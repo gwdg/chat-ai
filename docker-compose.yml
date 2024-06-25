@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  front:
+    image: chat-ai-front:latest
+    build: ./front
+    network_mode: "host"
+    ports:
+      - '7220:7220' # port mapping
+    volumes:
+      - ./front:/usr/src/app
+      - /usr/src/app/node_modules # cached node modules
+    restart: on-failure
+
+  back:
+    image: chat-ai-back:latest
+    build: ./back
+    network_mode: "host"
+    ports:
+      - '7230:7230' # port mapping
+    volumes:
+      - ./back:/usr/src/app
+      - /usr/src/app/node_modules # cached node modules
+    restart: on-failure
