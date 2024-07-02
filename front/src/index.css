@@ -1,0 +1,236 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  --primaryBackgroundColor: white;
+  --primaryTextColor: black;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    --primaryBackgroundColor: black;
+    --primaryTextColor: white;
+  }
+}
+
+/* body {
+  scrollbar-width: thin; 
+  scrollbar-color: #009ee0; 
+}
+
+::-webkit-scrollbar {
+  width: 6px; 
+}
+
+::-webkit-scrollbar-thumb {
+  background: #009ee0;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #009ee0; 
+} */
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+/* footer animation */
+.footer {
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.footer-visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.footer-hidden {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.slide-out-right {
+  animation: slideOutRight 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) both;
+}
+
+/* customStyles.css */
+.custom-syntax-highlighter {
+  margin: 0px !important;
+  background: inherit !important;
+}
+
+/* style.css */
+.react-markdown-output h1 {
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.react-markdown-output h2 {
+  font-size: 26px;
+  font-weight: bold;
+}
+
+.react-markdown-output h3 {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.react-markdown-output p {
+  margin: 0.5em 0;
+}
+
+.react-markdown-output ol {
+  list-style: number;
+  padding: 0;
+  margin: 0;
+  padding-left: 20px; /* Add 20px of padding to the left */
+}
+
+.react-markdown-output ul {
+  list-style: inherit;
+  padding: 0;
+  margin: 0;
+  padding-left: 20px; /* Add 20px of padding to the left */
+}
+
+.react-markdown-output li {
+  margin-bottom: 10px;
+}
+
+.react-markdown-output.light pre {
+  code {
+    background-color: #fff;
+    color: black !important;
+    font-size: 16px !important;
+    width: 100%;
+    /* white-space: pre-wrap; */
+    display: inline-block;
+    overflow-x: auto;
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  code::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.react-markdown-output.dark pre {
+  code {
+    background-color: #000;
+    color: #fff !important;
+    font-size: 16px !important;
+    width: 100%;
+    display: inline-block;
+    overflow-x: auto;
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  code::-webkit-scrollbar {
+    display: none;
+  }
+}
+.react-markdown-output.light pre {
+  background-color: #fff;
+  color: black;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.react-markdown-output.dark pre {
+  background-color: #000;
+  color: #fff;
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.light-theme svg path {
+  stroke: #000;
+}
+
+.dark-theme svg path {
+  stroke: #fff;
+}
+
+/* For light theme */
+.light-toast {
+  background: #ffffff;
+  color: #000000;
+}
+
+/* For dark theme */
+.dark-toast {
+  background: #2b2b2b;
+  color: #ffffff;
+}
+
+@media (hover: none) {
+  .group-hover\:block {
+    display: none !important;
+  }
+}
+
+.code {
+  /* white-space: pre-wrap; */
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.typing {
+  width: 5em;
+  height: 2em;
+  position: relative;
+  padding: 10px;
+  margin-left: 5px;
+}
+
+.typing__dot {
+  float: left;
+  width: 8px;
+  height: 8px;
+  margin: 0 4px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: loadingFade 1s infinite;
+}
+
+.typing__dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing__dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing__dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes loadingFade {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
