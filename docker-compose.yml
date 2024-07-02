@@ -9,7 +9,7 @@ services:
       - '7220:7220' # port mapping
     volumes:
       - ./front:/usr/src/app
-      - /usr/src/app/node_modules # cached node modules
+      - /usr/src/app/node_modules
     restart: on-failure
 
   back:
@@ -20,5 +20,5 @@ services:
       - '7230:7230' # port mapping
     volumes:
       - ./back:/usr/src/app
-      - /usr/src/app/node_modules # cached node modules
+      - /usr/src/app/node_modules
     restart: on-failure

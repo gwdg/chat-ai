@@ -1,6 +1,14 @@
-# ChatAI Web
+# Chat AI - A Seamless Slurm-Native Solution for HPC-Based Services
 
-This repository contains the web frontend of the ChatAI service. This includes all necessary configuration for the web-accessible cloud server to run the ChatAI web service. The code for the HPC backend is hosted in another repository, hpcinference. Note that this repository depends on the hpcinference backend.
+![Image Description](assets/example.jpg)
+
+This repository contains the stand-alone web interface of Chat AI. The implementation of the remaining components of the complete architecture can be found in two other repos:
+- Server components, incl. API gateway and SSH proxy: https://github.com/gwdg/saia-hub 
+- HPC components, incl. scheduler and slurm scripts: https://github.com/gwdg/saia-hpc
+
+Together these repos provide the entire underyling mechanism for Chat AI, which can be generalized as a slurm-native HPC web service.
+
+Note that the web interface provided in this repository can be set up on any device independently from the rest of the architecture, to act solely as a wrapper for an OpenAI-compatible API endpoint. 
 
 ## Getting started
 
@@ -10,45 +18,65 @@ Make sure you have docker installed.
 docker --version
 ```
 
-Clone the git repository, then navigate to the root folder.
+Clone this repository and navigate to the root folder.
 
 ```bash
-git clone https://gitlab-ce.gwdg.de/hpc-team/chat-ai-web
-cd chat-ai-web
+git clone https://github.com/gwdg/chat-ai
+cd chat-ai
 ```
 
-> **Note**: Change the password in the POSTGRES_PASSWORD file for security reasons.
-
-Then, build and run the docker containers using docker compose:
+Build the docker images.
 
 ```bash
-docker compose up db -d
-docker compose up kong-migrations
-docker compose up kong -d
-docker compose build chat-ai-web-front
-docker compose build chat-ai-web-back
-docker compose up chat-ai-web-front -d
-docker compose up chat-ai-web-back -d
+docker compose build chat-ai-front
+docker compose build chat-ai-back
 ```
+
+Start the web interface.
+
+```bash
+docker compose up front -d
+docker compose up back -d
+```
+
+The `front` service is a ReactJS app which is served by ViteJS and runs entirely on the user browser. `back` is simply a wrapper for message requests which gives the developer more control over the requests and prevents CORS errors on the user browser.  
+
+You should then be able to access the web interface via the specified port number.
+
+-----
+To apply any changes in the source code, run:
+```bash
+docker compose up restart front
+docker compose up restart back
+```
+
+Note that in some cases rebuilding the image might be necessary.
 
 ## Configuration
 
-Configure the necessary routes in the Kong Manager GUI which is hosted on port 8002. More detail will be included in the future.
+You can set the port numbers for both the `front` and `back` services in the `docker-compose.yml` file. The path to the `back` must be set via a reverse-proxy or virtual-host 
 
-## Database Backup
+The `front` interacts with the following endpoints to function properly:
+- Getting the model list by `/chat-ai/models`, defined in `/front/src/apis/ModelList.jsx`
+- Communicate with the `back` service by `/chat-ai-backend`, defined in `/front/src/apis/Completion.jsx`.
 
-To store Kong's configuration, make sure the `db` container is running and run:
+The `back` interacts with the Kong API gateway to route requests into the HPC services or alternatively connects to an OpenAI-compatible service endpoint. This can be configured in `/back/service.js`.
 
-```bash
-docker exec -it chat-ai-web-db-1 bash -c "pg_dump -U kong -d kong -F t > /backup/<db_filename>.tar"
+To connect the front to the back service, a route such as `/chat-ai-backend` must be created to its port number, or alternatively, the paths can be changed in the aforementioned source files. The route specified in `ModelList.jsx` must return a OpenAI-style JSON response containing the model ids and names, which will be displayed in the dropdown menu in the interface. 
+
+
+## Citation
+
+If you use our code in your research or services, please cite us as follows:
+
 ```
-
-The file will be generated in `kong/backup`. To restore the database from a file, make sure the file is located in `kong/backup/` and run:
-
-```bash
-docker exec -it chat-ai-web-db-1 bash -c "pg_restore -U kong -d kong -c -W -v /backup/<db_filename>.tar"
+@misc{doosthosseini2024chataiseamlessslurmnative,
+      title={Chat AI: A Seamless Slurm-Native Solution for HPC-Based Services}, 
+      author={Ali Doosthosseini and Jonathan Decker and Hendrik Nolte and Julian M. Kunkel},
+      year={2024},
+      eprint={2407.00110},
+      archivePrefix={arXiv},
+      primaryClass={cs.DC},
+      url={https://arxiv.org/abs/2407.00110}, 
+}
 ```
-
-## Authors
-- Ali Doosthosseini <adoosth@gwdg.de>
-- Priyesh Chikhaliya

@@ -1,0 +1,76 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Chat AI
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Ali
+    family-names: Doosthosseini
+    email: ali.doosthosseini@uni-goettingen.de
+    affiliation: University of Göttingen
+    orcid: 'https://orcid.org/0000-0002-0654-1268'
+  - given-names: Jonathan
+    family-names: Decker
+    email: jonathan.decker@uni-goettingen.de
+    affiliation: University of Göttingen
+    orcid: 'https://orcid.org/0000-0002-7384-7304'
+  - given-names: Hendrik
+    family-names: Nolte
+    email: hendrik.nolte@gwdg.de
+    affiliation: GWDG
+    orcid: 'https://orcid.org/0000-0003-2138-8510'
+  - given-names: Julian
+    name-particle: M.
+    family-names: Kunkel
+    email: julian.kunkel@gwdg.de
+    affiliation: GWDG
+    orcid: 'https://orcid.org/0000-0002-6915-1179'
+identifiers:
+  - type: other
+    value: 'arXiv:2407.00110'
+    description: The arXiv deposit of the encompassing paper.
+repository-code: 'https://github.com/gwdg/chat-ai'
+url: 'https://chat-ai.academiccloud.de'
+abstract: >-
+  The increasing adoption of large language models (LLMs)
+  has created a pressing need for an efficient, secure and
+  private serving infrastructure, which allows researchers
+  to run open-source or custom fine-tuned LLMs and ensures
+  users that their data remains private and is not stored
+  without their consent. While high-performance computing
+  (HPC) systems equipped with state-of-the-art GPUs are
+  well-suited for training LLMs, their batch scheduling
+  paradigm is not designed to support real-time serving of
+  AI applications. Cloud systems, on the other hand, are
+  well suited for web services but commonly lack access to
+  the computational power of clusters, especially expensive
+  and scarce high-end GPUs, which are required for optimal
+  inference speed. We propose an architecture with an
+  implementation consisting of a web service that runs on a
+  cloud VM with secure access to a scalable backend running
+  a multitude of AI models on HPC systems. By offering a web
+  service using our HPC infrastructure to host LLMs, we
+  leverage the trusted environment of local universities and
+  research centers to offer a private and secure alternative
+  to commercial LLM services. Our solution natively
+  integrates with Slurm, enabling seamless deployment on HPC
+  clusters and is able to run side by side with regular
+  Slurm workloads, while utilizing gaps in the schedule
+  created by Slurm. In order to ensure the security of the
+  HPC system, we use the SSH ForceCommand directive to
+  construct a robust circuit breaker, which prevents
+  successful attacks on the web-facing server from affecting
+  the cluster. We have successfully deployed our system as a
+  production service, and made the source code available at
+  https://github.com/gwdg/chat-ai.
+keywords:
+  - AI
+  - HPC
+  - Slurm
+license: GPL-3.0
+version: v0.6
+date-released: '2024-02-07'
