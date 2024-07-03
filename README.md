@@ -1,10 +1,26 @@
-# Chat AI - A Seamless Slurm-Native Solution for HPC-Based Services
+<p align="center">
+  <picture>
+    <img alt="Chat AI" src="assets/chatai-logo.png" width=30%>
+  </picture>
+</p>
 
-![Image Description](assets/example.jpg)
+<h3 align="center">
+A Seamless Slurm-Native Solution for HPC-Based Services
+</h3>
+
+<p align="center">
+<a href="https://docs.hpc.gwdg.de/services/chat-ai"><b>Documentation</b></a> | <a href="https://arxiv.org/abs/2407.00110"><b>Paper</b></a>
+</p>
 
 This repository contains the stand-alone web interface of Chat AI. The implementation of the remaining components of the complete architecture can be found in two other repos:
 - Server components, incl. API gateway and SSH proxy: https://github.com/gwdg/saia-hub 
 - HPC components, incl. scheduler and slurm scripts: https://github.com/gwdg/saia-hpc
+
+## Web interface
+
+![Image Description](assets/example.jpg)
+
+
 
 Together these repos provide the entire underyling mechanism for Chat AI, which can be generalized as a slurm-native HPC web service.
 
@@ -64,10 +80,12 @@ The `back` interacts with the Kong API gateway to route requests into the HPC se
 
 To connect the front to the back service, a route such as `/chat-ai-backend` must be created to its port number, or alternatively, the paths can be changed in the aforementioned source files. The route specified in `ModelList.jsx` must return a OpenAI-style JSON response containing the model ids and names, which will be displayed in the dropdown menu in the interface. 
 
+## Acknowledgements
+We thank Priyeshkumar Chikhaliya <p.chikhaliya@stud.uni-goettingen.de> for the design and implementation of the web interface and all colleagues and partners involved in this project.
 
 ## Citation
 
-If you use our code in your research or services, please cite us as follows:
+If you use Chat AI in your research or services, please cite us as follows:
 
 ```
 @misc{doosthosseini2024chataiseamlessslurmnative,
