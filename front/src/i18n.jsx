@@ -41,13 +41,14 @@ i18n
             tryAgain: "Please try again...",
 
             // Footer text
-            text1: "Terms and Policies",
-            text2: "Privacy and Security",
+            text1: "Terms of Use",
+            text2: "Data Privacy",
             text3: "User Guidelines",
             text4: "Contact Us",
             text5: "Feedback",
             text6: "Advanced options",
             text7: "About",
+            text8: "FAQ",
 
             // Custom instruction page
             custom1: "Advanced options",
@@ -155,13 +156,14 @@ i18n
             tryAgain: "Bitte versuchen Sie es noch einmal...",
 
             // Footer text
-            text1: "Bedingungen und Politiken",
-            text2: "Datenschutz und Sicherheit",
+            text1: "Nutzungsbedingungen",
+            text2: "Datenschutz",
             text3: "Benutzerrichtlinien",
             text4: "Kontakt",
             text5: "Rückmeldung",
             text6: "Erweiterte Optionen",
             text7: "Über uns",
+            text8: "FAQ",
 
             // Custom instruction page
             custom1: "Erweiterte Optionen",

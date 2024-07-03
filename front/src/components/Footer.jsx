@@ -38,14 +38,32 @@ function Footer(props) {
       {/* Main content of the footer */}
       <div className="flex justify-between w-full bg-white dark:bg-black">
         <div className="flex flex-col gap-3 items-center w-full">
-          <div className="grid md:grid-cols-3 grid-cols-1 justify-between w-full gap-y-2">
-            {/* Security  */}
+          <div className="grid md:grid-cols-5 grid-cols-1 justify-between w-full gap-y-2">
+            {/* Privacy and Security  */}
             <Link
               to={"https://datenschutz.gwdg.de/services/chatai"}
               target="_blank"
             >
               <p className="text-xl text-center h-full text-secondary md:border-r-secondary md:border-r">
                 <Trans i18nKey="description.text2"></Trans>
+              </p>
+            </Link>
+            {/* Terms of Use  */}
+            <Link
+              to={"https://docs.hpc.gwdg.de/services/chat-ai/terms_of_use/index.html"}
+              target="_blank"
+            >
+              <p className="text-xl text-center h-full text-secondary md:border-r-secondary md:border-r">
+                <Trans i18nKey="description.text1"></Trans>
+              </p>
+            </Link>
+            {/* FAQ  */}
+            <Link
+              to={"https://docs.hpc.gwdg.de/services/chat-ai/faq/index.html"}
+              target="_blank"
+            >
+              <p className="text-xl text-center h-full text-secondary md:border-r-secondary md:border-r">
+                <Trans i18nKey="description.text8"></Trans>
               </p>
             </Link>
             {/* Contact and Feedback */}
