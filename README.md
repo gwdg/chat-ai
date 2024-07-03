@@ -70,7 +70,7 @@ docker compose up restart front
 docker compose up restart back
 ```
 
-Note that in some cases rebuilding the image might be necessary.
+Note that in some cases rebuilding the docker image might be necessary.
 
 ## Configuration
 
@@ -85,7 +85,9 @@ The `back` interacts with the Kong API gateway to route requests into the HPC se
 To connect the front to the back service, a route such as `/chat-ai-backend` must be created to its port number, or alternatively, the paths can be changed in the aforementioned source files. The route specified in `ModelList.jsx` must return a OpenAI-style JSON response containing the model ids and names, which will be displayed in the dropdown menu in the interface. 
 
 ## Acknowledgements
-We thank Priyeshkumar Chikhaliya <p.chikhaliya@stud.uni-goettingen.de> for the design and implementation of the web interface and all colleagues and partners involved in this project.
+We thank Priyeshkumar Chikhaliya <p.chikhaliya@stud.uni-goettingen.de> for the design and implementation of the web interface.
+
+We thank all colleagues and partners involved in this project.
 
 ## Citation
 
