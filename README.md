@@ -16,15 +16,19 @@ This repository contains the stand-alone web interface of Chat AI. The implement
 - Server components, incl. API gateway and SSH proxy: https://github.com/gwdg/saia-hub 
 - HPC components, incl. scheduler and slurm scripts: https://github.com/gwdg/saia-hpc
 
-## Web interface
-
-![Image Description](assets/example.jpg)
-
-
+<p align="center">
+<img alt="Chat AI architecture" src="assets/arch-diagram.png" width="50%">
+</p>
 
 Together these repos provide the entire underyling mechanism for Chat AI, which can be generalized as a slurm-native HPC web service.
 
+## Web interface
+
 Note that the web interface provided in this repository can be set up on any device independently from the rest of the architecture, to act solely as a wrapper for an OpenAI-compatible API endpoint. 
+
+<p align="center">
+<img alt="Web Interface" src="assets/example.jpg" width="100%">
+</p>
 
 ## Getting started
 
