@@ -48,8 +48,8 @@ cd chat-ai
 Build the docker images.
 
 ```bash
-docker compose build chat-ai-front
-docker compose build chat-ai-back
+docker compose build front
+docker compose build back
 ```
 
 Start the web interface.
