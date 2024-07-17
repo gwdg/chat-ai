@@ -7,6 +7,7 @@ import {
 
 import Home from "../Pages/Home";
 import CustomInstructions from "../Pages/CustomInstructions";
+import Arcana from "../Pages/Arcana";
 
 function PublicRoute() {
   return (
@@ -24,6 +25,9 @@ function PublicRoute() {
             path="/custom-instructions"
             element={<CustomInstructions />}
           />
+
+          {/* Arcana page */}
+          <Route exact path="/arcana" element={<Arcana />} />
         </Routes>
       </Router>
     </div>
