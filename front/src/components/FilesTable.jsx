@@ -1,8 +1,9 @@
-import React, { useState, useRef } from "react";
+//filesTable.jsx
+import React, { useRef } from "react";
+import { Trans } from "react-i18next";
 import Table from "./Table";
 
-const FilesTable = (props) => {
-  const [files, setFiles] = useState([]);
+const FilesTable = ({ files, onUpload, onDelete, isEditing }) => {
   const fileInputRef = useRef(null);
 
   const handleFileUpload = (event) => {
@@ -21,22 +22,13 @@ const FilesTable = (props) => {
       }
 
       const newFile = {
-        index: files.length + 1,
         name: file.name,
         uploadDate: new Date().toLocaleString(),
       };
-      setFiles([...files, newFile]);
-      event.target.value = ""; // Reset the file input
-    }
-  };
 
-  const handleDeleteFile = (index) => {
-    const updatedFiles = files.filter((file, i) => i !== index);
-    const resetFiles = updatedFiles.map((file, i) => ({
-      ...file,
-      index: i + 1, // Reset index
-    }));
-    setFiles(resetFiles);
+      onUpload(newFile);
+      event.target.value = "";
+    }
   };
 
   const triggerFileInput = () => {
@@ -57,17 +49,15 @@ const FilesTable = (props) => {
         type="button"
         onClick={triggerFileInput}
       >
-        Upload file
+        <Trans i18nKey="description.arcana_file_upload"></Trans>
       </button>
 
-      {files.length > 0 ? (
-        <Table
-          data={files}
-          handleDeleteFile={handleDeleteFile}
-          isEditing={props.isEditing}
-        />
+      {files && files.length > 0 ? (
+        <Table data={files} handleDeleteFile={onDelete} isEditing={isEditing} />
       ) : (
-        <p className="dark:text-white text-black">No files uploaded yet.</p>
+        <p className="dark:text-white text-black">
+          <Trans i18nKey="description.arcana_file"></Trans>
+        </p>
       )}
     </div>
   );

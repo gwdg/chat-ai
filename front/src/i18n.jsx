@@ -128,6 +128,28 @@ i18n
             // temperature
             temperature:
               "A low temperature (e.g., 0-1) produces more predictable and logical responses, while higher temperatures (e.g., above 1) increase the possibility of more creative and unconventional responses. You can adjust the temperature setting to achieve different levels of predictability and creativity.",
+
+            // Help arcana note
+            help_arcana_title: "Note",
+            help_arcana_note:
+              "After uploading files to the collection, there might be a short processing period. During this time, the system analyzes your files to provide more accurate and precise responses. Thank you for your patience.",
+            //Arcana
+            arcana_title: "Title",
+            arcana_description: "Description",
+            arcana_enter_title: "Enter title here",
+            arcana_enter_description: "Enter description here",
+            arcana_req_title: "Title is required",
+            arcana_req_description: "Description is required ",
+            arcana_file: "No files uploaded yet.",
+            arcana_file_upload: "Upload",
+            help: "Help",
+            save: "Save",
+
+            //Table
+            table_text1: "Index",
+            table_text2: "Name",
+            table_text3: "Date of upload",
+            table_text4: "Action",
           },
         },
       },
@@ -244,6 +266,29 @@ i18n
             // temperature
             temperature:
               "Eine niedrige Temperatur (z. B. 0-1) erzeugt vorhersehbarere und logischere Antworten, während höhere Temperaturen (z. B. über 1) die Möglichkeit kreativerer und unkonventionellerer Antworten erhöhen. Sie können die Temperatureinstellung anpassen, um verschiedene Stufen der Vorhersagbarkeit und Kreativität zu erreichen.",
+
+            // Help arcana note
+            help_arcana_title: "Note",
+            help_arcana_note:
+              "Nach dem Hochladen von Dateien in die Sammlung kann es zu einer kurzen Bearbeitungszeit kommen. Während dieser Zeit analysiert das System Ihre Dateien, um genauere und präzisere Antworten zu geben. Wir danken Ihnen für Ihre Geduld.",
+
+            //Arcana
+            arcana_title: "Titel",
+            arcana_description: "Beschreibung",
+            arcana_enter_title: "Titel hier eingeben",
+            arcana_enter_description: "Geben Sie hier eine Beschreibung ein",
+            arcana_req_title: "Titel ist erforderlich",
+            arcana_req_description: "Beschreibung ist erforderlich",
+            arcana_file: "Noch keine Dateien hochgeladen.",
+            arcana_file_upload: "Hochladen",
+            help: "Hilfe",
+            save: "Speichern",
+
+            //Table
+            table_text1: "Index",
+            table_text2: "Name",
+            table_text3: "Datum des Hochladens",
+            table_text4: "Aktion",
           },
         },
       },

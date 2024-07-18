@@ -50,6 +50,7 @@ import Logo from "../assets/chatai-logo-v3-preview.png"; // Chat AI logo
 import { setAnncCountGlobal } from "../Redux/actions/anncAlertAction";
 import AnnouncementBarMobile from "./AnnouncementBarMobile";
 import ResponseItem from "./ResponseItem";
+import Arcanas from "./Arcanas";
 
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
@@ -1135,6 +1136,10 @@ function Prompt() {
             ) : null}
           </div>
 
+          <div>
+            <Arcanas />
+          </div>
+          {/* Select model */}
           <div className="md:flex flex-col hidden gap-4">
             {/* Select input for model for desktop */}
             <div className="flex items-center gap-4 select-none">

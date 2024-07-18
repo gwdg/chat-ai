@@ -16,18 +16,18 @@ function PublicRoute() {
         <Routes>
           {/* Redirect any unknown paths to the home page */}
           <Route path="*" element={<Navigate to="/" />} />
-          <Route exact path="/" element={<Navigate to="/chat" />}></Route>
+          {/* Home page */}
+          <Route exact path="/" element={<Navigate to="/chat" />} />
           <Route exact path="/chat" element={<Home />} />
-
           {/* Custom instructions page */}
           <Route
             exact
             path="/custom-instructions"
             element={<CustomInstructions />}
           />
-
-          {/* Arcana page */}
-          <Route exact path="/arcana" element={<Arcana />} />
+          {/* List all Arcana entries */}
+          <Route exact path="/arcana/:id" element={<Arcana />} />{" "}
+          {/* Single Arcana entry by ID */}
         </Routes>
       </Router>
     </div>
