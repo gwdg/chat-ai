@@ -22,7 +22,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
-async function getCompletionLLM(model, messages, inference_id = "no_id") {
+async function getCompletionLLM(model, messages, temperature, inference_id = "no_id") {
   const url = "http:///172.17.0.1:8000/inference/v1/chat/completions";
   const headers = {
     Accept: "application/json",
@@ -35,6 +35,7 @@ async function getCompletionLLM(model, messages, inference_id = "no_id") {
     model: model,
     messages: messages,
     max_tokens: 1024,
+    temperature: temperature,
     stream: true,
   });
 
@@ -56,6 +57,7 @@ app.get("/", async (req, res) => {
 app.post("/", async (req, res) => {
   const messages = req.body.messages;
   const model = req.body.model;
+  const temperature = req.body.temperature;
   const inference_id = req.headers["inference-id"];
 
   // Validation checks
@@ -102,7 +104,7 @@ app.post("/", async (req, res) => {
       }, 30000); // here, 30000ms is the timeout. Adjust it as per your needs
     });
 
-    const streamPromise = getCompletionLLM(model, messages, inference_id);
+    const streamPromise = getCompletionLLM(model, messages, temperature, inference_id);
     const response = await Promise.race([streamPromise, timeout]).catch(
       (error) => {
         console.error(error);
