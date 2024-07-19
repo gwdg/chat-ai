@@ -1,10 +1,20 @@
-//filesTable.jsx
-import React, { useRef } from "react";
-import { Trans } from "react-i18next";
+import { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import Table from "./Table";
+import { Trans } from "react-i18next";
+import { setFiles } from "../Redux/actions/arcanaAction";
 
-const FilesTable = ({ files, onUpload, onDelete, isEditing }) => {
+const FilesTable = ({ arcanaIndex, isEditing }) => {
+  const dispatch = useDispatch();
+  const files = useSelector((state) => state.arcana[arcanaIndex]?.files || []);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const arcanaExists = files.length > 0; // Since `files` is fetched correctly, no need to check again
+    if (arcanaExists && files.length === 0) {
+      dispatch(setFiles({ index: arcanaIndex, files: [] }));
+    }
+  }, [dispatch, arcanaIndex, files.length]);
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -22,13 +32,23 @@ const FilesTable = ({ files, onUpload, onDelete, isEditing }) => {
       }
 
       const newFile = {
+        index: files.length + 1,
         name: file.name,
         uploadDate: new Date().toLocaleString(),
       };
-
-      onUpload(newFile);
-      event.target.value = "";
+      const updatedFiles = [...files, newFile];
+      dispatch(setFiles({ index: arcanaIndex, files: updatedFiles }));
+      event.target.value = ""; // Reset the file input
     }
+  };
+
+  const handleDeleteFile = (index) => {
+    const updatedFiles = files.filter((file, i) => i !== index);
+    const resetFiles = updatedFiles.map((file, i) => ({
+      ...file,
+      index: i + 1, // Reset index
+    }));
+    dispatch(setFiles({ index: arcanaIndex, files: resetFiles }));
   };
 
   const triggerFileInput = () => {
@@ -52,8 +72,12 @@ const FilesTable = ({ files, onUpload, onDelete, isEditing }) => {
         <Trans i18nKey="description.arcana_file_upload"></Trans>
       </button>
 
-      {files && files.length > 0 ? (
-        <Table data={files} handleDeleteFile={onDelete} isEditing={isEditing} />
+      {files.length > 0 ? (
+        <Table
+          data={files}
+          handleDeleteFile={handleDeleteFile}
+          isEditing={isEditing}
+        />
       ) : (
         <p className="dark:text-white text-black">
           <Trans i18nKey="description.arcana_file"></Trans>

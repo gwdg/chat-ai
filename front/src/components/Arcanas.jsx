@@ -1,30 +1,57 @@
-//Arcanas.jsx
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { useMemo } from "react";
 
 function Arcanas() {
-  const [localArcanaList, setLocalArcanaList] = useState([]);
+  const arcanas = useSelector((state) => state.arcana);
 
-  const addArcanaBlock = () => {
-    const newArcana = { id: Date.now(), title: "", description: "", files: [] };
-    setLocalArcanaList([...localArcanaList, newArcana]);
+  // Memoize filteredArcanas
+  const filteredArcanas = useMemo(
+    () =>
+      arcanas.filter(
+        (arcana) =>
+          arcana.title || arcana.description || arcana.files.length > 0
+      ),
+    [arcanas]
+  );
+
+  const navigate = useNavigate();
+
+  const handleAddArcana = () => {
+    // Redirect to the next arcana index if there are less than 3
+    if (filteredArcanas.length < 3) {
+      navigate(`/arcana/${filteredArcanas.length + 1}`);
+    }
   };
 
   return (
-    <div className="home-container">
-      {localArcanaList.map((arcana) => (
-        <Link key={arcana.id} to={`/arcana/${arcana.id}`}>
-          <div className="arcana-block">
-            <p>Arcana {arcana.title || `#${arcana.id}`}</p>
-          </div>
-        </Link>
-      ))}
-      {localArcanaList.length < 3 && (
-        <button className="add-arcana-btn" onClick={addArcanaBlock}>
-          +
-        </button>
-      )}
-    </div>
+      <div className="p-6">
+        <h1 className="text-3xl mb-4">Arcanas</h1>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredArcanas.map((arcana, index) => (
+            <div
+              key={index}
+              className="bg-white dark:bg-gray-800 border rounded-lg shadow-md p-4"
+            >
+              <Link
+                to={`/arcana/${index + 1}`}
+                className="text-blue-500 text-lg font-semibold"
+              >
+                Arcana {index + 1}
+              </Link>
+            </div>
+          ))}
+          {filteredArcanas.length < 3 && (
+            <div
+              className="bg-white dark:bg-gray-800 border rounded-lg shadow-md p-4 flex items-center justify-center"
+              onClick={handleAddArcana}
+              role="button"
+            >
+              <button className="bg-blue-500 text-white p-2 rounded">+</button>
+            </div>
+          )}
+        </div>
+      </div>
   );
 }
 
