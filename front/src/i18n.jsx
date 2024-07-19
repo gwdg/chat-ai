@@ -144,6 +144,7 @@ i18n
             arcana_file_upload: "Upload",
             help: "Help",
             save: "Save",
+            add: "ADD",
 
             //Table
             table_text1: "Index",
@@ -283,6 +284,7 @@ i18n
             arcana_file_upload: "Hochladen",
             help: "Hilfe",
             save: "Speichern",
+            add: "Hinzufügen",
 
             //Table
             table_text1: "Index",
