@@ -10,6 +10,7 @@ import alertReducer from "./alertReducer";
 import modelApiReducer from "./modelApiReducer";
 import anncAlertReducer from "./anncAlertReducer";
 import arcanaReducer from "./arcanaReducer";
+import advOptionReducer from "./advancedOptionsReducer";
 
 // Combine all reducers into the root reducer
 const rootReducer = combineReducers({
@@ -24,6 +25,7 @@ const rootReducer = combineReducers({
   anncCount: anncAlertReducer,
   modelApi: modelApiReducer,
   arcana: arcanaReducer,
+  advOptions: advOptionReducer,
 });
 
 export default rootReducer;

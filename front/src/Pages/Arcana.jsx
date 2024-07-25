@@ -44,10 +44,8 @@ function Arcana() {
   const popupRef = useRef(null);
   const { index } = useParams();
   const arcanaIndex = parseInt(index, 10) - 1;
-  console.log("Hello", index, arcanaIndex);
   const dispatch = useDispatch();
   const arcanas = useSelector((state) => state.arcana);
-  console.log(arcanas);
   const arcana = arcanas[arcanaIndex] || {
     icon: icons[0].name,
     title: "",

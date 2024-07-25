@@ -12,6 +12,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { setPromptGlobal } from "../Redux/actions/promptAction";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import * as yup from "yup"; // Schema validation
+import { Form, Formik, useFormik } from "formik"; // Form handling
+import Slider from "@mui/material/Slider"; // Slider component
+import { persistor } from "../Redux/store/store";
 
 // Assets
 import retry from "../assets/icon_retry.svg";
@@ -28,6 +32,7 @@ import cross from "../assets/cross.svg";
 import mic from "../assets/icon_mic.svg";
 import stop from "../assets/stop_listening.svg";
 import pause from "../assets/pause.svg";
+import edit_icon from "../assets/edit_icon.svg";
 import Help_Model from "../model/Help_Modal";
 import Mic_Model from "../model/Mic_Model";
 import Cutom_Instructions_Model from "../model/Cutom_Instructions_Model";
@@ -47,10 +52,12 @@ import Bad_Request_Model from "../model/Bad_Request_Model";
 import Light from "../assets/light.svg"; // Light mode icon
 import Dark from "../assets/dark.svg"; // Dark mode icon
 import Logo from "../assets/chatai-logo-v3-preview.png"; // Chat AI logo
-import { setAnncCountGlobal } from "../Redux/actions/anncAlertAction";
-import AnnouncementBarMobile from "./AnnouncementBarMobile";
 import ResponseItem from "./ResponseItem";
 import Arcanas from "./Arcanas";
+import Clear_Catch_Model from "../model/Clear_Catch_Model";
+import Help_Model_Custom from "../model/Help_Model_Custom";
+import Help_model_Arcanas from "../model/Help_model_Arcanas";
+import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
 
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
@@ -98,6 +105,8 @@ function Prompt() {
   const [showBadRequest, setShowBadRequest] = useState(false); // Session expired model state
   const [showHelpModel, setShowHelpModel] = useState(false); // Help model state
   const [showMicModel, setShowMicModel] = useState(false); // Mic model state
+  const [showCustomHelpModel, setShowCustomHelpModel] = useState(false); // Help model state
+  const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false); // Help model state
   const [showCusModel, setShowCusModel] = useState(false); // Custom instructions model state
   const [showFileModel, setShowFileModel] = useState(false); // File format model state
   const [isAutoScroll, setAutoScroll] = useState(true); //Checks if user has scrolled while LLM is respondins
@@ -118,6 +127,13 @@ function Prompt() {
   const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal); // Accessing dark mode state from Redux store
   // const [showAnnc, setShowAnnc] = useState(countAnncGlobal > 3 ? false : true);
   // const [countAnnc, setCountAnnc] = useState(countAnncGlobal);
+  // State for temperature
+  const [temperature, setTemperature] = useState(temperatureGlobal);
+  const [showCacheModel, setShowCacheModel] = useState(false);
+  const [showAdvOpt, setShowAdvOpt] = useState(
+    useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
+  );
+  const [isEditingCustom, setIsEditingCustom] = useState(false);
 
   //TO scroll down when new chat is added in array
   const scrollToBottom = () => {
@@ -643,6 +659,11 @@ function Prompt() {
     dispatch({ type: "SET_THEME" }); // Dispatch action to update theme in Redux store
   };
 
+  const toggleAdvOpt = () => {
+    setShowAdvOpt(!showAdvOpt); // Toggle dark mode state
+    dispatch({ type: "SET_ADV" }); // Dispatch action to update theme in Redux store
+  };
+
   //Announcement alert count handler
   // const anncCounter = () => {
   //   setShowAnnc(false);
@@ -651,6 +672,47 @@ function Prompt() {
   //     return (prevCount += 1);
   //   });
   // };
+
+  // Validation schema for form fields
+  const validationSchema = yup.object({
+    instructions: yup.string().required(() => t("description.custom6")),
+  });
+
+  // Formik form initialization
+  const formik = useFormik({
+    initialValues: {
+      instructions: customInstructions,
+    },
+    validationSchema: validationSchema,
+    onSubmit: async (values) => {
+      // Dispatching action to update custom instructions
+      dispatch(setInstructions(values.instructions));
+      // navigate("/chat");
+      navigate("/chat", { state: { from: "/custom-instructions" } });
+    },
+  });
+
+  // Function to handle temperature change
+  const handleChangeCustom = (event, newValue) => {
+    setTemperature(newValue);
+    dispatch(setTemperatureGlobal(newValue));
+  };
+
+  const resetDefault = () => {
+    setTemperature(1);
+    formik.setFieldValue("instructions", "You are a helpful assistant");
+    dispatch(setTemperatureGlobal(1));
+    dispatch(setInstructions("You are a helpful assistant"));
+  };
+
+  const clearCatch = () => {
+    persistor.purge();
+    notifySuccess("Catch cleared successfully");
+  };
+
+  const toggleEdit = () => {
+    setIsEditingCustom(!isEditingCustom);
+  };
 
   return (
     <>
@@ -937,7 +999,7 @@ function Prompt() {
         </div>
 
         {/* prompt */}
-        <div className="md:w-[40%] flex flex-col gap-4 dark:text-white text-black h-fit md:m-0 mx-2 justify-between md:h-full">
+        <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit md:m-0 mx-2 justify-between md:h-full">
           {/* <div className="max-h-[650px] overflow-auto flex md:flex-col flex-row gap-2"> */}
           <div className="flex flex-col gap-4 w-full">
             <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
@@ -1137,70 +1199,85 @@ function Prompt() {
           </div>
 
           <div>
-            <Arcanas />
-          </div>
-          {/* Select model */}
-          <div className="md:flex flex-col hidden gap-4">
-            {/* Select input for model for desktop */}
-            <div className="flex items-center gap-4 select-none">
-              <div className="flex-shrink-0 flex items-center gap-2">
-                <p className="flex-shrink-0 text-xl">
-                  <Trans i18nKey="description.choose"></Trans>
-                </p>
-                <img
-                  src={help}
-                  alt="help"
-                  className="h-[20px] w-[20px] cursor-pointer"
-                  onClick={() => setShowHelpModel(true)}
-                />
-              </div>
-
-              {/* Select input */}
-              <div
-                className="relative w-full flex flex-col"
-                ref={dropdownRef}
-                tabIndex={0}
-                onBlur={() => setIsOpen(false)}
-              >
+            {showAdvOpt ? (
+              <div className="flex flex-col gap-4 md:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full">
                 <div
-                  className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark"
-                  onClick={toggleOpen}
+                  className="flex gap-1 items-center cursor-pointer"
+                  onClick={toggleAdvOpt} // Click handler to toggle dark mode
                 >
-                  {chooseModel}
-                  <div className="absolute right-0 flex items-center pr-[10px]  bottom-2 ">
-                    <img
-                      src={dropdown}
-                      alt="drop-down"
-                      className="h-[30px] w-[30px] cursor-pointer"
-                    />
-                  </div>
+                  <p className="text-xl h-full text-tertiary">
+                    <Trans i18nKey="description.text6"></Trans>
+                  </p>{" "}
+                  <img
+                    src={dropdown}
+                    alt="drop-down"
+                    className={`${
+                      showAdvOpt ? "" : "rotate-180"
+                    } h-[40px] w-[40px] cursor-pointer`}
+                  />
                 </div>
-                {isOpen && (
-                  <div
-                    className={`absolute w-full ${
-                      direction === "up" ? "bottom-full" : "top-full"
-                    } rounded-2xl border-opacity-10 border dark:border-border_dark`}
-                  >
-                    {modelList.map((option, index) => (
+                {/* Select model */}
+                <div className="md:flex flex-col hidden gap-4">
+                  {/* Select input for model for desktop */}
+                  <div className="flex items-center gap-4 select-none">
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      <p className="flex-shrink-0 text-xl">
+                        <Trans i18nKey="description.choose"></Trans>
+                      </p>
+                      <img
+                        src={help}
+                        alt="help"
+                        className="h-[20px] w-[20px] cursor-pointer"
+                        onClick={() => setShowHelpModel(true)}
+                      />
+                    </div>
+
+                    {/* Select input */}
+                    <div
+                      className="relative w-full flex flex-col"
+                      ref={dropdownRef}
+                      tabIndex={0}
+                      onBlur={() => setIsOpen(false)}
+                    >
                       <div
-                        key={index}
-                        className={`bg-white dark:bg-bg_secondary_dark text-tertiary block text-xl w-full p-2 cursor-pointer ${
-                          index === 0
-                            ? "rounded-t-2xl" // The first element
-                            : index === modelList.length - 1
-                            ? "rounded-b-2xl" // The last element
-                            : "" // All other elements
-                        }`}
-                        onClick={() => handleChangeModel(option)}
+                        className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark"
+                        onClick={toggleOpen}
                       >
-                        {option.name}
+                        {chooseModel}
+                        <div className="absolute right-0 flex items-center pr-[10px]  bottom-2 ">
+                          <img
+                            src={dropdown}
+                            alt="drop-down"
+                            className="h-[30px] w-[30px] cursor-pointer"
+                          />
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>{" "}
-            <div className="flex items-center gap-2 select-none">
+                      {isOpen && (
+                        <div
+                          className={`absolute w-full ${
+                            direction === "up" ? "bottom-full" : "top-full"
+                          } rounded-2xl border-opacity-10 border dark:border-border_dark`}
+                        >
+                          {modelList.map((option, index) => (
+                            <div
+                              key={index}
+                              className={`bg-white dark:bg-bg_secondary_dark text-tertiary block text-xl w-full p-2 cursor-pointer ${
+                                index === 0
+                                  ? "rounded-t-2xl" // The first element
+                                  : index === modelList.length - 1
+                                  ? "rounded-b-2xl" // The last element
+                                  : "" // All other elements
+                              }`}
+                              onClick={() => handleChangeModel(option)}
+                            >
+                              {option.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>{" "}
+                  {/* <div className="flex items-center gap-2 select-none">
               <Link to={"/custom-instructions"} target="">
                 <p className="text-xl h-full text-tertiary">
                   <Trans i18nKey="description.text6"></Trans>
@@ -1212,7 +1289,150 @@ function Prompt() {
                 className="h-[20px] w-[20px] cursor-pointer"
                 onClick={() => setShowCusModel(true)}
               />
-            </div>
+            </div> */}
+                </div>
+                {/* Arcanas */}
+                <div className="flex gap-4 w-full items-center">
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    {" "}
+                    <p className="text-xl">Arcanas</p>{" "}
+                    <img
+                      src={help}
+                      alt="help"
+                      className="h-[20px] w-[20px] cursor-pointer"
+                      onClick={() => setShowArcanasHelpModel(true)}
+                    />
+                  </div>
+                  <Arcanas />
+                </div>
+                {/* Custom instructions */}
+                <div className="">
+                  <Formik enableReinitialize={true} onSubmit>
+                    <Form onSubmit={formik.handleSubmit}>
+                      <div className="flex flex-col gap-4 items-center">
+                        {/* Temperature slider */}
+                        <div className="flex gap-4 w-full items-center">
+                          <div className="flex-shrink-0 flex items-center gap-2">
+                            {" "}
+                            <p className="text-xl">Temp</p>{" "}
+                            <img
+                              src={help}
+                              alt="help"
+                              className="h-[20px] w-[20px] cursor-pointer"
+                              onClick={() => setShowCustomHelpModel(true)}
+                            />
+                          </div>
+
+                          <div className="mx-2 w-full">
+                            {" "}
+                            <Slider
+                              aria-label="Temperature"
+                              defaultValue={1}
+                              value={temperature}
+                              onChange={handleChangeCustom}
+                              valueLabelDisplay="auto"
+                              shiftStep={20}
+                              step={0.1}
+                              marks
+                              min={0}
+                              max={2}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Custom instructions input*/}
+                        <div className="w-full">
+                          <div className="w-full relative">
+                            <div className="relative z-10">
+                              <textarea
+                                className="p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark dark:text-white text-black bg-white dark:bg-bg_secondary_dark w-full min-h-[150px]"
+                                type="text"
+                                name="instructions"
+                                placeholder={t("description.custom4")}
+                                value={formik.values.instructions}
+                                onBlur={formik.handleBlur}
+                                onChange={formik.handleChange}
+                                disabled={!isEditingCustom}
+                              />
+                            </div>
+                            <div className="absolute bottom-4 right-4 z-[99] flex justify-end items-center">
+                              {!isEditingCustom ? (
+                                <img
+                                  src={edit_icon}
+                                  alt="edit_icon"
+                                  onClick={toggleEdit}
+                                  className="h-[30px] w-[30px] cursor-pointer"
+                                />
+                              ) : (
+                                <button
+                                  className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center shadow-lg dark:shadow-dark border min-w-[100px] md:w-fit"
+                                  type="button"
+                                  onClick={toggleEdit}
+                                >
+                                  Save
+                                </button>
+                              )}
+                            </div>{" "}
+                          </div>
+                          {/* Display error message if any */}
+                          {formik.errors.instructions &&
+                          formik.touched.instructions ? (
+                            <p className="text-red-600 text-12-500 ">
+                              {formik.errors.instructions}
+                            </p>
+                          ) : null}{" "}
+                        </div>
+
+                        {/* Submit button */}
+                        <div className="flex flex-col md:flex-row justify-end gap-2 items-center w-full">
+                          {/* Opens clear cache model */}
+                          <button
+                            className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                            type="reset"
+                            onClick={() => {
+                              setShowCacheModel(true);
+                            }}
+                          >
+                            <Trans i18nKey="description.custom8"></Trans>
+                          </button>
+                          {/* Resets settings, and clears redux */}
+                          <button
+                            className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                            onClick={resetDefault}
+                            type="reset"
+                          >
+                            <Trans i18nKey="description.custom7"></Trans>
+                          </button>
+                          {/* Applies changes */}
+                          <button
+                            className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                            type="submit"
+                          >
+                            <Trans i18nKey="description.custom5"></Trans>
+                          </button>
+                        </div>
+                      </div>
+                    </Form>
+                  </Formik>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="cursor-pointer flex gap-1 items-center p-4 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full"
+                onClick={toggleAdvOpt} // Click handler to toggle dark mode
+              >
+                <p className="text-xl h-full text-tertiary">
+                  <Trans i18nKey="description.text6"></Trans>
+                </p>{" "}
+                <img
+                  src={dropdown}
+                  alt="drop-down"
+                  className={`${
+                    showAdvOpt ? "" : "rotate-180"
+                  } h-[40px] w-[40px] cursor-pointer`}
+                />
+              </div>
+            )}
           </div>
         </div>
         <div>
@@ -1223,6 +1443,20 @@ function Prompt() {
       {/* Help model for info on changing model */}
       <div className="">
         {showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}
+      </div>
+
+      {/* Help model for info on custom instructions */}
+      <div className="">
+        {showCustomHelpModel ? (
+          <Help_Model_Custom showModal={setShowCustomHelpModel} />
+        ) : null}
+      </div>
+
+      {/* Help model for info on custom instructions */}
+      <div className="">
+        {showArcanasHelpModel ? (
+          <Help_model_Arcanas showModal={setShowArcanasHelpModel} />
+        ) : null}
       </div>
 
       {/* Pop-up if microphone permission is not given or denied */}
@@ -1258,6 +1492,16 @@ function Prompt() {
       <div className="">
         {showBadRequest ? (
           <Bad_Request_Model showModal={setShowBadRequest} />
+        ) : null}
+      </div>
+
+      {/* Pop-up clear cache*/}
+      <div className="">
+        {showCacheModel ? (
+          <Clear_Catch_Model
+            showModal={setShowCacheModel}
+            clearCatch={clearCatch}
+          />
         ) : null}
       </div>
     </>

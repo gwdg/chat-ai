@@ -151,6 +151,9 @@ i18n
             table_text2: "Name",
             table_text3: "Date of upload",
             table_text4: "Action",
+
+            arcana_note:
+              "You can select the specific arcana to be referenced by the LLM model by making the appropriate choice.",
           },
         },
       },
@@ -291,6 +294,9 @@ i18n
             table_text2: "Name",
             table_text3: "Datum des Hochladens",
             table_text4: "Aktion",
+
+            arcana_note:
+              "Sie können die spezifischen Arkana auswählen, auf die das LLM-Modell verweisen soll, indem Sie die entsprechende Auswahl treffen.",
           },
         },
       },

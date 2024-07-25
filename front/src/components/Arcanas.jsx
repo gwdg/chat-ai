@@ -26,12 +26,10 @@ function Arcanas() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-xl">Arcanas</p>
-      <div className="flex md:flex-row flex-col gap-2 items-center">
+      <div className="flex md:flex-row flex-col gap-2 items-center w-full">
         {filteredArcanas.map((arcana, index) => (
-          <Link key={index} to={`/arcana/${index + 1}`}>
-            <div className="h-[200px] w-[200px] border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark dark:text-white text-black bg-white dark:bg-bg_secondary_dark flex items-center justify-center">
+          <Link className="w-full" key={index} to={`/arcana/${index + 1}`}>
+            <div className="h-[50px] border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark dark:text-white text-black bg-white dark:bg-bg_secondary_dark flex items-center justify-center">
               <p> Arcana {index + 1}</p>
             </div>{" "}
           </Link>
@@ -46,7 +44,6 @@ function Arcanas() {
           </button>
         )}
       </div>
-    </div>
   );
 }
 

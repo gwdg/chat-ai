@@ -42,7 +42,6 @@ function Feedback() {
     },
     validationSchema: validationSchema,
     onSubmit: async (values) => {
-      console.log(values); // Submitting form data
     },
   });
 
