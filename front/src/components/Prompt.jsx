@@ -27,6 +27,7 @@ import send from "../assets/icon_send.svg";
 import upload from "../assets/add.svg";
 import uploaded from "../assets/file_uploaded.svg";
 import dropdown from "../assets/icon_dropdown.svg";
+import advanced_settings_arrow from "../assets/advanced_settings_arrow.svg";
 import help from "../assets/icon_help.svg";
 import cross from "../assets/cross.svg";
 import mic from "../assets/icon_mic.svg";
@@ -58,6 +59,7 @@ import Clear_Catch_Model from "../model/Clear_Catch_Model";
 import Help_Model_Custom from "../model/Help_Model_Custom";
 import Help_model_Arcanas from "../model/Help_model_Arcanas";
 import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
+import Help_Model_System from "../model/Help_Model_System";
 
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
@@ -106,6 +108,7 @@ function Prompt() {
   const [showHelpModel, setShowHelpModel] = useState(false); // Help model state
   const [showMicModel, setShowMicModel] = useState(false); // Mic model state
   const [showCustomHelpModel, setShowCustomHelpModel] = useState(false); // Help model state
+  const [showSystemHelpModel, setShowSystemHelpModel] = useState(false); // Help model state
   const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false); // Help model state
   const [showCusModel, setShowCusModel] = useState(false); // Custom instructions model state
   const [showFileModel, setShowFileModel] = useState(false); // File format model state
@@ -688,7 +691,7 @@ function Prompt() {
       // Dispatching action to update custom instructions
       dispatch(setInstructions(values.instructions));
       // navigate("/chat");
-      navigate("/chat", { state: { from: "/custom-instructions" } });
+      // navigate("/chat", { state: { from: "/custom-instructions" } });
     },
   });
 
@@ -706,11 +709,25 @@ function Prompt() {
   };
 
   const clearCatch = () => {
-    persistor.purge();
-    notifySuccess("Catch cleared successfully");
+    persistor
+      .purge()
+      .then(() => {
+        notifySuccess("Cache cleared successfully");
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      })
+      .catch((error) => {
+        notifyError("Failed to clear cache: " + error.message);
+      });
   };
 
   const toggleEdit = () => {
+    setIsEditingCustom(!isEditingCustom);
+  };
+
+  const saveInstructions = () => {
+    dispatch(setInstructions(formik.values.instructions));
     setIsEditingCustom(!isEditingCustom);
   };
 
@@ -999,7 +1016,7 @@ function Prompt() {
         </div>
 
         {/* prompt */}
-        <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit md:m-0 mx-2 justify-between md:h-full">
+        <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit md:m-0 justify-between md:h-full">
           {/* <div className="max-h-[650px] overflow-auto flex md:flex-col flex-row gap-2"> */}
           <div className="flex flex-col gap-4 w-full">
             <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
@@ -1044,14 +1061,15 @@ function Prompt() {
                   </Tooltip>
                 ) : null}
                 <div className="flex gap-4 w-full justify-end items-center">
-                  <Link to={"/custom-instructions"} target="">
-                    <button className="md:hidden flex h-[30px] w-[30px] cursor-pointer">
-                      <img
-                        className="cursor-pointer h-[30px] w-[30px]"
-                        src={settings_icon}
-                      />
-                    </button>
-                  </Link>
+                  <button
+                    className="md:hidden flex h-[30px] w-[30px] cursor-pointer"
+                    onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                  >
+                    <img
+                      className="cursor-pointer h-[30px] w-[30px]"
+                      src={settings_icon}
+                    />
+                  </button>
                   {/* Input for file hidden in UI */}
                   <input
                     type="file"
@@ -1176,7 +1194,7 @@ function Prompt() {
                     >
                       <img className="h-[30px] w-[30px]" src={uploaded} />
                       <div className="flex justify-between items-center w-full">
-                        <div className="flex">
+                        <div className="flex items-center">
                           <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[80%]">
                             {file.name}
                           </p>
@@ -1198,22 +1216,22 @@ function Prompt() {
             ) : null}
           </div>
 
-          <div>
+          <div className="md:static absolute bottom-0 w-full">
             {showAdvOpt ? (
               <div className="flex flex-col gap-4 md:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full">
                 <div
-                  className="flex gap-1 items-center cursor-pointer"
+                  className="flex gap-4 items-center cursor-pointer justify-center"
                   onClick={toggleAdvOpt} // Click handler to toggle dark mode
                 >
                   <p className="text-xl h-full text-tertiary">
                     <Trans i18nKey="description.text6"></Trans>
                   </p>{" "}
                   <img
-                    src={dropdown}
+                    src={advanced_settings_arrow}
                     alt="drop-down"
                     className={`${
                       showAdvOpt ? "" : "rotate-180"
-                    } h-[40px] w-[40px] cursor-pointer`}
+                    } h-[15px] w-[40px] cursor-pointer`}
                   />
                 </div>
                 {/* Select model */}
@@ -1341,11 +1359,25 @@ function Prompt() {
                         </div>
 
                         {/* Custom instructions input*/}
-                        <div className="w-full">
+                        <div className="w-full flex flex-col gap-4">
+                          <div className="flex-shrink-0 flex items-center gap-2">
+                            {" "}
+                            <p className="text-xl">System prompt</p>{" "}
+                            <img
+                              src={help}
+                              alt="help"
+                              className="h-[20px] w-[20px] cursor-pointer"
+                              onClick={() => setShowSystemHelpModel(true)}
+                            />
+                          </div>
                           <div className="w-full relative">
                             <div className="relative z-10">
                               <textarea
-                                className="p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark dark:text-white text-black bg-white dark:bg-bg_secondary_dark w-full min-h-[150px]"
+                                className={`${
+                                  !isEditingCustom
+                                    ? "bg-disable_textArea text-black"
+                                    : "bg-white dark:bg-bg_secondary_dark dark:text-white text-black"
+                                } p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
                                 type="text"
                                 name="instructions"
                                 placeholder={t("description.custom4")}
@@ -1367,7 +1399,7 @@ function Prompt() {
                                 <button
                                   className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center shadow-lg dark:shadow-dark border min-w-[100px] md:w-fit"
                                   type="button"
-                                  onClick={toggleEdit}
+                                  onClick={saveInstructions}
                                 >
                                   Save
                                 </button>
@@ -1404,12 +1436,12 @@ function Prompt() {
                             <Trans i18nKey="description.custom7"></Trans>
                           </button>
                           {/* Applies changes */}
-                          <button
+                          {/* <button
                             className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
                             type="submit"
                           >
                             <Trans i18nKey="description.custom5"></Trans>
-                          </button>
+                          </button> */}
                         </div>
                       </div>
                     </Form>
@@ -1417,20 +1449,97 @@ function Prompt() {
                 </div>
               </div>
             ) : (
-              <div
-                className="cursor-pointer flex gap-1 items-center p-4 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full"
-                onClick={toggleAdvOpt} // Click handler to toggle dark mode
-              >
+              <div className="md:flex flex-col gap-4 hidden">
+                {/* Select model */}
+                <div className="md:flex flex-col hidden gap-4">
+                  {/* Select input for model for desktop */}
+                  <div className="flex items-center gap-4 select-none">
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      <p className="flex-shrink-0 text-xl">
+                        <Trans i18nKey="description.choose"></Trans>
+                      </p>
+                      <img
+                        src={help}
+                        alt="help"
+                        className="h-[20px] w-[20px] cursor-pointer"
+                        onClick={() => setShowHelpModel(true)}
+                      />
+                    </div>
+
+                    {/* Select input */}
+                    <div
+                      className="relative w-full flex flex-col"
+                      ref={dropdownRef}
+                      tabIndex={0}
+                      onBlur={() => setIsOpen(false)}
+                    >
+                      <div
+                        className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark"
+                        onClick={toggleOpen}
+                      >
+                        {chooseModel}
+                        <div className="absolute right-0 flex items-center pr-[10px]  bottom-2 ">
+                          <img
+                            src={dropdown}
+                            alt="drop-down"
+                            className="h-[30px] w-[30px] cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      {isOpen && (
+                        <div
+                          className={`absolute w-full ${
+                            direction === "up" ? "bottom-full" : "top-full"
+                          } rounded-2xl border-opacity-10 border dark:border-border_dark`}
+                        >
+                          {modelList.map((option, index) => (
+                            <div
+                              key={index}
+                              className={`bg-white dark:bg-bg_secondary_dark text-tertiary block text-xl w-full p-2 cursor-pointer ${
+                                index === 0
+                                  ? "rounded-t-2xl" // The first element
+                                  : index === modelList.length - 1
+                                  ? "rounded-b-2xl" // The last element
+                                  : "" // All other elements
+                              }`}
+                              onClick={() => handleChangeModel(option)}
+                            >
+                              {option.name}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>{" "}
+                  {/* <div className="flex items-center gap-2 select-none">
+              <Link to={"/custom-instructions"} target="">
                 <p className="text-xl h-full text-tertiary">
                   <Trans i18nKey="description.text6"></Trans>
-                </p>{" "}
-                <img
-                  src={dropdown}
-                  alt="drop-down"
-                  className={`${
-                    showAdvOpt ? "" : "rotate-180"
-                  } h-[40px] w-[40px] cursor-pointer`}
-                />
+                </p>
+              </Link>{" "}
+              <img
+                src={help}
+                alt="help"
+                className="h-[20px] w-[20px] cursor-pointer"
+                onClick={() => setShowCusModel(true)}
+              />
+            </div> */}
+                </div>
+                <div
+                  className="cursor-pointer flex gap-4 justify-center items-center p-4 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full"
+                  onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                >
+                  <p className="text-xl h-full text-tertiary">
+                    <Trans i18nKey="description.text6"></Trans>
+                  </p>{" "}
+                  <img
+                    src={advanced_settings_arrow}
+                    alt="drop-down"
+                    className={`${
+                      showAdvOpt ? "" : "rotate-180"
+                    } h-[15px] w-[40px] cursor-pointer`}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -1445,10 +1554,17 @@ function Prompt() {
         {showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}
       </div>
 
-      {/* Help model for info on custom instructions */}
+      {/* Help model for info on custom temperature */}
       <div className="">
         {showCustomHelpModel ? (
           <Help_Model_Custom showModal={setShowCustomHelpModel} />
+        ) : null}
+      </div>
+
+      {/* Help model for info on system prompt */}
+      <div className="">
+        {showSystemHelpModel ? (
+          <Help_Model_System showModal={setShowSystemHelpModel} />
         ) : null}
       </div>
 

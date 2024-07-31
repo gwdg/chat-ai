@@ -1,19 +1,19 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useFormik } from "formik";
 import * as yup from "yup";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ToastContainer, toast } from "react-toastify";
+// import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Layout from "../components/Layout";
 import cross from "../assets/cross.svg";
-import edit_icon from "../assets/edit_icon.svg";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setIcon,
   setTitle,
   setDescription,
   setFiles,
+  deleteArcana,
 } from "../Redux/actions/arcanaAction";
 import books from "../assets/icons_arcana/books.svg";
 import filesIcon from "../assets/icons_arcana/files.svg";
@@ -38,7 +38,6 @@ const icons = [
 function Arcana() {
   const { t } = useTranslation();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [showHelpModel, setShowHelpModel] = useState(false);
 
   const popupRef = useRef(null);
@@ -64,8 +63,8 @@ function Arcana() {
   const [selectedIconName, setSelectedIconName] = useState(
     icons.find((icon) => icon.name === arcana.icon)?.name || icons[0].name
   );
-  const isDarkMode = useSelector((state) => state.theme.isDarkMode);
-  const toastClass = isDarkMode ? "dark-toast" : "light-toast";
+  // const isDarkMode = useSelector((state) => state.theme.isDarkMode);
+  // const toastClass = isDarkMode ? "dark-toast" : "light-toast";
   const navigate = useNavigate();
 
   const formik = useFormik({
@@ -80,19 +79,22 @@ function Arcana() {
   });
 
   useEffect(() => {
-    if (arcanaIndex !== undefined) {
+    if (arcanaIndex !== undefined && selectedIconName !== arcana.icon) {
       dispatch(setIcon({ index: arcanaIndex, icon: selectedIconName }));
     }
-  }, [selectedIconName, arcanaIndex, dispatch]);
+  }, [selectedIconName, arcanaIndex, dispatch, arcana.icon]);
 
   useEffect(() => {
-    if (arcanaIndex !== undefined) {
+    if (arcanaIndex !== undefined && formik.values.title !== arcana.title) {
       dispatch(setTitle({ index: arcanaIndex, title: formik.values.title }));
     }
-  }, [formik.values.title, arcanaIndex, dispatch]);
+  }, [formik.values.title, arcanaIndex, dispatch, arcana.title]);
 
   useEffect(() => {
-    if (arcanaIndex !== undefined) {
+    if (
+      arcanaIndex !== undefined &&
+      formik.values.description !== arcana.description
+    ) {
       dispatch(
         setDescription({
           index: arcanaIndex,
@@ -100,28 +102,30 @@ function Arcana() {
         })
       );
     }
-  }, [formik.values.description, arcanaIndex, dispatch]);
+  }, [formik.values.description, arcanaIndex, dispatch, arcana.description]);
 
   useEffect(() => {
-    if (arcanaIndex !== undefined) {
+    if (
+      arcanaIndex !== undefined &&
+      JSON.stringify(arcana.files) !== JSON.stringify(arcana.files)
+    ) {
       dispatch(setFiles({ index: arcanaIndex, files: arcana.files }));
     }
   }, [arcana.files, arcanaIndex, dispatch]);
 
-  const handleIconClick = (icon) => {
-    dispatch(setIcon({ index: arcanaIndex, icon: icon.name }));
-    setSelectedIcon(icon.icon);
-    setSelectedIconName(icon.name);
-    setIsPopupOpen(false);
-  };
+  const handleIconClick = useCallback(
+    (icon) => {
+      dispatch(setIcon({ index: arcanaIndex, icon: icon.name }));
+      setSelectedIcon(icon.icon);
+      setSelectedIconName(icon.name);
+      setIsPopupOpen(false);
+    },
+    [dispatch, arcanaIndex]
+  );
 
-  const togglePopup = () => {
-    setIsPopupOpen(!isPopupOpen);
-  };
-
-  const toggleEdit = () => {
-    setIsEditing(!isEditing);
-  };
+  const togglePopup = useCallback(() => {
+    setIsPopupOpen((prev) => !prev);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -136,14 +140,22 @@ function Arcana() {
     };
   }, []);
 
-  const notifySuccess = (message) =>
-    toast.success(message, {
-      autoClose: 200,
-      className: toastClass,
-      onClose: () => {
-        navigate("/chat");
-      },
-    });
+  // const notifySuccess = useCallback(
+  //   (message) =>
+  //     toast.success(message, {
+  //       autoClose: 200,
+  //       className: toastClass,
+  //       onClose: () => {
+  //         navigate("/chat");
+  //       },
+  //     }),
+  //   [navigate, toastClass]
+  // );
+
+  const handleDelete = useCallback(() => {
+    dispatch(deleteArcana(arcana.id));
+    navigate("/chat");
+  }, [dispatch, arcana.id, navigate]);
 
   return (
     <Layout>
@@ -163,16 +175,16 @@ function Arcana() {
                         onClick={togglePopup}
                       />
                       <p className="md:text-4xl text-3xl text-tertiary">
-                        Arcana {arcanaIndex + 1}
+                        Arcana {arcana.id}
                       </p>
-                      {!isEditing ? (
+                      {/* {!isEditing ? (
                         <img
                           src={edit_icon}
                           alt="edit_icon"
                           onClick={toggleEdit}
                           className="h-[30px] w-[30px] cursor-pointer"
                         />
-                      ) : null}
+                      ) : null} */}
                       {isPopupOpen && (
                         <div
                           ref={popupRef}
@@ -240,7 +252,7 @@ function Arcana() {
                   <div className="flex flex-col gap-2 ">
                     <FilesTable
                       arcanaIndex={arcanaIndex}
-                      isEditing={isEditing}
+                      // isEditing={isEditing}
                     />
                   </div>
                   <div className="flex flex-col md:flex-row justify-between gap-2 items-center w-full">
@@ -251,15 +263,13 @@ function Arcana() {
                     >
                       <Trans i18nKey="description.help"></Trans>
                     </button>
-                    {isEditing ? (
-                      <button
-                        className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
-                        type="submit"
-                        onClick={toggleEdit}
-                      >
-                        <Trans i18nKey="description.save"></Trans>
-                      </button>
-                    ) : null}
+                    <button
+                      className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                      type="button"
+                      onClick={handleDelete}
+                    >
+                      Delete arcana
+                    </button>
                   </div>
                 </div>
               </form>
@@ -267,13 +277,10 @@ function Arcana() {
           </div>
         </div>
       </div>
-      <div>
+
+      {/* <div>
         <ToastContainer />
-      </div>
-      <div>
-        <ToastContainer />
-      </div>
-      <ToastContainer />{" "}
+      </div> */}
       {showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}
     </Layout>
   );

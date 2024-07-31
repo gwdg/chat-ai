@@ -11,6 +11,7 @@ import modelApiReducer from "./modelApiReducer";
 import anncAlertReducer from "./anncAlertReducer";
 import arcanaReducer from "./arcanaReducer";
 import advOptionReducer from "./advancedOptionsReducer";
+import selectedArcanaReducer from "./arcanaSelectReducer";
 
 // Combine all reducers into the root reducer
 const rootReducer = combineReducers({
@@ -26,6 +27,7 @@ const rootReducer = combineReducers({
   modelApi: modelApiReducer,
   arcana: arcanaReducer,
   advOptions: advOptionReducer,
+  selectedArcana: selectedArcanaReducer,
 });
 
 export default rootReducer;

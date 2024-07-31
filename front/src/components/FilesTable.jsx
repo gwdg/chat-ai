@@ -76,7 +76,7 @@ const FilesTable = ({ arcanaIndex, isEditing }) => {
         <Table
           data={files}
           handleDeleteFile={handleDeleteFile}
-          isEditing={isEditing}
+          // isEditing={isEditing}
         />
       ) : (
         <p className="dark:text-white text-black">

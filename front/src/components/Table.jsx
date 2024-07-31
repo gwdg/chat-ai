@@ -21,7 +21,7 @@ const Table = ({ data, handleDeleteFile, isEditing }) => {
                   className="text-gray-700 dark:text-white"
                 >
                   {headerGroup.headers.map((column, columnIndex) => {
-                    if (column.id === "action" && !isEditing) {
+                    if (column.id === "action") {
                       return (
                         <th
                           {...column.getHeaderProps()}
@@ -64,7 +64,7 @@ const Table = ({ data, handleDeleteFile, isEditing }) => {
                             key={cellIndex}
                             className="border-b dark:border-border_dark p-2"
                           >
-                            {isEditing && (
+                            {
                               <button
                                 onClick={() => handleDeleteFile(rowIndex)}
                                 type="button"
@@ -75,7 +75,7 @@ const Table = ({ data, handleDeleteFile, isEditing }) => {
                                   alt="Delete"
                                 />
                               </button>
-                            )}
+                            }
                           </td>
                         );
                       } else {

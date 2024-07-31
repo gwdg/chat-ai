@@ -6,7 +6,7 @@ import {
 } from "react-router-dom";
 
 import Home from "../Pages/Home";
-import CustomInstructions from "../Pages/CustomInstructions";
+// import CustomInstructions from "../Pages/CustomInstructions";
 import Arcana from "../Pages/Arcana";
 
 function PublicRoute() {
@@ -17,11 +17,11 @@ function PublicRoute() {
           <Route path="*" element={<Navigate to="/" />} />
           <Route exact path="/" element={<Navigate to="/chat" />} />
           <Route exact path="/chat" element={<Home />} />
-          <Route
+          {/* <Route
             exact
             path="/custom-instructions"
             element={<CustomInstructions />}
-          />
+          /> */}
           <Route exact path="/arcana/:index" element={<Arcana />} />
         </Routes>
       </Router>

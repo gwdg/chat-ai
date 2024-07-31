@@ -2,7 +2,7 @@ import { Trans } from "react-i18next"; // For translation
 import Modal from "./Modal"; // Importing Modal component
 import cross from "../assets/cross.svg"; // Close icon
 
-function Help_Model_Custom(props) {
+function Help_Model_System(props) {
   return (
     // Modal component with help content
     <Modal showModal={props.showModal}>
@@ -24,11 +24,8 @@ function Help_Model_Custom(props) {
         {/* Help content */}
         <div className="p-4 pt-0 flex flex-col gap-0">
           {/* Instruction hint */}
-          <p className="text-red-600">
-            <Trans i18nKey="description.custom2"></Trans>
-          </p>
           <p className="dark:text-white text-black">
-            <Trans i18nKey="description.temperature"></Trans>
+            <Trans i18nKey="description.custom3"></Trans>
           </p>
         </div>
       </div>
@@ -36,4 +33,4 @@ function Help_Model_Custom(props) {
   );
 }
 
-export default Help_Model_Custom;
+export default Help_Model_System;

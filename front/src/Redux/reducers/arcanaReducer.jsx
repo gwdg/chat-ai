@@ -1,60 +1,57 @@
+import { createReducer } from "@reduxjs/toolkit";
+import {
+  setItem,
+  setIcon,
+  setTitle,
+  setDescription,
+  setFiles,
+  deleteArcana,
+  resetArcanas,
+} from "../actions/arcanaAction";
+
 const initialState = [
-  // Initial arcana objects
-  {
-    icon: "",
-    title: "",
-    description: "",
-    files: [],
-  },
-  {
-    icon: "",
-    title: "",
-    description: "",
-    files: [],
-  },
-  {
-    icon: "",
-    title: "",
-    description: "",
-    files: [],
-  },
+  { id: 1, icon: "", title: "", description: "", files: [] },
+  { id: 2, icon: "", title: "", description: "", files: [] },
+  { id: 3, icon: "", title: "", description: "", files: [] },
 ];
 
-function arcanaReducer(state = initialState, action) {
-  switch (action.type) {
-    case "SET_ITEM":
-      return state.map((item, index) =>
-        index === action.payload.index
-          ? { ...item, ...action.payload.data }
-          : item
-      );
-    case "SET_ICON":
-      return state.map((item, index) =>
-        index === action.payload.index
-          ? { ...item, icon: action.payload.icon }
-          : item
-      );
-    case "SET_TITLE":
-      return state.map((item, index) =>
-        index === action.payload.index
-          ? { ...item, title: action.payload.title }
-          : item
-      );
-    case "SET_DESCRIPTION":
-      return state.map((item, index) =>
-        index === action.payload.index
-          ? { ...item, description: action.payload.description }
-          : item
-      );
-    case "SET_FILES":
-      return state.map((item, index) =>
-        index === action.payload.index
-          ? { ...item, files: action.payload.files }
-          : item
-      );
-    default:
-      return state;
-  }
-}
+const arcanaReducer = createReducer(initialState, (builder) => {
+  builder
+    .addCase(setItem, (state, action) => {
+      const { index, data } = action.payload;
+      if (state[index]) {
+        state[index] = { ...state[index], ...data };
+      }
+    })
+    .addCase(setIcon, (state, action) => {
+      const { index, icon } = action.payload;
+      if (state[index]) {
+        state[index].icon = icon;
+      }
+    })
+    .addCase(setTitle, (state, action) => {
+      const { index, title } = action.payload;
+      if (state[index]) {
+        state[index].title = title;
+      }
+    })
+    .addCase(setDescription, (state, action) => {
+      const { index, description } = action.payload;
+      if (state[index]) {
+        state[index].description = description;
+      }
+    })
+    .addCase(setFiles, (state, action) => {
+      const { index, files } = action.payload;
+      if (state[index]) {
+        state[index].files = files;
+      }
+    })
+    .addCase(deleteArcana, (state, action) => {
+      const { id } = action.payload;
+      return state.filter((arcana) => arcana.id !== id);
+    })
+    .addCase(resetArcanas, () => initialState);
+});
 
 export default arcanaReducer;
