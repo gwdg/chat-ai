@@ -734,7 +734,7 @@ function Prompt() {
 
   return (
     <>
-      <div className="flex flex-col md:flex-row h-screen md:h-full gap-3 md:pb-4 md:justify-between relative">
+      <div className="flex flex-col md:flex-row h-full gap-3 md:pb-4 md:justify-between relative">
         {/* Header component used with same code */}
         <div className="flex flex-col">
           {" "}
@@ -1022,7 +1022,7 @@ function Prompt() {
           <div className="flex flex-col gap-4 w-full">
             <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
               <textarea
-                className="p-4 outline-none text-xl max-h-[350px] md:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                className="no-scrollbar p-4 outline-none text-xl max-h-[350px] md:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
                 value={prompt}
                 ref={textAreaRef}
                 name="prompt"
@@ -1296,7 +1296,7 @@ function Prompt() {
             </div> */}
                 </div>
                 {/* Arcanas */}
-                <div className="flex gap-4 w-full items-center">
+                {/* <div className="flex gap-4 w-full items-center">
                   <div className="flex-shrink-0 flex items-center gap-2">
                     {" "}
                     <p className="text-xl">Arcanas</p>{" "}
@@ -1308,7 +1308,7 @@ function Prompt() {
                     />
                   </div>
                   <Arcanas />
-                </div>
+                </div> */}
                 {/* Custom instructions */}
                 <div className="">
                   <Formik enableReinitialize={true} onSubmit>
@@ -1359,7 +1359,7 @@ function Prompt() {
                           <div className="w-full relative">
                             <div className="relative z-10">
                               <textarea
-                                className={`${
+                                className={`no-scrollbar ${
                                   !isEditingCustom
                                     ? "bg-disable_textArea_light dark:bg-disable_textArea text-black"
                                     : "bg-white dark:bg-bg_secondary_dark dark:text-white text-black"
@@ -1551,9 +1551,7 @@ function Prompt() {
       </div>
 
       {/* Help model for info on changing model */}
-      <div className="">
-        {showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}
-      </div>
+      <>{showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}</>
 
       {/* Help model for info on custom temperature */}
       <div className="">
