@@ -230,8 +230,8 @@ function Prompt() {
     if (dropdownRef.current) {
       const rect = dropdownRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      // const spaceAbove = rect.top;
-      setDirection(spaceBelow > rect.height ? "up" : "down");
+      const spaceAbove = rect.top;
+      setDirection(spaceBelow > spaceAbove ? "down" : "up");
     }
   }, [isOpen]);
 
