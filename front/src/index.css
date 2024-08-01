@@ -249,3 +249,40 @@ html {
     opacity: 0;
   }
 }
+
+.custom-handle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.rc-slider-tooltip {
+  font-size: 12px;
+  color: white;
+  background-color: #009ee0;
+  border-radius: 4px;
+}
+
+/* Slider track style */
+.custom-slider .rc-slider-track {
+  background-color: #009EE0;
+}
+
+/* Slider handle style */
+.custom-slider .rc-slider-handle {
+  border-color: #009EE0;
+  background-color: #009EE0;
+}
+
+/* Slider rail style */
+.custom-slider .rc-slider-rail {
+  background-color: #ccc;
+}
+
+/* Tooltip customization */
+.rc-slider-tooltip {
+  background-color: #009EE0;
+  border-radius: 4px;
+  color: white;
+}

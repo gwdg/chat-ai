@@ -14,7 +14,9 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as yup from "yup"; // Schema validation
 import { Form, Formik, useFormik } from "formik"; // Form handling
-import Slider from "@mui/material/Slider"; // Slider component
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
+import Tooltip from "./Tooltip";
 import { persistor } from "../Redux/store/store";
 
 // Assets
@@ -44,7 +46,6 @@ import { setResponsesGlobal } from "../Redux/actions/responsesAction";
 import { setConversationGlobal } from "../Redux/actions/conAction";
 import { setInstructions } from "../Redux/actions/customInsAction"; // Redux action
 import { getModels } from "../apis/ModelLIst";
-import Tooltip from "./Tooltip";
 import { setCountGlobal } from "../Redux/actions/alertAction";
 import { setModelApiGlobal } from "../Redux/actions/setModelApi";
 import Session_Expired from "../model/Session_Expired";
@@ -697,10 +698,15 @@ function Prompt() {
   });
 
   // Function to handle temperature change
-  const handleChangeCustom = (event, newValue) => {
+  const handleTemperatureChange = (newValue) => {
     setTemperature(newValue);
     dispatch(setTemperatureGlobal(newValue));
   };
+
+  const marks = {};
+  for (let i = 0; i <= 2; i += 0.1) {
+    marks[i.toFixed(1)] = i.toFixed(1); // Add marks at every 0.1 step
+  }
 
   const resetDefault = () => {
     setTemperature(0.5);
@@ -1330,16 +1336,13 @@ function Prompt() {
                           <div className="mx-2 w-full">
                             {" "}
                             <Slider
-                              aria-label="Temperature"
-                              defaultValue={1}
-                              value={temperature}
-                              onChange={handleChangeCustom}
-                              valueLabelDisplay="auto"
-                              shiftStep={20}
-                              step={0.1}
-                              marks
                               min={0}
                               max={2}
+                              step={0.1}
+                              value={temperature}
+                              onChange={handleTemperatureChange}
+                              marks={marks}
+                              className="custom-slider" // Apply custom CSS class
                             />
                           </div>
                         </div>
