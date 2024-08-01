@@ -122,6 +122,7 @@ function Prompt() {
   const textAreaRef = useRef(null);
   const dropdownRef = useRef(null);
   const containerRef = useRef(null);
+
   const [direction, setDirection] = useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -702,9 +703,9 @@ function Prompt() {
   };
 
   const resetDefault = () => {
-    setTemperature(1);
+    setTemperature(0.5);
     formik.setFieldValue("instructions", "You are a helpful assistant");
-    dispatch(setTemperatureGlobal(1));
+    dispatch(setTemperatureGlobal(0.5));
     dispatch(setInstructions("You are a helpful assistant"));
   };
 
@@ -1219,21 +1220,6 @@ function Prompt() {
           <div className="md:static absolute bottom-0 w-full">
             {showAdvOpt ? (
               <div className="flex flex-col gap-4 md:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full">
-                <div
-                  className="flex gap-4 items-center cursor-pointer justify-center"
-                  onClick={toggleAdvOpt} // Click handler to toggle dark mode
-                >
-                  <p className="text-xl h-full text-tertiary">
-                    <Trans i18nKey="description.text6"></Trans>
-                  </p>{" "}
-                  <img
-                    src={advanced_settings_arrow}
-                    alt="drop-down"
-                    className={`${
-                      showAdvOpt ? "" : "rotate-180"
-                    } h-[15px] w-[40px] cursor-pointer`}
-                  />
-                </div>
                 {/* Select model */}
                 <div className="md:flex flex-col hidden gap-4">
                   {/* Select input for model for desktop */}
@@ -1375,7 +1361,7 @@ function Prompt() {
                               <textarea
                                 className={`${
                                   !isEditingCustom
-                                    ? "bg-disable_textArea text-black"
+                                    ? "bg-disable_textArea_light dark:bg-disable_textArea text-black"
                                     : "bg-white dark:bg-bg_secondary_dark dark:text-white text-black"
                                 } p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
                                 type="text"
@@ -1446,10 +1432,25 @@ function Prompt() {
                       </div>
                     </Form>
                   </Formik>
+                </div>{" "}
+                <div
+                  className="flex gap-4 items-center cursor-pointer justify-center"
+                  onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                >
+                  <p className="text-xl h-full text-tertiary">
+                    <Trans i18nKey="description.text6"></Trans>
+                  </p>{" "}
+                  <img
+                    src={advanced_settings_arrow}
+                    alt="drop-down"
+                    className={`${
+                      showAdvOpt ? "" : "rotate-180"
+                    } h-[15px] w-[40px] cursor-pointer`}
+                  />
                 </div>
               </div>
             ) : (
-              <div className="md:flex flex-col gap-4 hidden">
+              <div className="md:flex hidden flex-col gap-4 md:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full">
                 {/* Select model */}
                 <div className="md:flex flex-col hidden gap-4">
                   {/* Select input for model for desktop */}
@@ -1526,7 +1527,7 @@ function Prompt() {
             </div> */}
                 </div>
                 <div
-                  className="cursor-pointer flex gap-4 justify-center items-center p-4 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full"
+                  className="cursor-pointer flex gap-4 justify-center items-center p-4 bg-white dark:bg-black h-fit w-full"
                   onClick={toggleAdvOpt} // Click handler to toggle dark mode
                 >
                   <p className="text-xl h-full text-tertiary">

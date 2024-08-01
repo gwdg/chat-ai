@@ -19,6 +19,7 @@ export default {
         bg_chat_user_dark: "#2B2B2B",
         bg_reset_default: "#E7E7E7",
         disable_textArea: "#737373",
+        disable_textArea_light: "#EEEEEE",
       },
       boxShadow: {
         top: "0 -10px 15px -1px rgba(0, 0, 0, 0.1), 0 -4px 6px -4px rgba(0, 0, 0, 0.06)",

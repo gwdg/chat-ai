@@ -154,7 +154,7 @@ function Arcana() {
 
   const handleDelete = useCallback(() => {
     dispatch(deleteArcana(arcana.id));
-    navigate("/chat");
+    navigate("/chat"); // ensure correct path
   }, [dispatch, arcana.id, navigate]);
 
   return (

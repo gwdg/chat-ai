@@ -48,9 +48,12 @@ const arcanaReducer = createReducer(initialState, (builder) => {
       }
     })
     .addCase(deleteArcana, (state, action) => {
-      const { id } = action.payload;
-      return state.filter((arcana) => arcana.id !== id);
+      state.splice(action.payload, 1);
+      state.forEach((arcana, index) => {
+        arcana.id = index + 1;
+      });
     })
+
     .addCase(resetArcanas, () => initialState);
 });
 

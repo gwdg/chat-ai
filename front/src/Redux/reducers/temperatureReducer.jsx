@@ -1,5 +1,5 @@
 // Reducer function for managing the state of temperature
-function temperatureReducer(state = 1, action) {
+function temperatureReducer(state = 0.5, action) {
   switch (action.type) {
     // Action type for setting temperature
     case "SET_TEMPERATURE":
