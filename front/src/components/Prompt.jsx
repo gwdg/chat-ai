@@ -59,6 +59,7 @@ import Help_Model_Custom from "../model/Help_Model_Custom";
 import Help_model_Arcanas from "../model/Help_model_Arcanas";
 import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
 import Help_Model_System from "../model/Help_Model_System";
+import { setTpopGlobal } from "../Redux/actions/tpopAction";
 
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
@@ -76,10 +77,10 @@ function Prompt() {
   const responsesGLobal = useSelector((state) => state.responses);
   const customInstructions = useSelector((state) => state.instructions);
   const temperatureGlobal = useSelector((state) => state.temperature);
+  const tpopGlobal = useSelector((state) => state.tpop);
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const countClose = useSelector((state) => state.count);
   const modelApi = useSelector((state) => state.modelApi);
-  const countAnncGlobal = useSelector((state) => state.anncCount);
 
   //Theme for toast
   let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
@@ -133,6 +134,9 @@ function Prompt() {
   // State for temperature
   const [temperature, setTemperature] = useState(temperatureGlobal);
   const [isHovering, setHovering] = useState(false);
+  const [tPop, setTpop] = useState(tpopGlobal);
+  const [isHoveringTpop, setHoveringTpop] = useState(false);
+
   const [showCacheModel, setShowCacheModel] = useState(false);
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
@@ -702,10 +706,18 @@ function Prompt() {
     dispatch(setTemperatureGlobal(numVal));
   };
 
+  const handleChangeTpop = (newValue) => {
+    let numVal = parseFloat(newValue);
+    setTpop(numVal);
+    dispatch(setTpopGlobal(numVal));
+  };
+
   const resetDefault = () => {
     setTemperature(0.5);
+    setTpop(0.5);
     formik.setFieldValue("instructions", "You are a helpful assistant");
     dispatch(setTemperatureGlobal(0.5));
+    dispatch(setTpopGlobal(0.5));
     dispatch(setInstructions("You are a helpful assistant"));
   };
 
@@ -1361,6 +1373,61 @@ function Prompt() {
                                   }}
                                 >
                                   {Number(temperature).toFixed(1)}
+                                </output>
+                              )}
+                            </div>
+                            {/* <div className="text-center mt-2">
+                              <div className="text-xs font-semibold inline-block text-blue-600">
+                                {Number(temperature).toFixed(1)}
+                              </div>
+                            </div> */}
+                          </div>
+                        </div>
+                        {/* Top_p slider */}
+                        <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
+                          <div className="flex-shrink-0 flex items-center gap-2">
+                            {" "}
+                            <p className="text-xl">Top_p</p>{" "}
+                            <img
+                              src={help}
+                              alt="help"
+                              className="h-[20px] w-[20px] cursor-pointer"
+                              onClick={() => setShowCustomHelpModel(true)}
+                            />
+                          </div>
+                          <div className="mx-2 w-full">
+                            <div className="relative w-full">
+                              {/* Container for tick marks */}
+                              <div className="tick-marks-container cursor-pointer">
+                                {[...Array(21)].map((_, i) => (
+                                  <div key={i} className="tick-mark"></div>
+                                ))}
+                              </div>
+
+                              {/* Slider Input */}
+                              <input
+                                type="range"
+                                min="0"
+                                max="2"
+                                step="0.1"
+                                value={tPop}
+                                className="slider-input"
+                                onChange={(event) =>
+                                  handleChangeTpop(event.target.value)
+                                }
+                                onMouseEnter={() => setHoveringTpop(true)}
+                                onMouseLeave={() => setHoveringTpop(false)}
+                              />
+
+                              {/* Tooltip Display */}
+                              {isHoveringTpop && (
+                                <output
+                                  className="slider-tooltip"
+                                  style={{
+                                    left: `calc(${(tPop / 2) * 100}% - 15px)`,
+                                  }}
+                                >
+                                  {Number(tPop).toFixed(1)}
                                 </output>
                               )}
                             </div>
