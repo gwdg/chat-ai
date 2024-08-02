@@ -14,8 +14,6 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as yup from "yup"; // Schema validation
 import { Form, Formik, useFormik } from "formik"; // Form handling
-import Slider from "rc-slider";
-import "rc-slider/assets/index.css";
 import Tooltip from "./Tooltip";
 import { persistor } from "../Redux/store/store";
 
@@ -134,6 +132,7 @@ function Prompt() {
   // const [countAnnc, setCountAnnc] = useState(countAnncGlobal);
   // State for temperature
   const [temperature, setTemperature] = useState(temperatureGlobal);
+  const [isHovering, setHovering] = useState(false);
   const [showCacheModel, setShowCacheModel] = useState(false);
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
@@ -697,16 +696,11 @@ function Prompt() {
     },
   });
 
-  // Function to handle temperature change
-  const handleTemperatureChange = (newValue) => {
-    setTemperature(newValue);
-    dispatch(setTemperatureGlobal(newValue));
+  const handleChangeTemp = (newValue) => {
+    let numVal = parseFloat(newValue);
+    setTemperature(numVal);
+    dispatch(setTemperatureGlobal(numVal));
   };
-
-  const marks = {};
-  for (let i = 0; i <= 2; i += 0.1) {
-    marks[i.toFixed(1)] = i.toFixed(1); // Add marks at every 0.1 step
-  }
 
   const resetDefault = () => {
     setTemperature(0.5);
@@ -1321,7 +1315,7 @@ function Prompt() {
                     <Form onSubmit={formik.handleSubmit}>
                       <div className="flex flex-col gap-4 items-center">
                         {/* Temperature slider */}
-                        <div className="flex gap-4 w-full items-center">
+                        <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
                           <div className="flex-shrink-0 flex items-center gap-2">
                             {" "}
                             <p className="text-xl">Temp</p>{" "}
@@ -1332,18 +1326,49 @@ function Prompt() {
                               onClick={() => setShowCustomHelpModel(true)}
                             />
                           </div>
-
                           <div className="mx-2 w-full">
-                            {" "}
-                            <Slider
-                              min={0}
-                              max={2}
-                              step={0.1}
-                              value={temperature}
-                              onChange={handleTemperatureChange}
-                              marks={marks}
-                              className="custom-slider" // Apply custom CSS class
-                            />
+                            <div className="relative w-full">
+                              {/* Container for tick marks */}
+                              <div className="tick-marks-container cursor-pointer">
+                                {[...Array(21)].map((_, i) => (
+                                  <div key={i} className="tick-mark"></div>
+                                ))}
+                              </div>
+
+                              {/* Slider Input */}
+                              <input
+                                type="range"
+                                min="0"
+                                max="2"
+                                step="0.1"
+                                value={temperature}
+                                className="slider-input"
+                                onChange={(event) =>
+                                  handleChangeTemp(event.target.value)
+                                }
+                                onMouseEnter={() => setHovering(true)}
+                                onMouseLeave={() => setHovering(false)}
+                              />
+
+                              {/* Tooltip Display */}
+                              {isHovering && (
+                                <output
+                                  className="slider-tooltip"
+                                  style={{
+                                    left: `calc(${
+                                      (temperature / 2) * 100
+                                    }% - 15px)`,
+                                  }}
+                                >
+                                  {Number(temperature).toFixed(1)}
+                                </output>
+                              )}
+                            </div>
+                            {/* <div className="text-center mt-2">
+                              <div className="text-xs font-semibold inline-block text-blue-600">
+                                {Number(temperature).toFixed(1)}
+                              </div>
+                            </div> */}
                           </div>
                         </div>
 
@@ -1405,7 +1430,7 @@ function Prompt() {
                         </div>
 
                         {/* Submit button */}
-                        <div className="flex flex-col md:flex-row justify-end gap-2 items-center w-full">
+                        <div className="flex md:justify-end gap-2 items-center w-full">
                           {/* Opens clear cache model */}
                           <button
                             className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
