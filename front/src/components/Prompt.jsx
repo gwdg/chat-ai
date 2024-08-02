@@ -60,6 +60,7 @@ import Help_model_Arcanas from "../model/Help_model_Arcanas";
 import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
 import Help_Model_System from "../model/Help_Model_System";
 import { setTpopGlobal } from "../Redux/actions/tpopAction";
+import Help_Model_Tpop from "../model/Help_Model_Tpop";
 
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
@@ -108,6 +109,7 @@ function Prompt() {
   const [showHelpModel, setShowHelpModel] = useState(false); // Help model state
   const [showMicModel, setShowMicModel] = useState(false); // Mic model state
   const [showCustomHelpModel, setShowCustomHelpModel] = useState(false); // Help model state
+  const [showTpopHelpModel, setShowTpopHelpModel] = useState(false); // Help model state
   const [showSystemHelpModel, setShowSystemHelpModel] = useState(false); // Help model state
   const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false); // Help model state
   const [showCusModel, setShowCusModel] = useState(false); // Custom instructions model state
@@ -1328,7 +1330,7 @@ function Prompt() {
                       <div className="flex flex-col gap-4 items-center">
                         {/* Temperature slider */}
                         <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
-                          <div className="flex-shrink-0 flex items-center gap-2">
+                          <div className="flex-shrink-0 flex items-center gap-2 select-none">
                             {" "}
                             <p className="text-xl">Temp</p>{" "}
                             <img
@@ -1385,14 +1387,14 @@ function Prompt() {
                         </div>
                         {/* Top_p slider */}
                         <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
-                          <div className="flex-shrink-0 flex items-center gap-2">
+                          <div className="flex-shrink-0 flex items-center gap-2 select-none">
                             {" "}
                             <p className="text-xl">Top_p</p>{" "}
                             <img
                               src={help}
                               alt="help"
                               className="h-[20px] w-[20px] cursor-pointer"
-                              onClick={() => setShowCustomHelpModel(true)}
+                              onClick={() => setShowTpopHelpModel(true)}
                             />
                           </div>
                           <div className="mx-2 w-full">
@@ -1441,7 +1443,7 @@ function Prompt() {
 
                         {/* Custom instructions input*/}
                         <div className="w-full flex flex-col gap-4">
-                          <div className="flex-shrink-0 flex items-center gap-2">
+                          <div className="flex-shrink-0 flex items-center gap-2 select-none">
                             {" "}
                             <p className="text-xl">System prompt</p>{" "}
                             <img
@@ -1500,7 +1502,7 @@ function Prompt() {
                         <div className="flex md:justify-end gap-2 items-center w-full">
                           {/* Opens clear cache model */}
                           <button
-                            className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                            className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                             type="reset"
                             onClick={() => {
                               setShowCacheModel(true);
@@ -1510,7 +1512,7 @@ function Prompt() {
                           </button>
                           {/* Resets settings, and clears redux */}
                           <button
-                            className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                            className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                             onClick={resetDefault}
                             type="reset"
                           >
@@ -1518,7 +1520,7 @@ function Prompt() {
                           </button>
                           {/* Applies changes */}
                           {/* <button
-                            className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                            className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                             type="submit"
                           >
                             <Trans i18nKey="description.custom5"></Trans>
@@ -1529,7 +1531,7 @@ function Prompt() {
                   </Formik>
                 </div>{" "}
                 <div
-                  className="flex gap-4 items-center cursor-pointer justify-center"
+                  className="flex gap-4 items-center cursor-pointer justify-center select-none"
                   onClick={toggleAdvOpt} // Click handler to toggle dark mode
                 >
                   <p className="text-xl h-full text-tertiary">
@@ -1622,7 +1624,7 @@ function Prompt() {
             </div> */}
                 </div>
                 <div
-                  className="cursor-pointer flex gap-4 justify-center items-center p-4 bg-white dark:bg-black h-fit w-full"
+                  className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-black h-fit w-full"
                   onClick={toggleAdvOpt} // Click handler to toggle dark mode
                 >
                   <p className="text-xl h-full text-tertiary">
@@ -1652,6 +1654,13 @@ function Prompt() {
       <div className="">
         {showCustomHelpModel ? (
           <Help_Model_Custom showModal={setShowCustomHelpModel} />
+        ) : null}
+      </div>
+
+      {/* Help model for info on custom temperature */}
+      <div className="">
+        {showTpopHelpModel ? (
+          <Help_Model_Tpop showModal={setShowTpopHelpModel} />
         ) : null}
       </div>
 

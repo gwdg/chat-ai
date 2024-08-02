@@ -12,12 +12,3 @@ function temperatureReducer(state = 0.5, action) {
 }
 
 export default temperatureReducer;
-
-export function versionReducer(state = "1.0.0", action) {
-  switch (action.type) {
-    case "UPDATE_VERSION":
-      return action.payload;
-    default:
-      return state;
-  }
-}

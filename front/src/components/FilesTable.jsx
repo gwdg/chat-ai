@@ -65,7 +65,7 @@ const FilesTable = ({ arcanaIndex, isEditing }) => {
         ref={fileInputRef}
       />
       <button
-        className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+        className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
         type="button"
         onClick={triggerFileInput}
       >

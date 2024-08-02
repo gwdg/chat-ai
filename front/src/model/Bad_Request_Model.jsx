@@ -32,7 +32,7 @@ function Bad_Request_Model(props) {
           {/* Close button */}
           <div className="flex md:justify-end justify-center w-full">
             <button
-              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
               onClick={() => props.showModal(false)} // Click handler to close modal
             >
               <Trans i18nKey="description.session2"></Trans>

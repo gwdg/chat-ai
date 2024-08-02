@@ -5,7 +5,7 @@ import responsesReducer from "./responsesReducer";
 import modelReducer from "./modelReducer";
 import conReducer from "./conReducer";
 import instructionsReducer from "./instructionsReducer";
-import temperatureReducer, { versionReducer } from "./temperatureReducer";
+import temperatureReducer from "./temperatureReducer";
 import alertReducer from "./alertReducer";
 import modelApiReducer from "./modelApiReducer";
 import anncAlertReducer from "./anncAlertReducer";
@@ -30,7 +30,6 @@ const rootReducer = combineReducers({
   advOptions: advOptionReducer,
   selectedArcana: selectedArcanaReducer,
   tpop: tpopReducer,
-  version: versionReducer,
 });
 
 export default rootReducer;

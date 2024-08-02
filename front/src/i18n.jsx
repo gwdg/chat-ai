@@ -129,6 +129,10 @@ i18n
             temperature:
               "A low temperature (e.g., 0-1) produces more predictable and logical responses, while higher temperatures (e.g., above 1) increase the possibility of more creative and unconventional responses. You can adjust the temperature setting to achieve different levels of predictability and creativity.",
 
+            //t_pop
+            t_pop:
+              "Top P2 is a setting in language models that helps manage the randomness of their output. It works by establishing a probability threshold and then selecting tokens whose combined likelihood surpasses this limit.",
+
             // Help arcana note
             help_arcana_title: "Note",
             help_arcana_note:
@@ -270,6 +274,10 @@ i18n
             // temperature
             temperature:
               "Eine niedrige Temperatur (z. B. 0-1) erzeugt vorhersehbarere und logischere Antworten, während höhere Temperaturen (z. B. über 1) die Möglichkeit kreativerer und unkonventionellerer Antworten erhöhen. Sie können die Temperatureinstellung anpassen, um verschiedene Stufen der Vorhersagbarkeit und Kreativität zu erreichen.",
+
+            //t_pop
+            t_pop:
+              "Top P2 ist eine Einstellung in Sprachmodellen, die dazu beiträgt, die Zufälligkeit der Ausgabe zu steuern. Dazu wird ein Wahrscheinlichkeitsschwellenwert festgelegt, und dann werden die Token ausgewählt, deren kombinierte Wahrscheinlichkeit diesen Grenzwert übersteigt.",
 
             // Help arcana note
             help_arcana_title: "Note",

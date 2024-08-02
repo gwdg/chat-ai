@@ -257,14 +257,14 @@ function Arcana() {
                   </div>
                   <div className="flex flex-col md:flex-row justify-between gap-2 items-center w-full">
                     <button
-                      className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                      className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                       type="button"
                       onClick={() => setShowHelpModel(true)}
                     >
                       <Trans i18nKey="description.help"></Trans>
                     </button>
                     <button
-                      className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                      className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                       type="button"
                       onClick={handleDelete}
                     >

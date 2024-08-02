@@ -126,7 +126,7 @@ function Arcanas() {
       <div className="flex gap-2">
         {filteredArcanas.length < 3 && (
           <button
-            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
             type="button"
             onClick={handleAddArcana}
           >
@@ -136,7 +136,7 @@ function Arcanas() {
 
         {filteredArcanas.length > 0 && selectedArcana > 0 && (
           <button
-            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] flex gap-2"
+            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none  flex gap-2"
             type="button"
             onClick={handleEditClick}
           >
