@@ -27,7 +27,7 @@ import send from "../assets/icon_send.svg";
 import upload from "../assets/add.svg";
 import uploaded from "../assets/file_uploaded.svg";
 import dropdown from "../assets/icon_dropdown.svg";
-import advanced_settings_arrow from "../assets/advanced_settings_arrow.svg";
+// import advanced_settings_arrow from "../assets/advanced_settings_arrow.svg";
 import help from "../assets/icon_help.svg";
 import cross from "../assets/cross.svg";
 import mic from "../assets/icon_mic.svg";
@@ -319,6 +319,7 @@ function Prompt() {
         customInstructions,
         chooseModelApi,
         temperatureGlobal,
+        tpopGlobal,
         setResponses,
         setConversation,
         setShowModelSession,
@@ -1239,7 +1240,7 @@ function Prompt() {
                   {/* Select input for model for desktop */}
                   <div className="flex items-center gap-4 select-none">
                     <div className="flex-shrink-0 flex items-center gap-2">
-                      <p className="flex-shrink-0 text-xl">
+                      <p className="flex-shrink-0 text-[18px]">
                         <Trans i18nKey="description.choose"></Trans>
                       </p>
                       <img
@@ -1258,7 +1259,7 @@ function Prompt() {
                       onBlur={() => setIsOpen(false)}
                     >
                       <div
-                        className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark"
+                        className="text-tertiary block mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark"
                         onClick={toggleOpen}
                       >
                         {chooseModel}
@@ -1332,7 +1333,7 @@ function Prompt() {
                         <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
                           <div className="flex-shrink-0 flex items-center gap-2 select-none">
                             {" "}
-                            <p className="text-xl">Temp</p>{" "}
+                            <p className="text-[18px]">Temp</p>{" "}
                             <img
                               src={help}
                               alt="help"
@@ -1389,7 +1390,7 @@ function Prompt() {
                         <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
                           <div className="flex-shrink-0 flex items-center gap-2 select-none">
                             {" "}
-                            <p className="text-xl">Top_p</p>{" "}
+                            <p className="text-[18px]">Top_p</p>{" "}
                             <img
                               src={help}
                               alt="help"
@@ -1445,7 +1446,7 @@ function Prompt() {
                         <div className="w-full flex flex-col gap-4">
                           <div className="flex-shrink-0 flex items-center gap-2 select-none">
                             {" "}
-                            <p className="text-xl">System prompt</p>{" "}
+                            <p className="text-[18px]">System prompt</p>{" "}
                             <img
                               src={help}
                               alt="help"
@@ -1500,6 +1501,21 @@ function Prompt() {
 
                         {/* Submit button */}
                         <div className="flex md:justify-end gap-2 items-center w-full">
+                          <div
+                            className="flex gap-4 items-center justify-center select-none w-full"
+                            onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                          >
+                            <p className="text-xl h-full text-tertiary cursor-pointer">
+                              <Trans i18nKey="description.text9"></Trans>
+                            </p>{" "}
+                            {/* <img
+                    src={advanced_settings_arrow}
+                    alt="drop-down"
+                    className={`${
+                      showAdvOpt ? "" : "rotate-180"
+                    } h-[15px] w-[40px] cursor-pointer`}
+                  /> */}
+                          </div>
                           {/* Opens clear cache model */}
                           <button
                             className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
@@ -1530,21 +1546,6 @@ function Prompt() {
                     </Form>
                   </Formik>
                 </div>{" "}
-                <div
-                  className="flex gap-4 items-center cursor-pointer justify-center select-none"
-                  onClick={toggleAdvOpt} // Click handler to toggle dark mode
-                >
-                  <p className="text-xl h-full text-tertiary">
-                    <Trans i18nKey="description.text6"></Trans>
-                  </p>{" "}
-                  <img
-                    src={advanced_settings_arrow}
-                    alt="drop-down"
-                    className={`${
-                      showAdvOpt ? "" : "rotate-180"
-                    } h-[15px] w-[40px] cursor-pointer`}
-                  />
-                </div>
               </div>
             ) : (
               <div className="md:flex hidden flex-col gap-4 md:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full">
@@ -1630,13 +1631,13 @@ function Prompt() {
                   <p className="text-xl h-full text-tertiary">
                     <Trans i18nKey="description.text6"></Trans>
                   </p>{" "}
-                  <img
+                  {/* <img
                     src={advanced_settings_arrow}
                     alt="drop-down"
                     className={`${
                       showAdvOpt ? "" : "rotate-180"
                     } h-[15px] w-[40px] cursor-pointer`}
-                  />
+                  /> */}
                 </div>
               </div>
             )}

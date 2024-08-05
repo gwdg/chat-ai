@@ -46,7 +46,8 @@ i18n
             text3: "User Guidelines",
             text4: "Contact Us",
             text5: "Feedback",
-            text6: "Advanced options",
+            text6: "Show options",
+            text9: "Hide options",
             text7: "About",
             text8: "FAQ",
 
@@ -191,7 +192,8 @@ i18n
             text3: "Benutzerrichtlinien",
             text4: "Kontakt",
             text5: "Rückmeldung",
-            text6: "Erweiterte Optionen",
+            text6: "Optionen anzeigen",
+            text9: "Optionen ausblenden",
             text7: "Über uns",
             text8: "FAQ",
 
