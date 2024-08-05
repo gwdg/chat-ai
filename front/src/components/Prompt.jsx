@@ -1032,7 +1032,7 @@ function Prompt() {
         </div>
 
         {/* prompt */}
-        <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit md:m-0 justify-between md:h-full">
+        <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between md:h-full">
           {/* <div className="max-h-[650px] overflow-auto flex md:flex-col flex-row gap-2"> */}
           <div className="flex flex-col gap-4 w-full">
             <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
@@ -1232,9 +1232,9 @@ function Prompt() {
             ) : null}
           </div>
 
-          <div className="md:static absolute bottom-0 w-full">
+          <div className="md:static flex justify-center absolute bottom-0 w-full">
             {showAdvOpt ? (
-              <div className="flex flex-col gap-4 md:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full">
+              <div className="flex flex-col gap-4 md:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit md:w-full w-[calc(100%-24px)]">
                 {/* Select model */}
                 <div className="md:flex flex-col hidden gap-4">
                   {/* Select input for model for desktop */}
@@ -1259,7 +1259,7 @@ function Prompt() {
                       onBlur={() => setIsOpen(false)}
                     >
                       <div
-                        className="text-tertiary block mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark"
+                        className="text-tertiary block mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
                         onClick={toggleOpen}
                       >
                         {chooseModel}
@@ -1280,7 +1280,7 @@ function Prompt() {
                           {modelList.map((option, index) => (
                             <div
                               key={index}
-                              className={`bg-white dark:bg-bg_secondary_dark text-tertiary block text-xl w-full p-2 cursor-pointer ${
+                              className={`bg-white dark:bg-black text-tertiary block text-xl w-full p-2 cursor-pointer ${
                                 index === 0
                                   ? "rounded-t-2xl" // The first element
                                   : index === modelList.length - 1
@@ -1311,10 +1311,10 @@ function Prompt() {
             </div> */}
                 </div>
                 {/* Arcanas */}
-                {/* <div className="flex gap-4 w-full items-center">
+                <div className="flex gap-4 w-full items-center">
                   <div className="flex-shrink-0 flex items-center gap-2">
                     {" "}
-                    <p className="text-xl">Arcanas</p>{" "}
+                    <p className="text-[18px]">Arcanas</p>{" "}
                     <img
                       src={help}
                       alt="help"
@@ -1323,7 +1323,7 @@ function Prompt() {
                     />
                   </div>
                   <Arcanas />
-                </div> */}
+                </div>
                 {/* Custom instructions */}
                 <div className="">
                   <Formik enableReinitialize={true} onSubmit>
@@ -1548,13 +1548,13 @@ function Prompt() {
                 </div>{" "}
               </div>
             ) : (
-              <div className="md:flex hidden flex-col gap-4 md:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-black h-fit w-full">
+              <div className="md:flex hidden flex-col gap-4 md:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
                 {/* Select model */}
                 <div className="md:flex flex-col hidden gap-4">
                   {/* Select input for model for desktop */}
                   <div className="flex items-center gap-4 select-none">
                     <div className="flex-shrink-0 flex items-center gap-2">
-                      <p className="flex-shrink-0 text-xl">
+                      <p className="flex-shrink-0 text-[18px]">
                         <Trans i18nKey="description.choose"></Trans>
                       </p>
                       <img
@@ -1573,7 +1573,7 @@ function Prompt() {
                       onBlur={() => setIsOpen(false)}
                     >
                       <div
-                        className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark"
+                        className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
                         onClick={toggleOpen}
                       >
                         {chooseModel}
@@ -1594,7 +1594,7 @@ function Prompt() {
                           {modelList.map((option, index) => (
                             <div
                               key={index}
-                              className={`bg-white dark:bg-bg_secondary_dark text-tertiary block text-xl w-full p-2 cursor-pointer ${
+                              className={`bg-white dark:bg-black text-tertiary block text-xl w-full p-2 cursor-pointer ${
                                 index === 0
                                   ? "rounded-t-2xl" // The first element
                                   : index === modelList.length - 1
@@ -1625,7 +1625,7 @@ function Prompt() {
             </div> */}
                 </div>
                 <div
-                  className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-black h-fit w-full"
+                  className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit w-full"
                   onClick={toggleAdvOpt} // Click handler to toggle dark mode
                 >
                   <p className="text-xl h-full text-tertiary">

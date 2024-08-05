@@ -93,7 +93,7 @@ function Arcanas() {
       {filteredArcanas.length > 0 ? (
         <div className="relative w-full flex flex-col" ref={dropdownRef}>
           <div
-            className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark flex justify-between items-center"
+            className="text-tertiary mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark flex justify-between items-center"
             onClick={toggleOpen}
           >
             <span> {`Arcana ${selectedArcana}`}</span>
@@ -104,7 +104,7 @@ function Arcanas() {
             />
           </div>
           {isOpen && (
-            <div className="absolute z-50 top-full mt-2 w-full rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark">
+            <div className="absolute z-50 top-full mt-2 w-full rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark">
               {filteredArcanas.map((arcana, index) => (
                 <div
                   key={index}
