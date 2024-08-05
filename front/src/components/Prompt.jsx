@@ -1311,7 +1311,7 @@ function Prompt() {
             </div> */}
                 </div>
                 {/* Arcanas */}
-                <div className="flex gap-4 w-full items-center">
+                {/* <div className="flex gap-4 w-full items-center">
                   <div className="flex-shrink-0 flex items-center gap-2">
                     {" "}
                     <p className="text-[18px]">Arcanas</p>{" "}
@@ -1323,7 +1323,7 @@ function Prompt() {
                     />
                   </div>
                   <Arcanas />
-                </div>
+                </div> */}
                 {/* Custom instructions */}
                 <div className="">
                   <Formik enableReinitialize={true} onSubmit>
