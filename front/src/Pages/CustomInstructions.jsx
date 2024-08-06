@@ -166,7 +166,7 @@ function CustomInstructions() {
                   <div className="flex flex-col md:flex-row justify-end gap-2 items-center w-full">
                     {/* Opens clear cache model */}
                     <button
-                      className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                      className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                       type="reset"
                       onClick={() => {
                         setShowCacheModel(true);
@@ -176,7 +176,7 @@ function CustomInstructions() {
                     </button>
                     {/* Resets settings, and clears redux */}
                     <button
-                      className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                      className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                       onClick={resetDefault}
                       type="reset"
                     >
@@ -184,7 +184,7 @@ function CustomInstructions() {
                     </button>
                     {/* Applies changes */}
                     <button
-                      className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+                      className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                       type="submit"
                     >
                       <Trans i18nKey="description.custom5"></Trans>

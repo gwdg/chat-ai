@@ -49,7 +49,7 @@ function Layout(props) {
 
   return (
     // Main layout container
-    <div className="flex flex-col min-h-screen md:gap-4 relative no-scrollbar">
+    <div className="flex flex-col min-h-screen md:gap-4 relative no-scrollbar h-full">
       {/* Announcement bar */}
       {/* {showAnnc && count < 3 ? (
         <AnnouncementBar anncCounter={anncCounter} />
@@ -61,13 +61,13 @@ function Layout(props) {
       {/* Main content area */}
       <div
         ref={mainDiv} // Reference to the main content div
-        className={`md:pt-[65px] flex flex-col overflow-y-auto pt-0 bg-white dark:bg-black h-screen relative gap-0 `}
+        className={`md:pt-[65px] flex flex-col overflow-y-auto pt-0 bg-white dark:bg-black relative gap-0 h-full`}
       >
         {/* Content passed as props */}
         <div
           className={`${
-            showFooter ? "md:h-[88%] md:pb-4" : "h-screen"
-          } md:p-2 md:pb-0 bg-bg_light dark:bg-bg_dark max-h-screen overflow-auto`}
+            showFooter ? "h-[89%] md:pb-4 grow-0" : "h-screen flex-grow"
+          } md:p-2 md:pb-0 bg-bg_light dark:bg-bg_dark overflow-auto`}
         >
           {props.children}
         </div>

@@ -1,5 +1,5 @@
 // Reducer function for managing the state of the model
-function modelReducer(state = "Meta LLaMA 3 8B Instruct", action) {
+function modelReducer(state = "Meta LLaMA 3.1 8B Instruct", action) {
   switch (action.type) {
     // Action type for setting the model
     case "SET_MODEL":

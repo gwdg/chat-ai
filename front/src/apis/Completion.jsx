@@ -6,6 +6,7 @@ async function getDataFromLLM(
   customInstructions,
   chooseModel,
   temperatureGlobal,
+  tpopGlobal,
   setResponses,
   setConversation,
   setShowModelSession,
@@ -36,6 +37,7 @@ async function getDataFromLLM(
               ...conversation.slice(1),
             ],
         temperature: temperatureGlobal,
+        top_p: tpopGlobal,
       }),
       signal: signal,
     });

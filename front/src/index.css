@@ -32,6 +32,21 @@ html {
   background: #009ee0; 
 } */
 
+body,
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 .no-scrollbar {
   -ms-overflow-style: none; /* Internet Explorer 10+ */
   scrollbar-width: none; /* Firefox */
@@ -233,4 +248,81 @@ html {
   100% {
     opacity: 0;
   }
+}
+
+/* Container for tick marks */
+.tick-marks-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  background-color: #009ee0;
+  height: 2px;
+}
+
+.tick-mark {
+  height: 8px; /* Adjust height if needed */
+  width: 1px; /* Adjust width if needed */
+  background-color: #009ee0; /* Use your color variable or value */
+  align-self: center;
+}
+
+/* Slider Input */
+.slider-input {
+  width: calc(
+    100% + 16px
+  ); /* Adjust width to accommodate thumb going outside bounds */
+  height: 2px;
+  appearance: none;
+  background: transparent;
+  position: absolute;
+  top: 50%;
+  left: -8px; /* Offset by half the thumb width to align thumb center with track */
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+/* Thumb styling */
+.slider-input::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background-color: #009ee0;
+  border-radius: 50%;
+  border: none;
+}
+
+.slider-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background-color: #009ee0;
+  border-radius: 50%;
+  margin-top: -7px; /* Offset thumb to align vertically */
+  border: none;
+}
+
+.slider-input::-ms-thumb {
+  width: 16px;
+  height: 16px;
+  background-color: #009ee0;
+  border-radius: 50%;
+  margin-top: -7px; /* Offset thumb to align vertically */
+  border: none;
+}
+
+/* Tooltip Display */
+.slider-tooltip {
+  position: absolute;
+  top: -40px; /* Adjust this value to place the tooltip right above the thumb */
+  width: 30px;
+  color: #009ee0; /* Customize if needed */
+  background-color: var(--tooltip-bg-color, white); /* Customize if needed */
+  text-align: center;
+  padding: 4px; /* Adjust padding as needed */
+  border-radius: 4px; /* Adjust border-radius as needed */
+  font-size: 14px; /* Adjust font-size as needed */
 }
