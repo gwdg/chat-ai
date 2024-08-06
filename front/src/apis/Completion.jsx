@@ -15,7 +15,7 @@ async function getDataFromLLM(
 ) {
   try {
     const instructModels = ["mixtral-8x7b-instruct"];
-    const isInstuct = instructModels.includes(chooseModel);
+    const isInstruct = instructModels.includes(chooseModel);
 
     const response = await fetch("/chat-ai-backend", {
       method: "post",
@@ -24,7 +24,7 @@ async function getDataFromLLM(
       },
       body: JSON.stringify({
         model: chooseModel,
-        messages: isInstuct
+        messages: isInstruct
           ? [
               {
                 role: "user",
@@ -37,7 +37,7 @@ async function getDataFromLLM(
               ...conversation.slice(1),
             ],
         temperature: temperatureGlobal,
-        Top_p: tpopGlobal,
+        top_p: tpopGlobal,
       }),
       signal: signal,
     });

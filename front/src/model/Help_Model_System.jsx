@@ -24,6 +24,9 @@ function Help_Model_System(props) {
         {/* Help content */}
         <div className="p-4 pt-0 flex flex-col gap-0">
           {/* Instruction hint */}
+          <p className="text-red-600">
+            <Trans i18nKey="description.custom2"></Trans>
+          </p>
           <p className="dark:text-white text-black">
             <Trans i18nKey="description.custom3"></Trans>
           </p>

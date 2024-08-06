@@ -132,8 +132,7 @@ i18n
 
             //t_pop
             t_pop:
-              "Top P2 is a setting in language models that helps manage the randomness of their output. It works by establishing a probability threshold and then selecting tokens whose combined likelihood surpasses this limit.",
-
+              "top_p is a slider from 0 to 1 which adjusts the total population of probabilities considered for the next token. A top_p of 0.1 would mean only the top 10% of cumulative probabilities is considered. Variating top_p has a similar effect on predictability and creativity as temperature.",
             // Help arcana note
             help_arcana_title: "Note",
             help_arcana_note:
@@ -279,7 +278,7 @@ i18n
 
             //t_pop
             t_pop:
-              "Top P2 ist eine Einstellung in Sprachmodellen, die dazu beiträgt, die Zufälligkeit der Ausgabe zu steuern. Dazu wird ein Wahrscheinlichkeitsschwellenwert festgelegt, und dann werden die Token ausgewählt, deren kombinierte Wahrscheinlichkeit diesen Grenzwert übersteigt.",
+              "top_p ist ein Schieberegler von 0 bis 1, der die Gesamtbevölkerung der Wahrscheinlichkeiten anpasst, die für das nächste Token in Betracht gezogen werden. Ein top_p von 0,1 würde bedeuten, dass nur die oberen 10% der kumulativen Wahrscheinlichkeiten berücksichtigt werden. Die Variation von top_p hat einen ähnlichen Effekt auf Vorhersagbarkeit und Kreativität wie die Temperatur.",
 
             // Help arcana note
             help_arcana_title: "Note",
