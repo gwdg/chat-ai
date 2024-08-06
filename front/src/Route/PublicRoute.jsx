@@ -6,27 +6,29 @@ import {
 } from "react-router-dom";
 
 import Home from "../Pages/Home";
-import CustomInstructions from "../Pages/CustomInstructions";
+// import CustomInstructions from "../Pages/CustomInstructions";
+import Arcana from "../Pages/Arcana";
+import ZoomWrapper from "../components/ZoomWrapper";
 
 function PublicRoute() {
   return (
-    <div className="no-scrollbar">
-      <Router>
-        <Routes>
-          {/* Redirect any unknown paths to the home page */}
-          <Route path="*" element={<Navigate to="/" />} />
-          <Route exact path="/" element={<Navigate to="/chat" />}></Route>
-          <Route exact path="/chat" element={<Home />} />
-
-          {/* Custom instructions page */}
-          <Route
+    <ZoomWrapper>
+      <div className="no-scrollbar h-full">
+        <Router>
+          <Routes>
+            <Route path="*" element={<Navigate to="/" />} />
+            <Route exact path="/" element={<Navigate to="/chat" />} />
+            <Route exact path="/chat" element={<Home />} />
+            {/* <Route
             exact
             path="/custom-instructions"
             element={<CustomInstructions />}
-          />
-        </Routes>
-      </Router>
-    </div>
+          /> */}
+            <Route exact path="/arcana/:index" element={<Arcana />} />
+          </Routes>
+        </Router>
+      </div>
+    </ZoomWrapper>
   );
 }
 

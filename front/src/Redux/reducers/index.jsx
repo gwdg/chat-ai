@@ -9,6 +9,10 @@ import temperatureReducer from "./temperatureReducer";
 import alertReducer from "./alertReducer";
 import modelApiReducer from "./modelApiReducer";
 import anncAlertReducer from "./anncAlertReducer";
+import arcanaReducer from "./arcanaReducer";
+import advOptionReducer from "./advancedOptionsReducer";
+import selectedArcanaReducer from "./arcanaSelectReducer";
+import tpopReducer from "./tpopReducer";
 
 // Combine all reducers into the root reducer
 const rootReducer = combineReducers({
@@ -22,6 +26,10 @@ const rootReducer = combineReducers({
   count: alertReducer,
   anncCount: anncAlertReducer,
   modelApi: modelApiReducer,
+  arcana: arcanaReducer,
+  advOptions: advOptionReducer,
+  selectedArcana: selectedArcanaReducer,
+  tpop: tpopReducer,
 });
 
 export default rootReducer;

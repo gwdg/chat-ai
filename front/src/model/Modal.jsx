@@ -30,7 +30,7 @@ function Modal(props) {
   return (
     // Modal layout component
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center w-screen h-screen"
+      className="fixed inset-0 z-[1000] flex items-center justify-center w-full h-full"
       onClick={() => {
         // Close the modal when clicked outside of it
         props.showModal(false);
@@ -42,7 +42,7 @@ function Modal(props) {
     >
       {/* Background overlay */}
       <div
-        className={`absolute w-screen h-screen bg-black ${
+        className={`absolute w-full h-full bg-black ${
           props.isAlertModal ? "opacity-100" : "opacity-70"
         }`}
       ></div>

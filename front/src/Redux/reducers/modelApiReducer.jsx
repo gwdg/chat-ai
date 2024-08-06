@@ -1,5 +1,5 @@
 // Reducer function for managing the state of the model
-function modelApiReducer(state = "meta-llama-3-8b-instruct", action) {
+function modelApiReducer(state = "meta-llama-3.1-8b-instruct", action) {
   switch (action.type) {
     // Action type for setting the model
     case "SET_MODEL_API":

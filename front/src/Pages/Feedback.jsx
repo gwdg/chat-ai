@@ -42,7 +42,6 @@ function Feedback() {
     },
     validationSchema: validationSchema,
     onSubmit: async (values) => {
-      console.log(values); // Submitting form data
     },
   });
 
@@ -184,7 +183,7 @@ function Feedback() {
                   {/* submit */}
                   <div className="flex justify-end w-full">
                     <button
-                      className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full  min-w-[150px]"
+                      className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full  min-w-[150px] select-none "
                       type="submit"
                     >
                       <Trans i18nKey="description.feedback5"></Trans>

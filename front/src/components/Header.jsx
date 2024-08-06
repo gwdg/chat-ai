@@ -41,25 +41,28 @@ function Header() {
     // Header
     <nav
       // Conditional CSS classes based on location and dark mode state
-      className={`top-0 md:p-2 pl-2 md:flex hidden justify-between items-center select-none w-full md:fixed z-[990] bg-white dark:bg-black md:max-h-max max-h-[90px] ${
-        location.pathname === "/chat"
-          ? "md:shadow-lg md:dark:shadow-dark"
-          : "shadow-lg dark:shadow-dark "
-      }`}
+      className={`top-0 md:p-2 pl-2 md:flex ${
+        location.pathname === "/chat" ? "hidden" : "flex"
+      } justify-between items-center select-none w-full md:fixed z-[990] bg-white dark:bg-black md:max-h-max max-h-[90px] shadow-lg dark:shadow-dark`}
     >
       <div className="flex gap-4 items-center">
-        {/* Toggle button for theme*/}
+        {/* Toggle button for theme */}
         <button
           className="md:border-r-primary md:border-r-2 pr-4 h-[48px] w-[48px]"
           onClick={toggleDarkMode} // Click handler to toggle dark mode
         >
           {/* Display light or dark mode icon based on dark mode state */}
           {isDarkMode ? (
-            <img className="cursor-pointer h-[48px] w-[48px]" src={Light} />
+            <img
+              className="cursor-pointer h-[48px] w-[48px]"
+              src={Light}
+              alt="Light Mode"
+            />
           ) : (
             <img
               className="cursor-pointer h-[48px] w-[48px] -rotate-45"
               src={Dark}
+              alt="Dark Mode"
             />
           )}
         </button>
@@ -67,8 +70,9 @@ function Header() {
         {/* Chat AI Logo */}
         <Link to={"/"}>
           <img
-            className="cursor-pointer md:h-[40px] md:w-[125px] h-[50px] w-[130px]"
+            className="cursor-pointer md:h-[40px] md:w-[125px] h-[35px] w-[130px]"
             src={Logo}
+            alt="Chat AI Logo"
           />
         </Link>
       </div>

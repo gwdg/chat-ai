@@ -46,7 +46,8 @@ i18n
             text3: "User Guidelines",
             text4: "Contact Us",
             text5: "Feedback",
-            text6: "Advanced options",
+            text6: "Show options",
+            text9: "Hide options",
             text7: "About",
             text8: "FAQ",
 
@@ -128,6 +129,35 @@ i18n
             // temperature
             temperature:
               "A low temperature (e.g., 0-1) produces more predictable and logical responses, while higher temperatures (e.g., above 1) increase the possibility of more creative and unconventional responses. You can adjust the temperature setting to achieve different levels of predictability and creativity.",
+
+            //t_pop
+            t_pop:
+              "top_p is a slider from 0 to 1 which adjusts the total population of probabilities considered for the next token. A top_p of 0.1 would mean only the top 10% of cumulative probabilities is considered. Variating top_p has a similar effect on predictability and creativity as temperature.",
+            // Help arcana note
+            help_arcana_title: "Note",
+            help_arcana_note:
+              "After uploading files to the collection, there might be a short processing period. During this time, the system analyzes your files to provide more accurate and precise responses. Thank you for your patience.",
+            //Arcana
+            arcana_title: "Title",
+            arcana_description: "Description",
+            arcana_enter_title: "Enter title here",
+            arcana_enter_description: "Enter description here",
+            arcana_req_title: "Title is required",
+            arcana_req_description: "Description is required ",
+            arcana_file: "No files uploaded yet.",
+            arcana_file_upload: "Upload",
+            help: "Help",
+            save: "Save",
+            add: "ADD",
+
+            //Table
+            table_text1: "Index",
+            table_text2: "Name",
+            table_text3: "Date of upload",
+            table_text4: "Action",
+
+            arcana_note:
+              "You can select the specific arcana to be referenced by the LLM model by making the appropriate choice.",
           },
         },
       },
@@ -161,7 +191,8 @@ i18n
             text3: "Benutzerrichtlinien",
             text4: "Kontakt",
             text5: "Rückmeldung",
-            text6: "Erweiterte Optionen",
+            text6: "Optionen anzeigen",
+            text9: "Optionen ausblenden",
             text7: "Über uns",
             text8: "FAQ",
 
@@ -244,6 +275,37 @@ i18n
             // temperature
             temperature:
               "Eine niedrige Temperatur (z. B. 0-1) erzeugt vorhersehbarere und logischere Antworten, während höhere Temperaturen (z. B. über 1) die Möglichkeit kreativerer und unkonventionellerer Antworten erhöhen. Sie können die Temperatureinstellung anpassen, um verschiedene Stufen der Vorhersagbarkeit und Kreativität zu erreichen.",
+
+            //t_pop
+            t_pop:
+              "top_p ist ein Schieberegler von 0 bis 1, der die Gesamtbevölkerung der Wahrscheinlichkeiten anpasst, die für das nächste Token in Betracht gezogen werden. Ein top_p von 0,1 würde bedeuten, dass nur die oberen 10% der kumulativen Wahrscheinlichkeiten berücksichtigt werden. Die Variation von top_p hat einen ähnlichen Effekt auf Vorhersagbarkeit und Kreativität wie die Temperatur.",
+
+            // Help arcana note
+            help_arcana_title: "Note",
+            help_arcana_note:
+              "Nach dem Hochladen von Dateien in die Sammlung kann es zu einer kurzen Bearbeitungszeit kommen. Während dieser Zeit analysiert das System Ihre Dateien, um genauere und präzisere Antworten zu geben. Wir danken Ihnen für Ihre Geduld.",
+
+            //Arcana
+            arcana_title: "Titel",
+            arcana_description: "Beschreibung",
+            arcana_enter_title: "Titel hier eingeben",
+            arcana_enter_description: "Geben Sie hier eine Beschreibung ein",
+            arcana_req_title: "Titel ist erforderlich",
+            arcana_req_description: "Beschreibung ist erforderlich",
+            arcana_file: "Noch keine Dateien hochgeladen.",
+            arcana_file_upload: "Hochladen",
+            help: "Hilfe",
+            save: "Speichern",
+            add: "Hinzufügen",
+
+            //Table
+            table_text1: "Index",
+            table_text2: "Name",
+            table_text3: "Datum des Hochladens",
+            table_text4: "Aktion",
+
+            arcana_note:
+              "Sie können die spezifischen Arkana auswählen, auf die das LLM-Modell verweisen soll, indem Sie die entsprechende Auswahl treffen.",
           },
         },
       },

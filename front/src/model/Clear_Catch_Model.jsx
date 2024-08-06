@@ -34,14 +34,14 @@ function Clear_Catch_Model(props) {
             {" "}
             {/* Close button */}
             <button
-              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
               onClick={() => props.showModal(false)} // Click handler to close modal
             >
               <Trans i18nKey="description.cache2"></Trans>
             </button>{" "}
             {/* Clear cache button */}
             <button
-              className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px]"
+              className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
               onClick={() => props.clearCatch()}
             >
               <Trans i18nKey="description.cache3"></Trans>
