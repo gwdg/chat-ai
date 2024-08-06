@@ -21,7 +21,7 @@ function Footer(props) {
       // Conditional CSS classes based on props
       className={`${
         props.showFooter ? "pt-2" : "pt-0"
-      } md:h-[12%] md:absolute md:bottom-0 w-full p-3 flex flex-col gap-2 md:gap-0 justify-between select-none shadow-top dark:shadow-darkTop md:px-[50px] bg-white dark:bg-black items-center`}
+      } md:h-[11%] md:absolute md:bottom-0 w-full p-3 flex flex-col gap-2 md:gap-0 justify-between select-none shadow-top dark:shadow-darkTop md:px-[50px] bg-white dark:bg-black items-center`}
     >
       {/* Show/Hide footer arrow */}
       <div className="bg-white dark:bg-black h-[20px] pb-4 ">

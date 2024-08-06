@@ -3,9 +3,9 @@ import { Trans } from "react-i18next"; // For translation
 import Modal from "./Modal"; // Importing Modal component
 import cross from "../assets/cross.svg"; // Close icon
 
-function Bad_Request_Model(props) {
+function Help_model_Arcanas(props) {
   return (
-    // Modal component with export type selection form
+    // Modal component with help content
     <Modal showModal={props.showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
         {/* Modal header */}
@@ -22,26 +22,16 @@ function Bad_Request_Model(props) {
             onClick={() => props.showModal(false)} // Click handler to close modal
           />
         </div>
-        <div className="flex flex-col gap-2 p-4">
-          <div className="p-4 pt-0">
-            <p className="dark:text-white text-black text-justify">
-              {/* Translation for mic permission message */}
-              <Trans i18nKey="description.bad"></Trans>
-            </p>
-          </div>{" "}
-          {/* Close button */}
-          <div className="flex md:justify-end justify-center w-full">
-            <button
-              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-              onClick={() => props.showModal(false)} // Click handler to close modal
-            >
-              <Trans i18nKey="description.session2"></Trans>
-            </button>
-          </div>
+        {/* Help content */}
+        <div className="p-4 pt-0">
+          <p className="dark:text-white text-black text-justify">
+            {/* Translation for help note */}
+            <Trans i18nKey="description.arcana_note"></Trans>
+          </p>
         </div>
       </div>
     </Modal>
   );
 }
 
-export default Bad_Request_Model;
+export default Help_model_Arcanas;
