@@ -1403,7 +1403,7 @@ function Prompt() {
                               <div className="relative w-full">
                                 {/* Container for tick marks */}
                                 <div className="tick-marks-container cursor-pointer">
-                                  {[...Array(21)].map((_, i) => (
+                                  {[...Array(20)].map((_, i) => (
                                     <div key={i} className="tick-mark"></div>
                                   ))}
                                 </div>
@@ -1413,7 +1413,7 @@ function Prompt() {
                                   type="range"
                                   min="0.05"
                                   max="1"
-                                  step="0.1"
+                                  step="0.05"
                                   value={tPop}
                                   className="slider-input"
                                   onChange={(event) =>
@@ -1431,7 +1431,7 @@ function Prompt() {
                                       left: `calc(${(tPop / 0.95) * 100 - 5}% - 15px)`,
                                     }}
                                   >
-                                    {Number(tPop).toFixed(1)}
+                                    {Number(tPop).toFixed(2)}
                                   </output>
                                 )}
                               </div>
