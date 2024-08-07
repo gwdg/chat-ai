@@ -339,5 +339,6 @@ html {
 @media only screen and (min-width: 768px) {
   .Toastify__toast-container {
     right: 0px;
+    top: 0px;
   }
 }
