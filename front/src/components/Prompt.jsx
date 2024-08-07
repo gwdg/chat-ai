@@ -836,7 +836,7 @@ function Prompt() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row h-full gap-3 md:justify-between relative md:p-0 px-2 w-full">
+        <div className="flex flex-col md:flex-row h-full gap-3 md:justify-between relative md:p-0 px-2 w-full pb-2">
           {/* response */}
           <div
             className={`md:max-h-full md:h-full h-full  flex flex-col relative md:w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
@@ -1391,7 +1391,7 @@ function Prompt() {
                           <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
                             <div className="flex-shrink-0 flex items-center gap-2 select-none">
                               {" "}
-                              <p className="text-[18px]">top_p</p>{" "}
+                              <p className="text-[18px]">Top_p</p>{" "}
                               <img
                                 src={help}
                                 alt="help"
@@ -1403,7 +1403,7 @@ function Prompt() {
                               <div className="relative w-full">
                                 {/* Container for tick marks */}
                                 <div className="tick-marks-container cursor-pointer">
-                                  {[...Array(20)].map((_, i) => (
+                                  {[...Array(21)].map((_, i) => (
                                     <div key={i} className="tick-mark"></div>
                                   ))}
                                 </div>
@@ -1411,9 +1411,9 @@ function Prompt() {
                                 {/* Slider Input */}
                                 <input
                                   type="range"
-                                  min="0.05"
-                                  max="1"
-                                  step="0.05"
+                                  min="0"
+                                  max="2"
+                                  step="0.1"
                                   value={tPop}
                                   className="slider-input"
                                   onChange={(event) =>
@@ -1428,10 +1428,10 @@ function Prompt() {
                                   <output
                                     className="slider-tooltip"
                                     style={{
-                                      left: `calc(${(tPop / 0.95) * 100 - 5}% - 15px)`,
+                                      left: `calc(${(tPop / 2) * 100}% - 15px)`,
                                     }}
                                   >
-                                    {Number(tPop).toFixed(2)}
+                                    {Number(tPop).toFixed(1)}
                                   </output>
                                 )}
                               </div>
@@ -1644,10 +1644,10 @@ function Prompt() {
               )}
             </div>
           </div>
-          <div>
-            <ToastContainer />
-          </div>
         </div>
+      </div>
+      <div>
+        <ToastContainer />
       </div>
 
       {/* Help model for info on changing model */}
