@@ -326,3 +326,18 @@ html {
   border-radius: 4px; /* Adjust border-radius as needed */
   font-size: 14px; /* Adjust font-size as needed */
 }
+
+/* Mobile devices styles (devices less than 768px) */
+@media only screen and (max-width: 768px) {
+  .Toastify__toast-container {
+    right: 0px;
+    width: 100%;
+  }
+}
+
+/* Desktop and tablet styles (devices greater than or equal to 768px) */
+@media only screen and (min-width: 768px) {
+  .Toastify__toast-container {
+    right: 0px;
+  }
+}

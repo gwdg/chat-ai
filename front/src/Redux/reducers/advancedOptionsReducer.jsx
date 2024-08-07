@@ -1,5 +1,8 @@
-// Reducer function for managing the theme state
-const initialTheme = { isOpen: true };
+// Define device detection
+const isMobileDevice = window.innerWidth <= 768;
+
+// Initial state to be dependent on device type
+const initialTheme = { isOpen: !isMobileDevice };
 
 function advOptionReducer(state = initialTheme, action) {
   switch (action.type) {
