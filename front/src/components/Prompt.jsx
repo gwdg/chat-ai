@@ -1411,8 +1411,8 @@ function Prompt() {
                                 {/* Slider Input */}
                                 <input
                                   type="range"
-                                  min="0"
-                                  max="2"
+                                  min="0.05"
+                                  max="1"
                                   step="0.1"
                                   value={tPop}
                                   className="slider-input"
@@ -1428,7 +1428,7 @@ function Prompt() {
                                   <output
                                     className="slider-tooltip"
                                     style={{
-                                      left: `calc(${(tPop / 2) * 100}% - 15px)`,
+                                      left: `calc(${(tPop / 0.95) * 100 - 5}% - 15px)`,
                                     }}
                                   >
                                     {Number(tPop).toFixed(1)}
