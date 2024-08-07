@@ -67,7 +67,7 @@ function Layout(props) {
         <div
           className={`${
             showFooter ? "h-[89%] md:pb-4 grow-0" : "h-screen flex-grow"
-          } md:p-2 md:pb-0 bg-bg_light dark:bg-bg_dark overflow-auto`}
+          } bg-bg_light dark:bg-bg_dark overflow-x-hidden`}
         >
           {props.children}
         </div>

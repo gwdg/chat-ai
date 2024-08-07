@@ -749,7 +749,7 @@ function Prompt() {
 
   return (
     <>
-      <div className="flex flex-col md:flex-row h-full gap-3 md:pb-4 md:justify-between relative">
+      <div className="flex flex-col md:flex-row h-full gap-3 md:pt-2 md:justify-between relative">
         {/* Header component used with same code */}
         <div className="flex flex-col">
           {" "}
@@ -836,123 +836,175 @@ function Prompt() {
             </div>
           </div>
         </div>
-        {/* response */}
-        <div
-          className={`md:max-h-full md:h-full h-full  flex flex-col relative md:w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark md:m-0 mx-2`}
-        >
-          {/* Note model */}
-          {showModel && count < 3 ? (
-            <div className="w-[calc(100%-16px)] sticky select-none m-2 h-fit bg-white dark:bg-black p-2 rounded-2xl flex justify-between items-center border dark:border-border_dark shadow-lg dark:shadow-dark">
-              <p className="dark:text-white text-black">
-                <Trans i18nKey="description.note1"></Trans>
-                <Link
-                  to={
-                    "https://en.wikipedia.org/wiki/Hallucination_(artificial_intelligence)"
-                  }
-                  target="_blank"
-                  className="text-tertiary"
-                >
-                  &nbsp;<Trans i18nKey="description.note6"></Trans>&nbsp;
-                </Link>
-                <Trans i18nKey="description.note2"></Trans>
-                <Link
-                  to={"https://datenschutz.gwdg.de/services/chatai"}
-                  target="_blank"
-                  className="text-tertiary"
-                >
-                  &nbsp;<Trans i18nKey="description.note3"></Trans>&nbsp;
-                </Link>
-                <Trans i18nKey="description.note4"></Trans>
-                <Link
-                  to={"https://gwdg.de/imprint/"}
-                  target="_blank"
-                  className="text-tertiary"
-                >
-                  &nbsp;<Trans i18nKey="description.note5"></Trans>
-                </Link>
-                .
-              </p>
-              <img
-                src={cross}
-                alt="cross"
-                className="h-[30px] w-[30px] cursor-pointer"
-                onClick={() => {
-                  setShowModel(false);
-                  dispatch(setCountGlobal(count + 1));
-                  setCount(function (prevCount) {
-                    return (prevCount += 1);
-                  });
-                }}
-              />
-            </div>
-          ) : null}
-
-          {/* Prompt response */}
+        <div className="flex flex-col md:flex-row h-full gap-3 md:justify-between relative md:p-0 px-2 w-full">
+          {/* response */}
           <div
-            ref={containerRef}
-            className="p-2 flex flex-col gap-2 overflow-y-scroll flex-1 no-scrollbar"
+            className={`md:max-h-full md:h-full h-full  flex flex-col relative md:w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
           >
-            {responses?.map((res, index) => (
-              <div key={index} className={`flex flex-col gap-1`}>
-                <div className="text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 ">
-                  <pre
-                    className="font-sans"
-                    style={{
-                      overflow: "hidden",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                    }}
+            {/* Note model */}
+            {showModel && count < 3 ? (
+              <div className="w-[calc(100%-16px)] sticky select-none m-2 h-fit bg-white dark:bg-black p-2 rounded-2xl flex justify-between items-center border dark:border-border_dark shadow-lg dark:shadow-dark">
+                <p className="dark:text-white text-black">
+                  <Trans i18nKey="description.note1"></Trans>
+                  <Link
+                    to={
+                      "https://en.wikipedia.org/wiki/Hallucination_(artificial_intelligence)"
+                    }
+                    target="_blank"
+                    className="text-tertiary"
                   >
-                    {res.prompt}
-                  </pre>
-                </div>
-                <ResponseItem
-                  res={res}
-                  index={index}
-                  handleRetryError={handleRetryError}
-                  loading={loading}
-                  responses={responses}
-                  notifyError={notifyError}
-                  isDarkModeGlobal={isDarkModeGlobal}
-                  copied={copied}
-                  indexChecked={indexChecked}
-                  setCopied={setCopied}
-                  setIndexChecked={setIndexChecked}
+                    &nbsp;<Trans i18nKey="description.note6"></Trans>&nbsp;
+                  </Link>
+                  <Trans i18nKey="description.note2"></Trans>
+                  <Link
+                    to={"https://datenschutz.gwdg.de/services/chatai"}
+                    target="_blank"
+                    className="text-tertiary"
+                  >
+                    &nbsp;<Trans i18nKey="description.note3"></Trans>&nbsp;
+                  </Link>
+                  <Trans i18nKey="description.note4"></Trans>
+                  <Link
+                    to={"https://gwdg.de/imprint/"}
+                    target="_blank"
+                    className="text-tertiary"
+                  >
+                    &nbsp;<Trans i18nKey="description.note5"></Trans>
+                  </Link>
+                  .
+                </p>
+                <img
+                  src={cross}
+                  alt="cross"
+                  className="h-[30px] w-[30px] cursor-pointer"
+                  onClick={() => {
+                    setShowModel(false);
+                    dispatch(setCountGlobal(count + 1));
+                    setCount(function (prevCount) {
+                      return (prevCount += 1);
+                    });
+                  }}
                 />
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+            ) : null}
 
-          {responses.length > 0 ? (
-            <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
-              <Tooltip text={t("description.undo")}>
-                <button
-                  className="h-[30px] w-[30px] cursor-pointer "
-                  onClick={handleRetry}
-                  disabled={loading}
-                >
-                  <img
-                    className="cursor-pointer h-[30px] w-[30px]"
-                    src={retry}
+            {/* Prompt response */}
+            <div
+              ref={containerRef}
+              className="p-2 flex flex-col gap-2 overflow-y-scroll flex-1 no-scrollbar"
+            >
+              {responses?.map((res, index) => (
+                <div key={index} className={`flex flex-col gap-1`}>
+                  <div className="text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 ">
+                    <pre
+                      className="font-sans"
+                      style={{
+                        overflow: "hidden",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {res.prompt}
+                    </pre>
+                  </div>
+                  <ResponseItem
+                    res={res}
+                    index={index}
+                    handleRetryError={handleRetryError}
+                    loading={loading}
+                    responses={responses}
+                    notifyError={notifyError}
+                    isDarkModeGlobal={isDarkModeGlobal}
+                    copied={copied}
+                    indexChecked={indexChecked}
+                    setCopied={setCopied}
+                    setIndexChecked={setIndexChecked}
                   />
-                </button>
-              </Tooltip>
-              <div className="flex items-center gap-6">
-                <Tooltip text={t("description.export")}>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {responses.length > 0 ? (
+              <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
+                <Tooltip text={t("description.undo")}>
                   <button
-                    className="text-tertiary flex gap-2 items-center"
-                    onClick={() => setShowFileModel(true)}
+                    className="h-[30px] w-[30px] cursor-pointer "
+                    onClick={handleRetry}
                     disabled={loading}
                   >
-                    {/* <p>Export as PDF</p>{" "} */}
                     <img
                       className="cursor-pointer h-[30px] w-[30px]"
-                      src={export_icon}
+                      src={retry}
                     />
-                  </button>{" "}
+                  </button>
                 </Tooltip>
-                <div className="flex items-center">
+                <div className="flex items-center gap-6">
+                  <Tooltip text={t("description.export")}>
+                    <button
+                      className="text-tertiary flex gap-2 items-center"
+                      onClick={() => setShowFileModel(true)}
+                      disabled={loading}
+                    >
+                      {/* <p>Export as PDF</p>{" "} */}
+                      <img
+                        className="cursor-pointer h-[30px] w-[30px]"
+                        src={export_icon}
+                      />
+                    </button>{" "}
+                  </Tooltip>
+                  <div className="flex items-center">
+                    {" "}
+                    <input
+                      type="file"
+                      ref={hiddenFileInputJSON}
+                      accept="application/JSON"
+                      onChange={handleFilesChangeJSON}
+                      className="hidden"
+                    />
+                    {/* File upload button */}
+                    <Tooltip text={t("description.import")}>
+                      {" "}
+                      <button
+                        className="h-[30px] w-[30px] cursor-pointer"
+                        onClick={handleClickJSON}
+                        disabled={loading}
+                      >
+                        <img
+                          className="h-[30px] w-[30px]"
+                          src={import_icon}
+                          alt="import"
+                        />
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <Tooltip text={t("description.clear")}>
+                    {" "}
+                    <button
+                      className="h-[30px] w-[30px] cursor-pointer "
+                      disabled={loading}
+                      onClick={() => {
+                        setResponses([]);
+                        setConversation((con) => {
+                          if (con.length > 0) {
+                            return [con[0]];
+                          }
+                          return con; // If array was empty, return it as it is
+                        });
+                        notifySuccess("History cleared");
+                      }}
+                    >
+                      <img
+                        className="cursor-pointer h-[25px] w-[25px]"
+                        src={clear}
+                      />
+                    </button>
+                  </Tooltip>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-end items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
+                <>
                   {" "}
                   <input
                     type="file"
@@ -970,333 +1022,282 @@ function Prompt() {
                       disabled={loading}
                     >
                       <img
-                        className="h-[30px] w-[30px]"
+                        className="cursor-pointer h-[30px] w-[30px]"
                         src={import_icon}
-                        alt="import"
                       />
                     </button>
                   </Tooltip>
-                </div>
-                <Tooltip text={t("description.clear")}>
-                  {" "}
-                  <button
-                    className="h-[30px] w-[30px] cursor-pointer "
-                    disabled={loading}
-                    onClick={() => {
-                      setResponses([]);
-                      setConversation((con) => {
-                        if (con.length > 0) {
-                          return [con[0]];
-                        }
-                        return con; // If array was empty, return it as it is
-                      });
-                      notifySuccess("History cleared");
-                    }}
-                  >
-                    <img
-                      className="cursor-pointer h-[25px] w-[25px]"
-                      src={clear}
-                    />
-                  </button>
-                </Tooltip>
+                </>
               </div>
-            </div>
-          ) : (
-            <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-end items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
-              <>
-                {" "}
-                <input
-                  type="file"
-                  ref={hiddenFileInputJSON}
-                  accept="application/JSON"
-                  onChange={handleFilesChangeJSON}
-                  className="hidden"
+            )}
+          </div>
+
+          {/* prompt */}
+          <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between md:h-full">
+            {/* <div className="max-h-[650px] overflow-auto flex md:flex-col flex-row gap-2"> */}
+            <div className="flex flex-col gap-4 w-full">
+              <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
+                <textarea
+                  className="no-scrollbar p-4 outline-none text-xl max-h-[350px] md:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                  value={prompt}
+                  ref={textAreaRef}
+                  name="prompt"
+                  placeholder={t("description.placeholder")}
+                  onChange={handleChange}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      !event.shiftKey &&
+                      prompt.trim() !== ""
+                    ) {
+                      event.preventDefault();
+                      handleSubmit(event);
+                    }
+                  }}
                 />
-                {/* File upload button */}
-                <Tooltip text={t("description.import")}>
-                  {" "}
-                  <button
-                    className="h-[30px] w-[30px] cursor-pointer"
-                    onClick={handleClickJSON}
-                    disabled={loading}
-                  >
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={import_icon}
-                    />
-                  </button>
-                </Tooltip>
-              </>
-            </div>
-          )}
-        </div>
 
-        {/* prompt */}
-        <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between md:h-full">
-          {/* <div className="max-h-[650px] overflow-auto flex md:flex-col flex-row gap-2"> */}
-          <div className="flex flex-col gap-4 w-full">
-            <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
-              <textarea
-                className="no-scrollbar p-4 outline-none text-xl max-h-[350px] md:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
-                value={prompt}
-                ref={textAreaRef}
-                name="prompt"
-                placeholder={t("description.placeholder")}
-                onChange={handleChange}
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Enter" &&
-                    !event.shiftKey &&
-                    prompt.trim() !== ""
-                  ) {
-                    event.preventDefault();
-                    handleSubmit(event);
-                  }
-                }}
-              />
-
-              <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
-                {/* Clear prompt */}
-                {prompt.trim() !== "" ? (
-                  <Tooltip text={t("description.clear")}>
-                    {" "}
+                <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
+                  {/* Clear prompt */}
+                  {prompt.trim() !== "" ? (
+                    <Tooltip text={t("description.clear")}>
+                      {" "}
+                      <button
+                        className="h-[30px] w-[30px] cursor-pointer "
+                        onClick={() => {
+                          setPrompt("");
+                          resetTranscript();
+                          resetHeight();
+                        }}
+                        disabled={loading}
+                      >
+                        <img
+                          className="cursor-pointer h-[25px] w-[25px]"
+                          src={clear}
+                        />
+                      </button>
+                    </Tooltip>
+                  ) : null}
+                  <div className="flex gap-4 w-full justify-end items-center">
                     <button
-                      className="h-[30px] w-[30px] cursor-pointer "
-                      onClick={() => {
-                        setPrompt("");
-                        resetTranscript();
-                        resetHeight();
-                      }}
-                      disabled={loading}
-                    >
-                      <img
-                        className="cursor-pointer h-[25px] w-[25px]"
-                        src={clear}
-                      />
-                    </button>
-                  </Tooltip>
-                ) : null}
-                <div className="flex gap-4 w-full justify-end items-center">
-                  <button
-                    className="md:hidden flex h-[30px] w-[30px] cursor-pointer"
-                    onClick={toggleAdvOpt} // Click handler to toggle dark mode
-                  >
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={settings_icon}
-                    />
-                  </button>
-                  {/* Input for file hidden in UI */}
-                  <input
-                    type="file"
-                    ref={hiddenFileInput}
-                    multiple
-                    accept=".txt"
-                    onChange={handleFilesChange}
-                    className="hidden"
-                  />
-                  {/* File upload button */}
-                  <Tooltip text={t("description.upload")}>
-                    {" "}
-                    <button
-                      className="h-[30px] w-[30px] cursor-pointer"
-                      onClick={handleClick}
-                      disabled={loading}
+                      className="md:hidden flex h-[30px] w-[30px] cursor-pointer"
+                      onClick={toggleAdvOpt} // Click handler to toggle dark mode
                     >
                       <img
                         className="cursor-pointer h-[30px] w-[30px]"
-                        src={upload}
+                        src={settings_icon}
                       />
                     </button>
-                  </Tooltip>
-
-                  {/* Submit/Pause button */}
-                  {loading ? (
-                    <Tooltip text={t("description.pause")}>
-                      <button className="h-[30px] w-[30px] cursor-pointer">
-                        <img
-                          className="cursor-pointer h-[30px] w-[30px]"
-                          src={pause}
-                          onClick={() => {
-                            handleAbortFetch();
-                          }}
-                        />
-                      </button>
-                    </Tooltip>
-                  ) : listening ? (
-                    <Tooltip text={t("description.stop")}>
+                    {/* Input for file hidden in UI */}
+                    <input
+                      type="file"
+                      ref={hiddenFileInput}
+                      multiple
+                      accept=".txt"
+                      onChange={handleFilesChange}
+                      className="hidden"
+                    />
+                    {/* File upload button */}
+                    <Tooltip text={t("description.upload")}>
+                      {" "}
                       <button
                         className="h-[30px] w-[30px] cursor-pointer"
-                        type="button"
-                        onClick={() => {
-                          SpeechRecognition.stopListening();
-                        }}
+                        onClick={handleClick}
+                        disabled={loading}
                       >
                         <img
                           className="cursor-pointer h-[30px] w-[30px]"
-                          src={stop}
+                          src={upload}
                         />
                       </button>
                     </Tooltip>
-                  ) : prompt !== "" ? (
-                    <Tooltip text={t("description.send")}>
-                      <button className="h-[30px] w-[30px] cursor-pointer">
-                        <img
-                          className="cursor-pointer h-[30px] w-[30px]"
-                          src={send}
-                          onClick={(event) => {
-                            handleSubmit(event);
-                          }}
-                          disabled={loading}
-                        />
-                      </button>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip text={t("description.listen")}>
-                      <button
-                        className="h-[30px] w-[30px] cursor-pointer"
-                        type="button"
-                        onClick={() => {
-                          navigator.permissions
-                            .query({ name: "microphone" })
-                            .then(function (result) {
-                              if (
-                                result.state === "prompt" ||
-                                result.state === "denied"
-                              ) {
-                                setShowMicModel(true);
-                              } else {
-                                let speechRecognitionLanguage =
-                                  languageMap[i18n.language];
-                                SpeechRecognition.startListening({
-                                  language: speechRecognitionLanguage,
-                                  continuous: true,
-                                });
-                              }
-                            });
-                        }}
-                      >
-                        <img
-                          className="cursor-pointer h-[30px] w-[30px]"
-                          src={mic}
-                        />
-                      </button>
-                    </Tooltip>
-                  )}
-                </div>
-              </div>
-            </div>
 
-            {/* List of selected files */}
-            {selectedFiles.length > 0 ? (
-              <div className="flex flex-col gap-3 select-none">
-                <div className="flex items-center justify-between">
-                  <p>
-                    <Trans i18nKey="description.file1"></Trans>
-                  </p>
-                  <p
-                    className="text-tertiary cursor-pointer"
-                    onClick={() => setSelectedFiles([])}
-                  >
-                    <Trans i18nKey="description.file2"></Trans>
-                  </p>
-                </div>
-
-                <ul className="flex flex-col gap-4 overflow-auto max-h-[400px] pb-4">
-                  {Array.from(selectedFiles).map((file, index) => (
-                    <li
-                      key={`${file.name}-${index}`}
-                      className="cursor-pointer flex gap-2 items-center"
-                    >
-                      <img className="h-[30px] w-[30px]" src={uploaded} />
-                      <div className="flex justify-between items-center w-full">
-                        <div className="flex items-center">
-                          <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[80%]">
-                            {file.name}
-                          </p>
-                          <p>&nbsp;-&nbsp;</p>
-                          <p> {file.size} </p>
-                          <p>&nbsp;bytes</p>
-                        </div>
-                        <img
-                          src={cross}
-                          alt="cross"
-                          className="h-[30px] w-[30px]"
-                          onClick={() => removeFile(index)}
-                        />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="md:static flex justify-center absolute bottom-0 w-full">
-            {showAdvOpt ? (
-              <div className="flex flex-col gap-4 md:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit md:w-full w-[calc(100%-24px)]">
-                {/* Select model */}
-                <div className="md:flex flex-col hidden gap-4">
-                  {/* Select input for model for desktop */}
-                  <div className="flex items-center gap-4 select-none">
-                    <div className="flex-shrink-0 flex items-center gap-2">
-                      <p className="flex-shrink-0 text-[18px]">
-                        <Trans i18nKey="description.choose"></Trans>
-                      </p>
-                      <img
-                        src={help}
-                        alt="help"
-                        className="h-[20px] w-[20px] cursor-pointer"
-                        onClick={() => setShowHelpModel(true)}
-                      />
-                    </div>
-
-                    {/* Select input */}
-                    <div
-                      className="relative w-full flex flex-col"
-                      ref={dropdownRef}
-                      tabIndex={0}
-                      onBlur={() => setIsOpen(false)}
-                    >
-                      <div
-                        className="text-tertiary block mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
-                        onClick={toggleOpen}
-                      >
-                        {chooseModel}
-                        <div className="absolute right-0 flex items-center pr-[10px]  bottom-2 ">
+                    {/* Submit/Pause button */}
+                    {loading ? (
+                      <Tooltip text={t("description.pause")}>
+                        <button className="h-[30px] w-[30px] cursor-pointer">
                           <img
-                            src={dropdown}
-                            alt="drop-down"
-                            className="h-[30px] w-[30px] cursor-pointer"
+                            className="cursor-pointer h-[30px] w-[30px]"
+                            src={pause}
+                            onClick={() => {
+                              handleAbortFetch();
+                            }}
+                          />
+                        </button>
+                      </Tooltip>
+                    ) : listening ? (
+                      <Tooltip text={t("description.stop")}>
+                        <button
+                          className="h-[30px] w-[30px] cursor-pointer"
+                          type="button"
+                          onClick={() => {
+                            SpeechRecognition.stopListening();
+                          }}
+                        >
+                          <img
+                            className="cursor-pointer h-[30px] w-[30px]"
+                            src={stop}
+                          />
+                        </button>
+                      </Tooltip>
+                    ) : prompt !== "" ? (
+                      <Tooltip text={t("description.send")}>
+                        <button className="h-[30px] w-[30px] cursor-pointer">
+                          <img
+                            className="cursor-pointer h-[30px] w-[30px]"
+                            src={send}
+                            onClick={(event) => {
+                              handleSubmit(event);
+                            }}
+                            disabled={loading}
+                          />
+                        </button>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip text={t("description.listen")}>
+                        <button
+                          className="h-[30px] w-[30px] cursor-pointer"
+                          type="button"
+                          onClick={() => {
+                            navigator.permissions
+                              .query({ name: "microphone" })
+                              .then(function (result) {
+                                if (
+                                  result.state === "prompt" ||
+                                  result.state === "denied"
+                                ) {
+                                  setShowMicModel(true);
+                                } else {
+                                  let speechRecognitionLanguage =
+                                    languageMap[i18n.language];
+                                  SpeechRecognition.startListening({
+                                    language: speechRecognitionLanguage,
+                                    continuous: true,
+                                  });
+                                }
+                              });
+                          }}
+                        >
+                          <img
+                            className="cursor-pointer h-[30px] w-[30px]"
+                            src={mic}
+                          />
+                        </button>
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* List of selected files */}
+              {selectedFiles.length > 0 ? (
+                <div className="flex flex-col gap-3 select-none">
+                  <div className="flex items-center justify-between">
+                    <p>
+                      <Trans i18nKey="description.file1"></Trans>
+                    </p>
+                    <p
+                      className="text-tertiary cursor-pointer"
+                      onClick={() => setSelectedFiles([])}
+                    >
+                      <Trans i18nKey="description.file2"></Trans>
+                    </p>
+                  </div>
+
+                  <ul className="flex flex-col gap-4 overflow-auto max-h-[400px] pb-4">
+                    {Array.from(selectedFiles).map((file, index) => (
+                      <li
+                        key={`${file.name}-${index}`}
+                        className="cursor-pointer flex gap-2 items-center"
+                      >
+                        <img className="h-[30px] w-[30px]" src={uploaded} />
+                        <div className="flex justify-between items-center w-full">
+                          <div className="flex items-center">
+                            <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[80%]">
+                              {file.name}
+                            </p>
+                            <p>&nbsp;-&nbsp;</p>
+                            <p> {file.size} </p>
+                            <p>&nbsp;bytes</p>
+                          </div>
+                          <img
+                            src={cross}
+                            alt="cross"
+                            className="h-[30px] w-[30px]"
+                            onClick={() => removeFile(index)}
                           />
                         </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="md:static flex justify-center absolute bottom-0 md:w-full w-[calc(100%-16px)]">
+              {showAdvOpt ? (
+                <div className="flex flex-col gap-4 md:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
+                  {/* Select model */}
+                  <div className="md:flex flex-col hidden gap-4">
+                    {/* Select input for model for desktop */}
+                    <div className="flex items-center gap-4 select-none">
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        <p className="flex-shrink-0 text-[18px]">
+                          <Trans i18nKey="description.choose"></Trans>
+                        </p>
+                        <img
+                          src={help}
+                          alt="help"
+                          className="h-[20px] w-[20px] cursor-pointer"
+                          onClick={() => setShowHelpModel(true)}
+                        />
                       </div>
-                      {isOpen && (
+
+                      {/* Select input */}
+                      <div
+                        className="relative w-full flex flex-col"
+                        ref={dropdownRef}
+                        tabIndex={0}
+                        onBlur={() => setIsOpen(false)}
+                      >
                         <div
-                          className={`absolute w-full ${
-                            direction === "up" ? "bottom-full" : "top-full"
-                          } rounded-2xl border-opacity-10 border dark:border-border_dark`}
+                          className="text-tertiary block mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                          onClick={toggleOpen}
                         >
-                          {modelList.map((option, index) => (
-                            <div
-                              key={index}
-                              className={`bg-white dark:bg-black text-tertiary block text-xl w-full p-2 cursor-pointer ${
-                                index === 0
-                                  ? "rounded-t-2xl" // The first element
-                                  : index === modelList.length - 1
-                                  ? "rounded-b-2xl" // The last element
-                                  : "" // All other elements
-                              }`}
-                              onClick={() => handleChangeModel(option)}
-                            >
-                              {option.name}
-                            </div>
-                          ))}
+                          {chooseModel}
+                          <div className="absolute right-0 flex items-center pr-[10px]  bottom-2 ">
+                            <img
+                              src={dropdown}
+                              alt="drop-down"
+                              className="h-[30px] w-[30px] cursor-pointer"
+                            />
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>{" "}
-                  {/* <div className="flex items-center gap-2 select-none">
+                        {isOpen && (
+                          <div
+                            className={`absolute w-full ${
+                              direction === "up" ? "bottom-full" : "top-full"
+                            } rounded-2xl border-opacity-10 border dark:border-border_dark`}
+                          >
+                            {modelList.map((option, index) => (
+                              <div
+                                key={index}
+                                className={`bg-white dark:bg-black text-tertiary block text-xl w-full p-2 cursor-pointer ${
+                                  index === 0
+                                    ? "rounded-t-2xl" // The first element
+                                    : index === modelList.length - 1
+                                    ? "rounded-b-2xl" // The last element
+                                    : "" // All other elements
+                                }`}
+                                onClick={() => handleChangeModel(option)}
+                              >
+                                {option.name}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>{" "}
+                    {/* <div className="flex items-center gap-2 select-none">
               <Link to={"/custom-instructions"} target="">
                 <p className="text-xl h-full text-tertiary">
                   <Trans i18nKey="description.text6"></Trans>
@@ -1309,9 +1310,9 @@ function Prompt() {
                 onClick={() => setShowCusModel(true)}
               />
             </div> */}
-                </div>
-                {/* Arcanas */}
-                {/* <div className="flex gap-4 w-full items-center">
+                  </div>
+                  {/* Arcanas */}
+                  {/* <div className="flex gap-4 w-full items-center">
                   <div className="flex-shrink-0 flex items-center gap-2">
                     {" "}
                     <p className="text-[18px]">Arcanas</p>{" "}
@@ -1324,293 +1325,293 @@ function Prompt() {
                   </div>
                   <Arcanas />
                 </div> */}
-                {/* Custom instructions */}
-                <div className="">
-                  <Formik enableReinitialize={true} onSubmit>
-                    <Form onSubmit={formik.handleSubmit}>
-                      <div className="flex flex-col gap-4 items-center">
-                        {/* Temperature slider */}
-                        <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
-                          <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                            {" "}
-                            <p className="text-[18px]">Temp</p>{" "}
-                            <img
-                              src={help}
-                              alt="help"
-                              className="h-[20px] w-[20px] cursor-pointer"
-                              onClick={() => setShowCustomHelpModel(true)}
-                            />
-                          </div>
-                          <div className="mx-2 w-full">
-                            <div className="relative w-full">
-                              {/* Container for tick marks */}
-                              <div className="tick-marks-container cursor-pointer">
-                                {[...Array(21)].map((_, i) => (
-                                  <div key={i} className="tick-mark"></div>
-                                ))}
-                              </div>
-
-                              {/* Slider Input */}
-                              <input
-                                type="range"
-                                min="0"
-                                max="2"
-                                step="0.1"
-                                value={temperature}
-                                className="slider-input"
-                                onChange={(event) =>
-                                  handleChangeTemp(event.target.value)
-                                }
-                                onMouseEnter={() => setHovering(true)}
-                                onMouseLeave={() => setHovering(false)}
-                              />
-
-                              {/* Tooltip Display */}
-                              {isHovering && (
-                                <output
-                                  className="slider-tooltip"
-                                  style={{
-                                    left: `calc(${
-                                      (temperature / 2) * 100
-                                    }% - 15px)`,
-                                  }}
-                                >
-                                  {Number(temperature).toFixed(1)}
-                                </output>
-                              )}
-                            </div>
-                            {/* <div className="text-center mt-2">
-                              <div className="text-xs font-semibold inline-block text-blue-600">
-                                {Number(temperature).toFixed(1)}
-                              </div>
-                            </div> */}
-                          </div>
-                        </div>
-                        {/* Top_p slider */}
-                        <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
-                          <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                            {" "}
-                            <p className="text-[18px]">top_p</p>{" "}
-                            <img
-                              src={help}
-                              alt="help"
-                              className="h-[20px] w-[20px] cursor-pointer"
-                              onClick={() => setShowTpopHelpModel(true)}
-                            />
-                          </div>
-                          <div className="mx-2 w-full">
-                            <div className="relative w-full">
-                              {/* Container for tick marks */}
-                              <div className="tick-marks-container cursor-pointer">
-                                {[...Array(20)].map((_, i) => (
-                                  <div key={i} className="tick-mark"></div>
-                                ))}
-                              </div>
-
-                              {/* Slider Input */}
-                              <input
-                                type="range"
-                                min="0.05"
-                                max="1"
-                                step="0.05"
-                                value={tPop}
-                                className="slider-input"
-                                onChange={(event) =>
-                                  handleChangeTpop(event.target.value)
-                                }
-                                onMouseEnter={() => setHoveringTpop(true)}
-                                onMouseLeave={() => setHoveringTpop(false)}
-                              />
-
-                              {/* Tooltip Display */}
-                              {isHoveringTpop && (
-                                <output
-                                  className="slider-tooltip"
-                                  style={{
-                                    left: `calc(${(tPop / 0.95) * 100 - 5}% - 15px)`,
-                                  }}
-                                >
-                                  {Number(tPop).toFixed(2)}
-                                </output>
-                              )}
-                            </div>
-                            {/* <div className="text-center mt-2">
-                              <div className="text-xs font-semibold inline-block text-blue-600">
-                                {Number(temperature).toFixed(1)}
-                              </div>
-                            </div> */}
-                          </div>
-                        </div>
-
-                        {/* Custom instructions input*/}
-                        <div className="w-full flex flex-col gap-4">
-                          <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                            {" "}
-                            <p className="text-[18px]">System prompt</p>{" "}
-                            <img
-                              src={help}
-                              alt="help"
-                              className="h-[20px] w-[20px] cursor-pointer"
-                              onClick={() => setShowSystemHelpModel(true)}
-                            />
-                          </div>
-                          <div className="w-full relative">
-                            <div className="relative z-10">
-                              <textarea
-                                className={`no-scrollbar ${
-                                  !isEditingCustom
-                                    ? "bg-disable_textArea_light dark:bg-disable_textArea text-black"
-                                    : "bg-white dark:bg-bg_secondary_dark dark:text-white text-black"
-                                } p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
-                                type="text"
-                                name="instructions"
-                                placeholder={t("description.custom4")}
-                                value={formik.values.instructions}
-                                onBlur={formik.handleBlur}
-                                onChange={formik.handleChange}
-                                disabled={!isEditingCustom}
+                  {/* Custom instructions */}
+                  <div className="">
+                    <Formik enableReinitialize={true} onSubmit>
+                      <Form onSubmit={formik.handleSubmit}>
+                        <div className="flex flex-col gap-4 items-center">
+                          {/* Temperature slider */}
+                          <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
+                            <div className="flex-shrink-0 flex items-center gap-2 select-none">
+                              {" "}
+                              <p className="text-[18px]">Temp</p>{" "}
+                              <img
+                                src={help}
+                                alt="help"
+                                className="h-[20px] w-[20px] cursor-pointer"
+                                onClick={() => setShowCustomHelpModel(true)}
                               />
                             </div>
-                            <div className="absolute bottom-4 right-4 z-[99] flex justify-end items-center">
-                              {!isEditingCustom ? (
-                                <img
-                                  src={edit_icon}
-                                  alt="edit_icon"
-                                  onClick={toggleEdit}
-                                  className="h-[30px] w-[30px] cursor-pointer"
+                            <div className="mx-2 w-full">
+                              <div className="relative w-full">
+                                {/* Container for tick marks */}
+                                <div className="tick-marks-container cursor-pointer">
+                                  {[...Array(21)].map((_, i) => (
+                                    <div key={i} className="tick-mark"></div>
+                                  ))}
+                                </div>
+
+                                {/* Slider Input */}
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="2"
+                                  step="0.1"
+                                  value={temperature}
+                                  className="slider-input"
+                                  onChange={(event) =>
+                                    handleChangeTemp(event.target.value)
+                                  }
+                                  onMouseEnter={() => setHovering(true)}
+                                  onMouseLeave={() => setHovering(false)}
                                 />
-                              ) : (
-                                <button
-                                  className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center shadow-lg dark:shadow-dark border min-w-[100px] md:w-fit"
-                                  type="button"
-                                  onClick={saveInstructions}
-                                >
-                                  Save
-                                </button>
-                              )}
-                            </div>{" "}
-                          </div>
-                          {/* Display error message if any */}
-                          {formik.errors.instructions &&
-                          formik.touched.instructions ? (
-                            <p className="text-red-600 text-12-500 ">
-                              {formik.errors.instructions}
-                            </p>
-                          ) : null}{" "}
-                        </div>
 
-                        {/* Submit button */}
-                        <div className="flex md:justify-end gap-2 items-center w-full">
-                          <div
-                            className="flex gap-4 items-center justify-center select-none w-full"
-                            onClick={toggleAdvOpt} // Click handler to toggle dark mode
-                          >
-                            <p className="text-xl h-full text-tertiary cursor-pointer">
-                              <Trans i18nKey="description.text9"></Trans>
-                            </p>{" "}
-                            {/* <img
+                                {/* Tooltip Display */}
+                                {isHovering && (
+                                  <output
+                                    className="slider-tooltip"
+                                    style={{
+                                      left: `calc(${
+                                        (temperature / 2) * 100
+                                      }% - 15px)`,
+                                    }}
+                                  >
+                                    {Number(temperature).toFixed(1)}
+                                  </output>
+                                )}
+                              </div>
+                              {/* <div className="text-center mt-2">
+                              <div className="text-xs font-semibold inline-block text-blue-600">
+                                {Number(temperature).toFixed(1)}
+                              </div>
+                            </div> */}
+                            </div>
+                          </div>
+                          {/* Top_p slider */}
+                          <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
+                            <div className="flex-shrink-0 flex items-center gap-2 select-none">
+                              {" "}
+                              <p className="text-[18px]">Top_p</p>{" "}
+                              <img
+                                src={help}
+                                alt="help"
+                                className="h-[20px] w-[20px] cursor-pointer"
+                                onClick={() => setShowTpopHelpModel(true)}
+                              />
+                            </div>
+                            <div className="mx-2 w-full">
+                              <div className="relative w-full">
+                                {/* Container for tick marks */}
+                                <div className="tick-marks-container cursor-pointer">
+                                  {[...Array(20)].map((_, i) => (
+                                    <div key={i} className="tick-mark"></div>
+                                  ))}
+                                </div>
+
+                                {/* Slider Input */}
+                                <input
+                                  type="range"
+                                  min="0.05"
+                                  max="1"
+                                  step="0.05"
+                                  value={tPop}
+                                  className="slider-input"
+                                  onChange={(event) =>
+                                    handleChangeTpop(event.target.value)
+                                  }
+                                  onMouseEnter={() => setHoveringTpop(true)}
+                                  onMouseLeave={() => setHoveringTpop(false)}
+                                />
+
+                                {/* Tooltip Display */}
+                                {isHoveringTpop && (
+                                  <output
+                                    className="slider-tooltip"
+                                    style={{
+                                      left: `calc(${(tPop / 0.95) * 100 - 5}% - 15px)`,
+                                    }}
+                                  >
+                                    {Number(tPop).toFixed(2)}
+                                  </output>
+                                )}
+                              </div>
+                              {/* <div className="text-center mt-2">
+                              <div className="text-xs font-semibold inline-block text-blue-600">
+                                {Number(temperature).toFixed(1)}
+                              </div>
+                            </div> */}
+                            </div>
+                          </div>
+
+                          {/* Custom instructions input*/}
+                          <div className="w-full flex flex-col gap-4">
+                            <div className="flex-shrink-0 flex items-center gap-2 select-none">
+                              {" "}
+                              <p className="text-[18px]">System prompt</p>{" "}
+                              <img
+                                src={help}
+                                alt="help"
+                                className="h-[20px] w-[20px] cursor-pointer"
+                                onClick={() => setShowSystemHelpModel(true)}
+                              />
+                            </div>
+                            <div className="w-full relative">
+                              <div className="relative z-10">
+                                <textarea
+                                  className={`no-scrollbar ${
+                                    !isEditingCustom
+                                      ? "bg-disable_textArea_light dark:bg-disable_textArea text-black"
+                                      : "bg-white dark:bg-bg_secondary_dark dark:text-white text-black"
+                                  } p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                                  type="text"
+                                  name="instructions"
+                                  placeholder={t("description.custom4")}
+                                  value={formik.values.instructions}
+                                  onBlur={formik.handleBlur}
+                                  onChange={formik.handleChange}
+                                  disabled={!isEditingCustom}
+                                />
+                              </div>
+                              <div className="absolute bottom-4 right-4 z-[99] flex justify-end items-center">
+                                {!isEditingCustom ? (
+                                  <img
+                                    src={edit_icon}
+                                    alt="edit_icon"
+                                    onClick={toggleEdit}
+                                    className="h-[30px] w-[30px] cursor-pointer"
+                                  />
+                                ) : (
+                                  <button
+                                    className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center shadow-lg dark:shadow-dark border min-w-[100px] md:w-fit"
+                                    type="button"
+                                    onClick={saveInstructions}
+                                  >
+                                    Save
+                                  </button>
+                                )}
+                              </div>{" "}
+                            </div>
+                            {/* Display error message if any */}
+                            {formik.errors.instructions &&
+                            formik.touched.instructions ? (
+                              <p className="text-red-600 text-12-500 ">
+                                {formik.errors.instructions}
+                              </p>
+                            ) : null}{" "}
+                          </div>
+
+                          {/* Submit button */}
+                          <div className="flex md:justify-end gap-2 items-center w-full">
+                            <div
+                              className="flex gap-4 items-center justify-center select-none w-full"
+                              onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                            >
+                              <p className="text-[18px] h-full text-tertiary cursor-pointer">
+                                <Trans i18nKey="description.text9"></Trans>
+                              </p>{" "}
+                              {/* <img
                     src={advanced_settings_arrow}
                     alt="drop-down"
                     className={`${
                       showAdvOpt ? "" : "rotate-180"
                     } h-[15px] w-[40px] cursor-pointer`}
                   /> */}
-                          </div>
-                          {/* Opens clear cache model */}
-                          <button
-                            className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-                            type="reset"
-                            onClick={() => {
-                              setShowCacheModel(true);
-                            }}
-                          >
-                            <Trans i18nKey="description.custom8"></Trans>
-                          </button>
-                          {/* Resets settings, and clears redux */}
-                          <button
-                            className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-                            onClick={resetDefault}
-                            type="reset"
-                          >
-                            <Trans i18nKey="description.custom7"></Trans>
-                          </button>
-                          {/* Applies changes */}
-                          {/* <button
+                            </div>
+                            {/* Opens clear cache model */}
+                            <button
+                              className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
+                              type="reset"
+                              onClick={() => {
+                                setShowCacheModel(true);
+                              }}
+                            >
+                              <Trans i18nKey="description.custom8"></Trans>
+                            </button>
+                            {/* Resets settings, and clears redux */}
+                            <button
+                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
+                              onClick={resetDefault}
+                              type="reset"
+                            >
+                              <Trans i18nKey="description.custom7"></Trans>
+                            </button>
+                            {/* Applies changes */}
+                            {/* <button
                             className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                             type="submit"
                           >
                             <Trans i18nKey="description.custom5"></Trans>
                           </button> */}
+                          </div>
                         </div>
-                      </div>
-                    </Form>
-                  </Formik>
-                </div>{" "}
-              </div>
-            ) : (
-              <div className="md:flex hidden flex-col gap-4 md:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
-                {/* Select model */}
-                <div className="md:flex flex-col hidden gap-4">
-                  {/* Select input for model for desktop */}
-                  <div className="flex items-center gap-4 select-none">
-                    <div className="flex-shrink-0 flex items-center gap-2">
-                      <p className="flex-shrink-0 text-[18px]">
-                        <Trans i18nKey="description.choose"></Trans>
-                      </p>
-                      <img
-                        src={help}
-                        alt="help"
-                        className="h-[20px] w-[20px] cursor-pointer"
-                        onClick={() => setShowHelpModel(true)}
-                      />
-                    </div>
-
-                    {/* Select input */}
-                    <div
-                      className="relative w-full flex flex-col"
-                      ref={dropdownRef}
-                      tabIndex={0}
-                      onBlur={() => setIsOpen(false)}
-                    >
-                      <div
-                        className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
-                        onClick={toggleOpen}
-                      >
-                        {chooseModel}
-                        <div className="absolute right-0 flex items-center pr-[10px]  bottom-2 ">
-                          <img
-                            src={dropdown}
-                            alt="drop-down"
-                            className="h-[30px] w-[30px] cursor-pointer"
-                          />
-                        </div>
-                      </div>
-                      {isOpen && (
-                        <div
-                          className={`absolute w-full ${
-                            direction === "up" ? "bottom-full" : "top-full"
-                          } rounded-2xl border-opacity-10 border dark:border-border_dark`}
-                        >
-                          {modelList.map((option, index) => (
-                            <div
-                              key={index}
-                              className={`bg-white dark:bg-black text-tertiary block text-xl w-full p-2 cursor-pointer ${
-                                index === 0
-                                  ? "rounded-t-2xl" // The first element
-                                  : index === modelList.length - 1
-                                  ? "rounded-b-2xl" // The last element
-                                  : "" // All other elements
-                              }`}
-                              onClick={() => handleChangeModel(option)}
-                            >
-                              {option.name}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </Form>
+                    </Formik>
                   </div>{" "}
-                  {/* <div className="flex items-center gap-2 select-none">
+                </div>
+              ) : (
+                <div className="md:flex hidden flex-col gap-4 md:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
+                  {/* Select model */}
+                  <div className="md:flex flex-col hidden gap-4">
+                    {/* Select input for model for desktop */}
+                    <div className="flex items-center gap-4 select-none">
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        <p className="flex-shrink-0 text-[18px]">
+                          <Trans i18nKey="description.choose"></Trans>
+                        </p>
+                        <img
+                          src={help}
+                          alt="help"
+                          className="h-[20px] w-[20px] cursor-pointer"
+                          onClick={() => setShowHelpModel(true)}
+                        />
+                      </div>
+
+                      {/* Select input */}
+                      <div
+                        className="relative w-full flex flex-col"
+                        ref={dropdownRef}
+                        tabIndex={0}
+                        onBlur={() => setIsOpen(false)}
+                      >
+                        <div
+                          className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                          onClick={toggleOpen}
+                        >
+                          {chooseModel}
+                          <div className="absolute right-0 flex items-center pr-[10px]  bottom-2 ">
+                            <img
+                              src={dropdown}
+                              alt="drop-down"
+                              className="h-[30px] w-[30px] cursor-pointer"
+                            />
+                          </div>
+                        </div>
+                        {isOpen && (
+                          <div
+                            className={`absolute w-full ${
+                              direction === "up" ? "bottom-full" : "top-full"
+                            } rounded-2xl border-opacity-10 border dark:border-border_dark`}
+                          >
+                            {modelList.map((option, index) => (
+                              <div
+                                key={index}
+                                className={`bg-white dark:bg-black text-tertiary block text-xl w-full p-2 cursor-pointer ${
+                                  index === 0
+                                    ? "rounded-t-2xl" // The first element
+                                    : index === modelList.length - 1
+                                    ? "rounded-b-2xl" // The last element
+                                    : "" // All other elements
+                                }`}
+                                onClick={() => handleChangeModel(option)}
+                              >
+                                {option.name}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>{" "}
+                    {/* <div className="flex items-center gap-2 select-none">
               <Link to={"/custom-instructions"} target="">
                 <p className="text-xl h-full text-tertiary">
                   <Trans i18nKey="description.text6"></Trans>
@@ -1623,28 +1624,29 @@ function Prompt() {
                 onClick={() => setShowCusModel(true)}
               />
             </div> */}
-                </div>
-                <div
-                  className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit w-full"
-                  onClick={toggleAdvOpt} // Click handler to toggle dark mode
-                >
-                  <p className="text-xl h-full text-tertiary">
-                    <Trans i18nKey="description.text6"></Trans>
-                  </p>{" "}
-                  {/* <img
+                  </div>
+                  <div
+                    className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit w-full"
+                    onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                  >
+                    <p className="text-[18px] h-full text-tertiary">
+                      <Trans i18nKey="description.text6"></Trans>
+                    </p>{" "}
+                    {/* <img
                     src={advanced_settings_arrow}
                     alt="drop-down"
                     className={`${
                       showAdvOpt ? "" : "rotate-180"
                     } h-[15px] w-[40px] cursor-pointer`}
                   /> */}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-        <div>
-          <ToastContainer />
+          <div>
+            <ToastContainer />
+          </div>
         </div>
       </div>
 
