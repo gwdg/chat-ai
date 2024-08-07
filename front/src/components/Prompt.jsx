@@ -836,7 +836,7 @@ function Prompt() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row h-full gap-3 md:justify-between relative md:p-0 px-2 w-full pb-2">
+        <div className="flex flex-col md:flex-row h-full gap-3 md:justify-between relative md:p-0 px-2 w-full">
           {/* response */}
           <div
             className={`md:max-h-full md:h-full h-full  flex flex-col relative md:w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
@@ -1644,10 +1644,10 @@ function Prompt() {
               )}
             </div>
           </div>
+          <div>
+            <ToastContainer />
+          </div>
         </div>
-      </div>
-      <div>
-        <ToastContainer />
       </div>
 
       {/* Help model for info on changing model */}
