@@ -1391,7 +1391,7 @@ function Prompt() {
                           <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
                             <div className="flex-shrink-0 flex items-center gap-2 select-none">
                               {" "}
-                              <p className="text-[18px]">Top_p</p>{" "}
+                              <p className="text-[18px]">top_p</p>{" "}
                               <img
                                 src={help}
                                 alt="help"
