@@ -1428,7 +1428,9 @@ function Prompt() {
                                   <output
                                     className="slider-tooltip"
                                     style={{
-                                      left: `calc(${((tPop - 0.05) / 0.95) * 100}% - 15px)`,
+                                      left: `calc(${
+                                        ((tPop - 0.05) / 0.95) * 100
+                                      }% - 15px)`,
                                     }}
                                   >
                                     {Number(tPop).toFixed(2)}
@@ -1503,23 +1505,23 @@ function Prompt() {
                           {/* Submit button */}
                           <div className="flex md:justify-end gap-2 items-center w-full">
                             <div
-                              className="flex gap-4 items-center justify-center select-none w-full"
+                              className="hidden md:flex gap-4 items-center justify-center select-none w-full"
                               onClick={toggleAdvOpt} // Click handler to toggle dark mode
                             >
                               <p className="text-[18px] h-full text-tertiary cursor-pointer">
                                 <Trans i18nKey="description.text9"></Trans>
                               </p>{" "}
-                              {/* <img
-                    src={advanced_settings_arrow}
-                    alt="drop-down"
-                    className={`${
-                      showAdvOpt ? "" : "rotate-180"
-                    } h-[15px] w-[40px] cursor-pointer`}
-                  /> */}
                             </div>
+                            <button
+                              className="text-white p-3 bg-tertiary dark:border-border_dark md:hidden rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full select-none "
+                              type="reset"
+                              onClick={toggleAdvOpt}
+                            >
+                              <Trans i18nKey="description.save"></Trans>
+                            </button>
                             {/* Opens clear cache model */}
                             <button
-                              className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
+                              className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full md:min-w-[150px] select-none "
                               type="reset"
                               onClick={() => {
                                 setShowCacheModel(true);
@@ -1529,7 +1531,7 @@ function Prompt() {
                             </button>
                             {/* Resets settings, and clears redux */}
                             <button
-                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
+                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full md:min-w-[150px] select-none "
                               onClick={resetDefault}
                               type="reset"
                             >
