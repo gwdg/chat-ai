@@ -27,6 +27,7 @@ import send from "../assets/icon_send.svg";
 import upload from "../assets/add.svg";
 import uploaded from "../assets/file_uploaded.svg";
 import dropdown from "../assets/icon_dropdown.svg";
+
 // import advanced_settings_arrow from "../assets/advanced_settings_arrow.svg";
 import help from "../assets/icon_help.svg";
 import cross from "../assets/cross.svg";
@@ -575,7 +576,7 @@ function Prompt() {
     if (value == "json") {
       exportJSON();
     } else {
-      exportPDF();
+      exportPDF(conversation);
     }
   };
 
@@ -608,60 +609,160 @@ function Prompt() {
     notifySuccess("Settings changed successfully");
   };
 
-  // Exports conversation to a PDF file
-  const exportPDF = () => {
-    let date = new Date();
-    let year = date.getFullYear();
-    let month = String(date.getMonth() + 1).padStart(2, "0");
-    let day = String(date.getDate()).padStart(2, "0");
-    let hour = String(date.getHours()).padStart(2, "0");
-    let minute = String(date.getMinutes()).padStart(2, "0");
-    let second = String(date.getSeconds()).padStart(2, "0");
+  const exportPDF = async (conversation) => {
+    const doc = new jsPDF();
+    doc.setProperties({
+      title: "CHAT AI Conversation",
+      subject: "History",
+      author: "CHAT-AI",
+      keywords: "LLM Generated",
+      creator: "LLM",
+    });
 
-    try {
-      const doc = new jsPDF();
-      let content = "";
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 15;
+    const contentWidth = pageWidth - 2 * margin;
+    const lineHeight = 7;
+    let y = margin;
+    const headerHeight = 25;
 
-      conversation.forEach((entry, index) => {
-        let text = `${entry.role}: ${entry.content}\n`;
-        let splitText = [];
-        let maxLength = 100; // Change to the maximum length you'd like.
-        while (text.length > maxLength) {
-          let substr = text.slice(0, maxLength);
-          let lastSpaceIndex = substr.lastIndexOf(" ");
+    // Set up fonts
+    doc.addFont(
+      "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf",
+      "Roboto",
+      "normal"
+    );
+    doc.addFont(
+      "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Bold.ttf",
+      "Roboto",
+      "bold"
+    );
+    doc.setFont("Roboto");
 
-          if (lastSpaceIndex > -1) {
-            substr = substr.slice(0, lastSpaceIndex);
-            splitText.push(substr);
-            text = text.slice(lastSpaceIndex + 1);
-          } else {
-            splitText.push(substr);
-            text = text.slice(maxLength);
+    const addHeader = (isFirstPage) => {
+      y = margin;
+      if (isFirstPage) {
+        doc.addImage(Logo, "PNG", margin, margin, 20, 10);
+      }
+      const date = new Date().toLocaleDateString();
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(date, pageWidth - margin - 5, margin + 10, { align: "right" });
+      doc.line(margin, headerHeight, pageWidth - margin, headerHeight);
+      y = headerHeight + 10;
+    };
+
+    const addPageNumber = () => {
+      const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
+      const totalPages = doc.internal.getNumberOfPages();
+      doc.setFontSize(8);
+      doc.setTextColor(0); // Set to black to ensure visibility on all pages
+      doc.text(
+        `Page ${pageNumber} of ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: "center" }
+      );
+    };
+
+    const addNewPageIfNeeded = (spaceNeeded) => {
+      if (y + spaceNeeded > pageHeight - margin) {
+        doc.addPage();
+        addHeader(false);
+        addPageNumber();
+      }
+    };
+
+    // Initialize the PDF with headers on the first page
+    addHeader(true);
+    addPageNumber();
+
+    for (const entry of conversation) {
+      addNewPageIfNeeded(lineHeight * 2);
+
+      // Role
+      doc.setFontSize(12);
+      doc.setFont("Roboto", "bold");
+      doc.setTextColor(0, 102, 204); // Blue color for role
+      doc.text(`${entry.role}:`, margin, y);
+      y += lineHeight;
+
+      // Content
+      doc.setFontSize(10);
+      doc.setFont("Roboto", "normal");
+      doc.setTextColor(0);
+
+      if (typeof entry.content === "string") {
+        if (entry.content.includes("```")) {
+          const parts = entry.content.split(/(```[\s\S]+?```)/);
+          for (const part of parts) {
+            if (part.startsWith("```")) {
+              const [, language, code] =
+                part.match(/```(\w+)?\n([\s\S]+?)```/) || [];
+              if (code) {
+                const codeLines = code.trim().split("\n");
+                addNewPageIfNeeded(lineHeight * (codeLines.length + 2));
+
+                // Language title
+                doc.setFont("Roboto", "bold");
+                doc.text(language || "Code:", margin, y);
+                y += lineHeight * 0.5; // Reduced gap between title and code block
+
+                // Code block
+                doc.setFillColor(240, 240, 240);
+                doc.rect(
+                  margin,
+                  y,
+                  contentWidth,
+                  lineHeight * codeLines.length,
+                  "F"
+                );
+                doc.setFont("Courier", "normal");
+                doc.setFontSize(8);
+                codeLines.forEach((line, index) => {
+                  doc.text(line, margin + 5, y + 5 + index * lineHeight);
+                });
+                y += lineHeight * (codeLines.length + 0.5); // Slightly reduced gap after code block
+              }
+            } else {
+              doc.setFont("Roboto", "normal");
+              doc.setFontSize(10);
+              const lines = doc.splitTextToSize(part, contentWidth);
+              lines.forEach((line) => {
+                addNewPageIfNeeded(lineHeight);
+                doc.text(line, margin, y);
+                y += lineHeight;
+              });
+            }
           }
+        } else {
+          const lines = doc.splitTextToSize(entry.content, contentWidth);
+          lines.forEach((line) => {
+            addNewPageIfNeeded(lineHeight);
+            doc.text(line, margin, y);
+            y += lineHeight;
+          });
         }
-        splitText.push(text);
-        content += splitText.join("\n");
-      });
+      } else {
+        addNewPageIfNeeded(lineHeight);
+        doc.text("Content unavailable", margin, y);
+        y += lineHeight;
+      }
 
-      const splitContent = doc.splitTextToSize(content, 160);
-      let y = 30; // Initial y position to start the text
-      let pageHeight = doc.internal.pageSize.height;
-
-      splitContent.forEach((line) => {
-        if (y + 10 > pageHeight) {
-          doc.addPage();
-          y = 30; // Reset y to a new start position
-        }
-        doc.text(line, 20, y);
-        y += 10;
-      });
-      doc.setFontSize(8); // 12 is the font size
-
-      doc.save(`chat-ai-${year}-${month}-${day}-${hour}${minute}${second}.pdf`);
-      notifySuccess("File generated successfully");
-    } catch (error) {
-      notifyError("An error occurred while exporting to PDF: ", error);
+      y += lineHeight; // Space after each entry
     }
+
+    // Ensure all page numbers are in black
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      addPageNumber();
+    }
+
+    // Save the PDF
+    const filename = `chat-ai-${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(filename);
   };
 
   // Function for toggling theme using Redux store function
@@ -890,6 +991,7 @@ function Prompt() {
 
             {/* Prompt response */}
             <div
+              id="divToPrint"
               ref={containerRef}
               className="p-2 flex flex-col gap-2 overflow-y-scroll flex-1 no-scrollbar"
             >
