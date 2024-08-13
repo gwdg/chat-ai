@@ -850,7 +850,7 @@ function Prompt() {
 
   return (
     <>
-      <div className="flex flex-col md:flex-row h-full gap-3 md:pt-2 md:justify-between relative">
+      <div className="flex flex-col md:flex-row h-full gap-3 md:pt-2 md:justify-between relative overflow-y-auto">
         {/* Header component used with same code */}
         <div className="flex flex-col">
           {" "}
@@ -1135,7 +1135,7 @@ function Prompt() {
           </div>
 
           {/* prompt */}
-          <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between md:h-full">
+          <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between md:h-full no-scrollbar md:overflow-y-auto md:gap-3">
             {/* <div className="max-h-[650px] overflow-auto flex md:flex-col flex-row gap-2"> */}
             <div className="flex flex-col gap-4 w-full">
               <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">

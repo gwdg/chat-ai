@@ -318,7 +318,7 @@ html {
 .slider-tooltip {
   position: absolute;
   top: -40px; /* Adjust this value to place the tooltip right above the thumb */
-  width: 30px;
+  width: 32px;
   color: #009ee0; /* Customize if needed */
   background-color: var(--tooltip-bg-color, white); /* Customize if needed */
   text-align: center;
