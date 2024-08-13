@@ -618,6 +618,7 @@ function Prompt() {
       keywords: "LLM Generated",
       creator: "LLM",
     });
+    doc.setFont("helvetica"); // Set the default font
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -628,17 +629,8 @@ function Prompt() {
     const headerHeight = 25;
 
     // Set up fonts
-    doc.addFont(
-      "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf",
-      "Roboto",
-      "normal"
-    );
-    doc.addFont(
-      "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Bold.ttf",
-      "Roboto",
-      "bold"
-    );
-    doc.setFont("Roboto");
+    doc.setFont("helvetica", "bold"); // When setting Font
+    doc.setFont("helvetica", "normal");
 
     const addHeader = (isFirstPage) => {
       y = margin;
@@ -657,11 +649,11 @@ function Prompt() {
       const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
       const totalPages = doc.internal.getNumberOfPages();
       doc.setFontSize(8);
-      doc.setTextColor(0); // Set to black to ensure visibility on all pages
+      doc.setTextColor(0);
       doc.text(
         `Page ${pageNumber} of ${totalPages}`,
         pageWidth / 2,
-        pageHeight - 10,
+        pageHeight - 10, // Adjust this placement
         { align: "center" }
       );
     };
@@ -683,14 +675,12 @@ function Prompt() {
 
       // Role
       doc.setFontSize(12);
-      doc.setFont("Roboto", "bold");
       doc.setTextColor(0, 102, 204); // Blue color for role
       doc.text(`${entry.role}:`, margin, y);
       y += lineHeight;
 
       // Content
       doc.setFontSize(10);
-      doc.setFont("Roboto", "normal");
       doc.setTextColor(0);
 
       if (typeof entry.content === "string") {
@@ -705,7 +695,6 @@ function Prompt() {
                 addNewPageIfNeeded(lineHeight * (codeLines.length + 2));
 
                 // Language title
-                doc.setFont("Roboto", "bold");
                 doc.text(language || "Code:", margin, y);
                 y += lineHeight * 0.5; // Reduced gap between title and code block
 
@@ -726,7 +715,6 @@ function Prompt() {
                 y += lineHeight * (codeLines.length + 0.5); // Slightly reduced gap after code block
               }
             } else {
-              doc.setFont("Roboto", "normal");
               doc.setFontSize(10);
               const lines = doc.splitTextToSize(part, contentWidth);
               lines.forEach((line) => {
@@ -754,11 +742,11 @@ function Prompt() {
     }
 
     // Ensure all page numbers are in black
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      addPageNumber();
-    }
+    // const totalPages = doc.internal.getNumberOfPages();
+    // for (let i = 1; i <= totalPages; i++) {
+    //   doc.setPage(i);
+    //   addPageNumber();
+    // }
 
     // Save the PDF
     const filename = `chat-ai-${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -817,6 +805,14 @@ function Prompt() {
   };
 
   const resetDefault = () => {
+    let updatedConversation = conversation.map((item) => {
+      if (item.role === "system") {
+        return { ...item, content: "You are a helpful assistant" };
+      } else {
+        return item;
+      }
+    });
+    setConversation(updatedConversation);
     setTemperature(0.5);
     setTpop(0.5);
     formik.setFieldValue("instructions", "You are a helpful assistant");
@@ -844,6 +840,14 @@ function Prompt() {
   };
 
   const saveInstructions = () => {
+    let updatedConversation = conversation.map((item) => {
+      if (item.role === "system") {
+        return { ...item, content: formik.values.instructions };
+      } else {
+        return item;
+      }
+    });
+    setConversation(updatedConversation);
     dispatch(setInstructions(formik.values.instructions));
     setIsEditingCustom(!isEditingCustom);
   };

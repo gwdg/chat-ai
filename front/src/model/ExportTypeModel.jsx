@@ -76,6 +76,7 @@ function ExportTypeModel(props) {
               <button
                 className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
                 onClick={exportFile} // Click handler to export file
+                type="button"
               >
                 {/* Translation for export button */}
                 <Trans i18nKey="description.export"></Trans>
