@@ -638,7 +638,7 @@ function Prompt() {
         doc.addImage(Logo, "PNG", margin, margin, 20, 10);
       }
       const date = new Date().toLocaleDateString();
-      doc.setFontSize(8);
+      doc.setFontSize(10);
       doc.setTextColor(150);
       doc.text(date, pageWidth - margin - 5, margin + 10, { align: "right" });
       doc.line(margin, headerHeight, pageWidth - margin, headerHeight);
@@ -648,7 +648,7 @@ function Prompt() {
     const addPageNumber = () => {
       const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
       const totalPages = doc.internal.getNumberOfPages();
-      doc.setFontSize(8);
+      doc.setFontSize(10);
       doc.setTextColor(0);
       doc.text(
         `Page ${pageNumber} of ${totalPages}`,
@@ -674,7 +674,7 @@ function Prompt() {
       addNewPageIfNeeded(lineHeight * 2);
 
       // Role
-      doc.setFontSize(12);
+      doc.setFontSize(10);
       doc.setTextColor(0, 102, 204); // Blue color for role
       doc.text(`${entry.role}:`, margin, y);
       y += lineHeight;
@@ -708,7 +708,7 @@ function Prompt() {
                   "F"
                 );
                 doc.setFont("Courier", "normal");
-                doc.setFontSize(8);
+                doc.setFontSize(10);
                 codeLines.forEach((line, index) => {
                   doc.text(line, margin + 5, y + 5 + index * lineHeight);
                 });
@@ -941,7 +941,7 @@ function Prompt() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row h-full gap-3 md:justify-between relative md:p-0 px-2 w-full md:pb-2 pb-2">
+        <div className="flex flex-col md:flex-row h-full gap-3 md:justify-between relative md:p-0 px-2 w-full md:pb-2 pb-2 bg-bg_light dark:bg-bg_dark">
           {/* response */}
           <div
             className={`md:max-h-full md:h-full h-full  flex flex-col relative md:w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
@@ -1139,7 +1139,7 @@ function Prompt() {
           </div>
 
           {/* prompt */}
-          <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between md:h-full no-scrollbar md:overflow-y-auto md:gap-3">
+          <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between md:h-full no-scrollbar md:overflow-y-auto md:gap-3 relative rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
             {/* <div className="max-h-[650px] overflow-auto flex md:flex-col flex-row gap-2"> */}
             <div className="flex flex-col gap-4 w-full">
               <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
@@ -1339,7 +1339,7 @@ function Prompt() {
               ) : null}
             </div>
 
-            <div className="md:static flex justify-center absolute bottom-0 md:w-full w-[calc(100%-16px)]">
+            <div className="md:static flex justify-center absolute bottom-0 md:w-full w-[calc(100%-16px)] shadow-lg dark:shadow-dark">
               {showAdvOpt ? (
                 <div className="flex flex-col gap-4 md:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
                   {/* Select model */}
