@@ -10,7 +10,7 @@ exports.getArcanaInfo = async (req, res) => {
   try {
     // Step 1: Make a GET request to check if the user exists
     let response = await axios.get(
-      `https://llm.hpc.gwdg.de/api/users/${userEmail}`
+      `${process.env.API_BASE_URL}/users/${userEmail}`
     );
 
     // Step 2: If the user exists, return the JSON response to the frontend
@@ -22,13 +22,13 @@ exports.getArcanaInfo = async (req, res) => {
     if (error.response && error.response.status === 404) {
       try {
         // Replace this with the correct body if needed
-        await axios.post(`https://llm.hpc.gwdg.de/api/users`, {
+        await axios.post(`${process.env.API_BASE_URL}/users`, {
           email: userEmail,
         });
 
         // Step 4: After creating the user, send the GET request again
         const newUserResponse = await axios.get(
-          `https://llm.hpc.gwdg.de/api/users/${userEmail}`
+          `${process.env.API_BASE_URL}/users/${userEmail}`
         );
 
         // Step 5: Return the JSON response to the frontend
