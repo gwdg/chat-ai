@@ -88,6 +88,31 @@ function Arcanas() {
     };
   }, []);
 
+  useEffect(() => {
+    const fetchArcanaInfo = async () => {
+      try {
+        const response = await fetch("http://localhost:3000/arcana/info", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            email: "p.chikhaliya@stud.uni-goettingen.de", // Add the email header here
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data);
+      } catch (error) {
+        console.log(error.message);
+      }
+    };
+
+    fetchArcanaInfo();
+  }, []);
+
   return (
     <div className="flex md:flex-row flex-col gap-2 items-center w-full">
       {filteredArcanas.length > 0 ? (
