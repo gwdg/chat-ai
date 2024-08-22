@@ -1418,19 +1418,19 @@ function Prompt() {
             </div> */}
                   </div>
                   {/* Arcanas */}
-                  {/* <div className="flex gap-4 w-full items-center">
-                  <div className="flex-shrink-0 flex items-center gap-2">
-                    {" "}
-                    <p className="text-[18px]">Arcanas</p>{" "}
-                    <img
-                      src={help}
-                      alt="help"
-                      className="h-[20px] w-[20px] cursor-pointer"
-                      onClick={() => setShowArcanasHelpModel(true)}
-                    />
+                  <div className="flex gap-4 w-full items-center">
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      {" "}
+                      <p className="text-[18px]">Arcanas</p>{" "}
+                      <img
+                        src={help}
+                        alt="help"
+                        className="h-[20px] w-[20px] cursor-pointer"
+                        onClick={() => setShowArcanasHelpModel(true)}
+                      />
+                    </div>
+                    <Arcanas />
                   </div>
-                  <Arcanas />
-                </div> */}
                   {/* Custom instructions */}
                   <div className="">
                     <Formik enableReinitialize={true} onSubmit>
