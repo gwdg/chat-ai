@@ -24,7 +24,7 @@ function PublicRoute() {
             path="/custom-instructions"
             element={<CustomInstructions />}
           /> */}
-            <Route exact path="/arcana/:index" element={<Arcana />} />
+            <Route exact path="/collection/:index" element={<Arcana />} />
           </Routes>
         </Router>
       </div>

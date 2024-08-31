@@ -1,76 +1,75 @@
 // components/Arcanas.jsx
 import { useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import { useMemo, useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Trans } from "react-i18next";
 import dropdown from "../assets/icon_dropdown.svg";
-import { setSelectedArcana } from "../Redux/actions/arcanaSelectAction";
-import { setItem, resetArcanas } from "../Redux/actions/arcanaAction";
+import { fetchArcanaInfo, createArcana } from "../apis/ArcanaApis";
 
 function Arcanas() {
-  const arcanas = useSelector((state) => state.arcana);
-  const selectedArcana = useSelector((state) => state.selectedArcana);
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-
+  const [arcanas, setArcanas] = useState([]);
+  const [selectedArcana, setSelectedArcana] = useState(null); // Updated to store the selected arcana
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-
-  const filteredArcanas = useMemo(
-    () =>
-      arcanas.filter(
-        (arcana) =>
-          arcana.title || arcana.description || arcana.files.length > 0
-      ),
-    [arcanas]
-  );
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (filteredArcanas.length > 0) {
-      if (selectedArcana === 0 || selectedArcana > filteredArcanas.length) {
-        dispatch(setSelectedArcana(1));
+    const fetchArcanas = async () => {
+      try {
+        const response = await fetchArcanaInfo();
+        const fetchedArcanas = response.folders;
+        setArcanas(fetchedArcanas); // Directly setting the fetched folders
+
+        if (fetchedArcanas.length > 0) {
+          setSelectedArcana(fetchedArcanas[0]); // Set the first arcana as selected initially
+        }
+      } catch (error) {
+        console.error("Error fetching Arcanas:", error);
       }
-    } else {
-      dispatch(setSelectedArcana(0));
-      dispatch(resetArcanas());
+    };
+
+    fetchArcanas();
+  }, []);
+
+  // Create a new Arcana and navigate to its details page
+  const handleAddArcana = useCallback(async () => {
+    if (arcanas.length >= 3) {
+      alert("You can only create up to 3 Arcanas.");
+      return;
     }
-  }, [filteredArcanas, selectedArcana, dispatch]);
 
-  const handleAddArcana = useCallback(() => {
-    const newIndex = arcanas.findIndex(
-      (arcana) =>
-        !arcana.title && !arcana.description && arcana.files.length === 0
-    );
-    if (newIndex !== -1 && newIndex < 3) {
-      dispatch(
-        setItem({
-          index: newIndex,
-          data: { icon: "", title: "", description: "", files: [] },
-        })
-      );
-      navigate(`/arcana/${newIndex + 1}`);
-      dispatch(setSelectedArcana(newIndex + 1));
+    try {
+      const newArcana = await createArcana();
+
+      // If creation is successful, refetch arcanas and select the newly added one
+      if (newArcana) {
+        const response = await fetchArcanaInfo();
+        const updatedArcanas = response.folders;
+        setArcanas(updatedArcanas);
+        navigate(
+          `/collection/${
+            updatedArcanas
+              .find((a) => a.name === newArcana.name)
+              .name.split(" ")[1]
+          }`
+        );
+      }
+    } catch (error) {
+      console.error("Error creating Arcana:", error);
     }
-  }, [arcanas, navigate, dispatch]);
+  }, [arcanas, navigate]);
 
-  const handleArcanaSelect = useCallback(
-    (index) => {
-      dispatch(setSelectedArcana(index + 1));
-      setIsOpen(false);
-    },
-    [dispatch]
-  );
+  // Select an Arcana from the list
+  const handleArcanaSelect = useCallback((arcana) => {
+    setSelectedArcana(arcana);
+    setIsOpen(false);
+  }, []);
 
+  // Navigate to edit the selected arcana
   const handleEditClick = useCallback(() => {
-    if (filteredArcanas.length > 0) {
-      // Ensure the selected arcana is within the valid range
-      const validArcanaIndex = Math.max(
-        1,
-        Math.min(selectedArcana, filteredArcanas.length)
-      );
-      navigate(`/arcana/${validArcanaIndex}`);
+    if (selectedArcana) {
+      navigate(`/collection/${selectedArcana.name.split(" ")[1]}`); // Navigate using the exact arcana number
     }
-  }, [selectedArcana, filteredArcanas, navigate]);
+  }, [selectedArcana, navigate]);
 
   const toggleOpen = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -88,40 +87,17 @@ function Arcanas() {
     };
   }, []);
 
-  useEffect(() => {
-    const fetchArcanaInfo = async () => {
-      try {
-        const response = await fetch("http://localhost:3000/arcana/info", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            email: "p.chikhaliya@stud.uni-goettingen.de", // Add the email header here
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(data);
-      } catch (error) {
-        console.log(error.message);
-      }
-    };
-
-    fetchArcanaInfo();
-  }, []);
-
   return (
     <div className="flex md:flex-row flex-col gap-2 items-center w-full">
-      {filteredArcanas.length > 0 ? (
+      {arcanas.length > 0 && (
         <div className="relative w-full flex flex-col" ref={dropdownRef}>
           <div
             className="text-tertiary mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark flex justify-between items-center"
             onClick={toggleOpen}
           >
-            <span> {`Arcana ${selectedArcana}`}</span>
+            <span>
+              {selectedArcana ? selectedArcana.name : "Select Arcana"}
+            </span>
             <img
               src={dropdown}
               alt="dropdown"
@@ -130,42 +106,38 @@ function Arcanas() {
           </div>
           {isOpen && (
             <div className="absolute z-50 top-full mt-2 w-full rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark">
-              {filteredArcanas.map((arcana, index) => (
+              {arcanas.map((arcana) => (
                 <div
-                  key={index}
-                  className={`text-tertiary block text-xl w-full p-2 cursor-pointer ${
-                    index === 0 ? "rounded-t-2xl" : ""
-                  } ${
-                    index === filteredArcanas.length - 1 ? "rounded-b-2xl" : ""
-                  }`}
-                  onClick={() => handleArcanaSelect(index)}
+                  key={arcana.id}
+                  className="text-tertiary block text-xl w-full p-2 cursor-pointer"
+                  onClick={() => handleArcanaSelect(arcana)}
                 >
-                  {`Arcana ${arcana.id}`}
+                  {arcana.name}
                 </div>
               ))}
             </div>
           )}
         </div>
-      ) : null}
+      )}
 
       <div className="flex gap-2">
-        {filteredArcanas.length < 3 && (
+        {(arcanas.length === 0 || arcanas.length < 3) && (
           <button
-            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
+            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
             type="button"
             onClick={handleAddArcana}
           >
-            <Trans i18nKey="description.add"></Trans>
+            <Trans i18nKey="description.add">Add Arcana</Trans>
           </button>
         )}
 
-        {filteredArcanas.length > 0 && selectedArcana > 0 && (
+        {selectedArcana && (
           <button
-            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none  flex gap-2"
+            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none flex gap-2"
             type="button"
             onClick={handleEditClick}
           >
-            Edit
+            <Trans i18nKey="description.edit">Edit</Trans>
           </button>
         )}
       </div>

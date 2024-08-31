@@ -1,29 +1,21 @@
 const express = require("express");
 const dotenv = require("dotenv");
-const cors = require("cors"); // Import cors
+const cors = require("cors");
 
-// Load environment variables from .env file
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Use CORS middleware
-app.use(
-  cors({
-    origin: "http://localhost:7220", // Allow requests from your frontend
-    methods: ["GET", "POST"], // Specify the allowed methods
-    allowedHeaders: ["Content-Type", "email"], // Specify the allowed headers
-  })
-);
+app.use(cors());
 
-// Middleware to parse JSON bodies
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // To handle form data
 
-// Import routes
-const apiRoutes = require("./routes/apiRoutes");
-app.use("/arcana", apiRoutes);
+const userRoutes = require("./routes/userRoutes");
+
+app.use("/arcana", userRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
