@@ -85,7 +85,7 @@ function Arcana() {
   }, []);
 
   const togglePopup = useCallback(() => {
-    setIsPopupOpen((prev) => !prev);
+    setIsOpen((prev) => !prev);
   }, []);
 
   useEffect(() => {
@@ -148,52 +148,14 @@ function Arcana() {
                 </div>
               </div>
 
-              {/* Commented Formik Title and Description Divs as requested */}
-              {/* 
-              <form onSubmit={formik.handleSubmit}>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="dark:text-white text-black">
-                      <Trans i18nKey="description.arcana_title"></Trans>
-                    </label>
-                    <input
-                      className="p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark dark:text-white text-black bg-white dark:bg-bg_secondary_dark w-full"
-                      type="text"
-                      name="title"
-                      placeholder={t("description.arcana_enter_title")}
-                      value={formik.values.title}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                    />
-                    {formik.touched.title && formik.errors.title ? (
-                      <p className="text-red-500">{formik.errors.title}</p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="dark:text-white text-black">
-                      <Trans i18nKey="description.arcana_description"></Trans>
-                    </label>
-                    <textarea
-                      className="p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark dark:text-white text-black bg-white dark:bg-bg_secondary_dark w-full"
-                      name="description"
-                      placeholder={t("description.arcana_enter_description")}
-                      value={formik.values.description}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                    />
-                    {formik.touched.description && formik.errors.description ? (
-                      <p className="text-red-500">
-                        {formik.errors.description}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              </form> 
-              */}
-
+              {/* Render FilesTable with the correct folderName */}
               <div className="flex flex-col gap-2">
-                <FilesTable arcanaIndex={index - 1} />
+                <FilesTable
+                  folderName={arcanaDetails.name}
+                  filesFromAPI={arcanaDetails.files}
+                />
               </div>
+
               <div className="flex flex-col md:flex-row justify-between gap-2 items-center w-full">
                 <button
                   className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"

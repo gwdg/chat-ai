@@ -93,3 +93,58 @@ export const deleteArcana = async (folderName) => {
     throw error;
   }
 };
+
+// Function to upload a file to a specific folder
+export const uploadFile = async (file, folderName, fileName) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file); // File input
+    formData.append("folderName", folderName); // Folder name
+    formData.append("fileName", fileName); // File name
+
+    const response = await fetch("/arcana/uploadfile", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Error Response:", errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
+  }
+};
+
+// Function to delete a file from a specific folder
+export const deleteFile = async (folderName, fileName) => {
+  try {
+    const response = await fetch(`/arcana/deletefile`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        folderName: folderName,
+        fileName: fileName,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Error Response:", errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.success;
+  } catch (error) {
+    console.error("Error deleting file:", error);
+    throw error;
+  }
+};
