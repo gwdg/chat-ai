@@ -1491,7 +1491,7 @@ function Prompt() {
                       <Form onSubmit={formik.handleSubmit}>
                         <div className="flex flex-col gap-4 items-center">
                           {/* Temperature slider */}
-                          <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
+                          <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
                             <div className="flex-shrink-0 flex items-center gap-2 select-none">
                               <p className="text-[18px]">Temperature</p>
                               <img
@@ -1549,7 +1549,7 @@ function Prompt() {
                           </div>
 
                           {/* Top_p slider */}
-                          <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
+                          <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
                             <div className="flex-shrink-0 flex items-center gap-2 select-none">
                               <p className="text-[18px]">Top_p</p>
                               <img
