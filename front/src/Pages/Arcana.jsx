@@ -15,7 +15,7 @@ import studies from "../assets/icons_arcana/studies.svg";
 import work from "../assets/icons_arcana/work.svg";
 import FilesTable from "../components/FilesTable";
 import Help_Model from "../model/Help_Modal";
-import { getArcana, deleteArcana } from "../apis/ArcanaApis";
+import { getArcana, deleteArcana, buildArcana } from "../apis/ArcanaApis"; // Import buildArcana function
 import { useSelector } from "react-redux";
 import Delete_Arcana_Model from "../model/Delete_Arcana_Model";
 
@@ -70,7 +70,6 @@ function Arcana() {
         toast.error("Failed to fetch Arcana details.", {
           className: toastClass,
           autoClose: 1000,
-          onClose: () => {},
         });
       }
     };
@@ -97,6 +96,31 @@ function Arcana() {
       });
     }
   }, [folderName, navigate]);
+
+  // Handle the build operation
+  const handleBuild = useCallback(async () => {
+    try {
+      const success = await buildArcana(folderName);
+      if (success) {
+        toast.success("Arcana built successfully!", {
+          className: toastClass,
+          autoClose: 1000,
+        });
+      }
+    } catch (error) {
+      if (error.message === "Indexing already in progress") {
+        toast.warn("Indexing already in progress, please wait.", {
+          className: toastClass,
+          autoClose: 1000,
+        });
+      } else {
+        toast.error("Error building Arcana: " + error.message, {
+          className: toastClass,
+          autoClose: 1000,
+        });
+      }
+    }
+  }, [folderName, toastClass]);
 
   const handleIconClick = useCallback((icon) => {
     setSelectedIcon(icon.icon);
@@ -184,13 +208,22 @@ function Arcana() {
                 >
                   <Trans i18nKey="description.help"></Trans>
                 </button>
-                <button
-                  className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
-                  type="button"
-                  onClick={() => setShowDeleteModel(true)}
-                >
-                  Delete Arcana
-                </button>
+                <div className="flex flex-col md:flex-row md:gap-4 gap-2 items-center">
+                  <button
+                    className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+                    type="button"
+                    onClick={() => setShowDeleteModel(true)}
+                  >
+                    Delete Arcana
+                  </button>
+                  <button
+                    className="text-white p-3 bg-blue-500 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+                    type="button"
+                    onClick={handleBuild}
+                  >
+                    <Trans i18nKey="description.build">Build Arcana</Trans>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

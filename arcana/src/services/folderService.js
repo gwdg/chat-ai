@@ -78,3 +78,30 @@ exports.deleteFolder = async (userEmail, folderName) => {
     throw new Error("Failed to delete folder");
   }
 };
+
+// Build a folder (indexing operation)
+exports.buildFolder = async (userEmail, folderName) => {
+  try {
+    const response = await axios.post(
+      `${process.env.API_BASE_URL}/api/build/${userEmail}/${folderName}`,
+      {
+        user_email: userEmail,
+        folder_name: folderName,
+      }
+    );
+
+    if (response.status === 200) {
+      return true; // Successfully built
+    } else if (response.status === 400) {
+      return "in_progress"; // Indexing already in progress
+    } else {
+      throw new Error("Unexpected response status: " + response.status);
+    }
+  } catch (error) {
+    if (error.response && error.response.status === 400) {
+      return "in_progress";
+    }
+    console.error("Error during folder build:", error.message);
+    throw new Error("Failed to build folder");
+  }
+};

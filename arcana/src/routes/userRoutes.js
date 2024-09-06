@@ -31,4 +31,7 @@ router.post(
 );
 router.delete("/deletefile", authMiddleware, fileController.deleteFile);
 
+router.post("/build", authMiddleware, folderController.buildFolder);
+
+
 module.exports = router;

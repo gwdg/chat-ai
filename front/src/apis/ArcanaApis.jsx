@@ -148,3 +148,31 @@ export const deleteFile = async (folderName, fileName) => {
     throw error;
   }
 };
+
+// ArcanaApis.jsx
+export const buildArcana = async (folderName) => {
+  const response = await fetch("/arcana/build", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // Email will be automatically handled by the backend from headers
+    },
+    body: JSON.stringify({
+      folderName: folderName, // Only sending folder name
+    }),
+  });
+
+  // Handle response status directly
+  if (!response.ok) {
+    if (response.status === 400) {
+      const errorData = await response.json();
+      if (errorData.detail === "Indexing already in progress") {
+        throw new Error("Indexing already in progress");
+      }
+    }
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.success;
+};
