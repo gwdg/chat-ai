@@ -23,7 +23,7 @@ function Clear_Catch_Model(props) {
           />
         </div>
         <div className="flex flex-col gap-2 p-4">
-          <div className="p-4 pt-0">
+          <div className="pt-0 pb-2">
             <p className="dark:text-white text-black text-justify">
               {/* Translation for mic permission message */}
               <Trans i18nKey="description.cache1"></Trans>

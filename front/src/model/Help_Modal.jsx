@@ -2,6 +2,7 @@
 import { Trans } from "react-i18next"; // For translation
 import Modal from "./Modal"; // Importing Modal component
 import cross from "../assets/cross.svg"; // Close icon
+import { Link } from "react-router-dom";
 
 // Help model component
 function Help_Model(props) {
@@ -27,7 +28,15 @@ function Help_Model(props) {
         <div className="p-4 pt-0">
           <p className="dark:text-white text-black text-justify">
             {/* Translation for help note */}
-            <Trans i18nKey="description.help_note"></Trans>
+            <Trans i18nKey="description.help_note"></Trans>{" "}
+            {/* Move the link inside the paragraph */}
+            <Link
+              to={"https://docs.hpc.gwdg.de/services/chat-ai/index.html"}
+              target="_blank"
+              className="text-tertiary underline"
+            >
+              Link
+            </Link>
           </p>
         </div>
       </div>

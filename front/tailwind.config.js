@@ -26,6 +26,8 @@ export default {
         darkTop:
           "0 -10px 15px -1px rgba(0, 0, 0, 0.2), 0 -4px 6px -4px rgba(0, 0, 0, 0.2)",
         dark: "0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19)",
+        bottom: "0 20px 10px -10px rgba(0, 0, 0, 0.1)", // Focused bottom shadow with no spread
+        darkBottom: "0 20px 10px -10px rgba(0, 0, 0, 0.2)", // Focused dark mode bottom shadow with no spread
       },
       backgroundImage: () => ({
         "logo-large": "url('../src/assets/Gwdg-logo-neu.png')",

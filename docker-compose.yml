@@ -20,3 +20,14 @@ services:
       - ./back:/usr/src/app
       - /usr/src/app/node_modules
     restart: on-failure
+
+  arcana:
+    image: chat-ai-arcana:latest
+    build: ./arcana
+    network_mode: "host"
+    ports:
+      - '3000:3000' # port mapping
+    volumes:
+      - ./arcana:/usr/src/app
+      - /usr/src/app/node_modules
+    restart: on-failure
