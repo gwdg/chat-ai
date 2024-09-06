@@ -158,6 +158,9 @@ i18n
 
             arcana_note:
               "You can select the specific arcana to be referenced by the LLM model by making the appropriate choice.",
+
+            delete_arcana: "Are you sure you want to delete arcana?",
+            delete_arcana1: "Delete",
           },
         },
       },
@@ -306,6 +309,9 @@ i18n
 
             arcana_note:
               "Sie können die spezifischen Arkana auswählen, auf die das LLM-Modell verweisen soll, indem Sie die entsprechende Auswahl treffen.",
+
+            delete_arcana: "Sind Sie sicher, dass Sie Arcana löschen wollen?",
+            delete_arcana1: "Löschen",
           },
         },
       },

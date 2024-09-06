@@ -1429,7 +1429,10 @@ function Prompt() {
                         onClick={() => setShowArcanasHelpModel(true)}
                       />
                     </div>
-                    <Arcanas />
+                    <Arcanas
+                      notifyError={notifyError}
+                      notifySuccess={notifySuccess}
+                    />
                   </div>
                   {/* Custom instructions */}
                   <div className="">

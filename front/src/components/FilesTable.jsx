@@ -3,13 +3,39 @@ import { useEffect, useRef, useState } from "react";
 import Table from "./Table";
 import { Trans } from "react-i18next";
 import { uploadFile, deleteFile } from "../apis/ArcanaApis";
+import { toast } from "react-toastify"; // Import toast for notifications
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+import { useSelector } from "react-redux";
 
 const FilesTable = ({ folderName, filesFromAPI }) => {
   const [files, setFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // State to manage loading state
   const fileInputRef = useRef(null);
+  const isDarkMode = useSelector((state) => state.theme.isDarkMode);
+  const toastClass = isDarkMode ? "dark-toast" : "light-toast";
+
+  // Displays an error notification
+  const notifyError = (message) => {
+    toast.error(message, {
+      className: toastClass,
+      autoClose: 1000,
+      onClose: () => {},
+    });
+  };
+
+  // Displays a success notification
+  const notifySuccess = (message) =>
+    toast.success(message, {
+      className: toastClass,
+      autoClose: 1000,
+      onClose: () => {},
+    });
 
   // Initialize the files state with files from the API response
   useEffect(() => {
+    setIsLoading(true); // Start loading as soon as the component mounts
+
     if (filesFromAPI) {
       const formattedFiles = filesFromAPI.map((file, index) => ({
         id: file.id,
@@ -18,7 +44,14 @@ const FilesTable = ({ folderName, filesFromAPI }) => {
         url: file.url,
         index: index + 1, // Set index starting from 1
       }));
-      setFiles(formattedFiles);
+
+      // Simulate a slight delay to ensure skeleton visibility
+      setTimeout(() => {
+        setFiles(formattedFiles);
+        setIsLoading(false); // Stop loading once files are set
+      }, 500); // Adjust delay as needed (500ms here to simulate loading)
+    } else {
+      setIsLoading(false); // Stop loading if there's no data
     }
   }, [filesFromAPI]);
 
@@ -29,13 +62,13 @@ const FilesTable = ({ folderName, filesFromAPI }) => {
     if (!file) return;
 
     if (file.type !== "application/pdf") {
-      console.error("Only PDF files are allowed");
+      notifyError("Only PDF files are allowed.");
       return;
     }
 
     const fileExists = files.some((f) => f.name === file.name);
     if (fileExists) {
-      console.error("This file has already been uploaded.");
+      notifyError("This file has already been uploaded.");
       return;
     }
 
@@ -50,9 +83,12 @@ const FilesTable = ({ folderName, filesFromAPI }) => {
       };
 
       setFiles((prevFiles) => [...prevFiles, newFile]);
+      notifySuccess("File uploaded successfully.");
+
       event.target.value = ""; // Reset the file input
     } catch (error) {
       console.error("Error uploading file:", error);
+      notifyError("Error uploading file.");
     }
   };
 
@@ -70,9 +106,13 @@ const FilesTable = ({ folderName, filesFromAPI }) => {
               index: i + 1, // Reset index
             }))
         );
+        notifySuccess("File deleted successfully.");
+      } else {
+        notifyError("Failed to delete file.");
       }
     } catch (error) {
       console.error("Error deleting file:", error);
+      notifyError("Failed to delete file.");
     }
   };
 
@@ -98,12 +138,25 @@ const FilesTable = ({ folderName, filesFromAPI }) => {
         <Trans i18nKey="description.arcana_file_upload"></Trans>
       </button>
 
-      {files.length > 0 ? (
+      {isLoading ? (
+        // Skeleton loader for table while loading
+        <div>
+          <Skeleton
+            height={20}
+            count={3}
+            baseColor={isDarkMode ? "#3a3a3a" : "#e0e0e0"} // Darker gray for dark mode, lighter gray for light mode
+            highlightColor={isDarkMode ? "#525252" : "#f0f0f0"} // Slightly lighter gray for highlight
+            className="mb-1"
+          />
+        </div>
+      ) : files.length > 0 ? (
         <Table data={files} handleDeleteFile={handleDeleteFile} />
       ) : (
-        <p className="dark:text-white text-black">
-          <Trans i18nKey="description.arcana_file"></Trans>
-        </p>
+        !isLoading && (
+          <p className="dark:text-white text-black">
+            <Trans i18nKey="description.arcana_file"></Trans>
+          </p>
+        )
       )}
     </div>
   );

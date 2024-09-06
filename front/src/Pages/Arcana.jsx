@@ -2,6 +2,8 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify"; // Import toast and ToastContainer
+import "react-toastify/dist/ReactToastify.css"; // Import toastify CSS for styling
 import Layout from "../components/Layout";
 import cross from "../assets/cross.svg";
 import books from "../assets/icons_arcana/books.svg";
@@ -14,6 +16,8 @@ import work from "../assets/icons_arcana/work.svg";
 import FilesTable from "../components/FilesTable";
 import Help_Model from "../model/Help_Modal";
 import { getArcana, deleteArcana } from "../apis/ArcanaApis";
+import { useSelector } from "react-redux";
+import Delete_Arcana_Model from "../model/Delete_Arcana_Model";
 
 const icons = [
   { name: "Books", icon: books },
@@ -29,10 +33,14 @@ function Arcana() {
   const { t } = useTranslation();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [showHelpModel, setShowHelpModel] = useState(false);
+  const [showDeleteModel, setShowDeleteModel] = useState(false);
+
   const popupRef = useRef(null);
   const { index } = useParams();
   const folderName = `Arcana ${index}`;
   const navigate = useNavigate();
+  const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
+  let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
 
   const [arcanaDetails, setArcanaDetails] = useState({
     icon: icons[0].name,
@@ -59,6 +67,11 @@ function Arcana() {
         );
       } catch (error) {
         console.error("Error fetching Arcana details:", error);
+        toast.error("Failed to fetch Arcana details.", {
+          className: toastClass,
+          autoClose: 1000,
+          onClose: () => {},
+        });
       }
     };
 
@@ -75,6 +88,13 @@ function Arcana() {
       navigate("/arcanas");
     } catch (error) {
       console.error("Error deleting Arcana:", error);
+      toast.error("Failed to delete Arcana.", {
+        className: toastClass,
+        autoClose: 1000,
+        onClose: () => {
+          setShowDeleteModel(false);
+        },
+      });
     }
   }, [folderName, navigate]);
 
@@ -85,7 +105,7 @@ function Arcana() {
   }, []);
 
   const togglePopup = useCallback(() => {
-    setIsOpen((prev) => !prev);
+    setIsPopupOpen((prev) => !prev);
   }, []);
 
   useEffect(() => {
@@ -167,7 +187,7 @@ function Arcana() {
                 <button
                   className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
                   type="button"
-                  onClick={handleDelete}
+                  onClick={() => setShowDeleteModel(true)}
                 >
                   Delete Arcana
                 </button>
@@ -176,6 +196,14 @@ function Arcana() {
           </div>
         </div>
       </div>
+      <ToastContainer />
+
+      {showDeleteModel ? (
+        <Delete_Arcana_Model
+          showModal={setShowDeleteModel}
+          handleDelete={handleDelete}
+        />
+      ) : null}
       {showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}
     </Layout>
   );
