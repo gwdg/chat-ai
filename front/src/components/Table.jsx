@@ -1,8 +1,9 @@
+// Table.jsx
 import { useTable } from "react-table";
 import { useColumns } from "../column/columns";
 import icon_delete from "../assets/delete_icon.svg";
 
-const Table = ({ data, handleDeleteFile, isEditing }) => {
+const Table = ({ data, handleDeleteFile }) => {
   const columns = useColumns(); // Get the columns
 
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
@@ -28,7 +29,7 @@ const Table = ({ data, handleDeleteFile, isEditing }) => {
                           key={"header" + columnIndex}
                           className="px-4 py-2 border-b text-left"
                         ></th>
-                      ); // Skip rendering action header if not editing
+                      );
                     }
                     return (
                       <th

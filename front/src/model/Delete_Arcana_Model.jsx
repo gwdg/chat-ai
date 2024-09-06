@@ -3,7 +3,7 @@ import { Trans } from "react-i18next"; // For translation
 import Modal from "./Modal"; // Importing Modal component
 import cross from "../assets/cross.svg"; // Close icon
 
-function Bad_Request_Model(props) {
+function Delete_Arcana_Model(props) {
   return (
     // Modal component with export type selection form
     <Modal showModal={props.showModal}>
@@ -26,16 +26,25 @@ function Bad_Request_Model(props) {
           <div className="pt-0 pb-2">
             <p className="dark:text-white text-black text-justify">
               {/* Translation for mic permission message */}
-              <Trans i18nKey="description.bad"></Trans>
+              <Trans i18nKey="description.delete_arcana"></Trans>
             </p>
           </div>{" "}
-          {/* Close button */}
-          <div className="flex md:justify-end justify-center w-full">
+          {/* Buttons */}
+          <div className="flex flex-col md:flex-row gap-2 justify-between w-full">
+            {" "}
+            {/* Close button */}
             <button
               className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
               onClick={() => props.showModal(false)} // Click handler to close modal
             >
-              <Trans i18nKey="description.session2"></Trans>
+              <Trans i18nKey="description.cache2"></Trans>
+            </button>{" "}
+            {/* Clear cache button */}
+            <button
+              className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
+              onClick={() => props.handleDelete()}
+            >
+              <Trans i18nKey="description.delete_arcana1"></Trans>
             </button>
           </div>
         </div>
@@ -44,4 +53,4 @@ function Bad_Request_Model(props) {
   );
 }
 
-export default Bad_Request_Model;
+export default Delete_Arcana_Model;
