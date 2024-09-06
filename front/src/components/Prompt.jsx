@@ -62,6 +62,7 @@ import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
 import Help_Model_System from "../model/Help_Model_System";
 import { setTpopGlobal } from "../Redux/actions/tpopAction";
 import Help_Model_Tpop from "../model/Help_Model_Tpop";
+import Clear_History_Model from "../model/Clear_History_Model";
 
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
@@ -141,10 +142,12 @@ function Prompt() {
   const [isHoveringTpop, setHoveringTpop] = useState(false);
 
   const [showCacheModel, setShowCacheModel] = useState(false);
+  const [showHistoryModel, setShowHistoryModel] = useState(false);
+
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
   );
-  const [isEditingCustom, setIsEditingCustom] = useState(false);
+  // const [isEditingCustom, setIsEditingCustom] = useState(false);
 
   //TO scroll down when new chat is added in array
   const scrollToBottom = () => {
@@ -572,12 +575,36 @@ function Prompt() {
 
   // Exports conversation to a file
   const exportFile = (value) => {
-    // setShowFileModel(true);
-    if (value == "json") {
-      exportJSON();
-    } else {
+    // setShowFileModel(true); // Uncomment if you need to show a modal before export
+    if (value === "json") {
+      exportJSON(conversation);
+    } else if (value === "pdf") {
       exportPDF(conversation);
+    } else if (value === "text") {
+      exportTextFile(conversation);
     }
+  };
+
+  // Function to export conversation as a text file
+  const exportTextFile = (conversation) => {
+    // Convert conversation JSON to a formatted string
+    const textContent = conversation
+      .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
+      .join("\n\n");
+
+    // Create a blob from the string
+    const blob = new Blob([textContent], { type: "text/plain" });
+
+    // Create a link element
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "conversation.txt"; // Set the file name
+
+    // Trigger the download
+    link.click();
+
+    // Clean up the object URL
+    URL.revokeObjectURL(link.href);
   };
 
   // Exports conversation to a JSON file
@@ -835,21 +862,52 @@ function Prompt() {
       });
   };
 
-  const toggleEdit = () => {
-    setIsEditingCustom(!isEditingCustom);
+  const clearHistory = () => {
+    setResponses([]);
+    setConversation((con) => {
+      if (con.length > 0) {
+        return [con[0]];
+      }
+      return con; // If array was empty, return it as it is
+    });
+    setShowHistoryModel(false);
+    notifySuccess("History cleared");
   };
 
-  const saveInstructions = () => {
+  // const toggleEdit = () => {
+  //   setIsEditingCustom(!isEditingCustom);
+  // };
+
+  // const saveInstructions = () => {
+  //   let updatedConversation = conversation.map((item) => {
+  //     if (item.role === "system") {
+  //       return { ...item, content: formik.values.instructions };
+  //     } else {
+  //       return item;
+  //     }
+  //   });
+  //   setConversation(updatedConversation);
+  //   dispatch(setInstructions(formik.values.instructions));
+  //   setIsEditingCustom(!isEditingCustom);
+  // };
+
+  const handleInstructionsChange = (event) => {
+    const { value } = event.target;
+
+    // Update Formik values
+    formik.setFieldValue("instructions", value);
+
+    // Update conversation state and Redux state simultaneously
     let updatedConversation = conversation.map((item) => {
       if (item.role === "system") {
-        return { ...item, content: formik.values.instructions };
+        return { ...item, content: value };
       } else {
         return item;
       }
     });
+
     setConversation(updatedConversation);
-    dispatch(setInstructions(formik.values.instructions));
-    setIsEditingCustom(!isEditingCustom);
+    dispatch(setInstructions(value));
   };
 
   return (
@@ -997,7 +1055,7 @@ function Prompt() {
             <div
               id="divToPrint"
               ref={containerRef}
-              className="p-2 flex flex-col gap-2 overflow-y-scroll flex-1 no-scrollbar"
+              className="p-2 flex flex-col gap-2 overflow-y-auto flex-1"
             >
               {responses?.map((res, index) => (
                 <div key={index} className={`flex flex-col gap-1`}>
@@ -1033,15 +1091,18 @@ function Prompt() {
 
             {responses.length > 0 ? (
               <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
-                <Tooltip text={t("description.undo")}>
+                <Tooltip text={t("description.clear")}>
+                  {" "}
                   <button
                     className="h-[30px] w-[30px] cursor-pointer "
-                    onClick={handleRetry}
                     disabled={loading}
+                    onClick={() => {
+                      setShowHistoryModel(true);
+                    }}
                   >
                     <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={retry}
+                      className="cursor-pointer h-[25px] w-[25px]"
+                      src={clear}
                     />
                   </button>
                 </Tooltip>
@@ -1084,25 +1145,15 @@ function Prompt() {
                       </button>
                     </Tooltip>
                   </div>
-                  <Tooltip text={t("description.clear")}>
-                    {" "}
+                  <Tooltip text={t("description.undo")}>
                     <button
                       className="h-[30px] w-[30px] cursor-pointer "
+                      onClick={handleRetry}
                       disabled={loading}
-                      onClick={() => {
-                        setResponses([]);
-                        setConversation((con) => {
-                          if (con.length > 0) {
-                            return [con[0]];
-                          }
-                          return con; // If array was empty, return it as it is
-                        });
-                        notifySuccess("History cleared");
-                      }}
                     >
                       <img
-                        className="cursor-pointer h-[25px] w-[25px]"
-                        src={clear}
+                        className="cursor-pointer h-[30px] w-[30px]"
+                        src={retry}
                       />
                     </button>
                   </Tooltip>
@@ -1418,7 +1469,7 @@ function Prompt() {
             </div> */}
                   </div>
                   {/* Arcanas */}
-                  <div className="flex gap-4 w-full items-center">
+                  {/* <div className="flex gap-4 w-full items-center">
                     <div className="flex-shrink-0 flex items-center gap-2">
                       {" "}
                       <p className="text-[18px]">Arcanas</p>{" "}
@@ -1433,7 +1484,7 @@ function Prompt() {
                       notifyError={notifyError}
                       notifySuccess={notifySuccess}
                     />
-                  </div>
+                  </div> */}
                   {/* Custom instructions */}
                   <div className="">
                     <Formik enableReinitialize={true} onSubmit>
@@ -1442,8 +1493,7 @@ function Prompt() {
                           {/* Temperature slider */}
                           <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
                             <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                              {" "}
-                              <p className="text-[18px]">Temp</p>{" "}
+                              <p className="text-[18px]">Temperature</p>
                               <img
                                 src={help}
                                 alt="help"
@@ -1453,6 +1503,12 @@ function Prompt() {
                             </div>
                             <div className="mx-2 w-full">
                               <div className="relative w-full">
+                                {/* Labels for guidance */}
+                                <div className="flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                                  <span>Logical</span>
+                                  <span>Creative</span>
+                                </div>
+
                                 {/* Container for tick marks */}
                                 <div className="tick-marks-container cursor-pointer">
                                   {[...Array(21)].map((_, i) => (
@@ -1489,18 +1545,13 @@ function Prompt() {
                                   </output>
                                 )}
                               </div>
-                              {/* <div className="text-center mt-2">
-                              <div className="text-xs font-semibold inline-block text-blue-600">
-                                {Number(temperature).toFixed(1)}
-                              </div>
-                            </div> */}
                             </div>
                           </div>
+
                           {/* Top_p slider */}
                           <div className="flex flex-col md:flex-row gap-4 w-full md:items-center">
                             <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                              {" "}
-                              <p className="text-[18px]">top_p</p>{" "}
+                              <p className="text-[18px]">Top_p</p>
                               <img
                                 src={help}
                                 alt="help"
@@ -1510,6 +1561,12 @@ function Prompt() {
                             </div>
                             <div className="mx-2 w-full">
                               <div className="relative w-full">
+                                {/* Labels for guidance */}
+                                <div className="flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                                  <span>Focused</span>
+                                  <span>Diverse</span>
+                                </div>
+
                                 {/* Container for tick marks */}
                                 <div className="tick-marks-container cursor-pointer">
                                   {[...Array(20)].map((_, i) => (
@@ -1546,11 +1603,6 @@ function Prompt() {
                                   </output>
                                 )}
                               </div>
-                              {/* <div className="text-center mt-2">
-                              <div className="text-xs font-semibold inline-block text-blue-600">
-                                {Number(temperature).toFixed(1)}
-                              </div>
-                            </div> */}
                             </div>
                           </div>
 
@@ -1569,21 +1621,16 @@ function Prompt() {
                             <div className="w-full relative">
                               <div className="relative z-10">
                                 <textarea
-                                  className={`no-scrollbar ${
-                                    !isEditingCustom
-                                      ? "bg-disable_textArea_light dark:bg-disable_textArea text-black"
-                                      : "bg-white dark:bg-bg_secondary_dark dark:text-white text-black"
-                                  } p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                                  className={`no-scrollbar dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
                                   type="text"
                                   name="instructions"
                                   placeholder={t("description.custom4")}
                                   value={formik.values.instructions}
                                   onBlur={formik.handleBlur}
-                                  onChange={formik.handleChange}
-                                  disabled={!isEditingCustom}
+                                  onChange={handleInstructionsChange}
                                 />
                               </div>
-                              <div className="absolute bottom-4 right-4 z-[99] flex justify-end items-center">
+                              {/* <div className="absolute bottom-4 right-4 z-[99] flex justify-end items-center">
                                 {!isEditingCustom ? (
                                   <img
                                     src={edit_icon}
@@ -1600,7 +1647,7 @@ function Prompt() {
                                     Save
                                   </button>
                                 )}
-                              </div>{" "}
+                              </div>{" "} */}
                             </div>
                             {/* Display error message if any */}
                             {formik.errors.instructions &&
@@ -1614,23 +1661,23 @@ function Prompt() {
                           {/* Submit button */}
                           <div className="flex md:justify-end gap-2 items-center w-full">
                             <div
-                              className="hidden md:flex gap-4 items-center justify-center select-none w-full"
+                              className="flex gap-4 items-center justify-center select-none w-full"
                               onClick={toggleAdvOpt} // Click handler to toggle dark mode
                             >
                               <p className="text-[18px] h-full text-tertiary cursor-pointer">
                                 <Trans i18nKey="description.text9"></Trans>
                               </p>{" "}
                             </div>
-                            <button
+                            {/* <button
                               className="text-white p-3 bg-tertiary dark:border-border_dark md:hidden rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full select-none "
                               type="reset"
                               onClick={toggleAdvOpt}
                             >
                               <Trans i18nKey="description.save"></Trans>
-                            </button>
+                            </button> */}
                             {/* Opens clear cache model */}
                             <button
-                              className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full md:min-w-[150px] select-none "
+                              className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border min-w-[130px] select-none "
                               type="reset"
                               onClick={() => {
                                 setShowCacheModel(true);
@@ -1640,7 +1687,7 @@ function Prompt() {
                             </button>
                             {/* Resets settings, and clears redux */}
                             <button
-                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full md:min-w-[150px] select-none "
+                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border min-w-[130px] select-none "
                               onClick={resetDefault}
                               type="reset"
                             >
@@ -1834,6 +1881,16 @@ function Prompt() {
           <Clear_Catch_Model
             showModal={setShowCacheModel}
             clearCatch={clearCatch}
+          />
+        ) : null}
+      </div>
+
+      {/* Pop-up clear history*/}
+      <div className="">
+        {showHistoryModel ? (
+          <Clear_History_Model
+            showModal={setShowHistoryModel}
+            clearHistory={clearHistory}
           />
         ) : null}
       </div>

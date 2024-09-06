@@ -15,70 +15,72 @@ function ExportTypeModel(props) {
 
   // Function to handle export file action
   function exportFile() {
-    props.exportFile(value); // Execute export file function from parent component
+    props.exportFile(value, props.conversation); // Pass the conversation data
     props.showModal(false); // Close the modal
   }
 
   return (
-    // Modal component with export type selection form
     <Modal showModal={props.showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
-        {/* Modal header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
-            {/* Translation for help title */}
             <Trans i18nKey="description.help_title"></Trans> :
           </p>
-          {/* Close button */}
           <img
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModal(false)} // Click handler to close modal
+            onClick={() => props.showModal(false)}
           />
         </div>
-        {/* Export type selection form */}
         <form>
           <div className="flex flex-col gap-2 p-4">
-            {/* Radio button for JSON format */}
             <div className="flex gap-2">
               <input
                 type="radio"
                 id="json"
                 name="format"
                 value="json"
-                checked={value === "json"} // Check if JSON format is selected
-                onChange={handleChange} // Change handler for export type selection
+                checked={value === "json"}
+                onChange={handleChange}
               />
               <label className="dark:text-white text-black" htmlFor="json">
-                {/* Translation for JSON format */}
                 <Trans i18nKey="description.fileFormat1"></Trans>
-              </label>{" "}
+              </label>
             </div>
-            {/* Radio button for PDF format */}
             <div className="flex gap-2">
-              {" "}
               <input
                 type="radio"
                 id="pdf"
                 name="format"
                 value="pdf"
-                checked={value === "pdf"} // Check if PDF format is selected
-                onChange={handleChange} // Change handler for export type selection
+                checked={value === "pdf"}
+                onChange={handleChange}
               />
               <label className="dark:text-white text-black" htmlFor="pdf">
-                {/* Translation for PDF format */}
                 <Trans i18nKey="description.fileFormat2"></Trans>
               </label>
             </div>
-            {/* Export button */}
+            {/* Add a new radio button for text file */}
+            <div className="flex gap-2">
+              <input
+                type="radio"
+                id="text"
+                name="format"
+                value="text"
+                checked={value === "text"}
+                onChange={handleChange}
+              />
+              <label className="dark:text-white text-black" htmlFor="text">
+                Export as Text
+              </label>
+            </div>
             <div className="flex justify-end w-full">
               <button
-                className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-                onClick={exportFile} // Click handler to export file
+                className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+                onClick={exportFile}
                 type="button"
               >
-                {/* Translation for export button */}
                 <Trans i18nKey="description.export"></Trans>
               </button>
             </div>

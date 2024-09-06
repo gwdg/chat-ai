@@ -2,38 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
+:root {
   --primaryBackgroundColor: white;
   --primaryTextColor: black;
+  --scrollBarColorDark: #434343;
+  --scrollBarColorLight: #ebebeb;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    --primaryBackgroundColor: black;
-    --primaryTextColor: white;
-  }
-}
-
-/* body {
-  scrollbar-width: thin; 
-  scrollbar-color: #009ee0; 
-}
-
-::-webkit-scrollbar {
-  width: 6px; 
-}
-
-::-webkit-scrollbar-thumb {
-  background: #009ee0;
-  border-radius: 5px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #009ee0; 
-} */
-
-body,
-html {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -47,12 +28,68 @@ html {
   overflow: hidden;
 }
 
-.no-scrollbar {
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
-  scrollbar-width: none; /* Firefox */
+.body {
+  overflow-y: hidden !important;
+  scrollbar-width: none; /* Hides scrollbar in Firefox */
 }
-.no-scrollbar::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+
+html {
+  scrollbar-width: none; /* Hides scrollbar in Firefox */
+}
+
+/* Common scrollbar styling */
+*::-webkit-scrollbar {
+  width: 6px; /* Set width to slim scrollbar */
+  height: 6px; /* Set height to slim scrollbar */
+}
+
+/* Track styling */
+*::-webkit-scrollbar-track {
+  background: transparent; /* Set background to transparent */
+}
+
+/* Thumb styling for light mode */
+.lightScrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--scrollBarColorLight); /* Light mode thumb color */
+  border-radius: 50px; /* Fully rounded ends */
+  border: 2px solid transparent; /* Creates a rounded appearance */
+  background-clip: padding-box; /* Ensures rounded appearance */
+}
+
+/* Thumb styling for dark mode */
+.darkScrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--scrollBarColorDark); /* Dark mode thumb color */
+  border-radius: 50px; /* Fully rounded ends */
+  border: 2px solid transparent; /* Creates a rounded appearance */
+  background-clip: padding-box; /* Ensures rounded appearance */
+}
+
+/* Thumb hover effect */
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #888; /* Slightly darken on hover */
+}
+
+/* Remove scrollbar buttons */
+*::-webkit-scrollbar-button {
+  display: none; /* Explicitly hide scrollbar buttons */
+  width: 0; /* Ensure buttons do not take up space */
+  height: 0; /* Ensure buttons do not take up space */
+}
+
+/* Corner fix for consistent styling */
+*::-webkit-scrollbar-corner {
+  background: transparent; /* Ensure corner area matches the rest of the scrollbar */
+}
+
+/* Firefox specific scrollbar styling for light and dark modes */
+.light .lightScrollbar {
+  scrollbar-color: var(--scrollBarColorLight) transparent; /* Light mode color */
+  scrollbar-width: thin; /* Slim scrollbar */
+}
+
+.dark .darkScrollbar {
+  scrollbar-color: var(--scrollBarColorDark) transparent; /* Dark mode color */
+  scrollbar-width: thin; /* Slim scrollbar */
 }
 
 /* footer animation */

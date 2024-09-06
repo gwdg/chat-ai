@@ -111,7 +111,7 @@ function Arcanas({ notifyError, notifySuccess }) {
   }, []);
 
   return (
-    <div className="flex md:flex-row flex-col gap-2 items-center w-full">
+    <div className="flex gap-2 items-center w-full">
       {isLoading ? (
         // Customized skeleton loader with narrow strips
         <div className="w-full">

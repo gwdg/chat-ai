@@ -112,7 +112,7 @@ i18n
             import: "Import",
             clear: "Clear",
             upload: "Attach",
-            pause: "Pause",
+            pause: "Abort",
             send: "Send",
             stop: "Stop",
             listen: "Listen",
@@ -122,9 +122,9 @@ i18n
 
             //Clear cache
             cache1:
-              "Caution! Clearing cache will erase your history and settings. Proceed?",
-            cache2: "Close",
-            cache3: "Clear",
+              "Caution! Clearing cache will erase your history and settings.Proceed?",
+            cache2: "No, go back",
+            cache3: "Yes clear everything",
 
             // temperature
             temperature:
@@ -161,6 +161,8 @@ i18n
 
             delete_arcana: "Are you sure you want to delete arcana?",
             delete_arcana1: "Delete",
+
+            history: "Caution! Clearing will erase your history. Proceed?",
           },
         },
       },
@@ -261,7 +263,7 @@ i18n
             import: "Importieren",
             clear: "Löschen",
             upload: "Anhängen.",
-            pause: "Pause",
+            pause: "Abbrechen",
             send: "Senden",
             stop: "Anhalten",
             listen: "Anhören",
@@ -272,8 +274,8 @@ i18n
             //Clear cache
             cache1:
               "Vorsicht! Wenn Sie den Cache löschen, werden Ihr Verlauf und Ihre Einstellungen gelöscht. Fortfahren?",
-            cache2: "Schließen",
-            cache3: "Klar",
+            cache2: "Nein, geh zurück",
+            cache3: "Ja, alles löschen",
 
             // temperature
             temperature:
@@ -312,6 +314,8 @@ i18n
 
             delete_arcana: "Sind Sie sicher, dass Sie Arcana löschen wollen?",
             delete_arcana1: "Löschen",
+
+            history: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
           },
         },
       },
