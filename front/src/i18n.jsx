@@ -87,7 +87,7 @@ i18n
             help_title: "Note",
             help_note:
               "Chat AI provides access to a range of state-of-the-art Large Language Models (LLMs), each with distinct capabilities and performance characteristics. This allows you to explore and select the model that best aligns with your research goals and requirements. \
-              Larger models typically offer higher-quality responses, but may have longer response times due to their increased complexity. Conversely, smaller models provide faster response times, but may sacrifice some accuracy and depth. With the list of available models, you can balance trade-offs between response quality and speed to suit your specific needs.",
+              Larger models typically offer higher-quality responses, but may have longer response times due to their increased complexity. Conversely, smaller models provide faster response times, but may sacrifice some accuracy and depth. With the list of available models, you can balance trade-offs between response quality and speed to suit your specific needs. For more details",
 
             // Files upload
             file1: "Attachments",
@@ -97,9 +97,13 @@ i18n
             mic1: "Microphone permission was not granted. Please allow it in your browser settings.",
             mic2: "Allow microphone permission",
 
+            export_title: "Choose file type",
+
             // File format
             fileFormat1: "JSON file",
             fileFormat2: "PDF file",
+            fileFormat3: "TXT file",
+
             export: "Export",
 
             //Session
@@ -122,7 +126,7 @@ i18n
 
             //Clear cache
             cache1:
-              "Caution! Clearing cache will erase your history and settings.Proceed?",
+              "Caution! Clearing cache will erase your history and settings. Proceed?",
             cache2: "No, go back",
             cache3: "Yes clear everything",
 
@@ -163,6 +167,7 @@ i18n
             delete_arcana1: "Delete",
 
             history: "Caution! Clearing will erase your history. Proceed?",
+            dont_show_again: "Don't show again",
           },
         },
       },
@@ -237,7 +242,7 @@ i18n
             help_title: "Hinweis",
             help_note:
               "Chat-AI bietet Zugriff auf eine Palette von state-of-the-art Large Language Models (LLMs), jedes mit eigenen Fähigkeiten und Leistungsmerkmalen. Dies ermöglicht es Ihnen, den Modelltyp auszuwählen, der am besten Ihren Forschungszielen und Anforderungen entspricht.\
-              Größere Modelle bieten typischerweise höhere Antwortqualitäten, aber haben aufgrund ihrer erhöhten Komplexität längere Antwortzeiten. Umgekehrt bieten kleinere Modelle schnellere Antwortzeiten, mögen jedoch einige Genauigkeit und Tiefe opfern. Mit der Liste der verfügbaren Modelle können Sie Abwägungen zwischen Antwortqualität und Geschwindigkeit treffen, um Ihren spezifischen Bedürfnissen gerecht zu werden.",
+              Größere Modelle bieten typischerweise höhere Antwortqualitäten, aber haben aufgrund ihrer erhöhten Komplexität längere Antwortzeiten. Umgekehrt bieten kleinere Modelle schnellere Antwortzeiten, mögen jedoch einige Genauigkeit und Tiefe opfern. Mit der Liste der verfügbaren Modelle können Sie Abwägungen zwischen Antwortqualität und Geschwindigkeit treffen, um Ihren spezifischen Bedürfnissen gerecht zu werden. Für weitere Einzelheiten",
 
             // Files upload
             file1: "Anlagen",
@@ -247,9 +252,13 @@ i18n
             mic1: "Mikrofonerlaubnis wurde nicht erteilt. Bitte erlauben Sie es in den Einstellungen Ihres Browsers.",
             mic2: "Mikrofonerlaubnis erteilen",
 
+            export_title: "Dateityp auswählen",
+
             // File format
             fileFormat1: "JSON-Datei",
             fileFormat2: "PDF-Datei",
+            fileFormat3: "TXT-Datei",
+
             export: "exportieren",
 
             //Session
@@ -316,6 +325,7 @@ i18n
             delete_arcana1: "Löschen",
 
             history: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
+            dont_show_again: "Nicht mehr anzeigen",
           },
         },
       },
