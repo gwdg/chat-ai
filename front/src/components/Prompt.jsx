@@ -84,6 +84,7 @@ function Prompt() {
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const countClose = useSelector((state) => state.count);
   const modelApi = useSelector((state) => state.modelApi);
+  const dontShowAgain = useSelector((state) => state.showAgain.dontShowAgain); // Access the state from Redux
 
   //Theme for toast
   let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
@@ -585,6 +586,18 @@ function Prompt() {
     }
   };
 
+  // Function to generate a consistent file name
+  const generateFileName = (extension) => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hour = String(date.getHours()).padStart(2, "0");
+    const minute = String(date.getMinutes()).padStart(2, "0");
+    const second = String(date.getSeconds()).padStart(2, "0");
+    return `chat-ai-${year}-${month}-${day}-${hour}${minute}${second}.${extension}`;
+  };
+
   // Function to export conversation as a text file
   const exportTextFile = (conversation) => {
     // Convert conversation JSON to a formatted string
@@ -598,7 +611,7 @@ function Prompt() {
     // Create a link element
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "conversation.txt"; // Set the file name
+    link.download = generateFileName("txt"); // Set the consistent file name
 
     // Trigger the download
     link.click();
@@ -608,19 +621,12 @@ function Prompt() {
   };
 
   // Exports conversation to a JSON file
-  const exportJSON = () => {
+  const exportJSON = (conversation) => {
     try {
       const content = JSON.stringify(conversation, null, 2);
       let file = new Blob([content], { type: "application/json" });
       let a = document.createElement("a");
-      let date = new Date();
-      let year = date.getFullYear();
-      let month = String(date.getMonth() + 1).padStart(2, "0");
-      let day = String(date.getDate()).padStart(2, "0");
-      let hour = String(date.getHours()).padStart(2, "0");
-      let minute = String(date.getMinutes()).padStart(2, "0");
-      let second = String(date.getSeconds()).padStart(2, "0");
-      a.download = `chat-ai-${year}-${month}-${day}-${hour}${minute}${second}.json`;
+      a.download = generateFileName("json"); // Set the consistent file name
       a.href = URL.createObjectURL(file);
       document.body.appendChild(a);
       a.click();
@@ -631,11 +637,7 @@ function Prompt() {
     }
   };
 
-  // Advanced setttings changed toast
-  const advSettingsToast = () => {
-    notifySuccess("Settings changed successfully");
-  };
-
+  // Function to export conversation as a PDF file
   const exportPDF = async (conversation) => {
     const doc = new jsPDF();
     doc.setProperties({
@@ -768,16 +770,13 @@ function Prompt() {
       y += lineHeight; // Space after each entry
     }
 
-    // Ensure all page numbers are in black
-    // const totalPages = doc.internal.getNumberOfPages();
-    // for (let i = 1; i <= totalPages; i++) {
-    //   doc.setPage(i);
-    //   addPageNumber();
-    // }
+    // Save the PDF with a consistent file name
+    doc.save(generateFileName("pdf"));
+  };
 
-    // Save the PDF
-    const filename = `chat-ai-${new Date().toISOString().slice(0, 10)}.pdf`;
-    doc.save(filename);
+  // Advanced setttings changed toast
+  const advSettingsToast = () => {
+    notifySuccess("Settings changed successfully");
   };
 
   // Function for toggling theme using Redux store function
@@ -862,6 +861,14 @@ function Prompt() {
       });
   };
 
+  const handleClearHistory = () => {
+    if (dontShowAgain) {
+      clearHistory();
+    } else {
+      setShowHistoryModel(true);
+    }
+  };
+
   const clearHistory = () => {
     setResponses([]);
     setConversation((con) => {
@@ -912,16 +919,12 @@ function Prompt() {
 
   return (
     <>
-      <div className="flex flex-col md:flex-row h-full gap-3 md:pt-2 md:justify-between relative overflow-y-auto">
-        {/* Header component used with same code */}
+      <div className="flex flex-col sm:flex-row h-full gap-3 sm:pt-2 sm:justify-between relative overflow-y-auto">
+        {/* Header component used with the same code */}
         <div className="flex flex-col">
-          {" "}
-          {/* Select input for model mobile*/}
-          {/* {showAnnc && countAnnc < 3 ? (
-            <AnnouncementBarMobile anncCounter={anncCounter} />
-          ) : null} */}
+          {/* Select input for model mobile */}
           <div
-            className={`w-full px-1 justify-between flex md:hidden gap-4 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark`}
+            className={`w-full px-1 justify-between flex sm:hidden gap-4 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark`}
           >
             {/* Help icon */}
             <div className="flex items-center min-w-[100px]">
@@ -931,7 +934,7 @@ function Prompt() {
                   className="cursor-pointer h-[40px] object-contain"
                   src={Logo}
                 />
-              </Link>{" "}
+              </Link>
             </div>
             {/* Select input */}
             <div
@@ -940,7 +943,6 @@ function Prompt() {
               tabIndex={0}
               onBlur={() => setIsOpen(false)}
             >
-              {" "}
               <div
                 className="text-tertiary max-w-[160px] flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
                 onClick={toggleOpen}
@@ -976,14 +978,9 @@ function Prompt() {
                 />
               </div>
             </div>
-            {/* Toggle button for theme*/}
+            {/* Toggle button for theme */}
             <div className="cursor-pointer flex items-center">
-              {" "}
-              <button
-                className="h-[30px] w-[30px]"
-                onClick={toggleDarkMode} // Click handler to toggle dark mode
-              >
-                {/* Display light or dark mode icon based on dark mode state */}
+              <button className="h-[30px] w-[30px]" onClick={toggleDarkMode}>
                 {isDarkMode ? (
                   <img
                     className="cursor-pointer h-[30px] w-[30px]"
@@ -995,14 +992,15 @@ function Prompt() {
                     src={Dark}
                   />
                 )}
-              </button>{" "}
+              </button>
             </div>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row h-full gap-3 md:justify-between relative md:p-0 px-2 w-full md:pb-2 pb-2 bg-bg_light dark:bg-bg_dark">
-          {/* response */}
+
+        <div className="flex flex-col sm:flex-row h-full gap-3 sm:justify-between relative sm:p-0 px-2 w-full sm:pb-2 pb-2 bg-bg_light dark:bg-bg_dark">
+          {/* Response section */}
           <div
-            className={`md:max-h-full md:h-full h-full  flex flex-col relative md:w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
+            className={`sm:max-h-full sm:h-full h-full flex flex-col relative sm:w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
           >
             {/* Note model */}
             {showModel && count < 3 ? (
@@ -1043,15 +1041,13 @@ function Prompt() {
                   onClick={() => {
                     setShowModel(false);
                     dispatch(setCountGlobal(count + 1));
-                    setCount(function (prevCount) {
-                      return (prevCount += 1);
-                    });
+                    setCount((prevCount) => prevCount + 1);
                   }}
                 />
               </div>
             ) : null}
 
-            {/* Prompt response */}
+            {/* Prompt response section */}
             <div
               id="divToPrint"
               ref={containerRef}
@@ -1091,14 +1087,12 @@ function Prompt() {
 
             {responses.length > 0 ? (
               <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
+                {/* Clear, Export, Import buttons */}
                 <Tooltip text={t("description.clear")}>
-                  {" "}
                   <button
-                    className="h-[30px] w-[30px] cursor-pointer "
+                    className="h-[30px] w-[30px] cursor-pointer"
                     disabled={loading}
-                    onClick={() => {
-                      setShowHistoryModel(true);
-                    }}
+                    onClick={handleClearHistory}
                   >
                     <img
                       className="cursor-pointer h-[25px] w-[25px]"
@@ -1113,15 +1107,13 @@ function Prompt() {
                       onClick={() => setShowFileModel(true)}
                       disabled={loading}
                     >
-                      {/* <p>Export as PDF</p>{" "} */}
                       <img
                         className="cursor-pointer h-[30px] w-[30px]"
                         src={export_icon}
                       />
-                    </button>{" "}
+                    </button>
                   </Tooltip>
                   <div className="flex items-center">
-                    {" "}
                     <input
                       type="file"
                       ref={hiddenFileInputJSON}
@@ -1129,9 +1121,7 @@ function Prompt() {
                       onChange={handleFilesChangeJSON}
                       className="hidden"
                     />
-                    {/* File upload button */}
                     <Tooltip text={t("description.import")}>
-                      {" "}
                       <button
                         className="h-[30px] w-[30px] cursor-pointer"
                         onClick={handleClickJSON}
@@ -1147,7 +1137,7 @@ function Prompt() {
                   </div>
                   <Tooltip text={t("description.undo")}>
                     <button
-                      className="h-[30px] w-[30px] cursor-pointer "
+                      className="h-[30px] w-[30px] cursor-pointer"
                       onClick={handleRetry}
                       disabled={loading}
                     >
@@ -1161,41 +1151,35 @@ function Prompt() {
               </div>
             ) : (
               <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-end items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
-                <>
-                  {" "}
-                  <input
-                    type="file"
-                    ref={hiddenFileInputJSON}
-                    accept="application/JSON"
-                    onChange={handleFilesChangeJSON}
-                    className="hidden"
-                  />
-                  {/* File upload button */}
-                  <Tooltip text={t("description.import")}>
-                    {" "}
-                    <button
-                      className="h-[30px] w-[30px] cursor-pointer"
-                      onClick={handleClickJSON}
-                      disabled={loading}
-                    >
-                      <img
-                        className="cursor-pointer h-[30px] w-[30px]"
-                        src={import_icon}
-                      />
-                    </button>
-                  </Tooltip>
-                </>
+                <input
+                  type="file"
+                  ref={hiddenFileInputJSON}
+                  accept="application/JSON"
+                  onChange={handleFilesChangeJSON}
+                  className="hidden"
+                />
+                <Tooltip text={t("description.import")}>
+                  <button
+                    className="h-[30px] w-[30px] cursor-pointer"
+                    onClick={handleClickJSON}
+                    disabled={loading}
+                  >
+                    <img
+                      className="cursor-pointer h-[30px] w-[30px]"
+                      src={import_icon}
+                    />
+                  </button>
+                </Tooltip>
               </div>
             )}
           </div>
 
-          {/* prompt */}
-          <div className="md:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between md:h-full no-scrollbar md:overflow-y-auto md:gap-3 relative rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
-            {/* <div className="max-h-[650px] overflow-auto flex md:flex-col flex-row gap-2"> */}
+          {/* Prompt section */}
+          <div className="sm:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between sm:h-full no-scrollbar sm:overflow-y-auto sm:gap-3 relative rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
             <div className="flex flex-col gap-4 w-full">
               <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
                 <textarea
-                  className="no-scrollbar p-4 outline-none text-xl max-h-[350px] md:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                  className="no-scrollbar p-4 outline-none text-xl max-h-[350px] sm:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
                   value={prompt}
                   ref={textAreaRef}
                   name="prompt"
@@ -1214,12 +1198,10 @@ function Prompt() {
                 />
 
                 <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
-                  {/* Clear prompt */}
                   {prompt.trim() !== "" ? (
                     <Tooltip text={t("description.clear")}>
-                      {" "}
                       <button
-                        className="h-[30px] w-[30px] cursor-pointer "
+                        className="h-[30px] w-[30px] cursor-pointer"
                         onClick={() => {
                           setPrompt("");
                           resetTranscript();
@@ -1236,15 +1218,14 @@ function Prompt() {
                   ) : null}
                   <div className="flex gap-4 w-full justify-end items-center">
                     <button
-                      className="md:hidden flex h-[30px] w-[30px] cursor-pointer"
-                      onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                      className="sm:hidden flex h-[30px] w-[30px] cursor-pointer"
+                      onClick={toggleAdvOpt}
                     >
                       <img
                         className="cursor-pointer h-[30px] w-[30px]"
                         src={settings_icon}
                       />
                     </button>
-                    {/* Input for file hidden in UI */}
                     <input
                       type="file"
                       ref={hiddenFileInput}
@@ -1253,9 +1234,7 @@ function Prompt() {
                       onChange={handleFilesChange}
                       className="hidden"
                     />
-                    {/* File upload button */}
                     <Tooltip text={t("description.upload")}>
-                      {" "}
                       <button
                         className="h-[30px] w-[30px] cursor-pointer"
                         onClick={handleClick}
@@ -1268,16 +1247,13 @@ function Prompt() {
                       </button>
                     </Tooltip>
 
-                    {/* Submit/Pause button */}
                     {loading ? (
                       <Tooltip text={t("description.pause")}>
                         <button className="h-[30px] w-[30px] cursor-pointer">
                           <img
                             className="cursor-pointer h-[30px] w-[30px]"
                             src={pause}
-                            onClick={() => {
-                              handleAbortFetch();
-                            }}
+                            onClick={handleAbortFetch}
                           />
                         </button>
                       </Tooltip>
@@ -1345,7 +1321,6 @@ function Prompt() {
                 </div>
               </div>
 
-              {/* List of selected files */}
               {selectedFiles.length > 0 ? (
                 <div className="flex flex-col gap-3 select-none">
                   <div className="flex items-center justify-between">
@@ -1390,9 +1365,9 @@ function Prompt() {
               ) : null}
             </div>
 
-            <div className="md:static flex justify-center absolute bottom-0 md:w-full w-[calc(100%-16px)] shadow-lg dark:shadow-dark">
+            <div className="sm:static flex justify-center absolute bottom-0 sm:w-full w-[calc(100%-16px)] shadow-lg dark:shadow-dark">
               {showAdvOpt ? (
-                <div className="flex flex-col gap-4 md:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
+                <div className="flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
                   {/* Select model */}
                   <div className="md:flex flex-col hidden gap-4">
                     {/* Select input for model for desktop */}
@@ -1707,7 +1682,7 @@ function Prompt() {
                   </div>{" "}
                 </div>
               ) : (
-                <div className="md:flex hidden flex-col gap-4 md:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
+                <div className="sm:flex hidden flex-col gap-4 sm:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
                   {/* Select model */}
                   <div className="md:flex flex-col hidden gap-4">
                     {/* Select input for model for desktop */}
