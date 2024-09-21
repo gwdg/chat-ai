@@ -7,8 +7,6 @@ async function getDataFromLLM(
   chooseModel,
   temperatureGlobal,
   tpopGlobal,
-  setResponses,
-  setConversation,
   setShowModelSession,
   setPrompt,
   setShowBadRequest
@@ -42,33 +40,20 @@ async function getDataFromLLM(
       signal: signal,
     });
 
-    // If the response is not ok (status not in the range 200-299),
-    // throw original error from the API
     if (response.status === 401) {
-      // Reload the current page
-      setResponses((prevResponses) => [
-        ...prevResponses.slice(0, prevResponses.length - 1),
-      ]);
-      // Set prompt
-      setPrompt(conversation[conversation.length - 1].content);
-      // Set conversation
-      setConversation([...conversation.slice(0, conversation.length - 1)]);
-      // Show a dialog box to user
       setShowModelSession(true);
       return;
     } else if (response.status === 413) {
-      // Reload the current page
-      setResponses((prevResponses) => [
-        ...prevResponses.slice(0, prevResponses.length - 1),
-      ]);
-      setConversation([...conversation.slice(0, conversation.length - 1)]);
-      // Show a dialog box to user
       setShowBadRequest(true);
       return;
+    } else if (response.status === 404) {
+      // Handle 404 error: provide a temporary markdown response
+      const temporaryMarkdownResponse =
+        "### Oops! Something went wrong.\n\nIt looks like the requested information couldn't be retrieved. Please try again later or modify your query.";
+      return temporaryMarkdownResponse;
     } else {
       if (!response.ok) {
         let error = response.statusText;
-        setConversation([...conversation, { role: "assistant", content: "" }]);
         throw new Error(error || "An unknown error occurred");
       }
     }
@@ -77,33 +62,16 @@ async function getDataFromLLM(
     const decoder = new TextDecoder();
     let newResponse = "";
 
-    let { value, done } = await reader.read();
-    do {
-      if (done) {
-        break;
-      }
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
       const decodedChunk = decoder.decode(value, { stream: true });
-      newResponse += "" + decodedChunk;
+      newResponse += decodedChunk;
+    }
 
-      setResponses((prevResponses) => [
-        ...prevResponses.slice(0, prevResponses.length - 1),
-        {
-          ...prevResponses[prevResponses.length - 1],
-          response: newResponse,
-        },
-      ]);
-      setConversation([
-        ...conversation,
-        { role: "assistant", content: newResponse },
-      ]);
-
-      const readResult = await reader.read();
-      value = readResult.value;
-      done = readResult.done;
-    } while (!done);
     return newResponse;
   } catch (error) {
-    console.error("An eurror occurred", error);
+    console.error("An error occurred", error);
     throw error;
   }
 }

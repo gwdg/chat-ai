@@ -128,6 +128,9 @@ function Prompt() {
   const dropdownRef = useRef(null);
   const containerRef = useRef(null);
 
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editedText, setEditedText] = useState("");
+
   const [direction, setDirection] = useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -306,31 +309,80 @@ function Prompt() {
     }
   }, [isDarkMode]); // Run this effect when isDarkMode changes
 
-  // Function for getting response from backend
-  async function getRes() {
+  async function getRes(currentPrompt = prompt, index = null) {
     setLoading(true);
     resetHeight();
-    setResponses((prevResponses) => [
-      ...prevResponses,
-      {
-        prompt: prompt,
-        response: "",
-      },
-    ]);
+
+    let tempConversation;
+
+    if (index === null) {
+      setResponses((prevResponses) => [
+        ...prevResponses,
+        {
+          prompt: currentPrompt,
+          response: "",
+        },
+      ]);
+
+      tempConversation = [
+        ...conversation,
+        { role: "user", content: currentPrompt },
+      ];
+      setConversation(tempConversation);
+    } else {
+      tempConversation = [...conversation];
+
+      // Remove the assistant's response at that index
+      const assistantResponseIndex = index * 2 + 2;
+      if (tempConversation[assistantResponseIndex]) {
+        tempConversation.splice(assistantResponseIndex, 1);
+      }
+
+      // Update the user's prompt
+      const userMessageIndex = index * 2 + 1;
+      if (tempConversation[userMessageIndex]) {
+        tempConversation[userMessageIndex].content = currentPrompt;
+      }
+
+      setConversation(tempConversation);
+    }
+
     setPrompt("");
+
     try {
       const response = await getDataFromLLM(
-        conversation,
+        tempConversation,
         customInstructions,
         chooseModelApi,
         temperatureGlobal,
         tpopGlobal,
-        setResponses,
-        setConversation,
         setShowModelSession,
         setPrompt,
         setShowBadRequest
       );
+
+      if (index !== null) {
+        setResponses((prevResponses) => {
+          const updatedResponses = [...prevResponses];
+          updatedResponses[index] = {
+            ...updatedResponses[index],
+            response: response,
+          };
+          return updatedResponses;
+        });
+
+        tempConversation = [
+          ...tempConversation,
+          { role: "assistant", content: response },
+        ];
+        setConversation(tempConversation);
+      } else {
+        tempConversation = [
+          ...tempConversation,
+          { role: "assistant", content: response },
+        ];
+        setConversation(tempConversation);
+      }
 
       setIsSubmitting(false);
       setLoading(false);
@@ -374,7 +426,88 @@ function Prompt() {
     setLoading(false);
   };
 
-  // Handles submission of text area content
+  // Handle resending the request for a specific response
+  const handleResendClick = async (index) => {
+    const currentPrompt = responses[index]?.prompt;
+
+    if (!currentPrompt) {
+      notifyError("Invalid prompt at the specified index.");
+      return;
+    }
+
+    setLoading(true);
+
+    // Clear the response only for the specified index
+    setResponses((prevResponses) => {
+      const updatedResponses = [...prevResponses];
+      updatedResponses[index] = { ...updatedResponses[index], response: "" };
+      return updatedResponses;
+    });
+
+    // Remove the assistant's response from the conversation array
+    setConversation((prevConversation) => {
+      const updatedConversation = [...prevConversation];
+      const assistantResponseIndex = index * 2 + 2; // The assistant's response index
+
+      if (updatedConversation[assistantResponseIndex]) {
+        updatedConversation.splice(assistantResponseIndex, 1);
+      }
+
+      return updatedConversation;
+    });
+
+    try {
+      await getRes(currentPrompt, index);
+    } catch (error) {
+      notifyError("Failed to resend the request. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle editing a prompt
+  const handleEditClick = (index, prompt) => {
+    setEditingIndex(index);
+    setEditedText(prompt);
+  };
+
+  const handleSave = (index) => {
+    // Update conversation with the edited text
+    setConversation((prevConversation) => {
+      const updatedConversation = [...prevConversation];
+      const userMessageIndex = index * 2 + 1; // Calculate user's message index
+      const assistantResponseIndex = userMessageIndex + 1; // Assistant's response index
+
+      // Update the user's message
+      if (updatedConversation[userMessageIndex]) {
+        updatedConversation[userMessageIndex].content = editedText;
+      }
+
+      // Remove the assistant's response
+      if (updatedConversation[assistantResponseIndex]) {
+        updatedConversation.splice(assistantResponseIndex, 1);
+      }
+
+      return updatedConversation;
+    });
+
+    // Update responses with the edited text and clear the response
+    setResponses((prevResponses) => {
+      const updatedResponses = [...prevResponses];
+      updatedResponses[index] = {
+        prompt: editedText,
+        response: "",
+      };
+      return updatedResponses;
+    });
+
+    setEditingIndex(null); // Exit editing mode
+
+    // Call getRes to fetch the new response
+    getRes(editedText, index);
+  };
+
+  // Submit handler
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -1046,7 +1179,6 @@ function Prompt() {
                 />
               </div>
             ) : null}
-
             {/* Prompt response section */}
             <div
               id="divToPrint"
@@ -1055,22 +1187,54 @@ function Prompt() {
             >
               {responses?.map((res, index) => (
                 <div key={index} className={`flex flex-col gap-1`}>
-                  <div className="text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 ">
-                    <pre
-                      className="font-sans"
-                      style={{
-                        overflow: "hidden",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {res.prompt}
-                    </pre>
+                  <div className="text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
+                    {editingIndex === index ? (
+                      <textarea
+                        className="no-scrollbar p-4 outline-none text-xl max-h-[350px] sm:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                        value={editedText}
+                        onChange={(e) => setEditedText(e.target.value)}
+                      />
+                    ) : (
+                      <pre
+                        className="font-sans"
+                        style={{
+                          overflow: "hidden",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {res.prompt}
+                      </pre>
+                    )}
+                    <div className="flex gap-2 text-tertiary">
+                      {editingIndex === index ? (
+                        <button
+                          className="btn-save"
+                          onClick={() => handleSave(index)}
+                        >
+                          Save
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-edit"
+                          onClick={() => handleEditClick(index, res.prompt)}
+                        >
+                          Edit
+                        </button>
+                      )}
+                      <button
+                        className="btn-resend"
+                        onClick={() => handleResendClick(index)}
+                      >
+                        Resend
+                      </button>
+                    </div>
                   </div>
+
                   <ResponseItem
                     res={res}
                     index={index}
-                    handleRetryError={handleRetryError}
+                    handleRetryError={handleResendClick}
                     loading={loading}
                     responses={responses}
                     notifyError={notifyError}
@@ -1084,7 +1248,7 @@ function Prompt() {
               ))}
               <div ref={messagesEndRef} />
             </div>
-
+            );
             {responses.length > 0 ? (
               <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
                 {/* Clear, Export, Import buttons */}
@@ -1444,7 +1608,7 @@ function Prompt() {
             </div> */}
                   </div>
                   {/* Arcanas */}
-                  {/* <div className="flex gap-4 w-full items-center">
+                  <div className="flex gap-4 w-full items-center">
                     <div className="flex-shrink-0 flex items-center gap-2">
                       {" "}
                       <p className="text-[18px]">Arcanas</p>{" "}
@@ -1459,7 +1623,7 @@ function Prompt() {
                       notifyError={notifyError}
                       notifySuccess={notifySuccess}
                     />
-                  </div> */}
+                  </div>
                   {/* Custom instructions */}
                   <div className="">
                     <Formik enableReinitialize={true} onSubmit>
