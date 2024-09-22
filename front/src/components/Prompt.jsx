@@ -1165,6 +1165,7 @@ function Prompt() {
                   >
                     &nbsp;<Trans i18nKey="description.note5"></Trans>
                   </Link>
+                  .
                 </p>
                 <img
                   src={cross}
@@ -1247,7 +1248,7 @@ function Prompt() {
               ))}
               <div ref={messagesEndRef} />
             </div>
-            );
+            
             {responses.length > 0 ? (
               <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
                 {/* Clear, Export, Import buttons */}

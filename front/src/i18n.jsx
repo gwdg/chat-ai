@@ -53,8 +53,7 @@ i18n
 
             // Custom instruction page
             custom1: "Advanced options",
-            custom2:
-              "Note: These settings will not affect external (OpenAI) models.",
+            custom2: "These settings will not affect external (OpenAI) models.",
             custom3:
               "The system prompt is a special command or instruction given at the beginning of a conversation to set the tone, context, or constraints for our interaction. It's a way to guide the model's behavior and ensure that it responds in a helpful and appropriate manner.",
             custom4: "Enter the system prompt here",
@@ -85,6 +84,7 @@ i18n
 
             // Help note
             help_title: "Note",
+            help_title1: "Warning",
             help_note:
               "Chat AI provides access to a range of state-of-the-art Large Language Models (LLMs), each with distinct capabilities and performance characteristics. This allows you to explore and select the model that best aligns with your research goals and requirements. \
               Larger models typically offer higher-quality responses, but may have longer response times due to their increased complexity. Conversely, smaller models provide faster response times, but may sacrifice some accuracy and depth. With the list of available models, you can balance trade-offs between response quality and speed to suit your specific needs. For more details",
@@ -167,7 +167,7 @@ i18n
             delete_arcana1: "Delete",
 
             history: "Caution! Clearing will erase your history. Proceed?",
-            dont_show_again: "Don't show again",
+            dont_show_again: "Don't show this again",
           },
         },
       },
@@ -209,7 +209,7 @@ i18n
             // Custom instruction page
             custom1: "Erweiterte Optionen",
             custom2:
-              "Hinweis: Diese Einstellungen wirken sich nicht auf externe (OpenAI) Modelle aus.",
+              "Diese Einstellungen wirken sich nicht auf externe (OpenAI) Modelle aus.",
             custom3:
               "Der Systemprompt ist ein spezieller Befehl oder eine Anweisung, die zu Beginn eines Gesprächs gegeben wird, um den Ton, den Kontext oder die Einschränkungen für unsere Interaktion festzulegen. Damit wird das Verhalten des Modells gelenkt und sichergestellt, dass es auf hilfreiche und angemessene Weise reagiert.",
             custom4: "Geben Sie hier die Systemaufforderung ein",
@@ -240,6 +240,7 @@ i18n
 
             // Help note
             help_title: "Hinweis",
+            help_title1: "Warnung",
             help_note:
               "Chat-AI bietet Zugriff auf eine Palette von state-of-the-art Large Language Models (LLMs), jedes mit eigenen Fähigkeiten und Leistungsmerkmalen. Dies ermöglicht es Ihnen, den Modelltyp auszuwählen, der am besten Ihren Forschungszielen und Anforderungen entspricht.\
               Größere Modelle bieten typischerweise höhere Antwortqualitäten, aber haben aufgrund ihrer erhöhten Komplexität längere Antwortzeiten. Umgekehrt bieten kleinere Modelle schnellere Antwortzeiten, mögen jedoch einige Genauigkeit und Tiefe opfern. Mit der Liste der verfügbaren Modelle können Sie Abwägungen zwischen Antwortqualität und Geschwindigkeit treffen, um Ihren spezifischen Bedürfnissen gerecht zu werden. Für weitere Einzelheiten",
@@ -325,7 +326,7 @@ i18n
             delete_arcana1: "Löschen",
 
             history: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
-            dont_show_again: "Nicht mehr anzeigen",
+            dont_show_again: "Zeigen Sie das nicht mehr",
           },
         },
       },
