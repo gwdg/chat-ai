@@ -134,6 +134,7 @@ function Prompt() {
 
   const [direction, setDirection] = useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResend, setIsResend] = useState(false); // Flag to track if we should trigger getRes
   const [copied, setCopied] = useState(false);
   const [indexChecked, setIndexChecked] = useState(false);
   // Dark mode state
@@ -310,46 +311,17 @@ function Prompt() {
     }
   }, [isDarkMode]); // Run this effect when isDarkMode changes
 
-  async function getRes(currentPrompt = prompt, index = null) {
+  async function getRes() {
     setLoading(true);
     resetHeight();
-
-    let tempConversation;
-
-    if (index === null) {
-      setResponses((prevResponses) => [
-        ...prevResponses,
-        {
-          prompt: currentPrompt,
-          response: "",
-        },
-      ]);
-
-      tempConversation = [
-        ...conversation,
-        { role: "user", content: currentPrompt },
-      ];
-      setConversation(tempConversation);
-    } else {
-      tempConversation = [...conversation];
-
-      // Remove the assistant's response at that index
-      const assistantResponseIndex = index * 2 + 2;
-      if (tempConversation[assistantResponseIndex]) {
-        tempConversation.splice(assistantResponseIndex, 1);
-      }
-
-      // Update the user's prompt
-      const userMessageIndex = index * 2 + 1;
-      if (tempConversation[userMessageIndex]) {
-        tempConversation[userMessageIndex].content = currentPrompt;
-      }
-
-      setConversation(tempConversation);
-    }
-
+    setResponses((prevResponses) => [
+      ...prevResponses,
+      {
+        prompt: prompt,
+        response: "",
+      },
+    ]);
     setPrompt("");
-
     try {
       const response = await getDataFromLLM(
         conversation,
@@ -363,29 +335,6 @@ function Prompt() {
         setPrompt,
         setShowBadRequest
       );
-
-      if (index !== null) {
-        setResponses((prevResponses) => {
-          const updatedResponses = [...prevResponses];
-          updatedResponses[index] = {
-            ...updatedResponses[index],
-            response: response,
-          };
-          return updatedResponses;
-        });
-
-        tempConversation = [
-          ...tempConversation,
-          { role: "assistant", content: response },
-        ];
-        setConversation(tempConversation);
-      } else {
-        tempConversation = [
-          ...tempConversation,
-          { role: "assistant", content: response },
-        ];
-        setConversation(tempConversation);
-      }
 
       setIsSubmitting(false);
       setLoading(false);
@@ -431,40 +380,85 @@ function Prompt() {
 
   // Handle resending the request for a specific response
   const handleResendClick = async (index) => {
-    const currentPrompt = responses[index]?.prompt;
-
-    if (!currentPrompt) {
-      notifyError("Invalid prompt at the specified index.");
+    // Check if the index is valid
+    if (index < 0 || index >= responses.length) {
+      notifyError("Something went wrong");
       return;
     }
 
-    setLoading(true);
+    // Retrieve the prompt from the responses at the given index
+    const currentPrompt = responses[index]?.prompt;
 
-    // Clear the response only for the specified index
-    setResponses((prevResponses) => {
-      const updatedResponses = [...prevResponses];
-      updatedResponses[index] = { ...updatedResponses[index], response: "" };
-      return updatedResponses;
-    });
+    if (!currentPrompt || currentPrompt.trim() === "") {
+      notifyError("Invalid or empty prompt at the specified index.");
+      return;
+    }
 
-    // Remove the assistant's response from the conversation array
-    setConversation((prevConversation) => {
-      const updatedConversation = [...prevConversation];
-      const assistantResponseIndex = index * 2 + 2; // The assistant's response index
+    // 2. Remove everything from the selected index onwards in the conversation array.
+    let newConversation = [...conversation];
+    // `index * 2 + 1` to retain both user prompt and assistant response.
+    newConversation = newConversation.slice(0, index * 2 + 1); // Slice up to and including the user part only.
 
-      if (updatedConversation[assistantResponseIndex]) {
-        updatedConversation.splice(assistantResponseIndex, 1);
-      }
+    // 3. Remove everything from the selected index onwards in the responses array.
+    let newResponses = [...responses];
+    newResponses = newResponses.slice(0, index); // Remove all elements from the index onwards
 
-      return updatedConversation;
-    });
+    // 4. Update both arrays immediately
+    setResponses(newResponses);
 
+    // Wait for state to update using `setState` callbacks
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // 5. Do not push the current prompt again, as it's already in the conversation.
+
+    // Check if there are any selected files to attach them to the prompt
+    if (selectedFiles.length > 0) {
+      const allFilesText = selectedFiles
+        .map((file) => `${file.name}: ${file.text}`)
+        .join("\n");
+      const fullPrompt = `${currentPrompt}\n${allFilesText}`;
+      newConversation.push({ role: "user", content: fullPrompt });
+    } else {
+      newConversation.push({ role: "user", content: currentPrompt });
+    }
+
+    setResponses((prevResponses) => [
+      ...prevResponses,
+      {
+        prompt: currentPrompt,
+        response: "",
+      },
+    ]);
+    setConversation(newConversation);
     try {
-      await getRes(currentPrompt, index);
-    } catch (error) {
-      notifyError("Failed to resend the request. Please try again.");
-    } finally {
+      const response = await getDataFromLLM(
+        newConversation,
+        customInstructions,
+        chooseModelApi,
+        temperatureGlobal,
+        tpopGlobal,
+        setResponses,
+        setConversation,
+        setShowModelSession,
+        setPrompt,
+        setShowBadRequest
+      );
+
+      setIsSubmitting(false);
       setLoading(false);
+      setSelectedFiles([]);
+    } catch (error) {
+      setIsSubmitting(false);
+      setLoading(false);
+      setSelectedFiles([]);
+
+      if (error.name === "AbortError") {
+        notifyError("Request aborted.");
+      } else if (error.message) {
+        notifyError(error.message);
+      } else {
+        notifyError("An unknown error occurred");
+      }
     }
   };
 
@@ -474,45 +468,85 @@ function Prompt() {
     setEditedText(prompt);
   };
 
+  // Save the edited prompt and resend the request
+  const handleSave = async (index) => {
+    if (!editedText || !editedText.trim()) {
+      notifyError("Prompt cannot be empty!");
+      return;
+    }
+
+    // 2. Remove everything from the selected index onwards in the conversation array.
+    let newConversation = [...conversation];
+    // `index * 2 + 1` to retain both user prompt and assistant response.
+    newConversation = newConversation.slice(0, index * 2 + 1); // Slice up to and including the user part only.
+
+    // 3. Remove everything from the selected index onwards in the responses array.
+    let newResponses = [...responses];
+    newResponses = newResponses.slice(0, index); // Remove all elements from the index onwards
+
+    // 4. Update both arrays immediately
+    setResponses(newResponses);
+
+    // Wait for state to update using `setState` callbacks
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // 5. Do not push the current prompt again, as it's already in the conversation.
+
+    // Check if there are any selected files to attach them to the prompt
+    if (selectedFiles.length > 0) {
+      const allFilesText = selectedFiles
+        .map((file) => `${file.name}: ${file.text}`)
+        .join("\n");
+      const fullPrompt = `${editedText}\n${allFilesText}`;
+      newConversation.push({ role: "user", content: fullPrompt });
+    } else {
+      newConversation.push({ role: "user", content: editedText });
+    }
+
+    setResponses((prevResponses) => [
+      ...prevResponses,
+      {
+        prompt: editedText,
+        response: "",
+      },
+    ]);
+    setConversation(newConversation);
+
+    try {
+      const response = await getDataFromLLM(
+        newConversation,
+        customInstructions,
+        chooseModelApi,
+        temperatureGlobal,
+        tpopGlobal,
+        setResponses,
+        setConversation,
+        setShowModelSession,
+        setPrompt,
+        setShowBadRequest
+      );
+
+      setIsSubmitting(false);
+      setLoading(false);
+      setSelectedFiles([]);
+    } catch (error) {
+      setIsSubmitting(false);
+      setLoading(false);
+      setSelectedFiles([]);
+
+      if (error.name === "AbortError") {
+        notifyError("Request aborted.");
+      } else if (error.message) {
+        notifyError(error.message);
+      } else {
+        notifyError("An unknown error occurred");
+      }
+    }
+  };
+
   // Handle close editing a prompt
   const handleCloseClick = () => {
     setEditingIndex(null);
-  };
-
-  const handleSave = (index) => {
-    // Update conversation with the edited text
-    setConversation((prevConversation) => {
-      const updatedConversation = [...prevConversation];
-      const userMessageIndex = index * 2 + 1; // Calculate user's message index
-      const assistantResponseIndex = userMessageIndex + 1; // Assistant's response index
-
-      // Update the user's message
-      if (updatedConversation[userMessageIndex]) {
-        updatedConversation[userMessageIndex].content = editedText;
-      }
-
-      // Remove the assistant's response
-      if (updatedConversation[assistantResponseIndex]) {
-        updatedConversation.splice(assistantResponseIndex, 1);
-      }
-
-      return updatedConversation;
-    });
-
-    // Update responses with the edited text and clear the response
-    setResponses((prevResponses) => {
-      const updatedResponses = [...prevResponses];
-      updatedResponses[index] = {
-        prompt: editedText,
-        response: "",
-      };
-      return updatedResponses;
-    });
-
-    setEditingIndex(null); // Exit editing mode
-
-    // Call getRes to fetch the new response
-    getRes(editedText, index);
   };
 
   // Submit handler
@@ -1219,7 +1253,10 @@ function Prompt() {
                         />
                         <div className="flex gap-2 justify-end w-full">
                           <button
-                            onClick={() => handleSave(index)}
+                            onClick={() => {
+                              handleCloseClick();
+                              handleSave(index);
+                            }}
                             disabled={loading}
                           >
                             <img
@@ -1228,7 +1265,7 @@ function Prompt() {
                             />
                           </button>
                           <button
-                            onClick={() => handleCloseClick(index)}
+                            onClick={() => handleCloseClick()}
                             disabled={loading}
                           >
                             <img
@@ -1237,6 +1274,17 @@ function Prompt() {
                               className="h-[25px] w-[25px] cursor-pointer"
                             />
                           </button>
+                          {loading && (
+                            <button
+                              className="h-[30px] w-[30px] cursor-pointer"
+                              onClick={handleAbortFetch}
+                            >
+                              <img
+                                className="cursor-pointer h-[30px] w-[30px]"
+                                src={pause}
+                              />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -1254,8 +1302,8 @@ function Prompt() {
                         {/* Sub-div that appears on hover */}
                         <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
                           <button
-                            onClick={() => handleResendClick(index)}
-                            disabled={loading}
+                            onClick={(e) => handleResendClick(index, e)}
+                            disabled={loading} // Disable button if loading is true
                           >
                             <img
                               src={icon_resend}
@@ -1263,9 +1311,10 @@ function Prompt() {
                               className="h-[25px] w-[25px] cursor-pointer"
                             />
                           </button>
+
                           <button
                             onClick={() => handleEditClick(index, res.prompt)}
-                            disabled={loading}
+                            disabled={loading} // Disable button if loading is true
                           >
                             <img
                               src={edit_icon}

@@ -84,7 +84,6 @@ async function getDataFromLLM(
       }
       const decodedChunk = decoder.decode(value, { stream: true });
       newResponse += "" + decodedChunk;
-console.log(newResponse);
 
       setResponses((prevResponses) => [
         ...prevResponses.slice(0, prevResponses.length - 1),
