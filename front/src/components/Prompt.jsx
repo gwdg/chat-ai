@@ -352,11 +352,13 @@ function Prompt() {
 
     try {
       const response = await getDataFromLLM(
-        tempConversation,
+        conversation,
         customInstructions,
         chooseModelApi,
         temperatureGlobal,
         tpopGlobal,
+        setResponses,
+        setConversation,
         setShowModelSession,
         setPrompt,
         setShowBadRequest
@@ -1204,15 +1206,31 @@ function Prompt() {
                           className="no-scrollbar outline-none text-xl max-h-[350px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
                           value={editedText}
                           onChange={(e) => setEditedText(e.target.value)}
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === "Enter" &&
+                              !event.shiftKey &&
+                              prompt.trim() !== ""
+                            ) {
+                              event.preventDefault();
+                              handleSave(index);
+                            }
+                          }}
                         />
                         <div className="flex gap-2 justify-end w-full">
-                          <button onClick={() => handleSave(index)}>
+                          <button
+                            onClick={() => handleSave(index)}
+                            disabled={loading}
+                          >
                             <img
                               className="cursor-pointer h-[25px] w-[25px]"
                               src={send}
                             />
                           </button>
-                          <button onClick={() => handleCloseClick(index)}>
+                          <button
+                            onClick={() => handleCloseClick(index)}
+                            disabled={loading}
+                          >
                             <img
                               src={clear}
                               alt="clear"
@@ -1235,7 +1253,10 @@ function Prompt() {
                         </pre>
                         {/* Sub-div that appears on hover */}
                         <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
-                          <button onClick={() => handleResendClick(index)}>
+                          <button
+                            onClick={() => handleResendClick(index)}
+                            disabled={loading}
+                          >
                             <img
                               src={icon_resend}
                               alt="icon_resend"
@@ -1244,6 +1265,7 @@ function Prompt() {
                           </button>
                           <button
                             onClick={() => handleEditClick(index, res.prompt)}
+                            disabled={loading}
                           >
                             <img
                               src={edit_icon}
@@ -1597,7 +1619,7 @@ function Prompt() {
                           <div
                             className={`absolute w-full ${
                               direction === "up" ? "bottom-full" : "top-full"
-                            } rounded-2xl border-opacity-10 border dark:border-border_dark`}
+                            } rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto`}
                           >
                             {modelList.map((option, index) => (
                               <div
@@ -1633,7 +1655,7 @@ function Prompt() {
             </div> */}
                   </div>
                   {/* Arcanas */}
-                  <div className="flex gap-4 w-full items-center">
+                  {/* <div className="flex gap-4 w-full items-center">
                     <div className="flex-shrink-0 flex items-center gap-2">
                       {" "}
                       <p className="text-[18px]">Arcanas</p>{" "}
@@ -1648,7 +1670,7 @@ function Prompt() {
                       notifyError={notifyError}
                       notifySuccess={notifySuccess}
                     />
-                  </div>
+                  </div> */}
                   {/* Custom instructions */}
                   <div className="">
                     <Formik enableReinitialize={true} onSubmit>
@@ -1656,8 +1678,8 @@ function Prompt() {
                         <div className="flex flex-col gap-4 items-center">
                           {/* Temperature slider */}
                           <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-                            <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                              <p className="text-[18px]">Temperature</p>
+                            <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+                              <p className="text-[18px]">temp</p>
                               <img
                                 src={help}
                                 alt="help"
@@ -1668,7 +1690,7 @@ function Prompt() {
                             <div className="mx-2 w-full">
                               <div className="relative w-full">
                                 {/* Labels for guidance */}
-                                <div className="flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                                <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
                                   <span>Logical</span>
                                   <span>Creative</span>
                                 </div>
@@ -1714,8 +1736,8 @@ function Prompt() {
 
                           {/* Top_p slider */}
                           <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-                            <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                              <p className="text-[18px]">Top_p</p>
+                            <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+                              <p className="text-[18px]">top_p</p>
                               <img
                                 src={help}
                                 alt="help"
@@ -1726,7 +1748,7 @@ function Prompt() {
                             <div className="mx-2 w-full">
                               <div className="relative w-full">
                                 {/* Labels for guidance */}
-                                <div className="flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                                <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
                                   <span>Focused</span>
                                   <span>Diverse</span>
                                 </div>
@@ -1912,7 +1934,7 @@ function Prompt() {
                           <div
                             className={`absolute w-full ${
                               direction === "up" ? "bottom-full" : "top-full"
-                            } rounded-2xl border-opacity-10 border dark:border-border_dark`}
+                            } rounded-2xl border-opacity-10 border dark:border-border_dark z-[99]`}
                           >
                             {modelList.map((option, index) => (
                               <div

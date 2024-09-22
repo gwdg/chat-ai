@@ -50,7 +50,7 @@ function Clear_History_Model(props) {
               htmlFor="dontShowAgain"
               className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
             >
-              <Trans i18nKey="description.dont_show_agaimyW8ZCM9xrB5LTgrjoPxn"></Trans>
+              <Trans i18nKey="description.dont_show_again"></Trans>
             </label>
           </div>
 
