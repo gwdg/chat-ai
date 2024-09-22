@@ -35,6 +35,7 @@ import mic from "../assets/icon_mic.svg";
 import stop from "../assets/stop_listening.svg";
 import pause from "../assets/pause.svg";
 import edit_icon from "../assets/edit_icon.svg";
+import icon_resend from "../assets/icon_resend.svg";
 import Help_Model from "../model/Help_Modal";
 import Mic_Model from "../model/Mic_Model";
 import Cutom_Instructions_Model from "../model/Cutom_Instructions_Model";
@@ -469,6 +470,11 @@ function Prompt() {
   const handleEditClick = (index, prompt) => {
     setEditingIndex(index);
     setEditedText(prompt);
+  };
+
+  // Handle close editing a prompt
+  const handleCloseClick = () => {
+    setEditingIndex(null);
   };
 
   const handleSave = (index) => {
@@ -1187,48 +1193,67 @@ function Prompt() {
             >
               {responses?.map((res, index) => (
                 <div key={index} className={`flex flex-col gap-1`}>
-                  <div className="text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
+                  <div
+                    className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
+                      editingIndex === index ? "p-0" : "p-3"
+                    }  flex flex-col gap-2`}
+                  >
                     {editingIndex === index ? (
-                      <textarea
-                        className="no-scrollbar p-4 outline-none text-xl max-h-[350px] sm:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
-                        value={editedText}
-                        onChange={(e) => setEditedText(e.target.value)}
-                      />
+                      <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
+                        <textarea
+                          className="no-scrollbar outline-none text-xl max-h-[350px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                          value={editedText}
+                          onChange={(e) => setEditedText(e.target.value)}
+                        />
+                        <div className="flex gap-2 justify-end w-full">
+                          <button onClick={() => handleSave(index)}>
+                            <img
+                              className="cursor-pointer h-[25px] w-[25px]"
+                              src={send}
+                            />
+                          </button>
+                          <button onClick={() => handleCloseClick(index)}>
+                            <img
+                              src={clear}
+                              alt="clear"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                        </div>
+                      </div>
                     ) : (
-                      <pre
-                        className="font-sans"
-                        style={{
-                          overflow: "hidden",
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {res.prompt}
-                      </pre>
+                      <div className="flex gap-2 justify-between items-start group">
+                        <pre
+                          className="font-sans flex-grow min-w-0"
+                          style={{
+                            overflow: "hidden",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {res.prompt}
+                        </pre>
+                        {/* Sub-div that appears on hover */}
+                        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
+                          <button onClick={() => handleResendClick(index)}>
+                            <img
+                              src={icon_resend}
+                              alt="icon_resend"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                          <button
+                            onClick={() => handleEditClick(index, res.prompt)}
+                          >
+                            <img
+                              src={edit_icon}
+                              alt="edit_icon"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                        </div>
+                      </div>
                     )}
-                    <div className="flex gap-2 text-tertiary">
-                      {editingIndex === index ? (
-                        <button
-                          className="btn-save"
-                          onClick={() => handleSave(index)}
-                        >
-                          Save
-                        </button>
-                      ) : (
-                        <button
-                          className="btn-edit"
-                          onClick={() => handleEditClick(index, res.prompt)}
-                        >
-                          Edit
-                        </button>
-                      )}
-                      <button
-                        className="btn-resend"
-                        onClick={() => handleResendClick(index)}
-                      >
-                        Resend
-                      </button>
-                    </div>
                   </div>
 
                   <ResponseItem
@@ -1248,7 +1273,7 @@ function Prompt() {
               ))}
               <div ref={messagesEndRef} />
             </div>
-            
+
             {responses.length > 0 ? (
               <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
                 {/* Clear, Export, Import buttons */}
