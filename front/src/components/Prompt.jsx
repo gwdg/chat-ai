@@ -1165,7 +1165,6 @@ function Prompt() {
                   >
                     &nbsp;<Trans i18nKey="description.note5"></Trans>
                   </Link>
-                  .
                 </p>
                 <img
                   src={cross}
