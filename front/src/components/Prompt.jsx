@@ -130,8 +130,8 @@ function Prompt() {
   const textAreaRef = useRef(null);
   const dropdownRef = useRef(null);
   const containerRef = useRef(null);
-  const textareaResendRef = useRef(null);
-  const containerResendRef = useRef(null); // Ref for the container div (to detect outside click)
+  const textareaRefs = useRef([]); // Array of refs for textareas
+  const containerRefs = useRef([]); // Array of refs for containers
   const [editingIndex, setEditingIndex] = useState(null);
   const [editedText, setEditedText] = useState("");
 
@@ -314,37 +314,44 @@ function Prompt() {
     }
   }, [isDarkMode]); // Run this effect when isDarkMode changes
 
-  // Function to focus the textarea
-  const focusTextArea = () => {
-    if (textareaResendRef.current) {
-      textareaResendRef.current.focus();
+  // Function to focus the textarea for a given index
+  const focusTextArea = (index) => {
+    if (textareaRefs.current[index]) {
+      textareaRefs.current[index].focus();
     }
     setIsEditing(true);
   };
 
-  // Function to detect clicks outside the textarea and container
-  const handleClickOutside = (event) => {
+  // Function to detect clicks outside the textarea and container for a given index
+  const handleClickOutside = (event, index) => {
     if (
-      containerResendRef.current &&
-      !containerResendRef.current.contains(event.target) &&
-      textareaResendRef.current !== event.target // Ensure it's not the textarea itself
+      containerRefs.current[index] &&
+      !containerRefs.current[index].contains(event.target) &&
+      textareaRefs.current[index] !== event.target // Ensure it's not the textarea itself
     ) {
-      handleCloseClick();
+      handleCloseClick(index); // Call handleCloseClick for specific index
       setIsEditing(false);
     }
   };
 
-  // useEffect to add/remove event listener for outside clicks
   useEffect(() => {
-    if (isEditing) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+    const handleOutsideClick = (event) => {
+      // Iterate over all responses to check if the click was outside any textarea or container
+      responses.forEach((_, index) => {
+        handleClickOutside(event, index);
+      });
     };
-  }, [isEditing]);
+
+    // Attach event listener when editing starts
+    if (isEditing) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+
+    // Clean up the event listener when editing stops or on unmount
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isEditing, responses]);
 
   async function getRes() {
     setLoading(true);
@@ -416,47 +423,32 @@ function Prompt() {
   // Handle resending the request for a specific response
   const handleResendClick = async (index) => {
     setLoadingResend(true);
+
     // Check if the index is valid
     if (index < 0 || index >= responses.length) {
       notifyError("Something went wrong");
+      setLoadingResend(false);
       return;
     }
 
-    // Retrieve the prompt from the responses at the given index
     const currentPrompt = responses[index]?.prompt;
-
     if (!currentPrompt || currentPrompt.trim() === "") {
       notifyError("Invalid or empty prompt at the specified index.");
+      setLoadingResend(false);
       return;
     }
 
-    // 2. Remove everything from the selected index onwards in the conversation array.
-    let newConversation = [...conversation];
-    // `index * 2 + 1` to retain both user prompt and assistant response.
-    newConversation = newConversation.slice(0, index * 2 + 1); // Slice up to and including the user part only.
+    // Update conversation and responses
+    let newConversation = [...conversation].slice(0, index * 2 + 1);
+    let newResponses = [...responses].slice(0, index);
 
-    // 3. Remove everything from the selected index onwards in the responses array.
-    let newResponses = [...responses];
-    newResponses = newResponses.slice(0, index); // Remove all elements from the index onwards
-
-    // 4. Update both arrays immediately
     setResponses(newResponses);
 
-    // Wait for state to update using `setState` callbacks
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // 5. Do not push the current prompt again, as it's already in the conversation.
-
-    // Check if there are any selected files to attach them to the prompt
-    if (selectedFiles.length > 0) {
-      const allFilesText = selectedFiles
-        .map((file) => `${file.name}: ${file.text}`)
-        .join("\n");
-      const fullPrompt = `${currentPrompt}\n${allFilesText}`;
-      newConversation.push({ role: "user", content: fullPrompt });
-    } else {
-      newConversation.push({ role: "user", content: currentPrompt });
-    }
+    // Handle sending the prompt
+    const fullPrompt = currentPrompt;
+    newConversation.push({ role: "user", content: fullPrompt });
 
     setResponses((prevResponses) => [
       ...prevResponses,
@@ -466,8 +458,9 @@ function Prompt() {
       },
     ]);
     setConversation(newConversation);
+
     try {
-      const response = await getDataFromLLM(
+      await getDataFromLLM(
         newConversation,
         customInstructions,
         chooseModelApi,
@@ -479,21 +472,13 @@ function Prompt() {
         setPrompt,
         setShowBadRequest
       );
-
-      setIsSubmitting(false);
       setLoadingResend(false);
-      setSelectedFiles([]);
     } catch (error) {
-      setIsSubmitting(false);
       setLoadingResend(false);
-      setSelectedFiles([]);
-
       if (error.name === "AbortError") {
         notifyError("Request aborted.");
-      } else if (error.message) {
-        notifyError(error.message);
       } else {
-        notifyError("An unknown error occurred");
+        notifyError(error.message || "An unknown error occurred");
       }
     }
   };
@@ -507,39 +492,20 @@ function Prompt() {
   // Save the edited prompt and resend the request
   const handleSave = async (index) => {
     setLoadingResend(true);
-
     if (!editedText || !editedText.trim()) {
       notifyError("Prompt cannot be empty!");
+      setLoadingResend(false);
       return;
     }
 
-    // 2. Remove everything from the selected index onwards in the conversation array.
-    let newConversation = [...conversation];
-    // `index * 2 + 1` to retain both user prompt and assistant response.
-    newConversation = newConversation.slice(0, index * 2 + 1); // Slice up to and including the user part only.
+    let newConversation = [...conversation].slice(0, index * 2 + 1);
+    let newResponses = [...responses].slice(0, index);
 
-    // 3. Remove everything from the selected index onwards in the responses array.
-    let newResponses = [...responses];
-    newResponses = newResponses.slice(0, index); // Remove all elements from the index onwards
-
-    // 4. Update both arrays immediately
     setResponses(newResponses);
-
-    // Wait for state to update using `setState` callbacks
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // 5. Do not push the current prompt again, as it's already in the conversation.
-
-    // Check if there are any selected files to attach them to the prompt
-    if (selectedFiles.length > 0) {
-      const allFilesText = selectedFiles
-        .map((file) => `${file.name}: ${file.text}`)
-        .join("\n");
-      const fullPrompt = `${editedText}\n${allFilesText}`;
-      newConversation.push({ role: "user", content: fullPrompt });
-    } else {
-      newConversation.push({ role: "user", content: editedText });
-    }
+    const fullPrompt = editedText;
+    newConversation.push({ role: "user", content: fullPrompt });
 
     setResponses((prevResponses) => [
       ...prevResponses,
@@ -551,7 +517,7 @@ function Prompt() {
     setConversation(newConversation);
 
     try {
-      const response = await getDataFromLLM(
+      await getDataFromLLM(
         newConversation,
         customInstructions,
         chooseModelApi,
@@ -563,28 +529,18 @@ function Prompt() {
         setPrompt,
         setShowBadRequest
       );
-
-      setIsSubmitting(false);
       setLoadingResend(false);
-      setSelectedFiles([]);
     } catch (error) {
-      setIsSubmitting(false);
       setLoadingResend(false);
-      setSelectedFiles([]);
-
-      if (error.name === "AbortError") {
-        notifyError("Request aborted.");
-      } else if (error.message) {
-        notifyError(error.message);
-      } else {
-        notifyError("An unknown error occurred");
-      }
+      notifyError(error.message || "An unknown error occurred");
     }
   };
 
   // Handle close editing a prompt
-  const handleCloseClick = () => {
-    setEditingIndex(null);
+  const handleCloseClick = (index) => {
+    if (editingIndex === index) {
+      setEditingIndex(null); // Only close the currently edited item
+    }
   };
 
   // Submit handler
@@ -1268,7 +1224,7 @@ function Prompt() {
               {responses?.map((res, index) => (
                 <div key={index} className={`flex flex-col gap-1`}>
                   <div
-                    ref={containerResendRef} // Attach ref to container
+                    ref={(el) => (containerRefs.current[index] = el)} // Attach ref to container
                     className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
                       editingIndex === index ? "p-0" : "p-3"
                     } flex flex-col gap-2`}
@@ -1276,7 +1232,7 @@ function Prompt() {
                     {editingIndex === index ? (
                       <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
                         <textarea
-                          ref={textareaResendRef} // Attach ref to textarea
+                          ref={(el) => (textareaRefs.current[index] = el)} // Attach ref to textarea
                           className="no-scrollbar outline-none text-xl max-h-[350px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
                           value={editedText}
                           onChange={(e) => setEditedText(e.target.value)}
@@ -1287,15 +1243,15 @@ function Prompt() {
                               editedText.trim() !== ""
                             ) {
                               event.preventDefault();
-                              handleCloseClick();
-                              handleSave(index);
-                              setIsEditing(false); // Exit edit mode after save
+                              handleCloseClick(index); // Close the textarea
+                              handleSave(index); // Save the edited text
+                              setIsEditing(false); // Exit edit mode after saving
                             }
                           }}
                         />
                         <div className="flex gap-2 justify-between w-full">
                           <button
-                            onClick={() => setEditedText("")}
+                            onClick={() => setEditedText("")} // Clear the edited text
                             disabled={loadingResend}
                           >
                             <img
@@ -1306,8 +1262,8 @@ function Prompt() {
                           </button>
                           <button
                             onClick={() => {
-                              handleCloseClick();
-                              handleSave(index);
+                              handleCloseClick(index); // Close the textarea
+                              handleSave(index); // Save the edited text
                             }}
                             disabled={loadingResend}
                           >
@@ -1332,7 +1288,7 @@ function Prompt() {
                         </pre>
                         <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
                           <button
-                            onClick={(e) => handleResendClick(index, e)}
+                            onClick={(e) => handleResendClick(index, e)} // Resend the request for this response
                             disabled={loadingResend}
                           >
                             <img
@@ -1343,8 +1299,8 @@ function Prompt() {
                           </button>
                           <button
                             onClick={() => {
-                              focusTextArea();
-                              handleEditClick(index, res.prompt);
+                              focusTextArea(index); // Focus on this textarea for editing
+                              handleEditClick(index, res.prompt); // Set this response to be edited
                             }}
                             disabled={loadingResend}
                           >
@@ -1359,11 +1315,13 @@ function Prompt() {
                     )}
                   </div>
 
+                  {/* Render additional response item details */}
                   <ResponseItem
                     res={res}
                     index={index}
                     handleRetryError={handleResendClick}
                     loading={loading}
+                    loadingResend={loadingResend}
                     responses={responses}
                     notifyError={notifyError}
                     isDarkModeGlobal={isDarkModeGlobal}
@@ -1374,7 +1332,8 @@ function Prompt() {
                   />
                 </div>
               ))}
-              <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} />{" "}
+              {/* Scrolls to the end when new messages are added */}
             </div>
 
             {responses.length > 0 ? (
