@@ -12,7 +12,7 @@ function Help_Aracana(props) {
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
             {/* Translation for help title */}
-            <Trans i18nKey="description.help_arcana_title"></Trans> :
+            <Trans i18nKey="description.help_arcana_title"></Trans>:
           </p>
           {/* Close button */}
           <img
