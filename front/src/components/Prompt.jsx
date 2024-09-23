@@ -35,6 +35,7 @@ import mic from "../assets/icon_mic.svg";
 import stop from "../assets/stop_listening.svg";
 import pause from "../assets/pause.svg";
 import edit_icon from "../assets/edit_icon.svg";
+import icon_resend from "../assets/icon_resend.svg";
 import Help_Model from "../model/Help_Modal";
 import Mic_Model from "../model/Mic_Model";
 import Cutom_Instructions_Model from "../model/Cutom_Instructions_Model";
@@ -106,6 +107,8 @@ function Prompt() {
   const [responses, setResponses] = useState(responsesGLobal); //Responses array contains chat and will be displayed on left
   const [conversation, setConversation] = useState(conversationGLobal); //Conversation for LLM API payload
   const [loading, setLoading] = useState(false); // Submit button state
+  const [loadingResend, setLoadingResend] = useState(false); // Submit button state
+  const [isEditing, setIsEditing] = useState(false);
   const [showModel, setShowModel] = useState(true); // Note model state
   const [showModelSession, setShowModelSession] = useState(false); // Session expired model state
   const [showBadRequest, setShowBadRequest] = useState(false); // Session expired model state
@@ -127,9 +130,14 @@ function Prompt() {
   const textAreaRef = useRef(null);
   const dropdownRef = useRef(null);
   const containerRef = useRef(null);
+  const textareaResendRef = useRef(null);
+  const containerResendRef = useRef(null); // Ref for the container div (to detect outside click)
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editedText, setEditedText] = useState("");
 
   const [direction, setDirection] = useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResend, setIsResend] = useState(false); // Flag to track if we should trigger getRes
   const [copied, setCopied] = useState(false);
   const [indexChecked, setIndexChecked] = useState(false);
   // Dark mode state
@@ -306,7 +314,38 @@ function Prompt() {
     }
   }, [isDarkMode]); // Run this effect when isDarkMode changes
 
-  // Function for getting response from backend
+  // Function to focus the textarea
+  const focusTextArea = () => {
+    if (textareaResendRef.current) {
+      textareaResendRef.current.focus();
+    }
+    setIsEditing(true);
+  };
+
+  // Function to detect clicks outside the textarea and container
+  const handleClickOutside = (event) => {
+    if (
+      containerResendRef.current &&
+      !containerResendRef.current.contains(event.target) &&
+      textareaResendRef.current !== event.target // Ensure it's not the textarea itself
+    ) {
+      handleCloseClick();
+      setIsEditing(false);
+    }
+  };
+
+  // useEffect to add/remove event listener for outside clicks
+  useEffect(() => {
+    if (isEditing) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isEditing]);
+
   async function getRes() {
     setLoading(true);
     resetHeight();
@@ -374,7 +413,181 @@ function Prompt() {
     setLoading(false);
   };
 
-  // Handles submission of text area content
+  // Handle resending the request for a specific response
+  const handleResendClick = async (index) => {
+    setLoadingResend(true);
+    // Check if the index is valid
+    if (index < 0 || index >= responses.length) {
+      notifyError("Something went wrong");
+      return;
+    }
+
+    // Retrieve the prompt from the responses at the given index
+    const currentPrompt = responses[index]?.prompt;
+
+    if (!currentPrompt || currentPrompt.trim() === "") {
+      notifyError("Invalid or empty prompt at the specified index.");
+      return;
+    }
+
+    // 2. Remove everything from the selected index onwards in the conversation array.
+    let newConversation = [...conversation];
+    // `index * 2 + 1` to retain both user prompt and assistant response.
+    newConversation = newConversation.slice(0, index * 2 + 1); // Slice up to and including the user part only.
+
+    // 3. Remove everything from the selected index onwards in the responses array.
+    let newResponses = [...responses];
+    newResponses = newResponses.slice(0, index); // Remove all elements from the index onwards
+
+    // 4. Update both arrays immediately
+    setResponses(newResponses);
+
+    // Wait for state to update using `setState` callbacks
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // 5. Do not push the current prompt again, as it's already in the conversation.
+
+    // Check if there are any selected files to attach them to the prompt
+    if (selectedFiles.length > 0) {
+      const allFilesText = selectedFiles
+        .map((file) => `${file.name}: ${file.text}`)
+        .join("\n");
+      const fullPrompt = `${currentPrompt}\n${allFilesText}`;
+      newConversation.push({ role: "user", content: fullPrompt });
+    } else {
+      newConversation.push({ role: "user", content: currentPrompt });
+    }
+
+    setResponses((prevResponses) => [
+      ...prevResponses,
+      {
+        prompt: currentPrompt,
+        response: "",
+      },
+    ]);
+    setConversation(newConversation);
+    try {
+      const response = await getDataFromLLM(
+        newConversation,
+        customInstructions,
+        chooseModelApi,
+        temperatureGlobal,
+        tpopGlobal,
+        setResponses,
+        setConversation,
+        setShowModelSession,
+        setPrompt,
+        setShowBadRequest
+      );
+
+      setIsSubmitting(false);
+      setLoadingResend(false);
+      setSelectedFiles([]);
+    } catch (error) {
+      setIsSubmitting(false);
+      setLoadingResend(false);
+      setSelectedFiles([]);
+
+      if (error.name === "AbortError") {
+        notifyError("Request aborted.");
+      } else if (error.message) {
+        notifyError(error.message);
+      } else {
+        notifyError("An unknown error occurred");
+      }
+    }
+  };
+
+  // Handle editing a prompt
+  const handleEditClick = (index, prompt) => {
+    setEditingIndex(index);
+    setEditedText(prompt);
+  };
+
+  // Save the edited prompt and resend the request
+  const handleSave = async (index) => {
+    setLoadingResend(true);
+
+    if (!editedText || !editedText.trim()) {
+      notifyError("Prompt cannot be empty!");
+      return;
+    }
+
+    // 2. Remove everything from the selected index onwards in the conversation array.
+    let newConversation = [...conversation];
+    // `index * 2 + 1` to retain both user prompt and assistant response.
+    newConversation = newConversation.slice(0, index * 2 + 1); // Slice up to and including the user part only.
+
+    // 3. Remove everything from the selected index onwards in the responses array.
+    let newResponses = [...responses];
+    newResponses = newResponses.slice(0, index); // Remove all elements from the index onwards
+
+    // 4. Update both arrays immediately
+    setResponses(newResponses);
+
+    // Wait for state to update using `setState` callbacks
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // 5. Do not push the current prompt again, as it's already in the conversation.
+
+    // Check if there are any selected files to attach them to the prompt
+    if (selectedFiles.length > 0) {
+      const allFilesText = selectedFiles
+        .map((file) => `${file.name}: ${file.text}`)
+        .join("\n");
+      const fullPrompt = `${editedText}\n${allFilesText}`;
+      newConversation.push({ role: "user", content: fullPrompt });
+    } else {
+      newConversation.push({ role: "user", content: editedText });
+    }
+
+    setResponses((prevResponses) => [
+      ...prevResponses,
+      {
+        prompt: editedText,
+        response: "",
+      },
+    ]);
+    setConversation(newConversation);
+
+    try {
+      const response = await getDataFromLLM(
+        newConversation,
+        customInstructions,
+        chooseModelApi,
+        temperatureGlobal,
+        tpopGlobal,
+        setResponses,
+        setConversation,
+        setShowModelSession,
+        setPrompt,
+        setShowBadRequest
+      );
+
+      setIsSubmitting(false);
+      setLoadingResend(false);
+      setSelectedFiles([]);
+    } catch (error) {
+      setIsSubmitting(false);
+      setLoadingResend(false);
+      setSelectedFiles([]);
+
+      if (error.name === "AbortError") {
+        notifyError("Request aborted.");
+      } else if (error.message) {
+        notifyError(error.message);
+      } else {
+        notifyError("An unknown error occurred");
+      }
+    }
+  };
+
+  // Handle close editing a prompt
+  const handleCloseClick = () => {
+    setEditingIndex(null);
+  };
+
+  // Submit handler
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -1046,7 +1259,6 @@ function Prompt() {
                 />
               </div>
             ) : null}
-
             {/* Prompt response section */}
             <div
               id="divToPrint"
@@ -1055,22 +1267,102 @@ function Prompt() {
             >
               {responses?.map((res, index) => (
                 <div key={index} className={`flex flex-col gap-1`}>
-                  <div className="text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 ">
-                    <pre
-                      className="font-sans"
-                      style={{
-                        overflow: "hidden",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {res.prompt}
-                    </pre>
+                  <div
+                    ref={containerResendRef} // Attach ref to container
+                    className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
+                      editingIndex === index ? "p-0" : "p-3"
+                    } flex flex-col gap-2`}
+                  >
+                    {editingIndex === index ? (
+                      <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
+                        <textarea
+                          ref={textareaResendRef} // Attach ref to textarea
+                          className="no-scrollbar outline-none text-xl max-h-[350px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                          value={editedText}
+                          onChange={(e) => setEditedText(e.target.value)}
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === "Enter" &&
+                              !event.shiftKey &&
+                              editedText.trim() !== ""
+                            ) {
+                              event.preventDefault();
+                              handleCloseClick();
+                              handleSave(index);
+                              setIsEditing(false); // Exit edit mode after save
+                            }
+                          }}
+                        />
+                        <div className="flex gap-2 justify-between w-full">
+                          <button
+                            onClick={() => setEditedText("")}
+                            disabled={loadingResend}
+                          >
+                            <img
+                              src={clear}
+                              alt="clear"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleCloseClick();
+                              handleSave(index);
+                            }}
+                            disabled={loadingResend}
+                          >
+                            <img
+                              className="cursor-pointer h-[25px] w-[25px]"
+                              src={send}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 justify-between items-start group">
+                        <pre
+                          className="font-sans flex-grow min-w-0"
+                          style={{
+                            overflow: "hidden",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {res.prompt}
+                        </pre>
+                        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
+                          <button
+                            onClick={(e) => handleResendClick(index, e)}
+                            disabled={loadingResend}
+                          >
+                            <img
+                              src={icon_resend}
+                              alt="icon_resend"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                          <button
+                            onClick={() => {
+                              focusTextArea();
+                              handleEditClick(index, res.prompt);
+                            }}
+                            disabled={loadingResend}
+                          >
+                            <img
+                              src={edit_icon}
+                              alt="edit_icon"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
                   <ResponseItem
                     res={res}
                     index={index}
-                    handleRetryError={handleRetryError}
+                    handleRetryError={handleResendClick}
                     loading={loading}
                     responses={responses}
                     notifyError={notifyError}
@@ -1408,7 +1700,7 @@ function Prompt() {
                           <div
                             className={`absolute w-full ${
                               direction === "up" ? "bottom-full" : "top-full"
-                            } rounded-2xl border-opacity-10 border dark:border-border_dark`}
+                            } rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto`}
                           >
                             {modelList.map((option, index) => (
                               <div
@@ -1467,8 +1759,8 @@ function Prompt() {
                         <div className="flex flex-col gap-4 items-center">
                           {/* Temperature slider */}
                           <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-                            <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                              <p className="text-[18px]">Temperature</p>
+                            <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+                              <p className="text-[18px]">temp</p>
                               <img
                                 src={help}
                                 alt="help"
@@ -1479,7 +1771,7 @@ function Prompt() {
                             <div className="mx-2 w-full">
                               <div className="relative w-full">
                                 {/* Labels for guidance */}
-                                <div className="flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                                <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
                                   <span>Logical</span>
                                   <span>Creative</span>
                                 </div>
@@ -1525,8 +1817,8 @@ function Prompt() {
 
                           {/* Top_p slider */}
                           <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-                            <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                              <p className="text-[18px]">Top_p</p>
+                            <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+                              <p className="text-[18px]">top_p</p>
                               <img
                                 src={help}
                                 alt="help"
@@ -1537,7 +1829,7 @@ function Prompt() {
                             <div className="mx-2 w-full">
                               <div className="relative w-full">
                                 {/* Labels for guidance */}
-                                <div className="flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                                <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
                                   <span>Focused</span>
                                   <span>Diverse</span>
                                 </div>
@@ -1723,7 +2015,7 @@ function Prompt() {
                           <div
                             className={`absolute w-full ${
                               direction === "up" ? "bottom-full" : "top-full"
-                            } rounded-2xl border-opacity-10 border dark:border-border_dark`}
+                            } rounded-2xl border-opacity-10 border dark:border-border_dark z-[99]`}
                           >
                             {modelList.map((option, index) => (
                               <div

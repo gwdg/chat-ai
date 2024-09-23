@@ -4,7 +4,7 @@ let signal = controller.signal;
 async function getDataFromLLM(
   conversation,
   customInstructions,
-  chooseModel,
+  chooseModelApi,
   temperatureGlobal,
   tpopGlobal,
   setResponses,
@@ -15,7 +15,7 @@ async function getDataFromLLM(
 ) {
   try {
     const instructModels = ["mixtral-8x7b-instruct"];
-    const isInstruct = instructModels.includes(chooseModel);
+    const isInstruct = instructModels.includes(chooseModelApi);
 
     const response = await fetch("/chat-ai-backend", {
       method: "post",
@@ -23,7 +23,7 @@ async function getDataFromLLM(
         "Content-type": "application/json",
       },
       body: JSON.stringify({
-        model: chooseModel,
+        model: chooseModelApi,
         messages: isInstruct
           ? [
               {

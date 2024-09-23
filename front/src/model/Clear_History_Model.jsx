@@ -20,7 +20,7 @@ function Clear_History_Model(props) {
         {/* Modal header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
-            <Trans i18nKey="description.help_title"></Trans> :
+            <Trans i18nKey="description.help_title1"></Trans>:
           </p>
           {/* Close button */}
           <img
@@ -38,17 +38,17 @@ function Clear_History_Model(props) {
           </div>
 
           {/* Add the checkbox */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <input
               type="checkbox"
               id="dontShowAgain"
               checked={dontShowAgain}
               onChange={handleCheckboxChange}
-              className="cursor-pointer"
+              className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
             />
             <label
               htmlFor="dontShowAgain"
-              className="text-black dark:text-white cursor-pointer"
+              className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
             >
               <Trans i18nKey="description.dont_show_again"></Trans>
             </label>
