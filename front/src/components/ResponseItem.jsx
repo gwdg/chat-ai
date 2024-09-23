@@ -13,6 +13,7 @@ const ResponseItem = React.memo(
     index,
     handleRetryError,
     loading,
+    loadingResend,
     responses,
     isDarkModeGlobal,
     copied,
@@ -20,61 +21,69 @@ const ResponseItem = React.memo(
     setCopied,
     setIndexChecked,
     notifyError,
-  }) => (
-    <div className="p-2">
-      {res.response ? (
-        <div
-          className="text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3"
-          style={{
-            overflow: "hidden",
-            wordBreak: "break-word",
-          }}
-        >
-          <MarkdownRenderer isDarkMode={isDarkModeGlobal}>
-            {res.response}
-          </MarkdownRenderer>
-          <div className="flex justify-end w-full mt-1">
-            <button className="">
-              {copied && indexChecked === index ? (
-                <img
-                  src={check}
-                  alt="copy"
-                  className="h-[20px] w-[20px] cursor-pointer"
-                />
-              ) : (
-                <img
-                  src={copy}
-                  alt="copy"
-                  className="h-[20px] w-[20px] cursor-pointer"
-                  onClick={() => {
-                    try {
-                      navigator.clipboard.writeText(res.response);
-                      setCopied(true);
-                      setIndexChecked(index);
-                    } catch (err) {
-                      notifyError("Failed to copy text");
-                    }
-                  }}
-                />
-              )}
+  }) => {
+    // Determine if this is the last response being processed
+    const isLastResponse = index === responses.length - 1;
+
+    return (
+      <div className="p-2">
+        {res.response ? (
+          // Display the response if available
+          <div
+            className="text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3"
+            style={{
+              overflow: "hidden",
+              wordBreak: "break-word",
+            }}
+          >
+            <MarkdownRenderer isDarkMode={isDarkModeGlobal}>
+              {res.response}
+            </MarkdownRenderer>
+            <div className="flex justify-end w-full mt-1">
+              <button className="">
+                {copied && indexChecked === index ? (
+                  <img
+                    src={check}
+                    alt="copy"
+                    className="h-[20px] w-[20px] cursor-pointer"
+                  />
+                ) : (
+                  <img
+                    src={copy}
+                    alt="copy"
+                    className="h-[20px] w-[20px] cursor-pointer"
+                    onClick={() => {
+                      try {
+                        navigator.clipboard.writeText(res.response);
+                        setCopied(true);
+                        setIndexChecked(index);
+                      } catch (err) {
+                        notifyError("Failed to copy text");
+                      }
+                    }}
+                  />
+                )}
+              </button>
+            </div>
+          </div>
+        ) : isLastResponse && (loading || loadingResend) ? (
+          // If it's the last response and it's loading, display Typing animation
+          <Typing />
+        ) : (
+          // Show "Try Again" if no response and not loading for non-last responses
+          <div className="flex gap-2">
+            <p>Try Again</p>
+            <button
+              onClick={(e) => handleRetryError(index, e)}
+              disabled={loading}
+            >
+              <img src={retry} alt="Retry" />
             </button>
           </div>
-        </div>
-      ) : !res.response && !loading ? (
-        <div className="flex gap-2">
-          <p>Try Again</p>
-          <button
-            onClick={(e) => handleRetryError(index, e)}
-            disabled={loading}
-          >
-            <img src={retry} alt="Retry" />
-          </button>
-        </div>
-      ) : (
-        index === responses.length - 1 && loading && <Typing />
-      )}
-    </div>
-  )
+        )}
+      </div>
+    );
+  }
 );
 
 ResponseItem.displayName = "ResponseItem";
