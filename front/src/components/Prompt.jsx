@@ -107,6 +107,8 @@ function Prompt() {
   const [responses, setResponses] = useState(responsesGLobal); //Responses array contains chat and will be displayed on left
   const [conversation, setConversation] = useState(conversationGLobal); //Conversation for LLM API payload
   const [loading, setLoading] = useState(false); // Submit button state
+  const [loadingResend, setLoadingResend] = useState(false); // Submit button state
+  const [isEditing, setIsEditing] = useState(false);
   const [showModel, setShowModel] = useState(true); // Note model state
   const [showModelSession, setShowModelSession] = useState(false); // Session expired model state
   const [showBadRequest, setShowBadRequest] = useState(false); // Session expired model state
@@ -128,7 +130,8 @@ function Prompt() {
   const textAreaRef = useRef(null);
   const dropdownRef = useRef(null);
   const containerRef = useRef(null);
-
+  const textareaResendRef = useRef(null);
+  const containerResendRef = useRef(null); // Ref for the container div (to detect outside click)
   const [editingIndex, setEditingIndex] = useState(null);
   const [editedText, setEditedText] = useState("");
 
@@ -311,6 +314,38 @@ function Prompt() {
     }
   }, [isDarkMode]); // Run this effect when isDarkMode changes
 
+  // Function to focus the textarea
+  const focusTextArea = () => {
+    if (textareaResendRef.current) {
+      textareaResendRef.current.focus();
+    }
+    setIsEditing(true);
+  };
+
+  // Function to detect clicks outside the textarea and container
+  const handleClickOutside = (event) => {
+    if (
+      containerResendRef.current &&
+      !containerResendRef.current.contains(event.target) &&
+      textareaResendRef.current !== event.target // Ensure it's not the textarea itself
+    ) {
+      handleCloseClick();
+      setIsEditing(false);
+    }
+  };
+
+  // useEffect to add/remove event listener for outside clicks
+  useEffect(() => {
+    if (isEditing) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isEditing]);
+
   async function getRes() {
     setLoading(true);
     resetHeight();
@@ -380,6 +415,7 @@ function Prompt() {
 
   // Handle resending the request for a specific response
   const handleResendClick = async (index) => {
+    setLoadingResend(true);
     // Check if the index is valid
     if (index < 0 || index >= responses.length) {
       notifyError("Something went wrong");
@@ -445,11 +481,11 @@ function Prompt() {
       );
 
       setIsSubmitting(false);
-      setLoading(false);
+      setLoadingResend(false);
       setSelectedFiles([]);
     } catch (error) {
       setIsSubmitting(false);
-      setLoading(false);
+      setLoadingResend(false);
       setSelectedFiles([]);
 
       if (error.name === "AbortError") {
@@ -470,6 +506,8 @@ function Prompt() {
 
   // Save the edited prompt and resend the request
   const handleSave = async (index) => {
+    setLoadingResend(true);
+
     if (!editedText || !editedText.trim()) {
       notifyError("Prompt cannot be empty!");
       return;
@@ -527,11 +565,11 @@ function Prompt() {
       );
 
       setIsSubmitting(false);
-      setLoading(false);
+      setLoadingResend(false);
       setSelectedFiles([]);
     } catch (error) {
       setIsSubmitting(false);
-      setLoading(false);
+      setLoadingResend(false);
       setSelectedFiles([]);
 
       if (error.name === "AbortError") {
@@ -1230,13 +1268,15 @@ function Prompt() {
               {responses?.map((res, index) => (
                 <div key={index} className={`flex flex-col gap-1`}>
                   <div
+                    ref={containerResendRef} // Attach ref to container
                     className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
                       editingIndex === index ? "p-0" : "p-3"
-                    }  flex flex-col gap-2`}
+                    } flex flex-col gap-2`}
                   >
                     {editingIndex === index ? (
                       <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
                         <textarea
+                          ref={textareaResendRef} // Attach ref to textarea
                           className="no-scrollbar outline-none text-xl max-h-[350px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
                           value={editedText}
                           onChange={(e) => setEditedText(e.target.value)}
@@ -1244,29 +1284,19 @@ function Prompt() {
                             if (
                               event.key === "Enter" &&
                               !event.shiftKey &&
-                              prompt.trim() !== ""
+                              editedText.trim() !== ""
                             ) {
                               event.preventDefault();
+                              handleCloseClick();
                               handleSave(index);
+                              setIsEditing(false); // Exit edit mode after save
                             }
                           }}
                         />
-                        <div className="flex gap-2 justify-end w-full">
+                        <div className="flex gap-2 justify-between w-full">
                           <button
-                            onClick={() => {
-                              handleCloseClick();
-                              handleSave(index);
-                            }}
-                            disabled={loading}
-                          >
-                            <img
-                              className="cursor-pointer h-[25px] w-[25px]"
-                              src={send}
-                            />
-                          </button>
-                          <button
-                            onClick={() => handleCloseClick()}
-                            disabled={loading}
+                            onClick={() => setEditedText("")}
+                            disabled={loadingResend}
                           >
                             <img
                               src={clear}
@@ -1274,17 +1304,18 @@ function Prompt() {
                               className="h-[25px] w-[25px] cursor-pointer"
                             />
                           </button>
-                          {loading && (
-                            <button
-                              className="h-[30px] w-[30px] cursor-pointer"
-                              onClick={handleAbortFetch}
-                            >
-                              <img
-                                className="cursor-pointer h-[30px] w-[30px]"
-                                src={pause}
-                              />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => {
+                              handleCloseClick();
+                              handleSave(index);
+                            }}
+                            disabled={loadingResend}
+                          >
+                            <img
+                              className="cursor-pointer h-[25px] w-[25px]"
+                              src={send}
+                            />
+                          </button>
                         </div>
                       </div>
                     ) : (
@@ -1299,11 +1330,10 @@ function Prompt() {
                         >
                           {res.prompt}
                         </pre>
-                        {/* Sub-div that appears on hover */}
                         <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
                           <button
                             onClick={(e) => handleResendClick(index, e)}
-                            disabled={loading} // Disable button if loading is true
+                            disabled={loadingResend}
                           >
                             <img
                               src={icon_resend}
@@ -1311,10 +1341,12 @@ function Prompt() {
                               className="h-[25px] w-[25px] cursor-pointer"
                             />
                           </button>
-
                           <button
-                            onClick={() => handleEditClick(index, res.prompt)}
-                            disabled={loading} // Disable button if loading is true
+                            onClick={() => {
+                              focusTextArea();
+                              handleEditClick(index, res.prompt);
+                            }}
+                            disabled={loadingResend}
                           >
                             <img
                               src={edit_icon}
