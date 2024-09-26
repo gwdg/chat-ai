@@ -16,21 +16,15 @@ import { Form, Formik, useFormik } from "formik";
 import * as yup from "yup"; // Schema validation
 
 // Redux Actions
-import {
-  setPromptGlobal,
-  setModel,
-  setResponsesGlobal,
-  setConversationGlobal,
-  setInstructions,
-} from "../Redux/actions";
-import {
-  setTemperatureGlobal,
-  setTpopGlobal,
-} from "../Redux/actions/temperatureAction";
-import {
-  setCountGlobal,
-  setModelApiGlobal,
-} from "../Redux/actions/alertAction";
+import { setPromptGlobal } from "../Redux/actions/promptAction";
+import { setModel } from "../Redux/actions/modelAction";
+import { setResponsesGlobal } from "../Redux/actions/responsesAction";
+import { setConversationGlobal } from "../Redux/actions/conAction";
+import { setInstructions } from "../Redux/actions/customInsAction";
+import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
+import { setTpopGlobal } from "../Redux/actions/tpopAction";
+import { setCountGlobal } from "../Redux/actions/alertAction";
+import { setModelApiGlobal } from "../Redux/actions/setModelApi";
 
 // APIs
 import { abortFetch, getDataFromLLM } from "../apis/Completion";
