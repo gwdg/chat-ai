@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
-// Libraries and dependencies
+
+// Libraries and Dependencies
 import React, { useRef, useState, useEffect } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import SpeechRecognition, {
@@ -9,13 +10,31 @@ import SpeechRecognition, {
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import { useDispatch, useSelector } from "react-redux";
-import { setPromptGlobal } from "../Redux/actions/promptAction";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Form, Formik, useFormik } from "formik";
 import * as yup from "yup"; // Schema validation
-import { Form, Formik, useFormik } from "formik"; // Form handling
-import Tooltip from "./Tooltip";
-import { persistor } from "../Redux/store/store";
+
+// Redux Actions
+import {
+  setPromptGlobal,
+  setModel,
+  setResponsesGlobal,
+  setConversationGlobal,
+  setInstructions,
+} from "../Redux/actions";
+import {
+  setTemperatureGlobal,
+  setTpopGlobal,
+} from "../Redux/actions/temperatureAction";
+import {
+  setCountGlobal,
+  setModelApiGlobal,
+} from "../Redux/actions/alertAction";
+
+// APIs
+import { abortFetch, getDataFromLLM } from "../apis/Completion";
+import { getModels } from "../apis/ModelLIst";
 
 // Assets
 import retry from "../assets/icon_retry.svg";
@@ -27,8 +46,6 @@ import send from "../assets/icon_send.svg";
 import upload from "../assets/add.svg";
 import uploaded from "../assets/file_uploaded.svg";
 import dropdown from "../assets/icon_dropdown.svg";
-
-// import advanced_settings_arrow from "../assets/advanced_settings_arrow.svg";
 import help from "../assets/icon_help.svg";
 import cross from "../assets/cross.svg";
 import mic from "../assets/icon_mic.svg";
@@ -36,45 +53,38 @@ import stop from "../assets/stop_listening.svg";
 import pause from "../assets/pause.svg";
 import edit_icon from "../assets/edit_icon.svg";
 import icon_resend from "../assets/icon_resend.svg";
+import Light from "../assets/light.svg";
+import Dark from "../assets/dark.svg";
+import Logo from "../assets/chatai-logo-v3-preview.png";
+
+// Components and Modals
+import Tooltip from "./Tooltip";
+import ResponseItem from "./ResponseItem";
 import Help_Model from "../model/Help_Modal";
 import Mic_Model from "../model/Mic_Model";
 import Cutom_Instructions_Model from "../model/Cutom_Instructions_Model";
-import { abortFetch, getDataFromLLM } from "../apis/Completion";
 import ExportTypeModel from "../model/ExportTypeModel";
-import { setModel } from "../Redux/actions/modelAction";
-import { setResponsesGlobal } from "../Redux/actions/responsesAction";
-import { setConversationGlobal } from "../Redux/actions/conAction";
-import { setInstructions } from "../Redux/actions/customInsAction"; // Redux action
-import { getModels } from "../apis/ModelLIst";
-import { setCountGlobal } from "../Redux/actions/alertAction";
-import { setModelApiGlobal } from "../Redux/actions/setModelApi";
 import Session_Expired from "../model/Session_Expired";
 import Bad_Request_Model from "../model/Bad_Request_Model";
-
-import Light from "../assets/light.svg"; // Light mode icon
-import Dark from "../assets/dark.svg"; // Dark mode icon
-import Logo from "../assets/chatai-logo-v3-preview.png"; // Chat AI logo
-import ResponseItem from "./ResponseItem";
-import Arcanas from "./Arcanas";
 import Clear_Catch_Model from "../model/Clear_Catch_Model";
 import Help_Model_Custom from "../model/Help_Model_Custom";
 import Help_model_Arcanas from "../model/Help_model_Arcanas";
-import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
 import Help_Model_System from "../model/Help_Model_System";
-import { setTpopGlobal } from "../Redux/actions/tpopAction";
 import Help_Model_Tpop from "../model/Help_Model_Tpop";
 import Clear_History_Model from "../model/Clear_History_Model";
 
+// Constants
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
 
 function Prompt() {
-  const { t, i18n } = useTranslation(); // Objects of i18n lib
-  const { transcript, listening, resetTranscript } = useSpeechRecognition(); // Speech recognition lib objects
+  const { t, i18n } = useTranslation();
+  const { transcript, listening, resetTranscript } = useSpeechRecognition();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // States from redux
+  // Redux State and Dispatch
+  const dispatch = useDispatch();
   const promptGlobal = useSelector((state) => state.prompt);
   const model = useSelector((state) => state.model);
   const conversationGLobal = useSelector((state) => state.conversation);
@@ -85,13 +95,10 @@ function Prompt() {
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const countClose = useSelector((state) => state.count);
   const modelApi = useSelector((state) => state.modelApi);
-  const dontShowAgain = useSelector((state) => state.showAgain.dontShowAgain); // Access the state from Redux
+  const dontShowAgain = useSelector((state) => state.showAgain.dontShowAgain);
 
   //Theme for toast
   let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
-
-  // Dispatch for trigger setState
-  const dispatch = useDispatch();
 
   // Language list for speech recognition
   const languageMap = {
@@ -100,63 +107,57 @@ function Prompt() {
   };
 
   // All state variables
-  const [prompt, setPrompt] = useState(promptGlobal); // prompt state
-  const [chooseModel, setChooseModel] = useState(model); //Initialize model option
-  const [chooseModelApi, setChooseModelApi] = useState(modelApi); //Initialize model option
-  const [isOpen, setIsOpen] = useState(false); //To open and close select menu
-  const [responses, setResponses] = useState(responsesGLobal); //Responses array contains chat and will be displayed on left
-  const [conversation, setConversation] = useState(conversationGLobal); //Conversation for LLM API payload
-  const [loading, setLoading] = useState(false); // Submit button state
-  const [loadingResend, setLoadingResend] = useState(false); // Submit button state
+  const [prompt, setPrompt] = useState(promptGlobal);
+  const [chooseModel, setChooseModel] = useState(model);
+  const [chooseModelApi, setChooseModelApi] = useState(modelApi);
+  const [isOpen, setIsOpen] = useState(false);
+  const [responses, setResponses] = useState(responsesGLobal);
+  const [conversation, setConversation] = useState(conversationGLobal);
+  const [loading, setLoading] = useState(false);
+  const [loadingResend, setLoadingResend] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [showModel, setShowModel] = useState(true); // Note model state
-  const [showModelSession, setShowModelSession] = useState(false); // Session expired model state
-  const [showBadRequest, setShowBadRequest] = useState(false); // Session expired model state
-  const [showHelpModel, setShowHelpModel] = useState(false); // Help model state
-  const [showMicModel, setShowMicModel] = useState(false); // Mic model state
-  const [showCustomHelpModel, setShowCustomHelpModel] = useState(false); // Help model state
-  const [showTpopHelpModel, setShowTpopHelpModel] = useState(false); // Help model state
-  const [showSystemHelpModel, setShowSystemHelpModel] = useState(false); // Help model state
-  const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false); // Help model state
-  const [showCusModel, setShowCusModel] = useState(false); // Custom instructions model state
-  const [showFileModel, setShowFileModel] = useState(false); // File format model state
-  const [isAutoScroll, setAutoScroll] = useState(true); //Checks if user has scrolled while LLM is respondins
-  const [selectedFiles, setSelectedFiles] = useState([]); // Files state
+  const [showModel, setShowModel] = useState(true);
+  const [showModelSession, setShowModelSession] = useState(false);
+  const [showBadRequest, setShowBadRequest] = useState(false);
+  const [showHelpModel, setShowHelpModel] = useState(false);
+  const [showMicModel, setShowMicModel] = useState(false);
+  const [showCustomHelpModel, setShowCustomHelpModel] = useState(false);
+  const [showTpopHelpModel, setShowTpopHelpModel] = useState(false);
+  const [showSystemHelpModel, setShowSystemHelpModel] = useState(false);
+  const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false);
+  const [showCusModel, setShowCusModel] = useState(false);
+  const [showFileModel, setShowFileModel] = useState(false);
+  const [isAutoScroll, setAutoScroll] = useState(true);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [modelList, setModelList] = useState([]);
   const [count, setCount] = useState(countClose);
-  const hiddenFileInput = useRef(null); // Ref for hidden file input for prompt
-  const hiddenFileInputJSON = useRef(null); // Ref for hidden file input for import for load history
-  const messagesEndRef = useRef(null);
-  const textAreaRef = useRef(null);
-  const dropdownRef = useRef(null);
-  const containerRef = useRef(null);
-  const textareaRefs = useRef([]); // Array of refs for textareas
-  const containerRefs = useRef([]); // Array of refs for containers
   const [editingIndex, setEditingIndex] = useState(null);
   const [editedText, setEditedText] = useState("");
-
   const [direction, setDirection] = useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResend, setIsResend] = useState(false); // Flag to track if we should trigger getRes
+  const [isResend, setIsResend] = useState(false);
   const [copied, setCopied] = useState(false);
   const [indexChecked, setIndexChecked] = useState(false);
-  // Dark mode state
-  const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal); // Accessing dark mode state from Redux store
-  // const [showAnnc, setShowAnnc] = useState(countAnncGlobal > 3 ? false : true);
-  // const [countAnnc, setCountAnnc] = useState(countAnncGlobal);
-  // State for temperature
+  const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
   const [temperature, setTemperature] = useState(temperatureGlobal);
   const [isHovering, setHovering] = useState(false);
   const [tPop, setTpop] = useState(tpopGlobal);
   const [isHoveringTpop, setHoveringTpop] = useState(false);
-
   const [showCacheModel, setShowCacheModel] = useState(false);
   const [showHistoryModel, setShowHistoryModel] = useState(false);
 
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
   );
-  // const [isEditingCustom, setIsEditingCustom] = useState(false);
+
+  const hiddenFileInput = useRef(null);
+  const hiddenFileInputJSON = useRef(null);
+  const messagesEndRef = useRef(null);
+  const textAreaRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const containerRef = useRef(null);
+  const textareaRefs = useRef([]);
+  const containerRefs = useRef([]);
 
   //TO scroll down when new chat is added in array
   const scrollToBottom = () => {
@@ -165,8 +166,6 @@ function Prompt() {
     }
   };
 
-  // The function `resetHeight` is used to reset the height of the HTML element referred to by `textAreaRef`.
-  // The element's height is reset only if `textAreaRef` points to an existing element (not null).
   // The new height of the element is set to the predefined constant `MIN_HEIGHT_PX`, and it's set in pixels.
   const resetHeight = () => {
     if (textAreaRef.current != null) {
@@ -314,6 +313,42 @@ function Prompt() {
     }
   }, [isDarkMode]); // Run this effect when isDarkMode changes
 
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      // Iterate over all responses to check if the click was outside any textarea or container
+      responses.forEach((_, index) => {
+        handleClickOutside(event, index);
+      });
+    };
+
+    // Attach event listener when editing starts
+    if (isEditing) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+
+    // Clean up the event listener when editing stops or on unmount
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isEditing, responses]);
+
+  // Displays an error notification
+  const notifyError = (message) => {
+    toast.error(message, {
+      className: toastClass,
+      autoClose: 1000,
+      onClose: () => {},
+    });
+  };
+
+  // Displays a success notification
+  const notifySuccess = (message) =>
+    toast.success(message, {
+      className: toastClass,
+      autoClose: 1000,
+      onClose: () => {},
+    });
+
   // Function to focus the textarea for a given index
   const focusTextArea = (index) => {
     if (textareaRefs.current[index]) {
@@ -333,25 +368,6 @@ function Prompt() {
       setIsEditing(false);
     }
   };
-
-  useEffect(() => {
-    const handleOutsideClick = (event) => {
-      // Iterate over all responses to check if the click was outside any textarea or container
-      responses.forEach((_, index) => {
-        handleClickOutside(event, index);
-      });
-    };
-
-    // Attach event listener when editing starts
-    if (isEditing) {
-      document.addEventListener("mousedown", handleOutsideClick);
-    }
-
-    // Clean up the event listener when editing stops or on unmount
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [isEditing, responses]);
 
   async function getRes() {
     setLoading(true);
@@ -395,23 +411,6 @@ function Prompt() {
       }
     }
   }
-
-  // Displays an error notification
-  const notifyError = (message) => {
-    toast.error(message, {
-      className: toastClass,
-      autoClose: 1000,
-      onClose: () => {},
-    });
-  };
-
-  // Displays a success notification
-  const notifySuccess = (message) =>
-    toast.success(message, {
-      className: toastClass,
-      autoClose: 1000,
-      onClose: () => {},
-    });
 
   // Handles aborting fetch request
   const handleAbortFetch = () => {
@@ -624,9 +623,6 @@ function Prompt() {
     setConversation(newArray);
     setIsSubmitting(true);
   };
-
-  // Handles changing the selected model
-  const toggleOpen = () => setIsOpen(!isOpen);
 
   const handleChangeModel = (option) => {
     setChooseModel(option.name);
@@ -959,14 +955,8 @@ function Prompt() {
     dispatch({ type: "SET_ADV" }); // Dispatch action to update theme in Redux store
   };
 
-  //Announcement alert count handler
-  // const anncCounter = () => {
-  //   setShowAnnc(false);
-  //   dispatch(setAnncCountGlobal(countAnnc + 1));
-  //   setCountAnnc(function (prevCount) {
-  //     return (prevCount += 1);
-  //   });
-  // };
+  // Handles changing the selected model
+  const toggleOpen = () => setIsOpen(!isOpen);
 
   // Validation schema for form fields
   const validationSchema = yup.object({
@@ -1680,19 +1670,6 @@ function Prompt() {
                         )}
                       </div>
                     </div>{" "}
-                    {/* <div className="flex items-center gap-2 select-none">
-              <Link to={"/custom-instructions"} target="">
-                <p className="text-xl h-full text-tertiary">
-                  <Trans i18nKey="description.text6"></Trans>
-                </p>
-              </Link>{" "}
-              <img
-                src={help}
-                alt="help"
-                className="h-[20px] w-[20px] cursor-pointer"
-                onClick={() => setShowCusModel(true)}
-              />
-            </div> */}
                   </div>
                   {/* Arcanas */}
                   {/* <div className="flex gap-4 w-full items-center">
