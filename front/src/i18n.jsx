@@ -168,6 +168,8 @@ i18n
 
             history: "Caution! Clearing will erase your history. Proceed?",
             dont_show_again: "Don't show this again",
+
+            exportSettings: "Include model and options",
           },
         },
       },
@@ -327,6 +329,8 @@ i18n
 
             history: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
             dont_show_again: "Zeigen Sie das nicht mehr",
+
+            exportSettings: "Modell und Optionen einbeziehen",
           },
         },
       },

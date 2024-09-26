@@ -90,6 +90,9 @@ function Prompt() {
   const countClose = useSelector((state) => state.count);
   const modelApi = useSelector((state) => state.modelApi);
   const dontShowAgain = useSelector((state) => state.showAgain.dontShowAgain);
+  const exportSettings = useSelector(
+    (state) => state.exportSettings.exportSettings
+  );
 
   //Theme for toast
   let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
@@ -626,6 +629,19 @@ function Prompt() {
     setIsOpen(false);
   };
 
+  function formatFileSize(bytes) {
+    const units = ["Bytes", "KB", "MB", "GB", "TB"];
+    let size = bytes;
+    let unitIndex = 0;
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
+  }
+
   // Handles changing files
   const handleFilesChange = async (e) => {
     try {
@@ -644,6 +660,7 @@ function Prompt() {
         const text = await readFileAsText(file);
         filesWithText.push({
           name: file.name,
+          size: file.size,
           text,
         });
       }
@@ -663,18 +680,69 @@ function Prompt() {
   // Handles changing JSON files
   const handleFilesChangeJSON = async (e) => {
     try {
-      // let newArray = [];
-
       const selectedFile = e.target.files[0];
 
-      if (selectedFile.type === "application/json") {
-        const reader = new FileReader();
+      // Check if the file is selected and is of correct type
+      if (!selectedFile) {
+        notifyError("No file selected.");
+        return;
+      }
 
-        reader.onload = async () => {
+      if (selectedFile.type !== "application/json") {
+        notifyError("Please select a valid JSON file.");
+        return;
+      }
+
+      const reader = new FileReader();
+
+      // Handle FileReader error
+      reader.onerror = () => {
+        notifyError("Error reading file.");
+      };
+
+      reader.onload = async () => {
+        try {
           const data = reader.result;
           const parsedData = JSON.parse(data);
+
+          // Ensure parsedData is an array
+          if (!Array.isArray(parsedData)) {
+            notifyError(
+              "Invalid structure: expected an array in the JSON file."
+            );
+            return;
+          }
+
+          // Check if the first object is the settings object
+          let settings;
           if (
-            Array.isArray(parsedData) &&
+            parsedData.length > 0 &&
+            !parsedData[0]?.role &&
+            !parsedData[0]?.content &&
+            parsedData[0]?.model &&
+            parsedData[0]?.modelApi &&
+            parsedData[0]?.temperature &&
+            parsedData[0]?.tPop &&
+            parsedData[0]?.customInstructions
+          ) {
+            // Extract settings and remove it from the parsed data
+            settings = parsedData[0];
+
+            // Set relevant states from the settings object
+            if (settings.model) setChooseModel(settings.model);
+            if (settings.modelApi) setChooseModelApi(settings.modelApi);
+            if (settings.temperature) setTemperature(settings.temperature);
+            if (settings.tPop) setTpop(settings.tPop);
+            if (settings.customInstructions)
+              formik.setFieldValue("instructions", settings.customInstructions);
+
+            // Remove the settings object from the array to handle conversation as usual
+            parsedData.shift();
+          }
+
+          // Ensure parsedData is in the correct format
+          if (
+            parsedData.length > 0 &&
             Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
             Object.prototype.hasOwnProperty.call(parsedData[0], "content")
           ) {
@@ -699,12 +767,12 @@ function Prompt() {
           } else {
             notifyError("Invalid structure of JSON.");
           }
-        };
+        } catch (jsonError) {
+          notifyError("Invalid JSON file format.");
+        }
+      };
 
-        reader.readAsText(selectedFile);
-      } else {
-        notifyError("Please select a valid JSON file.");
-      }
+      reader.readAsText(selectedFile);
     } catch (error) {
       notifyError("An error occurred: " + error.toString());
     }
@@ -764,35 +832,74 @@ function Prompt() {
       .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
       .join("\n\n");
 
-    // Create a blob from the string
-    const blob = new Blob([textContent], { type: "text/plain" });
+    if (exportSettings) {
+      // Append model information at the end of the text file
+      const additionalText = `\n\nModel used: ${chooseModel}\nTemperature: ${temperature}\ntPop: ${tPop}\nCustom Instructions: ${formik.values.instructions}`;
 
-    // Create a link element
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = generateFileName("txt"); // Set the consistent file name
+      // Combine conversation text with additional information
+      const finalTextContent = textContent + additionalText;
 
-    // Trigger the download
-    link.click();
+      // Create a blob from the final string
+      const blob = new Blob([finalTextContent], { type: "text/plain" });
 
-    // Clean up the object URL
-    URL.revokeObjectURL(link.href);
+      // Create a link element
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = generateFileName("txt"); // Set the consistent file name
+
+      // Trigger the download
+      link.click();
+
+      // Clean up the object URL
+      URL.revokeObjectURL(link.href);
+    } else {
+      // If exportSettings is not true, just export the conversation
+      const blob = new Blob([textContent], { type: "text/plain" });
+
+      // Create a link element
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = generateFileName("txt"); // Set the consistent file name
+
+      // Trigger the download
+      link.click();
+
+      // Clean up the object URL
+      URL.revokeObjectURL(link.href);
+    }
   };
 
   // Exports conversation to a JSON file
   const exportJSON = (conversation) => {
     try {
-      const content = JSON.stringify(conversation, null, 2);
-      let file = new Blob([content], { type: "application/json" });
-      let a = document.createElement("a");
-      a.download = generateFileName("json"); // Set the consistent file name
-      a.href = URL.createObjectURL(file);
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      notifySuccess("Chat exported successfully");
+      let exportData = [...conversation]; // Start with the conversation array
+
+      // If the checkbox is checked, add the additional settings object at the beginning
+      if (exportSettings) {
+        const settingsObject = {
+          model: chooseModel,
+          modelApi: chooseModelApi,
+          temperature: temperature,
+          tPop: tPop,
+          customInstructions: formik.values.instructions,
+        };
+
+        // Add the settings object to the beginning of the conversation array
+        exportData = [{ ...settingsObject }, ...exportData];
+      }
+
+      const content = JSON.stringify(exportData, null, 2); // Convert to JSON string
+      let file = new Blob([content], { type: "application/json" }); // Create a Blob object for the file
+      let a = document.createElement("a"); // Create a download link
+      a.download = generateFileName("json"); // Set the file name
+      a.href = URL.createObjectURL(file); // Set the file URL
+      document.body.appendChild(a); // Append the link to the document
+      a.click(); // Trigger the download
+      document.body.removeChild(a); // Clean up the link element
+
+      notifySuccess("Chat exported successfully"); // Notify success
     } catch (error) {
-      notifyError("An error occurred while exporting to JSON: ", error);
+      notifyError("An error occurred while exporting to JSON: ", error); // Notify error
     }
   };
 
@@ -817,7 +924,7 @@ function Prompt() {
     const headerHeight = 25;
 
     // Set up fonts
-    doc.setFont("helvetica", "bold"); // When setting Font
+    doc.setFont("helvetica", "bold");
     doc.setFont("helvetica", "normal");
 
     const addHeader = (isFirstPage) => {
@@ -884,7 +991,7 @@ function Prompt() {
 
                 // Language title
                 doc.text(language || "Code:", margin, y);
-                y += lineHeight * 0.5; // Reduced gap between title and code block
+                y += lineHeight * 0.5;
 
                 // Code block
                 doc.setFillColor(240, 240, 240);
@@ -900,7 +1007,7 @@ function Prompt() {
                 codeLines.forEach((line, index) => {
                   doc.text(line, margin + 5, y + 5 + index * lineHeight);
                 });
-                y += lineHeight * (codeLines.length + 0.5); // Slightly reduced gap after code block
+                y += lineHeight * (codeLines.length + 0.5);
               }
             } else {
               doc.setFontSize(10);
@@ -929,6 +1036,25 @@ function Prompt() {
       y += lineHeight; // Space after each entry
     }
 
+    // Add the additional information at the end of the PDF
+    addNewPageIfNeeded(lineHeight * 5); // Ensure there's enough space for the added content
+    y += lineHeight * 2; // Add some spacing before the footer content
+
+    // Set the font for the footer content
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0);
+
+    if (exportSettings) {
+      // Add model information at the bottom
+      doc.text(`Model used: ${chooseModel}`, margin, y);
+      y += lineHeight;
+      doc.text(`Temperature: ${temperature}`, margin, y);
+      y += lineHeight;
+      doc.text(`tPop: ${tPop}`, margin, y);
+      y += lineHeight;
+      doc.text(`Custom Instructions: ${formik.values.instructions}`, margin, y);
+      y += lineHeight;
+    }
     // Save the PDF with a consistent file name
     doc.save(generateFileName("pdf"));
   };
@@ -1578,14 +1704,14 @@ function Prompt() {
                       >
                         <img className="h-[30px] w-[30px]" src={uploaded} />
                         <div className="flex justify-between items-center w-full">
-                          <div className="flex items-center">
-                            <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[80%]">
+                          <div className="flex items-center gap-1 w-full">
+                            <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[60%]">
                               {file.name}
                             </p>
-                            <p>&nbsp;-&nbsp;</p>
-                            <p> {file.size} </p>
-                            <p>&nbsp;bytes</p>
+                            <p className="mx-2"> | </p>
+                            <p>{formatFileSize(file.size)}</p>
                           </div>
+
                           <img
                             src={cross}
                             alt="cross"
