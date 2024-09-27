@@ -6,6 +6,8 @@ import json_icon from "../assets/json_icon.svg";
 import pdf_icon from "../assets/pdf_icon.svg";
 import txt_icon from "../assets/txt_icon.svg";
 import { useState } from "react"; // For managing component state
+import { useDispatch, useSelector } from "react-redux";
+import { setExportSettings } from "../Redux/reducers/fileIncludeSettings";
 
 // Export type modal component
 function ExportTypeModel(props) {
@@ -28,6 +30,16 @@ function ExportTypeModel(props) {
     { id: "pdf", icon: pdf_icon, label: "description.fileFormat2" },
     { id: "text", icon: txt_icon, label: "description.fileFormat3" },
   ];
+
+  const dispatch = useDispatch();
+  const exportSettings = useSelector(
+    (state) => state.exportSettings.exportSettings
+  );
+
+  // Handler for checkbox state change
+  const handleCheckboxChange = (event) => {
+    dispatch(setExportSettings(event.target.checked));
+  };
 
   return (
     <Modal showModal={props.showModal}>
@@ -66,6 +78,22 @@ function ExportTypeModel(props) {
               </label>
             </div>
           ))}
+          {/* Add the checkbox */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="exportSettings"
+              checked={exportSettings}
+              onChange={handleCheckboxChange}
+              className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+            />
+            <label
+              htmlFor="exportSettings"
+              className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+            >
+              <Trans i18nKey="description.exportSettings"></Trans>
+            </label>
+          </div>
           <div className="flex justify-end w-full">
             <button
               className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
