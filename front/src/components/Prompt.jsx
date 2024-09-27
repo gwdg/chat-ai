@@ -1,7 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
-
-// Libraries and Dependencies
+// Libraries and dependencies
 import React, { useRef, useState, useEffect } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import SpeechRecognition, {
@@ -10,25 +9,13 @@ import SpeechRecognition, {
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import { useDispatch, useSelector } from "react-redux";
+import { setPromptGlobal } from "../Redux/actions/promptAction";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Form, Formik, useFormik } from "formik";
 import * as yup from "yup"; // Schema validation
-
-// Redux Actions
-import { setPromptGlobal } from "../Redux/actions/promptAction";
-import { setModel } from "../Redux/actions/modelAction";
-import { setResponsesGlobal } from "../Redux/actions/responsesAction";
-import { setConversationGlobal } from "../Redux/actions/conAction";
-import { setInstructions } from "../Redux/actions/customInsAction";
-import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
-import { setTpopGlobal } from "../Redux/actions/tpopAction";
-import { setCountGlobal } from "../Redux/actions/alertAction";
-import { setModelApiGlobal } from "../Redux/actions/setModelApi";
-
-// APIs
-import { abortFetch, getDataFromLLM } from "../apis/Completion";
-import { getModels } from "../apis/ModelLIst";
+import { Form, Formik, useFormik } from "formik"; // Form handling
+import Tooltip from "./Tooltip";
+import { persistor } from "../Redux/store/store";
 
 // Assets
 import retry from "../assets/icon_retry.svg";
@@ -40,6 +27,8 @@ import send from "../assets/icon_send.svg";
 import upload from "../assets/add.svg";
 import uploaded from "../assets/file_uploaded.svg";
 import dropdown from "../assets/icon_dropdown.svg";
+
+// import advanced_settings_arrow from "../assets/advanced_settings_arrow.svg";
 import help from "../assets/icon_help.svg";
 import cross from "../assets/cross.svg";
 import mic from "../assets/icon_mic.svg";
@@ -47,27 +36,35 @@ import stop from "../assets/stop_listening.svg";
 import pause from "../assets/pause.svg";
 import edit_icon from "../assets/edit_icon.svg";
 import icon_resend from "../assets/icon_resend.svg";
-import Light from "../assets/light.svg";
-import Dark from "../assets/dark.svg";
-import Logo from "../assets/chatai-logo-v3-preview.png";
-
-// Components and Modals
-import Tooltip from "./Tooltip";
-import ResponseItem from "./ResponseItem";
 import Help_Model from "../model/Help_Modal";
 import Mic_Model from "../model/Mic_Model";
 import Cutom_Instructions_Model from "../model/Cutom_Instructions_Model";
+import { abortFetch, getDataFromLLM } from "../apis/Completion";
 import ExportTypeModel from "../model/ExportTypeModel";
+import { setModel } from "../Redux/actions/modelAction";
+import { setResponsesGlobal } from "../Redux/actions/responsesAction";
+import { setConversationGlobal } from "../Redux/actions/conAction";
+import { setInstructions } from "../Redux/actions/customInsAction"; // Redux action
+import { getModels } from "../apis/ModelLIst";
+import { setCountGlobal } from "../Redux/actions/alertAction";
+import { setModelApiGlobal } from "../Redux/actions/setModelApi";
 import Session_Expired from "../model/Session_Expired";
 import Bad_Request_Model from "../model/Bad_Request_Model";
+
+import Light from "../assets/light.svg"; // Light mode icon
+import Dark from "../assets/dark.svg"; // Dark mode icon
+import Logo from "../assets/chatai-logo-v3-preview.png"; // Chat AI logo
+import ResponseItem from "./ResponseItem";
+import Arcanas from "./Arcanas";
 import Clear_Catch_Model from "../model/Clear_Catch_Model";
 import Help_Model_Custom from "../model/Help_Model_Custom";
 import Help_model_Arcanas from "../model/Help_model_Arcanas";
+import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
 import Help_Model_System from "../model/Help_Model_System";
+import { setTpopGlobal } from "../Redux/actions/tpopAction";
 import Help_Model_Tpop from "../model/Help_Model_Tpop";
 import Clear_History_Model from "../model/Clear_History_Model";
 
-// Constants
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
 
