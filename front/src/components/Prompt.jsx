@@ -69,29 +69,30 @@ const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
 
 function Prompt() {
-  const { t, i18n } = useTranslation(); // Objects of i18n lib
-  const { transcript, listening, resetTranscript } = useSpeechRecognition(); // Speech recognition lib objects
+  const { t, i18n } = useTranslation();
+  const { transcript, listening, resetTranscript } = useSpeechRecognition();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // States from redux
+  // Redux State and Dispatch
+  const dispatch = useDispatch();
   const promptGlobal = useSelector((state) => state.prompt);
   const model = useSelector((state) => state.model);
   const conversationGLobal = useSelector((state) => state.conversation);
   const responsesGLobal = useSelector((state) => state.responses);
   const customInstructions = useSelector((state) => state.instructions);
   const temperatureGlobal = useSelector((state) => state.temperature);
-  const tpopGlobal = useSelector((state) => state.tpop);
+  const tpopGlobal = useSelector((state) => state.top_p);
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const countClose = useSelector((state) => state.count);
   const modelApi = useSelector((state) => state.modelApi);
-  const dontShowAgain = useSelector((state) => state.showAgain.dontShowAgain); // Access the state from Redux
+  const dontShowAgain = useSelector((state) => state.showAgain.dontShowAgain);
+  const exportSettings = useSelector(
+    (state) => state.exportSettings.exportSettings
+  );
 
   //Theme for toast
   let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
-
-  // Dispatch for trigger setState
-  const dispatch = useDispatch();
 
   // Language list for speech recognition
   const languageMap = {
@@ -100,63 +101,57 @@ function Prompt() {
   };
 
   // All state variables
-  const [prompt, setPrompt] = useState(promptGlobal); // prompt state
-  const [chooseModel, setChooseModel] = useState(model); //Initialize model option
-  const [chooseModelApi, setChooseModelApi] = useState(modelApi); //Initialize model option
-  const [isOpen, setIsOpen] = useState(false); //To open and close select menu
-  const [responses, setResponses] = useState(responsesGLobal); //Responses array contains chat and will be displayed on left
-  const [conversation, setConversation] = useState(conversationGLobal); //Conversation for LLM API payload
-  const [loading, setLoading] = useState(false); // Submit button state
-  const [loadingResend, setLoadingResend] = useState(false); // Submit button state
+  const [prompt, setPrompt] = useState(promptGlobal);
+  const [chooseModel, setChooseModel] = useState(model);
+  const [chooseModelApi, setChooseModelApi] = useState(modelApi);
+  const [isOpen, setIsOpen] = useState(false);
+  const [responses, setResponses] = useState(responsesGLobal);
+  const [conversation, setConversation] = useState(conversationGLobal);
+  const [loading, setLoading] = useState(false);
+  const [loadingResend, setLoadingResend] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [showModel, setShowModel] = useState(true); // Note model state
-  const [showModelSession, setShowModelSession] = useState(false); // Session expired model state
-  const [showBadRequest, setShowBadRequest] = useState(false); // Session expired model state
-  const [showHelpModel, setShowHelpModel] = useState(false); // Help model state
-  const [showMicModel, setShowMicModel] = useState(false); // Mic model state
-  const [showCustomHelpModel, setShowCustomHelpModel] = useState(false); // Help model state
-  const [showTpopHelpModel, setShowTpopHelpModel] = useState(false); // Help model state
-  const [showSystemHelpModel, setShowSystemHelpModel] = useState(false); // Help model state
-  const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false); // Help model state
-  const [showCusModel, setShowCusModel] = useState(false); // Custom instructions model state
-  const [showFileModel, setShowFileModel] = useState(false); // File format model state
-  const [isAutoScroll, setAutoScroll] = useState(true); //Checks if user has scrolled while LLM is respondins
-  const [selectedFiles, setSelectedFiles] = useState([]); // Files state
+  const [showModel, setShowModel] = useState(true);
+  const [showModelSession, setShowModelSession] = useState(false);
+  const [showBadRequest, setShowBadRequest] = useState(false);
+  const [showHelpModel, setShowHelpModel] = useState(false);
+  const [showMicModel, setShowMicModel] = useState(false);
+  const [showCustomHelpModel, setShowCustomHelpModel] = useState(false);
+  const [showTpopHelpModel, setShowTpopHelpModel] = useState(false);
+  const [showSystemHelpModel, setShowSystemHelpModel] = useState(false);
+  const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false);
+  const [showCusModel, setShowCusModel] = useState(false);
+  const [showFileModel, setShowFileModel] = useState(false);
+  const [isAutoScroll, setAutoScroll] = useState(true);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [modelList, setModelList] = useState([]);
   const [count, setCount] = useState(countClose);
-  const hiddenFileInput = useRef(null); // Ref for hidden file input for prompt
-  const hiddenFileInputJSON = useRef(null); // Ref for hidden file input for import for load history
-  const messagesEndRef = useRef(null);
-  const textAreaRef = useRef(null);
-  const dropdownRef = useRef(null);
-  const containerRef = useRef(null);
-  const textareaRefs = useRef([]); // Array of refs for textareas
-  const containerRefs = useRef([]); // Array of refs for containers
   const [editingIndex, setEditingIndex] = useState(null);
   const [editedText, setEditedText] = useState("");
-
   const [direction, setDirection] = useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResend, setIsResend] = useState(false); // Flag to track if we should trigger getRes
+  const [isResend, setIsResend] = useState(false);
   const [copied, setCopied] = useState(false);
   const [indexChecked, setIndexChecked] = useState(false);
-  // Dark mode state
-  const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal); // Accessing dark mode state from Redux store
-  // const [showAnnc, setShowAnnc] = useState(countAnncGlobal > 3 ? false : true);
-  // const [countAnnc, setCountAnnc] = useState(countAnncGlobal);
-  // State for temperature
+  const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
   const [temperature, setTemperature] = useState(temperatureGlobal);
   const [isHovering, setHovering] = useState(false);
-  const [tPop, setTpop] = useState(tpopGlobal);
+  const [top_p, setTpop] = useState(tpopGlobal);
   const [isHoveringTpop, setHoveringTpop] = useState(false);
-
   const [showCacheModel, setShowCacheModel] = useState(false);
   const [showHistoryModel, setShowHistoryModel] = useState(false);
 
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
   );
-  // const [isEditingCustom, setIsEditingCustom] = useState(false);
+
+  const hiddenFileInput = useRef(null);
+  const hiddenFileInputJSON = useRef(null);
+  const messagesEndRef = useRef(null);
+  const textAreaRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const containerRef = useRef(null);
+  const textareaRefs = useRef([]);
+  const containerRefs = useRef([]);
 
   //TO scroll down when new chat is added in array
   const scrollToBottom = () => {
@@ -165,8 +160,6 @@ function Prompt() {
     }
   };
 
-  // The function `resetHeight` is used to reset the height of the HTML element referred to by `textAreaRef`.
-  // The element's height is reset only if `textAreaRef` points to an existing element (not null).
   // The new height of the element is set to the predefined constant `MIN_HEIGHT_PX`, and it's set in pixels.
   const resetHeight = () => {
     if (textAreaRef.current != null) {
@@ -314,6 +307,42 @@ function Prompt() {
     }
   }, [isDarkMode]); // Run this effect when isDarkMode changes
 
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      // Iterate over all responses to check if the click was outside any textarea or container
+      responses.forEach((_, index) => {
+        handleClickOutside(event, index);
+      });
+    };
+
+    // Attach event listener when editing starts
+    if (isEditing) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+
+    // Clean up the event listener when editing stops or on unmount
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isEditing, responses]);
+
+  // Displays an error notification
+  const notifyError = (message) => {
+    toast.error(message, {
+      className: toastClass,
+      autoClose: 1000,
+      onClose: () => {},
+    });
+  };
+
+  // Displays a success notification
+  const notifySuccess = (message) =>
+    toast.success(message, {
+      className: toastClass,
+      autoClose: 1000,
+      onClose: () => {},
+    });
+
   // Function to focus the textarea for a given index
   const focusTextArea = (index) => {
     if (textareaRefs.current[index]) {
@@ -333,25 +362,6 @@ function Prompt() {
       setIsEditing(false);
     }
   };
-
-  useEffect(() => {
-    const handleOutsideClick = (event) => {
-      // Iterate over all responses to check if the click was outside any textarea or container
-      responses.forEach((_, index) => {
-        handleClickOutside(event, index);
-      });
-    };
-
-    // Attach event listener when editing starts
-    if (isEditing) {
-      document.addEventListener("mousedown", handleOutsideClick);
-    }
-
-    // Clean up the event listener when editing stops or on unmount
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [isEditing, responses]);
 
   async function getRes() {
     setLoading(true);
@@ -395,23 +405,6 @@ function Prompt() {
       }
     }
   }
-
-  // Displays an error notification
-  const notifyError = (message) => {
-    toast.error(message, {
-      className: toastClass,
-      autoClose: 1000,
-      onClose: () => {},
-    });
-  };
-
-  // Displays a success notification
-  const notifySuccess = (message) =>
-    toast.success(message, {
-      className: toastClass,
-      autoClose: 1000,
-      onClose: () => {},
-    });
 
   // Handles aborting fetch request
   const handleAbortFetch = () => {
@@ -625,9 +618,6 @@ function Prompt() {
     setIsSubmitting(true);
   };
 
-  // Handles changing the selected model
-  const toggleOpen = () => setIsOpen(!isOpen);
-
   const handleChangeModel = (option) => {
     setChooseModel(option.name);
     setChooseModelApi(option.id);
@@ -635,6 +625,19 @@ function Prompt() {
     dispatch(setModelApiGlobal(option.id));
     setIsOpen(false);
   };
+
+  function formatFileSize(bytes) {
+    const units = ["Bytes", "KB", "MB", "GB", "TB"];
+    let size = bytes;
+    let unitIndex = 0;
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
+  }
 
   // Handles changing files
   const handleFilesChange = async (e) => {
@@ -654,6 +657,7 @@ function Prompt() {
         const text = await readFileAsText(file);
         filesWithText.push({
           name: file.name,
+          size: file.size,
           text,
         });
       }
@@ -673,48 +677,124 @@ function Prompt() {
   // Handles changing JSON files
   const handleFilesChangeJSON = async (e) => {
     try {
-      // let newArray = [];
-
       const selectedFile = e.target.files[0];
 
-      if (selectedFile.type === "application/json") {
-        const reader = new FileReader();
+      // Check if the file is selected and is of correct type
+      if (!selectedFile) {
+        notifyError("No file selected.");
+        return;
+      }
 
-        reader.onload = async () => {
+      if (selectedFile.type !== "application/json") {
+        notifyError("Please select a valid JSON file.");
+        return;
+      }
+
+      const reader = new FileReader();
+
+      // Handle FileReader error
+      reader.onerror = () => {
+        notifyError("Error reading file.");
+      };
+
+      reader.onload = async () => {
+
+        function processMessages(parsedData) {
+            // Your logic to process the array data
+            if (
+              parsedData.length > 0 &&
+              Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
+              Object.prototype.hasOwnProperty.call(parsedData[0], "content")
+            ) {
+              let newArray = [];
+              for (let i = 0; i < parsedData.length; i++) {
+                if (parsedData[i].role === "system") {
+                  dispatch(setInstructions(parsedData[i].content));
+                }
+                if (
+                  parsedData[i].role === "user" &&
+                  parsedData[i + 1]?.role === "assistant"
+                ) {
+                  newArray.push({
+                    prompt: parsedData[i].content,
+                    response: parsedData[i + 1]?.content,
+                  });
+                }
+              }
+              setResponses(newArray);
+              setConversation(parsedData);
+              notifySuccess("Chat imported successfully");
+            } else {
+              notifyError("Invalid structure of JSON.");
+            }
+        }
+
+        try {
           const data = reader.result;
           const parsedData = JSON.parse(data);
-          if (
-            Array.isArray(parsedData) &&
-            Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
-            Object.prototype.hasOwnProperty.call(parsedData[0], "content")
-          ) {
-            let newArray = [];
-            for (let i = 0; i < parsedData.length; i++) {
-              if (parsedData[i].role === "system") {
-                dispatch(setInstructions(parsedData[i].content));
+        
+          if (Array.isArray(parsedData)) {
+            // Handle the case where parsedData is an array
+            processMessages(parsedData);
+          } else if (parsedData && parsedData.messages && Array.isArray(parsedData.messages)) {
+            // Handle the case where parsedData is an object with a "messages" attribute
+            if (parsedData.temperature) {
+              setTemperature(parsedData.temperature);
+            }
+            if (parsedData.top_p) {
+              setTpop(parsedData.top_p);
+            }
+            if (parsedData.model) {
+              setChooseModelApi(parsedData.model);
+              if (parsedData["model-name"]) {
+                setChooseModel(parsedData["model-name"]);
               }
-              if (
-                parsedData[i].role === "user" &&
-                parsedData[i + 1]?.role === "assistant"
-              ) {
-                newArray.push({
-                  prompt: parsedData[i].content,
-                  response: parsedData[i + 1]?.content,
-                });
+              else {
+                setChooseModel(parsedData.model);
               }
             }
-            setResponses(newArray);
-            setConversation(parsedData);
-            notifySuccess("Chat imported successfully");
+            processMessages(parsedData.messages);
           } else {
-            notifyError("Invalid structure of JSON.");
+              // Notify the user about the invalid structure
+              notifyError("Invalid structure of JSON.");
           }
-        };
+ 
+          // // Ensure parsedData is an array
+          // if (!Array.isArray(parsedData)) {
+          //   // notifyError(
+          //   //   "Invalid structure: expected an array in the JSON file."
+          //   // );
+          //   // Expect proper OpenAI-compatible JSON
+          //   // Check if the first object is the settings object
+          // let settings;
+          // if (
+          //   parsedData.length > 0 &&
+          //   !parsedData[0]?.role &&
+          //   !parsedData[0]?.content &&
+          //   parsedData[0]?.obj["model-name"] &&
+          //   parsedData[0]?.model &&
+          //   parsedData[0]?.temperature &&
+          //   parsedData[0]?.top_p
+          // ) {
+          //     // Set relevant states from the settings object
+          //     if (settings.model) setChooseModel(settings.model);
+          //     if (settings.modelApi) setChooseModelApi(settings.modelApi);
+          //     if (settings.temperature) setTemperature(settings.temperature);
+          //     if (settings.top_p) setTpop(settings.top_p);
 
-        reader.readAsText(selectedFile);
-      } else {
-        notifyError("Please select a valid JSON file.");
-      }
+          //     // Remove the settings object from the array to handle conversation as usual
+          //     parsedData.shift();
+          //   }
+          // }
+
+          // // Ensure parsedData is in the correct format
+          
+        } catch (jsonError) {
+          notifyError("Invalid JSON file format.");
+        }
+      };
+
+      reader.readAsText(selectedFile);
     } catch (error) {
       notifyError("An error occurred: " + error.toString());
     }
@@ -774,35 +854,73 @@ function Prompt() {
       .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
       .join("\n\n");
 
-    // Create a blob from the string
-    const blob = new Blob([textContent], { type: "text/plain" });
+    if (exportSettings) {
+      // Append model information at the end of the text file
+      const additionalText = `\n\nSettings used\nmodel-name: ${chooseModel}\nmodel: ${modelApi}\ntemperature: ${temperature}\ntop_p: ${top_p}`;
 
-    // Create a link element
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = generateFileName("txt"); // Set the consistent file name
+      // Combine conversation text with additional information
+      const finalTextContent = textContent + additionalText;
 
-    // Trigger the download
-    link.click();
+      // Create a blob from the final string
+      const blob = new Blob([finalTextContent], { type: "text/plain" });
 
-    // Clean up the object URL
-    URL.revokeObjectURL(link.href);
+      // Create a link element
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = generateFileName("txt"); // Set the consistent file name
+
+      // Trigger the download
+      link.click();
+
+      // Clean up the object URL
+      URL.revokeObjectURL(link.href);
+    } else {
+      // If exportSettings is not true, just export the conversation
+      const blob = new Blob([textContent], { type: "text/plain" });
+
+      // Create a link element
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = generateFileName("txt"); // Set the consistent file name
+
+      // Trigger the download
+      link.click();
+
+      // Clean up the object URL
+      URL.revokeObjectURL(link.href);
+    }
   };
 
   // Exports conversation to a JSON file
   const exportJSON = (conversation) => {
     try {
-      const content = JSON.stringify(conversation, null, 2);
-      let file = new Blob([content], { type: "application/json" });
-      let a = document.createElement("a");
-      a.download = generateFileName("json"); // Set the consistent file name
-      a.href = URL.createObjectURL(file);
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      notifySuccess("Chat exported successfully");
+      let exportData = [...conversation]; // Start with the conversation array
+
+      // If the checkbox is checked, add the additional settings object at the beginning
+      if (exportSettings) {
+        const settingsObject = {
+          "model-name": chooseModel,
+          model: chooseModelApi,
+          temperature: temperature,
+          top_p: top_p,
+        };
+
+        // Add the settings object to the beginning of the conversation array
+        exportData = { ...settingsObject , "messages": exportData };
+      }
+
+      const content = JSON.stringify(exportData, null, 2); // Convert to JSON string
+      let file = new Blob([content], { type: "application/json" }); // Create a Blob object for the file
+      let a = document.createElement("a"); // Create a download link
+      a.download = generateFileName("json"); // Set the file name
+      a.href = URL.createObjectURL(file); // Set the file URL
+      document.body.appendChild(a); // Append the link to the document
+      a.click(); // Trigger the download
+      document.body.removeChild(a); // Clean up the link element
+
+      notifySuccess("Chat exported successfully"); // Notify success
     } catch (error) {
-      notifyError("An error occurred while exporting to JSON: ", error);
+      notifyError("An error occurred while exporting to JSON: ", error); // Notify error
     }
   };
 
@@ -827,7 +945,7 @@ function Prompt() {
     const headerHeight = 25;
 
     // Set up fonts
-    doc.setFont("helvetica", "bold"); // When setting Font
+    doc.setFont("helvetica", "bold");
     doc.setFont("helvetica", "normal");
 
     const addHeader = (isFirstPage) => {
@@ -894,7 +1012,7 @@ function Prompt() {
 
                 // Language title
                 doc.text(language || "Code:", margin, y);
-                y += lineHeight * 0.5; // Reduced gap between title and code block
+                y += lineHeight * 0.5;
 
                 // Code block
                 doc.setFillColor(240, 240, 240);
@@ -910,7 +1028,7 @@ function Prompt() {
                 codeLines.forEach((line, index) => {
                   doc.text(line, margin + 5, y + 5 + index * lineHeight);
                 });
-                y += lineHeight * (codeLines.length + 0.5); // Slightly reduced gap after code block
+                y += lineHeight * (codeLines.length + 0.5);
               }
             } else {
               doc.setFontSize(10);
@@ -939,6 +1057,28 @@ function Prompt() {
       y += lineHeight; // Space after each entry
     }
 
+    // Add the additional information at the end of the PDF
+    addNewPageIfNeeded(lineHeight * 5); // Ensure there's enough space for the added content
+    y += lineHeight * 2; // Add some spacing before the footer content
+
+    // Set the font for the footer content
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0);
+
+    if (exportSettings) {
+      // Add model information at the bottom
+      doc.text(`Settings used`, margin, y);
+      y += lineHeight; // Increase spacing after the first line to avoid overlap
+      doc.text(`model-name: ${chooseModel}`, margin, y);
+      y += lineHeight;
+      doc.text(`model: ${modelApi}`, margin, y);
+      y += lineHeight;
+      doc.text(`temperature: ${temperature}`, margin, y);
+      y += lineHeight;
+      doc.text(`top_p: ${top_p}`, margin, y);
+      y += lineHeight;
+    }
+
     // Save the PDF with a consistent file name
     doc.save(generateFileName("pdf"));
   };
@@ -959,14 +1099,8 @@ function Prompt() {
     dispatch({ type: "SET_ADV" }); // Dispatch action to update theme in Redux store
   };
 
-  //Announcement alert count handler
-  // const anncCounter = () => {
-  //   setShowAnnc(false);
-  //   dispatch(setAnncCountGlobal(countAnnc + 1));
-  //   setCountAnnc(function (prevCount) {
-  //     return (prevCount += 1);
-  //   });
-  // };
+  // Handles changing the selected model
+  const toggleOpen = () => setIsOpen(!isOpen);
 
   // Validation schema for form fields
   const validationSchema = yup.object({
@@ -1594,14 +1728,14 @@ function Prompt() {
                       >
                         <img className="h-[30px] w-[30px]" src={uploaded} />
                         <div className="flex justify-between items-center w-full">
-                          <div className="flex items-center">
-                            <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[80%]">
+                          <div className="flex items-center gap-1 w-full">
+                            <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[60%]">
                               {file.name}
                             </p>
-                            <p>&nbsp;-&nbsp;</p>
-                            <p> {file.size} </p>
-                            <p>&nbsp;bytes</p>
+                            <p className="mx-2"> | </p>
+                            <p>{formatFileSize(file.size)}</p>
                           </div>
+
                           <img
                             src={cross}
                             alt="cross"
@@ -1680,19 +1814,6 @@ function Prompt() {
                         )}
                       </div>
                     </div>{" "}
-                    {/* <div className="flex items-center gap-2 select-none">
-              <Link to={"/custom-instructions"} target="">
-                <p className="text-xl h-full text-tertiary">
-                  <Trans i18nKey="description.text6"></Trans>
-                </p>
-              </Link>{" "}
-              <img
-                src={help}
-                alt="help"
-                className="h-[20px] w-[20px] cursor-pointer"
-                onClick={() => setShowCusModel(true)}
-              />
-            </div> */}
                   </div>
                   {/* Arcanas */}
                   {/* <div className="flex gap-4 w-full items-center">
@@ -1806,7 +1927,7 @@ function Prompt() {
                                   min="0.05"
                                   max="1"
                                   step="0.05"
-                                  value={tPop}
+                                  value={top_p}
                                   className="slider-input"
                                   onChange={(event) =>
                                     handleChangeTpop(event.target.value)
@@ -1821,11 +1942,11 @@ function Prompt() {
                                     className="slider-tooltip"
                                     style={{
                                       left: `calc(${
-                                        ((tPop - 0.05) / 0.95) * 100
+                                        ((top_p - 0.05) / 0.95) * 100
                                       }% - 15px)`,
                                     }}
                                   >
-                                    {Number(tPop).toFixed(2)}
+                                    {Number(top_p).toFixed(2)}
                                   </output>
                                 )}
                               </div>
