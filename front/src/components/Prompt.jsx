@@ -698,69 +698,97 @@ function Prompt() {
       };
 
       reader.onload = async () => {
+
+        function processMessages(parsedData) {
+            // Your logic to process the array data
+            if (
+              parsedData.length > 0 &&
+              Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
+              Object.prototype.hasOwnProperty.call(parsedData[0], "content")
+            ) {
+              let newArray = [];
+              for (let i = 0; i < parsedData.length; i++) {
+                if (parsedData[i].role === "system") {
+                  dispatch(setInstructions(parsedData[i].content));
+                }
+                if (
+                  parsedData[i].role === "user" &&
+                  parsedData[i + 1]?.role === "assistant"
+                ) {
+                  newArray.push({
+                    prompt: parsedData[i].content,
+                    response: parsedData[i + 1]?.content,
+                  });
+                }
+              }
+              setResponses(newArray);
+              setConversation(parsedData);
+              notifySuccess("Chat imported successfully");
+            } else {
+              notifyError("Invalid structure of JSON.");
+            }
+        }
+
         try {
           const data = reader.result;
           const parsedData = JSON.parse(data);
-
-          // Ensure parsedData is an array
-          if (!Array.isArray(parsedData)) {
-            notifyError(
-              "Invalid structure: expected an array in the JSON file."
-            );
-            return;
-          }
-
-          // Check if the first object is the settings object
-          let settings;
-          if (
-            parsedData.length > 0 &&
-            !parsedData[0]?.role &&
-            !parsedData[0]?.content &&
-            parsedData[0]?.obj["model-name"] &&
-            parsedData[0]?.model &&
-            parsedData[0]?.temperature &&
-            parsedData[0]?.top_p
-          ) {
-            // Extract settings and remove it from the parsed data
-            settings = parsedData[0];
-
-            // Set relevant states from the settings object
-            if (settings.model) setChooseModel(settings.model);
-            if (settings.modelApi) setChooseModelApi(settings.modelApi);
-            if (settings.temperature) setTemperature(settings.temperature);
-            if (settings.top_p) setTpop(settings.top_p);
-
-            // Remove the settings object from the array to handle conversation as usual
-            parsedData.shift();
-          }
-
-          // Ensure parsedData is in the correct format
-          if (
-            parsedData.length > 0 &&
-            Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
-            Object.prototype.hasOwnProperty.call(parsedData[0], "content")
-          ) {
-            let newArray = [];
-            for (let i = 0; i < parsedData.length; i++) {
-              if (parsedData[i].role === "system") {
-                dispatch(setInstructions(parsedData[i].content));
+        
+          if (Array.isArray(parsedData)) {
+            // Handle the case where parsedData is an array
+            processMessages(parsedData);
+          } else if (parsedData && parsedData.messages && Array.isArray(parsedData.messages)) {
+            // Handle the case where parsedData is an object with a "messages" attribute
+            if (parsedData.temperature) {
+              setTemperature(parsedData.temperature);
+            }
+            if (parsedData.top_p) {
+              setTpop(parsedData.top_p);
+            }
+            if (parsedData.model) {
+              setChooseModelApi(parsedData.model);
+              if (parsedData["model-name"]) {
+                setChooseModel(parsedData["model-name"]);
               }
-              if (
-                parsedData[i].role === "user" &&
-                parsedData[i + 1]?.role === "assistant"
-              ) {
-                newArray.push({
-                  prompt: parsedData[i].content,
-                  response: parsedData[i + 1]?.content,
-                });
+              else {
+                setChooseModel(parsedData.model);
               }
             }
-            setResponses(newArray);
-            setConversation(parsedData);
-            notifySuccess("Chat imported successfully");
+            processMessages(parsedData.messages);
           } else {
-            notifyError("Invalid structure of JSON.");
+              // Notify the user about the invalid structure
+              notifyError("Invalid structure of JSON.");
           }
+ 
+          // // Ensure parsedData is an array
+          // if (!Array.isArray(parsedData)) {
+          //   // notifyError(
+          //   //   "Invalid structure: expected an array in the JSON file."
+          //   // );
+          //   // Expect proper OpenAI-compatible JSON
+          //   // Check if the first object is the settings object
+          // let settings;
+          // if (
+          //   parsedData.length > 0 &&
+          //   !parsedData[0]?.role &&
+          //   !parsedData[0]?.content &&
+          //   parsedData[0]?.obj["model-name"] &&
+          //   parsedData[0]?.model &&
+          //   parsedData[0]?.temperature &&
+          //   parsedData[0]?.top_p
+          // ) {
+          //     // Set relevant states from the settings object
+          //     if (settings.model) setChooseModel(settings.model);
+          //     if (settings.modelApi) setChooseModelApi(settings.modelApi);
+          //     if (settings.temperature) setTemperature(settings.temperature);
+          //     if (settings.top_p) setTpop(settings.top_p);
+
+          //     // Remove the settings object from the array to handle conversation as usual
+          //     parsedData.shift();
+          //   }
+          // }
+
+          // // Ensure parsedData is in the correct format
+          
         } catch (jsonError) {
           notifyError("Invalid JSON file format.");
         }
@@ -878,7 +906,7 @@ function Prompt() {
         };
 
         // Add the settings object to the beginning of the conversation array
-        exportData = [{ ...settingsObject }, ...exportData];
+        exportData = { ...settingsObject , "messages": exportData };
       }
 
       const content = JSON.stringify(exportData, null, 2); // Convert to JSON string
