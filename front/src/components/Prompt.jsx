@@ -82,7 +82,7 @@ function Prompt() {
   const responsesGLobal = useSelector((state) => state.responses);
   const customInstructions = useSelector((state) => state.instructions);
   const temperatureGlobal = useSelector((state) => state.temperature);
-  const tpopGlobal = useSelector((state) => state.tpop);
+  const tpopGlobal = useSelector((state) => state.top_p);
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const countClose = useSelector((state) => state.count);
   const modelApi = useSelector((state) => state.modelApi);
@@ -135,7 +135,7 @@ function Prompt() {
   const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
   const [temperature, setTemperature] = useState(temperatureGlobal);
   const [isHovering, setHovering] = useState(false);
-  const [tPop, setTpop] = useState(tpopGlobal);
+  const [top_p, setTpop] = useState(tpopGlobal);
   const [isHoveringTpop, setHoveringTpop] = useState(false);
   const [showCacheModel, setShowCacheModel] = useState(false);
   const [showHistoryModel, setShowHistoryModel] = useState(false);
@@ -716,11 +716,10 @@ function Prompt() {
             parsedData.length > 0 &&
             !parsedData[0]?.role &&
             !parsedData[0]?.content &&
+            parsedData[0]?.obj["model-name"] &&
             parsedData[0]?.model &&
-            parsedData[0]?.modelApi &&
             parsedData[0]?.temperature &&
-            parsedData[0]?.tPop &&
-            parsedData[0]?.customInstructions
+            parsedData[0]?.top_p
           ) {
             // Extract settings and remove it from the parsed data
             settings = parsedData[0];
@@ -729,9 +728,7 @@ function Prompt() {
             if (settings.model) setChooseModel(settings.model);
             if (settings.modelApi) setChooseModelApi(settings.modelApi);
             if (settings.temperature) setTemperature(settings.temperature);
-            if (settings.tPop) setTpop(settings.tPop);
-            if (settings.customInstructions)
-              formik.setFieldValue("instructions", settings.customInstructions);
+            if (settings.top_p) setTpop(settings.top_p);
 
             // Remove the settings object from the array to handle conversation as usual
             parsedData.shift();
@@ -831,7 +828,7 @@ function Prompt() {
 
     if (exportSettings) {
       // Append model information at the end of the text file
-      const additionalText = `\n\nModel used: ${chooseModel}\nTemperature: ${temperature}\ntPop: ${tPop}\nCustom Instructions: ${formik.values.instructions}`;
+      const additionalText = `\n\nSettings used\nmodel-name: ${chooseModel}\nmodel: ${modelApi}\ntemperature: ${temperature}\ntop_p: ${top_p}`;
 
       // Combine conversation text with additional information
       const finalTextContent = textContent + additionalText;
@@ -874,11 +871,10 @@ function Prompt() {
       // If the checkbox is checked, add the additional settings object at the beginning
       if (exportSettings) {
         const settingsObject = {
-          model: chooseModel,
-          modelApi: chooseModelApi,
+          "model-name": chooseModel,
+          model: chooseModelApi,
           temperature: temperature,
-          tPop: tPop,
-          customInstructions: formik.values.instructions,
+          top_p: top_p,
         };
 
         // Add the settings object to the beginning of the conversation array
@@ -1043,15 +1039,18 @@ function Prompt() {
 
     if (exportSettings) {
       // Add model information at the bottom
-      doc.text(`Model used: ${chooseModel}`, margin, y);
+      doc.text(`Settings used`, margin, y);
+      y += lineHeight; // Increase spacing after the first line to avoid overlap
+      doc.text(`model-name: ${chooseModel}`, margin, y);
       y += lineHeight;
-      doc.text(`Temperature: ${temperature}`, margin, y);
+      doc.text(`model: ${modelApi}`, margin, y);
       y += lineHeight;
-      doc.text(`tPop: ${tPop}`, margin, y);
+      doc.text(`temperature: ${temperature}`, margin, y);
       y += lineHeight;
-      doc.text(`Custom Instructions: ${formik.values.instructions}`, margin, y);
+      doc.text(`top_p: ${top_p}`, margin, y);
       y += lineHeight;
     }
+
     // Save the PDF with a consistent file name
     doc.save(generateFileName("pdf"));
   };
@@ -1900,7 +1899,7 @@ function Prompt() {
                                   min="0.05"
                                   max="1"
                                   step="0.05"
-                                  value={tPop}
+                                  value={top_p}
                                   className="slider-input"
                                   onChange={(event) =>
                                     handleChangeTpop(event.target.value)
@@ -1915,11 +1914,11 @@ function Prompt() {
                                     className="slider-tooltip"
                                     style={{
                                       left: `calc(${
-                                        ((tPop - 0.05) / 0.95) * 100
+                                        ((top_p - 0.05) / 0.95) * 100
                                       }% - 15px)`,
                                     }}
                                   >
-                                    {Number(tPop).toFixed(2)}
+                                    {Number(top_p).toFixed(2)}
                                   </output>
                                 )}
                               </div>

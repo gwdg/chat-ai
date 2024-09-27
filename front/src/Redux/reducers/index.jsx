@@ -31,7 +31,7 @@ const rootReducer = combineReducers({
   arcana: arcanaReducer,
   advOptions: advOptionReducer,
   selectedArcana: selectedArcanaReducer,
-  tpop: tpopReducer,
+  top_p: tpopReducer,
   showAgain: showAgainReducer,
   exportSettings: fileIncludeSettings,
 });
