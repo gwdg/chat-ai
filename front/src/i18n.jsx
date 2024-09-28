@@ -48,6 +48,7 @@ i18n
             text5: "Feedback",
             text6: "Show options",
             text9: "Hide options",
+            text10: "Hide",
             text7: "About",
             text8: "FAQ",
 
@@ -61,6 +62,7 @@ i18n
             custom6: "System prompt is required",
             custom7: "Reset default",
             custom8: "Clear cache",
+            custom9: "Share",
 
             // Feedback page
             feedback1: "Title is required",
@@ -219,6 +221,7 @@ i18n
             custom6: "Anweisungen sind erforderlich",
             custom7: "Standard zurücksetzen",
             custom8: "Cache löschen",
+            custom9: "Aktie",
 
             // Feedback page
             feedback1: "Titel ist erforderlich",

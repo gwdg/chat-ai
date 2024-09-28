@@ -6,7 +6,12 @@ import { useTranslation, Trans } from "react-i18next";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import jsPDF from "jspdf";
 import { useDispatch, useSelector } from "react-redux";
 import { setPromptGlobal } from "../Redux/actions/promptAction";
@@ -23,6 +28,7 @@ import clear from "../assets/cross_icon.svg";
 import export_icon from "../assets/export_icon.svg";
 import import_icon from "../assets/import_icon.svg";
 import settings_icon from "../assets/Settings_Icon.svg";
+import share_icon from "../assets/share_icon.svg";
 import send from "../assets/icon_send.svg";
 import upload from "../assets/add.svg";
 import uploaded from "../assets/file_uploaded.svg";
@@ -76,6 +82,8 @@ function Prompt() {
 
   // Redux State and Dispatch
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
+
   const promptGlobal = useSelector((state) => state.prompt);
   const model = useSelector((state) => state.model);
   const conversationGLobal = useSelector((state) => state.conversation);
@@ -698,45 +706,48 @@ function Prompt() {
       };
 
       reader.onload = async () => {
-
         function processMessages(parsedData) {
-            // Your logic to process the array data
-            if (
-              parsedData.length > 0 &&
-              Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
-              Object.prototype.hasOwnProperty.call(parsedData[0], "content")
-            ) {
-              let newArray = [];
-              for (let i = 0; i < parsedData.length; i++) {
-                if (parsedData[i].role === "system") {
-                  dispatch(setInstructions(parsedData[i].content));
-                }
-                if (
-                  parsedData[i].role === "user" &&
-                  parsedData[i + 1]?.role === "assistant"
-                ) {
-                  newArray.push({
-                    prompt: parsedData[i].content,
-                    response: parsedData[i + 1]?.content,
-                  });
-                }
+          // Your logic to process the array data
+          if (
+            parsedData.length > 0 &&
+            Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
+            Object.prototype.hasOwnProperty.call(parsedData[0], "content")
+          ) {
+            let newArray = [];
+            for (let i = 0; i < parsedData.length; i++) {
+              if (parsedData[i].role === "system") {
+                dispatch(setInstructions(parsedData[i].content));
               }
-              setResponses(newArray);
-              setConversation(parsedData);
-              notifySuccess("Chat imported successfully");
-            } else {
-              notifyError("Invalid structure of JSON.");
+              if (
+                parsedData[i].role === "user" &&
+                parsedData[i + 1]?.role === "assistant"
+              ) {
+                newArray.push({
+                  prompt: parsedData[i].content,
+                  response: parsedData[i + 1]?.content,
+                });
+              }
             }
+            setResponses(newArray);
+            setConversation(parsedData);
+            notifySuccess("Chat imported successfully");
+          } else {
+            notifyError("Invalid structure of JSON.");
+          }
         }
 
         try {
           const data = reader.result;
           const parsedData = JSON.parse(data);
-        
+
           if (Array.isArray(parsedData)) {
             // Handle the case where parsedData is an array
             processMessages(parsedData);
-          } else if (parsedData && parsedData.messages && Array.isArray(parsedData.messages)) {
+          } else if (
+            parsedData &&
+            parsedData.messages &&
+            Array.isArray(parsedData.messages)
+          ) {
             // Handle the case where parsedData is an object with a "messages" attribute
             if (parsedData.temperature) {
               setTemperature(parsedData.temperature);
@@ -748,17 +759,16 @@ function Prompt() {
               setChooseModelApi(parsedData.model);
               if (parsedData["model-name"]) {
                 setChooseModel(parsedData["model-name"]);
-              }
-              else {
+              } else {
                 setChooseModel(parsedData.model);
               }
             }
             processMessages(parsedData.messages);
           } else {
-              // Notify the user about the invalid structure
-              notifyError("Invalid structure of JSON.");
+            // Notify the user about the invalid structure
+            notifyError("Invalid structure of JSON.");
           }
- 
+
           // // Ensure parsedData is an array
           // if (!Array.isArray(parsedData)) {
           //   // notifyError(
@@ -788,7 +798,6 @@ function Prompt() {
           // }
 
           // // Ensure parsedData is in the correct format
-          
         } catch (jsonError) {
           notifyError("Invalid JSON file format.");
         }
@@ -906,7 +915,7 @@ function Prompt() {
         };
 
         // Add the settings object to the beginning of the conversation array
-        exportData = { ...settingsObject , "messages": exportData };
+        exportData = { ...settingsObject, messages: exportData };
       }
 
       const content = JSON.stringify(exportData, null, 2); // Convert to JSON string
@@ -1218,6 +1227,67 @@ function Prompt() {
 
     setConversation(updatedConversation);
     dispatch(setInstructions(value));
+  };
+
+  useEffect(() => {
+    const encodedSettings = searchParams.get("settings");
+
+    if (encodedSettings) {
+      // Decode the Base64 string
+      const decodedSettings = atob(encodedSettings);
+
+      // Parse the JSON string back into an object
+      const settings = JSON.parse(decodedSettings);
+
+      const { system_prompt, model_name, model, temperature, top_p } = settings;
+
+      // Apply the settings
+      if (system_prompt) {
+        formik.setFieldValue("instructions", decodeURIComponent(system_prompt));
+      }
+      if (model_name) {
+        setChooseModel(model_name);
+      }
+      if (model) {
+        setChooseModelApi(model);
+      }
+      if (temperature) {
+        setTemperature(temperature);
+      }
+      if (top_p) {
+        setTpop(top_p);
+      }
+
+      // Reset URL to /chat without query parameters
+      navigate("/chat", { replace: true });
+    }
+  }, [searchParams, navigate]);
+
+  const handleShareSettings = () => {
+    const systemPrompt = encodeURIComponent(formik.values.instructions);
+    const settings = {
+      system_prompt: systemPrompt,
+      model_name: chooseModel,
+      model: chooseModelApi,
+      temperature: temperature,
+      top_p: top_p,
+    };
+
+    // Convert settings object to string
+    const settingsString = JSON.stringify(settings);
+
+    // Encode the string in Base64
+    const encodedSettings = btoa(settingsString);
+
+    // Get the dynamic base URL (e.g., http://141.5.106.179 or https://chat-ai.academiccloud.de)
+    const baseURL = window.location.origin;
+
+    // Create the full URL dynamically
+    const url = `${baseURL}/chat?settings=${encodedSettings}`;
+
+    // Copy the URL to the clipboard
+    navigator.clipboard.writeText(url);
+    notifySuccess("URL copied successfully");
   };
 
   return (
@@ -1750,7 +1820,7 @@ function Prompt() {
               ) : null}
             </div>
 
-            <div className="sm:static flex justify-center absolute bottom-0 sm:w-full w-[calc(100%-16px)] shadow-lg dark:shadow-dark">
+            <div className="sm:static flex justify-center absolute bottom-0 w-full shadow-lg dark:shadow-dark">
               {showAdvOpt ? (
                 <div className="flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
                   {/* Select model */}
@@ -1848,7 +1918,7 @@ function Prompt() {
                                 onClick={() => setShowCustomHelpModel(true)}
                               />
                             </div>
-                            <div className="mx-2 w-full">
+                            <div className="w-full">
                               <div className="relative w-full">
                                 {/* Labels for guidance */}
                                 <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
@@ -1906,7 +1976,7 @@ function Prompt() {
                                 onClick={() => setShowTpopHelpModel(true)}
                               />
                             </div>
-                            <div className="mx-2 w-full">
+                            <div className="w-full">
                               <div className="relative w-full">
                                 {/* Labels for guidance */}
                                 <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
@@ -2011,8 +2081,11 @@ function Prompt() {
                               className="flex gap-4 items-center justify-center select-none w-full"
                               onClick={toggleAdvOpt} // Click handler to toggle dark mode
                             >
-                              <p className="text-[18px] h-full text-tertiary cursor-pointer">
+                              <p className="hidden md:block text-[18px] h-full text-tertiary cursor-pointer">
                                 <Trans i18nKey="description.text9"></Trans>
+                              </p>{" "}
+                              <p className="block md:hidden text-[18px] h-full text-tertiary cursor-pointer">
+                                <Trans i18nKey="description.text10"></Trans>
                               </p>{" "}
                             </div>
                             {/* <button
@@ -2022,6 +2095,21 @@ function Prompt() {
                             >
                               <Trans i18nKey="description.save"></Trans>
                             </button> */}
+                            {/* Share settings */}
+                            <button
+                              className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border min-w-[130px] select-none flex gap-2"
+                              type="button"
+                              onClick={() => {
+                                handleShareSettings();
+                              }}
+                            >
+                              <Trans i18nKey="description.custom9"></Trans>
+                              <img
+                                src={share_icon}
+                                alt="share_icon"
+                                className="h-[20px] w-[20px] cursor-pointer"
+                              />
+                            </button>
                             {/* Opens clear cache model */}
                             <button
                               className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border min-w-[130px] select-none "
