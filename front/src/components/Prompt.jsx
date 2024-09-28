@@ -1297,7 +1297,7 @@ function Prompt() {
         <div className="flex flex-col">
           {/* Select input for model mobile */}
           <div
-            className={`w-full px-1 justify-between flex sm:hidden gap-4 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark`}
+            className={`w-full px-1 justify-between flex sm:hidden gap-4 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark relative`} // Parent div with relative positioning
           >
             {/* Help icon */}
             <div className="flex items-center min-w-[100px]">
@@ -1309,29 +1309,32 @@ function Prompt() {
                 />
               </Link>
             </div>
+
             {/* Select input */}
             <div
-              className="relative flex index"
+              className="flex index w-full justify-between" // Make the container take full width
               ref={dropdownRef}
               tabIndex={0}
               onBlur={() => setIsOpen(false)}
             >
               <div
-                className="text-tertiary max-w-[160px] flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
+                className="text-tertiary max-w-[250px] flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
                 onClick={toggleOpen}
               >
-                <p className="text-ellipsis overflow-hidden whitespace-nowrap">
+                <p className="text-ellipsis text-xl overflow-hidden whitespace-nowrap">
                   {chooseModel}
                 </p>
               </div>
+
               {isOpen && (
                 <div
-                  className={`absolute z-[999] w-full top-full shadow-lg dark:shadow-dark rounded-2xl border-opacity-10 border dark:border-border_dark `}
+                  className={`absolute z-[999] w-full left-0 top-full shadow-lg dark:shadow-dark rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark max-h-[250px] overflow-y-scroll`}
+                  // w-full ensures it takes the full width of the parent container
                 >
                   {modelList.map((option, index) => (
                     <div
                       key={index}
-                      className="bg-white dark:bg-bg_secondary_dark text-tertiary block text-xl w-full p-2 "
+                      className="text-tertiary block text-xl w-full p-2 cursor-pointer"
                       onClick={() => handleChangeModel(option)}
                     >
                       {option.name}
@@ -1339,11 +1342,12 @@ function Prompt() {
                   ))}
                 </div>
               )}
-              <div className="cursor-pointer w-[30px] flex items-center">
+
+              <div className="cursor-pointer w-[25px] flex items-center">
                 <img
                   src={help}
                   alt="help"
-                  className="h-[30px] w-[30px] cursor-pointer"
+                  className="h-[25px] w-[25px] cursor-pointer"
                   onClick={(event) => {
                     event.stopPropagation();
                     setShowHelpModel(true);
@@ -1351,6 +1355,7 @@ function Prompt() {
                 />
               </div>
             </div>
+
             {/* Toggle button for theme */}
             <div className="cursor-pointer flex items-center">
               <button className="h-[30px] w-[30px]" onClick={toggleDarkMode}>
