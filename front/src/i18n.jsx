@@ -222,7 +222,7 @@ i18n
             custom6: "Anweisungen sind erforderlich",
             custom7: "Standard zurücksetzen",
             custom8: "Cache löschen",
-            custom9: "Aktie",
+            custom9: "Teilen",
             custom10: "zurücksetzen",
 
             // Feedback page
