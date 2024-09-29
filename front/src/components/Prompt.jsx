@@ -2012,25 +2012,26 @@ function Prompt() {
                           </div>
 
                           {/* Submit button */}
-                          <div className="flex md:justify-end gap-2 items-center w-full">
+                          <div className="flex flex-wrap justify-center md:justify-end gap-2 md:gap-4 items-center w-full">
                             <div
-                              className="flex gap-4 items-center justify-center select-none w-full"
+                              className="flex gap-2 md:gap-4 items-center justify-center w-full md:w-auto select-none"
                               onClick={toggleAdvOpt} // Click handler to toggle dark mode
                             >
+                              {/* Text for large screens */}
                               <p className="hidden md:block text-[18px] h-full text-tertiary cursor-pointer">
                                 <Trans i18nKey="description.text9"></Trans>
-                              </p>{" "}
+                              </p>
+                              {/* Text for small screens */}
                               <p className="block md:hidden text-[18px] h-full text-tertiary cursor-pointer">
                                 <Trans i18nKey="description.text10"></Trans>
-                              </p>{" "}
+                              </p>
                             </div>
 
+                            {/* Share settings button */}
                             <button
-                              className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
+                              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center flex-1 md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
                               type="reset"
-                              onClick={() => {
-                                handleShareSettings();
-                              }}
+                              onClick={handleShareSettings}
                             >
                               <Trans i18nKey="description.custom9"></Trans>
                               <img
@@ -2039,20 +2040,21 @@ function Prompt() {
                                 className="h-[20px] w-[20px] cursor-pointer"
                               />
                             </button>
-                            {/* Opens clear cache model */}
+
+                            {/* Clear cache button */}
                             <button
-                              className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none "
+                              className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center flex-1 md:w-fit shadow-lg dark:shadow-dark border select-none"
                               type="reset"
-                              onClick={() => {
-                                setShowCacheModel(true);
-                              }}
+                              onClick={() => setShowCacheModel(true)}
                             >
                               <Trans i18nKey="description.custom8"></Trans>
                             </button>
+
+                            {/* Reset default button */}
                             <button
-                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none "
-                              onClick={resetDefault}
+                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark rounded-2xl justify-center items-center flex-1 md:w-fit shadow-lg dark:shadow-dark border select-none"
                               type="reset"
+                              onClick={resetDefault}
                             >
                               <Trans i18nKey="description.custom7"></Trans>
                             </button>
