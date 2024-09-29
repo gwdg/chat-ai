@@ -29,6 +29,7 @@ import export_icon from "../assets/export_icon.svg";
 import import_icon from "../assets/import_icon.svg";
 import settings_icon from "../assets/Settings_Icon.svg";
 import share_icon from "../assets/share_icon.svg";
+import clear_cache from "../assets/clear_cache.svg";
 import send from "../assets/icon_send.svg";
 import upload from "../assets/add.svg";
 import uploaded from "../assets/file_uploaded.svg";
@@ -2054,11 +2055,26 @@ function Prompt() {
 
                             {/* Clear cache button */}
                             <button
-                              className="text-white p-3 bg-red-600 hover:bg-red-550 active:bg-red-700  dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
+                              className="text-white p-3 bg-red-600 hover:bg-red-550 active:bg-red-700  dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
                               type="reset"
                               onClick={() => setShowCacheModel(true)}
                             >
+                              {/* Text for large screens */}
+                              <div className="hidden md:block">
                               <Trans i18nKey="description.custom8"></Trans>
+                              </div>
+                              {/* Icon for large screens */}
+                              <img
+                                  src={clear_cache}
+                                  alt="clear_cache"
+                                  className="hidden md:block h-[20px] w-[20px] cursor-pointer"
+                                />
+                              {/* Icon for small screens */}
+                              <img
+                                  src={clear_cache}
+                                  alt="clear_cache"
+                                  className="block md:hidden h-[30px] w-[30px] cursor-pointer"
+                                />
                             </button>
 
                             {/* Reset default button */}
