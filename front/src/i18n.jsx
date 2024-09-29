@@ -63,6 +63,7 @@ i18n
             custom7: "Reset default",
             custom8: "Clear cache",
             custom9: "Share",
+            custom10: "Default",
 
             // Feedback page
             feedback1: "Title is required",
@@ -222,6 +223,7 @@ i18n
             custom7: "Standard zurücksetzen",
             custom8: "Cache löschen",
             custom9: "Aktie",
+            custom10: "zurücksetzen",
 
             // Feedback page
             feedback1: "Titel ist erforderlich",

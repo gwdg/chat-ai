@@ -18,6 +18,7 @@ export default {
         bg_chat_user: "#fff",
         bg_chat_user_dark: "#2B2B2B",
         bg_reset_default: "#E7E7E7",
+        bg_reset_default_pressed: "#D7D7D7",
         disable_textArea: "#737373",
         disable_textArea_light: "#EEEEEE",
       },

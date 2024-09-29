@@ -2079,11 +2079,18 @@ function Prompt() {
 
                             {/* Reset default button */}
                             <button
-                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
+                              className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
                               type="reset"
                               onClick={resetDefault}
                             >
+                              {/* Text for large screens */}
+                              <div className="hidden md:block">
                               <Trans i18nKey="description.custom7"></Trans>
+                              </div>
+                              {/* Text for small screens */}
+                              <div className="block md:hidden">
+                              <Trans i18nKey="description.custom10"></Trans>
+                              </div>
                             </button>
                           </div>
                         </div>
