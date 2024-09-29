@@ -1264,7 +1264,16 @@ function Prompt() {
   }, [searchParams, navigate]);
 
   const handleShareSettings = () => {
+    // Ensure instructions are provided
+    if (!formik.values.instructions) {
+      console.error("Instructions are missing");
+      return;
+    }
+
+    // Encode the system prompt
     const systemPrompt = encodeURIComponent(formik.values.instructions);
+
+    // Build the settings object
     const settings = {
       system_prompt: systemPrompt,
       model_name: chooseModel,
@@ -1273,108 +1282,30 @@ function Prompt() {
       top_p: top_p,
     };
 
-    // Convert settings object to string
+    // Convert settings object to a Base64-encoded string
     const settingsString = JSON.stringify(settings);
-
-    // Encode the string in Base64
     const encodedSettings = btoa(settingsString);
 
-    // Get the dynamic base URL (e.g., http://141.5.106.179 or https://chat-ai.academiccloud.de)
+    // Get the base URL dynamically
     const baseURL = window.location.origin;
 
-    // Create the full URL dynamically
+    // Create the full URL with encoded settings
     const url = `${baseURL}/chat?settings=${encodedSettings}`;
 
-    // Copy the URL to the clipboard
-    navigator.clipboard.writeText(url);
-    notifySuccess("URL copied successfully");
+    // Attempt to copy the URL to the clipboard or use the fallback
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        notifySuccess("URL copied successfully");
+      })
+      .catch((err) => {
+        console.error("Failed to copy text: ", err);
+      });
   };
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row h-full gap-3 sm:pt-2 sm:justify-between relative overflow-y-auto">
-        {/* Header component used with the same code */}
-        <div className="flex flex-col">
-          {/* Select input for model mobile */}
-          <div
-            className={`w-full px-1 justify-between flex sm:hidden gap-4 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark relative`} // Parent div with relative positioning
-          >
-            {/* Help icon */}
-            <div className="flex items-center min-w-[100px]">
-              {/* Chat AI Logo */}
-              <Link to={"/"}>
-                <img
-                  className="cursor-pointer h-[40px] object-contain"
-                  src={Logo}
-                />
-              </Link>
-            </div>
-
-            {/* Select input */}
-            <div
-              className="flex index w-full justify-between" // Make the container take full width
-              ref={dropdownRef}
-              tabIndex={0}
-              onBlur={() => setIsOpen(false)}
-            >
-              <div
-                className="text-tertiary max-w-[250px] flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
-                onClick={toggleOpen}
-              >
-                <p className="text-ellipsis text-xl overflow-hidden whitespace-nowrap">
-                  {chooseModel}
-                </p>
-              </div>
-
-              {isOpen && (
-                <div
-                  className={`absolute z-[999] w-full left-0 top-full shadow-lg dark:shadow-dark rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark max-h-[250px] overflow-y-scroll`}
-                  // w-full ensures it takes the full width of the parent container
-                >
-                  {modelList.map((option, index) => (
-                    <div
-                      key={index}
-                      className="text-tertiary block text-xl w-full p-2 cursor-pointer"
-                      onClick={() => handleChangeModel(option)}
-                    >
-                      {option.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="cursor-pointer w-[25px] flex items-center">
-                <img
-                  src={help}
-                  alt="help"
-                  className="h-[25px] w-[25px] cursor-pointer"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setShowHelpModel(true);
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Toggle button for theme */}
-            <div className="cursor-pointer flex items-center">
-              <button className="h-[30px] w-[30px]" onClick={toggleDarkMode}>
-                {isDarkMode ? (
-                  <img
-                    className="cursor-pointer h-[30px] w-[30px]"
-                    src={Light}
-                  />
-                ) : (
-                  <img
-                    className="cursor-pointer h-[30px] w-[30px] -rotate-45"
-                    src={Dark}
-                  />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
+      <div className="flex flex-col sm:flex-row h-full gap-3 sm:p-2 sm:pb-0 sm:justify-between relative overflow-y-auto">
         <div className="flex flex-col sm:flex-row h-full gap-3 sm:justify-between relative sm:p-0 px-2 w-full sm:pb-2 pb-2 bg-bg_light dark:bg-bg_dark">
           {/* Response section */}
           <div
@@ -2093,17 +2024,10 @@ function Prompt() {
                                 <Trans i18nKey="description.text10"></Trans>
                               </p>{" "}
                             </div>
-                            {/* <button
-                              className="text-white p-3 bg-tertiary dark:border-border_dark md:hidden rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full select-none "
-                              type="reset"
-                              onClick={toggleAdvOpt}
-                            >
-                              <Trans i18nKey="description.save"></Trans>
-                            </button> */}
-                            {/* Share settings */}
+
                             <button
-                              className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border min-w-[130px] select-none flex gap-2"
-                              type="button"
+                              className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
+                              type="reset"
                               onClick={() => {
                                 handleShareSettings();
                               }}
@@ -2117,7 +2041,7 @@ function Prompt() {
                             </button>
                             {/* Opens clear cache model */}
                             <button
-                              className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border min-w-[130px] select-none "
+                              className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none "
                               type="reset"
                               onClick={() => {
                                 setShowCacheModel(true);
@@ -2125,21 +2049,13 @@ function Prompt() {
                             >
                               <Trans i18nKey="description.custom8"></Trans>
                             </button>
-                            {/* Resets settings, and clears redux */}
                             <button
-                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border min-w-[130px] select-none "
+                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none "
                               onClick={resetDefault}
                               type="reset"
                             >
                               <Trans i18nKey="description.custom7"></Trans>
                             </button>
-                            {/* Applies changes */}
-                            {/* <button
-                            className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-                            type="submit"
-                          >
-                            <Trans i18nKey="description.custom5"></Trans>
-                          </button> */}
                           </div>
                         </div>
                       </Form>

@@ -16,6 +16,8 @@ function Layout(props) {
 
   // State for footer hide/show
   const [showFooter, setShowFooter] = useState(false);
+  const [isIOSChrome, setIsIOSChrome] = useState(false);
+
   // const [showAnnc, setShowAnnc] = useState(countClose > 3 ? false : true);
   // const [count, setCount] = useState(countClose);
   const mainDiv = useRef(null); // Reference to the main content div
@@ -47,27 +49,36 @@ function Layout(props) {
     scrollToTop();
   }, []);
 
+  // Detect iOS Chrome
+  useEffect(() => {
+    if (navigator.userAgent.match("CriOS")) {
+      setIsIOSChrome(true);
+    }
+  }, []);
+
   return (
     // Main layout container
-    <div className="flex flex-col min-h-screen md:gap-4 relative no-scrollbar h-full">
+    <div className="flex flex-col min-h-screen relative no-scrollbar h-full">
       {/* Announcement bar */}
       {/* {showAnnc && count < 3 ? (
         <AnnouncementBar anncCounter={anncCounter} />
       ) : null} */}
 
       {/* Header component */}
-      <Header className="" />
+      <Header />
 
       {/* Main content area */}
       <div
         ref={mainDiv} // Reference to the main content div
-        className={`md:pt-[65px] flex flex-col overflow-y-auto pt-0 bg-white dark:bg-black relative gap-0 h-full`}
+        className={`flex flex-col overflow-y-auto pt-0 bg-white dark:bg-black relative gap-0 h-full`}
       >
         {/* Content passed as props */}
         <div
           className={`${
-            showFooter ? "h-[89%] pb-2 grow-0" : "h-screen flex-grow"
-          } bg-bg_light dark:bg-bg_dark overflow-x-hidden`}
+            showFooter ? "h-[89%] pb-2 grow-0" : "flex-grow"
+          } bg-bg_light dark:bg-bg_dark overflow-x-hidden ${
+            isIOSChrome ? "pt-[160px]" : "pt-0"
+          }`}
         >
           {props.children}
         </div>
