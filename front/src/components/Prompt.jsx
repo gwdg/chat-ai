@@ -2012,10 +2012,11 @@ function Prompt() {
                           </div>
 
                           {/* Submit button */}
-                          <div className="flex flex-wrap justify-center md:justify-end gap-2 md:gap-4 items-center w-full">
+                          <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
                             <div
-                              className="flex gap-2 md:gap-4 items-center justify-center w-full md:w-auto select-none"
-                              onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                              // className="flex gap-2 md:gap-4 items-center justify-center w-full md:w-auto select-none"
+                              className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
+                              onClick={toggleAdvOpt} // Click handler to toggle advanced options
                             >
                               {/* Text for large screens */}
                               <p className="hidden md:block text-[18px] h-full text-tertiary cursor-pointer">
@@ -2029,21 +2030,31 @@ function Prompt() {
 
                             {/* Share settings button */}
                             <button
-                              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center flex-1 md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
+                              className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
                               type="reset"
                               onClick={handleShareSettings}
                             >
-                              <Trans i18nKey="description.custom9"></Trans>
-                              <img
+                            {/* Text for large screens */}
+                            <div className="hidden md:block">
+                            <Trans i18nKey="description.custom9"></Trans>
+                            </div>
+                            {/* Icon for large screens */}
+                            <img
                                 src={share_icon}
                                 alt="share_icon"
-                                className="h-[20px] w-[20px] cursor-pointer"
+                                className="hidden md:block h-[20px] w-[20px] cursor-pointer"
+                              />
+                            {/* Icon for small screens */}
+                            <img
+                                src={share_icon}
+                                alt="share_icon"
+                                className="block md:hidden h-[30px] w-[30px] cursor-pointer"
                               />
                             </button>
 
                             {/* Clear cache button */}
                             <button
-                              className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center flex-1 md:w-fit shadow-lg dark:shadow-dark border select-none"
+                              className="text-white p-3 bg-red-600 hover:bg-red-550 active:bg-red-700  dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
                               type="reset"
                               onClick={() => setShowCacheModel(true)}
                             >
@@ -2052,7 +2063,7 @@ function Prompt() {
 
                             {/* Reset default button */}
                             <button
-                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark rounded-2xl justify-center items-center flex-1 md:w-fit shadow-lg dark:shadow-dark border select-none"
+                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
                               type="reset"
                               onClick={resetDefault}
                             >
@@ -2143,7 +2154,7 @@ function Prompt() {
                   </div>
                   <div
                     className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit w-full"
-                    onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                    onClick={toggleAdvOpt} // Click handler to toggle advanced options
                   >
                     <p className="text-[18px] h-full text-tertiary">
                       <Trans i18nKey="description.text6"></Trans>
