@@ -27,3 +27,57 @@
 ### Additional Features:
 - **Prompt resending/editing**: Users can now resend or edit prompts for better control.
 - **Unwanted announcement bar removed**: Cleaned up the interface by removing unnecessary elements.
+
+<hr>
+
+## Old Version Information
+
+### Version: v0.5.1
+- Bug fixes
+- Polished UI
+
+### Version: v0.5
+- Decoupled proxies
+- Service announcement
+- Bug fixes and cleanup
+
+### Version: v0.4.2
+- Security patch for proxy
+- Conversation save/load bug fixes
+- Improved error messages
+
+### Version: v0.4.1
+- Bug fixes
+- Minor UI cleanup
+
+### Version: v0.4
+- Website now running in production mode (much faster)
+- Better error handling on frontend and backend
+- Bug fixes
+
+### Version: v0.3.2
+- UI changes, progress loading
+- Model names fixed
+- Bug fixes
+
+### Version: v0.3.1
+- Added initial DB file
+- Ask for mic permission
+- Cleaner UI
+- Readable model names
+
+### Version: v0.3
+
+#### Design:
+- Rebranded as Chat AI
+- Responsive design
+- Light/dark mode
+- English/German interface
+
+#### Features:
+- Change system prompt for internal models
+- Change temperature for internal models
+- Load/save chat history
+- API service
+- Admin visualization with Prometheus
+- Dump/restore database
