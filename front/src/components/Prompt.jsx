@@ -2035,18 +2035,18 @@ function Prompt() {
                               type="reset"
                               onClick={handleShareSettings}
                             >
-                            {/* Text for large screens */}
-                            <div className="hidden md:block">
-                            <Trans i18nKey="description.custom9"></Trans>
-                            </div>
-                            {/* Icon for large screens */}
-                            <img
+                              {/* Text for large screens */}
+                              <div className="hidden md:block">
+                                <Trans i18nKey="description.custom9"></Trans>
+                              </div>
+                              {/* Icon for large screens */}
+                              <img
                                 src={share_icon}
                                 alt="share_icon"
                                 className="hidden md:block h-[20px] w-[20px] cursor-pointer"
                               />
-                            {/* Icon for small screens */}
-                            <img
+                              {/* Icon for small screens */}
+                              <img
                                 src={share_icon}
                                 alt="share_icon"
                                 className="block md:hidden h-[30px] w-[30px] cursor-pointer"
@@ -2061,20 +2061,20 @@ function Prompt() {
                             >
                               {/* Text for large screens */}
                               <div className="hidden md:block">
-                              <Trans i18nKey="description.custom8"></Trans>
+                                <Trans i18nKey="description.custom8"></Trans>
                               </div>
                               {/* Icon for large screens */}
                               <img
-                                  src={clear_cache}
-                                  alt="clear_cache"
-                                  className="hidden md:block h-[20px] w-[20px] cursor-pointer"
-                                />
+                                src={clear_cache}
+                                alt="clear_cache"
+                                className="hidden md:block h-[20px] w-[20px] cursor-pointer"
+                              />
                               {/* Icon for small screens */}
                               <img
-                                  src={clear_cache}
-                                  alt="clear_cache"
-                                  className="block md:hidden h-[30px] w-[30px] cursor-pointer"
-                                />
+                                src={clear_cache}
+                                alt="clear_cache"
+                                className="block md:hidden h-[30px] w-[30px] cursor-pointer"
+                              />
                             </button>
 
                             {/* Reset default button */}
@@ -2085,11 +2085,11 @@ function Prompt() {
                             >
                               {/* Text for large screens */}
                               <div className="hidden md:block">
-                              <Trans i18nKey="description.custom7"></Trans>
+                                <Trans i18nKey="description.custom7"></Trans>
                               </div>
                               {/* Text for small screens */}
                               <div className="block md:hidden">
-                              <Trans i18nKey="description.custom10"></Trans>
+                                <Trans i18nKey="description.custom10"></Trans>
                               </div>
                             </button>
                           </div>

@@ -39,13 +39,13 @@ html {
 
 /* Common scrollbar styling */
 *::-webkit-scrollbar {
-  width: 6px; /* Set width to slim scrollbar */
-  height: 6px; /* Set height to slim scrollbar */
+  /* width: 6px; 
+  height: 6px;  */
 }
 
 /* Track styling */
 *::-webkit-scrollbar-track {
-  background: transparent; /* Set background to transparent */
+  /* background: transparent; */
 }
 
 /* Thumb styling for light mode */
