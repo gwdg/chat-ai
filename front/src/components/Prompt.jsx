@@ -770,34 +770,6 @@ function Prompt() {
             notifyError("Invalid structure of JSON.");
           }
 
-          // // Ensure parsedData is an array
-          // if (!Array.isArray(parsedData)) {
-          //   // notifyError(
-          //   //   "Invalid structure: expected an array in the JSON file."
-          //   // );
-          //   // Expect proper OpenAI-compatible JSON
-          //   // Check if the first object is the settings object
-          // let settings;
-          // if (
-          //   parsedData.length > 0 &&
-          //   !parsedData[0]?.role &&
-          //   !parsedData[0]?.content &&
-          //   parsedData[0]?.obj["model-name"] &&
-          //   parsedData[0]?.model &&
-          //   parsedData[0]?.temperature &&
-          //   parsedData[0]?.top_p
-          // ) {
-          //     // Set relevant states from the settings object
-          //     if (settings.model) setChooseModel(settings.model);
-          //     if (settings.modelApi) setChooseModelApi(settings.modelApi);
-          //     if (settings.temperature) setTemperature(settings.temperature);
-          //     if (settings.top_p) setTpop(settings.top_p);
-
-          //     // Remove the settings object from the array to handle conversation as usual
-          //     parsedData.shift();
-          //   }
-          // }
-
           // // Ensure parsedData is in the correct format
         } catch (jsonError) {
           notifyError("Invalid JSON file format.");
@@ -1263,6 +1235,122 @@ function Prompt() {
       navigate("/chat", { replace: true });
     }
   }, [searchParams, navigate]);
+
+  useEffect(() => {
+    const fetchJsonFromUrl = async (url) => {
+      try {
+        const response = await fetch(url);
+
+        // Handle HTTP errors
+        if (!response.ok) {
+          if (response.status >= 400 && response.status < 500) {
+            throw new Error("Client Error: Failed to fetch the JSON file.");
+          } else if (response.status >= 500) {
+            throw new Error("Server Error: Please try again later.");
+          } else {
+            throw new Error("Unknown Error: Could not fetch the JSON file.");
+          }
+        }
+
+        // Parse JSON response
+        const data = await response.json();
+        processImportedData(data); // Process the fetched JSON
+
+        // Clear the "?import=" part from the URL after successful fetch
+        navigate("/chat", { replace: true });
+      } catch (error) {
+        // Handle specific fetch errors
+        if (error.name === "TypeError") {
+          notifyError("Network Error: Unable to reach the server.");
+        } else if (error.message.includes("Client Error")) {
+          notifyError("Client Error: The provided link might be incorrect.");
+        } else if (error.message.includes("Server Error")) {
+          notifyError("Server Error: Please try again later.");
+        } else {
+          notifyError(error.message || "An unexpected error occurred.");
+        }
+
+        console.error("Error:", error);
+      }
+    };
+
+    const processMessages = (parsedData) => {
+      let newArray = [];
+      for (let i = 0; i < parsedData.length; i++) {
+        if (parsedData[i].role === "system") {
+          // Set the "instructions" field in Formik using the content of the system message
+          if (parsedData[i].content) {
+            formik.setFieldValue("instructions", parsedData[i].content);
+          }
+        }
+        if (
+          parsedData[i].role === "user" &&
+          parsedData[i + 1]?.role === "assistant"
+        ) {
+          newArray.push({
+            prompt: parsedData[i].content,
+            response: parsedData[i + 1]?.content,
+          });
+        }
+      }
+      setResponses(newArray);
+      setConversation(parsedData);
+      notifySuccess("Chat imported successfully");
+    };
+
+    const processImportedData = (parsedData) => {
+      try {
+        // Validate the structure of the parsedData
+        if (Array.isArray(parsedData.messages)) {
+          const systemMessage = parsedData.messages.find(
+            (message) => message.role === "system"
+          );
+          if (systemMessage && systemMessage.content) {
+            formik.setFieldValue("instructions", systemMessage.content);
+          }
+          if (parsedData.temperature) {
+            setTemperature(parsedData.temperature);
+          }
+          if (parsedData.top_p) {
+            setTpop(parsedData.top_p);
+          }
+          if (parsedData.model) {
+            setChooseModelApi(parsedData.model);
+            if (parsedData["model-name"]) {
+              setChooseModel(parsedData["model-name"]);
+            } else {
+              setChooseModel(parsedData.model);
+            }
+          }
+          processMessages(parsedData.messages);
+        } else if (Array.isArray(parsedData)) {
+          const systemMessage = parsedData.find(
+            (message) => message.role === "system"
+          );
+          if (systemMessage && systemMessage.content) {
+            formik.setFieldValue("instructions", systemMessage.content);
+          }
+          processMessages(parsedData);
+        } else {
+          throw new Error(
+            "Invalid JSON Structure: Expected an array or object with a 'messages' key."
+          );
+        }
+      } catch (jsonError) {
+        notifyError(
+          "Invalid JSON: Unable to process the structure of the file."
+        );
+      }
+    };
+
+    // Extract the "import" URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const importUrl = urlParams.get("import");
+
+    if (importUrl) {
+      fetchJsonFromUrl(importUrl);
+    }
+  }, []);
 
   const handleShareSettings = () => {
     // Ensure instructions are provided
