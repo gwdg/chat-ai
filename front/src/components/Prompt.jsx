@@ -6,7 +6,12 @@ import { useTranslation, Trans } from "react-i18next";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import jsPDF from "jspdf";
 import { useDispatch, useSelector } from "react-redux";
 import { setPromptGlobal } from "../Redux/actions/promptAction";
@@ -23,6 +28,8 @@ import clear from "../assets/cross_icon.svg";
 import export_icon from "../assets/export_icon.svg";
 import import_icon from "../assets/import_icon.svg";
 import settings_icon from "../assets/Settings_Icon.svg";
+import share_icon from "../assets/share_icon.svg";
+import clear_cache from "../assets/clear_cache.svg";
 import send from "../assets/icon_send.svg";
 import upload from "../assets/add.svg";
 import uploaded from "../assets/file_uploaded.svg";
@@ -76,6 +83,8 @@ function Prompt() {
 
   // Redux State and Dispatch
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
+
   const promptGlobal = useSelector((state) => state.prompt);
   const model = useSelector((state) => state.model);
   const conversationGLobal = useSelector((state) => state.conversation);
@@ -698,45 +707,48 @@ function Prompt() {
       };
 
       reader.onload = async () => {
-
         function processMessages(parsedData) {
-            // Your logic to process the array data
-            if (
-              parsedData.length > 0 &&
-              Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
-              Object.prototype.hasOwnProperty.call(parsedData[0], "content")
-            ) {
-              let newArray = [];
-              for (let i = 0; i < parsedData.length; i++) {
-                if (parsedData[i].role === "system") {
-                  dispatch(setInstructions(parsedData[i].content));
-                }
-                if (
-                  parsedData[i].role === "user" &&
-                  parsedData[i + 1]?.role === "assistant"
-                ) {
-                  newArray.push({
-                    prompt: parsedData[i].content,
-                    response: parsedData[i + 1]?.content,
-                  });
-                }
+          // Your logic to process the array data
+          if (
+            parsedData.length > 0 &&
+            Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
+            Object.prototype.hasOwnProperty.call(parsedData[0], "content")
+          ) {
+            let newArray = [];
+            for (let i = 0; i < parsedData.length; i++) {
+              if (parsedData[i].role === "system") {
+                dispatch(setInstructions(parsedData[i].content));
               }
-              setResponses(newArray);
-              setConversation(parsedData);
-              notifySuccess("Chat imported successfully");
-            } else {
-              notifyError("Invalid structure of JSON.");
+              if (
+                parsedData[i].role === "user" &&
+                parsedData[i + 1]?.role === "assistant"
+              ) {
+                newArray.push({
+                  prompt: parsedData[i].content,
+                  response: parsedData[i + 1]?.content,
+                });
+              }
             }
+            setResponses(newArray);
+            setConversation(parsedData);
+            notifySuccess("Chat imported successfully");
+          } else {
+            notifyError("Invalid structure of JSON.");
+          }
         }
 
         try {
           const data = reader.result;
           const parsedData = JSON.parse(data);
-        
+
           if (Array.isArray(parsedData)) {
             // Handle the case where parsedData is an array
             processMessages(parsedData);
-          } else if (parsedData && parsedData.messages && Array.isArray(parsedData.messages)) {
+          } else if (
+            parsedData &&
+            parsedData.messages &&
+            Array.isArray(parsedData.messages)
+          ) {
             // Handle the case where parsedData is an object with a "messages" attribute
             if (parsedData.temperature) {
               setTemperature(parsedData.temperature);
@@ -748,47 +760,17 @@ function Prompt() {
               setChooseModelApi(parsedData.model);
               if (parsedData["model-name"]) {
                 setChooseModel(parsedData["model-name"]);
-              }
-              else {
+              } else {
                 setChooseModel(parsedData.model);
               }
             }
             processMessages(parsedData.messages);
           } else {
-              // Notify the user about the invalid structure
-              notifyError("Invalid structure of JSON.");
+            // Notify the user about the invalid structure
+            notifyError("Invalid structure of JSON.");
           }
- 
-          // // Ensure parsedData is an array
-          // if (!Array.isArray(parsedData)) {
-          //   // notifyError(
-          //   //   "Invalid structure: expected an array in the JSON file."
-          //   // );
-          //   // Expect proper OpenAI-compatible JSON
-          //   // Check if the first object is the settings object
-          // let settings;
-          // if (
-          //   parsedData.length > 0 &&
-          //   !parsedData[0]?.role &&
-          //   !parsedData[0]?.content &&
-          //   parsedData[0]?.obj["model-name"] &&
-          //   parsedData[0]?.model &&
-          //   parsedData[0]?.temperature &&
-          //   parsedData[0]?.top_p
-          // ) {
-          //     // Set relevant states from the settings object
-          //     if (settings.model) setChooseModel(settings.model);
-          //     if (settings.modelApi) setChooseModelApi(settings.modelApi);
-          //     if (settings.temperature) setTemperature(settings.temperature);
-          //     if (settings.top_p) setTpop(settings.top_p);
-
-          //     // Remove the settings object from the array to handle conversation as usual
-          //     parsedData.shift();
-          //   }
-          // }
 
           // // Ensure parsedData is in the correct format
-          
         } catch (jsonError) {
           notifyError("Invalid JSON file format.");
         }
@@ -906,7 +888,7 @@ function Prompt() {
         };
 
         // Add the settings object to the beginning of the conversation array
-        exportData = { ...settingsObject , "messages": exportData };
+        exportData = { ...settingsObject, messages: exportData };
       }
 
       const content = JSON.stringify(exportData, null, 2); // Convert to JSON string
@@ -1220,86 +1202,203 @@ function Prompt() {
     dispatch(setInstructions(value));
   };
 
+  useEffect(() => {
+    const encodedSettings = searchParams.get("settings");
+
+    if (encodedSettings) {
+      // Decode the Base64 string
+      const decodedSettings = atob(encodedSettings);
+
+      // Parse the JSON string back into an object
+      const settings = JSON.parse(decodedSettings);
+
+      const { system_prompt, model_name, model, temperature, top_p } = settings;
+
+      // Apply the settings
+      if (system_prompt) {
+        formik.setFieldValue("instructions", decodeURIComponent(system_prompt));
+        dispatch(setInstructions(decodeURIComponent(system_prompt)));
+      }
+      if (model_name) {
+        setChooseModel(model_name);
+      }
+      if (model) {
+        setChooseModelApi(model);
+      }
+      if (temperature) {
+        setTemperature(temperature);
+      }
+      if (top_p) {
+        setTpop(top_p);
+      }
+
+      // Reset URL to /chat without query parameters
+      navigate("/chat", { replace: true });
+    }
+  }, [searchParams, navigate]);
+
+  useEffect(() => {
+    const fetchJsonFromUrl = async (url) => {
+      try {
+        const response = await fetch(url);
+
+        // Handle HTTP errors
+        if (!response.ok) {
+          if (response.status >= 400 && response.status < 500) {
+            throw new Error("Client Error: Failed to fetch the JSON file.");
+          } else if (response.status >= 500) {
+            throw new Error("Server Error: Please try again later.");
+          } else {
+            throw new Error("Unknown Error: Could not fetch the JSON file.");
+          }
+        }
+
+        // Parse JSON response
+        const data = await response.json();
+        processImportedData(data); // Process the fetched JSON
+
+        // Clear the "?import=" part from the URL after successful fetch
+        navigate("/chat", { replace: true });
+      } catch (error) {
+        // Handle specific fetch errors
+        if (error.name === "TypeError") {
+          notifyError("Network Error: Unable to reach the server.");
+        } else if (error.message.includes("Client Error")) {
+          notifyError("Client Error: The provided link might be incorrect.");
+        } else if (error.message.includes("Server Error")) {
+          notifyError("Server Error: Please try again later.");
+        } else {
+          notifyError(error.message || "An unexpected error occurred.");
+        }
+
+        console.error("Error:", error);
+      }
+    };
+
+    const processMessages = (parsedData) => {
+      let newArray = [];
+      for (let i = 0; i < parsedData.length; i++) {
+        if (parsedData[i].role === "system") {
+          // Set the "instructions" field in Formik using the content of the system message
+          if (parsedData[i].content) {
+            formik.setFieldValue("instructions", parsedData[i].content);
+            dispatch(setInstructions(parsedData[i].content));
+          }
+        }
+        if (
+          parsedData[i].role === "user" &&
+          parsedData[i + 1]?.role === "assistant"
+        ) {
+          newArray.push({
+            prompt: parsedData[i].content,
+            response: parsedData[i + 1]?.content,
+          });
+        }
+      }
+      setResponses(newArray);
+      setConversation(parsedData);
+      notifySuccess("Chat imported successfully");
+    };
+
+    const processImportedData = (parsedData) => {
+      try {
+        // Validate the structure of the parsedData
+        if (Array.isArray(parsedData.messages)) {
+          const systemMessage = parsedData.messages.find(
+            (message) => message.role === "system"
+          );
+          if (systemMessage && systemMessage.content) {
+            formik.setFieldValue("instructions", systemMessage.content);
+            dispatch(setInstructions(systemMessage.content));
+          }
+          if (parsedData.temperature) {
+            setTemperature(parsedData.temperature);
+          }
+          if (parsedData.top_p) {
+            setTpop(parsedData.top_p);
+          }
+          if (parsedData.model) {
+            setChooseModelApi(parsedData.model);
+            if (parsedData["model-name"]) {
+              setChooseModel(parsedData["model-name"]);
+            } else {
+              setChooseModel(parsedData.model);
+            }
+          }
+          processMessages(parsedData.messages);
+        } else if (Array.isArray(parsedData)) {
+          const systemMessage = parsedData.find(
+            (message) => message.role === "system"
+          );
+          if (systemMessage && systemMessage.content) {
+            formik.setFieldValue("instructions", systemMessage.content);
+            dispatch(setInstructions(systemMessage.content));
+          }
+          processMessages(parsedData);
+        } else {
+          throw new Error(
+            "Invalid JSON Structure: Expected an array or object with a 'messages' key."
+          );
+        }
+      } catch (jsonError) {
+        notifyError(
+          "Invalid JSON: Unable to process the structure of the file."
+        );
+      }
+    };
+
+    // Extract the "import" URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const importUrl = urlParams.get("import");
+
+    if (importUrl) {
+      fetchJsonFromUrl(importUrl);
+    }
+  }, []);
+
+  const handleShareSettings = () => {
+    // Ensure instructions are provided
+    if (!formik.values.instructions) {
+      console.error("Instructions are missing");
+      return;
+    }
+
+    // Encode the system prompt
+    const systemPrompt = encodeURIComponent(formik.values.instructions);
+
+    // Build the settings object
+    const settings = {
+      system_prompt: systemPrompt,
+      model_name: chooseModel,
+      model: chooseModelApi,
+      temperature: temperature,
+      top_p: top_p,
+    };
+
+    // Convert settings object to a Base64-encoded string
+    const settingsString = JSON.stringify(settings);
+    const encodedSettings = btoa(settingsString);
+
+    // Get the base URL dynamically
+    const baseURL = window.location.origin;
+
+    // Create the full URL with encoded settings
+    const url = `${baseURL}/chat?settings=${encodedSettings}`;
+
+    // Attempt to copy the URL to the clipboard or use the fallback
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        notifySuccess("URL copied successfully");
+      })
+      .catch((err) => {
+        console.error("Failed to copy text: ", err);
+      });
+  };
+
   return (
     <>
-      <div className="flex flex-col sm:flex-row h-full gap-3 sm:pt-2 sm:justify-between relative overflow-y-auto">
-        {/* Header component used with the same code */}
-        <div className="flex flex-col">
-          {/* Select input for model mobile */}
-          <div
-            className={`w-full px-1 justify-between flex sm:hidden gap-4 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark`}
-          >
-            {/* Help icon */}
-            <div className="flex items-center min-w-[100px]">
-              {/* Chat AI Logo */}
-              <Link to={"/"}>
-                <img
-                  className="cursor-pointer h-[40px] object-contain"
-                  src={Logo}
-                />
-              </Link>
-            </div>
-            {/* Select input */}
-            <div
-              className="relative flex index"
-              ref={dropdownRef}
-              tabIndex={0}
-              onBlur={() => setIsOpen(false)}
-            >
-              <div
-                className="text-tertiary max-w-[160px] flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
-                onClick={toggleOpen}
-              >
-                <p className="text-ellipsis overflow-hidden whitespace-nowrap">
-                  {chooseModel}
-                </p>
-              </div>
-              {isOpen && (
-                <div
-                  className={`absolute z-[999] w-full top-full shadow-lg dark:shadow-dark rounded-2xl border-opacity-10 border dark:border-border_dark `}
-                >
-                  {modelList.map((option, index) => (
-                    <div
-                      key={index}
-                      className="bg-white dark:bg-bg_secondary_dark text-tertiary block text-xl w-full p-2 "
-                      onClick={() => handleChangeModel(option)}
-                    >
-                      {option.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="cursor-pointer w-[30px] flex items-center">
-                <img
-                  src={help}
-                  alt="help"
-                  className="h-[30px] w-[30px] cursor-pointer"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setShowHelpModel(true);
-                  }}
-                />
-              </div>
-            </div>
-            {/* Toggle button for theme */}
-            <div className="cursor-pointer flex items-center">
-              <button className="h-[30px] w-[30px]" onClick={toggleDarkMode}>
-                {isDarkMode ? (
-                  <img
-                    className="cursor-pointer h-[30px] w-[30px]"
-                    src={Light}
-                  />
-                ) : (
-                  <img
-                    className="cursor-pointer h-[30px] w-[30px] -rotate-45"
-                    src={Dark}
-                  />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
+      <div className="flex flex-col sm:flex-row h-full gap-3 sm:p-2 sm:pb-0 sm:justify-between relative overflow-y-auto">
         <div className="flex flex-col sm:flex-row h-full gap-3 sm:justify-between relative sm:p-0 px-2 w-full sm:pb-2 pb-2 bg-bg_light dark:bg-bg_dark">
           {/* Response section */}
           <div
@@ -1750,7 +1849,7 @@ function Prompt() {
               ) : null}
             </div>
 
-            <div className="sm:static flex justify-center absolute bottom-0 sm:w-full w-[calc(100%-16px)] shadow-lg dark:shadow-dark">
+            <div className="sm:static flex justify-center absolute bottom-0 w-full shadow-lg dark:shadow-dark">
               {showAdvOpt ? (
                 <div className="flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
                   {/* Select model */}
@@ -1848,7 +1947,7 @@ function Prompt() {
                                 onClick={() => setShowCustomHelpModel(true)}
                               />
                             </div>
-                            <div className="mx-2 w-full">
+                            <div className="w-full">
                               <div className="relative w-full">
                                 {/* Labels for guidance */}
                                 <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
@@ -1906,7 +2005,7 @@ function Prompt() {
                                 onClick={() => setShowTpopHelpModel(true)}
                               />
                             </div>
-                            <div className="mx-2 w-full">
+                            <div className="w-full">
                               <div className="relative w-full">
                                 {/* Labels for guidance */}
                                 <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
@@ -2006,47 +2105,85 @@ function Prompt() {
                           </div>
 
                           {/* Submit button */}
-                          <div className="flex md:justify-end gap-2 items-center w-full">
+                          <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
                             <div
-                              className="flex gap-4 items-center justify-center select-none w-full"
-                              onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                              // className="flex gap-2 md:gap-4 items-center justify-center w-full md:w-auto select-none"
+                              className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
+                              onClick={toggleAdvOpt} // Click handler to toggle advanced options
                             >
-                              <p className="text-[18px] h-full text-tertiary cursor-pointer">
+                              {/* Text for large screens */}
+                              <p className="hidden md:block text-[18px] h-full text-tertiary cursor-pointer">
                                 <Trans i18nKey="description.text9"></Trans>
-                              </p>{" "}
+                              </p>
+                              {/* Text for small screens */}
+                              <p className="block md:hidden text-[18px] h-full text-tertiary cursor-pointer">
+                                <Trans i18nKey="description.text10"></Trans>
+                              </p>
                             </div>
-                            {/* <button
-                              className="text-white p-3 bg-tertiary dark:border-border_dark md:hidden rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full select-none "
-                              type="reset"
-                              onClick={toggleAdvOpt}
-                            >
-                              <Trans i18nKey="description.save"></Trans>
-                            </button> */}
-                            {/* Opens clear cache model */}
+
+                            {/* Share settings button */}
                             <button
-                              className="text-white p-3 bg-red-600 dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border min-w-[130px] select-none "
+                              className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
                               type="reset"
-                              onClick={() => {
-                                setShowCacheModel(true);
-                              }}
+                              onClick={handleShareSettings}
                             >
-                              <Trans i18nKey="description.custom8"></Trans>
+                              {/* Text for large screens */}
+                              <div className="hidden md:block">
+                                <Trans i18nKey="description.custom9"></Trans>
+                              </div>
+                              {/* Icon for large screens */}
+                              <img
+                                src={share_icon}
+                                alt="share_icon"
+                                className="hidden md:block h-[20px] w-[20px] cursor-pointer"
+                              />
+                              {/* Icon for small screens */}
+                              <img
+                                src={share_icon}
+                                alt="share_icon"
+                                className="block md:hidden h-[30px] w-[30px] cursor-pointer"
+                              />
                             </button>
-                            {/* Resets settings, and clears redux */}
+
+                            {/* Clear cache button */}
                             <button
-                              className="text-black p-3 bg-bg_reset_default dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border min-w-[130px] select-none "
+                              className="text-white p-3 bg-red-600 hover:bg-red-550 active:bg-red-700  dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
+                              type="reset"
+                              onClick={() => setShowCacheModel(true)}
+                            >
+                              {/* Text for large screens */}
+                              <div className="hidden md:block">
+                                <Trans i18nKey="description.custom8"></Trans>
+                              </div>
+                              {/* Icon for large screens */}
+                              <img
+                                src={clear_cache}
+                                alt="clear_cache"
+                                className="hidden md:block h-[20px] w-[20px] cursor-pointer"
+                              />
+                              {/* Icon for small screens */}
+                              <img
+                                src={clear_cache}
+                                alt="clear_cache"
+                                className="block md:hidden h-[30px] w-[30px] cursor-pointer"
+                              />
+                            </button>
+
+                            {/* Reset default button */}
+                            <button
+                              className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
+                              type="reset"
                               onClick={resetDefault}
-                              type="reset"
                             >
-                              <Trans i18nKey="description.custom7"></Trans>
+                              {/* Text for large screens */}
+                              <div className="hidden md:block">
+                                <Trans i18nKey="description.custom7"></Trans>
+                              </div>
+                              {/* Text for small screens */}
+                              <div className="block md:hidden">
+                                <Trans i18nKey="description.custom10"></Trans>
+                              </div>
                             </button>
-                            {/* Applies changes */}
-                            {/* <button
-                            className="text-white p-3 bg-tertiary dark:border-border_dark  rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-                            type="submit"
-                          >
-                            <Trans i18nKey="description.custom5"></Trans>
-                          </button> */}
                           </div>
                         </div>
                       </Form>
@@ -2132,7 +2269,7 @@ function Prompt() {
                   </div>
                   <div
                     className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit w-full"
-                    onClick={toggleAdvOpt} // Click handler to toggle dark mode
+                    onClick={toggleAdvOpt} // Click handler to toggle advanced options
                   >
                     <p className="text-[18px] h-full text-tertiary">
                       <Trans i18nKey="description.text6"></Trans>

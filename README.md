@@ -27,7 +27,7 @@ Together these repos provide the entire underyling mechanism for Chat AI, which 
 Note that the web interface provided in this repository can be set up on any device independently from the rest of the architecture, to act solely as a wrapper for an OpenAI-compatible API endpoint. 
 
 <p align="center">
-<img alt="Web Interface" src="assets/example.jpg" width="100%">
+<img alt="Web Interface" src="assets/example.png" width="100%">
 </p>
 
 ## Getting started
