@@ -1217,6 +1217,7 @@ function Prompt() {
       // Apply the settings
       if (system_prompt) {
         formik.setFieldValue("instructions", decodeURIComponent(system_prompt));
+        dispatch(setInstructions(decodeURIComponent(system_prompt)));
       }
       if (model_name) {
         setChooseModel(model_name);
@@ -1281,6 +1282,7 @@ function Prompt() {
           // Set the "instructions" field in Formik using the content of the system message
           if (parsedData[i].content) {
             formik.setFieldValue("instructions", parsedData[i].content);
+            dispatch(setInstructions(parsedData[i].content));
           }
         }
         if (
@@ -1307,6 +1309,7 @@ function Prompt() {
           );
           if (systemMessage && systemMessage.content) {
             formik.setFieldValue("instructions", systemMessage.content);
+            dispatch(setInstructions(systemMessage.content));
           }
           if (parsedData.temperature) {
             setTemperature(parsedData.temperature);
@@ -1329,6 +1332,7 @@ function Prompt() {
           );
           if (systemMessage && systemMessage.content) {
             formik.setFieldValue("instructions", systemMessage.content);
+            dispatch(setInstructions(systemMessage.content));
           }
           processMessages(parsedData);
         } else {
