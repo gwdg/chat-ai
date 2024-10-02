@@ -61,7 +61,7 @@ i18n
             custom5: "Apply",
             custom6: "System prompt is required",
             custom7: "Reset default",
-            custom8: "Clear cache",
+            custom8: "Clear",
             custom9: "Share",
             custom10: "Default",
 
@@ -221,7 +221,7 @@ i18n
             custom5: "Anwenden",
             custom6: "Anweisungen sind erforderlich",
             custom7: "Standard zurücksetzen",
-            custom8: "Cache löschen",
+            custom8: "Löschen",
             custom9: "Teilen",
             custom10: "zurücksetzen",
 
