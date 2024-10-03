@@ -71,6 +71,7 @@ import Help_Model_System from "../model/Help_Model_System";
 import { setTpopGlobal } from "../Redux/actions/tpopAction";
 import Help_Model_Tpop from "../model/Help_Model_Tpop";
 import Clear_History_Model from "../model/Clear_History_Model";
+import Share_Settings_Model from "../model/Share_Settings_Model";
 
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
@@ -96,6 +97,9 @@ function Prompt() {
   const countClose = useSelector((state) => state.count);
   const modelApi = useSelector((state) => state.modelApi);
   const dontShowAgain = useSelector((state) => state.showAgain.dontShowAgain);
+  const dontShowAgainShare = useSelector(
+    (state) => state.showAgainShare.dontShowAgainShare
+  );
   const exportSettings = useSelector(
     (state) => state.exportSettings.exportSettings
   );
@@ -148,6 +152,7 @@ function Prompt() {
   const [isHoveringTpop, setHoveringTpop] = useState(false);
   const [showCacheModel, setShowCacheModel] = useState(false);
   const [showHistoryModel, setShowHistoryModel] = useState(false);
+  const [shareSettingsModel, setShareSettingsModel] = useState(false);
 
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
@@ -1356,6 +1361,14 @@ function Prompt() {
     }
   }, []);
 
+  const handleShareSettingsModel = () => {
+    if (dontShowAgainShare) {
+      handleShareSettings();
+    } else {
+      setShareSettingsModel(true);
+    }
+  };
+
   const handleShareSettings = () => {
     // Ensure instructions are provided
     if (!formik.values.instructions) {
@@ -1394,6 +1407,7 @@ function Prompt() {
       .catch((err) => {
         console.error("Failed to copy text: ", err);
       });
+    setShareSettingsModel(false);
   };
 
   return (
@@ -2125,7 +2139,7 @@ function Prompt() {
                             <button
                               className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
                               type="reset"
-                              onClick={handleShareSettings}
+                              onClick={() => handleShareSettingsModel()}
                             >
                               {/* Text for large screens */}
                               <div className="hidden md:block">
@@ -2375,6 +2389,16 @@ function Prompt() {
           <Clear_History_Model
             showModal={setShowHistoryModel}
             clearHistory={clearHistory}
+          />
+        ) : null}
+      </div>
+
+      {/* Pop-up share settings*/}
+      <div className="">
+        {shareSettingsModel ? (
+          <Share_Settings_Model
+            showModal={setShareSettingsModel}
+            handleShareSettings={handleShareSettings}
           />
         ) : null}
       </div>

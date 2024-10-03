@@ -15,6 +15,7 @@ import selectedArcanaReducer from "./arcanaSelectReducer";
 import tpopReducer from "./tpopReducer";
 import showAgainReducer from "./showAgainReducer";
 import fileIncludeSettings from "./fileIncludeSettings";
+import showAgainShareReducer from "./showAgainShareReducer";
 
 // Combine all reducers into the root reducer
 const rootReducer = combineReducers({
@@ -33,6 +34,7 @@ const rootReducer = combineReducers({
   selectedArcana: selectedArcanaReducer,
   top_p: tpopReducer,
   showAgain: showAgainReducer,
+  showAgainShare: showAgainShareReducer,
   exportSettings: fileIncludeSettings,
 });
 
