@@ -1,5 +1,16 @@
 # Changelog 
 
+## Version: v0.6.1 (04.10.2024)
+
+Features:
+- Sharing model and settings with base64-encoded URL parameter
+- Importing external settings, i.e., personas
+
+UI Updates:
+- Made scrollbar for model selection more visible
+- Fixed header issue on tablet-size screens
+- Improved overall design of options section
+
 ## Version: v0.6.0
 
 ### Memory and Performance Improvements:
