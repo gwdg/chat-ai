@@ -30,6 +30,11 @@ export default {
         bottom: "0 20px 10px -10px rgba(0, 0, 0, 0.1)", // Focused bottom shadow with no spread
         darkBottom: "0 20px 10px -10px rgba(0, 0, 0, 0.2)", // Focused dark mode bottom shadow with no spread
       },
+      screens: {
+        mobile: { max: "800px" }, // Under 800px
+        middle: { min: "801px", max: "1280px" }, // Between 800px and 1280px
+        desktop: { min: "1281px" }, // Above 1280px
+      },
       backgroundImage: () => ({
         "logo-large": "url('../src/assets/Gwdg-logo-neu.png')",
         "logo-small": "url('../src/assets/gwdg.png')",

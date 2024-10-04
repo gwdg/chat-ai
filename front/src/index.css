@@ -369,6 +369,7 @@ html {
   .Toastify__toast-container {
     right: 0px;
     width: 100%;
+    top: 0px;
   }
 }
 

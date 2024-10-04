@@ -174,31 +174,41 @@ function Prompt() {
     }
   };
 
+  const getMinHeight = () => {
+    if (window.innerWidth < 800) {
+      return 80; // 80px for screens smaller than 800px
+    }
+    return 200; // 200px for larger screens
+  };
   // The new height of the element is set to the predefined constant `MIN_HEIGHT_PX`, and it's set in pixels.
   const resetHeight = () => {
     if (textAreaRef.current != null) {
+      const MIN_HEIGHT_PX = getMinHeight(); // Get the min height based on screen size
       textAreaRef.current.style.height = `${MIN_HEIGHT_PX}px`;
     }
   };
 
+  const adjustHeight = () => {
+    if (textAreaRef.current) {
+      textAreaRef.current.style.height = "auto"; // Reset to auto to calculate correct scrollHeight
+      const scrollHeight = Math.min(
+        textAreaRef.current.scrollHeight,
+        MAX_HEIGHT_PX
+      );
+      textAreaRef.current.style.height = `${Math.max(
+        scrollHeight,
+        getMinHeight()
+      )}px`; // Apply minHeight and scrollHeight
+    }
+  };
   // Onchange function for textarea
   const handleChange = (event) => {
     setPrompt(event.target.value);
 
     if (event.target.value === "") {
-      resetHeight();
+      resetHeight(); // Reset when empty
     } else {
-      // Reset the height to auto
-      textAreaRef.current.style.height = "auto";
-
-      // Get the scrollHeight, capped at MAX_HEIGHT_PX
-      let scrollHeight = Math.min(
-        textAreaRef.current.scrollHeight,
-        MAX_HEIGHT_PX
-      );
-
-      // Set the height to the scrollHeight
-      textAreaRef.current.style.height = `${scrollHeight}px`;
+      adjustHeight(); // Dynamically adjust when typing
     }
   };
 
@@ -578,10 +588,11 @@ function Prompt() {
   // Handles retrying the conversation
   const handleRetry = (e) => {
     e.preventDefault();
-    if (responses[responses.length - 1].prompt.length >= 300) {
-      textAreaRef.current.style.height = `${MAX_HEIGHT_PX}px`;
-    }
     setPrompt(responses[responses.length - 1].prompt);
+
+    setTimeout(() => {
+      adjustHeight(); // Adjust height after refilling the textarea
+    }, 0);
 
     setConversation((conversation) => {
       const newArray = conversation.slice(0, conversation.length - 2);
@@ -1413,10 +1424,10 @@ function Prompt() {
   return (
     <>
       <div className="flex flex-col sm:flex-row h-full gap-3 sm:p-2 sm:pb-0 sm:justify-between relative overflow-y-auto">
-        <div className="flex flex-col sm:flex-row h-full gap-3 sm:justify-between relative sm:p-0 px-2 w-full sm:pb-2 pb-2 bg-bg_light dark:bg-bg_dark">
+        <div className="flex mobile:flex-col flex-row h-full gap-3 sm:justify-between relative sm:p-0 px-2 w-full sm:pb-2 pb-2 bg-bg_light dark:bg-bg_dark">
           {/* Response section */}
           <div
-            className={`sm:max-h-full sm:h-full h-full flex flex-col relative sm:w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
+            className={`desktop:max-h-full h-full flex flex-col relative mobile:w-full w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
           >
             {/* Note model */}
             {showModel && count < 3 ? (
@@ -1480,7 +1491,7 @@ function Prompt() {
                       <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
                         <textarea
                           ref={(el) => (textareaRefs.current[index] = el)} // Attach ref to textarea
-                          className="no-scrollbar outline-none text-xl max-h-[350px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                          className=" outline-none text-xl max-h-[350px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
                           value={editedText}
                           onChange={(e) => setEditedText(e.target.value)}
                           onKeyDown={(event) => {
@@ -1673,11 +1684,11 @@ function Prompt() {
           </div>
 
           {/* Prompt section */}
-          <div className="sm:w-[40%] flex flex-col dark:text-white text-black h-fit justify-between sm:h-full no-scrollbar sm:overflow-y-auto sm:gap-3 relative rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
+          <div className="mobile:w-full w-[40%] flex flex-col dark:text-white text-black mobile:h-fit justify-between h-full  mobile:min-h-[145px] sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
             <div className="flex flex-col gap-4 w-full">
               <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
                 <textarea
-                  className="no-scrollbar p-4 outline-none text-xl max-h-[350px] sm:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                  className=" p-4 outline-none text-xl max-h-[350px] mobile:min-h-0 middle:min-h-[200px] desktop:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
                   value={prompt}
                   ref={textAreaRef}
                   name="prompt"
@@ -1716,7 +1727,7 @@ function Prompt() {
                   ) : null}
                   <div className="flex gap-4 w-full justify-end items-center">
                     <button
-                      className="sm:hidden flex h-[30px] w-[30px] cursor-pointer"
+                      className="hidden mobile:flex h-[30px] w-[30px] cursor-pointer"
                       onClick={toggleAdvOpt}
                     >
                       <img
@@ -1863,11 +1874,11 @@ function Prompt() {
               ) : null}
             </div>
 
-            <div className="sm:static flex justify-center absolute bottom-0 w-full shadow-lg dark:shadow-dark">
+            <div className="static flex justify-center mobile:absolute bottom-0 sm:w-full w-[calc(100%-12px)] shadow-lg dark:shadow-dark">
               {showAdvOpt ? (
                 <div className="flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
                   {/* Select model */}
-                  <div className="md:flex flex-col hidden gap-4">
+                  <div className="flex flex-col mobile:hidden gap-4">
                     {/* Select input for model for desktop */}
                     <div className="flex items-center gap-4 select-none">
                       <div className="flex-shrink-0 flex items-center gap-2">
@@ -1890,11 +1901,11 @@ function Prompt() {
                         onBlur={() => setIsOpen(false)}
                       >
                         <div
-                          className="text-tertiary block mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                          className="text-tertiary flex justify-between mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
                           onClick={toggleOpen}
                         >
-                          {chooseModel}
-                          <div className="absolute right-0 flex items-center pr-[10px]  bottom-2 ">
+                          <p>{chooseModel}</p>
+                          <div className="flex items-center">
                             <img
                               src={dropdown}
                               alt="drop-down"
@@ -2081,7 +2092,7 @@ function Prompt() {
                             <div className="w-full relative">
                               <div className="relative z-10">
                                 <textarea
-                                  className={`no-scrollbar dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                                  className={` dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
                                   type="text"
                                   name="instructions"
                                   placeholder={t("description.custom4")}
@@ -2126,11 +2137,11 @@ function Prompt() {
                               onClick={toggleAdvOpt} // Click handler to toggle advanced options
                             >
                               {/* Text for large screens */}
-                              <p className="hidden md:block text-[18px] h-full text-tertiary cursor-pointer">
+                              <p className="hidden desktop:block text-[18px] h-full text-tertiary cursor-pointer">
                                 <Trans i18nKey="description.text9"></Trans>
                               </p>
                               {/* Text for small screens */}
-                              <p className="block md:hidden text-[18px] h-full text-tertiary cursor-pointer">
+                              <p className="block desktop:hidden text-[18px] h-full text-tertiary cursor-pointer">
                                 <Trans i18nKey="description.text10"></Trans>
                               </p>
                             </div>
@@ -2142,20 +2153,20 @@ function Prompt() {
                               onClick={() => handleShareSettingsModel()}
                             >
                               {/* Text for large screens */}
-                              <div className="hidden md:block">
+                              <div className="hidden desktop:block">
                                 <Trans i18nKey="description.custom9"></Trans>
                               </div>
                               {/* Icon for large screens */}
                               <img
                                 src={share_icon}
                                 alt="share_icon"
-                                className="hidden md:block h-[20px] w-[20px] cursor-pointer"
+                                className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
                               />
                               {/* Icon for small screens */}
                               <img
                                 src={share_icon}
                                 alt="share_icon"
-                                className="block md:hidden h-[30px] w-[30px] cursor-pointer"
+                                className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
                               />
                             </button>
 
@@ -2166,20 +2177,20 @@ function Prompt() {
                               onClick={() => setShowCacheModel(true)}
                             >
                               {/* Text for large screens */}
-                              <div className="hidden md:block">
+                              <div className="hidden desktop:block">
                                 <Trans i18nKey="description.custom8"></Trans>
                               </div>
                               {/* Icon for large screens */}
                               <img
                                 src={clear_cache}
                                 alt="clear_cache"
-                                className="hidden md:block h-[20px] w-[20px] cursor-pointer"
+                                className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
                               />
                               {/* Icon for small screens */}
                               <img
                                 src={clear_cache}
                                 alt="clear_cache"
-                                className="block md:hidden h-[30px] w-[30px] cursor-pointer"
+                                className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
                               />
                             </button>
 
@@ -2190,11 +2201,11 @@ function Prompt() {
                               onClick={resetDefault}
                             >
                               {/* Text for large screens */}
-                              <div className="hidden md:block">
+                              <div className="hidden desktop:block">
                                 <Trans i18nKey="description.custom7"></Trans>
                               </div>
                               {/* Text for small screens */}
-                              <div className="block md:hidden">
+                              <div className="block desktop:hidden">
                                 <Trans i18nKey="description.custom10"></Trans>
                               </div>
                             </button>
@@ -2205,9 +2216,9 @@ function Prompt() {
                   </div>{" "}
                 </div>
               ) : (
-                <div className="sm:flex hidden flex-col gap-4 sm:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
+                <div className="flex mobile:hidden flex-col gap-4 sm:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
                   {/* Select model */}
-                  <div className="md:flex flex-col hidden gap-4">
+                  <div className="sm:flex flex-col hidden gap-4">
                     {/* Select input for model for desktop */}
                     <div className="flex items-center gap-4 select-none">
                       <div className="flex-shrink-0 flex items-center gap-2">
@@ -2230,11 +2241,11 @@ function Prompt() {
                         onBlur={() => setIsOpen(false)}
                       >
                         <div
-                          className="text-tertiary block mt-1 cursor-pointer text-xl w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                          className="text-tertiary flex justify-between mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
                           onClick={toggleOpen}
                         >
-                          {chooseModel}
-                          <div className="absolute right-0 flex items-center pr-[10px]  bottom-2 ">
+                          <p>{chooseModel}</p>
+                          <div className="flex items-center">
                             <img
                               src={dropdown}
                               alt="drop-down"
@@ -2246,7 +2257,7 @@ function Prompt() {
                           <div
                             className={`absolute w-full ${
                               direction === "up" ? "bottom-full" : "top-full"
-                            } rounded-2xl border-opacity-10 border dark:border-border_dark z-[99]`}
+                            } rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto`}
                           >
                             {modelList.map((option, index) => (
                               <div

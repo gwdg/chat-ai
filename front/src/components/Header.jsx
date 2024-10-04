@@ -126,7 +126,7 @@ function Header() {
     <>
       {/* Desktop Header */}
       <nav
-        className={`top-0 min-h-[60px] px-3 items-center justify-between left-0 hidden md:flex z-[9999] w-full bg-white dark:bg-black shadow-lg`}
+        className={`top-0 min-h-[60px] px-3 items-center justify-between left-0 mobile:hidden flex z-[9999] w-full bg-white dark:bg-black shadow-lg`}
         style={{
           paddingBottom: "env(safe-area-inset-bottom)",
           paddingTop: "env(safe-area-inset-top)",
@@ -135,7 +135,7 @@ function Header() {
         <div className="flex gap-4 items-center">
           {/* Toggle button for theme */}
           <button
-            className="md:border-r-primary md:border-r-2 pr-4 h-[48px] w-[48px]"
+            className="sm:border-r-primary sm:border-r-2 pr-4 h-[48px] w-[48px]"
             onClick={toggleDarkMode}
           >
             {isDarkMode ? (
@@ -156,7 +156,7 @@ function Header() {
           {/* Chat AI Logo */}
           <Link to={"/"}>
             <img
-              className="cursor-pointer md:h-[40px] md:w-[125px] h-[35px] w-[130px]"
+              className="cursor-pointer sm:h-[40px] sm:w-[125px] h-[35px] w-[130px]"
               src={Logo}
               alt="Chat AI Logo"
             />
@@ -167,13 +167,13 @@ function Header() {
           {/* Kisski logo */}
           <div className="pr-2">
             <Link to={"https://kisski.gwdg.de/"} target="_blank">
-              <div className="md:bg-kisski-logo-large bg-kisski-logo-small md:h-[45px] md:w-[145px] h-[60px] w-[60px] bg-repeat-round"></div>
+              <div className="sm:bg-kisski-logo-large bg-kisski-logo-small sm:h-[45px] sm:w-[145px] h-[60px] w-[60px] bg-repeat-round"></div>
             </Link>
           </div>
           {/* GWDG logo */}
           <div className="border-l-2 border-primary pl-2">
             <Link to={"https://gwdg.de/"} target="_blank">
-              <div className="md:bg-logo-large bg-logo-small md:h-[45px] md:w-[145px] h-[60px] w-[60px] bg-repeat-round"></div>
+              <div className="sm:bg-logo-large bg-logo-small sm:h-[45px] sm:w-[145px] h-[60px] w-[60px] bg-repeat-round"></div>
             </Link>
           </div>
         </div>
@@ -181,9 +181,9 @@ function Header() {
 
       {/* Mobile Header */}
       <nav
-        className={`top-0 left-0 md:hidden ${
+        className={`top-0 left-0 hidden ${
           isIOSChrome ? "fixed" : ""
-        } flex z-[9999] w-full h-[60px] md:h-[90px] bg-white dark:bg-black shadow-lg`}
+        } mobile:flex z-[9999] w-full h-[60px] bg-white dark:bg-black shadow-lg`}
         style={{
           paddingBottom: "env(safe-area-inset-bottom)",
           paddingTop: "env(safe-area-inset-top)",
@@ -191,7 +191,7 @@ function Header() {
       >
         {/* Select input for model mobile */}
         <div
-          className={`w-full px-1 justify-between flex sm:hidden gap-4 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark relative`}
+          className={`w-full px-1 justify-between flex gap-4 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark relative`}
         >
           {/* Help icon */}
           <div className="flex items-center min-w-[100px]">
@@ -212,7 +212,7 @@ function Header() {
             onBlur={() => setIsOpen(false)}
           >
             <div
-              className="text-tertiary max-w-[250px] flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
+              className="text-tertiary sm:max-w-none max-w-[250px] flex-grow flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
               onClick={toggleOpen}
             >
               <p className="text-ellipsis text-xl overflow-hidden whitespace-nowrap">
@@ -222,7 +222,7 @@ function Header() {
 
             {isOpen && (
               <div
-                className={`absolute z-[999] w-full left-0 top-full shadow-lg dark:shadow-dark rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark max-h-[250px] overflow-y-scroll`}
+                className={`absolute z-[999] w-full left-0 top-full shadow-lg dark:shadow-dark rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark max-h-[250px] overflow-y-auto`}
               >
                 {modelList.map((option, index) => (
                   <div
@@ -236,7 +236,7 @@ function Header() {
               </div>
             )}
 
-            <div className="cursor-pointer w-[25px] flex items-center">
+            <div className="cursor-pointer flex-shrink-0 w-[25px] flex items-center">
               <img
                 src={help}
                 alt="help"

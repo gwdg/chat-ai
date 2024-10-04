@@ -12,7 +12,7 @@ const Table = ({ data, handleDeleteFile }) => {
   return (
     <div className="relative">
       <div className="rounded-2xl border dark:border-border_dark shadow-lg bg-white dark:bg-black dark:text-white text-black w-full max-h-[300px] overflow-hidden">
-        <div className="overflow-y-auto max-h-[250px] no-scrollbar">
+        <div className="overflow-y-auto max-h-[250px] ">
           <table {...getTableProps()} className="w-full table-fixed">
             <thead className="bg-white dark:bg-black dark:border-border_dark border-b sticky top-0 z-10">
               {headerGroups.map((headerGroup, headerGroupIndex) => (

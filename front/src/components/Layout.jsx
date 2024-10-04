@@ -58,7 +58,7 @@ function Layout(props) {
 
   return (
     // Main layout container
-    <div className="flex flex-col min-h-screen relative no-scrollbar h-full">
+    <div className="flex flex-col min-h-screen relative  h-full">
       {/* Announcement bar */}
       {/* {showAnnc && count < 3 ? (
         <AnnouncementBar anncCounter={anncCounter} />
