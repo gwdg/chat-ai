@@ -1,5 +1,8 @@
 # Changelog 
 
+## Version: v0.6.2 (10.10.2024)
+- Updated models API endpoint to /models
+
 ## Version: v0.6.1 (04.10.2024)
 
 Features:
