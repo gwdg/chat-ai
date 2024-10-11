@@ -118,7 +118,8 @@ i18n
             undo: "Undo",
             import: "Import",
             clear: "Clear",
-            upload: "Attach",
+            upload: "Attach Text",
+            attachImage: "Attach Image",
             pause: "Abort",
             send: "Send",
             stop: "Stop",
@@ -173,6 +174,7 @@ i18n
             dont_show_again: "Don't show this again",
 
             exportSettings: "Include model and options",
+            exportImages: "Include images",
             exportSettings1:
               "This feature creates a shareable link for your chosen model, system prompt, and settings. Any user who opens this link will be able to use the same configuration in their own conversations. Please note that your conversation history will not be shared.",
             exportSettings2: "Share",
@@ -282,7 +284,8 @@ i18n
             undo: "Rückgängig",
             import: "Importieren",
             clear: "Löschen",
-            upload: "Anhängen.",
+            upload: "Text Anhängen",
+            attachImage: "Bild Anhängen",
             pause: "Abbrechen",
             send: "Senden",
             stop: "Anhalten",
@@ -339,6 +342,7 @@ i18n
             dont_show_again: "Zeigen Sie das nicht mehr",
 
             exportSettings: "Modell und Optionen einbeziehen",
+            exportImages: "Bilder einbeziehen",
             exportSettings1:
               "Mit dieser Funktion wird ein Link für das von Ihnen gewählte Modell, die Systemansage und die Einstellungen erstellt, der gemeinsam genutzt werden kann. Jeder Benutzer, der diesen Link öffnet, kann dieselbe Konfiguration in seinen eigenen Unterhaltungen verwenden. Bitte beachten Sie, dass Ihr Gesprächsverlauf nicht freigegeben wird.",
             exportSettings2: "Teilen Sie",

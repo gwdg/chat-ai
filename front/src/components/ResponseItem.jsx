@@ -73,10 +73,7 @@ const ResponseItem = React.memo(
           // Show "Try Again" if no response and not loading for non-last responses
           <div className="flex gap-2">
             <p>Try Again</p>
-            <button
-              onClick={(e) => handleRetryError(index, e)}
-              disabled={loading}
-            >
+            <button onClick={() => handleRetryError(index)} disabled={loading}>
               <img src={retry} alt="Retry" />
             </button>
           </div>

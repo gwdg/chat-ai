@@ -11,7 +11,8 @@ async function getDataFromLLM(
   setConversation,
   setShowModelSession,
   setPrompt,
-  setShowBadRequest
+  setShowBadRequest,
+  updatedConversation
 ) {
   try {
     const instructModels = ["mixtral-8x7b-instruct"];
@@ -28,13 +29,13 @@ async function getDataFromLLM(
           ? [
               {
                 role: "user",
-                content: customInstructions + "\n" + conversation[1].content,
+                content: customInstructions + "\n" + updatedConversation[1].content,
               },
-              ...conversation.slice(2),
+              ...updatedConversation.slice(2),
             ]
           : [
               { role: "system", content: customInstructions },
-              ...conversation.slice(1),
+              ...updatedConversation.slice(1),
             ],
         temperature: temperatureGlobal,
         top_p: tpopGlobal,
