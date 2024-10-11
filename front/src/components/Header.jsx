@@ -50,28 +50,6 @@ function Header() {
   );
   const dropdownRef = useRef(null);
 
-  // Toggle open for dropdown
-  const toggleOpen = () => setIsOpen((prev) => !prev);
-
-  const handleChangeModel = (option) => {
-    setChooseModel(option.name);
-    setChooseModelApi(option.id);
-    setIsImageSupported(option.input.includes("image"));
-    setIsModelReady(option.status === "ready");
-    dispatch(setModel(option.name));
-    dispatch(setModelApiGlobal(option.id));
-    setIsOpen(false);
-  };
-
-  // Displays an error notification
-  const notifyError = (message) => {
-    toast.error(message, {
-      className: toastClass,
-      autoClose: 1000,
-      onClose: () => {},
-    });
-  };
-
   // Get model list
   useEffect(() => {
     const fetchData = async () => {
@@ -85,6 +63,39 @@ function Header() {
 
     fetchData();
   }, []);
+
+  // Toggle open for dropdown
+  const toggleOpen = () => setIsOpen((prev) => !prev);
+
+  const handleChangeModel = (option) => {
+    setChooseModel(option.name);
+    setChooseModelApi(option.id);
+    setIsImageSupported(option.input.includes("image"));
+    setIsModelReady(option.status === "ready");
+    dispatch(setModel(option.name));
+    dispatch(setModelApiGlobal(option.id));
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    if (modelList?.length > 0) {
+      console.log(modelList);
+      const currentModel = modelList?.find((modelX) => modelX.name === model);
+      setChooseModel(currentModel.name);
+      setChooseModelApi(currentModel.id);
+      setIsImageSupported(currentModel.input.includes("image"));
+      setIsModelReady(currentModel.status === "ready");
+    }
+  }, [model]);
+
+  // Displays an error notification
+  const notifyError = (message) => {
+    toast.error(message, {
+      className: toastClass,
+      autoClose: 1000,
+      onClose: () => {},
+    });
+  };
 
   // Update isImageSupported whenever modelList changes
   useEffect(() => {
@@ -247,7 +258,9 @@ function Header() {
                   }`}
                 ></div>{" "}
                 {/* This is for phone */}
-                <div className="text-ellipsis max-w-[200px] text-xl overflow-hidden whitespace-nowrap">{chooseModel}</div>
+                <div className="text-ellipsis max-w-[200px] text-xl overflow-hidden whitespace-nowrap">
+                  {chooseModel}
+                </div>
                 {isImageSupported ? (
                   <img
                     src={image_supported}
