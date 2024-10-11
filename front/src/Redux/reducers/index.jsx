@@ -16,6 +16,7 @@ import tpopReducer from "./tpopReducer";
 import showAgainReducer from "./showAgainReducer";
 import fileIncludeSettings from "./fileIncludeSettings";
 import showAgainShareReducer from "./showAgainShareReducer";
+import imageIncludeReducer from "./imageIncludeReducer";
 
 // Combine all reducers into the root reducer
 const rootReducer = combineReducers({
@@ -36,6 +37,7 @@ const rootReducer = combineReducers({
   showAgain: showAgainReducer,
   showAgainShare: showAgainShareReducer,
   exportSettings: fileIncludeSettings,
+  exportImage: imageIncludeReducer,
 });
 
 export default rootReducer;

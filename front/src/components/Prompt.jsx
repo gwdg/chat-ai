@@ -28,6 +28,7 @@ import clear from "../assets/cross_icon.svg";
 import export_icon from "../assets/export_icon.svg";
 import import_icon from "../assets/import_icon.svg";
 import settings_icon from "../assets/Settings_Icon.svg";
+import image_icon from "../assets/icon_image.svg";
 import share_icon from "../assets/share_icon.svg";
 import clear_cache from "../assets/clear_cache.svg";
 import send from "../assets/icon_send.svg";
@@ -37,6 +38,8 @@ import dropdown from "../assets/icon_dropdown.svg";
 
 // import advanced_settings_arrow from "../assets/advanced_settings_arrow.svg";
 import help from "../assets/icon_help.svg";
+import no_image_supported from "../assets/no_image_supported.svg";
+import image_supported from "../assets/image_supported.svg";
 import cross from "../assets/cross.svg";
 import mic from "../assets/icon_mic.svg";
 import stop from "../assets/stop_listening.svg";
@@ -103,6 +106,7 @@ function Prompt() {
   const exportSettings = useSelector(
     (state) => state.exportSettings.exportSettings
   );
+  const exportImage = useSelector((state) => state.exportImage.exportImage);
 
   //Theme for toast
   let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
@@ -153,12 +157,22 @@ function Prompt() {
   const [showCacheModel, setShowCacheModel] = useState(false);
   const [showHistoryModel, setShowHistoryModel] = useState(false);
   const [shareSettingsModel, setShareSettingsModel] = useState(false);
-
+  const [isImageSupported, setIsImageSupported] = useState(
+    modelList?.some(
+      (modelX) => modelX.name === model && modelX.input.includes("image")
+    )
+  );
+  const [isModelReady, setIsModelReady] = useState(
+    modelList?.some(
+      (modelX) => modelX.name === model && modelX.status === "ready"
+    )
+  );
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
   );
 
   const hiddenFileInput = useRef(null);
+  const hiddenFileInputImage = useRef(null);
   const hiddenFileInputJSON = useRef(null);
   const messagesEndRef = useRef(null);
   const textAreaRef = useRef(null);
@@ -241,6 +255,30 @@ function Prompt() {
     dispatch(setConversationGlobal(conversation));
   }, [conversation]);
 
+  useEffect(() => {
+    dispatch(setTemperatureGlobal(temperature));
+  }, [temperature]);
+
+  useEffect(() => {
+    dispatch(setTpopGlobal(top_p));
+  }, [top_p]);
+
+  useEffect(() => {
+    dispatch(setModel(chooseModel));
+    const imageSupport = modelList.some(
+      (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
+    );
+    const modelReady = modelList.some(
+      (modelX) => modelX.name === chooseModel && modelX.status === "ready"
+    );
+    setIsModelReady(modelReady);
+    setIsImageSupported(imageSupport);
+  }, [chooseModel]);
+
+  useEffect(() => {
+    dispatch(setModelApiGlobal(chooseModelApi));
+  }, [chooseModelApi]);
+
   // Triggers getRes function if isSubmitting is true
   useEffect(() => {
     if (isSubmitting) {
@@ -309,6 +347,17 @@ function Prompt() {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const imageSupport = modelList.some(
+      (modelX) => modelX.name === model && modelX.input.includes("image")
+    );
+    const modelReady = modelList.some(
+      (modelX) => modelX.name === model && modelX.status === "ready"
+    );
+    setIsModelReady(modelReady);
+    setIsImageSupported(imageSupport);
+  }, [modelList]);
 
   useEffect(() => {
     // If copied icon is shown, revert it back to copy icon after 3 seconds
@@ -390,13 +439,56 @@ function Prompt() {
   async function getRes() {
     setLoading(true);
     resetHeight();
-    setResponses((prevResponses) => [
-      ...prevResponses,
-      {
-        prompt: prompt,
-        response: "",
-      },
-    ]);
+
+    let updatedConversation = [...conversation];
+    const imageSupport = modelList.some(
+      (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
+    );
+
+    // Remove image part from the conversation if model doesn't support images
+    if (!imageSupport) {
+      updatedConversation = updatedConversation.map((message) => {
+        if (message.role === "user" && Array.isArray(message.content)) {
+          return {
+            role: "user",
+            content: message.content
+              .filter((item) => item.type === "text")
+              .map((item) => item.text)
+              .join("\n"),
+          };
+        }
+        return message;
+      });
+    }
+
+    if (selectedFiles.length > 0) {
+      const imageFiles = selectedFiles.filter((file) => file.type === "image"); // filter image files
+
+      const imageContent = imageFiles.map((imageFile) => ({
+        type: "image_url",
+        image_url: {
+          url: imageFile.text,
+        },
+      }));
+
+      setResponses((prevResponses) => [
+        ...prevResponses,
+        {
+          prompt: prompt,
+          images: imageContent,
+          response: "",
+        },
+      ]);
+    } else {
+      setResponses((prevResponses) => [
+        ...prevResponses,
+        {
+          prompt: prompt,
+          response: "",
+        },
+      ]);
+    }
+
     setPrompt("");
     try {
       const response = await getDataFromLLM(
@@ -409,7 +501,8 @@ function Prompt() {
         setConversation,
         setShowModelSession,
         setPrompt,
-        setShowBadRequest
+        setShowBadRequest,
+        updatedConversation
       );
 
       setIsSubmitting(false);
@@ -441,7 +534,6 @@ function Prompt() {
   const handleResendClick = async (index) => {
     setLoadingResend(true);
 
-    // Check if the index is valid
     if (index < 0 || index >= responses.length) {
       notifyError("Something went wrong");
       setLoadingResend(false);
@@ -454,6 +546,11 @@ function Prompt() {
       setLoadingResend(false);
       return;
     }
+    let imageFiles = [];
+
+    if (responses[index]?.images?.length > 0) {
+      imageFiles = responses[index]?.images;
+    }
 
     // Update conversation and responses
     let newConversation = [...conversation].slice(0, index * 2 + 1);
@@ -463,18 +560,58 @@ function Prompt() {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Handle sending the prompt
-    const fullPrompt = currentPrompt;
-    newConversation.push({ role: "user", content: fullPrompt });
+    if (imageFiles?.length > 0) {
+      const newPromptContent = [
+        {
+          type: "text",
+          text: currentPrompt,
+        },
+        ...imageFiles,
+      ];
+      newConversation.push({ role: "user", content: newPromptContent });
+    } else {
+      newConversation.push({ role: "user", content: currentPrompt });
+    }
 
-    setResponses((prevResponses) => [
-      ...prevResponses,
-      {
-        prompt: currentPrompt,
-        response: "",
-      },
-    ]);
-    setConversation(newConversation);
+    if (imageFiles?.length > 0) {
+      setResponses((prevResponses) => [
+        ...prevResponses,
+        {
+          prompt: currentPrompt,
+          images: imageFiles,
+          response: "",
+        },
+      ]);
+    } else {
+      setResponses((prevResponses) => [
+        ...prevResponses,
+        {
+          prompt: currentPrompt,
+          response: "",
+        },
+      ]);
+    }
+
+    let updatedConversation = [...newConversation];
+    const imageSupport = modelList.some(
+      (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
+    );
+
+    // Remove image part from the conversation if model doesn't support images
+    if (!imageSupport) {
+      updatedConversation = updatedConversation.map((message) => {
+        if (message.role === "user" && Array.isArray(message.content)) {
+          return {
+            role: "user",
+            content: message.content
+              .filter((item) => item.type === "text")
+              .map((item) => item.text)
+              .join("\n"),
+          };
+        }
+        return message;
+      });
+    }
 
     try {
       await getDataFromLLM(
@@ -487,7 +624,8 @@ function Prompt() {
         setConversation,
         setShowModelSession,
         setPrompt,
-        setShowBadRequest
+        setShowBadRequest,
+        updatedConversation
       );
       setLoadingResend(false);
     } catch (error) {
@@ -509,29 +647,84 @@ function Prompt() {
   // Save the edited prompt and resend the request
   const handleSave = async (index) => {
     setLoadingResend(true);
+
+    if (index < 0 || index >= responses.length) {
+      notifyError("Something went wrong");
+      setLoadingResend(false);
+      return;
+    }
+
     if (!editedText || !editedText.trim()) {
       notifyError("Prompt cannot be empty!");
       setLoadingResend(false);
       return;
     }
 
+    let imageFiles = [];
+
+    if (responses[index]?.images?.length > 0) {
+      imageFiles = responses[index]?.images;
+    }
+
     let newConversation = [...conversation].slice(0, index * 2 + 1);
     let newResponses = [...responses].slice(0, index);
 
     setResponses(newResponses);
+
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const fullPrompt = editedText;
-    newConversation.push({ role: "user", content: fullPrompt });
+    if (imageFiles?.length > 0) {
+      const newPromptContent = [
+        {
+          type: "text",
+          text: editedText,
+        },
+        ...imageFiles,
+      ];
+      newConversation.push({ role: "user", content: newPromptContent });
+    } else {
+      newConversation.push({ role: "user", content: editedText });
+    }
 
-    setResponses((prevResponses) => [
-      ...prevResponses,
-      {
-        prompt: editedText,
-        response: "",
-      },
-    ]);
-    setConversation(newConversation);
+    if (imageFiles?.length > 0) {
+      setResponses((prevResponses) => [
+        ...prevResponses,
+        {
+          prompt: editedText,
+          images: imageFiles,
+          response: "",
+        },
+      ]);
+    } else {
+      setResponses((prevResponses) => [
+        ...prevResponses,
+        {
+          prompt: editedText,
+          response: "",
+        },
+      ]);
+    }
+
+    let updatedConversation = [...newConversation];
+    const imageSupport = modelList.some(
+      (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
+    );
+
+    // Remove image part from the conversation if model doesn't support images
+    if (!imageSupport) {
+      updatedConversation = updatedConversation.map((message) => {
+        if (message.role === "user" && Array.isArray(message.content)) {
+          return {
+            role: "user",
+            content: message.content
+              .filter((item) => item.type === "text")
+              .map((item) => item.text)
+              .join("\n"),
+          };
+        }
+        return message;
+      });
+    }
 
     try {
       await getDataFromLLM(
@@ -544,7 +737,8 @@ function Prompt() {
         setConversation,
         setShowModelSession,
         setPrompt,
-        setShowBadRequest
+        setShowBadRequest,
+        updatedConversation
       );
       setLoadingResend(false);
     } catch (error) {
@@ -570,14 +764,36 @@ function Prompt() {
     SpeechRecognition.stopListening();
     resetTranscript();
 
+    // Handle files with images
     if (selectedFiles.length > 0) {
-      const allFilesText = selectedFiles
+      const textFiles = selectedFiles.filter((file) => file.type !== "image"); // filter out image files
+      const imageFiles = selectedFiles.filter((file) => file.type === "image"); // filter image files
+
+      const allTextFilesText = textFiles
         .map((file) => `${file.name}: ${file.text}`)
         .join("\n");
 
-      const fullPrompt = `${prompt}\n${allFilesText}`;
+      const fullPrompt = `${prompt}\n${allTextFilesText}`;
 
-      setConversation([...conversation, { role: "user", content: fullPrompt }]);
+      const imageContent = imageFiles.map((imageFile) => ({
+        type: "image_url",
+        image_url: {
+          url: imageFile.text,
+        },
+      }));
+
+      const newPromptContent = [
+        {
+          type: "text",
+          text: fullPrompt,
+        },
+        ...imageContent,
+      ];
+
+      setConversation([
+        ...conversation,
+        { role: "user", content: newPromptContent },
+      ]);
       setIsSubmitting(true);
     } else {
       setConversation([...conversation, { role: "user", content: prompt }]);
@@ -585,10 +801,43 @@ function Prompt() {
     }
   };
 
+  const convertBase64ArrayToImageList = (base64Array) => {
+    const imageFileList = base64Array.map((item, index) => {
+      if (
+        item.type === "image_url" &&
+        item.image_url.url.startsWith("data:image")
+      ) {
+        const base64Data = item.image_url.url;
+        // Extract the name from the base64 string or assign a default name
+        const fileName = `image_${index + 1}`; // You can customize how to generate names if needed
+        const fileSize = atob(base64Data.split(",")[1]).length; // Approximate size calculation
+
+        return {
+          name: fileName,
+          type: "image",
+          size: fileSize,
+          text: base64Data, // The base64 string is what you use as "text"
+        };
+      }
+      return null;
+    });
+
+    return imageFileList.filter(Boolean); // Remove any null items
+  };
+
   // Handles retrying the conversation
   const handleRetry = (e) => {
     e.preventDefault();
+
     setPrompt(responses[responses.length - 1].prompt);
+
+    if (responses[responses.length - 1]?.images?.length > 0) {
+      const imageFileList = convertBase64ArrayToImageList(
+        responses[responses.length - 1].images
+      );
+
+      setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
+    }
 
     setTimeout(() => {
       adjustHeight(); // Adjust height after refilling the textarea
@@ -629,16 +878,50 @@ function Prompt() {
     SpeechRecognition.stopListening();
     resetTranscript();
 
+    // if (selectedFiles.length > 0) {
+    //   const allFilesText = selectedFiles
+    //     .map((file) => `${file.name}: ${file.text}`)
+    //     .join("\n");
+    //   const fullPrompt = `${tempPrompt}\n${allFilesText}`;
+    //   newArray.push({ role: "user", content: fullPrompt });
+    // } else {
+    //   newArray.push({ role: "user", content: tempPrompt });
+    // }
+    // Ali: Handle files with images
     if (selectedFiles.length > 0) {
-      const allFilesText = selectedFiles
+      const textFiles = selectedFiles.filter((file) => file.type !== "image"); // filter out image files
+      const imageFiles = selectedFiles.filter((file) => file.type === "image"); // filter image files
+
+      const allTextFilesText = textFiles
         .map((file) => `${file.name}: ${file.text}`)
         .join("\n");
-      const fullPrompt = `${tempPrompt}\n${allFilesText}`;
-      newArray.push({ role: "user", content: fullPrompt });
-    } else {
-      newArray.push({ role: "user", content: tempPrompt });
-    }
 
+      const fullPrompt = `${prompt}\n${allTextFilesText}`;
+
+      const imageContent = imageFiles.map((imageFile) => ({
+        type: "image_url",
+        image_url: {
+          url: imageFile.text,
+        },
+      }));
+
+      const newPromptContent = [
+        {
+          type: "text",
+          text: fullPrompt,
+        },
+        ...imageContent,
+      ];
+
+      setConversation([
+        ...conversation,
+        { role: "user", content: newPromptContent },
+      ]);
+      setIsSubmitting(true);
+    } else {
+      setConversation([...conversation, { role: "user", content: prompt }]);
+      setIsSubmitting(true);
+    }
     setConversation(newArray);
     setIsSubmitting(true);
   };
@@ -646,8 +929,8 @@ function Prompt() {
   const handleChangeModel = (option) => {
     setChooseModel(option.name);
     setChooseModelApi(option.id);
-    dispatch(setModel(option.name));
-    dispatch(setModelApiGlobal(option.id));
+    setIsImageSupported(option.input.includes("image"));
+    setIsModelReady(option.status === "ready");
     setIsOpen(false);
   };
 
@@ -664,15 +947,24 @@ function Prompt() {
     return `${size.toFixed(2)} ${units[unitIndex]}`;
   }
 
+  const formatCSVText = (csvText) => {
+    const rows = csvText.split("\n");
+    const formattedRows = rows.map((row) => row.split(",").join(" | "));
+    return formattedRows.join("\n");
+  };
+
   // Handles changing files
   const handleFilesChange = async (e) => {
     try {
       const textFiles = Array.from(e.target.files).filter(
         (file) => file.type === "text/plain"
       );
+      const csvFiles = Array.from(e.target.files).filter(
+        (file) => file.type === "text/csv"
+      );
 
-      if (textFiles.length !== e.target.files.length) {
-        notifyError("All files must be text");
+      if (textFiles.length + csvFiles.length !== e.target.files.length) {
+        notifyError("All files must be text or CSV");
       } else {
         notifySuccess("File attached");
       }
@@ -687,7 +979,50 @@ function Prompt() {
         });
       }
 
+      for (const file of csvFiles) {
+        const text = await readFileAsText(file);
+        filesWithText.push({
+          name: file.name,
+          size: file.size,
+          text: formatCSVText(text),
+        });
+      }
+
       setSelectedFiles((prevFiles) => [...prevFiles, ...filesWithText]);
+    } catch (error) {
+      notifyError("An error occurred: ", error);
+    }
+  };
+
+  // Handles changing image files
+  const handleFilesChangeImage = async (e) => {
+    try {
+      const imageFiles = Array.from(e.target.files).filter(
+        (file) =>
+          file.type === "image/jpeg" ||
+          file.type === "image/png" ||
+          file.type === "image/gif" ||
+          file.type === "image/webp"
+      );
+
+      if (imageFiles.length !== e.target.files.length) {
+        notifyError("All files must be images");
+      } else {
+        notifySuccess("File attached");
+      }
+
+      const imageFileList = [];
+      for (const file of imageFiles) {
+        const text = await readFileAsBase64(file);
+        imageFileList.push({
+          name: file.name,
+          type: "image",
+          size: file.size,
+          text,
+        });
+      }
+
+      setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
     } catch (error) {
       notifyError("An error occurred: ", error);
     }
@@ -697,6 +1032,12 @@ function Prompt() {
   const handleClick = () => {
     hiddenFileInput.current.value = null; // Clear the input field prior to previous selections
     hiddenFileInput.current.click();
+  };
+
+  // Handles clicking on the Image file icon
+  const handleClickImage = () => {
+    hiddenFileInputImage.current.value = null; // Clear the input field prior to previous selections
+    hiddenFileInputImage.current.click();
   };
 
   // Handles changing JSON files
@@ -724,7 +1065,6 @@ function Prompt() {
 
       reader.onload = async () => {
         function processMessages(parsedData) {
-          // Your logic to process the array data
           if (
             parsedData.length > 0 &&
             Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
@@ -733,16 +1073,45 @@ function Prompt() {
             let newArray = [];
             for (let i = 0; i < parsedData.length; i++) {
               if (parsedData[i].role === "system") {
-                dispatch(setInstructions(parsedData[i].content));
+                formik.setFieldValue("instructions", parsedData[i].content);
               }
+
               if (
                 parsedData[i].role === "user" &&
                 parsedData[i + 1]?.role === "assistant"
               ) {
-                newArray.push({
-                  prompt: parsedData[i].content,
-                  response: parsedData[i + 1]?.content,
-                });
+                let userContent = parsedData[i].content;
+                let images = [];
+
+                if (Array.isArray(userContent)) {
+                  // Handle case where content contains multiple types (e.g., text and image)
+                  let textContent = "";
+
+                  userContent.forEach((item) => {
+                    if (item.type === "text") {
+                      textContent += item.text + "\n"; // Combine text content if multiple text entries
+                    } else if (item.type === "image_url" && item.image_url) {
+                      images.push({
+                        type: item.type,
+                        image_url: {
+                          url: item.image_url.url,
+                        },
+                      });
+                    }
+                  });
+
+                  newArray.push({
+                    prompt: textContent.trim(), // Trim to avoid extra newlines
+                    images: images,
+                    response: parsedData[i + 1]?.content,
+                  });
+                } else {
+                  // Handle the case where content is plain text
+                  newArray.push({
+                    prompt: userContent,
+                    response: parsedData[i + 1]?.content,
+                  });
+                }
               }
             }
             setResponses(newArray);
@@ -785,8 +1154,6 @@ function Prompt() {
             // Notify the user about the invalid structure
             notifyError("Invalid structure of JSON.");
           }
-
-          // // Ensure parsedData is in the correct format
         } catch (jsonError) {
           notifyError("Invalid JSON file format.");
         }
@@ -821,6 +1188,19 @@ function Prompt() {
     });
   };
 
+  // Reads a file as base64 URL
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64Url = `data:${file.type};base64,${btoa(reader.result)}`;
+        resolve(base64Url);
+      };
+      reader.onerror = reject;
+      reader.readAsBinaryString(file);
+    });
+  };
+
   // Exports conversation to a file
   const exportFile = (value) => {
     // setShowFileModel(true); // Uncomment if you need to show a modal before export
@@ -849,52 +1229,73 @@ function Prompt() {
   const exportTextFile = (conversation) => {
     // Convert conversation JSON to a formatted string
     const textContent = conversation
-      .map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`)
+      .map((msg) => {
+        let contentString = `${msg.role.toUpperCase()}: `;
+
+        // Check if content is an array (i.e., contains text and image types)
+        if (Array.isArray(msg.content)) {
+          msg.content.forEach((item) => {
+            if (item.type === "text") {
+              contentString += `${item.text}\n`; // Add text part
+            } else if (item.type === "image_url") {
+              if (exportImage) {
+                contentString += "[Image]\n"; // Add image placeholder if exportImage is true
+              }
+            }
+          });
+        } else {
+          // For text-only content
+          contentString += msg.content;
+        }
+
+        return contentString;
+      })
       .join("\n\n");
+
+    let finalTextContent = textContent;
 
     if (exportSettings) {
       // Append model information at the end of the text file
       const additionalText = `\n\nSettings used\nmodel-name: ${chooseModel}\nmodel: ${modelApi}\ntemperature: ${temperature}\ntop_p: ${top_p}`;
-
-      // Combine conversation text with additional information
-      const finalTextContent = textContent + additionalText;
-
-      // Create a blob from the final string
-      const blob = new Blob([finalTextContent], { type: "text/plain" });
-
-      // Create a link element
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = generateFileName("txt"); // Set the consistent file name
-
-      // Trigger the download
-      link.click();
-
-      // Clean up the object URL
-      URL.revokeObjectURL(link.href);
-    } else {
-      // If exportSettings is not true, just export the conversation
-      const blob = new Blob([textContent], { type: "text/plain" });
-
-      // Create a link element
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = generateFileName("txt"); // Set the consistent file name
-
-      // Trigger the download
-      link.click();
-
-      // Clean up the object URL
-      URL.revokeObjectURL(link.href);
+      finalTextContent += additionalText;
     }
+
+    // Create a blob from the final string
+    const blob = new Blob([finalTextContent], { type: "text/plain" });
+
+    // Create a link element
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = generateFileName("txt"); // Set the consistent file name
+
+    // Trigger the download
+    link.click();
+
+    // Clean up the object URL
+    URL.revokeObjectURL(link.href);
   };
 
   // Exports conversation to a JSON file
   const exportJSON = (conversation) => {
     try {
-      let exportData = [...conversation]; // Start with the conversation array
+      let exportData = [...conversation];
 
-      // If the checkbox is checked, add the additional settings object at the beginning
+      if (!exportImage) {
+        exportData = exportData.map((msg) => {
+          if (Array.isArray(msg.content)) {
+            // Filter out image content and only keep text
+            let filteredContent = msg.content
+              .filter((item) => item.type === "text")
+              .map((item) => item.text)
+              .join("\n"); // Combine multiple text blocks if needed
+
+            return { ...msg, content: filteredContent }; // Return the modified message
+          }
+          return msg; // If no images, return the message as is
+        });
+      }
+
+      // If the exportSettings is true, include settings at the beginning
       if (exportSettings) {
         const settingsObject = {
           "model-name": chooseModel,
@@ -967,7 +1368,7 @@ function Prompt() {
       doc.text(
         `Page ${pageNumber} of ${totalPages}`,
         pageWidth / 2,
-        pageHeight - 10, // Adjust this placement
+        pageHeight - 10,
         { align: "center" }
       );
     };
@@ -984,7 +1385,26 @@ function Prompt() {
     addHeader(true);
     addPageNumber();
 
-    for (const entry of conversation) {
+    // Modify the conversation based on the exportImage state
+    let conversationData = [...conversation];
+
+    if (!exportImage) {
+      // Remove images from conversation if exportImage is false
+      conversationData = conversationData.map((entry) => {
+        if (Array.isArray(entry.content)) {
+          // Filter out image content and keep text only
+          const filteredContent = entry.content
+            .filter((item) => item.type === "text")
+            .map((item) => item.text)
+            .join("\n"); // Combine text parts
+          return { ...entry, content: filteredContent }; // Return modified entry
+        }
+        return entry; // Return original entry if no image content
+      });
+    }
+
+    // Loop through conversation and render content into PDF
+    for (const entry of conversationData) {
       addNewPageIfNeeded(lineHeight * 2);
 
       // Role
@@ -998,6 +1418,7 @@ function Prompt() {
       doc.setTextColor(0);
 
       if (typeof entry.content === "string") {
+        // Handle text content
         if (entry.content.includes("```")) {
           const parts = entry.content.split(/(```[\s\S]+?```)/);
           for (const part of parts) {
@@ -1046,6 +1467,29 @@ function Prompt() {
             y += lineHeight;
           });
         }
+      } else if (Array.isArray(entry.content) && exportImage) {
+        // Handle entries with both text and images if exportImage is true
+        entry.content.forEach((item) => {
+          if (item.type === "text") {
+            const lines = doc.splitTextToSize(item.text, contentWidth);
+            lines.forEach((line) => {
+              addNewPageIfNeeded(lineHeight);
+              doc.text(line, margin, y);
+              y += lineHeight;
+            });
+          } else if (item.type === "image_url") {
+            addNewPageIfNeeded(lineHeight + 60); // Ensure space for image
+
+            // Render the image - ensure it's base64 encoded or a valid data URI
+            if (item.image_url.url.startsWith("data:image")) {
+              doc.addImage(item.image_url.url, "JPEG", margin, y, 50, 50); // Size can be adjusted
+              y += 60; // Leave space after the image
+            } else {
+              doc.text("[Invalid image format]", margin, y); // Add a placeholder if not base64
+              y += lineHeight;
+            }
+          }
+        });
       } else {
         addNewPageIfNeeded(lineHeight);
         doc.text("Content unavailable", margin, y);
@@ -1113,7 +1557,6 @@ function Prompt() {
     validationSchema: validationSchema,
     onSubmit: async (values) => {
       // Dispatching action to update custom instructions
-      dispatch(setInstructions(values.instructions));
       // navigate("/chat");
       // navigate("/chat", { state: { from: "/custom-instructions" } });
     },
@@ -1122,13 +1565,11 @@ function Prompt() {
   const handleChangeTemp = (newValue) => {
     let numVal = parseFloat(newValue);
     setTemperature(numVal);
-    dispatch(setTemperatureGlobal(numVal));
   };
 
   const handleChangeTpop = (newValue) => {
     let numVal = parseFloat(newValue);
     setTpop(numVal);
-    dispatch(setTpopGlobal(numVal));
   };
 
   const resetDefault = () => {
@@ -1143,9 +1584,6 @@ function Prompt() {
     setTemperature(0.5);
     setTpop(0.5);
     formik.setFieldValue("instructions", "You are a helpful assistant");
-    dispatch(setTemperatureGlobal(0.5));
-    dispatch(setTpopGlobal(0.5));
-    dispatch(setInstructions("You are a helpful assistant"));
   };
 
   const clearCatch = () => {
@@ -1195,7 +1633,6 @@ function Prompt() {
   //     }
   //   });
   //   setConversation(updatedConversation);
-  //   dispatch(setInstructions(formik.values.instructions));
   //   setIsEditingCustom(!isEditingCustom);
   // };
 
@@ -1215,7 +1652,6 @@ function Prompt() {
     });
 
     setConversation(updatedConversation);
-    dispatch(setInstructions(value));
   };
 
   useEffect(() => {
@@ -1233,7 +1669,6 @@ function Prompt() {
       // Apply the settings
       if (system_prompt) {
         formik.setFieldValue("instructions", decodeURIComponent(system_prompt));
-        dispatch(setInstructions(decodeURIComponent(system_prompt)));
       }
       if (model_name) {
         setChooseModel(model_name);
@@ -1298,7 +1733,6 @@ function Prompt() {
           // Set the "instructions" field in Formik using the content of the system message
           if (parsedData[i].content) {
             formik.setFieldValue("instructions", parsedData[i].content);
-            dispatch(setInstructions(parsedData[i].content));
           }
         }
         if (
@@ -1325,7 +1759,6 @@ function Prompt() {
           );
           if (systemMessage && systemMessage.content) {
             formik.setFieldValue("instructions", systemMessage.content);
-            dispatch(setInstructions(systemMessage.content));
           }
           if (parsedData.temperature) {
             setTemperature(parsedData.temperature);
@@ -1348,7 +1781,6 @@ function Prompt() {
           );
           if (systemMessage && systemMessage.content) {
             formik.setFieldValue("instructions", systemMessage.content);
-            dispatch(setInstructions(systemMessage.content));
           }
           processMessages(parsedData);
         } else {
@@ -1420,6 +1852,10 @@ function Prompt() {
       });
     setShareSettingsModel(false);
   };
+
+  useEffect(() => {
+    dispatch(setInstructions(formik.values.instructions));
+  }, [formik.values.instructions]);
 
   return (
     <>
@@ -1572,7 +2008,26 @@ function Prompt() {
                       </div>
                     )}
                   </div>
-
+                  {res?.images?.length > 0 ? (
+                    <div className="flex gap-2 overflow-x-auto items-center p-3">
+                      {res?.images?.map((imageObj, index) => {
+                        if (
+                          imageObj.type === "image_url" &&
+                          imageObj.image_url.url
+                        ) {
+                          return (
+                            <img
+                              key={index}
+                              src={imageObj.image_url.url}
+                              alt="Base64 Image"
+                              className="h-[150px] w-[150px] rounded-2xl object-cover"
+                            />
+                          );
+                        }
+                        return null; // Handle cases where type or URL might be missing
+                      })}
+                    </div>
+                  ) : null}
                   {/* Render additional response item details */}
                   <ResponseItem
                     res={res}
@@ -1739,7 +2194,7 @@ function Prompt() {
                       type="file"
                       ref={hiddenFileInput}
                       multiple
-                      accept=".txt"
+                      accept=".txt, .csv"
                       onChange={handleFilesChange}
                       className="hidden"
                     />
@@ -1755,7 +2210,32 @@ function Prompt() {
                         />
                       </button>
                     </Tooltip>
-
+                    {/* Attach image */}
+                    {isImageSupported ? (
+                      <>
+                        <input
+                          type="file"
+                          ref={hiddenFileInputImage}
+                          multiple
+                          accept=".jpg, .jpeg, .png, .gif, .webp"
+                          onChange={handleFilesChangeImage}
+                          className="hidden"
+                        />
+                        <Tooltip text={t("description.attachImage")}>
+                          {" "}
+                          <button
+                            className="h-[30px] w-[30px] cursor-pointer"
+                            onClick={handleClickImage}
+                            disabled={loading}
+                          >
+                            <img
+                              className="cursor-pointer h-[30px] w-[30px]"
+                              src={image_icon}
+                            />
+                          </button>
+                        </Tooltip>
+                      </>
+                    ) : null}
                     {loading ? (
                       <Tooltip text={t("description.pause")}>
                         <button className="h-[30px] w-[30px] cursor-pointer">
@@ -1850,7 +2330,19 @@ function Prompt() {
                         key={`${file.name}-${index}`}
                         className="cursor-pointer flex gap-2 items-center"
                       >
-                        <img className="h-[30px] w-[30px]" src={uploaded} />
+                        {file.type === "image" ? (
+                          <img
+                            className="h-[30px] w-[30px] rounded-md"
+                            src={file.text}
+                            alt={file.name}
+                          />
+                        ) : (
+                          <img
+                            className="h-[30px] w-[30px]"
+                            src={uploaded}
+                            alt="uploaded"
+                          />
+                        )}
                         <div className="flex justify-between items-center w-full">
                           <div className="flex items-center gap-1 w-full">
                             <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[60%]">
@@ -1904,7 +2396,30 @@ function Prompt() {
                           className="text-tertiary flex justify-between mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
                           onClick={toggleOpen}
                         >
-                          <p>{chooseModel}</p>
+                          <div className="flex gap-2 items-center justify-between w-full">
+                            <div
+                              className={`h-[8px] w-[8px] rounded-full ${
+                                isModelReady ? "bg-green-500" : "bg-red-500"
+                              }`}
+                            ></div>
+                            {/* This is for desktop, when options shown */}
+                            <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">{chooseModel}</div>
+                            {isImageSupported ? (
+                              <img
+                                src={image_supported}
+                                alt="image_supported"
+                                className="h-[20px] w-[20px] cursor-pointer"
+                              />
+                            ) : (
+                              // <img
+                              //   src={no_image_supported}
+                              //   alt="no_image_supported"
+                              //   className="h-[20px] w-[20px] cursor-pointer"
+                              // />
+                              <div></div>
+                            )}
+                            <div className = "flex-grow"></div>
+                          </div>
                           <div className="flex items-center">
                             <img
                               src={dropdown}
@@ -1922,7 +2437,7 @@ function Prompt() {
                             {modelList.map((option, index) => (
                               <div
                                 key={index}
-                                className={`bg-white dark:bg-black text-tertiary block text-xl w-full p-2 cursor-pointer ${
+                                className={`bg-white dark:bg-black text-tertiary flex gap-2 items-center text-xl w-full p-2 cursor-pointer ${
                                   index === 0
                                     ? "rounded-t-2xl" // The first element
                                     : index === modelList.length - 1
@@ -1931,7 +2446,30 @@ function Prompt() {
                                 }`}
                                 onClick={() => handleChangeModel(option)}
                               >
-                                {option.name}
+                                <div
+                                  className={`h-[8px] w-[8px] rounded-full ${
+                                    option.status === "ready"
+                                      ? "bg-green-500"
+                                      : "bg-red-500"
+                                  }`}
+                                ></div>
+                                <div className="flex-grow text-left pl-2">
+                                  {option.name}{" "}
+                                </div>
+                                {option.input.includes("image") ? (
+                                  <img
+                                    src={image_supported}
+                                    alt="image_supported"
+                                    className="h-[20px] w-[20px] cursor-pointer"
+                                  />
+                                ) : (
+                                  // <img
+                                  //   src={no_image_supported}
+                                  //   alt="no_image_supported"
+                                  //   className="h-[20px] w-[20px] cursor-pointer"
+                                  // />
+                                  <div></div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -2244,7 +2782,29 @@ function Prompt() {
                           className="text-tertiary flex justify-between mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
                           onClick={toggleOpen}
                         >
-                          <p>{chooseModel}</p>
+                          <div className="flex gap-2 items-center">
+                            <div
+                              className={`h-[8px] w-[8px] rounded-full ${
+                                isModelReady ? "bg-green-500" : "bg-red-500"
+                              }`}
+                            ></div>{" "}
+                            {/* This is for desktop, when options is hidden */}
+                            <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">{chooseModel}</div>
+                            {isImageSupported ? (
+                              <img
+                                src={image_supported}
+                                alt="image_supported"
+                                className="h-[20px] w-[20px] cursor-pointer"
+                              />
+                            ) : (
+                              // <img
+                              //   src={no_image_supported}
+                              //   alt="no_image_supported"
+                              //   className="h-[20px] w-[20px] cursor-pointer"
+                              // />
+                              <div></div>
+                            )}{" "}
+                          </div>
                           <div className="flex items-center">
                             <img
                               src={dropdown}
@@ -2262,7 +2822,7 @@ function Prompt() {
                             {modelList.map((option, index) => (
                               <div
                                 key={index}
-                                className={`bg-white dark:bg-black text-tertiary block text-xl w-full p-2 cursor-pointer ${
+                                className={`bg-white dark:bg-black flex gap-2 items-center text-tertiary text-xl w-full p-2 cursor-pointer ${
                                   index === 0
                                     ? "rounded-t-2xl" // The first element
                                     : index === modelList.length - 1
@@ -2271,7 +2831,30 @@ function Prompt() {
                                 }`}
                                 onClick={() => handleChangeModel(option)}
                               >
-                                {option.name}
+                                <div
+                                  className={`h-[8px] w-[8px] rounded-full ${
+                                    option.status === "ready"
+                                      ? "bg-green-500"
+                                      : "bg-red-500"
+                                  }`}
+                                ></div>
+                                <div className="flex-grow text-left pl-2">
+                                  {option.name}{" "}
+                                </div>
+                                {option.input.includes("image") ? (
+                                  <img
+                                    src={image_supported}
+                                    alt="image_supported"
+                                    className="h-[20px] w-[20px] cursor-pointer"
+                                  />
+                                ) : (
+                                  // <img
+                                  //   src={no_image_supported}
+                                  //   alt="no_image_supported"
+                                  //   className="h-[20px] w-[20px] cursor-pointer"
+                                  // />
+                                  <div></div>
+                                )}{" "}
                               </div>
                             ))}
                           </div>
@@ -2366,6 +2949,7 @@ function Prompt() {
           <ExportTypeModel
             showModal={setShowFileModel}
             exportFile={exportFile}
+            conversation={conversation}
           />
         ) : null}
       </div>
