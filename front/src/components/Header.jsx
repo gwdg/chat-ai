@@ -62,7 +62,7 @@ function Header() {
     };
 
     fetchData();
-  }, []);
+  }, [isOpen]);
 
   // Toggle open for dropdown
   const toggleOpen = () => setIsOpen((prev) => !prev);
@@ -79,7 +79,6 @@ function Header() {
 
   useEffect(() => {
     if (modelList?.length > 0) {
-      console.log(modelList);
       const currentModel = modelList?.find((modelX) => modelX.name === model);
       setChooseModel(currentModel.name);
       setChooseModelApi(currentModel.id);
