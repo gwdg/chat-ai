@@ -9,14 +9,14 @@ require("dotenv").config();
 const port = process.env.PORT || 7230;
 const api_key = process.env.API_KEY;
 
-// app.use(bodyParser.json({ limit: "50mb" }));
-// app.use(
-//   bodyParser.urlencoded({
-//     limit: "50mb",
-//     extended: true,
-//     parameterLimit: 10000,
-//   })
-// );
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(
+  bodyParser.urlencoded({
+    limit: "50mb",
+    extended: true,
+    parameterLimit: 10000,
+  })
+);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -34,7 +34,7 @@ async function getCompletionLLM(model, messages, temperature = 0.5, top_p = 0.5,
   const body = JSON.stringify({
     model: model,
     messages: messages,
-    max_tokens: 4096,
+    //max_tokens: 4096,
     temperature: temperature,
     top_p: top_p,
     stream: true,

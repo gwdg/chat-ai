@@ -8,10 +8,20 @@ import txt_icon from "../assets/txt_icon.svg";
 import { useState } from "react"; // For managing component state
 import { useDispatch, useSelector } from "react-redux";
 import { setExportSettings } from "../Redux/reducers/fileIncludeSettings";
+import { setExportImage } from "../Redux/reducers/imageIncludeReducer";
 
 // Export type modal component
 function ExportTypeModel(props) {
-  const [value, setValue] = useState("json"); // State for selected export type
+  const [value, setValue] = useState("json");
+  const [containsImage, setContainsImage] = useState(
+    props.conversation.some((message) => {
+      return (
+        message.role === "user" &&
+        Array.isArray(message.content) &&
+        message.content.some((item) => item.type === "image_url")
+      );
+    })
+  );
 
   // Function to handle change in export type selection
   const handleChange = (format) => {
@@ -36,9 +46,15 @@ function ExportTypeModel(props) {
     (state) => state.exportSettings.exportSettings
   );
 
+  const exportImage = useSelector((state) => state.exportImage.exportImage);
+
   // Handler for checkbox state change
   const handleCheckboxChange = (event) => {
     dispatch(setExportSettings(event.target.checked));
+  };
+
+  const handleCheckboxChangeImages = (event) => {
+    dispatch(setExportImage(event.target.checked));
   };
 
   return (
@@ -94,6 +110,26 @@ function ExportTypeModel(props) {
               <Trans i18nKey="description.exportSettings"></Trans>
             </label>
           </div>
+          {/* Add the checkbox */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="exportImage"
+              checked={exportImage}
+              onChange={handleCheckboxChangeImages}
+              className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
+                !containsImage ? "bg-gray-400 cursor-not-allowed" : ""
+              }`}
+              disabled={!containsImage}
+            />
+            <label
+              htmlFor="exportImage"
+              className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+            >
+              <Trans i18nKey="description.exportImages"></Trans>
+            </label>
+          </div>
+
           <div className="flex justify-end w-full">
             <button
               className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"

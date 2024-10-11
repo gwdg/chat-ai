@@ -2,7 +2,7 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom"; // For routing
 import { useDispatch, useSelector } from "react-redux"; // For Redux state management
 import { useEffect, useState, useRef } from "react"; // For managing component state and side effects
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 
 // Assets
 import Light from "../assets/light.svg"; // Light mode icon
@@ -13,6 +13,8 @@ import { getModels } from "../apis/ModelLIst";
 import { setModelApiGlobal } from "../Redux/actions/setModelApi";
 import { setModel } from "../Redux/actions/modelAction";
 import Help_Model from "../model/Help_Modal";
+import no_image_supported from "../assets/no_image_supported.svg";
+import image_supported from "../assets/image_supported.svg";
 
 function Header() {
   const navigate = useNavigate();
@@ -35,8 +37,17 @@ function Header() {
   const [chooseModel, setChooseModel] = useState(model);
   const [chooseModelApi, setChooseModelApi] = useState(modelApi);
   const [isIOSChrome, setIsIOSChrome] = useState(false);
-
   const [modelList, setModelList] = useState([]);
+  const [isImageSupported, setIsImageSupported] = useState(
+    modelList?.some(
+      (modelX) => modelX.name === model && modelX.input.includes("image")
+    )
+  );
+  const [isModelReady, setIsModelReady] = useState(
+    modelList?.some(
+      (modelX) => modelX.name === model && modelX.status === "ready"
+    )
+  );
   const dropdownRef = useRef(null);
 
   // Toggle open for dropdown
@@ -45,6 +56,8 @@ function Header() {
   const handleChangeModel = (option) => {
     setChooseModel(option.name);
     setChooseModelApi(option.id);
+    setIsImageSupported(option.input.includes("image"));
+    setIsModelReady(option.status === "ready");
     dispatch(setModel(option.name));
     dispatch(setModelApiGlobal(option.id));
     setIsOpen(false);
@@ -72,6 +85,18 @@ function Header() {
 
     fetchData();
   }, []);
+
+  // Update isImageSupported whenever modelList changes
+  useEffect(() => {
+    const imageSupport = modelList.some(
+      (modelX) => modelX.name === model && modelX.input.includes("image")
+    );
+    const modelReady = modelList.some(
+      (modelX) => modelX.name === model && modelX.status === "ready"
+    );
+    setIsModelReady(modelReady);
+    setIsImageSupported(imageSupport);
+  }, [modelList]);
 
   useEffect(() => {
     const encodedSettings = searchParams.get("settings");
@@ -212,12 +237,32 @@ function Header() {
             onBlur={() => setIsOpen(false)}
           >
             <div
-              className="text-tertiary sm:max-w-none max-w-[250px] flex-grow flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
+              className="text-tertiary sm:max-w-none flex-grow flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
               onClick={toggleOpen}
             >
-              <p className="text-ellipsis text-xl overflow-hidden whitespace-nowrap">
-                {chooseModel}
-              </p>
+              <div className="flex gap-2 items-center">
+                <div
+                  className={`h-[8px] w-[8px] rounded-full ${
+                    isModelReady ? "bg-green-500" : "bg-red-500"
+                  }`}
+                ></div>{" "}
+                {/* This is for phone */}
+                <div className="text-ellipsis max-w-[200px] text-xl overflow-hidden whitespace-nowrap">{chooseModel}</div>
+                {isImageSupported ? (
+                  <img
+                    src={image_supported}
+                    alt="image_supported"
+                    className="h-[20px] w-[20px] cursor-pointer ml-auto"
+                  />
+                ) : (
+                  // <img
+                  //   src={no_image_supported}
+                  //   alt="no_image_supported"
+                  //   className="h-[20px] w-[20px] cursor-pointer"
+                  // />
+                  <div></div>
+                )}{" "}
+              </div>
             </div>
 
             {isOpen && (
@@ -227,10 +272,33 @@ function Header() {
                 {modelList.map((option, index) => (
                   <div
                     key={index}
-                    className="text-tertiary block text-xl w-full p-2 cursor-pointer"
+                    className="text-tertiary flex gap-2 items-center text-xl w-full p-2 cursor-pointer"
                     onClick={() => handleChangeModel(option)}
                   >
-                    {option.name}
+                    <div
+                      className={`h-[8px] w-[8px] rounded-full ${
+                        option.status === "ready"
+                          ? "bg-green-500"
+                          : "bg-red-500"
+                      }`}
+                    ></div>
+                    <div className="flex-grow text-left pl-2">
+                      {option.name}{" "}
+                    </div>
+                    {option.input.includes("image") ? (
+                      <img
+                        src={image_supported}
+                        alt="image_supported"
+                        className="h-[20px] w-[20px] cursor-pointer"
+                      />
+                    ) : (
+                      // <img
+                      //   src={no_image_supported}
+                      //   alt="no_image_supported"
+                      //   className="h-[20px] w-[20px] cursor-pointer"
+                      // />
+                      <div></div>
+                    )}
                   </div>
                 ))}
               </div>
