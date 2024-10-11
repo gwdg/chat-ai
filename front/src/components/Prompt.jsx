@@ -360,6 +360,17 @@ function Prompt() {
   }, [modelList]);
 
   useEffect(() => {
+    if (modelList?.length > 0) {
+      console.log(modelList);
+      const currentModel = modelList?.find((modelX) => modelX.name === model);
+      setChooseModel(currentModel.name);
+      setChooseModelApi(currentModel.id);
+      setIsImageSupported(currentModel.input.includes("image"));
+      setIsModelReady(currentModel.status === "ready");
+    }
+  }, [model]);
+
+  useEffect(() => {
     // If copied icon is shown, revert it back to copy icon after 3 seconds
     let timer;
     if (copied) {
@@ -2403,7 +2414,9 @@ function Prompt() {
                               }`}
                             ></div>
                             {/* This is for desktop, when options shown */}
-                            <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">{chooseModel}</div>
+                            <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">
+                              {chooseModel}
+                            </div>
                             {isImageSupported ? (
                               <img
                                 src={image_supported}
@@ -2418,7 +2431,7 @@ function Prompt() {
                               // />
                               <div></div>
                             )}
-                            <div className = "flex-grow"></div>
+                            <div className="flex-grow"></div>
                           </div>
                           <div className="flex items-center">
                             <img
@@ -2789,7 +2802,9 @@ function Prompt() {
                               }`}
                             ></div>{" "}
                             {/* This is for desktop, when options is hidden */}
-                            <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">{chooseModel}</div>
+                            <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">
+                              {chooseModel}
+                            </div>
                             {isImageSupported ? (
                               <img
                                 src={image_supported}
