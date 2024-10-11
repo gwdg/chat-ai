@@ -346,7 +346,7 @@ function Prompt() {
     };
 
     fetchData();
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     const imageSupport = modelList.some(
@@ -361,7 +361,6 @@ function Prompt() {
 
   useEffect(() => {
     if (modelList?.length > 0) {
-      console.log(modelList);
       const currentModel = modelList?.find((modelX) => modelX.name === model);
       setChooseModel(currentModel.name);
       setChooseModelApi(currentModel.id);
@@ -1039,6 +1038,92 @@ function Prompt() {
     }
   };
 
+  const handlePaste = async (event) => {
+    try {
+      const clipboardItems = event.clipboardData.items;
+      const imageItems = [];
+
+      // Loop through clipboard items to find image files
+      for (const item of clipboardItems) {
+        if (item.type.startsWith("image/")) {
+          imageItems.push(item.getAsFile());
+        }
+      }
+
+      // If there are images, handle them similar to the file input
+      if (imageItems.length > 0) {
+        const imageFileList = [];
+
+        for (const file of imageItems) {
+          const base64 = await readFileAsBase64(file);
+          const timestamp = new Date()
+            .toISOString()
+            .replace(/[-:.]/g, "")
+            .slice(0, 15);
+          const imageName = `clipboard_${timestamp}`;
+
+          imageFileList.push({
+            name: imageName,
+            type: "image",
+            size: file.size,
+            text: base64,
+          });
+        }
+
+        setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
+        notifySuccess("Image pasted from clipboard");
+      }
+    } catch (error) {
+      notifyError("An error occurred while pasting: ", error);
+    }
+  };
+
+  const handleDrop = async (event) => {
+    if (!isImageSupported) return; // Guard clause to check if image support is enabled
+    event.preventDefault();
+    try {
+      const droppedFiles = Array.from(event.dataTransfer.files).filter(
+        (file) =>
+          file.type === "image/jpeg" ||
+          file.type === "image/png" ||
+          file.type === "image/gif" ||
+          file.type === "image/webp"
+      );
+
+      if (droppedFiles.length === 0) {
+        notifyError("Only image files are allowed");
+        return;
+      } else {
+        notifySuccess("Image(s) dropped");
+      }
+
+      const imageFileList = [];
+      for (const file of droppedFiles) {
+        const base64 = await readFileAsBase64(file);
+        imageFileList.push({
+          name: file.name,
+          type: "image",
+          size: file.size,
+          text: base64,
+        });
+      }
+
+      setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
+    } catch (error) {
+      notifyError("An error occurred while dropping the files: ", error);
+    }
+  };
+
+  // Helper function to read file as base64
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Handles clicking on the file icon
   const handleClick = () => {
     hiddenFileInput.current.value = null; // Clear the input field prior to previous selections
@@ -1196,19 +1281,6 @@ function Prompt() {
       reader.onload = () => resolve(reader.result);
       reader.onerror = reject;
       reader.readAsText(file);
-    });
-  };
-
-  // Reads a file as base64 URL
-  const readFileAsBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64Url = `data:${file.type};base64,${btoa(reader.result)}`;
-        resolve(base64Url);
-      };
-      reader.onerror = reject;
-      reader.readAsBinaryString(file);
     });
   };
 
@@ -2153,25 +2225,52 @@ function Prompt() {
           <div className="mobile:w-full w-[40%] flex flex-col dark:text-white text-black mobile:h-fit justify-between h-full  mobile:min-h-[145px] sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
             <div className="flex flex-col gap-4 w-full">
               <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
-                <textarea
-                  className=" p-4 outline-none text-xl max-h-[350px] mobile:min-h-0 middle:min-h-[200px] desktop:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
-                  value={prompt}
-                  ref={textAreaRef}
-                  name="prompt"
-                  placeholder={t("description.placeholder")}
-                  onChange={handleChange}
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" &&
-                      !event.shiftKey &&
-                      prompt.trim() !== ""
-                    ) {
-                      event.preventDefault();
-                      handleSubmit(event);
-                    }
-                  }}
-                />
-
+                {isImageSupported ? (
+                  <div
+                    className="drag-drop-container"
+                    onDragOver={(e) => e.preventDefault()} // Allow drop by preventing default behavior
+                    onDrop={handleDrop}
+                  >
+                    <textarea
+                      className="p-4 outline-none text-xl max-h-[350px] mobile:min-h-0 middle:min-h-[200px] desktop:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                      value={prompt}
+                      ref={textAreaRef}
+                      name="prompt"
+                      placeholder={t("description.placeholder")}
+                      onChange={handleChange}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "Enter" &&
+                          !event.shiftKey &&
+                          prompt.trim() !== ""
+                        ) {
+                          event.preventDefault();
+                          handleSubmit(event);
+                        }
+                      }}
+                      onPaste={isImageSupported ? handlePaste : null}
+                    />
+                  </div>
+                ) : (
+                  <textarea
+                    className="p-4 outline-none text-xl max-h-[350px] mobile:min-h-0 middle:min-h-[200px] desktop:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                    value={prompt}
+                    ref={textAreaRef}
+                    name="prompt"
+                    placeholder={t("description.placeholder")}
+                    onChange={handleChange}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "Enter" &&
+                        !event.shiftKey &&
+                        prompt.trim() !== ""
+                      ) {
+                        event.preventDefault();
+                        handleSubmit(event);
+                      }
+                    }}
+                  />
+                )}
                 <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
                   {prompt.trim() !== "" ? (
                     <Tooltip text={t("description.clear")}>
@@ -2475,14 +2574,7 @@ function Prompt() {
                                     alt="image_supported"
                                     className="h-[20px] w-[20px] cursor-pointer"
                                   />
-                                ) : (
-                                  // <img
-                                  //   src={no_image_supported}
-                                  //   alt="no_image_supported"
-                                  //   className="h-[20px] w-[20px] cursor-pointer"
-                                  // />
-                                  <div></div>
-                                )}
+                                ) : null}
                               </div>
                             ))}
                           </div>
@@ -2862,14 +2954,7 @@ function Prompt() {
                                     alt="image_supported"
                                     className="h-[20px] w-[20px] cursor-pointer"
                                   />
-                                ) : (
-                                  // <img
-                                  //   src={no_image_supported}
-                                  //   alt="no_image_supported"
-                                  //   className="h-[20px] w-[20px] cursor-pointer"
-                                  // />
-                                  <div></div>
-                                )}{" "}
+                                ) : null}{" "}
                               </div>
                             ))}
                           </div>
