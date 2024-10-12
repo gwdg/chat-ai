@@ -338,8 +338,10 @@ function Prompt() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await getModels();
-        setModelList(data);
+        const data = await getModels(setShowModelSession);
+        if (data) {
+          setModelList(data);
+        }
       } catch (error) {
         notifyError("Error:", error);
       }
