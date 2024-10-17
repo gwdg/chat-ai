@@ -38,7 +38,6 @@ import dropdown from "../assets/icon_dropdown.svg";
 
 // import advanced_settings_arrow from "../assets/advanced_settings_arrow.svg";
 import help from "../assets/icon_help.svg";
-import no_image_supported from "../assets/no_image_supported.svg";
 import image_supported from "../assets/image_supported.svg";
 import cross from "../assets/cross.svg";
 import mic from "../assets/icon_mic.svg";
@@ -78,6 +77,19 @@ import Share_Settings_Model from "../model/Share_Settings_Model";
 
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case "ready":
+      return "limegreen";
+    case "loading":
+      return "orange";
+    case "offline":
+      return "grey";
+    default:
+      return "red";
+  }
+};
 
 function Prompt() {
   const { t, i18n } = useTranslation();
@@ -162,11 +174,12 @@ function Prompt() {
       (modelX) => modelX.name === model && modelX.input.includes("image")
     )
   );
-  const [isModelReady, setIsModelReady] = useState(
-    modelList?.some(
-      (modelX) => modelX.name === model && modelX.status === "ready"
-    )
-  );
+  const [isModelReady, setIsModelReady] = useState(() => {
+    const modelX = modelList?.find((modelItem) => modelItem.name === model);
+    return {
+      color: modelX ? getStatusColor(modelX.status) : "red",
+    };
+  });
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
   );
@@ -268,10 +281,12 @@ function Prompt() {
     const imageSupport = modelList.some(
       (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
     );
-    const modelReady = modelList.some(
-      (modelX) => modelX.name === chooseModel && modelX.status === "ready"
+    const currentModel = modelList.find(
+      (modelX) => modelX.name === chooseModel
     );
-    setIsModelReady(modelReady);
+    setIsModelReady({
+      color: currentModel ? getStatusColor(currentModel.status) : "red",
+    });
     setIsImageSupported(imageSupport);
   }, [chooseModel]);
 
@@ -354,10 +369,10 @@ function Prompt() {
     const imageSupport = modelList.some(
       (modelX) => modelX.name === model && modelX.input.includes("image")
     );
-    const modelReady = modelList.some(
-      (modelX) => modelX.name === model && modelX.status === "ready"
-    );
-    setIsModelReady(modelReady);
+    const currentModel = modelList.find((modelX) => modelX.name === model);
+    setIsModelReady({
+      color: currentModel ? getStatusColor(currentModel.status) : "red",
+    });
     setIsImageSupported(imageSupport);
   }, [modelList]);
 
@@ -367,7 +382,9 @@ function Prompt() {
       setChooseModel(currentModel.name);
       setChooseModelApi(currentModel.id);
       setIsImageSupported(currentModel.input.includes("image"));
-      setIsModelReady(currentModel.status === "ready");
+      setIsModelReady({
+        color: getStatusColor(currentModel.status),
+      });
     }
   }, [model]);
 
@@ -942,7 +959,9 @@ function Prompt() {
     setChooseModel(option.name);
     setChooseModelApi(option.id);
     setIsImageSupported(option.input.includes("image"));
-    setIsModelReady(option.status === "ready");
+    setIsModelReady({
+      color: getStatusColor(option.status),
+    });
     setIsOpen(false);
   };
 
@@ -2510,9 +2529,8 @@ function Prompt() {
                         >
                           <div className="flex gap-2 items-center justify-between w-full">
                             <div
-                              className={`h-[8px] w-[8px] rounded-full ${
-                                isModelReady ? "bg-green-500" : "bg-red-500"
-                              }`}
+                              className={`h-[8px] w-[8px] rounded-full`}
+                              style={{ backgroundColor: isModelReady.color }}
                             ></div>
                             {/* This is for desktop, when options shown */}
                             <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">
@@ -2561,11 +2579,12 @@ function Prompt() {
                                 onClick={() => handleChangeModel(option)}
                               >
                                 <div
-                                  className={`h-[8px] w-[8px] rounded-full ${
-                                    option.status === "ready"
-                                      ? "bg-green-500"
-                                      : "bg-red-500"
-                                  }`}
+                                  className={`h-[8px] w-[8px] rounded-full`}
+                                  style={{
+                                    backgroundColor: getStatusColor(
+                                      option.status
+                                    ),
+                                  }}
                                 ></div>
                                 <div className="flex-grow text-left pl-2">
                                   {option.name}{" "}
@@ -2891,10 +2910,9 @@ function Prompt() {
                         >
                           <div className="flex gap-2 items-center">
                             <div
-                              className={`h-[8px] w-[8px] rounded-full ${
-                                isModelReady ? "bg-green-500" : "bg-red-500"
-                              }`}
-                            ></div>{" "}
+                              className={`h-[8px] w-[8px] rounded-full`}
+                              style={{ backgroundColor: isModelReady.color }}
+                            ></div>
                             {/* This is for desktop, when options is hidden */}
                             <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">
                               {chooseModel}
@@ -2941,11 +2959,12 @@ function Prompt() {
                                 onClick={() => handleChangeModel(option)}
                               >
                                 <div
-                                  className={`h-[8px] w-[8px] rounded-full ${
-                                    option.status === "ready"
-                                      ? "bg-green-500"
-                                      : "bg-red-500"
-                                  }`}
+                                  className={`h-[8px] w-[8px] rounded-full`}
+                                  style={{
+                                    backgroundColor: getStatusColor(
+                                      option.status
+                                    ),
+                                  }}
                                 ></div>
                                 <div className="flex-grow text-left pl-2">
                                   {option.name}{" "}
