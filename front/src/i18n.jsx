@@ -25,8 +25,8 @@ i18n
               "Service Announcement: Changes to Chat AI Model Availability",
 
             // Disclaimer note
-            note1: "Note: The chatbot is prone to",
-            note2: "and its responses should not be considered accurate.",
+            note1: "Note: Chatbots are prone to",
+            note2: "and their responses should not be considered accurate.",
             note3: "Data Privacy",
             note4: "and",
             note5: "Imprint",
@@ -189,7 +189,7 @@ i18n
               "Service-Ankündigung: Änderungen an der Verfügbarkeit von Chat-AI-Modellen",
 
             // Disclaimer note
-            note1: "Hinweis: Der Chatbot ist anfällig für",
+            note1: "Hinweis: Chatbots sind anfällig für",
             note2:
               "und ihre Antworten sollten nicht als korrekt angesehen werden.",
             note3: "Datenschutz",

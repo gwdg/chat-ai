@@ -13,8 +13,20 @@ import { getModels } from "../apis/ModelLIst";
 import { setModelApiGlobal } from "../Redux/actions/setModelApi";
 import { setModel } from "../Redux/actions/modelAction";
 import Help_Model from "../model/Help_Modal";
-import no_image_supported from "../assets/no_image_supported.svg";
 import image_supported from "../assets/image_supported.svg";
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case "ready":
+      return "limegreen";
+    case "loading":
+      return "orange";
+    case "offline":
+      return "grey";
+    default:
+      return "red";
+  }
+};
 
 function Header() {
   const navigate = useNavigate();
@@ -43,11 +55,12 @@ function Header() {
       (modelX) => modelX.name === model && modelX.input.includes("image")
     )
   );
-  const [isModelReady, setIsModelReady] = useState(
-    modelList?.some(
-      (modelX) => modelX.name === model && modelX.status === "ready"
-    )
-  );
+  const [isModelReady, setIsModelReady] = useState(() => {
+    const modelX = modelList?.find((modelItem) => modelItem.name === model);
+    return {
+      color: modelX ? getStatusColor(modelX.status) : "red",
+    };
+  });
   const dropdownRef = useRef(null);
 
   // Get model list
@@ -71,11 +84,22 @@ function Header() {
     setChooseModel(option.name);
     setChooseModelApi(option.id);
     setIsImageSupported(option.input.includes("image"));
-    setIsModelReady(option.status === "ready");
-    dispatch(setModel(option.name));
-    dispatch(setModelApiGlobal(option.id));
+    setIsModelReady({
+      color: getStatusColor(option.status),
+    });
     setIsOpen(false);
   };
+
+  useEffect(() => {
+    const imageSupport = modelList.some(
+      (modelX) => modelX.name === model && modelX.input.includes("image")
+    );
+    const currentModel = modelList.find((modelX) => modelX.name === model);
+    setIsModelReady({
+      color: currentModel ? getStatusColor(currentModel.status) : "red",
+    });
+    setIsImageSupported(imageSupport);
+  }, [modelList]);
 
   useEffect(() => {
     if (modelList?.length > 0) {
@@ -83,9 +107,29 @@ function Header() {
       setChooseModel(currentModel.name);
       setChooseModelApi(currentModel.id);
       setIsImageSupported(currentModel.input.includes("image"));
-      setIsModelReady(currentModel.status === "ready");
+      setIsModelReady({
+        color: getStatusColor(currentModel.status),
+      });
     }
   }, [model]);
+
+  useEffect(() => {
+    dispatch(setModel(chooseModel));
+    const imageSupport = modelList.some(
+      (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
+    );
+    const currentModel = modelList.find(
+      (modelX) => modelX.name === chooseModel
+    );
+    setIsModelReady({
+      color: currentModel ? getStatusColor(currentModel.status) : "red",
+    });
+    setIsImageSupported(imageSupport);
+  }, [chooseModel]);
+
+  useEffect(() => {
+    dispatch(setModelApiGlobal(chooseModelApi));
+  }, [chooseModelApi]);
 
   // Displays an error notification
   const notifyError = (message) => {
@@ -95,18 +139,6 @@ function Header() {
       onClose: () => {},
     });
   };
-
-  // Update isImageSupported whenever modelList changes
-  useEffect(() => {
-    const imageSupport = modelList.some(
-      (modelX) => modelX.name === model && modelX.input.includes("image")
-    );
-    const modelReady = modelList.some(
-      (modelX) => modelX.name === model && modelX.status === "ready"
-    );
-    setIsModelReady(modelReady);
-    setIsImageSupported(imageSupport);
-  }, [modelList]);
 
   useEffect(() => {
     const encodedSettings = searchParams.get("settings");
@@ -252,10 +284,9 @@ function Header() {
             >
               <div className="flex gap-2 items-center">
                 <div
-                  className={`h-[8px] w-[8px] rounded-full ${
-                    isModelReady ? "bg-green-500" : "bg-red-500"
-                  }`}
-                ></div>{" "}
+                  className={`h-[8px] w-[8px] rounded-full`}
+                  style={{ backgroundColor: isModelReady.color }}
+                ></div>
                 {/* This is for phone */}
                 <div className="text-ellipsis max-w-[200px] text-xl overflow-hidden whitespace-nowrap">
                   {chooseModel}
@@ -288,11 +319,10 @@ function Header() {
                     onClick={() => handleChangeModel(option)}
                   >
                     <div
-                      className={`h-[8px] w-[8px] rounded-full ${
-                        option.status === "ready"
-                          ? "bg-green-500"
-                          : "bg-red-500"
-                      }`}
+                      className={`h-[8px] w-[8px] rounded-full`}
+                      style={{
+                        backgroundColor: getStatusColor(option.status),
+                      }}
                     ></div>
                     <div className="flex-grow text-left pl-2">
                       {option.name}{" "}
