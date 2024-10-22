@@ -12,7 +12,6 @@ Features:
 UI Updates:
 
 -   Clipart addition: Added clipart of an image near the model selection section to indicate where image uploads are allowed.
--   Bug improvement: Fixed an issue affecting multiple image uploads.
 
 ## Version: v0.6.2 (10.10.2024)
 - Updated models API endpoint to /models
