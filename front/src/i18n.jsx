@@ -30,7 +30,7 @@ i18n
             note3: "Data Privacy",
             note4: "and",
             note5: "Imprint",
-            note6: "hallucination",
+            note6: "Hallucination",
 
             // Choose model
             choose: "Model",
@@ -195,7 +195,7 @@ i18n
             note3: "Datenschutz",
             note4: "und",
             note5: "Impressum",
-            note6: "halluzination",
+            note6: "Halluzination",
 
             // Choose model
             choose: "Modell",
