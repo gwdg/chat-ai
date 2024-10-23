@@ -1,5 +1,32 @@
 # Changelog 
 
+## Version: v0.6.3 (23.10.2024)
+
+Features:
+-   Token limit removed: No more restrictions on the number of tokens.
+-   Image upload feature: You can now upload images with an exportable option. Images can be added by copy-pasting from the clipboard or via drag-and-drop functionality.
+-   CSV upload: Users can now upload CSV files directly.
+-   Model status indicator: Added a point system that shows the status of models (e.g., active, loading).
+-   Temporary model execution: Users can run available models temporarily, even if they are not active.
+
+UI Updates:
+
+-   Clipart addition: Added clipart of an image near the model selection section to indicate where image uploads are allowed.
+
+## Version: v0.6.2 (10.10.2024)
+- Updated models API endpoint to /models
+
+## Version: v0.6.1 (04.10.2024)
+
+Features:
+- Sharing model and settings with base64-encoded URL parameter
+- Importing external settings, i.e., personas
+
+UI Updates:
+- Made scrollbar for model selection more visible
+- Fixed header issue on tablet-size screens
+- Improved overall design of options section
+
 ## Version: v0.6.0
 
 ### Memory and Performance Improvements:
