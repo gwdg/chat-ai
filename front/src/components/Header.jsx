@@ -14,6 +14,7 @@ import { setModelApiGlobal } from "../Redux/actions/setModelApi";
 import { setModel } from "../Redux/actions/modelAction";
 import Help_Model from "../model/Help_Modal";
 import image_supported from "../assets/image_supported.svg";
+import Session_Expired from "../model/Session_Expired";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -38,6 +39,7 @@ function Header() {
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
   const [showHelpModel, setShowHelpModel] = useState(false);
+  const [showModelSession, setShowModelSession] = useState(false);
 
   // Dark mode state
   const [isDarkMode, setIsDarkMode] = useState(
@@ -67,7 +69,7 @@ function Header() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await getModels();
+        const data = await getModels(setShowModelSession);
         setModelList(data);
       } catch (error) {
         notifyError("Error:", error);
@@ -76,6 +78,26 @@ function Header() {
 
     fetchData();
   }, [isOpen]);
+
+  useEffect(() => {
+    // Set up polling without the initial call
+    const interval = setInterval(() => {
+      const fetchData = async () => {
+        try {
+          const data = await getModels(setShowModelSession);
+          if (data) {
+            setModelList(data);
+          }
+        } catch (error) {
+          notifyError("Error:", error);
+        }
+      };
+
+      fetchData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Toggle open for dropdown
   const toggleOpen = () => setIsOpen((prev) => !prev);
@@ -377,6 +399,11 @@ function Header() {
 
       {/* Help model for info on changing model */}
       <>{showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}</>
+      <>
+        {showModelSession ? (
+          <Session_Expired showModal={setShowModelSession} />
+        ) : null}
+      </>
     </>
   );
 }

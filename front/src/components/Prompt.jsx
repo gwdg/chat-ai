@@ -366,6 +366,26 @@ function Prompt() {
   }, [isOpen]);
 
   useEffect(() => {
+    // Set up polling without the initial call
+    const interval = setInterval(() => {
+      const fetchData = async () => {
+        try {
+          const data = await getModels(setShowModelSession);
+          if (data) {
+            setModelList(data);
+          }
+        } catch (error) {
+          notifyError("Error:", error);
+        }
+      };
+
+      fetchData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     const imageSupport = modelList.some(
       (modelX) => modelX.name === model && modelX.input.includes("image")
     );
