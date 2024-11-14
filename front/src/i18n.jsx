@@ -178,6 +178,9 @@ i18n
             exportSettings1:
               "This feature creates a shareable link for your chosen model, system prompt, and settings. Any user who opens this link will be able to use the same configuration in their own conversations. Please note that your conversation history will not be shared.",
             exportSettings2: "Share",
+
+            offline:
+              "Sorry for the inconvenience, but the model you selected is currently unavailable. It will be accessible in a few minutes. In the meantime, feel free to choose another model.",
           },
         },
       },
@@ -346,6 +349,9 @@ i18n
             exportSettings1:
               "Mit dieser Funktion wird ein Link für das von Ihnen gewählte Modell, die Systemansage und die Einstellungen erstellt, der gemeinsam genutzt werden kann. Jeder Benutzer, der diesen Link öffnet, kann dieselbe Konfiguration in seinen eigenen Unterhaltungen verwenden. Bitte beachten Sie, dass Ihr Gesprächsverlauf nicht freigegeben wird.",
             exportSettings2: "Teilen Sie",
+
+            offline:
+              "Entschuldigen Sie die Unannehmlichkeiten, aber das gewählte Modell ist derzeit nicht verfügbar. Es wird in wenigen Minuten wieder zugänglich sein. In der Zwischenzeit können Sie ein anderes Modell auswählen.",
           },
         },
       },

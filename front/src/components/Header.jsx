@@ -15,6 +15,7 @@ import { setModel } from "../Redux/actions/modelAction";
 import Help_Model from "../model/Help_Modal";
 import image_supported from "../assets/image_supported.svg";
 import Session_Expired from "../model/Session_Expired";
+import Offline_Model_Model from "../model/Offline_Model_Model";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -40,6 +41,7 @@ function Header() {
   let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
   const [showHelpModel, setShowHelpModel] = useState(false);
   const [showModelSession, setShowModelSession] = useState(false);
+  const [showModelOffline, setShowModelOffline] = useState(false);
 
   // Dark mode state
   const [isDarkMode, setIsDarkMode] = useState(
@@ -80,23 +82,27 @@ function Header() {
   }, [isOpen]);
 
   useEffect(() => {
-    // Set up polling without the initial call
-    const interval = setInterval(() => {
-      const fetchData = async () => {
-        try {
-          const data = await getModels(setShowModelSession);
-          if (data) {
-            setModelList(data);
+    const isMobile = window.matchMedia("(max-width: 800px)").matches;
+
+    if (isMobile) {
+      const interval = setInterval(() => {
+        const fetchData = async () => {
+          try {
+            const data = await getModels(setShowModelSession);
+            if (data) {
+              setModelList(data);
+            }
+          } catch (error) {
+            notifyError("Error:", error);
           }
-        } catch (error) {
-          notifyError("Error:", error);
-        }
-      };
+        };
+        fetchData();
+      }, 30000);
 
-      fetchData();
-    }, 30000);
+      return () => clearInterval(interval);
+    }
 
-    return () => clearInterval(interval);
+    return () => {};
   }, []);
 
   // Toggle open for dropdown
@@ -147,6 +153,15 @@ function Header() {
       color: currentModel ? getStatusColor(currentModel.status) : "red",
     });
     setIsImageSupported(imageSupport);
+  }, [chooseModel]);
+
+  useEffect(() => {
+    const currentModel = modelList.find(
+      (modelX) => modelX.name === chooseModel
+    );
+    if (currentModel?.status == "offline") {
+      setShowModelOffline(true);
+    }
   }, [chooseModel]);
 
   useEffect(() => {
@@ -404,6 +419,14 @@ function Header() {
           <Session_Expired showModal={setShowModelSession} />
         ) : null}
       </>
+      {/* <>
+        {showModelOffline ? (
+          <Offline_Model_Model
+            showModal={setShowModelOffline}
+            model={chooseModelApi}
+          />
+        ) : null}
+      </> */}
     </>
   );
 }
