@@ -74,6 +74,7 @@ import { setTpopGlobal } from "../Redux/actions/tpopAction";
 import Help_Model_Tpop from "../model/Help_Model_Tpop";
 import Clear_History_Model from "../model/Clear_History_Model";
 import Share_Settings_Model from "../model/Share_Settings_Model";
+import Offline_Model_Model from "../model/Offline_Model_Model";
 
 const MAX_HEIGHT_PX = 350;
 const MIN_HEIGHT_PX = 200;
@@ -141,6 +142,7 @@ function Prompt() {
   const [isEditing, setIsEditing] = useState(false);
   const [showModel, setShowModel] = useState(true);
   const [showModelSession, setShowModelSession] = useState(false);
+  const [showModelOffline, setShowModelOffline] = useState(false);
   const [showBadRequest, setShowBadRequest] = useState(false);
   const [showHelpModel, setShowHelpModel] = useState(false);
   const [showMicModel, setShowMicModel] = useState(false);
@@ -291,6 +293,15 @@ function Prompt() {
   }, [chooseModel]);
 
   useEffect(() => {
+    const currentModel = modelList.find(
+      (modelX) => modelX.name === chooseModel
+    );
+    if (currentModel?.status == "offline") {
+      setShowModelOffline(true);
+    }
+  }, [chooseModel]);
+
+  useEffect(() => {
     dispatch(setModelApiGlobal(chooseModelApi));
   }, [chooseModelApi]);
 
@@ -366,25 +377,28 @@ function Prompt() {
   }, [isOpen]);
 
   useEffect(() => {
-    // Set up polling without the initial call
-    const interval = setInterval(() => {
-      const fetchData = async () => {
-        try {
-          const data = await getModels(setShowModelSession);
-          if (data) {
-            setModelList(data);
+    const isPC = window.matchMedia("(min-width: 801px)").matches; // For screens wider than 800px
+
+    if (isPC) {
+      const interval = setInterval(() => {
+        const fetchData = async () => {
+          try {
+            const data = await getModels(setShowModelSession);
+            if (data) {
+              setModelList(data);
+            }
+          } catch (error) {
+            notifyError("Error:", error);
           }
-        } catch (error) {
-          notifyError("Error:", error);
-        }
-      };
+        };
+        fetchData();
+      }, 30000);
 
-      fetchData();
-    }, 30000);
+      return () => clearInterval(interval);
+    }
 
-    return () => clearInterval(interval);
+    return () => {};
   }, []);
-
   useEffect(() => {
     const imageSupport = modelList.some(
       (modelX) => modelX.name === model && modelX.input.includes("image")
@@ -3040,50 +3054,42 @@ function Prompt() {
       <div>
         <ToastContainer />
       </div>
-
       {/* Help model for info on changing model */}
       <>{showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}</>
-
       {/* Help model for info on custom temperature */}
       <div className="">
         {showCustomHelpModel ? (
           <Help_Model_Custom showModal={setShowCustomHelpModel} />
         ) : null}
       </div>
-
       {/* Help model for info on custom temperature */}
       <div className="">
         {showTpopHelpModel ? (
           <Help_Model_Tpop showModal={setShowTpopHelpModel} />
         ) : null}
       </div>
-
       {/* Help model for info on system prompt */}
       <div className="">
         {showSystemHelpModel ? (
           <Help_Model_System showModal={setShowSystemHelpModel} />
         ) : null}
       </div>
-
       {/* Help model for info on custom instructions */}
       <div className="">
         {showArcanasHelpModel ? (
           <Help_model_Arcanas showModal={setShowArcanasHelpModel} />
         ) : null}
       </div>
-
       {/* Pop-up if microphone permission is not given or denied */}
       <div className="">
         {showMicModel ? <Mic_Model showModal={setShowMicModel} /> : null}
       </div>
-
       {/* Pop-up for info about custom instructions */}
       <div className="">
         {showCusModel ? (
           <Cutom_Instructions_Model showModal={setShowCusModel} />
         ) : null}
       </div>
-
       {/* Pop-up  for export file model*/}
       <div className="">
         {showFileModel ? (
@@ -3094,21 +3100,27 @@ function Prompt() {
           />
         ) : null}
       </div>
-
       {/* Pop-up  for session expired model*/}
       <div className="">
         {showModelSession ? (
           <Session_Expired showModal={setShowModelSession} />
         ) : null}
       </div>
-
+      {/* Pop-up  for session expired model*/}
+      <div className="">
+        {showModelOffline ? (
+          <Offline_Model_Model
+            showModal={setShowModelOffline}
+            model={chooseModelApi}
+          />
+        ) : null}
+      </div>
       {/* Pop-up token limit exceed*/}
       <div className="">
         {showBadRequest ? (
           <Bad_Request_Model showModal={setShowBadRequest} />
         ) : null}
       </div>
-
       {/* Pop-up clear cache*/}
       <div className="">
         {showCacheModel ? (
@@ -3118,7 +3130,6 @@ function Prompt() {
           />
         ) : null}
       </div>
-
       {/* Pop-up clear history*/}
       <div className="">
         {showHistoryModel ? (
@@ -3128,7 +3139,6 @@ function Prompt() {
           />
         ) : null}
       </div>
-
       {/* Pop-up share settings*/}
       <div className="">
         {shareSettingsModel ? (
