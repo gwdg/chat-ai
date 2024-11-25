@@ -2,18 +2,27 @@
 import { Trans } from "react-i18next"; // For translation
 import Modal from "./Modal"; // Importing Modal component
 import cross from "../assets/cross.svg"; // Close icon
-import { useSelector, useDispatch } from "react-redux"; // For accessing and dispatching Redux state
-import { setDontShowAgainShare } from "../Redux/reducers/showAgainShareReducer";
 
 function Share_Settings_Model(props) {
-  const dispatch = useDispatch();
-  const dontShowAgain = useSelector(
-    (state) => state.showAgainShare.dontShowAgainShare
-  ); // Get the checkbox state from Redux
-
   // Handler for checkbox state change
   const handleCheckboxChange = (event) => {
-    dispatch(setDontShowAgainShare(event.target.checked));
+    props.setLocalState((prevState) => ({
+      ...prevState,
+      dontShow: {
+        ...prevState.exportOptions,
+        dontShowAgainShare: event.target.checked,
+      },
+    }));
+  };
+
+  const handleCheckboxChangeArcana = (event) => {
+    props.setLocalState((prevState) => ({
+      ...prevState,
+      exportOptions: {
+        ...prevState.exportOptions,
+        exportArcana: event.target.checked,
+      },
+    }));
   };
 
   return (
@@ -39,12 +48,42 @@ function Share_Settings_Model(props) {
             </p>
           </div>
 
+          {props.arcana.id && props.arcana.key ? (
+            <>
+              <div className="">
+                <p className="text-red-600">
+                  <Trans i18nKey="description.arcana_warn"></Trans>
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="exportArcana"
+                  checked={props.exportArcana}
+                  onChange={handleCheckboxChangeArcana}
+                  className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
+                    !props.arcana.id && !props.arcana.key
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : ""
+                  }`}
+                  disabled={!props.arcana.id && !props.arcana.key}
+                />
+                <label
+                  htmlFor="exportArcana"
+                  className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                >
+                  <Trans i18nKey="description.exportArcana"></Trans>
+                </label>
+              </div>
+            </>
+          ) : null}
+
           {/* Add the checkbox */}
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
               id="dontShowAgain"
-              checked={dontShowAgain}
+              checked={props.dontShowAgain}
               onChange={handleCheckboxChange}
               className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
             />

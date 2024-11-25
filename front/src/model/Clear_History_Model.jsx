@@ -2,16 +2,17 @@
 import { Trans } from "react-i18next"; // For translation
 import Modal from "./Modal"; // Importing Modal component
 import cross from "../assets/cross.svg"; // Close icon
-import { useSelector, useDispatch } from "react-redux"; // For accessing and dispatching Redux state
-import { setDontShowAgain } from "../Redux/reducers/showAgainReducer";
 
 function Clear_History_Model(props) {
-  const dispatch = useDispatch();
-  const dontShowAgain = useSelector((state) => state.showAgain.dontShowAgain); // Get the checkbox state from Redux
-
   // Handler for checkbox state change
   const handleCheckboxChange = (event) => {
-    dispatch(setDontShowAgain(event.target.checked));
+    props.setLocalState((prevState) => ({
+      ...prevState,
+      dontShow: {
+        ...prevState.exportOptions,
+        dontShowAgain: event.target.checked,
+      },
+    }));
   };
 
   return (
@@ -42,7 +43,7 @@ function Clear_History_Model(props) {
             <input
               type="checkbox"
               id="dontShowAgain"
-              checked={dontShowAgain}
+              checked={props.dontShowAgain}
               onChange={handleCheckboxChange}
               className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
             />

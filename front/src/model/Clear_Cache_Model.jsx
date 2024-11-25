@@ -3,7 +3,7 @@ import { Trans } from "react-i18next"; // For translation
 import Modal from "./Modal"; // Importing Modal component
 import cross from "../assets/cross.svg"; // Close icon
 
-function Clear_Catch_Model(props) {
+function Clear_Cache_Model(props) {
   return (
     // Modal component with export type selection form
     <Modal showModal={props.showModal}>
@@ -42,7 +42,7 @@ function Clear_Catch_Model(props) {
             {/* Clear cache button */}
             <button
               className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-              onClick={() => props.clearCatch()}
+              onClick={() => props.clearCache()}
             >
               <Trans i18nKey="description.cache3"></Trans>
             </button>
@@ -53,4 +53,4 @@ function Clear_Catch_Model(props) {
   );
 }
 
-export default Clear_Catch_Model;
+export default Clear_Cache_Model;

@@ -8,6 +8,8 @@ export default {
         primary: "#B4388D",
         secondary: "#695EA2",
         tertiary: "#009EE0",
+        dark_hover: "#333333",
+        light_hover:"#efeff1",
         border_dark: "#333333",
         bg_dark: "#1a1a1a",
         bg_light: "#f3f4f6",

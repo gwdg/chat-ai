@@ -1,7 +1,7 @@
 // Importing necessary assets and hooks from React
 import { useState, useEffect } from "react";
-import copy from "../assets/icon_copy.svg";
-import check from "../assets/check.svg";
+import copy from "../../assets/icon_copy.svg";
+import check from "../../assets/check.svg";
 
 // CodeCopyBtn component definition
 export default function CodeCopyBtn({ children, hovered }) {
