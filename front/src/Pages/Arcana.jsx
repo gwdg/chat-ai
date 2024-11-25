@@ -4,7 +4,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify"; // Import toast and ToastContainer
 import "react-toastify/dist/ReactToastify.css"; // Import toastify CSS for styling
-import Layout from "../components/Layout";
+import Layout from "../components/Layout/Layout";
 import cross from "../assets/cross.svg";
 import books from "../assets/icons_arcana/books.svg";
 import filesIcon from "../assets/icons_arcana/files.svg";
@@ -13,7 +13,7 @@ import personal from "../assets/icons_arcana/personal.svg";
 import reports from "../assets/icons_arcana/reports.svg";
 import studies from "../assets/icons_arcana/studies.svg";
 import work from "../assets/icons_arcana/work.svg";
-import FilesTable from "../components/FilesTable";
+import FilesTable from "../components/Arcanas/FilesTable";
 import Help_Model from "../model/Help_Modal";
 import { getArcana, deleteArcana, buildArcana } from "../apis/ArcanaApis"; // Import buildArcana function
 import { useSelector } from "react-redux";

@@ -1,9 +1,9 @@
 // Importing necessary modules and assets
 import { Link } from "react-router-dom"; // For routing
 import { Trans, useTranslation } from "react-i18next"; // For internationalization
-import arrow_down from "../assets/footer_arrow.svg"; // Arrow icon
-import english_flag from "../assets/english_flag.svg"; // English flag icon
-import german_flag from "../assets/german_flag.svg"; // German flag icon
+import arrow_down from "../../assets/footer_arrow.svg"; // Arrow icon
+import english_flag from "../../assets/english_flag.svg"; // English flag icon
+import german_flag from "../../assets/german_flag.svg"; // German flag icon
 
 // Language list of supported languages with corresponding flag icons
 const lngs = {

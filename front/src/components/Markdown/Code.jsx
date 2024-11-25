@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import CodeCopyBtn from "./CodeCopyBtn";
+import CodeCopyBtn from "../Others/CodeCopyBtn";
 
 // Code component definition
 export default function Code({ inline, className, children, ...props }) {

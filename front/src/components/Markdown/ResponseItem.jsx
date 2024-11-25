@@ -1,10 +1,10 @@
 // Importing necessary libraries and components
 import React from "react";
-import retry from "../assets/icon_retry.svg";
-import Typing from "../components/Typing";
+import retry from "../../assets/icon_retry.svg";
+import Typing from "../Others/Typing";
 import MarkdownRenderer from "./MarkdownRenderer";
-import copy from "../assets/icon_copy.svg";
-import check from "../assets/check.svg";
+import copy from "../../assets/icon_copy.svg";
+import check from "../../assets/check.svg";
 
 // ResponseItem component definition
 const ResponseItem = React.memo(

@@ -380,3 +380,8 @@ html {
     top: 0px;
   }
 }
+
+/* Make sure toasts are visible */
+.Toastify__toast-container {
+  z-index: 9999;
+}

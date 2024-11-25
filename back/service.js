@@ -22,7 +22,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
-async function getCompletionLLM(model, messages, temperature = 0.5, top_p = 0.5, inference_id = "no_id") {
+async function getCompletionLLM(model, messages, temperature = 0.5, top_p = 0.5, inference_id = "no_id", arcana = null) {
   const url = "http://172.17.0.1:8000/inference/v1/chat/completions";
   const headers = {
     Accept: "application/json",
@@ -38,6 +38,7 @@ async function getCompletionLLM(model, messages, temperature = 0.5, top_p = 0.5,
     temperature: temperature,
     top_p: top_p,
     stream: true,
+    ...(arcana !== null && arcana !== undefined && arcana.id !== null && arcana.id !== undefined && arcana.id !== "" ? { arcana: arcana } : {})
   });
 
   const response = await fetch(url, { method: "POST", headers, body });
@@ -56,31 +57,14 @@ app.get("/", async (req, res) => {
 });
 
 app.post("/", async (req, res) => {
-  const messages = req.body.messages;
-  const model = req.body.model;
-  const temperature = req.body.temperature;
-  const top_p = req.body.top_p;
+  const {
+    messages,
+    model,
+    temperature = 0.5,
+    top_p = 0.5,
+    arcana = null,
+  } = req.body;
   const inference_id = req.headers["inference-id"];
-
-  // Validation checks
-  // const validModels = [
-  //   "openai-gpt35",
-  //   "openai-gpt4",
-  //   "intel-neural-chat-7b",
-  //   "mixtral-8x7b-instruct",
-  //   "qwen1.5-72b-chat",
-  //   "meta-llama-3-70b-instruct",
-  // ];
-
-  // if (
-  //   typeof model !== "string" ||
-  //   model.length === 0 ||
-  //   !validModels.includes(model)
-  // ) {
-  //   return res
-  //     .status(422)
-  //     .json({ error: "Invalid or unsupported model provided" });
-  // }
 
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
@@ -106,7 +90,7 @@ app.post("/", async (req, res) => {
       }, 30000); // here, 30000ms is the timeout. Adjust it as per your needs
     });
 
-    const streamPromise = getCompletionLLM(model, messages, temperature, top_p, inference_id);
+    const streamPromise = getCompletionLLM(model, messages, temperature, top_p, inference_id, arcana);
     const response = await Promise.race([streamPromise, timeout]).catch(
       (error) => {
         console.error(error);

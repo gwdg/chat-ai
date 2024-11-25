@@ -1,4 +1,4 @@
-import Layout from "../components/Layout"; // Importing the Layout component
+import Layout from "../components/Layout/Layout"; // Importing the Layout component
 import Prompt from "../components/Prompt"; // Importing the Prompt component
 
 // Home component
