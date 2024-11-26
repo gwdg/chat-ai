@@ -209,7 +209,7 @@ i18n
             warning_arcana:
               "Keep temperature and top_p at 0 for optimal arcana results",
             offline:
-              "Sorry for the inconvenience, but the model you selected is currently unavailable. It will be accessible in a few minutes. In the meantime, feel free to choose another model.",
+              "The model you selected is currently offline. By pressing OK below, the model starts up and will be online in a few minutes. In the meantime, feel free to choose another model.",
           },
         },
       },
@@ -410,7 +410,7 @@ i18n
             warning_arcana:
               "Halten Sie Temperatur und top_p auf 0 für optimale Arcana-Ergebnisse",
             offline:
-              "Entschuldigen Sie die Unannehmlichkeiten, aber das gewählte Modell ist derzeit nicht verfügbar. Es wird in wenigen Minuten wieder zugänglich sein. In der Zwischenzeit können Sie ein anderes Modell auswählen.",
+              "Das von Ihnen ausgewählte Modell ist derzeit offline. Durch das Anklicken von OK unten startet das Modell und wird in wenigen Minuten online sein. In der Zwischenzeit können Sie gerne ein anderes Modell auswählen.",
           },
         },
       },

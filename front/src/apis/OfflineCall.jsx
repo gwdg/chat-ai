@@ -22,7 +22,7 @@ async function offlineModelCall(model) {
       }),
     });
 
-    return response; // Return data to use elsewhere
+    return response;
   } catch (error) {
     console.error("An error occurred", error);
     throw error;
