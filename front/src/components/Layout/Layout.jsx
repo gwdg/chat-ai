@@ -19,11 +19,14 @@ import {
   selectCurrentConversation,
 } from "../../Redux/reducers/conversationsSlice";
 import { getModels } from "../../apis/ModelLIst";
+import Offline_Model_Model from "../../model/Offline_Model_Model";
 
 function Layout() {
   const [showFooter, setShowFooter] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showCacheModel, setShowCacheModel] = useState(false);
+  const [showModelOffline, setShowModelOffline] = useState(false);
+
   const mainDiv = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -74,6 +77,15 @@ function Layout() {
       });
     }
   }, [currentConversation]);
+
+  useEffect(() => {
+    const currentModel = modelList.find(
+      (modelX) => modelX.name === modelSettings.model
+    );
+    if (currentModel?.status === "offline") {
+      setShowModelOffline(true);
+    }
+  }, [modelSettings.model, modelList]);
 
   // Handle model change
   const handleModelChange = useCallback(
@@ -302,6 +314,12 @@ function Layout() {
           onConfirm={confirmDelete}
         />
       )}
+      {showModelOffline ? (
+        <Offline_Model_Model
+          showModal={setShowModelOffline}
+          model={modelSettings.model_api}
+        />
+      ) : null}
     </div>
   );
 }
