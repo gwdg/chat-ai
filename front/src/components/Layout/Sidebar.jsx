@@ -6,21 +6,15 @@ import {
   selectConversations,
   selectCurrentConversationId,
 } from "../../Redux/reducers/conversationsSlice";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import cross from "../../assets/cross.svg";
-import { Trans } from "react-i18next";
+import back_arrow from "../../assets/back_arrow.svg";
 
-function Sidebar({
-  onClose,
-  setShowCacheModel,
-  onDeleteConversation,
-  conversationIds,
-}) {
+function Sidebar({ onClose, onDeleteConversation, conversationIds }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleNewChat = useCallback(() => {
     const action = dispatch(addConversation());
@@ -41,7 +35,7 @@ function Sidebar({
   );
 
   return (
-    <div className="flex flex-col h-[100dvh] md:h-full bg-white dark:bg-bg_secondary_dark border-r dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark select-none">
+    <div className="flex flex-col h-full bg-white dark:bg-bg_secondary_dark border-r dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark select-none">
       <div className="md:hidden flex items-center justify-between p-4 border-b dark:border-border_dark">
         <p className="text-lg font-medium text-black dark:text-white">
           Conversations
@@ -50,7 +44,7 @@ function Sidebar({
           onClick={onClose}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
         >
-          <img src={cross} alt="close" className="h-5 w-5" />
+          <img src={back_arrow} alt="close" className="h-5 w-5" />
         </button>
       </div>
 
@@ -98,29 +92,6 @@ function Sidebar({
               );
             })}
           </div>
-        </div>
-
-        <div className="flex-shrink-0 p-2 space-y-2 border-t dark:border-border_dark">
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full p-3 bg-bg_light dark:bg-bg_dark text-black dark:text-white rounded-2xl flex items-center justify-center gap-2 hover:bg-light_hover dark:hover:bg-dark_hover transition-all"
-          >
-            <div className="flex items-center gap-2 truncate px-1">
-              {showAdvanced ? (
-                <span className="truncate">Hide Advanced Settings</span>
-              ) : (
-                <span className="truncate">Advanced Settings</span>
-              )}
-            </div>
-          </button>
-          {showAdvanced && (
-            <button
-              className="w-full p-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl flex items-center justify-center gap-2"
-              onClick={() => setShowCacheModel(true)}
-            >
-              <Trans i18nKey="description.file2"></Trans>
-            </button>
-          )}
         </div>
       </div>
     </div>

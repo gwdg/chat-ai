@@ -5,10 +5,12 @@ import { useEffect, useState, useRef, useMemo } from "react";
 // Assets
 import Light from "../../assets/light.svg";
 import Dark from "../../assets/dark.svg";
+import hamburger_icon from "../../assets/hamburger_icon.svg";
+import profile_icon from "../../assets/profile_icon.svg";
 import Logo from "../../assets/chatai-logo-v3-preview.png";
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
-import Help_Model from "../../model/Help_Modal";
+import Help_Model from "../../model/Help_Model";
 import Session_Expired from "../../model/Session_Expired";
 
 const getStatusColor = (status) => {
@@ -24,7 +26,14 @@ const getStatusColor = (status) => {
   }
 };
 
-function Header({ modelSettings, modelList, onModelChange }) {
+function Header({
+  onMenuClick,
+  isSidebarOpen,
+  modelSettings,
+  modelList,
+  onModelChange,
+  setShowSettingsModel,
+}) {
   const dispatch = useDispatch();
 
   // UI States
@@ -81,51 +90,67 @@ function Header({ modelSettings, modelList, onModelChange }) {
     <>
       {/* Desktop Header */}
       <nav
-        className={`top-0 min-h-[60px] px-3 items-center justify-between left-0 mobile:hidden flex z-[999] w-full bg-white dark:bg-black shadow-lg`}
+        className="top-0 min-h-[60px] px-2 sm:px-4 items-center justify-between left-0 mobile:hidden flex z-[995] w-full bg-white dark:bg-black shadow-lg"
         style={{
           paddingBottom: "env(safe-area-inset-bottom)",
           paddingTop: "env(safe-area-inset-top)",
         }}
       >
-        <div className="flex gap-4 items-center">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Hamburger Menu */}
           <button
-            className="sm:border-r-primary sm:border-r-2 pr-4 h-[48px] w-[48px]"
+            onClick={onMenuClick}
+            className="lg:hidden hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <img
+              className="h-[32px] w-[32px] sm:h-[40px] sm:w-[40px]"
+              src={hamburger_icon}
+              alt="Menu"
+            />
+          </button>
+
+          <button
+            className="border-r border-primary pr-2 sm:pr-4 h-[40px] w-[40px] sm:h-[48px] sm:w-[48px] transition-all"
             onClick={toggleDarkMode}
           >
             {isDarkMode ? (
-              <img
-                className="cursor-pointer h-[48px] w-[48px]"
-                src={Light}
-                alt="Light Mode"
-              />
+              <img className="h-full w-full p-1" src={Light} alt="Light Mode" />
             ) : (
               <img
-                className="cursor-pointer h-[48px] w-[48px] -rotate-45"
+                className="h-full w-full p-1 -rotate-45"
                 src={Dark}
                 alt="Dark Mode"
               />
             )}
           </button>
 
-          <Link to={"/"}>
+          <Link to={"/"} className="flex items-center">
             <img
-              className="cursor-pointer sm:h-[40px] sm:w-[125px] h-[35px] w-[130px]"
+              className="h-[30px] w-[100px] sm:h-[40px] sm:w-[125px] object-contain"
               src={Logo}
               alt="Chat AI Logo"
             />
           </Link>
         </div>
 
-        <div className="flex">
-          <div className="pr-2">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="hidden sm:block">
             <Link to={"https://kisski.gwdg.de/"} target="_blank">
-              <div className="sm:bg-kisski-logo-large bg-kisski-logo-small sm:h-[45px] sm:w-[145px] h-[60px] w-[60px] bg-repeat-round"></div>
+              <div className="bg-kisski-logo-small sm:bg-kisski-logo-large h-[45px] w-[145px] bg-repeat-round transition-all"></div>
             </Link>
           </div>
-          <div className="border-l-2 border-primary pl-2">
+          <div className="hidden sm:block border-l border-primary px-2 sm:px-4">
             <Link to={"https://gwdg.de/"} target="_blank">
-              <div className="sm:bg-logo-large bg-logo-small sm:h-[45px] sm:w-[145px] h-[60px] w-[60px] bg-repeat-round"></div>
+              <div className="bg-logo-small sm:bg-logo-large h-[45px] w-[145px] bg-repeat-round transition-all"></div>
             </Link>
+          </div>
+          <div className="cursor-pointer border-l border-primary pl-2 sm:pl-4">
+            <img
+              className="h-[40px] w-[40px] sm:h-[48px] sm:w-[48px] transition-all p-1"
+              src={profile_icon}
+              alt="Profile"
+              onClick={() => setShowSettingsModel(true)}
+            />
           </div>
         </div>
       </nav>
@@ -140,113 +165,146 @@ function Header({ modelSettings, modelList, onModelChange }) {
           paddingTop: "env(safe-area-inset-top)",
         }}
       >
-        <div
-          className={`w-full px-1 justify-between flex gap-4 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark relative`}
-        >
-          <div className="flex items-center min-w-[100px]">
+        <div className="w-full px-2 flex items-center justify-between gap-2 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark relative">
+          {/* Left Section */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onMenuClick}
+              className=" hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <img
+                className="h-[32px] w-[32px] "
+                src={hamburger_icon}
+                alt="Menu"
+              />
+            </button>
+
             <Link to={"/"}>
               <img
-                className="cursor-pointer h-[40px] object-contain"
+                className="h-[35px] w-[100px] object-contain"
                 src={Logo}
                 alt="Chat AI Logo"
               />
             </Link>
           </div>
 
+          {/* Full Width Model Selection */}
           <div
-            className="flex index w-full justify-between"
+            className="flex-1 px-2"
             ref={dropdownRef}
             tabIndex={0}
             onBlur={() => setIsOpen(false)}
           >
             <div
-              className="text-tertiary sm:max-w-none flex-grow flex items-center text-[16px] w-full py-[10px] px-[5px] appearance-none focus:outline-none cursor-pointer"
+              className="flex items-center w-full gap-2 px-3 py-1.5 rounded-lg 
+          bg-gray-50 dark:bg-gray-800
+          hover:bg-gray-100 dark:hover:bg-gray-700 
+          border border-gray-200 dark:border-gray-700
+          text-gray-900 dark:text-gray-100
+          transition-colors cursor-pointer"
               onClick={() => setIsOpen(!isOpen)}
             >
-              <div className="flex gap-2 items-center">
-                <div
-                  className={`h-[8px] w-[8px] rounded-full`}
-                  style={{ backgroundColor: modelStatus.color }}
-                ></div>
-                <div className="text-ellipsis max-w-[200px] text-xl overflow-hidden whitespace-nowrap">
-                  {modelSettings.model}
-                </div>
-                {isImageSupported && (
-                  <img
-                    src={image_supported}
-                    alt="image_supported"
-                    className="h-[20px] w-[20px] cursor-pointer ml-auto"
-                  />
-                )}
+              <div
+                className="h-[8px] w-[8px] flex-shrink-0 rounded-full"
+                style={{ backgroundColor: modelStatus.color }}
+              ></div>
+              <div className="flex-1 text-sm truncate">
+                {modelSettings.model}
               </div>
+              {isImageSupported && (
+                <img
+                  src={image_supported}
+                  alt="image_supported"
+                  className="h-[18px] w-[18px] flex-shrink-0 "
+                />
+              )}
             </div>
 
             {isOpen && (
               <div
-                className={`absolute z-[999] w-full left-0 top-full shadow-lg dark:shadow-dark rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-bg_secondary_dark max-h-[250px] overflow-y-auto`}
+                className="absolute z-[999] w-[calc(100%-1rem)] left-2 right-2 top-[calc(100%-0.5rem)] 
+          bg-white dark:bg-gray-800 
+          shadow-lg dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)] 
+          rounded-lg 
+          border border-gray-200 dark:border-gray-700
+          max-h-[250px] overflow-y-auto"
               >
                 {modelList.map((option) => (
                   <div
                     key={option.id}
-                    className="text-tertiary flex gap-2 items-center text-xl w-full p-2 cursor-pointer"
+                    className="flex items-center gap-2 px-3 py-2 
+                hover:bg-gray-50 dark:hover:bg-gray-700
+                text-gray-900 dark:text-gray-100 
+                border-b border-gray-100 dark:border-gray-700 
+                last:border-0
+                transition-colors cursor-pointer"
                     onClick={() => handleChangeModel(option)}
                   >
                     <div
-                      className={`h-[8px] w-[8px] rounded-full`}
+                      className="h-[8px] w-[8px] flex-shrink-0 rounded-full"
                       style={{
                         backgroundColor: getStatusColor(option.status),
                       }}
                     ></div>
-                    <div className="flex-grow text-left pl-2">
-                      {option.name}
-                    </div>
+                    <div className="flex-1 text-sm">{option.name}</div>
                     {option.input.includes("image") && (
                       <img
                         src={image_supported}
                         alt="image_supported"
-                        className="h-[20px] w-[20px] cursor-pointer"
+                        className="h-[18px] w-[18px] flex-shrink-0 "
                       />
                     )}
                   </div>
                 ))}
               </div>
             )}
-
-            <div className="cursor-pointer flex-shrink-0 w-[25px] flex items-center">
-              <img
-                src={help}
-                alt="help"
-                className="h-[25px] w-[25px] cursor-pointer"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setShowHelpModel(true);
-                }}
-              />
-            </div>
           </div>
 
-          <div className="cursor-pointer flex items-center">
-            <button className="h-[30px] w-[30px]" onClick={toggleDarkMode}>
+          {/* Right Section */}
+          <div className="flex items-center gap-2">
+            <img
+              src={help}
+              alt="help"
+              className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity "
+              onClick={(event) => {
+                event.stopPropagation();
+                setShowHelpModel(true);
+              }}
+            />
+
+            <button
+              className=" hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              onClick={toggleDarkMode}
+            >
               {isDarkMode ? (
                 <img
-                  className="cursor-pointer h-[30px] w-[30px]"
+                  className="h-[24px] w-[24px]"
                   src={Light}
                   alt="Light Mode"
                 />
               ) : (
                 <img
-                  className="cursor-pointer h-[30px] w-[30px] -rotate-45"
+                  className="h-[24px] w-[24px] -rotate-45"
                   src={Dark}
                   alt="Dark Mode"
                 />
               )}
             </button>
+
+            <div className="cursor-pointer border-l border-primary pl-2">
+              <img
+                className="h-[32px] w-[32px] "
+                src={profile_icon}
+                alt="Profile"
+                onClick={() => setShowSettingsModel(true)}
+              />
+            </div>
           </div>
         </div>
       </nav>
 
-      {showHelpModel && <Help_Model showModal={setShowHelpModel} />}
-      {showModelSession && <Session_Expired showModal={setShowModelSession} />}
+      {showHelpModel && <Help_Model showModel={setShowHelpModel} />}
+      {showModelSession && <Session_Expired showModel={setShowModelSession} />}
     </>
   );
 }

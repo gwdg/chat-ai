@@ -1,6 +1,6 @@
 // Importing necessary modules
 import { Trans } from "react-i18next"; // For translation
-import Modal from "./Modal"; // Importing Modal component
+import Model from "./Model"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
 import { offlineModelCall } from "../apis/OfflineCall";
 
@@ -11,11 +11,11 @@ function Offline_Model_Model(props) {
     } catch (error) {
       console.error("An error occurred", error);
     }
-    props?.showModal(false);
+    props?.showModel(false);
   }
 
   return (
-    <Modal showModal={props.showModal}>
+    <Model showModel={props.showModel}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
@@ -25,7 +25,7 @@ function Offline_Model_Model(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModal(false)}
+            onClick={() => props.showModel(false)}
           />
         </div>
         <div className="flex flex-col gap-2 p-4">
@@ -44,7 +44,7 @@ function Offline_Model_Model(props) {
           </div>
         </div>
       </div>
-    </Modal>
+    </Model>
   );
 }
 

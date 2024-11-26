@@ -20,12 +20,14 @@ import {
 } from "../../Redux/reducers/conversationsSlice";
 import { getModels } from "../../apis/ModelLIst";
 import Offline_Model_Model from "../../model/Offline_Model_Model";
+import Settings_Model from "../../model/Settings_Model";
 
 function Layout() {
   const [showFooter, setShowFooter] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showCacheModel, setShowCacheModel] = useState(false);
   const [showModelOffline, setShowModelOffline] = useState(false);
+  const [showSettingsModel, setShowSettingsModel] = useState(false);
 
   const mainDiv = useRef(null);
   const dispatch = useDispatch();
@@ -124,26 +126,36 @@ function Layout() {
 
   const confirmDelete = useCallback(() => {
     const id = deletingConversationId;
-    const isLastConversation = conversations.length === 1;
-    const isDeletingCurrent = id === currentConversationId;
+    const currentIndex = conversations.findIndex((conv) => conv.id === id);
 
-    if (isLastConversation || isDeletingCurrent) {
-      const newAction = dispatch(addConversation());
-      const newId = newAction.payload?.id;
+    if (currentIndex !== -1) {
+      // If deleting current conversation, navigate to the new conversation before deleting
+      if (id === currentConversationId) {
+        const isFirstConversation = currentIndex === 0;
+        const nextConversationIndex = isFirstConversation
+          ? 1
+          : currentIndex - 1;
 
-      if (newId) {
-        setConversationIds((prev) => [
-          newId,
-          ...prev.filter((convId) => convId !== id),
-        ]);
-        navigate(`/chat/${newId}`);
-        setTimeout(() => {
+        if (conversations.length === 1) {
+          // If it's the last conversation, create a new one first
+          const newAction = dispatch(addConversation());
+          const newId = newAction.payload?.id;
+          if (newId) {
+            navigate(`/chat/${newId}`);
+            setTimeout(() => {
+              dispatch(deleteConversation(id));
+            }, 0);
+          }
+        } else {
+          // Navigate to the next conversation before deleting
+          const nextConversationId = conversations[nextConversationIndex].id;
+          navigate(`/chat/${nextConversationId}`);
           dispatch(deleteConversation(id));
-        }, 0);
+        }
+      } else {
+        // If not deleting current conversation, just delete it
+        dispatch(deleteConversation(id));
       }
-    } else {
-      setConversationIds((prev) => prev.filter((convId) => convId !== id));
-      dispatch(deleteConversation(id));
     }
 
     setShowDeleteConfirm(false);
@@ -151,7 +163,7 @@ function Layout() {
   }, [
     dispatch,
     navigate,
-    conversations.length,
+    conversations,
     currentConversationId,
     deletingConversationId,
   ]);
@@ -172,7 +184,7 @@ function Layout() {
   // Handle responsive sidebar
   useEffect(() => {
     const handleResize = () => {
-      setIsSidebarOpen(window.innerWidth >= 768);
+      setIsSidebarOpen(window.innerWidth >= 1024);
     };
 
     handleResize();
@@ -195,6 +207,7 @@ function Layout() {
       }
 
       setShowCacheModel(false);
+      setShowSettingsModel(false);
     } catch (error) {
       notifyError("Failed to clear chats: " + error.message);
     }
@@ -202,20 +215,20 @@ function Layout() {
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-white dark:bg-black">
-      {/* Header - Full width */}
       <Header
         onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        isSidebarOpen={isSidebarOpen}
         modelSettings={modelSettings}
         modelList={modelList}
         onModelChange={handleModelChange}
+        setShowSettingsModel={setShowSettingsModel}
       />
 
-      {/* Content Container */}
       <div className="flex flex-1 overflow-hidden relative bg-bg_light dark:bg-bg_dark">
         {/* Mobile Overlay */}
         {isSidebarOpen && (
           <div
-            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
@@ -224,40 +237,18 @@ function Layout() {
         <div
           className={`
             ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-            md:translate-x-0 transition-transform duration-200 ease-in-out
-            fixed md:relative w-72 md:h-full h-screen z-30 md:z-auto shrink-0 md:p-2 bg-bg_light dark:bg-bg_dark`}
+            lg:translate-x-0 transition-transform duration-200 ease-in-out
+            fixed lg:relative w-72 lg:h-full h-screen z-30 lg:z-auto shrink-0 lg:p-2 bg-bg_light dark:bg-bg_dark`}
         >
           <Sidebar
             onClose={() => setIsSidebarOpen(false)}
-            setShowCacheModel={setShowCacheModel}
             onDeleteConversation={handleDeleteConversation}
             conversationIds={conversationIds}
           />
         </div>
 
-        {/* Mobile Sidebar Toggle Button */}
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          className="md:hidden fixed bottom-4 left-4 z-20 bg-tertiary hover:bg-tertiary_hover active:bg-tertiary_pressed text-white p-3 rounded-full shadow-lg"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
-        </button>
-
         {/* Main Content */}
         <div className="flex flex-col flex-1 w-full overflow-hidden">
-          {/* Main scrollable area */}
           <div
             ref={mainDiv}
             className={`flex-1 overflow-y-auto bg-bg_light dark:bg-bg_dark ${
@@ -299,11 +290,12 @@ function Layout() {
           />
         )}
       </div>
-      {/* Pop-up clear cache*/}
+
+      {/* Modals */}
       <div className="">
         {showCacheModel ? (
           <Clear_Cache_Model
-            showModal={setShowCacheModel}
+            showModel={setShowCacheModel}
             clearCache={clearCache}
           />
         ) : null}
@@ -316,8 +308,14 @@ function Layout() {
       )}
       {showModelOffline ? (
         <Offline_Model_Model
-          showModal={setShowModelOffline}
+          showModel={setShowModelOffline}
           model={modelSettings.model_api}
+        />
+      ) : null}
+      {showSettingsModel ? (
+        <Settings_Model
+          showModel={setShowSettingsModel}
+          setShowCacheModel={setShowCacheModel}
         />
       ) : null}
     </div>
