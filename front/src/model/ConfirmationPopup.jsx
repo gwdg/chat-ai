@@ -1,10 +1,10 @@
-import Modal from "./Modal";
+import Model from "./Model";
 import cross from "../assets/cross.svg";
 import { Trans } from "react-i18next";
 
 function ConfirmationPopup({ onClose, onConfirm }) {
   return (
-    <Modal showModal={onClose}>
+    <Model showModel={onClose}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
@@ -41,7 +41,7 @@ function ConfirmationPopup({ onClose, onConfirm }) {
           </div>
         </div>
       </div>
-    </Modal>
+    </Model>
   );
 }
 

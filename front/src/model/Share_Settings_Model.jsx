@@ -1,6 +1,6 @@
 // Importing necessary modules
 import { Trans } from "react-i18next"; // For translation
-import Modal from "./Modal"; // Importing Modal component
+import Model from "./Model"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
 
 function Share_Settings_Model(props) {
@@ -26,9 +26,9 @@ function Share_Settings_Model(props) {
   };
 
   return (
-    <Modal showModal={props.showModal}>
+    <Model showModel={props.showModel}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
-        {/* Modal header */}
+        {/* Model header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
             <Trans i18nKey="description.help_title"></Trans>:
@@ -38,7 +38,7 @@ function Share_Settings_Model(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModal(false)}
+            onClick={() => props.showModel(false)}
           />
         </div>
         <div className="flex flex-col gap-2 p-4">
@@ -100,7 +100,7 @@ function Share_Settings_Model(props) {
             {/* Close button */}
             {/* <button
               className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-              onClick={() => props.showModal(false)}
+              onClick={() => props.showModel(false)}
             >
               <Trans i18nKey="description.cache2"></Trans>
             </button> */}
@@ -114,7 +114,7 @@ function Share_Settings_Model(props) {
           </div>
         </div>
       </div>
-    </Modal>
+    </Model>
   );
 }
 

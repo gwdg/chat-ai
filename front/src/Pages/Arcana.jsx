@@ -14,7 +14,7 @@ import reports from "../assets/icons_arcana/reports.svg";
 import studies from "../assets/icons_arcana/studies.svg";
 import work from "../assets/icons_arcana/work.svg";
 import FilesTable from "../components/Arcanas/FilesTable";
-import Help_Model from "../model/Help_Modal";
+import Help_Model from "../model/Help_Model";
 import { getArcana, deleteArcana, buildArcana } from "../apis/ArcanaApis"; // Import buildArcana function
 import { useSelector } from "react-redux";
 import Delete_Arcana_Model from "../model/Delete_Arcana_Model";
@@ -233,11 +233,11 @@ function Arcana() {
 
       {showDeleteModel ? (
         <Delete_Arcana_Model
-          showModal={setShowDeleteModel}
+          showModel={setShowDeleteModel}
           handleDelete={handleDelete}
         />
       ) : null}
-      {showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}
+      {showHelpModel ? <Help_Model showModel={setShowHelpModel} /> : null}
     </Layout>
   );
 }

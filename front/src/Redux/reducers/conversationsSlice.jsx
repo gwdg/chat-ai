@@ -86,20 +86,33 @@ const conversationsSlice = createSlice({
         Object.assign(conversation, updates);
       }
     },
-    // ... rest of the reducers remain the same
     deleteConversation: (state, action) => {
-      const id = action.payload;
-      state.conversations = state.conversations.filter(
-        (conv) => conv.id !== id
+      const idToDelete = action.payload;
+      const currentIndex = state.conversations.findIndex(
+        (conv) => conv.id === idToDelete
       );
 
+      // If conversation not found, do nothing
+      if (currentIndex === -1) return;
+
+      // Remove the conversation
+      state.conversations = state.conversations.filter(
+        (conv) => conv.id !== idToDelete
+      );
+
+      // Handle different cases for currentConversationId
       if (state.conversations.length === 0) {
+        // If last conversation was deleted, create a new one
         const newConversation = createDefaultConversation();
         state.conversations.push(newConversation);
         state.currentConversationId = newConversation.id;
-      } else if (state.currentConversationId === id) {
-        state.currentConversationId = state.conversations[0].id;
+      } else if (state.currentConversationId === idToDelete) {
+        // If deleted conversation was current, move to the previous conversation
+        // (or the next one if deleting the first conversation)
+        const newIndex = currentIndex === 0 ? 0 : currentIndex - 1;
+        state.currentConversationId = state.conversations[newIndex].id;
       }
+      // If deleted conversation wasn't current, currentConversationId stays the same
     },
     setCurrentConversation: (state, action) => {
       const conversationId = action.payload;

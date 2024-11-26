@@ -191,7 +191,7 @@ function CustomInstructions() {
       <div className="">
         {showCacheModel ? (
           <Clear_Cache_Model
-            showModal={setShowCacheModel}
+            showModel={setShowCacheModel}
             clearCache={clearCache}
           />
         ) : null}

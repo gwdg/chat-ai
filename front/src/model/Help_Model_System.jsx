@@ -1,13 +1,13 @@
 import { Trans } from "react-i18next"; // For translation
-import Modal from "./Modal"; // Importing Modal component
+import Model from "./Model"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
 
 function Help_Model_System(props) {
   return (
-    // Modal component with help content
-    <Modal showModal={props.showModal}>
+    // Model component with help content
+    <Model showModel={props.showModel}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
-        {/* Modal header */}
+        {/* Model header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
             {/* Translation for help title */}
@@ -18,7 +18,7 @@ function Help_Model_System(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModal(false)} // Click handler to close modal
+            onClick={() => props.showModel(false)} // Click handler to close model
           />
         </div>
         {/* Help content */}
@@ -32,7 +32,7 @@ function Help_Model_System(props) {
           </p>
         </div>
       </div>
-    </Modal>
+    </Model>
   );
 }
 

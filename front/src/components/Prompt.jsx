@@ -46,7 +46,7 @@ import stop from "../assets/stop_listening.svg";
 import pause from "../assets/pause.svg";
 import edit_icon from "../assets/edit_icon.svg";
 import icon_resend from "../assets/icon_resend.svg";
-import Help_Model from "../model/Help_Modal";
+import Help_Model from "../model/Help_Model";
 import Mic_Model from "../model/Mic_Model";
 import Cutom_Instructions_Model from "../model/Cutom_Instructions_Model";
 import { abortFetch, getDataFromLLM } from "../apis/Completion";
@@ -1327,7 +1327,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
 
   // Exports conversation to a file
   const exportFile = (value) => {
-    // setShowFileModel(true); // Uncomment if you need to show a modal before export
+    // setShowFileModel(true); // Uncomment if you need to show a model before export
     if (value === "json") {
       exportJSON(localState.conversation);
     } else if (value === "pdf") {
@@ -1713,7 +1713,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
 
   const toggleAdvOpt = () => {
     setShowAdvOpt(!showAdvOpt); // Toggle dark mode state
-    dispatch({ type: "SET_ADV" }); // Dispatch action to update theme in Redux store
   };
 
   // Handles changing the selected model
@@ -2743,7 +2742,15 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
           {/* Panel */}
           <div className="static flex justify-center mobile:absolute bottom-0 w-[calc(100%-12px)] shadow-lg dark:shadow-dark">
             {showAdvOpt ? (
-              <div className="flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
+              <div
+                className={`transform transition-all duration-300 ${
+                  showAdvOpt
+                    ? "translate-y-0 opacity-100"
+                    : "translate-y-full opacity-0"
+                } flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark 
+      rounded-2xl shadow-lg dark:shadow-dark bg-white 
+      dark:bg-bg_secondary_dark h-fit w-full`}
+              >
                 {/* Select model */}
                 <div className="flex flex-col mobile:hidden gap-4">
                   {/* Select input for model for desktop */}
@@ -3085,7 +3092,18 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                 </div>{" "}
               </div>
             ) : (
-              <div className="flex mobile:hidden flex-col gap-4 sm:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
+              <div
+                className={`transform transition-all duration-300 motion-safe:duration-300
+        ${
+          showAdvOpt
+            ? "translate-y-0 opacity-100 scale-100"
+            : "translate-y-0 opacity-100 scale-100"
+        }
+        mobile:hidden flex flex-col gap-4 sm:px-6 py-4 px-3 border 
+        dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark 
+        bg-white dark:bg-bg_secondary_dark h-fit w-full
+        ease-[cubic-bezier(0.34,1.56,0.64,1)]`}
+              >
                 {/* Select model */}
                 <div className="sm:flex flex-col hidden gap-4">
                   {/* Select input for model for desktop */}
@@ -3205,45 +3223,45 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       </div>
 
       {/* Help model for info on changing model */}
-      <>{showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}</>
+      <>{showHelpModel ? <Help_Model showModel={setShowHelpModel} /> : null}</>
 
       {/* Help model for info on custom temperature */}
       <div className="">
         {showCustomHelpModel ? (
-          <Help_Model_Custom showModal={setShowCustomHelpModel} />
+          <Help_Model_Custom showModel={setShowCustomHelpModel} />
         ) : null}
       </div>
 
       {/* Help model for info on custom temperature */}
       <div className="">
         {showTpopHelpModel ? (
-          <Help_Model_Tpop showModal={setShowTpopHelpModel} />
+          <Help_Model_Tpop showModel={setShowTpopHelpModel} />
         ) : null}
       </div>
 
       {/* Help model for info on system prompt */}
       <div className="">
         {showSystemHelpModel ? (
-          <Help_Model_System showModal={setShowSystemHelpModel} />
+          <Help_Model_System showModel={setShowSystemHelpModel} />
         ) : null}
       </div>
 
       {/* Help model for info on custom instructions */}
       <div className="">
         {showArcanasHelpModel ? (
-          <Help_model_Arcanas showModal={setShowArcanasHelpModel} />
+          <Help_model_Arcanas showModel={setShowArcanasHelpModel} />
         ) : null}
       </div>
 
       {/* Pop-up if microphone permission is not given or denied */}
       <div className="">
-        {showMicModel ? <Mic_Model showModal={setShowMicModel} /> : null}
+        {showMicModel ? <Mic_Model showModel={setShowMicModel} /> : null}
       </div>
 
       {/* Pop-up for info about custom instructions */}
       <div className="">
         {showCusModel ? (
-          <Cutom_Instructions_Model showModal={setShowCusModel} />
+          <Cutom_Instructions_Model showModel={setShowCusModel} />
         ) : null}
       </div>
 
@@ -3252,7 +3270,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
         {showFileModel ? (
           <ExportTypeModel
             arcana={localState.arcana}
-            showModal={setShowFileModel}
+            showModel={setShowFileModel}
             exportFile={exportFile}
             conversation={localState.conversation}
             exportSettings={localState.exportOptions.exportSettings}
@@ -3266,14 +3284,14 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       {/* Pop-up  for session expired model*/}
       <div className="">
         {showModelSession ? (
-          <Session_Expired showModal={setShowModelSession} />
+          <Session_Expired showModel={setShowModelSession} />
         ) : null}
       </div>
 
       {/* Pop-up token limit exceed*/}
       <div className="">
         {showBadRequest ? (
-          <Bad_Request_Model showModal={setShowBadRequest} />
+          <Bad_Request_Model showModel={setShowBadRequest} />
         ) : null}
       </div>
 
@@ -3281,7 +3299,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       <div className="">
         {showHistoryModel ? (
           <Clear_History_Model
-            showModal={setShowHistoryModel}
+            showModel={setShowHistoryModel}
             clearHistory={clearHistory}
             dontShowAgain={localState.dontShow.dontShowAgain}
             setLocalState={setLocalState}
@@ -3295,7 +3313,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
           <Share_Settings_Model
             arcana={localState.arcana}
             exportArcana={localState.exportOptions.exportArcana}
-            showModal={setShareSettingsModel}
+            showModel={setShareSettingsModel}
             handleShareSettings={handleShareSettings}
             dontShowAgainShare={localState.dontShow.dontShowAgainShare}
             setLocalState={setLocalState}
