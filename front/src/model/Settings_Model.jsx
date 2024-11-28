@@ -3,7 +3,10 @@ import Model from "./Model";
 import cross from "../assets/cross.svg";
 
 function Settings_Model(props) {
-  const handleLogout = () => {};
+  const handleLogout = () => {
+    window.location.href =
+      "https://keycloak.sso.gwdg.de/auth/realms/academiccloud/protocol/openid-connect/logout";
+  };
 
   return (
     <Model showModel={props.showModel} isSettingsModel={true}>
@@ -23,10 +26,10 @@ function Settings_Model(props) {
         <div className="p-4 flex items-center gap-3 border-b dark:border-border_dark">
           <div className="flex flex-col">
             <span className="font-medium text-lg dark:text-white">
-              Username{" "}
+              {props.userData.username || "Loading..."}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              Goettingen University
+              {props.userData.organization || "Loading..."}
             </span>
           </div>
         </div>
@@ -57,7 +60,7 @@ function Settings_Model(props) {
 
           {/* Logout Button */}
           <button
-            onClick={() => props.showModel(false)}
+            onClick={handleLogout}
             className="w-full p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
           >
             <p>Logout</p>

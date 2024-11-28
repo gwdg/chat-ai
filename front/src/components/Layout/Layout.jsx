@@ -21,6 +21,7 @@ import {
 import { getModels } from "../../apis/ModelLIst";
 import Offline_Model_Model from "../../model/Offline_Model_Model";
 import Settings_Model from "../../model/Settings_Model";
+import { getUserData } from "../../apis/UserData";
 
 function Layout() {
   const [showFooter, setShowFooter] = useState(false);
@@ -28,6 +29,7 @@ function Layout() {
   const [showCacheModel, setShowCacheModel] = useState(false);
   const [showModelOffline, setShowModelOffline] = useState(false);
   const [showSettingsModel, setShowSettingsModel] = useState(false);
+  const [userData, setUserData] = useState(null);
 
   const mainDiv = useRef(null);
   const dispatch = useDispatch();
@@ -49,6 +51,18 @@ function Layout() {
     model_api: currentConversation?.settings?.model_api || "",
   });
 
+  const fetchUserData = async () => {
+    try {
+      const data = await getUserData();
+      setUserData(data);
+    } catch (error) {
+      console.error("Failed to fetch user data:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
   // Initialize conversation IDs
   useEffect(() => {
     setConversationIds(conversations.map((conv) => conv.id));
@@ -217,11 +231,11 @@ function Layout() {
     <div className="flex flex-col h-full w-full overflow-hidden bg-white dark:bg-black">
       <Header
         onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
         modelSettings={modelSettings}
         modelList={modelList}
         onModelChange={handleModelChange}
         setShowSettingsModel={setShowSettingsModel}
+        userData={userData}
       />
 
       <div className="flex flex-1 overflow-hidden relative bg-bg_light dark:bg-bg_dark">
@@ -316,6 +330,7 @@ function Layout() {
         <Settings_Model
           showModel={setShowSettingsModel}
           setShowCacheModel={setShowCacheModel}
+          userData={userData}
         />
       ) : null}
     </div>

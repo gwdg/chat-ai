@@ -28,11 +28,11 @@ const getStatusColor = (status) => {
 
 function Header({
   onMenuClick,
-  isSidebarOpen,
   modelSettings,
   modelList,
   onModelChange,
   setShowSettingsModel,
+  userData,
 }) {
   const dispatch = useDispatch();
 
@@ -70,6 +70,16 @@ function Header({
     setIsOpen(false);
   };
 
+  const getInitials = (username) => {
+    if (!username) return "";
+
+    if (username.includes(".")) {
+      const [first, last] = username.split(".");
+      return (first.charAt(0) + last.charAt(0)).toUpperCase();
+    }
+
+    return username.slice(0, 2).toUpperCase();
+  };
   // Theme handling
   useEffect(() => {
     const root = window.document.documentElement;
@@ -144,14 +154,25 @@ function Header({
               <div className="bg-logo-small sm:bg-logo-large h-[45px] w-[145px] bg-repeat-round transition-all"></div>
             </Link>
           </div>
-          <div className="cursor-pointer border-l border-primary pl-2 sm:pl-4">
+          {userData?.username ? (
+            <div
+              className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
+              onClick={() => setShowSettingsModel(true)}
+            >
+              <div className="w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
+                <span className="text-tertiary font-medium">
+                  {getInitials(userData.username)}
+                </span>
+              </div>
+            </div>
+          ) : (
             <img
-              className="h-[40px] w-[40px] sm:h-[48px] sm:w-[48px] transition-all p-1"
+              className="h-[32px] w-[32px]"
               src={profile_icon}
               alt="Profile"
               onClick={() => setShowSettingsModel(true)}
             />
-          </div>
+          )}
         </div>
       </nav>
 
@@ -291,14 +312,25 @@ function Header({
               )}
             </button>
 
-            <div className="cursor-pointer border-l border-primary pl-2">
+            {userData?.username ? (
+              <div
+                className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
+                onClick={() => setShowSettingsModel(true)}
+              >
+                <div className="w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
+                  <span className="text-tertiary font-medium">
+                    {getInitials(userData.username)}
+                  </span>
+                </div>
+              </div>
+            ) : (
               <img
-                className="h-[32px] w-[32px] "
+                className="h-[32px] w-[32px]"
                 src={profile_icon}
                 alt="Profile"
                 onClick={() => setShowSettingsModel(true)}
               />
-            </div>
+            )}
           </div>
         </div>
       </nav>
