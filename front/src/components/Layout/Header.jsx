@@ -180,7 +180,7 @@ function Header({
       <nav
         className={`top-0 left-0 hidden ${
           isIOSChrome ? "fixed" : ""
-        } mobile:flex z-[9999] w-full h-[60px] bg-white dark:bg-black shadow-lg`}
+        } mobile:flex z-[995] w-full h-[60px] bg-white dark:bg-black shadow-lg`}
         style={{
           paddingBottom: "env(safe-area-inset-bottom)",
           paddingTop: "env(safe-area-inset-top)",
@@ -286,7 +286,7 @@ function Header({
             <img
               src={help}
               alt="help"
-              className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity "
+              className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity"
               onClick={(event) => {
                 event.stopPropagation();
                 setShowHelpModel(true);
@@ -294,18 +294,18 @@ function Header({
             />
 
             <button
-              className=" hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               onClick={toggleDarkMode}
             >
               {isDarkMode ? (
                 <img
-                  className="h-[24px] w-[24px]"
+                  className="h-[32px] w-[32px]"
                   src={Light}
                   alt="Light Mode"
                 />
               ) : (
                 <img
-                  className="h-[24px] w-[24px] -rotate-45"
+                  className="h-[32px] w-[32px] -rotate-45"
                   src={Dark}
                   alt="Dark Mode"
                 />

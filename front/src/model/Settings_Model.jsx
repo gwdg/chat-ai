@@ -13,7 +13,7 @@ function Settings_Model(props) {
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
         {/* Model header */}
         <div className="flex justify-between items-center px-4 pt-4">
-          <p className="text-xl text-tertiary">Settings</p>
+          <p className="text-xl text-tertiary">User Profile</p>
           <img
             src={cross}
             alt="cross"
@@ -23,15 +23,31 @@ function Settings_Model(props) {
         </div>
 
         {/* User Profile Section */}
-        <div className="p-4 flex items-center gap-3 border-b dark:border-border_dark">
+        <div className="p-4 flex items-center justify-between gap-3 border-b dark:border-border_dark">
           <div className="flex flex-col">
             <span className="font-medium text-lg dark:text-white">
-              {props.userData.username || "Loading..."}
+              {props.userData.lastname + props.userData.lastname ||
+                "Loading..."}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {props.userData.organization || "Loading..."}
             </span>
           </div>
+          <div className="flex flex-col">
+            <span className="font-medium text-lg dark:text-white">
+              {props.userData.username || "Loading..."}
+            </span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {props.userData.email || "Loading..."}
+            </span>
+          </div>
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="max-w-[250px] w-full p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
+          >
+            <p>Logout</p>
+          </button>
         </div>
 
         {/* Settings Content */}
@@ -47,24 +63,16 @@ function Settings_Model(props) {
               This will permanently delete all your chat history and cannot be
               undone.
             </p>
-            <button
-              className="w-full p-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
-              onClick={() => props.setShowCacheModel(true)}
-            >
-              <Trans i18nKey="description.file2" />
-            </button>
+            <div className="w-full flex justify-center">
+              {" "}
+              <button
+                className="max-w-[250px] w-full p-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
+                onClick={() => props.setShowCacheModel(true)}
+              >
+                <Trans i18nKey="description.file2" />
+              </button>
+            </div>
           </div>
-
-          {/* Divider */}
-          <div className="border-t dark:border-border_dark my-2"></div>
-
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="w-full p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
-          >
-            <p>Logout</p>
-          </button>
         </div>
       </div>
     </Model>
