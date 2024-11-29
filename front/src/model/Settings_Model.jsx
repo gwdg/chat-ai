@@ -26,7 +26,7 @@ function Settings_Model(props) {
         <div className="p-4 flex items-center justify-between gap-3 border-b dark:border-border_dark">
           <div className="flex flex-col">
             <span className="font-medium text-lg dark:text-white">
-              {props.userData.lastname + props.userData.lastname ||
+              {props.userData.firstname + " " + props.userData.lastname ||
                 "Loading..."}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
