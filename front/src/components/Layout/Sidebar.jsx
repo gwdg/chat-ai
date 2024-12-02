@@ -53,7 +53,7 @@ function Sidebar({ onClose, onDeleteConversation, conversationIds }) {
           onClick={handleNewChat}
           className="w-full bg-bg_light dark:bg-bg_dark hover:bg-light_hover dark:hover:bg-dark_hover active:bg-tertiary_pressed text-black dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
         >
-          <span>New Chat</span>
+          <span>Add New Chat</span>
         </button>
       </div>
 
@@ -76,7 +76,7 @@ function Sidebar({ onClose, onDeleteConversation, conversationIds }) {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1 truncate mr-2" title={conv.title}>
-                      {conv.title || "New Chat"}
+                      {conv.title || "Untitled Conversation"}
                     </div>
                     <button
                       onClick={(e) => {

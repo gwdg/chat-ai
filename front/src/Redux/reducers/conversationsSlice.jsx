@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 const createDefaultConversation = () => ({
   id: uuidv4(),
-  title: "New Chat",
+  title: "Untitled Conversation",
   conversation: [
     {
       role: "system",

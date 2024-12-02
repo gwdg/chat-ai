@@ -34,7 +34,7 @@ async function generateTitle(conversation, settings) {
     return title.trim();
   } catch (error) {
     console.error("Title generation failed:", error);
-    return "New Chat";
+    return "Untitled Conversation";
   }
 }
 
