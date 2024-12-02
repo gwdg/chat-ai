@@ -1,7 +1,7 @@
 // Table.jsx
 import { useTable } from "react-table";
-import { useColumns } from "../column/columns";
-import icon_delete from "../assets/delete_icon.svg";
+import { useColumns } from "../../column/columns";
+import icon_delete from "../../assets/delete_icon.svg";
 
 const Table = ({ data, handleDeleteFile }) => {
   const columns = useColumns(); // Get the columns

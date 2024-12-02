@@ -4,7 +4,6 @@ import { Trans, useTranslation } from "react-i18next"; // Translation
 import { Link, useNavigate } from "react-router-dom"; // Navigation
 import * as yup from "yup"; // Schema validation
 import Slider from "@mui/material/Slider"; // Slider component
-import { ToastContainer, toast } from "react-toastify"; // Toast notifications
 import "react-toastify/dist/ReactToastify.css"; // Toast styling
 
 import Layout from "../components/Layout"; // Custom layout component
@@ -14,7 +13,8 @@ import { setInstructions } from "../Redux/actions/customInsAction"; // Redux act
 import { useState } from "react"; // State management
 import { setTemperatureGlobal } from "../Redux/actions/temperatureAction"; // Redux action
 import { persistor } from "../Redux/store/store";
-import Clear_Catch_Model from "../model/Clear_Catch_Model";
+import Clear_Cache_Model from "../model/Clear_Cache_Model";
+import { useToast } from "../hooks/useToast";
 
 // CustomInstructions component
 function CustomInstructions() {
@@ -24,10 +24,7 @@ function CustomInstructions() {
   // Redux state selectors
   const customInstructions = useSelector((state) => state.instructions);
   const temperatureGlobal = useSelector((state) => state.temperature);
-  const isDarkMode = useSelector((state) => state.theme.isDarkMode);
-
-  //Theme for toast
-  let toastClass = isDarkMode ? "dark-toast" : "light-toast";
+  const { notifySuccess } = useToast();
 
   // State for temperature
   const [temperature, setTemperature] = useState(temperatureGlobal);
@@ -43,17 +40,6 @@ function CustomInstructions() {
   const validationSchema = yup.object({
     instructions: yup.string().required(() => t("description.custom6")),
   });
-
-  // Toast notification function for success
-  const notifySuccess = (message) =>
-    toast.success(message, {
-      autoClose: 200,
-      className: toastClass,
-      onClose: () => {
-        navigate("/chat");
-        location.reload();
-      },
-    });
 
   // Formik form initialization
   const formik = useFormik({
@@ -82,7 +68,7 @@ function CustomInstructions() {
     dispatch(setInstructions("You are a helpful assistant"));
   };
 
-  const clearCatch = () => {
+  const clearCache = () => {
     persistor.purge();
     notifySuccess("Catch cleared successfully");
   };
@@ -204,9 +190,9 @@ function CustomInstructions() {
       {/* Pop-up clear cache*/}
       <div className="">
         {showCacheModel ? (
-          <Clear_Catch_Model
-            showModal={setShowCacheModel}
-            clearCatch={clearCatch}
+          <Clear_Cache_Model
+            showModel={setShowCacheModel}
+            clearCache={clearCache}
           />
         ) : null}
       </div>

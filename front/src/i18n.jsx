@@ -30,7 +30,7 @@ i18n
             note3: "Data Privacy",
             note4: "and",
             note5: "Imprint",
-            note6: "hallucination",
+            note6: "Hallucination",
 
             // Choose model
             choose: "Model",
@@ -165,7 +165,7 @@ i18n
             table_text4: "Action",
 
             arcana_note:
-              "You can select the specific arcana to be referenced by the LLM model by making the appropriate choice.",
+              "Arcana is a unique feature of our service that empowers the LLM with specialized knowledge. When you enter a valid Arcana ID and its corresponding key, the LLM gains access to the knowledge contained within that Arcana. This enables the model to generate responses that are more informed and relevant to your needs. Leave the ID empty to use the model without any specialized knowledge.",
 
             delete_arcana: "Are you sure you want to delete arcana?",
             delete_arcana1: "Delete",
@@ -175,9 +175,41 @@ i18n
 
             exportSettings: "Include model and options",
             exportImages: "Include images",
+            exportArcana: "Include Arcana details",
+            arcana_warn:
+              "Warning: Exporting Arcana details to a file may compromise your private data, as it can be accessed by others.",
+
             exportSettings1:
               "This feature creates a shareable link for your chosen model, system prompt, and settings. Any user who opens this link will be able to use the same configuration in their own conversations. Please note that your conversation history will not be shared.",
             exportSettings2: "Share",
+
+            notFound: {
+              title: "404: Conversation Not Found",
+              description:
+                "Oops! It seems like you're trying to access a conversation that doesn't exist in your chat history.",
+              reasonsTitle: "This might happen because:",
+              reasons: {
+                deleted: "• The conversation was deleted",
+                outdatedLink: "• You're using an outdated or invalid link",
+                incorrectId: "• The conversation ID in the URL is incorrect",
+                historyCleared: "• Your chat history was cleared",
+              },
+              reassurance:
+                "Don't worry! You can start a new conversation by clicking the button below.",
+              buttonText: "Go to chat",
+            },
+            delete_title: "Delete Conversation",
+            delete_message:
+              "Are you sure you want to delete this conversation?",
+            delete_confirmText: "Delete",
+            delete_cancelText: "Cancel",
+
+            warning_settings:
+              "Below settings won't be applied as you are using external model",
+            warning_arcana:
+              "Keep temperature and top_p at 0 for optimal arcana results",
+            offline:
+              "The model you selected is currently offline. By pressing OK below, the model starts up and will be online in a few minutes. In the meantime, feel free to choose another model.",
           },
         },
       },
@@ -195,7 +227,7 @@ i18n
             note3: "Datenschutz",
             note4: "und",
             note5: "Impressum",
-            note6: "halluzination",
+            note6: "Halluzination",
 
             // Choose model
             choose: "Modell",
@@ -333,7 +365,7 @@ i18n
             table_text4: "Aktion",
 
             arcana_note:
-              "Sie können die spezifischen Arkana auswählen, auf die das LLM-Modell verweisen soll, indem Sie die entsprechende Auswahl treffen.",
+              "Arcana ist eine einzigartige Funktion unseres Dienstes, die das LLM mit spezialisiertem Wissen ausstattet. Wenn Sie eine gültige Arcana-ID und den entsprechenden Schlüssel eingeben, erhält das LLM Zugriff auf das in dieser Arcana enthaltene Wissen. Dies ermöglicht es dem Modell, Antworten zu generieren, die besser informiert und relevanter für Ihre Bedürfnisse sind. Lassen Sie das Feld für die ID leer, um das Modell ohne spezialisiertes Wissen zu verwenden.",
 
             delete_arcana: "Sind Sie sicher, dass Sie Arcana löschen wollen?",
             delete_arcana1: "Löschen",
@@ -343,9 +375,42 @@ i18n
 
             exportSettings: "Modell und Optionen einbeziehen",
             exportImages: "Bilder einbeziehen",
+            exportArcana: "Arcana-Details einbeziehen",
+            arcana_warn:
+              "Warnung: Das Exportieren von Arcana-Details in eine Datei kann Ihre privaten Daten gefährden, da sie für andere zugänglich sind.",
+
             exportSettings1:
               "Mit dieser Funktion wird ein Link für das von Ihnen gewählte Modell, die Systemansage und die Einstellungen erstellt, der gemeinsam genutzt werden kann. Jeder Benutzer, der diesen Link öffnet, kann dieselbe Konfiguration in seinen eigenen Unterhaltungen verwenden. Bitte beachten Sie, dass Ihr Gesprächsverlauf nicht freigegeben wird.",
             exportSettings2: "Teilen Sie",
+
+            notFound: {
+              title: "404: Unterhaltung nicht gefunden",
+              description:
+                "Ups! Sie versuchen auf eine Unterhaltung zuzugreifen, die in Ihrem Chatverlauf nicht existiert.",
+              reasonsTitle: "Dies kann folgende Gründe haben:",
+              reasons: {
+                deleted: "• Die Unterhaltung wurde gelöscht",
+                outdatedLink:
+                  "• Sie verwenden einen veralteten oder ungültigen Link",
+                incorrectId: "• Die Unterhaltungs-ID in der URL ist falsch",
+                historyCleared: "• Ihr Chatverlauf wurde gelöscht",
+              },
+              reassurance:
+                "Keine Sorge! Sie können eine neue Unterhaltung starten, indem Sie auf den Button unten klicken.",
+              buttonText: "Zum Chat gehen",
+            },
+            delete_title: "Konversation löschen",
+            delete_message:
+              "Sind Sie sicher, dass Sie diese Konversation löschen möchten?",
+            delete_confirmText: "Löschen",
+            delete_cancelText: "Abbrechen",
+
+            warning_settings:
+              "Da Sie ein externes Modell verwenden, werden die folgenden Einstellungen nicht übernommen",
+            warning_arcana:
+              "Halten Sie Temperatur und top_p auf 0 für optimale Arcana-Ergebnisse",
+            offline:
+              "Das von Ihnen ausgewählte Modell ist derzeit offline. Durch das Anklicken von OK unten startet das Modell und wird in wenigen Minuten online sein. In der Zwischenzeit können Sie gerne ein anderes Modell auswählen.",
           },
         },
       },

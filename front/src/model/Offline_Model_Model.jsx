@@ -2,48 +2,44 @@
 import { Trans } from "react-i18next"; // For translation
 import Model from "./Model"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
+import { offlineModelCall } from "../apis/OfflineCall";
 
-function Session_Expired(props) {
+function Offline_Model_Model(props) {
+  async function getRes() {
+    try {
+      const response = await offlineModelCall(props?.model);
+    } catch (error) {
+      console.error("An error occurred", error);
+    }
+    props?.showModel(false);
+  }
+
   return (
-    // Model component with export type selection form
     <Model showModel={props.showModel}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
-        {/* Model header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
-            {/* Translation for help title */}
             <Trans i18nKey="description.help_title"></Trans>:
           </p>
-          {/* Close button */}
           <img
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModel(false)} // Click handler to close model
+            onClick={() => props.showModel(false)}
           />
         </div>
         <div className="flex flex-col gap-2 p-4">
           <div className="pt-0 pb-2">
             <p className="dark:text-white text-black text-justify">
-              {/* Translation for mic permission message */}
-              <Trans i18nKey="description.session1"></Trans>
+              <Trans i18nKey="description.offline"></Trans>
             </p>
-          </div>{" "}
-          {/* Buttons */}
+          </div>
           <div className="flex flex-col md:flex-row gap-2 justify-center w-full">
-            {/* Close button */}
-            {/* <button
-              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-              onClick={() => props.showModel(false)} // Click handler to close model
-            >
-              <Trans i18nKey="description.session2"></Trans>
-            </button> */}
-            {/* Reload button */}
             <button
               className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-              onClick={() => location.reload()}
+              onClick={() => getRes()}
             >
-              <Trans i18nKey="description.session3"></Trans>
+              Ok
             </button>
           </div>
         </div>
@@ -52,4 +48,4 @@ function Session_Expired(props) {
   );
 }
 
-export default Session_Expired;
+export default Offline_Model_Model;

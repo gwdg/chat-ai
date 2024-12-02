@@ -2,35 +2,35 @@
 import { useEffect, useRef, useState } from "react";
 import Table from "./Table";
 import { Trans } from "react-i18next";
-import { uploadFile, deleteFile } from "../apis/ArcanaApis";
-import { toast } from "react-toastify"; // Import toast for notifications
+import { uploadFile, deleteFile } from "../../apis/ArcanaApis";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useSelector } from "react-redux";
+import { useToast } from "../../hooks/useToast";
 
 const FilesTable = ({ folderName, filesFromAPI }) => {
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true); // State to manage loading state
   const fileInputRef = useRef(null);
   const isDarkMode = useSelector((state) => state.theme.isDarkMode);
-  const toastClass = isDarkMode ? "dark-toast" : "light-toast";
+  const { notifySuccess, notifyError } = useToast();
 
-  // Displays an error notification
-  const notifyError = (message) => {
-    toast.error(message, {
-      className: toastClass,
-      autoClose: 1000,
-      onClose: () => {},
-    });
-  };
+  // // Displays an error notification
+  // const notifyError = (message) => {
+  //   toast.error(message, {
+  //     className: toastClass,
+  //     autoClose: 1000,
+  //     onClose: () => {},
+  //   });
+  // };
 
-  // Displays a success notification
-  const notifySuccess = (message) =>
-    toast.success(message, {
-      className: toastClass,
-      autoClose: 1000,
-      onClose: () => {},
-    });
+  // // Displays a success notification
+  // const notifySuccess = (message) =>
+  //   toast.success(message, {
+  //     className: toastClass,
+  //     autoClose: 1000,
+  //     onClose: () => {},
+  //   });
 
   // Initialize the files state with files from the API response
   useEffect(() => {

@@ -1,7 +1,13 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 // Libraries and dependencies
-import React, { useRef, useState, useEffect } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { useTranslation, Trans } from "react-i18next";
 import SpeechRecognition, {
   useSpeechRecognition,
@@ -10,17 +16,13 @@ import {
   Link,
   useLocation,
   useNavigate,
+  useParams,
   useSearchParams,
 } from "react-router-dom";
 import jsPDF from "jspdf";
 import { useDispatch, useSelector } from "react-redux";
-import { setPromptGlobal } from "../Redux/actions/promptAction";
-import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import * as yup from "yup"; // Schema validation
-import { Form, Formik, useFormik } from "formik"; // Form handling
-import Tooltip from "./Tooltip";
-import { persistor } from "../Redux/store/store";
+import Tooltip from "./Others/Tooltip";
 
 // Assets
 import retry from "../assets/icon_retry.svg";
@@ -30,7 +32,6 @@ import import_icon from "../assets/import_icon.svg";
 import settings_icon from "../assets/Settings_Icon.svg";
 import image_icon from "../assets/icon_image.svg";
 import share_icon from "../assets/share_icon.svg";
-import clear_cache from "../assets/clear_cache.svg";
 import send from "../assets/icon_send.svg";
 import upload from "../assets/add.svg";
 import uploaded from "../assets/file_uploaded.svg";
@@ -45,38 +46,34 @@ import stop from "../assets/stop_listening.svg";
 import pause from "../assets/pause.svg";
 import edit_icon from "../assets/edit_icon.svg";
 import icon_resend from "../assets/icon_resend.svg";
-import Help_Model from "../model/Help_Modal";
+import Help_Model from "../model/Help_Model";
 import Mic_Model from "../model/Mic_Model";
 import Cutom_Instructions_Model from "../model/Cutom_Instructions_Model";
 import { abortFetch, getDataFromLLM } from "../apis/Completion";
 import ExportTypeModel from "../model/ExportTypeModel";
-import { setModel } from "../Redux/actions/modelAction";
-import { setResponsesGlobal } from "../Redux/actions/responsesAction";
-import { setConversationGlobal } from "../Redux/actions/conAction";
-import { setInstructions } from "../Redux/actions/customInsAction"; // Redux action
-import { getModels } from "../apis/ModelLIst";
 import { setCountGlobal } from "../Redux/actions/alertAction";
-import { setModelApiGlobal } from "../Redux/actions/setModelApi";
 import Session_Expired from "../model/Session_Expired";
 import Bad_Request_Model from "../model/Bad_Request_Model";
 
-import Light from "../assets/light.svg"; // Light mode icon
-import Dark from "../assets/dark.svg"; // Dark mode icon
 import Logo from "../assets/chatai-logo-v3-preview.png"; // Chat AI logo
-import ResponseItem from "./ResponseItem";
-import Arcanas from "./Arcanas";
-import Clear_Catch_Model from "../model/Clear_Catch_Model";
+import ResponseItem from "./Markdown/ResponseItem";
 import Help_Model_Custom from "../model/Help_Model_Custom";
 import Help_model_Arcanas from "../model/Help_model_Arcanas";
-import { setTemperatureGlobal } from "../Redux/actions/temperatureAction";
 import Help_Model_System from "../model/Help_Model_System";
-import { setTpopGlobal } from "../Redux/actions/tpopAction";
 import Help_Model_Tpop from "../model/Help_Model_Tpop";
 import Clear_History_Model from "../model/Clear_History_Model";
 import Share_Settings_Model from "../model/Share_Settings_Model";
+import {
+  addConversation,
+  selectConversations,
+  setCurrentConversation,
+  updateConversation,
+} from "../Redux/reducers/conversationsSlice";
+import { useToast } from "../hooks/useToast";
+import ArcanaContainer from "./Arcanas/ArcanaContainer";
 
-const MAX_HEIGHT_PX = 350;
-const MIN_HEIGHT_PX = 200;
+const MAX_HEIGHT = 200;
+const MIN_HEIGHT = 56;
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -91,34 +88,106 @@ const getStatusColor = (status) => {
   }
 };
 
-function Prompt() {
+function Prompt({ modelSettings, modelList, onModelChange }) {
   const { t, i18n } = useTranslation();
   const { transcript, listening, resetTranscript } = useSpeechRecognition();
   const location = useLocation();
   const navigate = useNavigate();
+  const hasProcessedSettings = useRef(false);
+  const hasProcessedImport = useRef(false);
+  const hasProcessedArcana = useRef(false);
+  const { notifySuccess, notifyError } = useToast();
 
   // Redux State and Dispatch
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
+  const { conversationId } = useParams();
 
-  const promptGlobal = useSelector((state) => state.prompt);
-  const model = useSelector((state) => state.model);
-  const conversationGLobal = useSelector((state) => state.conversation);
-  const responsesGLobal = useSelector((state) => state.responses);
-  const customInstructions = useSelector((state) => state.instructions);
-  const temperatureGlobal = useSelector((state) => state.temperature);
-  const tpopGlobal = useSelector((state) => state.top_p);
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const countClose = useSelector((state) => state.count);
-  const modelApi = useSelector((state) => state.modelApi);
-  const dontShowAgain = useSelector((state) => state.showAgain.dontShowAgain);
-  const dontShowAgainShare = useSelector(
-    (state) => state.showAgainShare.dontShowAgainShare
+  const conversations = useSelector(selectConversations);
+  const currentConversationId = useSelector(
+    (state) => state.conversations.currentConversationId
   );
-  const exportSettings = useSelector(
-    (state) => state.exportSettings.exportSettings
+  const currentConversation = useSelector((state) =>
+    state.conversations.conversations.find((conv) => conv.id === conversationId)
   );
-  const exportImage = useSelector((state) => state.exportImage.exportImage);
+
+  const [localState, setLocalState] = useState({
+    prompt: "",
+    responses: [],
+    conversation: [],
+    settings: {
+      model: "",
+      model_api: "",
+      temperature: null,
+      top_p: null,
+      systemPrompt: "",
+    },
+    exportOptions: {
+      exportSettings: false,
+      exportImage: false,
+      exportArcana: false,
+    },
+    dontShow: {
+      dontShowAgain: false,
+      dontShowAgainShare: false,
+    },
+    arcana: {
+      id: "",
+      key: "",
+    },
+  });
+
+  useEffect(() => {
+    if (conversationId && currentConversation) {
+      dispatch(setCurrentConversation(conversationId));
+      setLocalState({
+        prompt: currentConversation.prompt,
+        responses: currentConversation.responses,
+        conversation: currentConversation.conversation,
+        settings: { ...currentConversation.settings },
+        exportOptions: { ...currentConversation.exportOptions },
+        dontShow: { ...currentConversation.dontShow },
+        arcana: { ...currentConversation.arcana },
+      });
+    }
+  }, [conversationId, currentConversation]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentConversation) {
+        dispatch(
+          updateConversation({
+            id: conversationId,
+            updates: {
+              ...localState,
+              lastModified: new Date().toISOString(),
+            },
+          })
+        );
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [localState, currentConversation]);
+
+  const updateLocalState = (updates) => {
+    setLocalState((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+  };
+
+  const updateSettings = (settingUpdates) => {
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        ...settingUpdates,
+      },
+    }));
+  };
 
   //Theme for toast
   let toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
@@ -130,12 +199,7 @@ function Prompt() {
   };
 
   // All state variables
-  const [prompt, setPrompt] = useState(promptGlobal);
-  const [chooseModel, setChooseModel] = useState(model);
-  const [chooseModelApi, setChooseModelApi] = useState(modelApi);
   const [isOpen, setIsOpen] = useState(false);
-  const [responses, setResponses] = useState(responsesGLobal);
-  const [conversation, setConversation] = useState(conversationGLobal);
   const [loading, setLoading] = useState(false);
   const [loadingResend, setLoadingResend] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -150,156 +214,141 @@ function Prompt() {
   const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false);
   const [showCusModel, setShowCusModel] = useState(false);
   const [showFileModel, setShowFileModel] = useState(false);
-  const [isAutoScroll, setAutoScroll] = useState(true);
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [modelList, setModelList] = useState([]);
   const [count, setCount] = useState(countClose);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editedText, setEditedText] = useState("");
   const [direction, setDirection] = useState("down");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResend, setIsResend] = useState(false);
   const [copied, setCopied] = useState(false);
   const [indexChecked, setIndexChecked] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
-  const [temperature, setTemperature] = useState(temperatureGlobal);
   const [isHovering, setHovering] = useState(false);
-  const [top_p, setTpop] = useState(tpopGlobal);
   const [isHoveringTpop, setHoveringTpop] = useState(false);
-  const [showCacheModel, setShowCacheModel] = useState(false);
   const [showHistoryModel, setShowHistoryModel] = useState(false);
   const [shareSettingsModel, setShareSettingsModel] = useState(false);
-  const [isImageSupported, setIsImageSupported] = useState(
-    modelList?.some(
-      (modelX) => modelX.name === model && modelX.input.includes("image")
-    )
+  const [systemPromptError, setSystemPromptError] = useState("");
+  // Computed properties using useMemo
+  const currentModel = useMemo(
+    () => modelList.find((m) => m.name === modelSettings.model),
+    [modelList, modelSettings.model]
   );
-  const [isModelReady, setIsModelReady] = useState(() => {
-    const modelX = modelList?.find((modelItem) => modelItem.name === model);
-    return {
-      color: modelX ? getStatusColor(modelX.status) : "red",
-    };
-  });
+
+  const isImageSupported = useMemo(
+    () => currentModel?.input.includes("image") || false,
+    [currentModel]
+  );
+
+  const modelStatus = useMemo(
+    () => ({
+      color: currentModel ? getStatusColor(currentModel.status) : "red",
+    }),
+    [currentModel]
+  );
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen) // Accessing dark mode state from Redux store
   );
-
   const hiddenFileInput = useRef(null);
   const hiddenFileInputImage = useRef(null);
   const hiddenFileInputJSON = useRef(null);
-  const messagesEndRef = useRef(null);
-  const textAreaRef = useRef(null);
+  const textareaRef = useRef(null);
   const dropdownRef = useRef(null);
-  const containerRef = useRef(null);
   const textareaRefs = useRef([]);
   const containerRefs = useRef([]);
 
-  //TO scroll down when new chat is added in array
-  const scrollToBottom = () => {
-    if (isAutoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-    }
-  };
+  const containerRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const lastScrollPosition = useRef(0);
+  const [userScrolled, setUserScrolled] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const isLoading = loading || loadingResend;
 
-  const getMinHeight = () => {
-    if (window.innerWidth < 800) {
-      return 80; // 80px for screens smaller than 800px
+  const handleScroll = useCallback((e) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const distanceFromBottom = scrollHeight - clientHeight - scrollTop;
+
+    setShowScrollButton(distanceFromBottom > 100);
+    if (Math.abs(scrollTop - lastScrollPosition.current) > 10) {
+      setUserScrolled(distanceFromBottom > 100);
+      lastScrollPosition.current = scrollTop;
     }
-    return 200; // 200px for larger screens
-  };
-  // The new height of the element is set to the predefined constant `MIN_HEIGHT_PX`, and it's set in pixels.
-  const resetHeight = () => {
-    if (textAreaRef.current != null) {
-      const MIN_HEIGHT_PX = getMinHeight(); // Get the min height based on screen size
-      textAreaRef.current.style.height = `${MIN_HEIGHT_PX}px`;
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener("scroll", handleScroll, { passive: true });
     }
-  };
+    return () => container?.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
+
+  useEffect(() => {
+    if (!userScrolled && messagesEndRef.current) {
+      const behavior = isLoading ? "auto" : "smooth";
+      messagesEndRef.current.scrollIntoView({ behavior, block: "end" });
+    }
+  }, [localState.responses, isLoading, userScrolled]);
+
+  useEffect(() => {
+    if (localState.responses.length === 0 && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+    }
+  }, [localState.responses.length]);
+
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      setUserScrolled(false);
+      setShowScrollButton(false);
+    }
+  }, []);
 
   const adjustHeight = () => {
-    if (textAreaRef.current) {
-      textAreaRef.current.style.height = "auto"; // Reset to auto to calculate correct scrollHeight
-      const scrollHeight = Math.min(
-        textAreaRef.current.scrollHeight,
-        MAX_HEIGHT_PX
-      );
-      textAreaRef.current.style.height = `${Math.max(
-        scrollHeight,
-        getMinHeight()
-      )}px`; // Apply minHeight and scrollHeight
+    if (textareaRef.current) {
+      // Reset height to allow proper scrollHeight calculation
+      textareaRef.current.style.height = `${MIN_HEIGHT}px`;
+
+      // Calculate new height
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
+
+      // Set new height
+      textareaRef.current.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
     }
   };
+
+  // Adjust the height function to accept an index
+  const adjustHeightRefs = (index) => {
+    if (textareaRefs.current[index]) {
+      const textarea = textareaRefs.current[index];
+      textarea.style.height = `${MIN_HEIGHT}px`; // Reset height
+      const scrollHeight = textarea.scrollHeight;
+      const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
+      textarea.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
+    }
+  };
+
+  // Add effect to handle initial content and updates for each textarea
+  useEffect(() => {
+    // Find the active textarea and adjust its height
+    if (editingIndex !== null) {
+      adjustHeightRefs(editingIndex);
+    }
+  }, [editedText, editingIndex]);
+
   // Onchange function for textarea
   const handleChange = (event) => {
-    setPrompt(event.target.value);
-
-    if (event.target.value === "") {
-      resetHeight(); // Reset when empty
-    } else {
-      adjustHeight(); // Dynamically adjust when typing
-    }
+    updateLocalState({ prompt: event.target.value });
+    adjustHeight();
   };
 
   // All useEffects
-
-  // Triggers every time responses changes
-  useEffect(scrollToBottom, [responses]);
-  //WHen audio is being recorded transcript will be set into prompt state
   useEffect(() => {
-    setPrompt(transcript);
-  }, [transcript]);
-
-  //Initialising prompt from redux prompt state on page change/refresh
-  useEffect(() => {
-    setPrompt(promptGlobal);
-  }, []);
-
-  // Dispatches an action to update the redux prompt value whenever prompt changes
-  useEffect(() => {
-    dispatch(setPromptGlobal(prompt));
-  }, [prompt]);
-
-  // Dispatches an action to update the redux responses value whenever responses changes
-  useEffect(() => {
-    dispatch(setResponsesGlobal(responses));
-  }, [responses]);
-
-  // Dispatches an action to update the redux conversation value whenever conversation changes
-  useEffect(() => {
-    dispatch(setConversationGlobal(conversation));
-  }, [conversation]);
-
-  useEffect(() => {
-    dispatch(setTemperatureGlobal(temperature));
-  }, [temperature]);
-
-  useEffect(() => {
-    dispatch(setTpopGlobal(top_p));
-  }, [top_p]);
-
-  useEffect(() => {
-    dispatch(setModel(chooseModel));
-    const imageSupport = modelList.some(
-      (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
-    );
-    const currentModel = modelList.find(
-      (modelX) => modelX.name === chooseModel
-    );
-    setIsModelReady({
-      color: currentModel ? getStatusColor(currentModel.status) : "red",
-    });
-    setIsImageSupported(imageSupport);
-  }, [chooseModel]);
-
-  useEffect(() => {
-    dispatch(setModelApiGlobal(chooseModelApi));
-  }, [chooseModelApi]);
-
-  // Triggers getRes function if isSubmitting is true
-  useEffect(() => {
-    if (isSubmitting) {
-      getRes();
-    }
-  }, [isSubmitting]); // it will run whenever isSubmitting changes
+    adjustHeight();
+  }, [localState.prompt, editedText]);
 
   // If copied icon is shown, revert it back to copy icon after 3 seconds
   useEffect(() => {
@@ -325,70 +374,6 @@ function Prompt() {
   }, [isOpen]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    function handleScroll(e) {
-      const { scrollTop, scrollHeight, clientHeight } = e.target;
-      if (scrollTop + clientHeight < scrollHeight) {
-        setAutoScroll(false);
-      } else {
-        setAutoScroll(true);
-      }
-    }
-    if (container) {
-      container.addEventListener("scroll", handleScroll);
-      return () => {
-        container.removeEventListener("scroll", handleScroll);
-      };
-    }
-  }, []);
-
-  useEffect(() => {
-    if (location.state && location.state.from === "/custom-instructions") {
-      advSettingsToast();
-      navigate(location.pathname, { state: { from: null } });
-    }
-  }, [location]);
-
-  // Get model list
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getModels(setShowModelSession);
-        if (data) {
-          setModelList(data);
-        }
-      } catch (error) {
-        notifyError("Error:", error);
-      }
-    };
-
-    fetchData();
-  }, [isOpen]);
-
-  useEffect(() => {
-    const imageSupport = modelList.some(
-      (modelX) => modelX.name === model && modelX.input.includes("image")
-    );
-    const currentModel = modelList.find((modelX) => modelX.name === model);
-    setIsModelReady({
-      color: currentModel ? getStatusColor(currentModel.status) : "red",
-    });
-    setIsImageSupported(imageSupport);
-  }, [modelList]);
-
-  useEffect(() => {
-    if (modelList?.length > 0) {
-      const currentModel = modelList?.find((modelX) => modelX.name === model);
-      setChooseModel(currentModel.name);
-      setChooseModelApi(currentModel.id);
-      setIsImageSupported(currentModel.input.includes("image"));
-      setIsModelReady({
-        color: getStatusColor(currentModel.status),
-      });
-    }
-  }, [model]);
-
-  useEffect(() => {
     // If copied icon is shown, revert it back to copy icon after 3 seconds
     let timer;
     if (copied) {
@@ -412,7 +397,7 @@ function Prompt() {
   useEffect(() => {
     const handleOutsideClick = (event) => {
       // Iterate over all responses to check if the click was outside any textarea or container
-      responses.forEach((_, index) => {
+      localState.responses.forEach((_, index) => {
         handleClickOutside(event, index);
       });
     };
@@ -426,24 +411,7 @@ function Prompt() {
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
-  }, [isEditing, responses]);
-
-  // Displays an error notification
-  const notifyError = (message) => {
-    toast.error(message, {
-      className: toastClass,
-      autoClose: 1000,
-      onClose: () => {},
-    });
-  };
-
-  // Displays a success notification
-  const notifySuccess = (message) =>
-    toast.success(message, {
-      className: toastClass,
-      autoClose: 1000,
-      onClose: () => {},
-    });
+  }, [isEditing, localState.responses]);
 
   // Function to focus the textarea for a given index
   const focusTextArea = (index) => {
@@ -465,18 +433,19 @@ function Prompt() {
     }
   };
 
-  async function getRes() {
+  async function getRes(updatedConversation) {
     setLoading(true);
-    resetHeight();
 
-    let updatedConversation = [...conversation];
     const imageSupport = modelList.some(
-      (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
+      (modelX) =>
+        modelX.name === localState.settings.model &&
+        modelX.input.includes("image")
     );
 
     // Remove image part from the conversation if model doesn't support images
+    let processedConversation = updatedConversation;
     if (!imageSupport) {
-      updatedConversation = updatedConversation.map((message) => {
+      processedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
           return {
             role: "user",
@@ -491,8 +460,7 @@ function Prompt() {
     }
 
     if (selectedFiles.length > 0) {
-      const imageFiles = selectedFiles.filter((file) => file.type === "image"); // filter image files
-
+      const imageFiles = selectedFiles.filter((file) => file.type === "image");
       const imageContent = imageFiles.map((imageFile) => ({
         type: "image_url",
         image_url: {
@@ -500,38 +468,44 @@ function Prompt() {
         },
       }));
 
-      setResponses((prevResponses) => [
-        ...prevResponses,
-        {
-          prompt: prompt,
-          images: imageContent,
-          response: "",
-        },
-      ]);
+      setLocalState((prevState) => ({
+        ...prevState,
+        responses: [
+          ...prevState.responses,
+          {
+            prompt: prevState.prompt,
+            images: imageContent,
+            response: "",
+          },
+        ],
+      }));
     } else {
-      setResponses((prevResponses) => [
-        ...prevResponses,
-        {
-          prompt: prompt,
-          response: "",
-        },
-      ]);
+      setLocalState((prevState) => ({
+        ...prevState,
+        responses: [
+          ...prevState.responses,
+          {
+            prompt: prevState.prompt,
+            response: "",
+          },
+        ],
+      }));
     }
 
-    setPrompt("");
+    updateLocalState({ prompt: "" });
+
     try {
       const response = await getDataFromLLM(
-        conversation,
-        customInstructions,
-        chooseModelApi,
-        temperatureGlobal,
-        tpopGlobal,
-        setResponses,
-        setConversation,
+        processedConversation,
+        localState.settings.systemPrompt,
+        localState.settings.model_api,
+        localState.settings.temperature,
+        localState.settings.top_p,
+        localState.arcana,
+        setLocalState,
         setShowModelSession,
-        setPrompt,
         setShowBadRequest,
-        updatedConversation
+        processedConversation
       );
 
       setIsSubmitting(false);
@@ -563,13 +537,13 @@ function Prompt() {
   const handleResendClick = async (index) => {
     setLoadingResend(true);
 
-    if (index < 0 || index >= responses.length) {
+    if (index < 0 || index >= localState.responses.length) {
       notifyError("Something went wrong");
       setLoadingResend(false);
       return;
     }
 
-    const currentPrompt = responses[index]?.prompt;
+    const currentPrompt = localState.responses[index]?.prompt;
     if (!currentPrompt || currentPrompt.trim() === "") {
       notifyError("Invalid or empty prompt at the specified index.");
       setLoadingResend(false);
@@ -577,16 +551,15 @@ function Prompt() {
     }
     let imageFiles = [];
 
-    if (responses[index]?.images?.length > 0) {
-      imageFiles = responses[index]?.images;
+    if (localState.responses[index]?.images?.length > 0) {
+      imageFiles = localState.responses[index]?.images;
     }
 
     // Update conversation and responses
-    let newConversation = [...conversation].slice(0, index * 2 + 1);
-    let newResponses = [...responses].slice(0, index);
+    let newConversation = [...localState.conversation].slice(0, index * 2 + 1);
+    let newResponses = [...localState.responses].slice(0, index);
 
-    setResponses(newResponses);
-
+    updateLocalState({ responses: newResponses });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     if (imageFiles?.length > 0) {
@@ -603,27 +576,35 @@ function Prompt() {
     }
 
     if (imageFiles?.length > 0) {
-      setResponses((prevResponses) => [
-        ...prevResponses,
-        {
-          prompt: currentPrompt,
-          images: imageFiles,
-          response: "",
-        },
-      ]);
+      setLocalState((prevState) => ({
+        ...prevState,
+        responses: [
+          ...prevState.responses,
+          {
+            prompt: currentPrompt,
+            images: imageFiles,
+            response: "",
+          },
+        ],
+      }));
     } else {
-      setResponses((prevResponses) => [
-        ...prevResponses,
-        {
-          prompt: currentPrompt,
-          response: "",
-        },
-      ]);
+      setLocalState((prevState) => ({
+        ...prevState,
+        responses: [
+          ...prevState.responses,
+          {
+            prompt: currentPrompt,
+            response: "",
+          },
+        ],
+      }));
     }
 
     let updatedConversation = [...newConversation];
     const imageSupport = modelList.some(
-      (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
+      (modelX) =>
+        modelX.name === localState.settings.model &&
+        modelX.input.includes("image")
     );
 
     // Remove image part from the conversation if model doesn't support images
@@ -645,14 +626,13 @@ function Prompt() {
     try {
       await getDataFromLLM(
         newConversation,
-        customInstructions,
-        chooseModelApi,
-        temperatureGlobal,
-        tpopGlobal,
-        setResponses,
-        setConversation,
+        localState.settings.systemPrompt,
+        localState.settings.model_api,
+        localState.settings.temperature,
+        localState.settings.top_p,
+        localState.arcana,
+        setLocalState,
         setShowModelSession,
-        setPrompt,
         setShowBadRequest,
         updatedConversation
       );
@@ -671,13 +651,14 @@ function Prompt() {
   const handleEditClick = (index, prompt) => {
     setEditingIndex(index);
     setEditedText(prompt);
+    setTimeout(() => adjustHeight(index), 0);
   };
 
   // Save the edited prompt and resend the request
   const handleSave = async (index) => {
     setLoadingResend(true);
 
-    if (index < 0 || index >= responses.length) {
+    if (index < 0 || index >= localState.responses.length) {
       notifyError("Something went wrong");
       setLoadingResend(false);
       return;
@@ -691,14 +672,14 @@ function Prompt() {
 
     let imageFiles = [];
 
-    if (responses[index]?.images?.length > 0) {
-      imageFiles = responses[index]?.images;
+    if (localState.responses[index]?.images?.length > 0) {
+      imageFiles = localState.responses[index]?.images;
     }
 
-    let newConversation = [...conversation].slice(0, index * 2 + 1);
-    let newResponses = [...responses].slice(0, index);
+    let newConversation = [...localState.conversation].slice(0, index * 2 + 1);
+    let newResponses = [...localState.responses].slice(0, index);
 
-    setResponses(newResponses);
+    updateLocalState({ responses: newResponses });
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -716,27 +697,35 @@ function Prompt() {
     }
 
     if (imageFiles?.length > 0) {
-      setResponses((prevResponses) => [
-        ...prevResponses,
-        {
-          prompt: editedText,
-          images: imageFiles,
-          response: "",
-        },
-      ]);
+      setLocalState((prevState) => ({
+        ...prevState,
+        responses: [
+          ...prevState.responses,
+          {
+            prompt: editedText,
+            images: imageFiles,
+            response: "",
+          },
+        ],
+      }));
     } else {
-      setResponses((prevResponses) => [
-        ...prevResponses,
-        {
-          prompt: editedText,
-          response: "",
-        },
-      ]);
+      setLocalState((prevState) => ({
+        ...prevState,
+        responses: [
+          ...prevState.responses,
+          {
+            prompt: editedText,
+            response: "",
+          },
+        ],
+      }));
     }
 
     let updatedConversation = [...newConversation];
     const imageSupport = modelList.some(
-      (modelX) => modelX.name === chooseModel && modelX.input.includes("image")
+      (modelX) =>
+        modelX.name === localState.settings.model &&
+        modelX.input.includes("image")
     );
 
     // Remove image part from the conversation if model doesn't support images
@@ -758,14 +747,13 @@ function Prompt() {
     try {
       await getDataFromLLM(
         newConversation,
-        customInstructions,
-        chooseModelApi,
-        temperatureGlobal,
-        tpopGlobal,
-        setResponses,
-        setConversation,
+        localState.settings.systemPrompt,
+        localState.settings.model_api,
+        localState.settings.temperature,
+        localState.settings.top_p,
+        localState.arcana,
+        setLocalState,
         setShowModelSession,
-        setPrompt,
         setShowBadRequest,
         updatedConversation
       );
@@ -787,22 +775,24 @@ function Prompt() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // Return function if prompt is empty or whitespace
-    if (prompt.trim() === "") return;
+    // Return if prompt is empty or whitespace
+    if (localState.prompt.trim() === "") return;
 
     SpeechRecognition.stopListening();
     resetTranscript();
 
+    let newConversation;
+
     // Handle files with images
     if (selectedFiles.length > 0) {
-      const textFiles = selectedFiles.filter((file) => file.type !== "image"); // filter out image files
-      const imageFiles = selectedFiles.filter((file) => file.type === "image"); // filter image files
+      const textFiles = selectedFiles.filter((file) => file.type !== "image");
+      const imageFiles = selectedFiles.filter((file) => file.type === "image");
 
       const allTextFilesText = textFiles
         .map((file) => `${file.name}: ${file.text}`)
         .join("\n");
 
-      const fullPrompt = `${prompt}\n${allTextFilesText}`;
+      const fullPrompt = `${localState.prompt}\n${allTextFilesText}`;
 
       const imageContent = imageFiles.map((imageFile) => ({
         type: "image_url",
@@ -819,15 +809,25 @@ function Prompt() {
         ...imageContent,
       ];
 
-      setConversation([
-        ...conversation,
+      newConversation = [
+        ...localState.conversation,
         { role: "user", content: newPromptContent },
-      ]);
-      setIsSubmitting(true);
+      ];
     } else {
-      setConversation([...conversation, { role: "user", content: prompt }]);
-      setIsSubmitting(true);
+      newConversation = [
+        ...localState.conversation,
+        { role: "user", content: localState.prompt },
+      ];
     }
+
+    // Update state and pass the new conversation to getRes
+    setLocalState((prevState) => ({
+      ...prevState,
+      conversation: newConversation,
+    }));
+
+    setIsSubmitting(true);
+    await getRes(newConversation);
   };
 
   const convertBase64ArrayToImageList = (base64Array) => {
@@ -858,11 +858,15 @@ function Prompt() {
   const handleRetry = (e) => {
     e.preventDefault();
 
-    setPrompt(responses[responses.length - 1].prompt);
-
-    if (responses[responses.length - 1]?.images?.length > 0) {
+    setLocalState((prevState) => ({
+      ...prevState,
+      prompt: prevState.responses[prevState.responses.length - 1].prompt,
+    }));
+    if (
+      localState.responses[localState.responses.length - 1]?.images?.length > 0
+    ) {
       const imageFileList = convertBase64ArrayToImageList(
-        responses[responses.length - 1].images
+        localState.responses[localState.responses.length - 1].images
       );
 
       setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
@@ -872,51 +876,52 @@ function Prompt() {
       adjustHeight(); // Adjust height after refilling the textarea
     }, 0);
 
-    setConversation((conversation) => {
-      const newArray = conversation.slice(0, conversation.length - 2);
-      return newArray;
-    });
-
-    setResponses((res) => {
-      const newArray = res.slice(0, res.length - 1);
-      return newArray;
-    });
+    setLocalState((prevState) => ({
+      ...prevState,
+      conversation: prevState.conversation.slice(
+        0,
+        prevState.conversation.length - 2
+      ),
+      responses: prevState.responses.slice(0, prevState.responses.length - 1),
+    }));
   };
 
   // Handles retrying the conversation
   const handleRetryError = (index, e) => {
     e.preventDefault();
 
-    if (index < 0 || index >= responses.length) {
+    if (index < 0 || index >= localState.responses.length) {
       notifyError("Something went wrong");
       return;
     }
 
-    let tempPrompt = responses[index].prompt;
-    setPrompt(tempPrompt);
+    let tempPrompt = localState.responses[index].prompt;
 
-    let newArray = [...conversation];
+    setLocalState((prevState) => ({
+      ...prevState,
+      prompt: tempPrompt,
+    }));
+
+    let newArray = [...localState.conversation];
     newArray.splice(index * 2 + 1, 2); // index*2 + 1 because the conversation array is twice as large as responses array and also we want to keep "system" attribute unaffected
 
-    setResponses((res) => {
-      const resCopy = [...res];
-      resCopy.splice(index, 1);
-      return resCopy;
-    });
+    setLocalState((prevState) => ({
+      ...prevState,
+      responses: prevState.responses.filter((_, i) => i !== index),
+    }));
+    setLocalState((prevState) => {
+      const newResponses = [...prevState.responses];
+      newResponses.splice(index, 1);
 
+      return {
+        ...prevState,
+        prompt: tempPrompt,
+        responses: newResponses,
+      };
+    });
     SpeechRecognition.stopListening();
     resetTranscript();
 
-    // if (selectedFiles.length > 0) {
-    //   const allFilesText = selectedFiles
-    //     .map((file) => `${file.name}: ${file.text}`)
-    //     .join("\n");
-    //   const fullPrompt = `${tempPrompt}\n${allFilesText}`;
-    //   newArray.push({ role: "user", content: fullPrompt });
-    // } else {
-    //   newArray.push({ role: "user", content: tempPrompt });
-    // }
-    // Ali: Handle files with images
     if (selectedFiles.length > 0) {
       const textFiles = selectedFiles.filter((file) => file.type !== "image"); // filter out image files
       const imageFiles = selectedFiles.filter((file) => file.type === "image"); // filter image files
@@ -925,7 +930,7 @@ function Prompt() {
         .map((file) => `${file.name}: ${file.text}`)
         .join("\n");
 
-      const fullPrompt = `${prompt}\n${allTextFilesText}`;
+      const fullPrompt = `${localState.prompt}\n${allTextFilesText}`;
 
       const imageContent = imageFiles.map((imageFile) => ({
         type: "image_url",
@@ -941,27 +946,35 @@ function Prompt() {
         },
         ...imageContent,
       ];
+      setLocalState((prevState) => ({
+        ...prevState,
+        conversation: [
+          ...prevState.conversation,
+          { role: "user", content: newPromptContent },
+        ],
+      }));
 
-      setConversation([
-        ...conversation,
-        { role: "user", content: newPromptContent },
-      ]);
       setIsSubmitting(true);
     } else {
-      setConversation([...conversation, { role: "user", content: prompt }]);
+      setLocalState((prevState) => ({
+        ...prevState,
+        conversation: [
+          ...prevState.conversation,
+          { role: "user", content: localState.prompt },
+        ],
+      }));
       setIsSubmitting(true);
     }
-    setConversation(newArray);
+    setLocalState((prevState) => ({
+      ...prevState,
+      conversation: newArray,
+    }));
     setIsSubmitting(true);
   };
 
+  // Handle model change
   const handleChangeModel = (option) => {
-    setChooseModel(option.name);
-    setChooseModelApi(option.id);
-    setIsImageSupported(option.input.includes("image"));
-    setIsModelReady({
-      color: getStatusColor(option.status),
-    });
+    onModelChange(option.name, option.id);
     setIsOpen(false);
   };
 
@@ -1188,11 +1201,10 @@ function Prompt() {
             Object.prototype.hasOwnProperty.call(parsedData[0], "content")
           ) {
             let newArray = [];
+            if (parsedData[0].role === "system") {
+              updateSettings({ systemPrompt: parsedData[0].content });
+            }
             for (let i = 0; i < parsedData.length; i++) {
-              if (parsedData[i].role === "system") {
-                formik.setFieldValue("instructions", parsedData[i].content);
-              }
-
               if (
                 parsedData[i].role === "user" &&
                 parsedData[i + 1]?.role === "assistant"
@@ -1231,8 +1243,11 @@ function Prompt() {
                 }
               }
             }
-            setResponses(newArray);
-            setConversation(parsedData);
+            setLocalState((prevState) => ({
+              ...prevState,
+              responses: newArray,
+              conversation: parsedData,
+            }));
             notifySuccess("Chat imported successfully");
           } else {
             notifyError("Invalid structure of JSON.");
@@ -1244,7 +1259,6 @@ function Prompt() {
           const parsedData = JSON.parse(data);
 
           if (Array.isArray(parsedData)) {
-            // Handle the case where parsedData is an array
             processMessages(parsedData);
           } else if (
             parsedData &&
@@ -1253,18 +1267,24 @@ function Prompt() {
           ) {
             // Handle the case where parsedData is an object with a "messages" attribute
             if (parsedData.temperature) {
-              setTemperature(parsedData.temperature);
+              updateSettings({ temperature: parsedData.temperature });
             }
             if (parsedData.top_p) {
-              setTpop(parsedData.top_p);
+              updateSettings({ top_p: parsedData.top_p });
+            }
+            if (parsedData.arcana) {
+              setLocalState((prev) => ({
+                ...prev,
+                arcana: parsedData.arcana,
+              }));
             }
             if (parsedData.model) {
-              setChooseModelApi(parsedData.model);
-              if (parsedData["model-name"]) {
-                setChooseModel(parsedData["model-name"]);
-              } else {
-                setChooseModel(parsedData.model);
-              }
+              updateSettings({ model_api: parsedData.model });
+            }
+            if (parsedData["model-name"]) {
+              updateSettings({ model: parsedData["model-name"] });
+            } else {
+              updateSettings({ model: parsedData.model });
             }
             processMessages(parsedData.messages);
           } else {
@@ -1307,13 +1327,13 @@ function Prompt() {
 
   // Exports conversation to a file
   const exportFile = (value) => {
-    // setShowFileModel(true); // Uncomment if you need to show a modal before export
+    // setShowFileModel(true); // Uncomment if you need to show a model before export
     if (value === "json") {
-      exportJSON(conversation);
+      exportJSON(localState.conversation);
     } else if (value === "pdf") {
-      exportPDF(conversation);
+      exportPDF(localState.conversation);
     } else if (value === "text") {
-      exportTextFile(conversation);
+      exportTextFile(localState.conversation);
     }
   };
 
@@ -1331,8 +1351,22 @@ function Prompt() {
 
   // Function to export conversation as a text file
   const exportTextFile = (conversation) => {
+    // Start with a copy of the conversation
+    let exportData = [...conversation];
+
+    // Update system message with latest system prompt
+    const systemMessageIndex = exportData.findIndex(
+      (msg) => msg.role === "system"
+    );
+    if (systemMessageIndex !== -1) {
+      exportData[systemMessageIndex] = {
+        role: "system",
+        content: localState.settings.systemPrompt,
+      };
+    }
+
     // Convert conversation JSON to a formatted string
-    const textContent = conversation
+    const textContent = exportData
       .map((msg) => {
         let contentString = `${msg.role.toUpperCase()}: `;
 
@@ -1342,7 +1376,7 @@ function Prompt() {
             if (item.type === "text") {
               contentString += `${item.text}\n`; // Add text part
             } else if (item.type === "image_url") {
-              if (exportImage) {
+              if (localState.exportOptions.exportImage) {
                 contentString += "[Image]\n"; // Add image placeholder if exportImage is true
               }
             }
@@ -1358,9 +1392,17 @@ function Prompt() {
 
     let finalTextContent = textContent;
 
-    if (exportSettings) {
+    if (localState.exportOptions.exportSettings) {
       // Append model information at the end of the text file
-      const additionalText = `\n\nSettings used\nmodel-name: ${chooseModel}\nmodel: ${modelApi}\ntemperature: ${temperature}\ntop_p: ${top_p}`;
+      const additionalText = `\n\nSettings used\nmodel-name: ${
+        localState.settings.model
+      }\nmodel: ${localState.settings.model_api}\ntemperature: ${
+        localState.settings.temperature
+      }\ntop_p: ${localState.settings.top_p}${
+        localState.exportOptions.exportArcana
+          ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
+          : ""
+      }`;
       finalTextContent += additionalText;
     }
 
@@ -1382,48 +1424,64 @@ function Prompt() {
   // Exports conversation to a JSON file
   const exportJSON = (conversation) => {
     try {
+      // Start with a copy of the conversation
       let exportData = [...conversation];
 
-      if (!exportImage) {
+      // Update system message with latest system prompt
+      const systemMessageIndex = exportData.findIndex(
+        (msg) => msg.role === "system"
+      );
+      if (systemMessageIndex !== -1) {
+        exportData[systemMessageIndex] = {
+          role: "system",
+          content: localState.settings.systemPrompt,
+        };
+      }
+
+      // Continue with the rest of the export logic
+      if (!localState.exportOptions.exportImage) {
         exportData = exportData.map((msg) => {
           if (Array.isArray(msg.content)) {
-            // Filter out image content and only keep text
             let filteredContent = msg.content
               .filter((item) => item.type === "text")
               .map((item) => item.text)
-              .join("\n"); // Combine multiple text blocks if needed
+              .join("\n");
 
-            return { ...msg, content: filteredContent }; // Return the modified message
+            return { ...msg, content: filteredContent };
           }
-          return msg; // If no images, return the message as is
+          return msg;
         });
       }
 
-      // If the exportSettings is true, include settings at the beginning
-      if (exportSettings) {
+      if (localState.exportOptions.exportSettings) {
         const settingsObject = {
-          "model-name": chooseModel,
-          model: chooseModelApi,
-          temperature: temperature,
-          top_p: top_p,
+          "model-name": localState.settings.model,
+          model: localState.settings.model_api,
+          temperature: localState.settings.temperature,
+          top_p: localState.settings.top_p,
+          ...(localState.exportOptions.exportArcana && {
+            arcana: {
+              id: localState.arcana.id,
+              key: localState.arcana.key,
+            },
+          }),
         };
 
-        // Add the settings object to the beginning of the conversation array
         exportData = { ...settingsObject, messages: exportData };
       }
 
-      const content = JSON.stringify(exportData, null, 2); // Convert to JSON string
-      let file = new Blob([content], { type: "application/json" }); // Create a Blob object for the file
-      let a = document.createElement("a"); // Create a download link
-      a.download = generateFileName("json"); // Set the file name
-      a.href = URL.createObjectURL(file); // Set the file URL
-      document.body.appendChild(a); // Append the link to the document
-      a.click(); // Trigger the download
-      document.body.removeChild(a); // Clean up the link element
+      const content = JSON.stringify(exportData, null, 2);
+      let file = new Blob([content], { type: "application/json" });
+      let a = document.createElement("a");
+      a.download = generateFileName("json");
+      a.href = URL.createObjectURL(file);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
-      notifySuccess("Chat exported successfully"); // Notify success
+      notifySuccess("Chat exported successfully");
     } catch (error) {
-      notifyError("An error occurred while exporting to JSON: ", error); // Notify error
+      notifyError("An error occurred while exporting to JSON: ", error);
     }
   };
 
@@ -1437,7 +1495,14 @@ function Prompt() {
       keywords: "LLM Generated",
       creator: "LLM",
     });
-    doc.setFont("helvetica"); // Set the default font
+    doc.setFont("helvetica");
+
+    // Define colors as constants for consistency
+    const COLORS = {
+      DEFAULT: [0, 0, 0], // Black
+      HEADER_DATE: [150, 150, 150], // Gray for date
+      ROLE: [0, 102, 204], // Blue for role names
+    };
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -1447,10 +1512,6 @@ function Prompt() {
     let y = margin;
     const headerHeight = 25;
 
-    // Set up fonts
-    doc.setFont("helvetica", "bold");
-    doc.setFont("helvetica", "normal");
-
     const addHeader = (isFirstPage) => {
       y = margin;
       if (isFirstPage) {
@@ -1458,72 +1519,85 @@ function Prompt() {
       }
       const date = new Date().toLocaleDateString();
       doc.setFontSize(10);
-      doc.setTextColor(150);
+      doc.setTextColor(...COLORS.HEADER_DATE);
       doc.text(date, pageWidth - margin - 5, margin + 10, { align: "right" });
       doc.line(margin, headerHeight, pageWidth - margin, headerHeight);
       y = headerHeight + 10;
     };
 
-    const addPageNumber = () => {
-      const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
+    const addPageNumbers = () => {
       const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(10);
+        doc.setTextColor(...COLORS.DEFAULT);
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, {
+          align: "center",
+        });
+      }
+    };
+
+    const resetTextStyle = () => {
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      doc.setTextColor(0);
-      doc.text(
-        `Page ${pageNumber} of ${totalPages}`,
-        pageWidth / 2,
-        pageHeight - 10,
-        { align: "center" }
-      );
+      doc.setTextColor(...COLORS.DEFAULT);
     };
 
     const addNewPageIfNeeded = (spaceNeeded) => {
       if (y + spaceNeeded > pageHeight - margin) {
         doc.addPage();
         addHeader(false);
-        addPageNumber();
+        resetTextStyle(); // Reset text style after new page
       }
     };
 
-    // Initialize the PDF with headers on the first page
+    // Initialize the PDF
     addHeader(true);
-    addPageNumber();
+    resetTextStyle();
 
-    // Modify the conversation based on the exportImage state
+    // Process conversation
     let conversationData = [...conversation];
 
-    if (!exportImage) {
-      // Remove images from conversation if exportImage is false
+    // Update system message with latest system prompt
+    const systemMessageIndex = conversationData.findIndex(
+      (msg) => msg.role === "system"
+    );
+    if (systemMessageIndex !== -1) {
+      conversationData[systemMessageIndex] = {
+        role: "system",
+        content: localState.settings.systemPrompt,
+      };
+    }
+
+    if (!localState.exportOptions.exportImage) {
       conversationData = conversationData.map((entry) => {
         if (Array.isArray(entry.content)) {
-          // Filter out image content and keep text only
           const filteredContent = entry.content
             .filter((item) => item.type === "text")
             .map((item) => item.text)
-            .join("\n"); // Combine text parts
-          return { ...entry, content: filteredContent }; // Return modified entry
+            .join("\n");
+          return { ...entry, content: filteredContent };
         }
-        return entry; // Return original entry if no image content
+        return entry;
       });
     }
 
-    // Loop through conversation and render content into PDF
+    // Render conversation content
     for (const entry of conversationData) {
       addNewPageIfNeeded(lineHeight * 2);
 
-      // Role
+      // Role header
       doc.setFontSize(10);
-      doc.setTextColor(0, 102, 204); // Blue color for role
+      doc.setTextColor(...COLORS.ROLE);
       doc.text(`${entry.role}:`, margin, y);
       y += lineHeight;
 
-      // Content
-      doc.setFontSize(10);
-      doc.setTextColor(0);
+      // Reset to default style for content
+      resetTextStyle();
 
       if (typeof entry.content === "string") {
-        // Handle text content
         if (entry.content.includes("```")) {
+          // Handle code blocks
           const parts = entry.content.split(/(```[\s\S]+?```)/);
           for (const part of parts) {
             if (part.startsWith("```")) {
@@ -1533,11 +1607,9 @@ function Prompt() {
                 const codeLines = code.trim().split("\n");
                 addNewPageIfNeeded(lineHeight * (codeLines.length + 2));
 
-                // Language title
                 doc.text(language || "Code:", margin, y);
                 y += lineHeight * 0.5;
 
-                // Code block
                 doc.setFillColor(240, 240, 240);
                 doc.rect(
                   margin,
@@ -1547,14 +1619,14 @@ function Prompt() {
                   "F"
                 );
                 doc.setFont("Courier", "normal");
-                doc.setFontSize(10);
                 codeLines.forEach((line, index) => {
                   doc.text(line, margin + 5, y + 5 + index * lineHeight);
                 });
                 y += lineHeight * (codeLines.length + 0.5);
+                resetTextStyle(); // Reset after code block
               }
             } else {
-              doc.setFontSize(10);
+              // Normal text
               const lines = doc.splitTextToSize(part, contentWidth);
               lines.forEach((line) => {
                 addNewPageIfNeeded(lineHeight);
@@ -1564,6 +1636,7 @@ function Prompt() {
             }
           }
         } else {
+          // Regular text content
           const lines = doc.splitTextToSize(entry.content, contentWidth);
           lines.forEach((line) => {
             addNewPageIfNeeded(lineHeight);
@@ -1571,8 +1644,10 @@ function Prompt() {
             y += lineHeight;
           });
         }
-      } else if (Array.isArray(entry.content) && exportImage) {
-        // Handle entries with both text and images if exportImage is true
+      } else if (
+        Array.isArray(entry.content) &&
+        localState.exportOptions.exportImage
+      ) {
         entry.content.forEach((item) => {
           if (item.type === "text") {
             const lines = doc.splitTextToSize(item.text, contentWidth);
@@ -1582,14 +1657,12 @@ function Prompt() {
               y += lineHeight;
             });
           } else if (item.type === "image_url") {
-            addNewPageIfNeeded(lineHeight + 60); // Ensure space for image
-
-            // Render the image - ensure it's base64 encoded or a valid data URI
+            addNewPageIfNeeded(lineHeight + 60);
             if (item.image_url.url.startsWith("data:image")) {
-              doc.addImage(item.image_url.url, "JPEG", margin, y, 50, 50); // Size can be adjusted
-              y += 60; // Leave space after the image
+              doc.addImage(item.image_url.url, "JPEG", margin, y, 50, 50);
+              y += 60;
             } else {
-              doc.text("[Invalid image format]", margin, y); // Add a placeholder if not base64
+              doc.text("[Invalid image format]", margin, y);
               y += lineHeight;
             }
           }
@@ -1600,112 +1673,83 @@ function Prompt() {
         y += lineHeight;
       }
 
-      y += lineHeight; // Space after each entry
+      y += lineHeight;
     }
 
-    // Add the additional information at the end of the PDF
-    addNewPageIfNeeded(lineHeight * 5); // Ensure there's enough space for the added content
-    y += lineHeight * 2; // Add some spacing before the footer content
+    // Add settings information
+    if (localState.exportOptions.exportSettings) {
+      addNewPageIfNeeded(
+        lineHeight * (localState.exportOptions.exportArcana ? 7 : 5)
+      );
+      y += lineHeight * 2;
 
-    // Set the font for the footer content
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(0);
-
-    if (exportSettings) {
-      // Add model information at the bottom
+      resetTextStyle();
       doc.text(`Settings used`, margin, y);
-      y += lineHeight; // Increase spacing after the first line to avoid overlap
-      doc.text(`model-name: ${chooseModel}`, margin, y);
       y += lineHeight;
-      doc.text(`model: ${modelApi}`, margin, y);
+      doc.text(`model-name: ${modelSettings.model}`, margin, y);
       y += lineHeight;
-      doc.text(`temperature: ${temperature}`, margin, y);
+      doc.text(`model: ${localState.settings.model_api}`, margin, y);
       y += lineHeight;
-      doc.text(`top_p: ${top_p}`, margin, y);
+      doc.text(`temperature: ${localState.settings.temperature}`, margin, y);
       y += lineHeight;
+      doc.text(`top_p: ${localState.settings.top_p}`, margin, y);
+      y += lineHeight;
+
+      if (localState.exportOptions.exportArcana) {
+        doc.text(`Arcana: {`, margin, y);
+        y += lineHeight;
+        doc.text(`  id: ${localState.arcana.id}`, margin, y);
+        y += lineHeight;
+        doc.text(`  key: ${localState.arcana.key}`, margin, y);
+        y += lineHeight;
+        doc.text(`}`, margin, y);
+        y += lineHeight;
+      }
     }
-
-    // Save the PDF with a consistent file name
+    // Add page numbers and save
+    addPageNumbers();
     doc.save(generateFileName("pdf"));
-  };
-
-  // Advanced setttings changed toast
-  const advSettingsToast = () => {
-    notifySuccess("Settings changed successfully");
-  };
-
-  // Function for toggling theme using Redux store function
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode); // Toggle dark mode state
-    dispatch({ type: "SET_THEME" }); // Dispatch action to update theme in Redux store
   };
 
   const toggleAdvOpt = () => {
     setShowAdvOpt(!showAdvOpt); // Toggle dark mode state
-    dispatch({ type: "SET_ADV" }); // Dispatch action to update theme in Redux store
   };
 
   // Handles changing the selected model
   const toggleOpen = () => setIsOpen(!isOpen);
 
-  // Validation schema for form fields
-  const validationSchema = yup.object({
-    instructions: yup.string().required(() => t("description.custom6")),
-  });
-
-  // Formik form initialization
-  const formik = useFormik({
-    initialValues: {
-      instructions: customInstructions,
-    },
-    validationSchema: validationSchema,
-    onSubmit: async (values) => {
-      // Dispatching action to update custom instructions
-      // navigate("/chat");
-      // navigate("/chat", { state: { from: "/custom-instructions" } });
-    },
-  });
-
   const handleChangeTemp = (newValue) => {
-    let numVal = parseFloat(newValue);
-    setTemperature(numVal);
+    const numVal = parseFloat(newValue);
+    updateSettings({ temperature: numVal });
   };
 
   const handleChangeTpop = (newValue) => {
-    let numVal = parseFloat(newValue);
-    setTpop(numVal);
+    const numVal = parseFloat(newValue);
+    updateSettings({ top_p: numVal });
   };
 
   const resetDefault = () => {
-    let updatedConversation = conversation.map((item) => {
+    let updatedConversation = localState.conversation.map((item) => {
       if (item.role === "system") {
         return { ...item, content: "You are a helpful assistant" };
       } else {
         return item;
       }
     });
-    setConversation(updatedConversation);
-    setTemperature(0.5);
-    setTpop(0.5);
-    formik.setFieldValue("instructions", "You are a helpful assistant");
-  };
-
-  const clearCatch = () => {
-    persistor
-      .purge()
-      .then(() => {
-        notifySuccess("Cache cleared successfully");
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      })
-      .catch((error) => {
-        notifyError("Failed to clear cache: " + error.message);
-      });
+    setLocalState((prevState) => ({
+      ...prevState,
+      conversation: updatedConversation,
+      settings: {
+        ...prevState.settings,
+        temperature: 0.5,
+        top_p: 0.5,
+      },
+    }));
+    updateSettings({ systemPrompt: "You are a helpful assistant" });
   };
 
   const handleClearHistory = () => {
-    if (dontShowAgain) {
+    if (localState.dontShow.dontShowAgain) {
       clearHistory();
     } else {
       setShowHistoryModel(true);
@@ -1713,203 +1757,344 @@ function Prompt() {
   };
 
   const clearHistory = () => {
-    setResponses([]);
-    setConversation((con) => {
-      if (con.length > 0) {
-        return [con[0]];
-      }
-      return con; // If array was empty, return it as it is
-    });
+    setLocalState((prevState) => ({
+      ...prevState,
+      responses: [],
+      conversation:
+        prevState.conversation.length > 0
+          ? [prevState.conversation[0]]
+          : prevState.conversation,
+    }));
+
     setShowHistoryModel(false);
     notifySuccess("History cleared");
   };
 
-  // const toggleEdit = () => {
-  //   setIsEditingCustom(!isEditingCustom);
-  // };
-
-  // const saveInstructions = () => {
-  //   let updatedConversation = conversation.map((item) => {
-  //     if (item.role === "system") {
-  //       return { ...item, content: formik.values.instructions };
-  //     } else {
-  //       return item;
-  //     }
-  //   });
-  //   setConversation(updatedConversation);
-  //   setIsEditingCustom(!isEditingCustom);
-  // };
-
   const handleInstructionsChange = (event) => {
     const { value } = event.target;
 
-    // Update Formik values
-    formik.setFieldValue("instructions", value);
+    // Clear error when user starts typing
+    if (systemPromptError) {
+      setSystemPromptError("");
+    }
 
-    // Update conversation state and Redux state simultaneously
-    let updatedConversation = conversation.map((item) => {
-      if (item.role === "system") {
-        return { ...item, content: value };
-      } else {
-        return item;
-      }
-    });
+    setLocalState((prevState) => ({
+      ...prevState,
+      settings: {
+        ...prevState.settings,
+        systemPrompt: value,
+      },
+    }));
+  };
 
-    setConversation(updatedConversation);
+  const validateSystemPrompt = () => {
+    if (!localState.settings.systemPrompt?.trim()) {
+      setSystemPromptError(t("description.custom6")); // Your error message
+      return false;
+    }
+    return true;
   };
 
   useEffect(() => {
-    const encodedSettings = searchParams.get("settings");
+    const handleSettings = async () => {
+      const encodedSettings = searchParams.get("settings");
 
-    if (encodedSettings) {
-      // Decode the Base64 string
-      const decodedSettings = atob(encodedSettings);
+      if (
+        encodedSettings &&
+        location.pathname === "/chat" &&
+        !hasProcessedSettings.current
+      ) {
+        try {
+          hasProcessedSettings.current = true;
 
-      // Parse the JSON string back into an object
-      const settings = JSON.parse(decodedSettings);
+          // Try to decode the settings
+          const decodedSettings = atob(encodedSettings);
+          const settings = JSON.parse(decodedSettings);
 
-      const { system_prompt, model_name, model, temperature, top_p } = settings;
+          const action = dispatch(addConversation());
+          const newId = action.payload?.id;
 
-      // Apply the settings
-      if (system_prompt) {
-        formik.setFieldValue("instructions", decodeURIComponent(system_prompt));
-      }
-      if (model_name) {
-        setChooseModel(model_name);
-      }
-      if (model) {
-        setChooseModelApi(model);
-      }
-      if (temperature) {
-        setTemperature(temperature);
-      }
-      if (top_p) {
-        setTpop(top_p);
-      }
+          if (newId) {
+            setLocalState((prev) => ({
+              ...prev,
+              settings: {
+                systemPrompt: settings.systemPrompt
+                  ? decodeURIComponent(settings.systemPrompt)
+                  : "You are a helpful assistant",
+                model: settings.model_name || "Meta LLaMA 3.1 8B Instruct",
+                model_api: settings.model || "meta-llama-3.1-8b-instruct",
+                temperature: settings.temperature || 0.5,
+                top_p: settings.top_p || 0.5,
+              },
+              ...(settings.arcana && {
+                arcana: {
+                  id: settings.arcana.id,
+                  key: settings.arcana.key,
+                },
+              }),
+            }));
 
-      // Reset URL to /chat without query parameters
-      navigate("/chat", { replace: true });
+            dispatch(
+              updateConversation({
+                id: newId,
+                updates: {
+                  settings: {
+                    systemPrompt: settings.systemPrompt
+                      ? decodeURIComponent(settings.systemPrompt)
+                      : "You are a helpful assistant",
+                    model: settings.model_name || "Meta LLaMA 3.1 8B Instruct",
+                    model_api: settings.model || "meta-llama-3.1-8b-instruct",
+                    temperature: settings.temperature ?? 0.5,
+                    top_p: settings.top_p ?? 0.5,
+                  },
+                  ...(settings.arcana && {
+                    arcana: {
+                      id: settings.arcana.id,
+                      key: settings.arcana.key,
+                    },
+                  }),
+                },
+              })
+            );
+
+            // Navigate to new conversation
+            navigate(`/chat/${newId}`, { replace: true });
+          }
+        } catch (error) {
+          console.error("Error applying shared settings:", error);
+          notifyError(
+            "Invalid settings in shared link. Redirecting to default chat."
+          );
+          navigate(`/chat/${currentConversationId}`, { replace: true });
+          window.location.reload();
+        }
+      }
+    };
+
+    if (conversations.length > 0) {
+      handleSettings();
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, location.pathname, conversations.length]);
 
   useEffect(() => {
-    const fetchJsonFromUrl = async (url) => {
-      try {
-        const response = await fetch(url);
+    const handleImport = async () => {
+      const importUrl = searchParams.get("import");
 
-        // Handle HTTP errors
-        if (!response.ok) {
-          if (response.status >= 400 && response.status < 500) {
-            throw new Error("Client Error: Failed to fetch the JSON file.");
-          } else if (response.status >= 500) {
-            throw new Error("Server Error: Please try again later.");
-          } else {
-            throw new Error("Unknown Error: Could not fetch the JSON file.");
-          }
-        }
+      if (
+        importUrl &&
+        location.pathname === "/chat" &&
+        !hasProcessedImport.current
+      ) {
+        try {
+          hasProcessedImport.current = true;
+          const response = await fetch(importUrl);
 
-        // Parse JSON response
-        const data = await response.json();
-        processImportedData(data); // Process the fetched JSON
-
-        // Clear the "?import=" part from the URL after successful fetch
-        navigate("/chat", { replace: true });
-      } catch (error) {
-        // Handle specific fetch errors
-        if (error.name === "TypeError") {
-          notifyError("Network Error: Unable to reach the server.");
-        } else if (error.message.includes("Client Error")) {
-          notifyError("Client Error: The provided link might be incorrect.");
-        } else if (error.message.includes("Server Error")) {
-          notifyError("Server Error: Please try again later.");
-        } else {
-          notifyError(error.message || "An unexpected error occurred.");
-        }
-
-        console.error("Error:", error);
-      }
-    };
-
-    const processMessages = (parsedData) => {
-      let newArray = [];
-      for (let i = 0; i < parsedData.length; i++) {
-        if (parsedData[i].role === "system") {
-          // Set the "instructions" field in Formik using the content of the system message
-          if (parsedData[i].content) {
-            formik.setFieldValue("instructions", parsedData[i].content);
-          }
-        }
-        if (
-          parsedData[i].role === "user" &&
-          parsedData[i + 1]?.role === "assistant"
-        ) {
-          newArray.push({
-            prompt: parsedData[i].content,
-            response: parsedData[i + 1]?.content,
-          });
-        }
-      }
-      setResponses(newArray);
-      setConversation(parsedData);
-      notifySuccess("Chat imported successfully");
-    };
-
-    const processImportedData = (parsedData) => {
-      try {
-        // Validate the structure of the parsedData
-        if (Array.isArray(parsedData.messages)) {
-          const systemMessage = parsedData.messages.find(
-            (message) => message.role === "system"
-          );
-          if (systemMessage && systemMessage.content) {
-            formik.setFieldValue("instructions", systemMessage.content);
-          }
-          if (parsedData.temperature) {
-            setTemperature(parsedData.temperature);
-          }
-          if (parsedData.top_p) {
-            setTpop(parsedData.top_p);
-          }
-          if (parsedData.model) {
-            setChooseModelApi(parsedData.model);
-            if (parsedData["model-name"]) {
-              setChooseModel(parsedData["model-name"]);
+          if (!response.ok) {
+            if (response.status >= 400 && response.status < 500) {
+              throw new Error("Client Error: Failed to fetch the JSON file.");
+            } else if (response.status >= 500) {
+              throw new Error("Server Error: Please try again later.");
             } else {
-              setChooseModel(parsedData.model);
+              throw new Error("Unknown Error: Could not fetch the JSON file.");
             }
           }
-          processMessages(parsedData.messages);
-        } else if (Array.isArray(parsedData)) {
-          const systemMessage = parsedData.find(
-            (message) => message.role === "system"
-          );
-          if (systemMessage && systemMessage.content) {
-            formik.setFieldValue("instructions", systemMessage.content);
+
+          const parsedData = await response.json();
+          const action = dispatch(addConversation());
+          const newId = action.payload?.id;
+
+          if (newId) {
+            if (Array.isArray(parsedData.messages)) {
+              // Handle object with messages format
+              let newArray = [];
+              for (let i = 0; i < parsedData.messages.length; i++) {
+                if (
+                  parsedData.messages[i].role === "user" &&
+                  parsedData.messages[i + 1]?.role === "assistant"
+                ) {
+                  newArray.push({
+                    prompt: parsedData.messages[i].content,
+                    response: parsedData.messages[i + 1]?.content,
+                  });
+                }
+              }
+
+              const systemMessage = parsedData.messages.find(
+                (message) => message.role === "system"
+              );
+
+              dispatch(
+                updateConversation({
+                  id: newId,
+                  updates: {
+                    title: parsedData.messages[1].content,
+                    conversation: parsedData.messages,
+                    responses: newArray,
+                    settings: {
+                      systemPrompt:
+                        systemMessage?.content || "You are a helpful assistant",
+                      model:
+                        parsedData["model-name"] ||
+                        parsedData.model ||
+                        "Meta LLaMA 3.1 8B Instruct",
+                      model_api:
+                        parsedData.model || "meta-llama-3.1-8b-instruct",
+                      temperature: parsedData.temperature || 0.5,
+                      top_p: parsedData.top_p || 0.5,
+                    },
+                    ...(parsedData.arcana && {
+                      arcana: {
+                        id: parsedData.arcana.id,
+                        key: parsedData.arcana.key,
+                      },
+                    }),
+                  },
+                })
+              );
+            } else if (Array.isArray(parsedData)) {
+              // Handle array format
+              let newArray = [];
+              for (let i = 0; i < parsedData.length; i++) {
+                if (
+                  parsedData[i].role === "user" &&
+                  parsedData[i + 1]?.role === "assistant"
+                ) {
+                  newArray.push({
+                    prompt: parsedData[i].content,
+                    response: parsedData[i + 1]?.content,
+                  });
+                }
+              }
+
+              const systemMessage = parsedData.find(
+                (message) => message.role === "system"
+              );
+
+              dispatch(
+                updateConversation({
+                  id: newId,
+                  updates: {
+                    title: parsedData[1].content,
+                    conversation: parsedData,
+                    responses: newArray,
+                    settings: {
+                      systemPrompt:
+                        systemMessage?.content || "You are a helpful assistant",
+                      model: "Meta LLaMA 3.1 8B Instruct",
+                      model_api: "meta-llama-3.1-8b-instruct",
+                      temperature: 0.5,
+                      top_p: 0.5,
+                    },
+                  },
+                })
+              );
+            }
+
+            // Navigate after update
+            navigate(`/chat/${newId}`, { replace: true });
+            notifySuccess("Chat imported successfully");
           }
-          processMessages(parsedData);
-        } else {
-          throw new Error(
-            "Invalid JSON Structure: Expected an array or object with a 'messages' key."
-          );
+        } catch (error) {
+          if (error.name === "TypeError") {
+            notifyError("Network Error: Unable to reach the server.");
+            navigate(`/chat/${currentConversationId}`, { replace: true });
+            window.location.reload();
+          } else if (error.message.includes("Client Error")) {
+            notifyError("Client Error: The provided link might be incorrect.");
+            navigate(`/chat/${currentConversationId}`, { replace: true });
+            window.location.reload();
+          } else if (error.message.includes("Server Error")) {
+            notifyError("Server Error: Please try again later.");
+            navigate(`/chat/${currentConversationId}`, { replace: true });
+            window.location.reload();
+          } else {
+            notifyError(error.message || "An unexpected error occurred.");
+            navigate(`/chat/${currentConversationId}`, { replace: true });
+            window.location.reload();
+          }
+          console.error("Error:", error);
+          navigate(`/chat/${currentConversationId}`, { replace: true });
+          window.location.reload();
         }
-      } catch (jsonError) {
-        notifyError(
-          "Invalid JSON: Unable to process the structure of the file."
-        );
       }
     };
 
-    // Extract the "import" URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const importUrl = urlParams.get("import");
-
-    if (importUrl) {
-      fetchJsonFromUrl(importUrl);
+    if (conversations.length > 0) {
+      handleImport();
     }
-  }, []);
+  }, [searchParams, location.pathname, conversations.length]);
+
+  useEffect(() => {
+    const handleArcanaParams = async () => {
+      const arcanaID = searchParams.get("arcana");
+      const arcanaKey = searchParams.get("arcana_key");
+
+      if (
+        arcanaID &&
+        arcanaKey &&
+        location.pathname === "/chat" &&
+        !hasProcessedArcana.current
+      ) {
+        try {
+          hasProcessedArcana.current = true;
+
+          setLocalState((prev) => ({
+            ...prev,
+            arcana: {
+              id: decodeURIComponent(arcanaID),
+              key: decodeURIComponent(arcanaKey),
+            },
+            settings: {
+              ...prev.settings,
+              temperature: 0,
+              top_p: 0,
+            },
+          }));
+          const currentConversation = conversations.find(
+            (conv) => conv.id === currentConversationId
+          );
+          dispatch(
+            updateConversation({
+              id: currentConversationId,
+              updates: {
+                arcana: {
+                  id: decodeURIComponent(arcanaID),
+                  key: decodeURIComponent(arcanaKey),
+                },
+                settings: {
+                  ...currentConversation.settings,
+                  temperature: 0,
+                  top_p: 0,
+                },
+              },
+            })
+          );
+          navigate(`/chat/${currentConversationId}`, { replace: true });
+        } catch (error) {
+          console.error("Error processing arcana parameters:", error);
+          hasProcessedArcana.current = false;
+          notifyError(
+            "Invalid arcana parameters in shared link. Redirecting to default chat."
+          );
+          navigate(`/chat/${currentConversationId}`, { replace: true });
+        }
+      }
+    };
+
+    if (conversations.length > 0) {
+      handleArcanaParams();
+    }
+  }, [
+    searchParams,
+    location.pathname,
+    conversations.length,
+    currentConversationId,
+    dispatch,
+    navigate,
+  ]);
 
   const handleShareSettingsModel = () => {
-    if (dontShowAgainShare) {
+    if (localState.dontShow.dontShowAgainShare) {
       handleShareSettings();
     } else {
       setShareSettingsModel(true);
@@ -1917,57 +2102,74 @@ function Prompt() {
   };
 
   const handleShareSettings = () => {
-    // Ensure instructions are provided
-    if (!formik.values.instructions) {
-      console.error("Instructions are missing");
+    if (!localState.settings.systemPrompt) {
+      notifyError("System prompt is missing");
       return;
     }
 
-    // Encode the system prompt
-    const systemPrompt = encodeURIComponent(formik.values.instructions);
+    try {
+      // Build the settings object with validation
+      const settings = {
+        systemPrompt: encodeURIComponent(localState.settings.systemPrompt),
+        model_name: localState.settings.model,
+        model: localState.settings.model_api,
+        temperature:
+          localState.settings.temperature !== undefined &&
+          localState.settings.temperature !== null
+            ? Number(localState.settings.temperature)
+            : null,
+        top_p:
+          localState.settings.top_p !== undefined &&
+          localState.settings.top_p !== null
+            ? Number(localState.settings.top_p)
+            : null,
+        ...(localState.exportOptions.exportArcana && {
+          arcana: {
+            id: localState.arcana.id,
+            key: localState.arcana.key,
+          },
+        }),
+      };
 
-    // Build the settings object
-    const settings = {
-      system_prompt: systemPrompt,
-      model_name: chooseModel,
-      model: chooseModelApi,
-      temperature: temperature,
-      top_p: top_p,
-    };
+      // Validate the settings object
+      if (Object.values(settings).some((value) => value === undefined)) {
+        throw new Error("Invalid settings detected");
+      }
 
-    // Convert settings object to a Base64-encoded string
-    const settingsString = JSON.stringify(settings);
-    const encodedSettings = btoa(settingsString);
+      // Convert settings object to a Base64-encoded string
+      const settingsString = JSON.stringify(settings);
+      const encodedSettings = btoa(settingsString);
 
-    // Get the base URL dynamically
-    const baseURL = window.location.origin;
+      // Get the base URL dynamically and always use /chat path
+      const baseURL = window.location.origin;
+      const url = `${baseURL}/chat?settings=${encodedSettings}`;
 
-    // Create the full URL with encoded settings
-    const url = `${baseURL}/chat?settings=${encodedSettings}`;
+      // Copy to clipboard
+      navigator.clipboard
+        .writeText(url)
+        .then(() => {
+          notifySuccess("URL copied successfully");
+        })
+        .catch((err) => {
+          console.error("Failed to copy text: ", err);
+          notifyError("Failed to copy URL to clipboard");
+        });
 
-    // Attempt to copy the URL to the clipboard or use the fallback
-    navigator.clipboard
-      .writeText(url)
-      .then(() => {
-        notifySuccess("URL copied successfully");
-      })
-      .catch((err) => {
-        console.error("Failed to copy text: ", err);
-      });
-    setShareSettingsModel(false);
+      setShareSettingsModel(false);
+    } catch (error) {
+      console.error("Error generating settings URL:", error);
+      notifyError("Failed to generate settings URL");
+    }
   };
-
-  useEffect(() => {
-    dispatch(setInstructions(formik.values.instructions));
-  }, [formik.values.instructions]);
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row h-full gap-3 sm:p-2 sm:pb-0 sm:justify-between relative overflow-y-auto">
-        <div className="flex mobile:flex-col flex-row h-full gap-3 sm:justify-between relative sm:p-0 px-2 w-full sm:pb-2 pb-2 bg-bg_light dark:bg-bg_dark">
+      <div className="flex mobile:flex-col flex-row h-full sm:justify-between relative">
+        {/* Section 1 */}
+        <div className="flex flex-col items-center mobile:w-full w-[60%] h-full gap-3 sm:justify-between relative p-2 bg-bg_light dark:bg-bg_dark">
           {/* Response section */}
           <div
-            className={`desktop:max-h-full h-full flex flex-col relative mobile:w-full w-[60%] border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
+            className={`desktop:max-h-full flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[90%] mobile:w-full border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
           >
             {/* Note model */}
             {showModel && count < 3 ? (
@@ -2015,11 +2217,10 @@ function Prompt() {
             ) : null}
             {/* Prompt response section */}
             <div
-              id="divToPrint"
               ref={containerRef}
-              className="p-2 flex flex-col gap-2 overflow-y-auto flex-1"
+              className="p-2 flex flex-col gap-2 overflow-y-auto flex-1 relative"
             >
-              {responses?.map((res, index) => (
+              {localState.responses?.map((res, index) => (
                 <div key={index} className={`flex flex-col gap-1`}>
                   <div
                     ref={(el) => (containerRefs.current[index] = el)} // Attach ref to container
@@ -2030,10 +2231,17 @@ function Prompt() {
                     {editingIndex === index ? (
                       <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
                         <textarea
-                          ref={(el) => (textareaRefs.current[index] = el)} // Attach ref to textarea
-                          className=" outline-none text-xl max-h-[350px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
+                          ref={(el) => (textareaRefs.current[index] = el)}
+                          className="p-2 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
                           value={editedText}
-                          onChange={(e) => setEditedText(e.target.value)}
+                          style={{
+                            minHeight: `${MIN_HEIGHT}px`,
+                            maxHeight: `${MAX_HEIGHT}px`,
+                          }}
+                          onChange={(e) => {
+                            setEditedText(e.target.value);
+                            adjustHeight(index);
+                          }}
                           onKeyDown={(event) => {
                             if (
                               event.key === "Enter" &&
@@ -2041,9 +2249,9 @@ function Prompt() {
                               editedText.trim() !== ""
                             ) {
                               event.preventDefault();
-                              handleCloseClick(index); // Close the textarea
-                              handleSave(index); // Save the edited text
-                              setIsEditing(false); // Exit edit mode after saving
+                              handleCloseClick(index);
+                              handleSave(index);
+                              setIsEditing(false);
                             }
                           }}
                         />
@@ -2139,7 +2347,7 @@ function Prompt() {
                     handleRetryError={handleResendClick}
                     loading={loading}
                     loadingResend={loadingResend}
-                    responses={responses}
+                    responses={localState.responses}
                     notifyError={notifyError}
                     isDarkModeGlobal={isDarkModeGlobal}
                     copied={copied}
@@ -2150,10 +2358,29 @@ function Prompt() {
                 </div>
               ))}
               <div ref={messagesEndRef} />{" "}
-              {/* Scrolls to the end when new messages are added */}
+              {showScrollButton && (
+                <button
+                  onClick={scrollToBottom}
+                  style={{
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                  }}
+                  className="bg-tertiary sticky bottom-0 hover:bg-blue-600 text-white w-fit rounded-full shadow-lg transition-all duration-200 flex items-center justify-center gap-1 py-2 px-4 group hover:shadow-xl"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="25"
+                    height="25"
+                    viewBox="0 0 24 24"
+                    className="transform transition-transform group-hover:translate-y-0.5"
+                  >
+                    <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
+                  </svg>
+                </button>
+              )}
             </div>
 
-            {responses.length > 0 ? (
+            {localState.responses.length > 0 ? (
               <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl ">
                 {/* Clear, Export, Import buttons */}
                 <Tooltip text={t("description.clear")}>
@@ -2241,9 +2468,8 @@ function Prompt() {
               </div>
             )}
           </div>
-
           {/* Prompt section */}
-          <div className="mobile:w-full w-[40%] flex flex-col dark:text-white text-black mobile:h-fit justify-between h-full  mobile:min-h-[145px] sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
+          <div className="mobile:w-full flex flex-shrink-0 flex-col w-[90%] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
             <div className="flex flex-col gap-4 w-full">
               <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
                 {isImageSupported ? (
@@ -2253,17 +2479,21 @@ function Prompt() {
                     onDrop={handleDrop}
                   >
                     <textarea
-                      className="p-4 outline-none text-xl max-h-[350px] mobile:min-h-0 middle:min-h-[200px] desktop:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
-                      value={prompt}
-                      ref={textAreaRef}
+                      ref={textareaRef}
+                      className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+                      value={localState.prompt}
                       name="prompt"
                       placeholder={t("description.placeholder")}
+                      style={{
+                        minHeight: `${MIN_HEIGHT}px`,
+                        maxHeight: `${MAX_HEIGHT}px`,
+                      }}
                       onChange={handleChange}
                       onKeyDown={(event) => {
                         if (
                           event.key === "Enter" &&
                           !event.shiftKey &&
-                          prompt.trim() !== ""
+                          localState.prompt.trim() !== ""
                         ) {
                           event.preventDefault();
                           handleSubmit(event);
@@ -2274,17 +2504,25 @@ function Prompt() {
                   </div>
                 ) : (
                   <textarea
-                    className="p-4 outline-none text-xl max-h-[350px] mobile:min-h-0 middle:min-h-[200px] desktop:min-h-[200px] rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark"
-                    value={prompt}
-                    ref={textAreaRef}
+                    ref={textareaRef}
+                    className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+                    value={localState.prompt}
                     name="prompt"
                     placeholder={t("description.placeholder")}
-                    onChange={handleChange}
+                    rows={1}
+                    style={{
+                      minHeight: `${MIN_HEIGHT}px`,
+                      maxHeight: `${MAX_HEIGHT}px`,
+                    }}
+                    onChange={(event) => {
+                      handleChange(event);
+                      adjustHeight();
+                    }}
                     onKeyDown={(event) => {
                       if (
                         event.key === "Enter" &&
                         !event.shiftKey &&
-                        prompt.trim() !== ""
+                        localState.prompt.trim() !== ""
                       ) {
                         event.preventDefault();
                         handleSubmit(event);
@@ -2293,14 +2531,13 @@ function Prompt() {
                   />
                 )}
                 <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
-                  {prompt.trim() !== "" ? (
+                  {localState.prompt.trim() !== "" ? (
                     <Tooltip text={t("description.clear")}>
                       <button
                         className="h-[30px] w-[30px] cursor-pointer"
                         onClick={() => {
-                          setPrompt("");
+                          updateLocalState({ prompt: "" });
                           resetTranscript();
-                          resetHeight();
                         }}
                         disabled={loading}
                       >
@@ -2392,7 +2629,7 @@ function Prompt() {
                           />
                         </button>
                       </Tooltip>
-                    ) : prompt !== "" ? (
+                    ) : localState.prompt !== "" ? (
                       <Tooltip text={t("description.send")}>
                         <button className="h-[30px] w-[30px] cursor-pointer">
                           <img
@@ -2440,627 +2677,591 @@ function Prompt() {
                   </div>
                 </div>
               </div>
-
-              {selectedFiles.length > 0 ? (
-                <div className="flex flex-col gap-3 select-none">
-                  <div className="flex items-center justify-between">
-                    <p>
-                      <Trans i18nKey="description.file1"></Trans>
-                    </p>
-                    <p
-                      className="text-tertiary cursor-pointer"
-                      onClick={() => setSelectedFiles([])}
-                    >
-                      <Trans i18nKey="description.file2"></Trans>
-                    </p>
-                  </div>
-
-                  <ul className="flex flex-col gap-4 overflow-auto max-h-[400px] pb-4">
-                    {Array.from(selectedFiles).map((file, index) => (
-                      <li
-                        key={`${file.name}-${index}`}
-                        className="cursor-pointer flex gap-2 items-center"
-                      >
-                        {file.type === "image" ? (
-                          <img
-                            className="h-[30px] w-[30px] rounded-md"
-                            src={file.text}
-                            alt={file.name}
-                          />
-                        ) : (
-                          <img
-                            className="h-[30px] w-[30px]"
-                            src={uploaded}
-                            alt="uploaded"
-                          />
-                        )}
-                        <div className="flex justify-between items-center w-full">
-                          <div className="flex items-center gap-1 w-full">
-                            <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[60%]">
-                              {file.name}
-                            </p>
-                            <p className="mx-2"> | </p>
-                            <p>{formatFileSize(file.size)}</p>
-                          </div>
-
-                          <img
-                            src={cross}
-                            alt="cross"
-                            className="h-[30px] w-[30px]"
-                            onClick={() => removeFile(index)}
-                          />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
             </div>
+          </div>
+        </div>
+        {/* Section 2 */}
+        <div className="w-[40%] mobile:w-full p-2 text-tertiary flex flex-col justify-end">
+          {/* Files */}
+          <div>
+            {selectedFiles.length > 0 ? (
+              <div className="flex flex-col gap-3 select-none">
+                <div className="flex items-center justify-between">
+                  <p>
+                    <Trans i18nKey="description.file1"></Trans>
+                  </p>
+                  <p
+                    className="text-tertiary cursor-pointer"
+                    onClick={() => setSelectedFiles([])}
+                  >
+                    <Trans i18nKey="description.file2"></Trans>
+                  </p>
+                </div>
 
-            <div className="static flex justify-center mobile:absolute bottom-0 sm:w-full w-[calc(100%-12px)] shadow-lg dark:shadow-dark">
-              {showAdvOpt ? (
-                <div className="flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
-                  {/* Select model */}
-                  <div className="flex flex-col mobile:hidden gap-4">
-                    {/* Select input for model for desktop */}
-                    <div className="flex items-center gap-4 select-none">
-                      <div className="flex-shrink-0 flex items-center gap-2">
-                        <p className="flex-shrink-0 text-[18px]">
-                          <Trans i18nKey="description.choose"></Trans>
-                        </p>
+                <ul className="flex flex-col gap-4 overflow-auto max-h-[400px] pb-4">
+                  {Array.from(selectedFiles).map((file, index) => (
+                    <li
+                      key={`${file.name}-${index}`}
+                      className="cursor-pointer flex gap-2 items-center"
+                    >
+                      {file.type === "image" ? (
                         <img
-                          src={help}
-                          alt="help"
-                          className="h-[20px] w-[20px] cursor-pointer"
-                          onClick={() => setShowHelpModel(true)}
+                          className="h-[30px] w-[30px] rounded-md"
+                          src={file.text}
+                          alt={file.name}
+                        />
+                      ) : (
+                        <img
+                          className="h-[30px] w-[30px]"
+                          src={uploaded}
+                          alt="uploaded"
+                        />
+                      )}
+                      <div className="flex justify-between items-center w-full">
+                        <div className="flex items-center gap-1 w-full">
+                          <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[60%]">
+                            {file.name}
+                          </p>
+                          <p className="mx-2"> | </p>
+                          <p>{formatFileSize(file.size)}</p>
+                        </div>
+
+                        <img
+                          src={cross}
+                          alt="cross"
+                          className="h-[30px] w-[30px]"
+                          onClick={() => removeFile(index)}
                         />
                       </div>
-
-                      {/* Select input */}
-                      <div
-                        className="relative w-full flex flex-col"
-                        ref={dropdownRef}
-                        tabIndex={0}
-                        onBlur={() => setIsOpen(false)}
-                      >
-                        <div
-                          className="text-tertiary flex justify-between mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
-                          onClick={toggleOpen}
-                        >
-                          <div className="flex gap-2 items-center justify-between w-full">
-                            <div
-                              className={`h-[8px] w-[8px] rounded-full`}
-                              style={{ backgroundColor: isModelReady.color }}
-                            ></div>
-                            {/* This is for desktop, when options shown */}
-                            <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">
-                              {chooseModel}
-                            </div>
-                            {isImageSupported ? (
-                              <img
-                                src={image_supported}
-                                alt="image_supported"
-                                className="h-[20px] w-[20px] cursor-pointer"
-                              />
-                            ) : (
-                              // <img
-                              //   src={no_image_supported}
-                              //   alt="no_image_supported"
-                              //   className="h-[20px] w-[20px] cursor-pointer"
-                              // />
-                              <div></div>
-                            )}
-                            <div className="flex-grow"></div>
-                          </div>
-                          <div className="flex items-center">
-                            <img
-                              src={dropdown}
-                              alt="drop-down"
-                              className="h-[30px] w-[30px] cursor-pointer"
-                            />
-                          </div>
-                        </div>
-                        {isOpen && (
-                          <div
-                            className={`absolute w-full ${
-                              direction === "up" ? "bottom-full" : "top-full"
-                            } rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto`}
-                          >
-                            {modelList.map((option, index) => (
-                              <div
-                                key={index}
-                                className={`bg-white dark:bg-black text-tertiary flex gap-2 items-center text-xl w-full p-2 cursor-pointer ${
-                                  index === 0
-                                    ? "rounded-t-2xl" // The first element
-                                    : index === modelList.length - 1
-                                    ? "rounded-b-2xl" // The last element
-                                    : "" // All other elements
-                                }`}
-                                onClick={() => handleChangeModel(option)}
-                              >
-                                <div
-                                  className={`h-[8px] w-[8px] rounded-full`}
-                                  style={{
-                                    backgroundColor: getStatusColor(
-                                      option.status
-                                    ),
-                                  }}
-                                ></div>
-                                <div className="flex-grow text-left pl-2">
-                                  {option.name}{" "}
-                                </div>
-                                {option.input.includes("image") ? (
-                                  <img
-                                    src={image_supported}
-                                    alt="image_supported"
-                                    className="h-[20px] w-[20px] cursor-pointer"
-                                  />
-                                ) : null}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>{" "}
-                  </div>
-                  {/* Arcanas */}
-                  {/* <div className="flex gap-4 w-full items-center">
-                    <div className="flex-shrink-0 flex items-center gap-2">
-                      {" "}
-                      <p className="text-[18px]">Arcanas</p>{" "}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>{" "}
+          {/* Panel */}
+          <div className="static flex justify-center mobile:absolute bottom-0 w-[calc(100%-12px)] shadow-lg dark:shadow-dark">
+            {showAdvOpt ? (
+              <div
+                className={`transform transition-all duration-300 ${
+                  showAdvOpt
+                    ? "translate-y-0 opacity-100"
+                    : "translate-y-full opacity-0"
+                } flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark 
+      rounded-2xl shadow-lg dark:shadow-dark bg-white 
+      dark:bg-bg_secondary_dark h-fit w-full`}
+              >
+                {/* Select model */}
+                <div className="flex flex-col mobile:hidden gap-4">
+                  {/* Select input for model for desktop */}
+                  <div className="flex flex-wrap items-center gap-4 select-none">
+                    <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
+                      <p className="flex-shrink-0 text-[18px] whitespace-nowrap">
+                        <Trans i18nKey="description.choose"></Trans>
+                      </p>
                       <img
                         src={help}
                         alt="help"
                         className="h-[20px] w-[20px] cursor-pointer"
-                        onClick={() => setShowArcanasHelpModel(true)}
+                        onClick={() => setShowHelpModel(true)}
                       />
                     </div>
-                    <Arcanas
-                      notifyError={notifyError}
-                      notifySuccess={notifySuccess}
-                    />
-                  </div> */}
-                  {/* Custom instructions */}
-                  <div className="">
-                    <Formik enableReinitialize={true} onSubmit>
-                      <Form onSubmit={formik.handleSubmit}>
-                        <div className="flex flex-col gap-4 items-center">
-                          {/* Temperature slider */}
-                          <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-                            <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
-                              <p className="text-[18px]">temp</p>
-                              <img
-                                src={help}
-                                alt="help"
-                                className="h-[20px] w-[20px] cursor-pointer"
-                                onClick={() => setShowCustomHelpModel(true)}
-                              />
-                            </div>
-                            <div className="w-full">
-                              <div className="relative w-full">
-                                {/* Labels for guidance */}
-                                <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
-                                  <span>Logical</span>
-                                  <span>Creative</span>
-                                </div>
 
-                                {/* Container for tick marks */}
-                                <div className="tick-marks-container cursor-pointer">
-                                  {[...Array(21)].map((_, i) => (
-                                    <div key={i} className="tick-mark"></div>
-                                  ))}
-                                </div>
-
-                                {/* Slider Input */}
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="2"
-                                  step="0.1"
-                                  value={temperature}
-                                  className="slider-input"
-                                  onChange={(event) =>
-                                    handleChangeTemp(event.target.value)
-                                  }
-                                  onMouseEnter={() => setHovering(true)}
-                                  onMouseLeave={() => setHovering(false)}
-                                />
-
-                                {/* Tooltip Display */}
-                                {isHovering && (
-                                  <output
-                                    className="slider-tooltip"
-                                    style={{
-                                      left: `calc(${
-                                        (temperature / 2) * 100
-                                      }% - 15px)`,
-                                    }}
-                                  >
-                                    {Number(temperature).toFixed(1)}
-                                  </output>
-                                )}
-                              </div>
-                            </div>
+                    {/* Select input */}
+                    <div
+                      className="relative flex-1 min-w-[200px]"
+                      ref={dropdownRef}
+                      tabIndex={0}
+                      onBlur={() => setIsOpen(false)}
+                    >
+                      <div
+                        className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                        onClick={toggleOpen}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <div
+                            className="h-[8px] w-[8px] rounded-full flex-shrink-0"
+                            style={{ backgroundColor: modelStatus.color }}
+                          />
+                          <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
+                            {modelSettings.model}
                           </div>
-
-                          {/* Top_p slider */}
-                          <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-                            <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
-                              <p className="text-[18px]">top_p</p>
-                              <img
-                                src={help}
-                                alt="help"
-                                className="h-[20px] w-[20px] cursor-pointer"
-                                onClick={() => setShowTpopHelpModel(true)}
-                              />
-                            </div>
-                            <div className="w-full">
-                              <div className="relative w-full">
-                                {/* Labels for guidance */}
-                                <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
-                                  <span>Focused</span>
-                                  <span>Diverse</span>
-                                </div>
-
-                                {/* Container for tick marks */}
-                                <div className="tick-marks-container cursor-pointer">
-                                  {[...Array(20)].map((_, i) => (
-                                    <div key={i} className="tick-mark"></div>
-                                  ))}
-                                </div>
-
-                                {/* Slider Input */}
-                                <input
-                                  type="range"
-                                  min="0.05"
-                                  max="1"
-                                  step="0.05"
-                                  value={top_p}
-                                  className="slider-input"
-                                  onChange={(event) =>
-                                    handleChangeTpop(event.target.value)
-                                  }
-                                  onMouseEnter={() => setHoveringTpop(true)}
-                                  onMouseLeave={() => setHoveringTpop(false)}
-                                />
-
-                                {/* Tooltip Display */}
-                                {isHoveringTpop && (
-                                  <output
-                                    className="slider-tooltip"
-                                    style={{
-                                      left: `calc(${
-                                        ((top_p - 0.05) / 0.95) * 100
-                                      }% - 15px)`,
-                                    }}
-                                  >
-                                    {Number(top_p).toFixed(2)}
-                                  </output>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Custom instructions input*/}
-                          <div className="w-full flex flex-col gap-4">
-                            <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                              {" "}
-                              <p className="text-[18px]">System prompt</p>{" "}
-                              <img
-                                src={help}
-                                alt="help"
-                                className="h-[20px] w-[20px] cursor-pointer"
-                                onClick={() => setShowSystemHelpModel(true)}
-                              />
-                            </div>
-                            <div className="w-full relative">
-                              <div className="relative z-10">
-                                <textarea
-                                  className={` dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
-                                  type="text"
-                                  name="instructions"
-                                  placeholder={t("description.custom4")}
-                                  value={formik.values.instructions}
-                                  onBlur={formik.handleBlur}
-                                  onChange={handleInstructionsChange}
-                                />
-                              </div>
-                              {/* <div className="absolute bottom-4 right-4 z-[99] flex justify-end items-center">
-                                {!isEditingCustom ? (
-                                  <img
-                                    src={edit_icon}
-                                    alt="edit_icon"
-                                    onClick={toggleEdit}
-                                    className="h-[30px] w-[30px] cursor-pointer"
-                                  />
-                                ) : (
-                                  <button
-                                    className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center shadow-lg dark:shadow-dark border min-w-[100px] md:w-fit"
-                                    type="button"
-                                    onClick={saveInstructions}
-                                  >
-                                    Save
-                                  </button>
-                                )}
-                              </div>{" "} */}
-                            </div>
-                            {/* Display error message if any */}
-                            {formik.errors.instructions &&
-                            formik.touched.instructions ? (
-                              <p className="text-red-600 text-12-500 ">
-                                {formik.errors.instructions}
-                              </p>
-                            ) : null}{" "}
-                          </div>
-
-                          {/* Submit button */}
-                          <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
-                            <div
-                              // className="flex gap-2 md:gap-4 items-center justify-center w-full md:w-auto select-none"
-                              className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
-                              onClick={toggleAdvOpt} // Click handler to toggle advanced options
-                            >
-                              {/* Text for large screens */}
-                              <p className="hidden desktop:block text-[18px] h-full text-tertiary cursor-pointer">
-                                <Trans i18nKey="description.text9"></Trans>
-                              </p>
-                              {/* Text for small screens */}
-                              <p className="block desktop:hidden text-[18px] h-full text-tertiary cursor-pointer">
-                                <Trans i18nKey="description.text10"></Trans>
-                              </p>
-                            </div>
-
-                            {/* Share settings button */}
-                            <button
-                              className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
-                              type="reset"
-                              onClick={() => handleShareSettingsModel()}
-                            >
-                              {/* Text for large screens */}
-                              <div className="hidden desktop:block">
-                                <Trans i18nKey="description.custom9"></Trans>
-                              </div>
-                              {/* Icon for large screens */}
-                              <img
-                                src={share_icon}
-                                alt="share_icon"
-                                className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
-                              />
-                              {/* Icon for small screens */}
-                              <img
-                                src={share_icon}
-                                alt="share_icon"
-                                className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
-                              />
-                            </button>
-
-                            {/* Clear cache button */}
-                            <button
-                              className="text-white p-3 bg-red-600 hover:bg-red-550 active:bg-red-700  dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
-                              type="reset"
-                              onClick={() => setShowCacheModel(true)}
-                            >
-                              {/* Text for large screens */}
-                              <div className="hidden desktop:block">
-                                <Trans i18nKey="description.custom8"></Trans>
-                              </div>
-                              {/* Icon for large screens */}
-                              <img
-                                src={clear_cache}
-                                alt="clear_cache"
-                                className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
-                              />
-                              {/* Icon for small screens */}
-                              <img
-                                src={clear_cache}
-                                alt="clear_cache"
-                                className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
-                              />
-                            </button>
-
-                            {/* Reset default button */}
-                            <button
-                              className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
-                              type="reset"
-                              onClick={resetDefault}
-                            >
-                              {/* Text for large screens */}
-                              <div className="hidden desktop:block">
-                                <Trans i18nKey="description.custom7"></Trans>
-                              </div>
-                              {/* Text for small screens */}
-                              <div className="block desktop:hidden">
-                                <Trans i18nKey="description.custom10"></Trans>
-                              </div>
-                            </button>
-                          </div>
+                          {isImageSupported && (
+                            <img
+                              src={image_supported}
+                              alt="image_supported"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                            />
+                          )}
+                          <img
+                            src={dropdown}
+                            alt="drop-down"
+                            className="h-[30px] w-[30px] cursor-pointer flex-shrink-0"
+                          />
                         </div>
-                      </Form>
-                    </Formik>
-                  </div>{" "}
+                      </div>
+
+                      {isOpen && (
+                        <div
+                          className={`absolute w-full ${
+                            direction === "up" ? "bottom-full" : "top-full"
+                          } mt-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto bg-white dark:bg-black`}
+                        >
+                          {modelList.map((option, index) => (
+                            <div
+                              key={index}
+                              className={`flex items-center gap-2 text-tertiary text-xl w-full px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                                index === 0
+                                  ? "rounded-t-2xl"
+                                  : index === modelList.length - 1
+                                  ? "rounded-b-2xl"
+                                  : ""
+                              }`}
+                              onClick={() => handleChangeModel(option)}
+                            >
+                              <div
+                                className="h-[8px] w-[8px] rounded-full flex-shrink-0"
+                                style={{
+                                  backgroundColor: getStatusColor(
+                                    option.status
+                                  ),
+                                }}
+                              />
+                              <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                                {option.name}
+                              </div>
+                              {option.input.includes("image") && (
+                                <img
+                                  src={image_supported}
+                                  alt="image_supported"
+                                  className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="flex mobile:hidden flex-col gap-4 sm:px-6 py-4 px-3 border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark h-fit w-full">
-                  {/* Select model */}
-                  <div className="sm:flex flex-col hidden gap-4">
-                    {/* Select input for model for desktop */}
-                    <div className="flex items-center gap-4 select-none">
-                      <div className="flex-shrink-0 flex items-center gap-2">
-                        <p className="flex-shrink-0 text-[18px]">
-                          <Trans i18nKey="description.choose"></Trans>
-                        </p>
+                {localState.settings.model
+                  .toLowerCase()
+                  .includes("external") && (
+                  <div className="text-yellow-600 text-sm mb-3 select-none">
+                    <Trans i18nKey="description.warning_settings"></Trans>
+                  </div>
+                )}
+                {/* Arcanas */}
+                <div className="flex gap-4 w-full items-center">
+                  <div className="flex-shrink-0 flex items-center gap-2 select-none">
+                    {" "}
+                    <p className="text-[18px]">Arcana</p>{" "}
+                    <img
+                      src={help}
+                      alt="help"
+                      className="h-[20px] w-[20px] cursor-pointer"
+                      onClick={() => setShowArcanasHelpModel(true)}
+                    />
+                  </div>
+                  <ArcanaContainer
+                    localState={localState}
+                    setLocalState={setLocalState}
+                  />
+                </div>
+                {/* Custom instructions */}
+                <div className="">
+                  <div className="flex flex-col gap-4 items-center">
+                    {localState.arcana.id && localState.arcana.key && (
+                      <div className="text-yellow-600 text-sm w-full select-none">
+                        <Trans i18nKey="description.warning_arcana"></Trans>
+                      </div>
+                    )}
+                    {/* Temperature slider */}
+                    <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
+                      <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+                        <p className="text-[18px]">temp</p>
                         <img
                           src={help}
                           alt="help"
                           className="h-[20px] w-[20px] cursor-pointer"
-                          onClick={() => setShowHelpModel(true)}
+                          onClick={() => setShowCustomHelpModel(true)}
+                        />
+                      </div>
+                      <div className="w-full">
+                        <div className="relative w-full">
+                          {/* Labels for guidance */}
+                          <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                            <span>Logical</span>
+                            <span>Creative</span>
+                          </div>
+
+                          {/* Container for tick marks */}
+                          <div className="tick-marks-container cursor-pointer">
+                            {[...Array(21)].map((_, i) => (
+                              <div key={i} className="tick-mark"></div>
+                            ))}
+                          </div>
+
+                          {/* Slider Input */}
+                          <input
+                            type="range"
+                            min="0"
+                            max="2"
+                            step="0.1"
+                            value={localState.settings.temperature}
+                            className="slider-input"
+                            onChange={(event) =>
+                              handleChangeTemp(event.target.value)
+                            }
+                            onMouseEnter={() => setHovering(true)}
+                            onMouseLeave={() => setHovering(false)}
+                          />
+
+                          {/* Tooltip Display */}
+                          {isHovering && (
+                            <output
+                              className="slider-tooltip"
+                              style={{
+                                left: `calc(${
+                                  (localState.settings.temperature / 2) * 100
+                                }% - 15px)`,
+                              }}
+                            >
+                              {Number(localState.settings.temperature).toFixed(
+                                1
+                              )}
+                            </output>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top_p slider */}
+                    <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
+                      <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+                        <p className="text-[18px]">top_p</p>
+                        <img
+                          src={help}
+                          alt="help"
+                          className="h-[20px] w-[20px] cursor-pointer"
+                          onClick={() => setShowTpopHelpModel(true)}
+                        />
+                      </div>
+                      <div className="w-full">
+                        <div className="relative w-full">
+                          {/* Labels for guidance */}
+                          <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                            <span>Focused</span>
+                            <span>Diverse</span>
+                          </div>
+
+                          {/* Container for tick marks */}
+                          <div className="tick-marks-container cursor-pointer">
+                            {[...Array(20)].map((_, i) => (
+                              <div key={i} className="tick-mark"></div>
+                            ))}
+                          </div>
+
+                          {/* Slider Input */}
+                          <input
+                            type="range"
+                            min="0.05"
+                            max="1"
+                            step="0.05"
+                            value={localState.settings.top_p}
+                            className="slider-input"
+                            onChange={(event) =>
+                              handleChangeTpop(event.target.value)
+                            }
+                            onMouseEnter={() => setHoveringTpop(true)}
+                            onMouseLeave={() => setHoveringTpop(false)}
+                          />
+
+                          {/* Tooltip Display */}
+                          {isHoveringTpop && (
+                            <output
+                              className="slider-tooltip"
+                              style={{
+                                left: `calc(${
+                                  ((localState.settings.top_p - 0.05) / 0.95) *
+                                  100
+                                }% - 15px)`,
+                              }}
+                            >
+                              {Number(localState.settings.top_p).toFixed(2)}
+                            </output>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Custom instructions input*/}
+                    <div className="w-full flex flex-col gap-4">
+                      <div className="flex-shrink-0 flex items-center gap-2 select-none">
+                        {" "}
+                        <p className="text-[18px]">System prompt</p>{" "}
+                        <img
+                          src={help}
+                          alt="help"
+                          className="h-[20px] w-[20px] cursor-pointer"
+                          onClick={() => setShowSystemHelpModel(true)}
+                        />
+                      </div>
+                      <div className="w-full relative">
+                        <div className="relative z-10">
+                          <textarea
+                            className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border ${
+                              systemPromptError
+                                ? "border-red-500"
+                                : "dark:border-border_dark"
+                            } outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                            type="text"
+                            name="systemPrompt"
+                            placeholder={t("description.custom4")}
+                            value={localState.settings.systemPrompt}
+                            onChange={handleInstructionsChange}
+                            onBlur={() => validateSystemPrompt()} // Validate on blur
+                          />
+                        </div>
+                        {systemPromptError && (
+                          <p className="text-red-600 text-12-500">
+                            {systemPromptError}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Submit button */}
+                    <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
+                      <div
+                        // className="flex gap-2 md:gap-4 items-center justify-center w-full md:w-auto select-none"
+                        className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
+                        onClick={toggleAdvOpt} // Click handler to toggle advanced options
+                      >
+                        {/* Text for large screens */}
+                        <p className="hidden desktop:block text-[18px] h-full text-tertiary cursor-pointer">
+                          <Trans i18nKey="description.text9"></Trans>
+                        </p>
+                        {/* Text for small screens */}
+                        <p className="block desktop:hidden text-[18px] h-full text-tertiary cursor-pointer">
+                          <Trans i18nKey="description.text10"></Trans>
+                        </p>
+                      </div>
+
+                      {/* Share settings button */}
+                      <button
+                        className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
+                        type="reset"
+                        onClick={() => handleShareSettingsModel()}
+                      >
+                        {/* Text for large screens */}
+                        <div className="hidden desktop:block">
+                          <Trans i18nKey="description.custom9"></Trans>
+                        </div>
+                        {/* Icon for large screens */}
+                        <img
+                          src={share_icon}
+                          alt="share_icon"
+                          className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
+                        />
+                        {/* Icon for small screens */}
+                        <img
+                          src={share_icon}
+                          alt="share_icon"
+                          className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
+                        />
+                      </button>
+
+                      {/* Reset default button */}
+                      <button
+                        className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
+                        type="reset"
+                        onClick={resetDefault}
+                      >
+                        {/* Text for large screens */}
+                        <div className="hidden desktop:block">
+                          <Trans i18nKey="description.custom7"></Trans>
+                        </div>
+                        {/* Text for small screens */}
+                        <div className="block desktop:hidden">
+                          <Trans i18nKey="description.custom10"></Trans>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>{" "}
+              </div>
+            ) : (
+              <div
+                className={`transform transition-all duration-300 motion-safe:duration-300
+        ${
+          showAdvOpt
+            ? "translate-y-0 opacity-100 scale-100"
+            : "translate-y-0 opacity-100 scale-100"
+        }
+        mobile:hidden flex flex-col gap-4 sm:px-6 py-4 px-3 border 
+        dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark 
+        bg-white dark:bg-bg_secondary_dark h-fit w-full
+        ease-[cubic-bezier(0.34,1.56,0.64,1)]`}
+              >
+                {/* Select model */}
+                <div className="sm:flex flex-col hidden gap-4">
+                  {/* Select input for model for desktop */}
+                  <div className="flex flex-wrap items-center gap-4 select-none">
+                    <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
+                      <p className="flex-shrink-0 text-[18px] whitespace-nowrap">
+                        <Trans i18nKey="description.choose"></Trans>
+                      </p>
+                      <img
+                        src={help}
+                        alt="help"
+                        className="h-[20px] w-[20px] cursor-pointer"
+                        onClick={() => setShowHelpModel(true)}
+                      />
+                    </div>
+
+                    {/* Select input */}
+                    <div
+                      className="relative flex-1 min-w-[200px]"
+                      ref={dropdownRef}
+                      tabIndex={0}
+                      onBlur={() => setIsOpen(false)}
+                    >
+                      <div
+                        className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                        onClick={toggleOpen}
+                      >
+                        {/* Status dot */}
+                        <div
+                          className="h-[8px] w-[8px] rounded-full flex-shrink-0"
+                          style={{ backgroundColor: modelStatus.color }}
+                        />
+
+                        {/* Model name */}
+                        <div className="mx-2 text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
+                          {modelSettings.model}
+                        </div>
+
+                        {/* Image support icon */}
+                        {isImageSupported && (
+                          <img
+                            src={image_supported}
+                            alt="image_supported"
+                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mr-2"
+                          />
+                        )}
+
+                        {/* Dropdown arrow */}
+                        <img
+                          src={dropdown}
+                          alt="drop-down"
+                          className="h-[30px] w-[30px] cursor-pointer flex-shrink-0"
                         />
                       </div>
 
-                      {/* Select input */}
-                      <div
-                        className="relative w-full flex flex-col"
-                        ref={dropdownRef}
-                        tabIndex={0}
-                        onBlur={() => setIsOpen(false)}
-                      >
+                      {isOpen && (
                         <div
-                          className="text-tertiary flex justify-between mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
-                          onClick={toggleOpen}
+                          className={`absolute w-full ${
+                            direction === "up" ? "bottom-full" : "top-full"
+                          } mt-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto bg-white dark:bg-black`}
                         >
-                          <div className="flex gap-2 items-center">
+                          {modelList.map((option, index) => (
                             <div
-                              className={`h-[8px] w-[8px] rounded-full`}
-                              style={{ backgroundColor: isModelReady.color }}
-                            ></div>
-                            {/* This is for desktop, when options is hidden */}
-                            <div className="text-ellipsis text-xl overflow-hidden whitespace-nowrap ml-auto">
-                              {chooseModel}
-                            </div>
-                            {isImageSupported ? (
-                              <img
-                                src={image_supported}
-                                alt="image_supported"
-                                className="h-[20px] w-[20px] cursor-pointer"
-                              />
-                            ) : (
-                              // <img
-                              //   src={no_image_supported}
-                              //   alt="no_image_supported"
-                              //   className="h-[20px] w-[20px] cursor-pointer"
-                              // />
-                              <div></div>
-                            )}{" "}
-                          </div>
-                          <div className="flex items-center">
-                            <img
-                              src={dropdown}
-                              alt="drop-down"
-                              className="h-[30px] w-[30px] cursor-pointer"
-                            />
-                          </div>
-                        </div>
-                        {isOpen && (
-                          <div
-                            className={`absolute w-full ${
-                              direction === "up" ? "bottom-full" : "top-full"
-                            } rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto`}
-                          >
-                            {modelList.map((option, index) => (
+                              key={index}
+                              className={`flex items-center gap-2 text-tertiary text-xl w-full p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                                index === 0
+                                  ? "rounded-t-2xl"
+                                  : index === modelList.length - 1
+                                  ? "rounded-b-2xl"
+                                  : ""
+                              }`}
+                              onClick={() => handleChangeModel(option)}
+                            >
+                              {/* Status dot */}
                               <div
-                                key={index}
-                                className={`bg-white dark:bg-black flex gap-2 items-center text-tertiary text-xl w-full p-2 cursor-pointer ${
-                                  index === 0
-                                    ? "rounded-t-2xl" // The first element
-                                    : index === modelList.length - 1
-                                    ? "rounded-b-2xl" // The last element
-                                    : "" // All other elements
-                                }`}
-                                onClick={() => handleChangeModel(option)}
-                              >
-                                <div
-                                  className={`h-[8px] w-[8px] rounded-full`}
-                                  style={{
-                                    backgroundColor: getStatusColor(
-                                      option.status
-                                    ),
-                                  }}
-                                ></div>
-                                <div className="flex-grow text-left pl-2">
-                                  {option.name}{" "}
-                                </div>
-                                {option.input.includes("image") ? (
-                                  <img
-                                    src={image_supported}
-                                    alt="image_supported"
-                                    className="h-[20px] w-[20px] cursor-pointer"
-                                  />
-                                ) : null}{" "}
+                                className="h-[8px] w-[8px] rounded-full flex-shrink-0"
+                                style={{
+                                  backgroundColor: getStatusColor(
+                                    option.status
+                                  ),
+                                }}
+                              />
+
+                              {/* Model name */}
+                              <div className="flex-1 text-left overflow-hidden text-ellipsis whitespace-nowrap">
+                                {option.name}
                               </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>{" "}
-                    {/* <div className="flex items-center gap-2 select-none">
-              <Link to={"/custom-instructions"} target="">
-                <p className="text-xl h-full text-tertiary">
-                  <Trans i18nKey="description.text6"></Trans>
-                </p>
-              </Link>{" "}
-              <img
-                src={help}
-                alt="help"
-                className="h-[20px] w-[20px] cursor-pointer"
-                onClick={() => setShowCusModel(true)}
-              />
-            </div> */}
-                  </div>
-                  <div
-                    className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit w-full"
-                    onClick={toggleAdvOpt} // Click handler to toggle advanced options
-                  >
-                    <p className="text-[18px] h-full text-tertiary">
-                      <Trans i18nKey="description.text6"></Trans>
-                    </p>{" "}
-                    {/* <img
-                    src={advanced_settings_arrow}
-                    alt="drop-down"
-                    className={`${
-                      showAdvOpt ? "" : "rotate-180"
-                    } h-[15px] w-[40px] cursor-pointer`}
-                  /> */}
+
+                              {/* Image support icon */}
+                              {option.input.includes("image") && (
+                                <img
+                                  src={image_supported}
+                                  alt="image_supported"
+                                  className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div
+                  className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit w-full"
+                  onClick={toggleAdvOpt}
+                >
+                  <p className="text-[18px] h-full text-tertiary">
+                    <Trans i18nKey="description.text6"></Trans>
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
-      <div>
-        <ToastContainer />
-      </div>
 
       {/* Help model for info on changing model */}
-      <>{showHelpModel ? <Help_Model showModal={setShowHelpModel} /> : null}</>
+      <>{showHelpModel ? <Help_Model showModel={setShowHelpModel} /> : null}</>
 
       {/* Help model for info on custom temperature */}
       <div className="">
         {showCustomHelpModel ? (
-          <Help_Model_Custom showModal={setShowCustomHelpModel} />
+          <Help_Model_Custom showModel={setShowCustomHelpModel} />
         ) : null}
       </div>
 
       {/* Help model for info on custom temperature */}
       <div className="">
         {showTpopHelpModel ? (
-          <Help_Model_Tpop showModal={setShowTpopHelpModel} />
+          <Help_Model_Tpop showModel={setShowTpopHelpModel} />
         ) : null}
       </div>
 
       {/* Help model for info on system prompt */}
       <div className="">
         {showSystemHelpModel ? (
-          <Help_Model_System showModal={setShowSystemHelpModel} />
+          <Help_Model_System showModel={setShowSystemHelpModel} />
         ) : null}
       </div>
 
       {/* Help model for info on custom instructions */}
       <div className="">
         {showArcanasHelpModel ? (
-          <Help_model_Arcanas showModal={setShowArcanasHelpModel} />
+          <Help_model_Arcanas showModel={setShowArcanasHelpModel} />
         ) : null}
       </div>
 
       {/* Pop-up if microphone permission is not given or denied */}
       <div className="">
-        {showMicModel ? <Mic_Model showModal={setShowMicModel} /> : null}
+        {showMicModel ? <Mic_Model showModel={setShowMicModel} /> : null}
       </div>
 
       {/* Pop-up for info about custom instructions */}
       <div className="">
         {showCusModel ? (
-          <Cutom_Instructions_Model showModal={setShowCusModel} />
+          <Cutom_Instructions_Model showModel={setShowCusModel} />
         ) : null}
       </div>
 
@@ -3068,9 +3269,14 @@ function Prompt() {
       <div className="">
         {showFileModel ? (
           <ExportTypeModel
-            showModal={setShowFileModel}
+            arcana={localState.arcana}
+            showModel={setShowFileModel}
             exportFile={exportFile}
-            conversation={conversation}
+            conversation={localState.conversation}
+            exportSettings={localState.exportOptions.exportSettings}
+            exportImage={localState.exportOptions.exportImage}
+            exportArcana={localState.exportOptions.exportArcana}
+            setLocalState={setLocalState}
           />
         ) : null}
       </div>
@@ -3078,24 +3284,14 @@ function Prompt() {
       {/* Pop-up  for session expired model*/}
       <div className="">
         {showModelSession ? (
-          <Session_Expired showModal={setShowModelSession} />
+          <Session_Expired showModel={setShowModelSession} />
         ) : null}
       </div>
 
       {/* Pop-up token limit exceed*/}
       <div className="">
         {showBadRequest ? (
-          <Bad_Request_Model showModal={setShowBadRequest} />
-        ) : null}
-      </div>
-
-      {/* Pop-up clear cache*/}
-      <div className="">
-        {showCacheModel ? (
-          <Clear_Catch_Model
-            showModal={setShowCacheModel}
-            clearCatch={clearCatch}
-          />
+          <Bad_Request_Model showModel={setShowBadRequest} />
         ) : null}
       </div>
 
@@ -3103,8 +3299,10 @@ function Prompt() {
       <div className="">
         {showHistoryModel ? (
           <Clear_History_Model
-            showModal={setShowHistoryModel}
+            showModel={setShowHistoryModel}
             clearHistory={clearHistory}
+            dontShowAgain={localState.dontShow.dontShowAgain}
+            setLocalState={setLocalState}
           />
         ) : null}
       </div>
@@ -3113,8 +3311,12 @@ function Prompt() {
       <div className="">
         {shareSettingsModel ? (
           <Share_Settings_Model
-            showModal={setShareSettingsModel}
+            arcana={localState.arcana}
+            exportArcana={localState.exportOptions.exportArcana}
+            showModel={setShareSettingsModel}
             handleShareSettings={handleShareSettings}
+            dontShowAgainShare={localState.dontShow.dontShowAgainShare}
+            setLocalState={setLocalState}
           />
         ) : null}
       </div>
