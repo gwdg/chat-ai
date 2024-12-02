@@ -1,16 +1,13 @@
 // Importing necessary modules
 import { Trans } from "react-i18next"; // For translation
-import Modal from "./Modal"; // Importing Modal component
+import Model from "./Model"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
 import json_icon from "../assets/json_icon.svg";
 import pdf_icon from "../assets/pdf_icon.svg";
 import txt_icon from "../assets/txt_icon.svg";
 import { useState } from "react"; // For managing component state
-import { useDispatch, useSelector } from "react-redux";
-import { setExportSettings } from "../Redux/reducers/fileIncludeSettings";
-import { setExportImage } from "../Redux/reducers/imageIncludeReducer";
 
-// Export type modal component
+// Export type model component
 function ExportTypeModel(props) {
   const [value, setValue] = useState("json");
   const [containsImage, setContainsImage] = useState(
@@ -31,7 +28,7 @@ function ExportTypeModel(props) {
   // Function to handle export file action
   function exportFile() {
     props.exportFile(value, props.conversation); // Pass the conversation data
-    props.showModal(false); // Close the modal
+    props.showModel(false); // Close the model
   }
 
   // Array of export options
@@ -41,24 +38,39 @@ function ExportTypeModel(props) {
     { id: "text", icon: txt_icon, label: "description.fileFormat3" },
   ];
 
-  const dispatch = useDispatch();
-  const exportSettings = useSelector(
-    (state) => state.exportSettings.exportSettings
-  );
-
-  const exportImage = useSelector((state) => state.exportImage.exportImage);
-
   // Handler for checkbox state change
   const handleCheckboxChange = (event) => {
-    dispatch(setExportSettings(event.target.checked));
+    props.setLocalState((prevState) => ({
+      ...prevState,
+      exportOptions: {
+        ...prevState.exportOptions,
+        exportSettings: event.target.checked,
+      },
+    }));
   };
 
   const handleCheckboxChangeImages = (event) => {
-    dispatch(setExportImage(event.target.checked));
+    props.setLocalState((prevState) => ({
+      ...prevState,
+      exportOptions: {
+        ...prevState.exportOptions,
+        exportImage: event.target.checked,
+      },
+    }));
+  };
+
+  const handleCheckboxChangeArcana = (event) => {
+    props.setLocalState((prevState) => ({
+      ...prevState,
+      exportOptions: {
+        ...prevState.exportOptions,
+        exportArcana: event.target.checked,
+      },
+    }));
   };
 
   return (
-    <Modal showModal={props.showModal}>
+    <Model showModel={props.showModel}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
@@ -68,7 +80,7 @@ function ExportTypeModel(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModal(false)}
+            onClick={() => props.showModel(false)}
           />
         </div>
         <div className="flex flex-col gap-4 p-4">
@@ -94,12 +106,42 @@ function ExportTypeModel(props) {
               </label>
             </div>
           ))}
+          {props.arcana.id && props.arcana.key && props.exportSettings ? (
+            <>
+              <div className="">
+                <p className="text-red-600">
+                  <Trans i18nKey="description.arcana_warn"></Trans>
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="exportArcana"
+                  checked={props.exportArcana}
+                  onChange={handleCheckboxChangeArcana}
+                  className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
+                    !props.arcana.id && !props.arcana.key
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : ""
+                  }`}
+                  disabled={!props.arcana.id && !props.arcana.key}
+                />
+                <label
+                  htmlFor="exportArcana"
+                  className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                >
+                  <Trans i18nKey="description.exportArcana"></Trans>
+                </label>
+              </div>
+            </>
+          ) : null}
+
           {/* Add the checkbox */}
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
               id="exportSettings"
-              checked={exportSettings}
+              checked={props.exportSettings}
               onChange={handleCheckboxChange}
               className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
             />
@@ -115,7 +157,7 @@ function ExportTypeModel(props) {
             <input
               type="checkbox"
               id="exportImage"
-              checked={exportImage}
+              checked={props.exportImage}
               onChange={handleCheckboxChangeImages}
               className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
                 !containsImage ? "bg-gray-400 cursor-not-allowed" : ""
@@ -141,7 +183,7 @@ function ExportTypeModel(props) {
           </div>
         </div>
       </div>
-    </Modal>
+    </Model>
   );
 }
 

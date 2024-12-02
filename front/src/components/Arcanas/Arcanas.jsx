@@ -5,9 +5,9 @@ import { Trans } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import Skeleton from "react-loading-skeleton"; // Import Skeleton
 import "react-loading-skeleton/dist/skeleton.css"; // Import Skeleton styles
-import dropdown from "../assets/icon_dropdown.svg";
-import { fetchArcanaInfo, createArcana } from "../apis/ArcanaApis";
-import { setSelectedArcana } from "../Redux/actions/arcanaSelectAction"; // Action to set selected Arcana
+import dropdown from "../../assets/icon_dropdown.svg";
+import { fetchArcanaInfo, createArcana } from "../../apis/ArcanaApis";
+import { setSelectedArcana } from "../../Redux/actions/arcanaSelectAction"; // Action to set selected Arcana
 
 function Arcanas({ notifyError, notifySuccess }) {
   const [arcanas, setArcanas] = useState([]);

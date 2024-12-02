@@ -1,43 +1,27 @@
+// Root Reducer for combining all slices
 import { combineReducers } from "redux";
 import themeReducer from "./themeReducer";
-import promptReducer from "./promptReducer";
-import responsesReducer from "./responsesReducer";
-import modelReducer from "./modelReducer";
-import conReducer from "./conReducer";
-import instructionsReducer from "./instructionsReducer";
-import temperatureReducer from "./temperatureReducer";
 import alertReducer from "./alertReducer";
-import modelApiReducer from "./modelApiReducer";
 import anncAlertReducer from "./anncAlertReducer";
-import arcanaReducer from "./arcanaReducer";
 import advOptionReducer from "./advancedOptionsReducer";
-import selectedArcanaReducer from "./arcanaSelectReducer";
-import tpopReducer from "./tpopReducer";
-import showAgainReducer from "./showAgainReducer";
-import fileIncludeSettings from "./fileIncludeSettings";
-import showAgainShareReducer from "./showAgainShareReducer";
-import imageIncludeReducer from "./imageIncludeReducer";
+import conversationsReducer from "./conversationsSlice";
 
-// Combine all reducers into the root reducer
-const rootReducer = combineReducers({
+const appReducer = combineReducers({
   theme: themeReducer,
-  prompt: promptReducer,
-  model: modelReducer,
-  responses: responsesReducer,
-  conversation: conReducer,
-  instructions: instructionsReducer,
-  temperature: temperatureReducer,
   count: alertReducer,
   anncCount: anncAlertReducer,
-  modelApi: modelApiReducer,
-  arcana: arcanaReducer,
+  conversations: conversationsReducer,
   advOptions: advOptionReducer,
-  selectedArcana: selectedArcanaReducer,
-  top_p: tpopReducer,
-  showAgain: showAgainReducer,
-  showAgainShare: showAgainShareReducer,
-  exportSettings: fileIncludeSettings,
-  exportImage: imageIncludeReducer,
+
 });
+
+const rootReducer = (state, action) => {
+  if (action.type === "RESET_ALL") {
+    // Reset state of all reducers except theme
+    const { theme } = state;
+    state = { theme };
+  }
+  return appReducer(state, action);
+};
 
 export default rootReducer;

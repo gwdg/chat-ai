@@ -1,7 +1,7 @@
 // Importing necessary libraries and components
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
-import Code from "./Code";
+import Code from "../Markdown/Code";
 import "highlight.js/styles/github.css";
 
 // MarkdownRenderer component definition
