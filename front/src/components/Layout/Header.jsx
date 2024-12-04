@@ -110,7 +110,7 @@ function Header({
           {/* Hamburger Menu */}
           <button
             onClick={onMenuClick}
-            className="lg:hidden hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="custom:hidden hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           >
             <img
               className="h-[32px] w-[32px] sm:h-[40px] sm:w-[40px]"
