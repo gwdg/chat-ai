@@ -385,3 +385,7 @@ html {
 .Toastify__toast-container {
   z-index: 9999;
 }
+
+.custom-syntax-highlighter {
+  background: transparent !important;
+}
