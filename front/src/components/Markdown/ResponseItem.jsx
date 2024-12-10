@@ -2,6 +2,7 @@ import React from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import copy from "../../assets/icon_copy.svg";
 import check from "../../assets/check.svg";
+import retry from "../../assets/icon_retry.svg";
 
 const ResponseItem = React.memo(
   ({
@@ -36,7 +37,7 @@ const ResponseItem = React.memo(
         <div className="flex gap-2 p-2">
           <p>Try Again</p>
           <button onClick={() => handleRetryError(index)} disabled={loading}>
-            <img src="/retry.svg" alt="Retry" />
+            <img src={retry} alt="Retry" />
           </button>
         </div>
       );
