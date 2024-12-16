@@ -9,7 +9,7 @@ export default {
         secondary: "#695EA2",
         tertiary: "#009EE0",
         dark_hover: "#333333",
-        light_hover:"#efeff1",
+        light_hover: "#efeff1",
         border_dark: "#333333",
         bg_dark: "#1a1a1a",
         bg_light: "#f3f4f6",
@@ -36,6 +36,7 @@ export default {
         mobile: { max: "800px" }, // Under 800px
         middle: { min: "801px", max: "1280px" }, // Between 800px and 1280px
         desktop: { min: "1281px" }, // Above 1280px
+        custom: "1081px",
       },
       backgroundImage: () => ({
         "logo-large": "url('../src/assets/Gwdg-logo-neu.png')",

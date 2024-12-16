@@ -198,14 +198,13 @@ function Layout() {
   // Handle responsive sidebar
   useEffect(() => {
     const handleResize = () => {
-      setIsSidebarOpen(window.innerWidth >= 1024);
+      setIsSidebarOpen(window.innerWidth > 1080);
     };
 
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
   // Clear cache handler
   const clearCache = async () => {
     try {
@@ -242,7 +241,7 @@ function Layout() {
         {/* Mobile Overlay */}
         {isSidebarOpen && (
           <div
-            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
+            className="custom:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
@@ -250,9 +249,9 @@ function Layout() {
         {/* Sidebar */}
         <div
           className={`
-            ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-            lg:translate-x-0 transition-transform duration-200 ease-in-out
-            fixed lg:relative w-72 lg:h-full h-screen z-30 lg:z-auto shrink-0 lg:p-2 bg-bg_light dark:bg-bg_dark`}
+          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          custom:translate-x-0 transition-transform duration-200 ease-in-out
+          fixed custom:relative w-72 custom:h-full h-screen z-30 custom:z-auto shrink-0 custom:p-2 bg-bg_light dark:bg-bg_dark`}
         >
           <Sidebar
             onClose={() => setIsSidebarOpen(false)}

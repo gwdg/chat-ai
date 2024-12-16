@@ -1,3 +1,4 @@
+@import "katex/dist/katex.min.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -384,4 +385,18 @@ html {
 /* Make sure toasts are visible */
 .Toastify__toast-container {
   z-index: 9999;
+}
+
+.custom-syntax-highlighter {
+  background: transparent !important;
+}
+
+.math-inline {
+  padding: 0 0.25rem;
+}
+
+.math-display {
+  display: block;
+  margin: 1rem 0;
+  overflow-x: auto;
 }

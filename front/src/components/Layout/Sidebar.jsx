@@ -36,7 +36,7 @@ function Sidebar({ onClose, onDeleteConversation, conversationIds }) {
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-bg_secondary_dark border-r dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark select-none">
-      <div className="md:hidden flex items-center justify-between p-4 border-b dark:border-border_dark">
+      <div className="custom:hidden flex items-center justify-between p-4 border-b dark:border-border_dark">
         <p className="text-lg font-medium text-black dark:text-white">
           Conversations
         </p>
@@ -83,7 +83,7 @@ function Sidebar({ onClose, onDeleteConversation, conversationIds }) {
                         e.stopPropagation();
                         onDeleteConversation(id);
                       }}
-                      className="md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity"
+                      className="custom:opacity-0 custom:group-hover:opacity-100 opacity-100 transition-opacity"
                     >
                       <img src={cross} alt="delete" className="w-5 h-5" />
                     </button>

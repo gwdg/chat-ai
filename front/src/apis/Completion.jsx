@@ -9,7 +9,7 @@ async function generateTitle(conversation, settings) {
       method: "post",
       headers: { "Content-type": "application/json" },
       body: JSON.stringify({
-        model: settings.model_api,
+        model: "meta-llama-3.1-8b-instruct",
         messages: [
           { role: "system", content: "You are a helpful assistant." },
           ...conversation.slice(1),

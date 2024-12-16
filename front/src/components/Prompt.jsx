@@ -2169,7 +2169,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
         <div className="flex flex-col items-center mobile:w-full w-[60%] h-full gap-3 sm:justify-between relative p-2 bg-bg_light dark:bg-bg_dark">
           {/* Response section */}
           <div
-            className={`desktop:max-h-full flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[90%] mobile:w-full border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
+            className={`desktop:max-h-full flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-12px)] mobile:w-full border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark`}
           >
             {/* Note model */}
             {showModel && count < 3 ? (
@@ -2469,7 +2469,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
             )}
           </div>
           {/* Prompt section */}
-          <div className="mobile:w-full flex flex-shrink-0 flex-col w-[90%] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
+          <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
             <div className="flex flex-col gap-4 w-full">
               <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
                 {isImageSupported ? (
