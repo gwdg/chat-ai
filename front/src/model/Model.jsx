@@ -50,7 +50,7 @@ function Model(props) {
       ></div>
       {/* Model content */}
       <div
-        className="absolute flex flex-col justify-center sm:w-fit shadow-lg outline-none focus:outline-none w-[calc(100%-32px)]"
+        className="absolute flex flex-col justify-center items-center max-w-[700px] shadow-lg outline-none focus:outline-none w-[calc(100%-32px)]"
         onClick={(e) => {
           e.stopPropagation(); // Prevent closing model when clicked inside it
         }}

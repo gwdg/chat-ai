@@ -12,6 +12,7 @@ import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
 import Help_Model from "../../model/Help_Model";
 import Session_Expired from "../../model/Session_Expired";
+import AnnouncementBar from "../Others/AnnouncementBar";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -35,6 +36,7 @@ function Header({
   userData,
 }) {
   const dispatch = useDispatch();
+  const closeCount = useSelector((state) => state.anncCount);
 
   // UI States
   const [isDarkMode, setIsDarkMode] = useState(
@@ -44,6 +46,8 @@ function Header({
   const [isIOSChrome, setIsIOSChrome] = useState(false);
   const [showHelpModel, setShowHelpModel] = useState(false);
   const [showModelSession, setShowModelSession] = useState(false);
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
+
   const dropdownRef = useRef(null);
 
   // Computed properties using useMemo
@@ -96,8 +100,26 @@ function Header({
     setIsIOSChrome(!!navigator.userAgent.match("CriOS"));
   }, []);
 
+  useEffect(() => {
+    setShowAnnouncement(closeCount < 3);
+  }, []);
+
+  const handleAnnouncementClose = () => {
+    // Immediately hide the announcement
+    setShowAnnouncement(false);
+
+    // Update the Redux store with the new count
+    dispatch({
+      type: "SET_ANNCCOUNT",
+      payload: closeCount + 1,
+    });
+  };
+
   return (
     <>
+      {showAnnouncement && closeCount < 3 && (
+        <AnnouncementBar onClose={handleAnnouncementClose} />
+      )}
       {/* Desktop Header */}
       <nav
         className="top-0 min-h-[60px] px-2 sm:px-4 items-center justify-between left-0 mobile:hidden flex z-[995] w-full bg-white dark:bg-black shadow-lg"
@@ -134,13 +156,13 @@ function Header({
             )}
           </button>
 
-          <Link to={"/"} className="flex items-center">
+          <div className="flex items-center">
             <img
               className="h-[30px] w-[100px] sm:h-[40px] sm:w-[125px] object-contain"
               src={Logo}
               alt="Chat AI Logo"
             />
-          </Link>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
@@ -200,13 +222,13 @@ function Header({
               />
             </button>
 
-            <Link to={"/"}>
+            <div>
               <img
                 className="h-[35px] w-[100px] object-contain"
                 src={Logo}
                 alt="Chat AI Logo"
               />
-            </Link>
+            </div>
           </div>
 
           {/* Full Width Model Selection */}

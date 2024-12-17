@@ -1712,7 +1712,8 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
   };
 
   const toggleAdvOpt = () => {
-    setShowAdvOpt(!showAdvOpt); // Toggle dark mode state
+    setShowAdvOpt(!showAdvOpt);
+    dispatch({ type: "SET_ADV" });
   };
 
   // Handles changing the selected model
@@ -2047,7 +2048,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
             settings: {
               ...prev.settings,
               temperature: 0,
-              top_p: 0,
+              top_p: 0.05,
             },
           }));
           const currentConversation = conversations.find(
@@ -2064,7 +2065,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                 settings: {
                   ...currentConversation.settings,
                   temperature: 0,
-                  top_p: 0,
+                  top_p: 0.05,
                 },
               },
             })
@@ -2479,6 +2480,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                     onDrop={handleDrop}
                   >
                     <textarea
+                      autoFocus
                       ref={textareaRef}
                       className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
                       value={localState.prompt}
@@ -2504,6 +2506,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                   </div>
                 ) : (
                   <textarea
+                    autoFocus
                     ref={textareaRef}
                     className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
                     value={localState.prompt}

@@ -10,7 +10,7 @@ function Settings_Model(props) {
 
   return (
     <Model showModel={props.showModel} isSettingsModel={true}>
-      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
+      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         {/* Model header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">User Profile</p>

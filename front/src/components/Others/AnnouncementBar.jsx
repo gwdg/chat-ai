@@ -1,43 +1,27 @@
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
-import cross from "../assets/cross_white.svg";
+import { Trans } from "react-i18next";
+import cross from "../../assets/cross.svg";
 
-//This component is here for important announcement, when user closes it thrice it will disappear.
-function AnnouncementBar(props) {
-  const { t } = useTranslation();
-
+const AnnouncementBar = ({ onClose }) => {
   return (
-    <nav
-      // Conditional CSS classes based on location and dark mode state
-      className={`px-2 py-[2px] md:flex hidden gap-1 justify-between items-center select-none w-full fixed top-0 z-[990] text-white text-xs bg-red-600 h-[30px] max-h-[30px] ${
-        location.pathname === "/chat"
-          ? "md:shadow-lg md:dark:shadow-dark"
-          : "shadow-lg dark:shadow-dark "
-      }`}
-    >
-      <div className="flex gap-1 justify-between items-center">
-        {" "}
-        <Link
-          to={
-            "https://info.gwdg.de/news/aenderungen-an-der-verfuegbarkeit-von-chat-ai-modellen/"
-          }
-          target="_blank"
+    <div className="bg-orange-500 text-white select-none">
+      <div className="px-2 sm:px-4 flex items-center justify-between">
+        <p className="text-xs sm:text-sm md:text-base font-medium py-1.5 sm:py-2 leading-tight sm:leading-normal">
+          <Trans i18nKey="description.announcement" />
+        </p>
+        <button
+          onClick={onClose}
+          className="p-0.5 sm:p-1 hover:bg-orange-600 rounded-full transition-colors flex-shrink-0 ml-2"
+          aria-label="Close announcement"
         >
-          <p className="h-full underline">
-            {t("description.titleAnnouncement")}{" "}
-          </p>
-        </Link>
+          <img
+            src={cross}
+            alt="cross"
+            className="h-[20px] w-[20px] sm:h-[24px] sm:w-[24px] md:h-[30px] md:w-[30px] cursor-pointer"
+          />
+        </button>
       </div>
-      <img
-        src={cross}
-        alt="cross"
-        className="h-[30px] w-[30px] cursor-pointer"
-        onClick={() => {
-          props.anncCounter();
-        }}
-      />
-    </nav>
+    </div>
   );
-}
+};
 
 export default AnnouncementBar;
