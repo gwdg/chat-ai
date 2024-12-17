@@ -1712,7 +1712,8 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
   };
 
   const toggleAdvOpt = () => {
-    setShowAdvOpt(!showAdvOpt); // Toggle dark mode state
+    setShowAdvOpt(!showAdvOpt);
+    dispatch({ type: "SET_ADV" });
   };
 
   // Handles changing the selected model
