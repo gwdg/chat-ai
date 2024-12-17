@@ -81,12 +81,9 @@ function Sidebar({
                   className={`group p-3 rounded-lg cursor-pointer transition-all relative ${
                     id === currentConversationId
                       ? "bg-bg_light/80 dark:bg-bg_dark/80 text-black dark:text-white"
-                      : "text-black dark:text-white"
+                      : "text-black dark:text-white hover:bg-bg_light/50 dark:hover:bg-white/5"
                   }`}
                 >
-                  {id !== currentConversationId && (
-                    <div className="absolute inset-0 rounded-lg transition-colors hover:bg-bg_light/50 dark:hover:bg-white/5" />
-                  )}
                   <div className="flex items-center justify-between relative">
                     <div
                       className="flex-1 overflow-hidden relative custom:group-hover:mr-2 transition-all duration-200"
@@ -99,11 +96,11 @@ function Sidebar({
                             el.dataset.hasOverflow = hasOverflow.toString();
                           }
                         }}
-                        className={`relative whitespace-nowrap [&[data-has-overflow="true"]]:before:absolute [&[data-has-overflow="true"]]:before:right-0 [&[data-has-overflow="true"]]:before:content-[''] [&[data-has-overflow="true"]]:before:w-full [&[data-has-overflow="true"]]:before:h-full [&[data-has-overflow="true"]]:before:bg-gradient-to-r [&[data-has-overflow="true"]]:before:from-transparent transition-all duration-200 ${
+                        className={`relative whitespace-nowrap ${
                           id === currentConversationId
-                            ? '[&[data-has-overflow="true"]]:before:to-bg_light/90 dark:[&[data-has-overflow="true"]]:before:to-bg_dark/90'
-                            : '[&[data-has-overflow="true"]]:before:to-white dark:[&[data-has-overflow="true"]]:before:to-bg_secondary_dark group-hover:[&[data-has-overflow="true"]]:before:to-bg_light/50 dark:group-hover:[&[data-has-overflow="true"]]:before:to-white/5'
-                        }`}
+                            ? 'truncate group-hover:truncate-none group-hover:[&[data-has-overflow="true"]]:before:absolute group-hover:[&[data-has-overflow="true"]]:before:right-0 group-hover:[&[data-has-overflow="true"]]:before:content-[\'\'] group-hover:[&[data-has-overflow="true"]]:before:w-full group-hover:[&[data-has-overflow="true"]]:before:h-full group-hover:[&[data-has-overflow="true"]]:before:bg-gradient-to-r group-hover:[&[data-has-overflow="true"]]:before:from-transparent group-hover:[&[data-has-overflow="true"]]:before:to-bg_light/90 dark:group-hover:[&[data-has-overflow="true"]]:before:to-bg_dark/90'
+                            : "truncate group-hover:truncate-none"
+                        } transition-all duration-200`}
                       >
                         {conv.title || "Untitled Conversation"}
                       </div>
