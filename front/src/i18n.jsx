@@ -211,6 +211,11 @@ i18n
             offline:
               "The model you selected is currently offline. By pressing OK below, the model starts up and will be online in a few minutes. In the meantime, feel free to choose another model.",
 
+            rename_conversation: "Rename conversation",
+            input_conversation: "Enter conversation title",
+            input_button: "Rename",
+            error_title: "Title is required",
+
             announcement:
               "Chat AI will be temporarily unavailable on Wednesday, 18.12.2024, from 10:00 to 12:00 due to maintenance. We apologize for the inconvenience.",
           },
@@ -414,6 +419,11 @@ i18n
               "Halten Sie Temperatur und top_p auf 0 für optimale Arcana-Ergebnisse",
             offline:
               "Das von Ihnen ausgewählte Modell ist derzeit offline. Durch das Anklicken von OK unten startet das Modell und wird in wenigen Minuten online sein. In der Zwischenzeit können Sie gerne ein anderes Modell auswählen.",
+
+            rename_conversation: "Konversation umbenennen",
+            input_conversation: "Titel der Unterhaltung eingeben",
+            input_button: "Umbenennen",
+            error_title: "Titel ist erforderlich",
 
             announcement:
               "Chat AI wird am Mittwoch, 18.12.2024, von 10:00 bis 12:00 Uhr aufgrund von Wartungsarbeiten vorübergehend nicht verfügbar sein. Wir entschuldigen uns für die Unannehmlichkeiten.",

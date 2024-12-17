@@ -7,7 +7,7 @@ function Clear_Cache_Model(props) {
   return (
     // Model component with export type selection form
     <Model showModel={props.showModel}>
-      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
+      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         {/* Model header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">

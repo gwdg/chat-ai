@@ -16,7 +16,7 @@ function Offline_Model_Model(props) {
 
   return (
     <Model showModel={props.showModel}>
-      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
+      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
             <Trans i18nKey="description.help_title"></Trans>:
