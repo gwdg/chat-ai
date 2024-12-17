@@ -3,7 +3,7 @@ let signal = controller.signal;
 
 async function generateTitle(conversation, settings) {
   const titlePrompt =
-    "Suggest one title for the above conversation. The title should be concise, informative and useful. Do not write anything else other than the suggested title. No greetings or explanations; just the title.";
+    "Create a very short title (maximum 4 words) for this conversation that captures its main topic. Respond only with the title - no quotes, punctuation, or additional text.";
   try {
     const response = await fetch("/chat-ai-backend", {
       method: "post",

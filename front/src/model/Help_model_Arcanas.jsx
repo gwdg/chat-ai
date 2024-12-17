@@ -7,7 +7,7 @@ function Help_model_Arcanas(props) {
   return (
     // Model component with help content
     <Model showModel={props.showModel}>
-      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[700px] h-fit md:max-w-[350px]">
+      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         {/* Model header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">

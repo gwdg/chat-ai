@@ -8,9 +8,15 @@ import {
 } from "../../Redux/reducers/conversationsSlice";
 import { useCallback } from "react";
 import cross from "../../assets/cross.svg";
+import edit_icon from "../../assets/edit_icon.svg";
 import back_arrow from "../../assets/back_arrow.svg";
 
-function Sidebar({ onClose, onDeleteConversation, conversationIds }) {
+function Sidebar({
+  onClose,
+  onDeleteConversation,
+  onRenameConversation,
+  conversationIds,
+}) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const conversations = useSelector(selectConversations);
@@ -22,6 +28,10 @@ function Sidebar({ onClose, onDeleteConversation, conversationIds }) {
     if (newId) {
       navigate(`/chat/${newId}`);
       onClose?.();
+      // Add a slight delay before refreshing to ensure navigation completes
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
   }, [dispatch, navigate, onClose]);
 
@@ -71,19 +81,49 @@ function Sidebar({ onClose, onDeleteConversation, conversationIds }) {
                   className={`group p-3 rounded-lg cursor-pointer transition-all relative ${
                     id === currentConversationId
                       ? "bg-bg_light/80 dark:bg-bg_dark/80 text-black dark:text-white"
-                      : "hover:bg-bg_light/50 dark:hover:bg-white/5 text-black dark:text-white"
+                      : "text-black dark:text-white"
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 truncate mr-2" title={conv.title}>
-                      {conv.title || "Untitled Conversation"}
+                  {id !== currentConversationId && (
+                    <div className="absolute inset-0 rounded-lg transition-colors hover:bg-bg_light/50 dark:hover:bg-white/5" />
+                  )}
+
+                  <div className="flex items-center justify-between relative">
+                    <div
+                      className="flex-1 mr-2 overflow-hidden relative"
+                      title={conv.title}
+                    >
+                      <div
+                        ref={(el) => {
+                          if (el) {
+                            const hasOverflow = el.scrollWidth > el.clientWidth;
+                            el.dataset.hasOverflow = hasOverflow.toString();
+                          }
+                        }}
+                        className={`relative whitespace-nowrap [&[data-has-overflow="true"]]:before:absolute [&[data-has-overflow="true"]]:before:right-0 [&[data-has-overflow="true"]]:before:content-[''] [&[data-has-overflow="true"]]:before:w-12 [&[data-has-overflow="true"]]:before:h-full [&[data-has-overflow="true"]]:before:bg-gradient-to-r [&[data-has-overflow="true"]]:before:from-transparent ${
+                          id === currentConversationId
+                            ? '[&[data-has-overflow="true"]]:before:to-bg_light/80 dark:[&[data-has-overflow="true"]]:before:to-bg_dark'
+                            : '[&[data-has-overflow="true"]]:before:to-white dark:[&[data-has-overflow="true"]]:before:to-bg_secondary_dark group-hover:[&[data-has-overflow="true"]]:before:to-bg_light/50 dark:group-hover:[&[data-has-overflow="true"]]:before:to-white/5'
+                        } transition-[background-color,_border-color] duration-200`}
+                      >
+                        {conv.title || "Untitled Conversation"}
+                      </div>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRenameConversation(id);
+                      }}
+                      className="custom:opacity-0 custom:group-hover:opacity-100 opacity-100 transition-opacity relative z-10"
+                    >
+                      <img src={edit_icon} alt="edit" className="w-5 h-5" />
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onDeleteConversation(id);
                       }}
-                      className="custom:opacity-0 custom:group-hover:opacity-100 opacity-100 transition-opacity"
+                      className="custom:opacity-0 custom:group-hover:opacity-100 opacity-100 transition-opacity relative z-10"
                     >
                       <img src={cross} alt="delete" className="w-5 h-5" />
                     </button>

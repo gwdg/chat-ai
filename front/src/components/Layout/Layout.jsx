@@ -22,6 +22,7 @@ import { getModels } from "../../apis/ModelLIst";
 import Offline_Model_Model from "../../model/Offline_Model_Model";
 import Settings_Model from "../../model/Settings_Model";
 import { getUserData } from "../../apis/UserData";
+import RenameConversationModal from "../../model/RenameConversationModal";
 
 function Layout() {
   const [showFooter, setShowFooter] = useState(false);
@@ -50,6 +51,8 @@ function Layout() {
     model: currentConversation?.settings?.model || "",
     model_api: currentConversation?.settings?.model_api || "",
   });
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renamingConversationId, setRenamingConversationId] = useState(null);
 
   const fetchUserData = async () => {
     try {
@@ -226,6 +229,11 @@ function Layout() {
     }
   };
 
+  const handleRenameConversation = (id) => {
+    setRenamingConversationId(id);
+    setShowRenameModal(true);
+  };
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-white dark:bg-black">
       <Header
@@ -256,6 +264,7 @@ function Layout() {
           <Sidebar
             onClose={() => setIsSidebarOpen(false)}
             onDeleteConversation={handleDeleteConversation}
+            onRenameConversation={handleRenameConversation}
             conversationIds={conversationIds}
           />
         </div>
@@ -332,6 +341,20 @@ function Layout() {
           userData={userData}
         />
       ) : null}
+      {showRenameModal && (
+        <RenameConversationModal
+          showModel={setShowRenameModal}
+          conversationId={renamingConversationId}
+          currentTitle={
+            conversations.find((conv) => conv.id === renamingConversationId)
+              ?.title || ""
+          }
+          onClose={() => {
+            setShowRenameModal(false);
+            setRenamingConversationId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

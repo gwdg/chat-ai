@@ -156,13 +156,13 @@ function Header({
             )}
           </button>
 
-          <Link to={"/"} className="flex items-center">
+          <div className="flex items-center">
             <img
               className="h-[30px] w-[100px] sm:h-[40px] sm:w-[125px] object-contain"
               src={Logo}
               alt="Chat AI Logo"
             />
-          </Link>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
@@ -222,13 +222,13 @@ function Header({
               />
             </button>
 
-            <Link to={"/"}>
+            <div>
               <img
                 className="h-[35px] w-[100px] object-contain"
                 src={Logo}
                 alt="Chat AI Logo"
               />
-            </Link>
+            </div>
           </div>
 
           {/* Full Width Model Selection */}
