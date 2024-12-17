@@ -2048,7 +2048,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
             settings: {
               ...prev.settings,
               temperature: 0,
-              top_p: 0,
+              top_p: 0.05,
             },
           }));
           const currentConversation = conversations.find(
@@ -2065,7 +2065,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                 settings: {
                   ...currentConversation.settings,
                   temperature: 0,
-                  top_p: 0,
+                  top_p: 0.05,
                 },
               },
             })
