@@ -207,7 +207,7 @@ i18n
             warning_settings:
               "Below settings won't be applied as you are using external model",
             warning_arcana:
-              "Keep temperature and top_p at 0 for optimal arcana results",
+              "Keep temperature at 0 and top_p at 0.05 for optimal arcana results",
             offline:
               "The model you selected is currently offline. By pressing OK below, the model starts up and will be online in a few minutes. In the meantime, feel free to choose another model.",
 
@@ -416,7 +416,7 @@ i18n
             warning_settings:
               "Da Sie ein externes Modell verwenden, werden die folgenden Einstellungen nicht übernommen",
             warning_arcana:
-              "Halten Sie Temperatur und top_p auf 0 für optimale Arcana-Ergebnisse",
+              "Halten Sie Temperatur auf 0 und top_p auf 0.05 für optimale Arcana-Ergebnisse",
             offline:
               "Das von Ihnen ausgewählte Modell ist derzeit offline. Durch das Anklicken von OK unten startet das Modell und wird in wenigen Minuten online sein. In der Zwischenzeit können Sie gerne ein anderes Modell auswählen.",
 
