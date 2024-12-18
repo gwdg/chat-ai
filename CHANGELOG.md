@@ -1,5 +1,23 @@
 # Changelog 
 
+## Version: v0.7.0 (18.12.2024)
+
+Highlights:
+- Support for arcanas
+- Support for multiple conversations.
+- Added profile window
+- Improved LaTeX rendering with simplified code and markdown fixes.
+- UI Support for scale-to-zero models.
+- Model status popups for unavailable models.
+- Code copy button added for responses.
+- UI fixes: Responsive width, improved profile pop-ups, and settings flow.
+
+Fixes:
+- Retry button path fixed.
+- LaTeX bugs resolved and libraries optimized.
+- Markdown handling improved.
+- First name typo corrected.
+
 ## Version: v0.6.3 (23.10.2024)
 
 Features:
