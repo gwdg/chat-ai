@@ -51,11 +51,11 @@ function Header({
   const dropdownRef = useRef(null);
 
   // Computed properties using useMemo
-  const currentModel = useMemo(
-    () => modelList.find((m) => m.name === modelSettings.model),
-    [modelList, modelSettings.model]
-  );
 
+  const currentModel = useMemo(
+    () => modelList?.find((m) => m.name === modelSettings?.model),
+    [modelList, modelSettings?.model]
+  );
   const isImageSupported = useMemo(
     () => currentModel?.input.includes("image") || false,
     [currentModel]

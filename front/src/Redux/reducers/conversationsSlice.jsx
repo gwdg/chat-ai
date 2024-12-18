@@ -63,7 +63,7 @@ const conversationsSlice = createSlice({
     },
     updateConversation: (state, action) => {
       const { id, updates } = action.payload;
-      const conversation = state.conversations.find((conv) => conv.id === id);
+      const conversation = state.conversations?.find((conv) => conv.id === id);
       if (conversation) {
         // Ensure system message remains at the start when updating conversation array
         if (updates.conversation) {
@@ -134,7 +134,7 @@ export const selectConversations = (state) => state.conversations.conversations;
 export const selectCurrentConversationId = (state) =>
   state.conversations.currentConversationId;
 export const selectCurrentConversation = (state) =>
-  state.conversations.conversations.find(
+  state?.conversations?.conversations?.find(
     (conv) => conv.id === state.conversations.currentConversationId
   );
 

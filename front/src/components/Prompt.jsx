@@ -110,7 +110,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     (state) => state.conversations.currentConversationId
   );
   const currentConversation = useSelector((state) =>
-    state.conversations.conversations.find((conv) => conv.id === conversationId)
+    state.conversations?.conversations?.find((conv) => conv.id === conversationId)
   );
 
   const [localState, setLocalState] = useState({
@@ -229,11 +229,11 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
   const [shareSettingsModel, setShareSettingsModel] = useState(false);
   const [systemPromptError, setSystemPromptError] = useState("");
   // Computed properties using useMemo
-  const currentModel = useMemo(
-    () => modelList.find((m) => m.name === modelSettings.model),
-    [modelList, modelSettings.model]
-  );
 
+  const currentModel = useMemo(
+    () => modelList?.find((m) => m.name === modelSettings?.model),
+    [modelList, modelSettings?.model]
+  );
   const isImageSupported = useMemo(
     () => currentModel?.input.includes("image") || false,
     [currentModel]
@@ -1920,7 +1920,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                 }
               }
 
-              const systemMessage = parsedData.messages.find(
+              const systemMessage = parsedData?.messages?.find(
                 (message) => message.role === "system"
               );
 
@@ -1967,7 +1967,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                 }
               }
 
-              const systemMessage = parsedData.find(
+              const systemMessage = parsedData?.find(
                 (message) => message.role === "system"
               );
 
@@ -2051,7 +2051,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
               top_p: 0.05,
             },
           }));
-          const currentConversation = conversations.find(
+          const currentConversation = conversations?.find(
             (conv) => conv.id === currentConversationId
           );
           dispatch(
