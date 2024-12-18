@@ -71,7 +71,7 @@ function Sidebar({
         <div className="flex-1 overflow-y-auto p-2">
           <div className="space-y-2">
             {conversationIds.map((id) => {
-              const conv = conversations.find((c) => c.id === id);
+              const conv = conversations?.find((c) => c.id === id);
               if (!conv) return null;
 
               return (

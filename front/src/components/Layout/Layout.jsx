@@ -98,7 +98,7 @@ function Layout() {
   }, [currentConversation]);
 
   useEffect(() => {
-    const currentModel = modelList.find(
+    const currentModel = modelList?.find(
       (modelX) => modelX.name === modelSettings.model
     );
     if (currentModel?.status === "offline") {
@@ -346,7 +346,7 @@ function Layout() {
           showModel={setShowRenameModal}
           conversationId={renamingConversationId}
           currentTitle={
-            conversations.find((conv) => conv.id === renamingConversationId)
+            conversations?.find((conv) => conv.id === renamingConversationId)
               ?.title || ""
           }
           onClose={() => {
