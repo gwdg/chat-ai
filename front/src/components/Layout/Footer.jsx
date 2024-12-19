@@ -41,7 +41,7 @@ function Footer(props) {
           <div className="grid md:grid-cols-5 grid-cols-1 justify-between w-full gap-y-2">
             {/* Privacy and Security  */}
             <Link
-              to={"https://datenschutz.gwdg.de/services/chatai"}
+              to={"https://docs.hpc.gwdg.de/services/chat-ai/data-privacy.de/index.html"}
               target="_blank"
             >
               <p className="text-xl text-center h-full text-secondary md:border-r-secondary md:border-r">
@@ -50,7 +50,7 @@ function Footer(props) {
             </Link>
             {/* Terms of Use  */}
             <Link
-              to={"https://docs.hpc.gwdg.de/services/chat-ai/terms_of_use/index.html"}
+              to={"https://docs.hpc.gwdg.de/services/chat-ai/terms_of_use.de/index.html"}
               target="_blank"
             >
               <p className="text-xl text-center h-full text-secondary md:border-r-secondary md:border-r">

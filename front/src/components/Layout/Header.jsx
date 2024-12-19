@@ -117,9 +117,9 @@ function Header({
 
   return (
     <>
-      {showAnnouncement && closeCount < 3 && (
+      {/*showAnnouncement && closeCount < 3 && (
         <AnnouncementBar onClose={handleAnnouncementClose} />
-      )}
+      )*/}
       {/* Desktop Header */}
       <nav
         className="top-0 min-h-[60px] px-2 sm:px-4 items-center justify-between left-0 mobile:hidden flex z-[995] w-full bg-white dark:bg-black shadow-lg"
