@@ -31,7 +31,7 @@ async function generateTitle(conversation, settings) {
       title += decoder.decode(value, { stream: true });
     }
 
-    return title.trim();
+    return title?.trim();
   } catch (error) {
     console.error("Title generation failed:", error);
     return "Untitled Conversation";

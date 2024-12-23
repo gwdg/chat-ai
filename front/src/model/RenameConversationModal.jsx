@@ -22,7 +22,7 @@ function RenameConversationModal({
   }, [currentTitle]);
 
   const handleRename = () => {
-    if (!title.trim()) {
+    if (!title?.trim()) {
       setError(t("description.error_title"));
       return;
     }
@@ -31,7 +31,7 @@ function RenameConversationModal({
       updateConversation({
         id: conversationId,
         updates: {
-          title: title.trim(),
+          title: title?.trim(),
           lastModified: new Date().toISOString(),
         },
       })
