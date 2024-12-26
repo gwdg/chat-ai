@@ -110,7 +110,9 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     (state) => state.conversations.currentConversationId
   );
   const currentConversation = useSelector((state) =>
-    state.conversations?.conversations?.find((conv) => conv.id === conversationId)
+    state.conversations?.conversations?.find(
+      (conv) => conv.id === conversationId
+    )
   );
 
   const [localState, setLocalState] = useState({
@@ -263,20 +265,39 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const isLoading = loading || loadingResend;
 
-  const handleScroll = useCallback((e) => {
+  // Check if container has overflow
+  const hasOverflow = useCallback(() => {
     const container = containerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const distanceFromBottom = scrollHeight - clientHeight - scrollTop;
-
-    setShowScrollButton(distanceFromBottom > 100);
-    if (Math.abs(scrollTop - lastScrollPosition.current) > 10) {
-      setUserScrolled(distanceFromBottom > 100);
-      lastScrollPosition.current = scrollTop;
-    }
+    if (!container) return false;
+    return container.scrollHeight > container.clientHeight;
   }, []);
 
+  // Enhanced scroll handler
+  const handleScroll = useCallback(
+    (e) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - clientHeight - scrollTop;
+      const hasContentOverflow = hasOverflow();
+
+      // Only show button if there's overflow and user has scrolled up
+      setShowScrollButton(hasContentOverflow && distanceFromBottom > 100);
+
+      // Track user scroll only if there's actual content overflow
+      if (
+        hasContentOverflow &&
+        Math.abs(scrollTop - lastScrollPosition.current) > 10
+      ) {
+        setUserScrolled(distanceFromBottom > 100);
+        lastScrollPosition.current = scrollTop;
+      }
+    },
+    [hasOverflow]
+  );
+
+  // Scroll event listener
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
@@ -285,6 +306,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     return () => container?.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
+  // Auto-scroll logic for new messages
   useEffect(() => {
     if (!userScrolled && messagesEndRef.current) {
       const behavior = isLoading ? "auto" : "smooth";
@@ -292,12 +314,16 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     }
   }, [localState.responses, isLoading, userScrolled]);
 
+  // Reset scroll position when conversation is cleared
   useEffect(() => {
     if (localState.responses.length === 0 && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+      setShowScrollButton(false);
+      setUserScrolled(false);
     }
   }, [localState.responses.length]);
 
+  // Manual scroll to bottom
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -544,7 +570,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     }
 
     const currentPrompt = localState.responses[index]?.prompt;
-    if (!currentPrompt || currentPrompt.trim() === "") {
+    if (!currentPrompt || currentPrompt?.trim() === "") {
       notifyError("Invalid or empty prompt at the specified index.");
       setLoadingResend(false);
       return;
@@ -664,7 +690,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       return;
     }
 
-    if (!editedText || !editedText.trim()) {
+    if (!editedText || !editedText?.trim()) {
       notifyError("Prompt cannot be empty!");
       setLoadingResend(false);
       return;
@@ -776,7 +802,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     event.preventDefault();
 
     // Return if prompt is empty or whitespace
-    if (localState.prompt.trim() === "") return;
+    if (localState.prompt?.trim() === "") return;
 
     SpeechRecognition.stopListening();
     resetTranscript();
@@ -1230,7 +1256,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                   });
 
                   newArray.push({
-                    prompt: textContent.trim(), // Trim to avoid extra newlines
+                    prompt: textContent?.trim(), // Trim to avoid extra newlines
                     images: images,
                     response: parsedData[i + 1]?.content,
                   });
@@ -1604,7 +1630,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
               const [, language, code] =
                 part.match(/```(\w+)?\n([\s\S]+?)```/) || [];
               if (code) {
-                const codeLines = code.trim().split("\n");
+                const codeLines = code?.trim().split("\n");
                 addNewPageIfNeeded(lineHeight * (codeLines.length + 2));
 
                 doc.text(language || "Code:", margin, y);
@@ -2247,7 +2273,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                             if (
                               event.key === "Enter" &&
                               !event.shiftKey &&
-                              editedText.trim() !== ""
+                              editedText?.trim() !== ""
                             ) {
                               event.preventDefault();
                               handleCloseClick(index);
@@ -2495,7 +2521,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                         if (
                           event.key === "Enter" &&
                           !event.shiftKey &&
-                          localState.prompt.trim() !== ""
+                          localState.prompt?.trim() !== ""
                         ) {
                           event.preventDefault();
                           handleSubmit(event);
@@ -2525,7 +2551,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                       if (
                         event.key === "Enter" &&
                         !event.shiftKey &&
-                        localState.prompt.trim() !== ""
+                        localState.prompt?.trim() !== ""
                       ) {
                         event.preventDefault();
                         handleSubmit(event);
@@ -2534,7 +2560,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                   />
                 )}
                 <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
-                  {localState.prompt.trim() !== "" ? (
+                  {localState.prompt?.trim() !== "" ? (
                     <Tooltip text={t("description.clear")}>
                       <button
                         className="h-[30px] w-[30px] cursor-pointer"
