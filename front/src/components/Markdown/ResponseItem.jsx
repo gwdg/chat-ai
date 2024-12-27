@@ -2,6 +2,7 @@ import React, { useCallback, useEffect } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import copy from "../../assets/icon_copy.svg";
 import check from "../../assets/check.svg";
+import Typing from "../Others/Typing";
 
 const ResponseItem = React.memo(
   ({
@@ -12,6 +13,9 @@ const ResponseItem = React.memo(
     indexChecked,
     setCopied,
     setIndexChecked,
+    loading,
+    loadingResend,
+    responses,
   }) => {
     useEffect(() => {
       if (copied && indexChecked === index) {
@@ -32,6 +36,13 @@ const ResponseItem = React.memo(
         console.error("Copy failed:", err);
       }
     }, [res?.response, index, setCopied, setIndexChecked]);
+
+    const isLastItem = index === responses.length - 1;
+
+    // Show typing animation only for the last item when loading
+    if ((loading || loadingResend) && isLastItem) {
+      return <Typing />;
+    }
 
     if (!res?.response) {
       return null;
