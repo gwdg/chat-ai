@@ -272,31 +272,24 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     return container.scrollHeight > container.clientHeight;
   }, []);
 
-  // Enhanced scroll handler
-  const handleScroll = useCallback(
-    (e) => {
-      const container = containerRef.current;
-      if (!container) return;
+const handleScroll = useCallback((e) => {
+  const container = containerRef.current;
+  if (!container) return;
 
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const distanceFromBottom = scrollHeight - clientHeight - scrollTop;
-      const hasContentOverflow = hasOverflow();
+  const { scrollTop, scrollHeight, clientHeight } = container;
+  const distanceFromBottom = scrollHeight - clientHeight - scrollTop;
+  const isNotAtBottom = distanceFromBottom > 20;
+  const hasEnoughContent = scrollHeight > clientHeight + 100; // Check if content is significantly more than viewport
 
-      // Only show button if there's overflow and user has scrolled up
-      setShowScrollButton(hasContentOverflow && distanceFromBottom > 100);
+  // Show button only when user has scrolled up AND there's enough content
+  setShowScrollButton(isNotAtBottom && hasEnoughContent);
 
-      // Track user scroll only if there's actual content overflow
-      if (
-        hasContentOverflow &&
-        Math.abs(scrollTop - lastScrollPosition.current) > 10
-      ) {
-        setUserScrolled(distanceFromBottom > 100);
-        lastScrollPosition.current = scrollTop;
-      }
-    },
-    [hasOverflow]
-  );
-
+  if (Math.abs(scrollTop - lastScrollPosition.current) > 10) {
+    setUserScrolled(isNotAtBottom);
+    lastScrollPosition.current = scrollTop;
+  }
+}, []);
+  
   // Scroll event listener
   useEffect(() => {
     const container = containerRef.current;

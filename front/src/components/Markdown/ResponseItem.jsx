@@ -38,37 +38,38 @@ const ResponseItem = React.memo(
     }, [res?.response, index, setCopied, setIndexChecked]);
 
     const isLastItem = index === responses.length - 1;
+    const isLoading = (loading || loadingResend) && isLastItem;
 
-    // Show typing animation only for the last item when loading
-    if ((loading || loadingResend) && isLastItem) {
-      return <Typing />;
-    }
-
-    if (!res?.response) {
+    if (!res?.response && !isLoading) {
       return null;
     }
 
     return (
       <div className="p-2">
         <div className="text-black dark:text-white overflow-hidden border dark:border-border_dark rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
-          <MarkdownRenderer isDarkMode={isDarkModeGlobal}>
-            {res.response}
-          </MarkdownRenderer>
-          <div className="flex justify-end w-full mt-1">
-            <button
-              className="hover:opacity-80 p-1 rounded transition-opacity"
-              onClick={handleCopy}
-              aria-label={
-                copied && indexChecked === index ? "Copied" : "Copy text"
-              }
-            >
-              <img
-                src={copied && indexChecked === index ? check : copy}
-                alt={copied && indexChecked === index ? "copied" : "copy"}
-                className="h-[20px] w-[20px]"
-              />
-            </button>
-          </div>
+          {!res?.response && isLoading && <Typing />}
+          {res?.response && (
+            <>
+              <MarkdownRenderer isDarkMode={isDarkModeGlobal}>
+                {res.response}
+              </MarkdownRenderer>
+              <div className="flex justify-end w-full mt-1">
+                <button
+                  className="hover:opacity-80 p-1 rounded transition-opacity"
+                  onClick={handleCopy}
+                  aria-label={
+                    copied && indexChecked === index ? "Copied" : "Copy text"
+                  }
+                >
+                  <img
+                    src={copied && indexChecked === index ? check : copy}
+                    alt={copied && indexChecked === index ? "copied" : "copy"}
+                    className="h-[20px] w-[20px]"
+                  />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
