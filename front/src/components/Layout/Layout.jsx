@@ -23,6 +23,7 @@ import Offline_Model_Model from "../../model/Offline_Model_Model";
 import Settings_Model from "../../model/Settings_Model";
 import { getUserData } from "../../apis/UserData";
 import RenameConversationModal from "../../model/RenameConversationModal";
+import Session_Expired from "../../model/Session_Expired";
 
 function Layout() {
   const [showFooter, setShowFooter] = useState(false);
@@ -44,6 +45,7 @@ function Layout() {
   const currentConversationId = useSelector(selectCurrentConversationId);
   const currentConversation = useSelector(selectCurrentConversation);
   const [conversationIds, setConversationIds] = useState([]);
+  const [showModelSession, setShowModelSession] = useState(false);
 
   // Model states
   const [modelList, setModelList] = useState([]);
@@ -75,7 +77,7 @@ function Layout() {
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const data = await getModels();
+        const data = await getModels(setShowModelSession);
         setModelList(data);
       } catch (error) {
         notifyError("Error fetching models:", error);
@@ -244,7 +246,6 @@ function Layout() {
         setShowSettingsModel={setShowSettingsModel}
         userData={userData}
       />
-
       <div className="flex flex-1 overflow-hidden relative bg-bg_light dark:bg-bg_dark">
         {/* Mobile Overlay */}
         {isSidebarOpen && (
@@ -285,7 +286,6 @@ function Layout() {
           </div>
         </div>
       </div>
-
       {/* Footer toggle and Footer */}
       <div className="w-full bg-bg_light dark:bg-bg_dark">
         {!showFooter && (
@@ -312,7 +312,6 @@ function Layout() {
           />
         )}
       </div>
-
       {/* Modals */}
       <div className="">
         {showCacheModel ? (
@@ -354,7 +353,10 @@ function Layout() {
             setRenamingConversationId(null);
           }}
         />
-      )}
+      )}{" "}
+      {showModelSession ? (
+        <Session_Expired showModel={setShowModelSession} />
+      ) : null}
     </div>
   );
 }
