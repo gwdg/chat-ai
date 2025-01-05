@@ -1841,7 +1841,7 @@ const handleScroll = useCallback((e) => {
                 systemPrompt: settings.systemPrompt
                   ? decodeURIComponent(settings.systemPrompt)
                   : "You are a helpful assistant",
-                model: settings.model_name || "Meta LLaMA 3.1 8B Instruct",
+                model: settings.model_name || "Meta Llama 3.1 8B Instruct",
                 model_api: settings.model || "meta-llama-3.1-8b-instruct",
                 temperature: settings.temperature || 0.5,
                 top_p: settings.top_p || 0.5,
@@ -1862,7 +1862,7 @@ const handleScroll = useCallback((e) => {
                     systemPrompt: settings.systemPrompt
                       ? decodeURIComponent(settings.systemPrompt)
                       : "You are a helpful assistant",
-                    model: settings.model_name || "Meta LLaMA 3.1 8B Instruct",
+                    model: settings.model_name || "Meta Llama 3.1 8B Instruct",
                     model_api: settings.model || "meta-llama-3.1-8b-instruct",
                     temperature: settings.temperature ?? 0.5,
                     top_p: settings.top_p ?? 0.5,
@@ -1956,7 +1956,7 @@ const handleScroll = useCallback((e) => {
                       model:
                         parsedData["model-name"] ||
                         parsedData.model ||
-                        "Meta LLaMA 3.1 8B Instruct",
+                        "Meta Llama 3.1 8B Instruct",
                       model_api:
                         parsedData.model || "meta-llama-3.1-8b-instruct",
                       temperature: parsedData.temperature || 0.5,
@@ -2000,7 +2000,7 @@ const handleScroll = useCallback((e) => {
                     settings: {
                       systemPrompt:
                         systemMessage?.content || "You are a helpful assistant",
-                      model: "Meta LLaMA 3.1 8B Instruct",
+                      model: "Meta Llama 3.1 8B Instruct",
                       model_api: "meta-llama-3.1-8b-instruct",
                       temperature: 0.5,
                       top_p: 0.5,
