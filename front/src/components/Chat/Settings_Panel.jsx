@@ -1,4 +1,5 @@
-import { Trans } from "react-i18next";
+/* eslint-disable no-unused-vars */
+import { Trans, useTranslation } from "react-i18next";
 import Tooltip from "../Others/Tooltip";
 
 import help from "../../assets/icon_help.svg";
@@ -7,69 +8,473 @@ import cross from "../../assets/cross.svg";
 import dropdown from "../../assets/icon_dropdown.svg";
 import uploaded from "../../assets/file_uploaded.svg";
 import share_icon from "../../assets/share_icon.svg";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ArcanaContainer from "../Arcanas/ArcanaContainer";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
+import { useToast } from "../../hooks/useToast";
+import { addConversation, selectConversations, updateConversation } from "../../Redux/reducers/conversationsSlice";
 
 const Settings_Panel = ({
   // File Management
   selectedFiles,
   setSelectedFiles,
-  removeFile,
-  formatFileSize,
-
-  // Advanced Options State
-  showAdvOpt,
 
   // Model Settings
   modelSettings,
-  modelStatus,
   modelList,
+  currentModel,
   isImageSupported,
-
-  // Dropdown State
-  isOpen,
-  setIsOpen,
-  direction,
+  onModelChange,
+  showAdvOpt,
+  toggleAdvOpt,
   dropdownRef,
-  toggleOpen,
 
   // Local State Management
   localState,
   setLocalState,
-
-  // Temperature Slider
-  isHovering,
-  setHovering,
-  handleChangeTemp,
-
-  // Top_p Slider
-  isHoveringTpop,
-  setHoveringTpop,
-  handleChangeTpop,
-
-  // System Prompt
-  systemPromptError,
-  handleInstructionsChange,
-  validateSystemPrompt,
-
-  // Event Handlers
-  handleChangeModel,
-  toggleAdvOpt,
-  handleShareSettingsModel,
-  resetDefault,
-  getStatusColor,
-
+  updateSettings,
+  setShareSettingsModel,
+handleShareSettings,
   // Help Modal Controls
   setShowHelpModel,
   setShowArcanasHelpModel,
   setShowCustomHelpModel,
   setShowTpopHelpModel,
   setShowSystemHelpModel,
-
-  // Translation
-  t,
-
-  // Components
-  ArcanaContainer,
 }) => {
+  const modelStatus = useMemo(
+    () => ({
+      color: currentModel ? getStatusColor(currentModel.status) : "red",
+    }),
+    [currentModel]
+  );
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+ const conversations = useSelector(selectConversations);
+ const currentConversationId = useSelector(
+   (state) => state.conversations.currentConversationId
+ );
+  const { notifySuccess, notifyError } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [direction, setDirection] = useState("down");
+  const [isHovering, setHovering] = useState(false);
+  const [isHoveringTpop, setHoveringTpop] = useState(false);
+  const [systemPromptError, setSystemPromptError] = useState("");
+
+  const hasProcessedSettings = useRef(false);
+  const hasProcessedImport = useRef(false);
+  const hasProcessedArcana = useRef(false);
+
+  const removeFile = (index) => {
+    const newFiles = JSON.parse(JSON.stringify(selectedFiles));
+    newFiles.splice(index, 1);
+    setSelectedFiles(newFiles);
+  };
+
+  function formatFileSize(bytes) {
+    const units = ["Bytes", "KB", "MB", "GB", "TB"];
+    let size = bytes;
+    let unitIndex = 0;
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
+  }
+  const handleInstructionsChange = (event) => {
+    const { value } = event.target;
+
+    // Clear error when user starts typing
+    if (systemPromptError) {
+      setSystemPromptError("");
+    }
+
+    setLocalState((prevState) => ({
+      ...prevState,
+      settings: {
+        ...prevState.settings,
+        systemPrompt: value,
+      },
+    }));
+  };
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "ready":
+        return "limegreen";
+      case "loading":
+        return "orange";
+      case "offline":
+        return "grey";
+      default:
+        return "red";
+    }
+  };
+  const resetDefault = () => {
+    let updatedConversation = localState.conversation.map((item) => {
+      if (item.role === "system") {
+        return { ...item, content: "You are a helpful assistant" };
+      } else {
+        return item;
+      }
+    });
+    setLocalState((prevState) => ({
+      ...prevState,
+      conversation: updatedConversation,
+      settings: {
+        ...prevState.settings,
+        temperature: 0.5,
+        top_p: 0.5,
+      },
+    }));
+    updateSettings({ systemPrompt: "You are a helpful assistant" });
+  };
+  const validateSystemPrompt = () => {
+    if (!localState.settings.systemPrompt?.trim()) {
+      setSystemPromptError(t("description.custom6")); // Your error message
+      return false;
+    }
+    return true;
+  };
+  const handleChangeModel = (option) => {
+    onModelChange(option.name, option.id);
+    setIsOpen(false);
+  };
+  const toggleOpen = () => setIsOpen(!isOpen);
+
+  const handleChangeTemp = (newValue) => {
+    const numVal = parseFloat(newValue);
+    updateSettings({ temperature: numVal });
+  };
+
+  const handleChangeTpop = (newValue) => {
+    const numVal = parseFloat(newValue);
+    updateSettings({ top_p: numVal });
+  };
+  useEffect(() => {
+    if (dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      setDirection(spaceBelow > spaceAbove ? "down" : "up");
+    }
+  }, [isOpen]);
+  useEffect(() => {
+    const handleSettings = async () => {
+      const encodedSettings = searchParams.get("settings");
+
+      if (
+        encodedSettings &&
+        location.pathname === "/chat" &&
+        !hasProcessedSettings.current
+      ) {
+        try {
+          hasProcessedSettings.current = true;
+
+          // Try to decode the settings
+          const decodedSettings = atob(encodedSettings);
+          const settings = JSON.parse(decodedSettings);
+
+          const action = dispatch(addConversation());
+          const newId = action.payload?.id;
+
+          if (newId) {
+            setLocalState((prev) => ({
+              ...prev,
+              settings: {
+                systemPrompt: settings.systemPrompt
+                  ? decodeURIComponent(settings.systemPrompt)
+                  : "You are a helpful assistant",
+                model: settings.model_name || "Meta Llama 3.1 8B Instruct",
+                model_api: settings.model || "meta-llama-3.1-8b-instruct",
+                temperature: settings.temperature || 0.5,
+                top_p: settings.top_p || 0.5,
+              },
+              ...(settings.arcana && {
+                arcana: {
+                  id: settings.arcana.id,
+                  key: settings.arcana.key,
+                },
+              }),
+            }));
+
+            dispatch(
+              updateConversation({
+                id: newId,
+                updates: {
+                  settings: {
+                    systemPrompt: settings.systemPrompt
+                      ? decodeURIComponent(settings.systemPrompt)
+                      : "You are a helpful assistant",
+                    model: settings.model_name || "Meta Llama 3.1 8B Instruct",
+                    model_api: settings.model || "meta-llama-3.1-8b-instruct",
+                    temperature: settings.temperature ?? 0.5,
+                    top_p: settings.top_p ?? 0.5,
+                  },
+                  ...(settings.arcana && {
+                    arcana: {
+                      id: settings.arcana.id,
+                      key: settings.arcana.key,
+                    },
+                  }),
+                },
+              })
+            );
+
+            // Navigate to new conversation
+            navigate(`/chat/${newId}`, { replace: true });
+          }
+        } catch (error) {
+          console.error("Error applying shared settings:", error);
+          notifyError(
+            "Invalid settings in shared link. Redirecting to default chat."
+          );
+          navigate(`/chat/${currentConversationId}`, { replace: true });
+          window.location.reload();
+        }
+      }
+    };
+
+    if (conversations.length > 0) {
+      handleSettings();
+    }
+  }, [searchParams, location.pathname, conversations.length]);
+
+  useEffect(() => {
+    const handleImport = async () => {
+      const importUrl = searchParams.get("import");
+
+      if (
+        importUrl &&
+        location.pathname === "/chat" &&
+        !hasProcessedImport.current
+      ) {
+        try {
+          hasProcessedImport.current = true;
+          const response = await fetch(importUrl);
+
+          if (!response.ok) {
+            if (response.status >= 400 && response.status < 500) {
+              throw new Error("Client Error: Failed to fetch the JSON file.");
+            } else if (response.status >= 500) {
+              throw new Error("Server Error: Please try again later.");
+            } else {
+              throw new Error("Unknown Error: Could not fetch the JSON file.");
+            }
+          }
+
+          const parsedData = await response.json();
+          const action = dispatch(addConversation());
+          const newId = action.payload?.id;
+
+          if (newId) {
+            if (Array.isArray(parsedData.messages)) {
+              // Handle object with messages format
+              let newArray = [];
+              for (let i = 0; i < parsedData.messages.length; i++) {
+                if (
+                  parsedData.messages[i].role === "user" &&
+                  parsedData.messages[i + 1]?.role === "assistant"
+                ) {
+                  newArray.push({
+                    prompt: parsedData.messages[i].content,
+                    response: parsedData.messages[i + 1]?.content,
+                  });
+                }
+              }
+
+              const systemMessage = parsedData?.messages?.find(
+                (message) => message.role === "system"
+              );
+
+              dispatch(
+                updateConversation({
+                  id: newId,
+                  updates: {
+                    title: parsedData.messages[1].content,
+                    conversation: parsedData.messages,
+                    responses: newArray,
+                    settings: {
+                      systemPrompt:
+                        systemMessage?.content || "You are a helpful assistant",
+                      model:
+                        parsedData["model-name"] ||
+                        parsedData.model ||
+                        "Meta Llama 3.1 8B Instruct",
+                      model_api:
+                        parsedData.model || "meta-llama-3.1-8b-instruct",
+                      temperature: parsedData.temperature || 0.5,
+                      top_p: parsedData.top_p || 0.5,
+                    },
+                    ...(parsedData.arcana && {
+                      arcana: {
+                        id: parsedData.arcana.id,
+                        key: parsedData.arcana.key,
+                      },
+                    }),
+                  },
+                })
+              );
+            } else if (Array.isArray(parsedData)) {
+              // Handle array format
+              let newArray = [];
+              for (let i = 0; i < parsedData.length; i++) {
+                if (
+                  parsedData[i].role === "user" &&
+                  parsedData[i + 1]?.role === "assistant"
+                ) {
+                  newArray.push({
+                    prompt: parsedData[i].content,
+                    response: parsedData[i + 1]?.content,
+                  });
+                }
+              }
+
+              const systemMessage = parsedData?.find(
+                (message) => message.role === "system"
+              );
+
+              dispatch(
+                updateConversation({
+                  id: newId,
+                  updates: {
+                    title: parsedData[1].content,
+                    conversation: parsedData,
+                    responses: newArray,
+                    settings: {
+                      systemPrompt:
+                        systemMessage?.content || "You are a helpful assistant",
+                      model: "Meta Llama 3.1 8B Instruct",
+                      model_api: "meta-llama-3.1-8b-instruct",
+                      temperature: 0.5,
+                      top_p: 0.5,
+                    },
+                  },
+                })
+              );
+            }
+
+            // Navigate after update
+            navigate(`/chat/${newId}`, { replace: true });
+            notifySuccess("Chat imported successfully");
+          }
+        } catch (error) {
+          if (error.name === "TypeError") {
+            notifyError("Network Error: Unable to reach the server.");
+            navigate(`/chat/${currentConversationId}`, { replace: true });
+            window.location.reload();
+          } else if (error.message.includes("Client Error")) {
+            notifyError("Client Error: The provided link might be incorrect.");
+            navigate(`/chat/${currentConversationId}`, { replace: true });
+            window.location.reload();
+          } else if (error.message.includes("Server Error")) {
+            notifyError("Server Error: Please try again later.");
+            navigate(`/chat/${currentConversationId}`, { replace: true });
+            window.location.reload();
+          } else {
+            notifyError(error.message || "An unexpected error occurred.");
+            navigate(`/chat/${currentConversationId}`, { replace: true });
+            window.location.reload();
+          }
+          console.error("Error:", error);
+          navigate(`/chat/${currentConversationId}`, { replace: true });
+          window.location.reload();
+        }
+      }
+    };
+
+    if (conversations.length > 0) {
+      handleImport();
+    }
+  }, [searchParams, location.pathname, conversations.length]);
+
+  useEffect(() => {
+    const handleArcanaParams = async () => {
+      const arcanaID = searchParams.get("arcana");
+      const arcanaKey = searchParams.get("arcana_key");
+
+      if (
+        arcanaID &&
+        arcanaKey &&
+        location.pathname === "/chat" &&
+        !hasProcessedArcana.current
+      ) {
+        try {
+          hasProcessedArcana.current = true;
+
+          setLocalState((prev) => ({
+            ...prev,
+            arcana: {
+              id: decodeURIComponent(arcanaID),
+              key: decodeURIComponent(arcanaKey),
+            },
+            settings: {
+              ...prev.settings,
+              temperature: 0,
+              top_p: 0.05,
+            },
+          }));
+          const currentConversation = conversations?.find(
+            (conv) => conv.id === currentConversationId
+          );
+          dispatch(
+            updateConversation({
+              id: currentConversationId,
+              updates: {
+                arcana: {
+                  id: decodeURIComponent(arcanaID),
+                  key: decodeURIComponent(arcanaKey),
+                },
+                settings: {
+                  ...currentConversation.settings,
+                  temperature: 0,
+                  top_p: 0.05,
+                },
+              },
+            })
+          );
+          navigate(`/chat/${currentConversationId}`, { replace: true });
+        } catch (error) {
+          console.error("Error processing arcana parameters:", error);
+          hasProcessedArcana.current = false;
+          notifyError(
+            "Invalid arcana parameters in shared link. Redirecting to default chat."
+          );
+          navigate(`/chat/${currentConversationId}`, { replace: true });
+        }
+      }
+    };
+
+    if (conversations.length > 0) {
+      handleArcanaParams();
+    }
+  }, [
+    searchParams,
+    location.pathname,
+    conversations.length,
+    currentConversationId,
+    dispatch,
+    navigate,
+  ]);
+
+  const handleShareSettingsModel = () => {
+    if (localState.dontShow.dontShowAgainShare) {
+      handleShareSettings();
+    } else {
+      setShareSettingsModel(true);
+    }
+  };
+
+ 
   return (
     <div className="w-[40%] mobile:w-full p-2 text-tertiary flex flex-col justify-end">
       {/* Files Section */}

@@ -51,6 +51,7 @@ const Responses = ({
   toggleAdvOpt,
   updateLocalState,
   updateSettings,
+  clearHistory,
 }) => {
   const countClose = useSelector((state) => state.count);
   const { transcript, listening, resetTranscript } = useSpeechRecognition();
@@ -893,19 +894,7 @@ const Responses = ({
       lastScrollPosition.current = scrollTop;
     }
   }, []);
-  const clearHistory = () => {
-    setLocalState((prevState) => ({
-      ...prevState,
-      responses: [],
-      conversation:
-        prevState.conversation.length > 0
-          ? [prevState.conversation[0]]
-          : prevState.conversation,
-    }));
 
-    setShowHistoryModel(false);
-    notifySuccess("History cleared");
-  };
   const handleClearHistory = () => {
     if (localState.dontShow.dontShowAgain) {
       clearHistory();
