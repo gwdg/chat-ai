@@ -1,47 +1,52 @@
 /* eslint-disable no-unused-vars */
+//Libraries
 import { useState, useEffect, useMemo } from "react";
-
 import { useParams } from "react-router-dom";
 import jsPDF from "jspdf";
 import { useDispatch, useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
 
+//Components
 import Help_Model from "../model/Help_Model";
 import Mic_Model from "../model/Mic_Model";
 import Cutom_Instructions_Model from "../model/Cutom_Instructions_Model";
 import ExportTypeModel from "../model/ExportTypeModel";
 import Session_Expired from "../model/Session_Expired";
 import Bad_Request_Model from "../model/Bad_Request_Model";
-
-import Logo from "../assets/chatai-logo-v3-preview.png";
 import Help_Model_Custom from "../model/Help_Model_Custom";
 import Help_model_Arcanas from "../model/Help_model_Arcanas";
 import Help_Model_System from "../model/Help_Model_System";
 import Help_Model_Tpop from "../model/Help_Model_Tpop";
 import Clear_History_Model from "../model/Clear_History_Model";
 import Share_Settings_Model from "../model/Share_Settings_Model";
+import Responses from "./Chat/Responses";
+import Settings_Panel from "./Chat/Settings_Panel";
+
+//Assets
+import Logo from "../assets/chatai-logo-v3-preview.png";
+
+//Hooks and Redux
 import {
   setCurrentConversation,
   updateConversation,
 } from "../Redux/reducers/conversationsSlice";
 import { useToast } from "../hooks/useToast";
-import Responses from "./Chat/Responses";
-import Settings_Panel from "./Chat/Settings_Panel";
 
 function Prompt({ modelSettings, modelList, onModelChange }) {
+  // Hooks
   const { notifySuccess, notifyError } = useToast();
-
   const dispatch = useDispatch();
   const { conversationId } = useParams();
 
+  // Redux state
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
-
   const currentConversation = useSelector((state) =>
     state.conversations?.conversations?.find(
       (conv) => conv.id === conversationId
     )
   );
 
+  // Local useState
   const [localState, setLocalState] = useState({
     prompt: "",
     responses: [],
@@ -67,7 +72,25 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       key: "",
     },
   });
+  const [showModelSession, setShowModelSession] = useState(false);
+  const [showBadRequest, setShowBadRequest] = useState(false);
+  const [showHelpModel, setShowHelpModel] = useState(false);
+  const [showMicModel, setShowMicModel] = useState(false);
+  const [showCustomHelpModel, setShowCustomHelpModel] = useState(false);
+  const [showTpopHelpModel, setShowTpopHelpModel] = useState(false);
+  const [showSystemHelpModel, setShowSystemHelpModel] = useState(false);
+  const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false);
+  const [showCusModel, setShowCusModel] = useState(false);
+  const [showFileModel, setShowFileModel] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
+  const [showHistoryModel, setShowHistoryModel] = useState(false);
+  const [shareSettingsModel, setShareSettingsModel] = useState(false);
+  const [showAdvOpt, setShowAdvOpt] = useState(
+    useSelector((state) => state.advOptions.isOpen)
+  );
 
+  //Effects
   useEffect(() => {
     if (conversationId && currentConversation) {
       dispatch(setCurrentConversation(conversationId));
@@ -100,7 +123,27 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
 
     return () => clearTimeout(timer);
   }, [localState, currentConversation]);
+  useEffect(() => {
+    const root = window.document.documentElement;
 
+    if (isDarkMode) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [isDarkMode]);
+
+  //Memo
+  const currentModel = useMemo(
+    () => modelList?.find((m) => m.name === modelSettings?.model),
+    [modelList, modelSettings?.model]
+  );
+  const isImageSupported = useMemo(
+    () => currentModel?.input.includes("image") || false,
+    [currentModel]
+  );
+
+  //Functions
   const updateLocalState = (updates) => {
     setLocalState((prev) => ({
       ...prev,
@@ -117,43 +160,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       },
     }));
   };
-
-  const [showModelSession, setShowModelSession] = useState(false);
-  const [showBadRequest, setShowBadRequest] = useState(false);
-  const [showHelpModel, setShowHelpModel] = useState(false);
-  const [showMicModel, setShowMicModel] = useState(false);
-  const [showCustomHelpModel, setShowCustomHelpModel] = useState(false);
-  const [showTpopHelpModel, setShowTpopHelpModel] = useState(false);
-  const [showSystemHelpModel, setShowSystemHelpModel] = useState(false);
-  const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false);
-  const [showCusModel, setShowCusModel] = useState(false);
-  const [showFileModel, setShowFileModel] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
-
-  const [showHistoryModel, setShowHistoryModel] = useState(false);
-  const [shareSettingsModel, setShareSettingsModel] = useState(false);
-  const [showAdvOpt, setShowAdvOpt] = useState(
-    useSelector((state) => state.advOptions.isOpen)
-  );
-  const currentModel = useMemo(
-    () => modelList?.find((m) => m.name === modelSettings?.model),
-    [modelList, modelSettings?.model]
-  );
-  const isImageSupported = useMemo(
-    () => currentModel?.input.includes("image") || false,
-    [currentModel]
-  );
-
-  useEffect(() => {
-    const root = window.document.documentElement;
-
-    if (isDarkMode) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  }, [isDarkMode]);
 
   const toggleAdvOpt = () => {
     setShowAdvOpt(!showAdvOpt);
@@ -584,6 +590,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     setShowHistoryModel(false);
     notifySuccess("History cleared");
   };
+
   return (
     <>
       <div className="flex mobile:flex-col flex-row h-full sm:justify-between relative">

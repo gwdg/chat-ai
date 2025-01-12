@@ -1,12 +1,24 @@
 /* eslint-disable no-unused-vars */
+//Libraries
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 
+//
 import Tooltip from "../Others/Tooltip";
+import ResponseItem from "../Markdown/ResponseItem";
 
+//API
+import { abortFetch, getDataFromLLM } from "../../apis/Completion";
+
+//Redux
+import { setCountGlobal } from "../../Redux/actions/alertAction";
+import { useDispatch, useSelector } from "react-redux";
+
+//Assets
 import retry from "../../assets/icon_retry.svg";
 import clear from "../../assets/cross_icon.svg";
 import export_icon from "../../assets/export_icon.svg";
@@ -21,12 +33,8 @@ import pause from "../../assets/pause.svg";
 import edit_icon from "../../assets/edit_icon.svg";
 import cross from "../../assets/cross.svg";
 import icon_resend from "../../assets/icon_resend.svg";
-import { setCountGlobal } from "../../Redux/actions/alertAction";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { abortFetch, getDataFromLLM } from "../../apis/Completion";
-import ResponseItem from "../Markdown/ResponseItem";
 
+//Variables
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
@@ -54,12 +62,16 @@ const Responses = ({
   notifySuccess,
   notifyError,
 }) => {
-  const countClose = useSelector((state) => state.count);
-  const { listening, resetTranscript } = useSpeechRecognition();
-  const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
+  // Hooks
   const dispatch = useDispatch();
   const { t, i18n } = useTranslation();
+  const { listening, resetTranscript } = useSpeechRecognition();
 
+  // Redux state
+  const countClose = useSelector((state) => state.count);
+  const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
+
+  // Local useState
   const [showModel, setShowModel] = useState(true);
   const [count, setCount] = useState(countClose);
   const [editingIndex, setEditingIndex] = useState(null);
@@ -72,11 +84,14 @@ const Responses = ({
   const [isEditing, setIsEditing] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+
+  //Variable
   const isLoading = loading || loadingResend;
 
+  //Refs
+  const lastScrollPosition = useRef(0);
   const containerRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const lastScrollPosition = useRef(0);
   const textareaRef = useRef(null);
   const hiddenFileInput = useRef(null);
   const hiddenFileInputImage = useRef(null);
@@ -84,6 +99,7 @@ const Responses = ({
   const textareaRefs = useRef([]);
   const containerRefs = useRef([]);
 
+  //Functions
   async function getRes(updatedConversation) {
     setLoading(true);
 
@@ -456,29 +472,6 @@ const Responses = ({
     await getRes(newConversation);
   };
 
-  const convertBase64ArrayToImageList = (base64Array) => {
-    const imageFileList = base64Array.map((item, index) => {
-      if (
-        item.type === "image_url" &&
-        item.image_url.url.startsWith("data:image")
-      ) {
-        const base64Data = item.image_url.url;
-        const fileName = `image_${index + 1}`;
-        const fileSize = atob(base64Data.split(",")[1]).length;
-
-        return {
-          name: fileName,
-          type: "image",
-          size: fileSize,
-          text: base64Data,
-        };
-      }
-      return null;
-    });
-
-    return imageFileList.filter(Boolean);
-  };
-
   const handleRetry = (e) => {
     e.preventDefault();
 
@@ -516,15 +509,6 @@ const Responses = ({
   const handleClickJSON = () => {
     hiddenFileInputJSON.current.value = null;
     hiddenFileInputJSON.current.click();
-  };
-  const adjustHeightRefs = (index) => {
-    if (textareaRefs.current[index]) {
-      const textarea = textareaRefs.current[index];
-      textarea.style.height = `${MIN_HEIGHT}px`;
-      const scrollHeight = textarea.scrollHeight;
-      const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
-      textarea.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
-    }
   };
   const handleEditClick = (index, prompt) => {
     setEditingIndex(index);
@@ -674,20 +658,6 @@ const Responses = ({
     hiddenFileInputImage.current.value = null;
     hiddenFileInputImage.current.click();
   };
-  const readFileAsText = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsText(file);
-    });
-  };
-
-  const formatCSVText = (csvText) => {
-    const rows = csvText.split("\n");
-    const formattedRows = rows.map((row) => row.split(",").join(" | "));
-    return formattedRows.join("\n");
-  };
   const handleFilesChange = async (e) => {
     try {
       const textFiles = Array.from(e.target.filemodelLists).filter(
@@ -834,22 +804,6 @@ const Responses = ({
       notifyError("An error occurred while dropping the files: ", error);
     }
   };
-
-  const readFileAsBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const hasOverflow = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return false;
-    return container.scrollHeight > container.clientHeight;
-  }, []);
-
   const handleScroll = useCallback((e) => {
     const container = containerRef.current;
     if (!container) return;
@@ -875,6 +829,66 @@ const Responses = ({
     }
   };
 
+  const handleChange = (event) => {
+    updateLocalState({ prompt: event.target.value });
+    adjustHeight();
+  };
+  const convertBase64ArrayToImageList = (base64Array) => {
+    const imageFileList = base64Array.map((item, index) => {
+      if (
+        item.type === "image_url" &&
+        item.image_url.url.startsWith("data:image")
+      ) {
+        const base64Data = item.image_url.url;
+        const fileName = `image_${index + 1}`;
+        const fileSize = atob(base64Data.split(",")[1]).length;
+
+        return {
+          name: fileName,
+          type: "image",
+          size: fileSize,
+          text: base64Data,
+        };
+      }
+      return null;
+    });
+
+    return imageFileList.filter(Boolean);
+  };
+
+  const adjustHeightRefs = (index) => {
+    if (textareaRefs.current[index]) {
+      const textarea = textareaRefs.current[index];
+      textarea.style.height = `${MIN_HEIGHT}px`;
+      const scrollHeight = textarea.scrollHeight;
+      const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
+      textarea.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
+    }
+  };
+
+  const readFileAsText = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  };
+
+  const formatCSVText = (csvText) => {
+    const rows = csvText.split("\n");
+    const formattedRows = rows.map((row) => row.split(",").join(" | "));
+    return formattedRows.join("\n");
+  };
+
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
   const adjustHeight = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = `${MIN_HEIGHT}px`;
@@ -886,16 +900,21 @@ const Responses = ({
     }
   };
 
-  const handleChange = (event) => {
-    updateLocalState({ prompt: event.target.value });
-    adjustHeight();
-  };
   const focusTextArea = (index) => {
     if (textareaRefs.current[index]) {
       textareaRefs.current[index].focus();
     }
     setIsEditing(true);
   };
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      setUserScrolled(false);
+      setShowScrollButton(false);
+    }
+  }, []);
+
+  //Effects
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
@@ -911,14 +930,6 @@ const Responses = ({
       setUserScrolled(false);
     }
   }, [localState.responses.length]);
-
-  const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-      setUserScrolled(false);
-      setShowScrollButton(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (editingIndex !== null) {

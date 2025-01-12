@@ -1,16 +1,22 @@
 /* eslint-disable no-unused-vars */
+//Libraries
 import { Trans, useTranslation } from "react-i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
+//Components
+import ArcanaContainer from "../Arcanas/ArcanaContainer";
+
+//Assets
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
 import cross from "../../assets/cross.svg";
 import dropdown from "../../assets/icon_dropdown.svg";
 import uploaded from "../../assets/file_uploaded.svg";
 import share_icon from "../../assets/share_icon.svg";
-import ArcanaContainer from "../Arcanas/ArcanaContainer";
-import { useDispatch, useSelector } from "react-redux";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+
+//Redux
 import {
   addConversation,
   selectConversations,
@@ -40,6 +46,7 @@ const Settings_Panel = ({
   notifySuccess,
   notifyError,
 }) => {
+  //Varaibles and Functions
   const getStatusColor = (status) => {
     switch (status) {
       case "ready":
@@ -58,26 +65,32 @@ const Settings_Panel = ({
     }),
     [currentModel]
   );
+  const conversations = useSelector(selectConversations);
+
+  //Hooks
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(
     (state) => state.conversations.currentConversationId
   );
+
+  //Local useStates
   const [isOpen, setIsOpen] = useState(false);
   const [direction, setDirection] = useState("down");
   const [isHovering, setHovering] = useState(false);
   const [isHoveringTpop, setHoveringTpop] = useState(false);
   const [systemPromptError, setSystemPromptError] = useState("");
 
+  //Refs
   const hasProcessedSettings = useRef(false);
   const hasProcessedImport = useRef(false);
   const hasProcessedArcana = useRef(false);
   const dropdownRef = useRef(null);
 
+  //Functions
   const removeFile = (index) => {
     const newFiles = JSON.parse(JSON.stringify(selectedFiles));
     newFiles.splice(index, 1);
@@ -153,6 +166,15 @@ const Settings_Panel = ({
     const numVal = parseFloat(newValue);
     updateSettings({ top_p: numVal });
   };
+  const handleShareSettingsModel = () => {
+    if (localState.dontShow.dontShowAgainShare) {
+      handleShareSettings();
+    } else {
+      setShareSettingsModel(true);
+    }
+  };
+
+  //Effects
   useEffect(() => {
     if (dropdownRef.current) {
       const rect = dropdownRef.current.getBoundingClientRect();
@@ -453,14 +475,6 @@ const Settings_Panel = ({
     dispatch,
     navigate,
   ]);
-
-  const handleShareSettingsModel = () => {
-    if (localState.dontShow.dontShowAgainShare) {
-      handleShareSettings();
-    } else {
-      setShareSettingsModel(true);
-    }
-  };
 
   return (
     <div className="w-[40%] mobile:w-full p-2 text-tertiary flex flex-col justify-end">
