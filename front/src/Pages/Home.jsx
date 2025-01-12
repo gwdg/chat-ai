@@ -1,12 +1,11 @@
+import ChatWindow from "../components/Chat/ChatWindow";
 import Layout from "../components/Layout/Layout"; // Importing the Layout component
-import Prompt from "../components/Prompt"; // Importing the Prompt component
 
 // Home component
 function Home() {
   return (
     <Layout>
-      {" "}
-      <Prompt /> {/* Rendering the Prompt component */}
+      <ChatWindow />
     </Layout>
   );
 }
