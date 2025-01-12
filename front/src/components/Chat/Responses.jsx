@@ -25,15 +25,14 @@ import { setCountGlobal } from "../../Redux/actions/alertAction";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { abortFetch, getDataFromLLM } from "../../apis/Completion";
-import { useToast } from "../../hooks/useToast";
 import ResponseItem from "../Markdown/ResponseItem";
 
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
 const languageMap = {
-  en: "en-US", // English
-  de: "de-DE", // German
+  en: "en-US",
+  de: "de-DE",
 };
 
 const Responses = ({
@@ -52,12 +51,13 @@ const Responses = ({
   updateLocalState,
   updateSettings,
   clearHistory,
+  notifySuccess,
+  notifyError,
 }) => {
   const countClose = useSelector((state) => state.count);
-  const { transcript, listening, resetTranscript } = useSpeechRecognition();
+  const { listening, resetTranscript } = useSpeechRecognition();
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const dispatch = useDispatch();
-  const { notifySuccess, notifyError } = useToast();
   const { t, i18n } = useTranslation();
 
   const [showModel, setShowModel] = useState(true);
@@ -93,7 +93,6 @@ const Responses = ({
         modelX.input.includes("image")
     );
 
-    // Remove image part from the conversation if model doesn't support images
     let processedConversation = updatedConversation;
     if (!imageSupport) {
       processedConversation = updatedConversation.map((message) => {
@@ -177,14 +176,12 @@ const Responses = ({
     }
   }
 
-  // Handles aborting fetch request
   const handleAbortFetch = () => {
     abortFetch(notifyError);
     setIsSubmitting(false);
     setLoading(false);
   };
 
-  // Handle resending the request for a specific response
   const handleResendClick = async (index) => {
     setLoadingResend(true);
 
@@ -206,7 +203,6 @@ const Responses = ({
       imageFiles = localState.responses[index]?.images;
     }
 
-    // Update conversation and responses
     let newConversation = [...localState.conversation].slice(0, index * 2 + 1);
     let newResponses = [...localState.responses].slice(0, index);
 
@@ -258,7 +254,6 @@ const Responses = ({
         modelX.input.includes("image")
     );
 
-    // Remove image part from the conversation if model doesn't support images
     if (!imageSupport) {
       updatedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
@@ -298,9 +293,6 @@ const Responses = ({
     }
   };
 
-  // Handle editing a prompt
-
-  // Save the edited prompt and resend the request
   const handleSave = async (index) => {
     setLoadingResend(true);
 
@@ -374,7 +366,6 @@ const Responses = ({
         modelX.input.includes("image")
     );
 
-    // Remove image part from the conversation if model doesn't support images
     if (!imageSupport) {
       updatedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
@@ -410,13 +401,9 @@ const Responses = ({
     }
   };
 
-  // Handle close editing a prompt
-
-  // Submit handler
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // Return if prompt is empty or whitespace
     if (localState.prompt?.trim() === "") return;
 
     SpeechRecognition.stopListening();
@@ -424,7 +411,6 @@ const Responses = ({
 
     let newConversation;
 
-    // Handle files with images
     if (selectedFiles.length > 0) {
       const textFiles = selectedFiles.filter((file) => file.type !== "image");
       const imageFiles = selectedFiles.filter((file) => file.type === "image");
@@ -461,7 +447,6 @@ const Responses = ({
       ];
     }
 
-    // Update state and pass the new conversation to getRes
     setLocalState((prevState) => ({
       ...prevState,
       conversation: newConversation,
@@ -478,24 +463,22 @@ const Responses = ({
         item.image_url.url.startsWith("data:image")
       ) {
         const base64Data = item.image_url.url;
-        // Extract the name from the base64 string or assign a default name
-        const fileName = `image_${index + 1}`; // You can customize how to generate names if needed
-        const fileSize = atob(base64Data.split(",")[1]).length; // Approximate size calculation
+        const fileName = `image_${index + 1}`;
+        const fileSize = atob(base64Data.split(",")[1]).length;
 
         return {
           name: fileName,
           type: "image",
           size: fileSize,
-          text: base64Data, // The base64 string is what you use as "text"
+          text: base64Data,
         };
       }
       return null;
     });
 
-    return imageFileList.filter(Boolean); // Remove any null items
+    return imageFileList.filter(Boolean);
   };
 
-  // Handles retrying the conversation
   const handleRetry = (e) => {
     e.preventDefault();
 
@@ -514,7 +497,7 @@ const Responses = ({
     }
 
     setTimeout(() => {
-      adjustHeight(); // Adjust height after refilling the textarea
+      adjustHeight();
     }, 0);
 
     setLocalState((prevState) => ({
@@ -527,17 +510,17 @@ const Responses = ({
     }));
   };
   const handleClick = () => {
-    hiddenFileInput.current.value = null; // Clear the input field prior to previous selections
+    hiddenFileInput.current.value = null;
     hiddenFileInput.current.click();
   };
   const handleClickJSON = () => {
-    hiddenFileInputJSON.current.value = null; // Clear the input field prior to previous selections
+    hiddenFileInputJSON.current.value = null;
     hiddenFileInputJSON.current.click();
   };
   const adjustHeightRefs = (index) => {
     if (textareaRefs.current[index]) {
       const textarea = textareaRefs.current[index];
-      textarea.style.height = `${MIN_HEIGHT}px`; // Reset height
+      textarea.style.height = `${MIN_HEIGHT}px`;
       const scrollHeight = textarea.scrollHeight;
       const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
       textarea.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
@@ -550,14 +533,14 @@ const Responses = ({
   };
   const handleCloseClick = (index) => {
     if (editingIndex === index) {
-      setEditingIndex(null); // Only close the currently edited item
+      setEditingIndex(null);
     }
   };
   const handleClickOutside = (event, index) => {
     if (
       containerRefs.current[index] &&
       !containerRefs.current[index].contains(event.target) &&
-      textareaRefs.current[index] !== event.target // Ensure it's not the textarea itself
+      textareaRefs.current[index] !== event.target
     ) {
       handleCloseClick(index);
       setIsEditing(false);
@@ -567,7 +550,6 @@ const Responses = ({
     try {
       const selectedFile = e.target.files[0];
 
-      // Check if the file is selected and is of correct type
       if (!selectedFile) {
         notifyError("No file selected.");
         return;
@@ -580,7 +562,6 @@ const Responses = ({
 
       const reader = new FileReader();
 
-      // Handle FileReader error
       reader.onerror = () => {
         notifyError("Error reading file.");
       };
@@ -605,12 +586,11 @@ const Responses = ({
                 let images = [];
 
                 if (Array.isArray(userContent)) {
-                  // Handle case where content contains multiple types (e.g., text and image)
                   let textContent = "";
 
                   userContent.forEach((item) => {
                     if (item.type === "text") {
-                      textContent += item.text + "\n"; // Combine text content if multiple text entries
+                      textContent += item.text + "\n";
                     } else if (item.type === "image_url" && item.image_url) {
                       images.push({
                         type: item.type,
@@ -622,12 +602,11 @@ const Responses = ({
                   });
 
                   newArray.push({
-                    prompt: textContent?.trim(), // Trim to avoid extra newlines
+                    prompt: textContent?.trim(),
                     images: images,
                     response: parsedData[i + 1]?.content,
                   });
                 } else {
-                  // Handle the case where content is plain text
                   newArray.push({
                     prompt: userContent,
                     response: parsedData[i + 1]?.content,
@@ -657,7 +636,6 @@ const Responses = ({
             parsedData.messages &&
             Array.isArray(parsedData.messages)
           ) {
-            // Handle the case where parsedData is an object with a "messages" attribute
             if (parsedData.temperature) {
               updateSettings({ temperature: parsedData.temperature });
             }
@@ -680,7 +658,6 @@ const Responses = ({
             }
             processMessages(parsedData.messages);
           } else {
-            // Notify the user about the invalid structure
             notifyError("Invalid structure of JSON.");
           }
         } catch (jsonError) {
@@ -694,7 +671,7 @@ const Responses = ({
     }
   };
   const handleClickImage = () => {
-    hiddenFileInputImage.current.value = null; // Clear the input field prior to previous selections
+    hiddenFileInputImage.current.value = null;
     hiddenFileInputImage.current.click();
   };
   const readFileAsText = (file) => {
@@ -751,7 +728,6 @@ const Responses = ({
     }
   };
 
-  // Handles changing image files
   const handleFilesChangeImage = async (e) => {
     try {
       const imageFiles = Array.from(e.target.files).filter(
@@ -790,14 +766,12 @@ const Responses = ({
       const clipboardItems = event.clipboardData.items;
       const imageItems = [];
 
-      // Loop through clipboard items to find image files
       for (const item of clipboardItems) {
         if (item.type.startsWith("image/")) {
           imageItems.push(item.getAsFile());
         }
       }
 
-      // If there are images, handle them similar to the file input
       if (imageItems.length > 0) {
         const imageFileList = [];
 
@@ -826,7 +800,7 @@ const Responses = ({
   };
 
   const handleDrop = async (event) => {
-    if (!isImageSupported) return; // Guard clause to check if image support is enabled
+    if (!isImageSupported) return;
     event.preventDefault();
     try {
       const droppedFiles = Array.from(event.dataTransfer.files).filter(
@@ -861,7 +835,6 @@ const Responses = ({
     }
   };
 
-  // Helper function to read file as base64
   const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -884,9 +857,8 @@ const Responses = ({
     const { scrollTop, scrollHeight, clientHeight } = container;
     const distanceFromBottom = scrollHeight - clientHeight - scrollTop;
     const isNotAtBottom = distanceFromBottom > 20;
-    const hasEnoughContent = scrollHeight > clientHeight + 100; // Check if content is significantly more than viewport
+    const hasEnoughContent = scrollHeight > clientHeight + 100;
 
-    // Show button only when user has scrolled up AND there's enough content
     setShowScrollButton(isNotAtBottom && hasEnoughContent);
 
     if (Math.abs(scrollTop - lastScrollPosition.current) > 10) {
@@ -905,14 +877,11 @@ const Responses = ({
 
   const adjustHeight = () => {
     if (textareaRef.current) {
-      // Reset height to allow proper scrollHeight calculation
       textareaRef.current.style.height = `${MIN_HEIGHT}px`;
 
-      // Calculate new height
       const scrollHeight = textareaRef.current.scrollHeight;
       const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
 
-      // Set new height
       textareaRef.current.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
     }
   };
@@ -927,7 +896,6 @@ const Responses = ({
     }
     setIsEditing(true);
   };
-  // Scroll event listener
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
@@ -936,9 +904,6 @@ const Responses = ({
     return () => container?.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  // Auto-scroll logic for new messages
-
-  // Reset scroll position when conversation is cleared
   useEffect(() => {
     if (localState.responses.length === 0 && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "auto" });
@@ -947,7 +912,6 @@ const Responses = ({
     }
   }, [localState.responses.length]);
 
-  // Manual scroll to bottom
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -957,25 +921,21 @@ const Responses = ({
   }, []);
 
   useEffect(() => {
-    // Find the active textarea and adjust its height
     if (editingIndex !== null) {
       adjustHeightRefs(editingIndex);
     }
   }, [editedText, editingIndex]);
   useEffect(() => {
     const handleOutsideClick = (event) => {
-      // Iterate over all responses to check if the click was outside any textarea or container
       localState.responses.forEach((_, index) => {
         handleClickOutside(event, index);
       });
     };
 
-    // Attach event listener when editing starts
     if (isEditing) {
       document.addEventListener("mousedown", handleOutsideClick);
     }
 
-    // Clean up the event listener when editing stops or on unmount
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
@@ -997,14 +957,11 @@ const Responses = ({
       }, 1000);
     }
 
-    // Cleanup function
     return () => clearTimeout(timer);
   }, [copied]);
   return (
     <div className="flex flex-col items-center mobile:w-full w-[60%] h-full gap-3 sm:justify-between relative p-2 bg-bg_light dark:bg-bg_dark">
-      {/* Response section */}
       <div className="desktop:max-h-full flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-12px)] mobile:w-full border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
-        {/* Note model */}
         {showModel && count < 3 && (
           <div className="w-[calc(100%-16px)] sticky select-none m-2 h-fit bg-white dark:bg-black p-2 rounded-2xl flex justify-between items-center border dark:border-border_dark shadow-lg dark:shadow-dark">
             <p className="dark:text-white text-black">
@@ -1052,7 +1009,6 @@ const Responses = ({
           </div>
         )}
 
-        {/* Prompt response section */}
         <div
           ref={containerRef}
           className="p-2 flex flex-col gap-2 overflow-y-auto flex-1 relative"
@@ -1220,33 +1176,36 @@ const Responses = ({
           )}
         </div>
 
-        {/* Bottom toolbar */}
         {localState.responses.length > 0 ? (
           <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
-            <button
-              className="h-[30px] w-[30px] cursor-pointer"
-              disabled={loading}
-              onClick={handleClearHistory}
-            >
-              <img
-                className="cursor-pointer h-[25px] w-[25px]"
-                src={clear}
-                alt="clear"
-              />
-            </button>
-
-            <div className="flex items-center gap-6">
+            <Tooltip text={t("description.clear")}>
               <button
-                className="text-tertiary flex gap-2 items-center"
-                onClick={() => setShowFileModel(true)}
+                className="h-[30px] w-[30px] cursor-pointer"
                 disabled={loading}
+                onClick={handleClearHistory}
               >
                 <img
-                  className="cursor-pointer h-[30px] w-[30px]"
-                  src={export_icon}
-                  alt="export"
+                  className="cursor-pointer h-[25px] w-[25px]"
+                  src={clear}
+                  alt="clear"
                 />
               </button>
+            </Tooltip>
+
+            <div className="flex items-center gap-6">
+              <Tooltip text={t("description.export")}>
+                <button
+                  className="text-tertiary flex gap-2 items-center"
+                  onClick={() => setShowFileModel(true)}
+                  disabled={loading}
+                >
+                  <img
+                    className="cursor-pointer h-[30px] w-[30px]"
+                    src={export_icon}
+                    alt="export"
+                  />
+                </button>
+              </Tooltip>
 
               <div className="flex items-center">
                 <input
@@ -1256,30 +1215,33 @@ const Responses = ({
                   onChange={handleFilesChangeJSON}
                   className="hidden"
                 />
+                <Tooltip text={t("description.import")}>
+                  <button
+                    className="h-[30px] w-[30px] cursor-pointer"
+                    onClick={handleClickJSON}
+                    disabled={loading}
+                  >
+                    <img
+                      className="h-[30px] w-[30px]"
+                      src={import_icon}
+                      alt="import"
+                    />
+                  </button>
+                </Tooltip>
+              </div>
+              <Tooltip text={t("description.undo")}>
                 <button
                   className="h-[30px] w-[30px] cursor-pointer"
-                  onClick={handleClickJSON}
+                  onClick={handleRetry}
                   disabled={loading}
                 >
                   <img
-                    className="h-[30px] w-[30px]"
-                    src={import_icon}
-                    alt="import"
+                    className="cursor-pointer h-[30px] w-[30px]"
+                    src={retry}
+                    alt="retry"
                   />
                 </button>
-              </div>
-
-              <button
-                className="h-[30px] w-[30px] cursor-pointer"
-                onClick={handleRetry}
-                disabled={loading}
-              >
-                <img
-                  className="cursor-pointer h-[30px] w-[30px]"
-                  src={retry}
-                  alt="retry"
-                />
-              </button>
+              </Tooltip>
             </div>
           </div>
         ) : (
@@ -1291,22 +1253,22 @@ const Responses = ({
               onChange={handleFilesChangeJSON}
               className="hidden"
             />
-            <button
-              className="h-[30px] w-[30px] cursor-pointer"
-              onClick={handleClickJSON}
-              disabled={loading}
-            >
-              <img
-                className="cursor-pointer h-[30px] w-[30px]"
-                src={import_icon}
-                alt="import"
-              />
-            </button>
+            <Tooltip text={t("description.import")}>
+              <button
+                className="h-[30px] w-[30px] cursor-pointer"
+                onClick={handleClickJSON}
+                disabled={loading}
+              >
+                <img
+                  className="cursor-pointer h-[30px] w-[30px]"
+                  src={import_icon}
+                  alt="import"
+                />
+              </button>
+            </Tooltip>
           </div>
         )}
       </div>
-
-      {/* Prompt section */}
       <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
         <div className="flex flex-col gap-4 w-full">
           <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
@@ -1372,20 +1334,22 @@ const Responses = ({
 
             <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
               {localState.prompt?.trim() !== "" ? (
-                <button
-                  className="h-[30px] w-[30px] cursor-pointer"
-                  onClick={() => {
-                    updateLocalState({ prompt: "" });
-                    resetTranscript();
-                  }}
-                  disabled={loading}
-                >
-                  <img
-                    className="cursor-pointer h-[25px] w-[25px]"
-                    src={clear}
-                    alt="clear"
-                  />
-                </button>
+                <Tooltip text={t("description.clear")}>
+                  <button
+                    className="h-[30px] w-[30px] cursor-pointer"
+                    onClick={() => {
+                      updateLocalState({ prompt: "" });
+                      resetTranscript();
+                    }}
+                    disabled={loading}
+                  >
+                    <img
+                      className="cursor-pointer h-[25px] w-[25px]"
+                      src={clear}
+                      alt="clear"
+                    />
+                  </button>
+                </Tooltip>
               ) : null}
 
               <div className="flex gap-4 w-full justify-end items-center">
@@ -1408,17 +1372,19 @@ const Responses = ({
                   onChange={handleFilesChange}
                   className="hidden"
                 />
-                <button
-                  className="h-[30px] w-[30px] cursor-pointer"
-                  onClick={handleClick}
-                  disabled={loading}
-                >
-                  <img
-                    className="cursor-pointer h-[30px] w-[30px]"
-                    src={upload}
-                    alt="upload"
-                  />
-                </button>
+                <Tooltip text={t("description.upload")}>
+                  <button
+                    className="h-[30px] w-[30px] cursor-pointer"
+                    onClick={handleClick}
+                    disabled={loading}
+                  >
+                    <img
+                      className="cursor-pointer h-[30px] w-[30px]"
+                      src={upload}
+                      alt="upload"
+                    />
+                  </button>
+                </Tooltip>
 
                 {isImageSupported && (
                   <>
@@ -1430,85 +1396,95 @@ const Responses = ({
                       onChange={handleFilesChangeImage}
                       className="hidden"
                     />
-                    <button
-                      className="h-[30px] w-[30px] cursor-pointer"
-                      onClick={handleClickImage}
-                      disabled={loading}
-                    >
-                      <img
-                        className="cursor-pointer h-[30px] w-[30px]"
-                        src={image_icon}
-                        alt="attach image"
-                      />
-                    </button>
+                    <Tooltip text={t("description.attachImage")}>
+                      <button
+                        className="h-[30px] w-[30px] cursor-pointer"
+                        onClick={handleClickImage}
+                        disabled={loading}
+                      >
+                        <img
+                          className="cursor-pointer h-[30px] w-[30px]"
+                          src={image_icon}
+                          alt="attach image"
+                        />
+                      </button>
+                    </Tooltip>
                   </>
                 )}
 
                 {loading ? (
-                  <button className="h-[30px] w-[30px] cursor-pointer">
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={pause}
-                      alt="pause"
-                      onClick={handleAbortFetch}
-                    />
-                  </button>
+                  <Tooltip text={t("description.pause")}>
+                    <button className="h-[30px] w-[30px] cursor-pointer">
+                      <img
+                        className="cursor-pointer h-[30px] w-[30px]"
+                        src={pause}
+                        alt="pause"
+                        onClick={handleAbortFetch}
+                      />
+                    </button>
+                  </Tooltip>
                 ) : listening ? (
-                  <button
-                    className="h-[30px] w-[30px] cursor-pointer"
-                    type="button"
-                    onClick={() => {
-                      SpeechRecognition.stopListening();
-                    }}
-                  >
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={stop}
-                      alt="stop"
-                    />
-                  </button>
-                ) : localState.prompt !== "" ? (
-                  <button className="h-[30px] w-[30px] cursor-pointer">
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={send}
-                      alt="send"
-                      onClick={(event) => {
-                        handleSubmit(event);
+                  <Tooltip text={t("description.stop")}>
+                    <button
+                      className="h-[30px] w-[30px] cursor-pointer"
+                      type="button"
+                      onClick={() => {
+                        SpeechRecognition.stopListening();
                       }}
-                      disabled={loading}
-                    />
-                  </button>
+                    >
+                      <img
+                        className="cursor-pointer h-[30px] w-[30px]"
+                        src={stop}
+                        alt="stop"
+                      />
+                    </button>
+                  </Tooltip>
+                ) : localState.prompt !== "" ? (
+                  <Tooltip text={t("description.send")}>
+                    <button className="h-[30px] w-[30px] cursor-pointer">
+                      <img
+                        className="cursor-pointer h-[30px] w-[30px]"
+                        src={send}
+                        alt="send"
+                        onClick={(event) => {
+                          handleSubmit(event);
+                        }}
+                        disabled={loading}
+                      />
+                    </button>
+                  </Tooltip>
                 ) : (
-                  <button
-                    className="h-[30px] w-[30px] cursor-pointer"
-                    type="button"
-                    onClick={() => {
-                      navigator.permissions
-                        .query({ name: "microphone" })
-                        .then(function (result) {
-                          if (
-                            result.state === "prompt" ||
-                            result.state === "denied"
-                          ) {
-                            setShowMicModel(true);
-                          } else {
-                            let speechRecognitionLanguage =
-                              languageMap[i18n.language];
-                            SpeechRecognition.startListening({
-                              language: speechRecognitionLanguage,
-                              continuous: true,
-                            });
-                          }
-                        });
-                    }}
-                  >
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={mic}
-                      alt="microphone"
-                    />
-                  </button>
+                  <Tooltip text={t("description.listen")}>
+                    <button
+                      className="h-[30px] w-[30px] cursor-pointer"
+                      type="button"
+                      onClick={() => {
+                        navigator.permissions
+                          .query({ name: "microphone" })
+                          .then(function (result) {
+                            if (
+                              result.state === "prompt" ||
+                              result.state === "denied"
+                            ) {
+                              setShowMicModel(true);
+                            } else {
+                              let speechRecognitionLanguage =
+                                languageMap[i18n.language];
+                              SpeechRecognition.startListening({
+                                language: speechRecognitionLanguage,
+                                continuous: true,
+                              });
+                            }
+                          });
+                      }}
+                    >
+                      <img
+                        className="cursor-pointer h-[30px] w-[30px]"
+                        src={mic}
+                        alt="microphone"
+                      />
+                    </button>
+                  </Tooltip>
                 )}
               </div>
             </div>

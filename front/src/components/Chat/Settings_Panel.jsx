@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { Trans, useTranslation } from "react-i18next";
-import Tooltip from "../Others/Tooltip";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
@@ -8,23 +8,18 @@ import cross from "../../assets/cross.svg";
 import dropdown from "../../assets/icon_dropdown.svg";
 import uploaded from "../../assets/file_uploaded.svg";
 import share_icon from "../../assets/share_icon.svg";
-import { useEffect, useMemo, useRef, useState } from "react";
 import ArcanaContainer from "../Arcanas/ArcanaContainer";
 import { useDispatch, useSelector } from "react-redux";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  useLocation,
-  useNavigate,
-  useSearchParams,
-} from "react-router-dom";
-import { useToast } from "../../hooks/useToast";
-import { addConversation, selectConversations, updateConversation } from "../../Redux/reducers/conversationsSlice";
+  addConversation,
+  selectConversations,
+  updateConversation,
+} from "../../Redux/reducers/conversationsSlice";
 
 const Settings_Panel = ({
-  // File Management
   selectedFiles,
   setSelectedFiles,
-
-  // Model Settings
   modelSettings,
   modelList,
   currentModel,
@@ -32,21 +27,31 @@ const Settings_Panel = ({
   onModelChange,
   showAdvOpt,
   toggleAdvOpt,
-  dropdownRef,
-
-  // Local State Management
   localState,
   setLocalState,
   updateSettings,
   setShareSettingsModel,
-handleShareSettings,
-  // Help Modal Controls
+  handleShareSettings,
   setShowHelpModel,
   setShowArcanasHelpModel,
   setShowCustomHelpModel,
   setShowTpopHelpModel,
   setShowSystemHelpModel,
+  notifySuccess,
+  notifyError,
 }) => {
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "ready":
+        return "limegreen";
+      case "loading":
+        return "orange";
+      case "offline":
+        return "grey";
+      default:
+        return "red";
+    }
+  };
   const modelStatus = useMemo(
     () => ({
       color: currentModel ? getStatusColor(currentModel.status) : "red",
@@ -58,11 +63,10 @@ handleShareSettings,
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
- const conversations = useSelector(selectConversations);
- const currentConversationId = useSelector(
-   (state) => state.conversations.currentConversationId
- );
-  const { notifySuccess, notifyError } = useToast();
+  const conversations = useSelector(selectConversations);
+  const currentConversationId = useSelector(
+    (state) => state.conversations.currentConversationId
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [direction, setDirection] = useState("down");
   const [isHovering, setHovering] = useState(false);
@@ -72,6 +76,7 @@ handleShareSettings,
   const hasProcessedSettings = useRef(false);
   const hasProcessedImport = useRef(false);
   const hasProcessedArcana = useRef(false);
+  const dropdownRef = useRef(null);
 
   const removeFile = (index) => {
     const newFiles = JSON.parse(JSON.stringify(selectedFiles));
@@ -94,7 +99,6 @@ handleShareSettings,
   const handleInstructionsChange = (event) => {
     const { value } = event.target;
 
-    // Clear error when user starts typing
     if (systemPromptError) {
       setSystemPromptError("");
     }
@@ -107,18 +111,7 @@ handleShareSettings,
       },
     }));
   };
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "ready":
-        return "limegreen";
-      case "loading":
-        return "orange";
-      case "offline":
-        return "grey";
-      default:
-        return "red";
-    }
-  };
+
   const resetDefault = () => {
     let updatedConversation = localState.conversation.map((item) => {
       if (item.role === "system") {
@@ -140,7 +133,7 @@ handleShareSettings,
   };
   const validateSystemPrompt = () => {
     if (!localState.settings.systemPrompt?.trim()) {
-      setSystemPromptError(t("description.custom6")); // Your error message
+      setSystemPromptError(t("description.custom6"));
       return false;
     }
     return true;
@@ -180,7 +173,6 @@ handleShareSettings,
         try {
           hasProcessedSettings.current = true;
 
-          // Try to decode the settings
           const decodedSettings = atob(encodedSettings);
           const settings = JSON.parse(decodedSettings);
 
@@ -230,7 +222,6 @@ handleShareSettings,
               })
             );
 
-            // Navigate to new conversation
             navigate(`/chat/${newId}`, { replace: true });
           }
         } catch (error) {
@@ -278,7 +269,6 @@ handleShareSettings,
 
           if (newId) {
             if (Array.isArray(parsedData.messages)) {
-              // Handle object with messages format
               let newArray = [];
               for (let i = 0; i < parsedData.messages.length; i++) {
                 if (
@@ -325,7 +315,6 @@ handleShareSettings,
                 })
               );
             } else if (Array.isArray(parsedData)) {
-              // Handle array format
               let newArray = [];
               for (let i = 0; i < parsedData.length; i++) {
                 if (
@@ -363,7 +352,6 @@ handleShareSettings,
               );
             }
 
-            // Navigate after update
             navigate(`/chat/${newId}`, { replace: true });
             notifySuccess("Chat imported successfully");
           }
@@ -474,10 +462,8 @@ handleShareSettings,
     }
   };
 
- 
   return (
     <div className="w-[40%] mobile:w-full p-2 text-tertiary flex flex-col justify-end">
-      {/* Files Section */}
       <div>
         {selectedFiles.length > 0 && (
           <div className="flex flex-col gap-3 select-none">
@@ -534,7 +520,6 @@ handleShareSettings,
         )}
       </div>
 
-      {/* Settings Panel */}
       <div className="static flex justify-center mobile:absolute bottom-0 w-[calc(100%-12px)] shadow-lg dark:shadow-dark">
         {showAdvOpt ? (
           <div
@@ -546,7 +531,6 @@ handleShareSettings,
       rounded-2xl shadow-lg dark:shadow-dark bg-white 
       dark:bg-bg_secondary_dark h-fit w-full`}
           >
-            {/* Model Selection */}
             <div className="flex flex-col mobile:hidden gap-4">
               <div className="flex flex-wrap items-center gap-4 select-none">
                 <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
@@ -642,7 +626,6 @@ handleShareSettings,
               </div>
             )}
 
-            {/* Arcanas Section */}
             <div className="flex gap-4 w-full items-center">
               <div className="flex-shrink-0 flex items-center gap-2 select-none">
                 <p className="text-[18px]">Arcana</p>
@@ -659,7 +642,6 @@ handleShareSettings,
               />
             </div>
 
-            {/* Custom Instructions Section */}
             <div className="flex flex-col gap-4 items-center">
               {localState.arcana.id && localState.arcana.key && (
                 <div className="text-yellow-600 text-sm w-full select-none">
@@ -667,7 +649,6 @@ handleShareSettings,
                 </div>
               )}
 
-              {/* Temperature Slider */}
               <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
                 <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
                   <p className="text-[18px]">temp</p>
@@ -716,7 +697,6 @@ handleShareSettings,
                 </div>
               </div>
 
-              {/* Top_p Slider */}
               <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
                 <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
                   <p className="text-[18px]">top_p</p>
@@ -765,7 +745,6 @@ handleShareSettings,
                 </div>
               </div>
 
-              {/* System Prompt */}
               <div className="w-full flex flex-col gap-4">
                 <div className="flex-shrink-0 flex items-center gap-2 select-none">
                   <p className="text-[18px]">System prompt</p>
@@ -800,7 +779,6 @@ handleShareSettings,
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
                 <div
                   className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"

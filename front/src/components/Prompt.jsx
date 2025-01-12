@@ -1,10 +1,10 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect, useMemo } from "react";
 
 import { useParams } from "react-router-dom";
 import jsPDF from "jspdf";
 import { useDispatch, useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
-import Tooltip from "./Others/Tooltip";
 
 import Help_Model from "../model/Help_Model";
 import Mic_Model from "../model/Mic_Model";
@@ -13,7 +13,7 @@ import ExportTypeModel from "../model/ExportTypeModel";
 import Session_Expired from "../model/Session_Expired";
 import Bad_Request_Model from "../model/Bad_Request_Model";
 
-import Logo from "../assets/chatai-logo-v3-preview.png"; // Chat AI logo
+import Logo from "../assets/chatai-logo-v3-preview.png";
 import Help_Model_Custom from "../model/Help_Model_Custom";
 import Help_model_Arcanas from "../model/Help_model_Arcanas";
 import Help_Model_System from "../model/Help_Model_System";
@@ -31,7 +31,6 @@ import Settings_Panel from "./Chat/Settings_Panel";
 function Prompt({ modelSettings, modelList, onModelChange }) {
   const { notifySuccess, notifyError } = useToast();
 
-  // Redux State and Dispatch
   const dispatch = useDispatch();
   const { conversationId } = useParams();
 
@@ -168,7 +167,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     }
 
     try {
-      // Build the settings object with validation
       const settings = {
         systemPrompt: encodeURIComponent(localState.settings.systemPrompt),
         model_name: localState.settings.model,
@@ -191,20 +189,16 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
         }),
       };
 
-      // Validate the settings object
       if (Object.values(settings).some((value) => value === undefined)) {
         throw new Error("Invalid settings detected");
       }
 
-      // Convert settings object to a Base64-encoded string
       const settingsString = JSON.stringify(settings);
       const encodedSettings = btoa(settingsString);
 
-      // Get the base URL dynamically and always use /chat path
       const baseURL = window.location.origin;
       const url = `${baseURL}/chat?settings=${encodedSettings}`;
 
-      // Copy to clipboard
       navigator.clipboard
         .writeText(url)
         .then(() => {
@@ -222,9 +216,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     }
   };
 
-  // Exports conversation to a file
   const exportFile = (value) => {
-    // setShowFileModel(true); // Uncomment if you need to show a model before export
     if (value === "json") {
       exportJSON(localState.conversation);
     } else if (value === "pdf") {
@@ -234,7 +226,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     }
   };
 
-  // Function to generate a consistent file name
   const generateFileName = (extension) => {
     const date = new Date();
     const year = date.getFullYear();
@@ -246,12 +237,9 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     return `chat-ai-${year}-${month}-${day}-${hour}${minute}${second}.${extension}`;
   };
 
-  // Function to export conversation as a text file
   const exportTextFile = (conversation) => {
-    // Start with a copy of the conversation
     let exportData = [...conversation];
 
-    // Update system message with latest system prompt
     const systemMessageIndex = exportData.findIndex(
       (msg) => msg.role === "system"
     );
@@ -262,24 +250,21 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       };
     }
 
-    // Convert conversation JSON to a formatted string
     const textContent = exportData
       .map((msg) => {
         let contentString = `${msg.role.toUpperCase()}: `;
 
-        // Check if content is an array (i.e., contains text and image types)
         if (Array.isArray(msg.content)) {
           msg.content.forEach((item) => {
             if (item.type === "text") {
-              contentString += `${item.text}\n`; // Add text part
+              contentString += `${item.text}\n`;
             } else if (item.type === "image_url") {
               if (localState.exportOptions.exportImage) {
-                contentString += "[Image]\n"; // Add image placeholder if exportImage is true
+                contentString += "[Image]\n";
               }
             }
           });
         } else {
-          // For text-only content
           contentString += msg.content;
         }
 
@@ -290,7 +275,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     let finalTextContent = textContent;
 
     if (localState.exportOptions.exportSettings) {
-      // Append model information at the end of the text file
       const additionalText = `\n\nSettings used\nmodel-name: ${
         localState.settings.model
       }\nmodel: ${localState.settings.model_api}\ntemperature: ${
@@ -303,28 +287,21 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       finalTextContent += additionalText;
     }
 
-    // Create a blob from the final string
     const blob = new Blob([finalTextContent], { type: "text/plain" });
 
-    // Create a link element
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = generateFileName("txt"); // Set the consistent file name
+    link.download = generateFileName("txt");
 
-    // Trigger the download
     link.click();
 
-    // Clean up the object URL
     URL.revokeObjectURL(link.href);
   };
 
-  // Exports conversation to a JSON file
   const exportJSON = (conversation) => {
     try {
-      // Start with a copy of the conversation
       let exportData = [...conversation];
 
-      // Update system message with latest system prompt
       const systemMessageIndex = exportData.findIndex(
         (msg) => msg.role === "system"
       );
@@ -335,7 +312,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
         };
       }
 
-      // Continue with the rest of the export logic
       if (!localState.exportOptions.exportImage) {
         exportData = exportData.map((msg) => {
           if (Array.isArray(msg.content)) {
@@ -382,7 +358,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     }
   };
 
-  // Function to export conversation as a PDF file
   const exportPDF = async (conversation) => {
     const doc = new jsPDF();
     doc.setProperties({
@@ -394,11 +369,10 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     });
     doc.setFont("helvetica");
 
-    // Define colors as constants for consistency
     const COLORS = {
-      DEFAULT: [0, 0, 0], // Black
-      HEADER_DATE: [150, 150, 150], // Gray for date
-      ROLE: [0, 102, 204], // Blue for role names
+      DEFAULT: [0, 0, 0],
+      HEADER_DATE: [150, 150, 150],
+      ROLE: [0, 102, 204],
     };
 
     const pageWidth = doc.internal.pageSize.width;
@@ -444,18 +418,15 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       if (y + spaceNeeded > pageHeight - margin) {
         doc.addPage();
         addHeader(false);
-        resetTextStyle(); // Reset text style after new page
+        resetTextStyle();
       }
     };
 
-    // Initialize the PDF
     addHeader(true);
     resetTextStyle();
 
-    // Process conversation
     let conversationData = [...conversation];
 
-    // Update system message with latest system prompt
     const systemMessageIndex = conversationData.findIndex(
       (msg) => msg.role === "system"
     );
@@ -479,22 +450,18 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       });
     }
 
-    // Render conversation content
     for (const entry of conversationData) {
       addNewPageIfNeeded(lineHeight * 2);
 
-      // Role header
       doc.setFontSize(10);
       doc.setTextColor(...COLORS.ROLE);
       doc.text(`${entry.role}:`, margin, y);
       y += lineHeight;
 
-      // Reset to default style for content
       resetTextStyle();
 
       if (typeof entry.content === "string") {
         if (entry.content.includes("```")) {
-          // Handle code blocks
           const parts = entry.content.split(/(```[\s\S]+?```)/);
           for (const part of parts) {
             if (part.startsWith("```")) {
@@ -520,10 +487,9 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
                   doc.text(line, margin + 5, y + 5 + index * lineHeight);
                 });
                 y += lineHeight * (codeLines.length + 0.5);
-                resetTextStyle(); // Reset after code block
+                resetTextStyle();
               }
             } else {
-              // Normal text
               const lines = doc.splitTextToSize(part, contentWidth);
               lines.forEach((line) => {
                 addNewPageIfNeeded(lineHeight);
@@ -533,7 +499,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
             }
           }
         } else {
-          // Regular text content
           const lines = doc.splitTextToSize(entry.content, contentWidth);
           lines.forEach((line) => {
             addNewPageIfNeeded(lineHeight);
@@ -573,7 +538,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
       y += lineHeight;
     }
 
-    // Add settings information
     if (localState.exportOptions.exportSettings) {
       addNewPageIfNeeded(
         lineHeight * (localState.exportOptions.exportArcana ? 7 : 5)
@@ -603,7 +567,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
         y += lineHeight;
       }
     }
-    // Add page numbers and save
     addPageNumbers();
     doc.save(generateFileName("pdf"));
   };
@@ -624,11 +587,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
   return (
     <>
       <div className="flex mobile:flex-col flex-row h-full sm:justify-between relative">
-        {/* Section 1 */}
         <Responses
-          // UI State
-
-          // UI State
           modelList={modelList}
           selectedFiles={selectedFiles}
           setSelectedFiles={setSelectedFiles}
@@ -645,13 +604,9 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
           updateSettings={updateSettings}
           clearHistory={clearHistory}
         />
-        {/* Section 2 */}
         <Settings_Panel
-          // File Management
           selectedFiles={selectedFiles}
           setSelectedFiles={setSelectedFiles}
-          // Advanced Options State
-
           modelSettings={modelSettings}
           modelList={modelList}
           currentModel={currentModel}
@@ -659,67 +614,57 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
           onModelChange={onModelChange}
           showAdvOpt={showAdvOpt}
           toggleAdvOpt={toggleAdvOpt}
-          // Local State Management
           localState={localState}
           setLocalState={setLocalState}
           updateSettings={updateSettings}
-          // System Prompt
-
           showModel={setShareSettingsModel}
           handleShareSettings={handleShareSettings}
-          // Help Modal Controls
           setShowHelpModel={setShowHelpModel}
           setShowArcanasHelpModel={setShowArcanasHelpModel}
           setShowCustomHelpModel={setShowCustomHelpModel}
           setShowTpopHelpModel={setShowTpopHelpModel}
           setShowSystemHelpModel={setShowSystemHelpModel}
+          notifySuccess={notifySuccess}
+          notifyError={notifyError}
         />
       </div>
 
-      {/* Help model for info on changing model */}
       <>{showHelpModel ? <Help_Model showModel={setShowHelpModel} /> : null}</>
 
-      {/* Help model for info on custom temperature */}
       <div className="">
         {showCustomHelpModel ? (
           <Help_Model_Custom showModel={setShowCustomHelpModel} />
         ) : null}
       </div>
 
-      {/* Help model for info on custom temperature */}
       <div className="">
         {showTpopHelpModel ? (
           <Help_Model_Tpop showModel={setShowTpopHelpModel} />
         ) : null}
       </div>
 
-      {/* Help model for info on system prompt */}
       <div className="">
         {showSystemHelpModel ? (
           <Help_Model_System showModel={setShowSystemHelpModel} />
         ) : null}
       </div>
 
-      {/* Help model for info on custom instructions */}
       <div className="">
         {showArcanasHelpModel ? (
           <Help_model_Arcanas showModel={setShowArcanasHelpModel} />
         ) : null}
       </div>
 
-      {/* Pop-up if microphone permission is not given or denied */}
       <div className="">
         {showMicModel ? <Mic_Model showModel={setShowMicModel} /> : null}
       </div>
 
-      {/* Pop-up for info about custom instructions */}
       <div className="">
         {showCusModel ? (
           <Cutom_Instructions_Model showModel={setShowCusModel} />
         ) : null}
       </div>
 
-      {/* Pop-up  for export file model*/}
       <div className="">
         {showFileModel ? (
           <ExportTypeModel
@@ -735,21 +680,18 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
         ) : null}
       </div>
 
-      {/* Pop-up  for session expired model*/}
       <div className="">
         {showModelSession ? (
           <Session_Expired showModel={setShowModelSession} />
         ) : null}
       </div>
 
-      {/* Pop-up token limit exceed*/}
       <div className="">
         {showBadRequest ? (
           <Bad_Request_Model showModel={setShowBadRequest} />
         ) : null}
       </div>
 
-      {/* Pop-up clear history*/}
       <div className="">
         {showHistoryModel ? (
           <Clear_History_Model
@@ -761,7 +703,6 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
         ) : null}
       </div>
 
-      {/* Pop-up share settings*/}
       <div className="">
         {shareSettingsModel ? (
           <Share_Settings_Model
