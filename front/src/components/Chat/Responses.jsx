@@ -515,11 +515,11 @@ const Responses = ({
     setEditedText(prompt);
     setTimeout(() => adjustHeight(index), 0);
   };
-  const handleCloseClick = (index) => {
+  const handleCloseClick = useCallback((index) => {
     if (editingIndex === index) {
       setEditingIndex(null);
     }
-  };
+  }, [editingIndex]);
   const handleClickOutside = (event, index) => {
     if (
       containerRefs.current[index] &&
@@ -939,7 +939,14 @@ const Responses = ({
   useEffect(() => {
     const handleOutsideClick = (event) => {
       localState.responses.forEach((_, index) => {
-        handleClickOutside(event, index);
+        if (
+          containerRefs.current[index] &&
+          !containerRefs.current[index].contains(event.target) &&
+          textareaRefs.current[index] !== event.target
+        ) {
+          handleCloseClick(index);
+          setIsEditing(false);
+        }
       });
     };
 
@@ -950,7 +957,7 @@ const Responses = ({
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
-  }, [isEditing, localState.responses]);
+  }, [isEditing, localState.responses, handleCloseClick]);
   useEffect(() => {
     adjustHeight();
   }, [localState.prompt, editedText]);

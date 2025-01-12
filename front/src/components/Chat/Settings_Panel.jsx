@@ -260,7 +260,16 @@ const Settings_Panel = ({
     if (conversations.length > 0) {
       handleSettings();
     }
-  }, [searchParams, location.pathname, conversations.length]);
+  }, [
+    searchParams,
+    location.pathname,
+    conversations.length,
+    currentConversationId,
+    dispatch,
+    navigate,
+    notifyError,
+    setLocalState,
+  ]);
 
   useEffect(() => {
     const handleImport = async () => {
@@ -405,7 +414,17 @@ const Settings_Panel = ({
     if (conversations.length > 0) {
       handleImport();
     }
-  }, [searchParams, location.pathname, conversations.length]);
+  }, [
+    searchParams,
+    location.pathname,
+    conversations.length,
+    currentConversationId,
+    dispatch,
+    navigate,
+    notifyError,
+    notifySuccess,
+    setLocalState,
+  ]);
 
   useEffect(() => {
     const handleArcanaParams = async () => {
@@ -470,10 +489,12 @@ const Settings_Panel = ({
   }, [
     searchParams,
     location.pathname,
-    conversations.length,
+    conversations,
     currentConversationId,
     dispatch,
     navigate,
+    notifyError,
+    setLocalState,
   ]);
 
   return (

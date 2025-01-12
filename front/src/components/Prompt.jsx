@@ -104,7 +104,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
         arcana: { ...currentConversation.arcana },
       });
     }
-  }, [conversationId, currentConversation]);
+  }, [conversationId, currentConversation, dispatch]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -122,7 +122,7 @@ function Prompt({ modelSettings, modelList, onModelChange }) {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [localState, currentConversation]);
+  }, [localState, currentConversation, conversationId, dispatch]);
   useEffect(() => {
     const root = window.document.documentElement;
 
