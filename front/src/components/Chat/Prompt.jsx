@@ -27,29 +27,35 @@ const MIN_HEIGHT = 56;
 
 function Prompt({
   modelList,
-  isImageSupported,
-  localState,
-  toggleAdvOpt,
   loading,
-  setLoading,
-  updateLocalState,
-  setShowMicModel,
+  isImageSupported,
   selectedFiles,
-  setSelectedFiles,
+  localState,
   setLocalState,
+  setShowMicModel,
+  setLoading,
+  setSelectedFiles,
   setShowModelSession,
   setShowBadRequest,
+  toggleAdvOpt,
+  updateLocalState,
   notifySuccess,
   notifyError,
   adjustHeight,
 }) {
-  const textareaRef = useRef(null);
+  //Hooks
   const { t, i18n } = useTranslation();
-
   const { listening, resetTranscript } = useSpeechRecognition();
+
+  //Local useState
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  //Refs
   const hiddenFileInput = useRef(null);
   const hiddenFileInputImage = useRef(null);
+  const textareaRef = useRef(null);
+
+  //Functions
   const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -57,46 +63,6 @@ function Prompt({
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-  };
-
-  const handleDrop = async (event) => {
-    if (!isImageSupported) return;
-    event.preventDefault();
-    try {
-      const droppedFiles = Array.from(event.dataTransfer.files).filter(
-        (file) =>
-          file.type === "image/jpeg" ||
-          file.type === "image/png" ||
-          file.type === "image/gif" ||
-          file.type === "image/webp"
-      );
-
-      if (droppedFiles.length === 0) {
-        notifyError("Only image files are allowed");
-        return;
-      } else {
-        notifySuccess("Image(s) dropped");
-      }
-
-      const imageFileList = [];
-      for (const file of droppedFiles) {
-        const base64 = await readFileAsBase64(file);
-        imageFileList.push({
-          name: file.name,
-          type: "image",
-          size: file.size,
-          text: base64,
-        });
-      }
-
-      setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
-    } catch (error) {
-      notifyError("An error occurred while dropping the files: ", error);
-    }
-  };
-  const handleChange = (event) => {
-    updateLocalState({ prompt: event.target.value });
-    adjustHeight();
   };
   async function getRes(updatedConversation) {
     setLoading(true);
@@ -189,6 +155,46 @@ function Prompt({
       }
     }
   }
+
+  const handleDrop = async (event) => {
+    if (!isImageSupported) return;
+    event.preventDefault();
+    try {
+      const droppedFiles = Array.from(event.dataTransfer.files).filter(
+        (file) =>
+          file.type === "image/jpeg" ||
+          file.type === "image/png" ||
+          file.type === "image/gif" ||
+          file.type === "image/webp"
+      );
+
+      if (droppedFiles.length === 0) {
+        notifyError("Only image files are allowed");
+        return;
+      } else {
+        notifySuccess("Image(s) dropped");
+      }
+
+      const imageFileList = [];
+      for (const file of droppedFiles) {
+        const base64 = await readFileAsBase64(file);
+        imageFileList.push({
+          name: file.name,
+          type: "image",
+          size: file.size,
+          text: base64,
+        });
+      }
+
+      setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
+    } catch (error) {
+      notifyError("An error occurred while dropping the files: ", error);
+    }
+  };
+  const handleChange = (event) => {
+    updateLocalState({ prompt: event.target.value });
+    adjustHeight();
+  };
 
   const handleAbortFetch = () => {
     abortFetch(notifyError);

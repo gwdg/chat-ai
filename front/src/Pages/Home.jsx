@@ -1,5 +1,5 @@
 import ChatWindow from "../components/Chat/ChatWindow";
-import Layout from "../components/Layout/Layout"; // Importing the Layout component
+import Layout from "../components/Layout/Layout";
 
 // Home component
 function Home() {
@@ -10,4 +10,4 @@ function Home() {
   );
 }
 
-export default Home; // Exporting the Home component
+export default Home; 

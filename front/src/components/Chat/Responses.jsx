@@ -21,23 +21,27 @@ const MIN_HEIGHT = 56;
 function Responses({
   modelList,
   localState,
-  adjustHeight,
-  loading,
-  notifySuccess,
-  notifyError,
-  updateLocalState,
   setLocalState,
+  loading,
   setShowModelSession,
   setShowBadRequest,
   setSelectedFiles,
   setShowHistoryModel,
+  setShowFileModel,
+  updateLocalState,
+  adjustHeight,
+  notifySuccess,
+  notifyError,
   clearHistory,
   updateSettings,
-  setShowFileModel,
 }) {
-  const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
+  // Hooks
   const { t } = useTranslation();
 
+  // Redux state
+  const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
+
+  // Local useState
   const [editingIndex, setEditingIndex] = useState(null);
   const [editedText, setEditedText] = useState("");
   const [copied, setCopied] = useState(false);
@@ -47,6 +51,7 @@ function Responses({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [loadingResend, setLoadingResend] = useState(false);
 
+  //Refs
   const containerRef = useRef(null);
   const containerRefs = useRef([]);
   const textareaRefs = useRef([]);
@@ -57,6 +62,7 @@ function Responses({
   //Variable
   const isLoading = loading || loadingResend;
 
+  //Functions
   const handleResendClick = async (index) => {
     setLoadingResend(true);
 

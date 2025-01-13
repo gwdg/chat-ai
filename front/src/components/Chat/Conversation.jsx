@@ -118,36 +118,36 @@ const Conversation = ({
         <Responses
           modelList={modelList}
           localState={localState}
-          adjustHeight={adjustHeight}
-          loading={loading}
-          notifySuccess={notifySuccess}
-          notifyError={notifyError}
-          updateLocalState={updateLocalState}
           setLocalState={setLocalState}
+          loading={loading}
           setShowModelSession={setShowModelSession}
           setShowBadRequest={setShowBadRequest}
           setSelectedFiles={setSelectedFiles}
           setShowHistoryModel={setShowHistoryModel}
+          setShowFileModel={setShowFileModel}
+          updateLocalState={updateLocalState}
+          adjustHeight={adjustHeight}
+          notifySuccess={notifySuccess}
+          notifyError={notifyError}
           clearHistory={clearHistory}
           updateSettings={updateSettings}
-          setShowFileModel={setShowFileModel}
         />
       </div>
 
       <Prompt
         modelList={modelList}
-        isImageSupported={isImageSupported}
-        localState={localState}
-        toggleAdvOpt={toggleAdvOpt}
         loading={loading}
-        setLoading={setLoading}
-        updateLocalState={updateLocalState}
-        setShowMicModel={setShowMicModel}
+        isImageSupported={isImageSupported}
         selectedFiles={selectedFiles}
-        setSelectedFiles={setSelectedFiles}
+        localState={localState}
         setLocalState={setLocalState}
+        setShowMicModel={setShowMicModel}
+        setLoading={setLoading}
+        setSelectedFiles={setSelectedFiles}
         setShowModelSession={setShowModelSession}
         setShowBadRequest={setShowBadRequest}
+        toggleAdvOpt={toggleAdvOpt}
+        updateLocalState={updateLocalState}
         notifySuccess={notifySuccess}
         notifyError={notifyError}
         adjustHeight={adjustHeight}
