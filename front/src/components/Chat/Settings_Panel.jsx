@@ -46,8 +46,10 @@ const Settings_Panel = ({
   notifySuccess,
   notifyError,
 }) => {
-  //Varaibles and Functions
+  //Variables and Functions
   const getStatusColor = (status) => {
+    console.log(status);
+
     switch (status) {
       case "ready":
         return "limegreen";
@@ -330,7 +332,7 @@ const Settings_Panel = ({
                       model:
                         parsedData["model-name"] ||
                         parsedData.model ||
-                        "Meta Llama 3.1 8B Instruct",
+                        "Meta LLaMA 3.1 8B Instruct",
                       model_api:
                         parsedData.model || "meta-llama-3.1-8b-instruct",
                       temperature: parsedData.temperature || 0.5,

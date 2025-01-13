@@ -314,7 +314,7 @@ function Prompt({
 
   const handleFilesChange = async (e) => {
     try {
-      const textFiles = Array.from(e.target.filemodelLists).filter(
+      const textFiles = Array.from(e.target.files).filter(
         (file) => file.type === "text/plain"
       );
       const csvFiles = Array.from(e.target.files).filter(
