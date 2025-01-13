@@ -10,8 +10,8 @@ import profile_icon from "../../assets/profile_icon.svg";
 import Logo from "../../assets/chatai-logo-v3-preview.png";
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
-import Help_Model from "../../model/Help_Model";
-import Session_Expired from "../../model/Session_Expired";
+import HelpModal from "../../modals/HelpModal";
+import SessionExpiredModal from "../../modals/SessionExpiredModal";
 import AnnouncementBar from "../Others/AnnouncementBar";
 
 const getStatusColor = (status) => {
@@ -32,7 +32,7 @@ function Header({
   modelSettings,
   modelList,
   onModelChange,
-  setShowSettingsModel,
+  setShowSettingsModal,
   userData,
 }) {
   const dispatch = useDispatch();
@@ -44,8 +44,8 @@ function Header({
   );
   const [isOpen, setIsOpen] = useState(false);
   const [isIOSChrome, setIsIOSChrome] = useState(false);
-  const [showHelpModel, setShowHelpModel] = useState(false);
-  const [showModelSession, setShowModelSession] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showModalSession, setShowModalSession] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   const dropdownRef = useRef(null);
@@ -179,7 +179,7 @@ function Header({
           {userData?.username ? (
             <div
               className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
-              onClick={() => setShowSettingsModel(true)}
+              onClick={() => setShowSettingsModal(true)}
             >
               <div className="w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
                 <span className="text-tertiary font-medium">
@@ -192,7 +192,7 @@ function Header({
               className="h-[32px] w-[32px]"
               src={profile_icon}
               alt="Profile"
-              onClick={() => setShowSettingsModel(true)}
+              onClick={() => setShowSettingsModal(true)}
             />
           )}
         </div>
@@ -311,7 +311,7 @@ function Header({
               className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity"
               onClick={(event) => {
                 event.stopPropagation();
-                setShowHelpModel(true);
+                setShowHelpModal(true);
               }}
             />
 
@@ -337,7 +337,7 @@ function Header({
             {userData?.username ? (
               <div
                 className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
-                onClick={() => setShowSettingsModel(true)}
+                onClick={() => setShowSettingsModal(true)}
               >
                 <div className="w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
                   <span className="text-tertiary font-medium">
@@ -350,15 +350,15 @@ function Header({
                 className="h-[32px] w-[32px]"
                 src={profile_icon}
                 alt="Profile"
-                onClick={() => setShowSettingsModel(true)}
+                onClick={() => setShowSettingsModal(true)}
               />
             )}
           </div>
         </div>
       </nav>
 
-      {showHelpModel && <Help_Model showModel={setShowHelpModel} />}
-      {showModelSession && <Session_Expired showModel={setShowModelSession} />}
+      {showHelpModal && <HelpModal showModal={setShowHelpModal} />}
+      {showModalSession && <SessionExpiredModal showModal={setShowModalSession} />}
     </>
   );
 }

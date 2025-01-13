@@ -26,11 +26,11 @@ const Conversation = ({
   isImageSupported,
   setSelectedFiles,
   setLocalState,
-  setShowModelSession,
+  setShowModalSession,
   setShowBadRequest,
-  setShowFileModel,
-  setShowMicModel,
-  setShowHistoryModel,
+  setShowFileModal,
+  setShowMicModal,
+  setShowHistoryModal,
   toggleAdvOpt,
   updateLocalState,
   updateSettings,
@@ -45,7 +45,7 @@ const Conversation = ({
   const countClose = useSelector((state) => state.count);
 
   // Local useState
-  const [showModel, setShowModel] = useState(true);
+  const [showModal, setshowModal] = useState(true);
   const [count, setCount] = useState(countClose);
 
   const [loading, setLoading] = useState(false);
@@ -68,7 +68,7 @@ const Conversation = ({
   return (
     <div className="flex flex-col items-center mobile:w-full w-[60%] h-full gap-3 sm:justify-between relative p-2 bg-bg_light dark:bg-bg_dark">
       <div className="desktop:max-h-full flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-12px)] mobile:w-full border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
-        {showModel && count < 3 && (
+        {showModal && count < 3 && (
           <div className="w-[calc(100%-16px)] sticky select-none m-2 h-fit bg-white dark:bg-black p-2 rounded-2xl flex justify-between items-center border dark:border-border_dark shadow-lg dark:shadow-dark">
             <p className="dark:text-white text-black">
               <Trans i18nKey="description.note1" />
@@ -107,7 +107,7 @@ const Conversation = ({
               alt="cross"
               className="h-[30px] w-[30px] cursor-pointer"
               onClick={() => {
-                setShowModel(false);
+                setshowModal(false);
                 dispatch(setCountGlobal(count + 1));
                 setCount((prevCount) => prevCount + 1);
               }}
@@ -120,11 +120,11 @@ const Conversation = ({
           localState={localState}
           setLocalState={setLocalState}
           loading={loading}
-          setShowModelSession={setShowModelSession}
+          setShowModalSession={setShowModalSession}
           setShowBadRequest={setShowBadRequest}
           setSelectedFiles={setSelectedFiles}
-          setShowHistoryModel={setShowHistoryModel}
-          setShowFileModel={setShowFileModel}
+          setShowHistoryModal={setShowHistoryModal}
+          setShowFileModal={setShowFileModal}
           updateLocalState={updateLocalState}
           adjustHeight={adjustHeight}
           notifySuccess={notifySuccess}
@@ -141,10 +141,10 @@ const Conversation = ({
         selectedFiles={selectedFiles}
         localState={localState}
         setLocalState={setLocalState}
-        setShowMicModel={setShowMicModel}
+        setShowMicModal={setShowMicModal}
         setLoading={setLoading}
         setSelectedFiles={setSelectedFiles}
-        setShowModelSession={setShowModelSession}
+        setShowModalSession={setShowModalSession}
         setShowBadRequest={setShowBadRequest}
         toggleAdvOpt={toggleAdvOpt}
         updateLocalState={updateLocalState}

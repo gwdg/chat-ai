@@ -23,7 +23,7 @@ import {
   updateConversation,
 } from "../../Redux/reducers/conversationsSlice";
 
-const Settings_Panel = ({
+const SettingsPanel = ({
   selectedFiles,
   setSelectedFiles,
   modelSettings,
@@ -36,20 +36,18 @@ const Settings_Panel = ({
   localState,
   setLocalState,
   updateSettings,
-  setShareSettingsModel,
+  setShareSettingsModal,
   handleShareSettings,
-  setShowHelpModel,
-  setShowArcanasHelpModel,
-  setShowCustomHelpModel,
-  setShowTpopHelpModel,
-  setShowSystemHelpModel,
+  setShowHelpModal,
+  setShowArcanasHelpModal,
+  setShowCustomHelpModal,
+  setShowTpopHelpModal,
+  setShowSystemHelpModal,
   notifySuccess,
   notifyError,
 }) => {
   //Variables and Functions
   const getStatusColor = (status) => {
-    console.log(status);
-
     switch (status) {
       case "ready":
         return "limegreen";
@@ -168,11 +166,11 @@ const Settings_Panel = ({
     const numVal = parseFloat(newValue);
     updateSettings({ top_p: numVal });
   };
-  const handleShareSettingsModel = () => {
+  const handleShareSettingsModal = () => {
     if (localState.dontShow.dontShowAgainShare) {
       handleShareSettings();
     } else {
-      setShareSettingsModel(true);
+      setShareSettingsModal(true);
     }
   };
 
@@ -578,7 +576,7 @@ const Settings_Panel = ({
                     src={help}
                     alt="help"
                     className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowHelpModel(true)}
+                    onClick={() => setShowHelpModal(true)}
                   />
                 </div>
 
@@ -670,7 +668,7 @@ const Settings_Panel = ({
                   src={help}
                   alt="help"
                   className="h-[20px] w-[20px] cursor-pointer"
-                  onClick={() => setShowArcanasHelpModel(true)}
+                  onClick={() => setShowArcanasHelpModal(true)}
                 />
               </div>
               <ArcanaContainer
@@ -693,7 +691,7 @@ const Settings_Panel = ({
                     src={help}
                     alt="help"
                     className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowCustomHelpModel(true)}
+                    onClick={() => setShowCustomHelpModal(true)}
                   />
                 </div>
                 <div className="w-full">
@@ -741,7 +739,7 @@ const Settings_Panel = ({
                     src={help}
                     alt="help"
                     className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowTpopHelpModel(true)}
+                    onClick={() => setShowTpopHelpModal(true)}
                   />
                 </div>
                 <div className="w-full">
@@ -789,7 +787,7 @@ const Settings_Panel = ({
                     src={help}
                     alt="help"
                     className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowSystemHelpModel(true)}
+                    onClick={() => setShowSystemHelpModal(true)}
                   />
                 </div>
                 <div className="w-full relative">
@@ -832,7 +830,7 @@ const Settings_Panel = ({
                 <button
                   className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
                   type="reset"
-                  onClick={() => handleShareSettingsModel()}
+                  onClick={() => handleShareSettingsModal()}
                 >
                   <div className="hidden desktop:block">
                     <Trans i18nKey="description.custom9" />
@@ -887,7 +885,7 @@ const Settings_Panel = ({
                     src={help}
                     alt="help"
                     className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowHelpModel(true)}
+                    onClick={() => setShowHelpModal(true)}
                   />
                 </div>
 
@@ -979,6 +977,6 @@ const Settings_Panel = ({
   );
 };
 
-Settings_Panel.defaultProps = {};
+SettingsPanel.defaultProps = {};
 
-export default Settings_Panel;
+export default SettingsPanel;

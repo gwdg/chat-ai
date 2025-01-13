@@ -1,24 +1,24 @@
 import { Trans } from "react-i18next";
-import Model from "./Model";
+import ContainerModal from "./ContainerModal";
 import cross from "../assets/cross.svg";
 
-function Settings_Model(props) {
+function SettingsModal(props) {
   const handleLogout = () => {
     window.location.href =
       "https://keycloak.sso.gwdg.de/auth/realms/academiccloud/protocol/openid-connect/logout";
   };
 
   return (
-    <Model showModel={props.showModel} isSettingsModel={true}>
+    <ContainerModal showModal={props.showModal} isSettingsModel={true}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
-        {/* Model header */}
+        {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">User Profile</p>
           <img
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-            onClick={() => props.showModel(false)}
+            onClick={() => props.showModal(false)}
           />
         </div>
 
@@ -67,7 +67,7 @@ function Settings_Model(props) {
               {" "}
               <button
                 className="max-w-[250px] w-full p-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
-                onClick={() => props.setShowCacheModel(true)}
+                onClick={() => props.setShowCacheModal(true)}
               >
                 <Trans i18nKey="description.file2" />
               </button>
@@ -75,8 +75,9 @@ function Settings_Model(props) {
           </div>
         </div>
       </div>
-    </Model>
+    </ContainerModal>
+
   );
 }
 
-export default Settings_Model;
+export default SettingsModal;

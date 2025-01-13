@@ -1,6 +1,7 @@
+/* eslint-disable no-unused-vars */
 // Importing necessary modules
 import { Trans } from "react-i18next"; // For translation
-import Model from "./Model"; // Importing Model component
+import ContainerModal from "./ContainerModal"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
 import json_icon from "../assets/json_icon.svg";
 import pdf_icon from "../assets/pdf_icon.svg";
@@ -8,7 +9,7 @@ import txt_icon from "../assets/txt_icon.svg";
 import { useState } from "react"; // For managing component state
 
 // Export type model component
-function ExportTypeModel(props) {
+function ExportTypeModal(props) {
   const [value, setValue] = useState("json");
   const [containsImage, setContainsImage] = useState(
     props.conversation.some((message) => {
@@ -28,7 +29,7 @@ function ExportTypeModel(props) {
   // Function to handle export file action
   function exportFile() {
     props.exportFile(value, props.conversation); // Pass the conversation data
-    props.showModel(false); // Close the model
+    props.showModal(false); // Close the model
   }
 
   // Array of export options
@@ -70,7 +71,7 @@ function ExportTypeModel(props) {
   };
 
   return (
-    <Model showModel={props.showModel}>
+    <ContainerModal showModal={props.showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
@@ -80,7 +81,7 @@ function ExportTypeModel(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModel(false)}
+            onClick={() => props.showModal(false)}
           />
         </div>
         <div className="flex flex-col gap-4 p-4">
@@ -183,8 +184,9 @@ function ExportTypeModel(props) {
           </div>
         </div>
       </div>
-    </Model>
+    </ContainerModal>
+
   );
 }
 
-export default ExportTypeModel;
+export default ExportTypeModal;

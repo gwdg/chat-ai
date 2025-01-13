@@ -1,21 +1,22 @@
+/* eslint-disable no-unused-vars */
 // Importing necessary modules
 import { Trans } from "react-i18next"; // For translation
-import Model from "./Model"; // Importing Model component
+import ContainerModal from "./ContainerModal"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
-import { offlineModelCall } from "../apis/OfflineCall";
+import { offlineModelCall } from "../apis/OfflineModelCallApi";
 
-function Offline_Model_Model(props) {
+function OfflineModelInfoModal(props) {
   async function getRes() {
     try {
       const response = await offlineModelCall(props?.model);
     } catch (error) {
       console.error("An error occurred", error);
     }
-    props?.showModel(false);
+    props?.showModal(false);
   }
 
   return (
-    <Model showModel={props.showModel}>
+    <ContainerModal showModal={props.showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
@@ -25,7 +26,7 @@ function Offline_Model_Model(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModel(false)}
+            onClick={() => props.showModal(false)}
           />
         </div>
         <div className="flex flex-col gap-2 p-4">
@@ -44,8 +45,9 @@ function Offline_Model_Model(props) {
           </div>
         </div>
       </div>
-    </Model>
+    </ContainerModal>
+
   );
 }
 
-export default Offline_Model_Model;
+export default OfflineModelInfoModal;

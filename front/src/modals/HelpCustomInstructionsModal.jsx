@@ -1,13 +1,13 @@
 import { Trans } from "react-i18next"; // For translation
-import Model from "./Model"; // Importing Model component
+import ContainerModal from "./ContainerModal"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
 
-function Help_Model_Tpop(props) {
+function HelpCustomInstructionsModal(props) {
   return (
     // Model component with help content
-    <Model showModel={props.showModel}>
+    <ContainerModal showModal={props.showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
-        {/* Model header */}
+        {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
             {/* Translation for help title */}
@@ -18,7 +18,7 @@ function Help_Model_Tpop(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModel(false)} // Click handler to close model
+            onClick={() => props.showModal(false)} // Click handler to close model
           />
         </div>
         {/* Help content */}
@@ -28,12 +28,13 @@ function Help_Model_Tpop(props) {
             <Trans i18nKey="description.custom2"></Trans>
           </p>
           <p className="dark:text-white text-black">
-            <Trans i18nKey="description.t_pop"></Trans>
+            <Trans i18nKey="description.temperature"></Trans>
           </p>
         </div>
       </div>
-    </Model>
+    </ContainerModal>
+
   );
 }
 
-export default Help_Model_Tpop;
+export default HelpCustomInstructionsModal;

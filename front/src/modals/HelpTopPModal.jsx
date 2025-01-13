@@ -1,14 +1,13 @@
-// Importing necessary modules
 import { Trans } from "react-i18next"; // For translation
-import Model from "./Model"; // Importing Model component
+import ContainerModal from "./ContainerModal"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
 
-function Help_model_Arcanas(props) {
+function HelpTopPModal(props) {
   return (
     // Model component with help content
-    <Model showModel={props.showModel}>
+    <ContainerModal showModal={props.showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
-        {/* Model header */}
+        {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
             {/* Translation for help title */}
@@ -19,19 +18,23 @@ function Help_model_Arcanas(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModel(false)} // Click handler to close model
+            onClick={() => props.showModal(false)} // Click handler to close model
           />
         </div>
         {/* Help content */}
-        <div className="p-4 pt-0">
-          <p className="dark:text-white text-black text-justify">
-            {/* Translation for help note */}
-            <Trans i18nKey="description.arcana_note"></Trans>
+        <div className="p-4 pt-0 flex flex-col gap-0">
+          {/* Instruction hint */}
+          <p className="text-red-600">
+            <Trans i18nKey="description.custom2"></Trans>
+          </p>
+          <p className="dark:text-white text-black">
+            <Trans i18nKey="description.t_pop"></Trans>
           </p>
         </div>
       </div>
-    </Model>
+    </ContainerModal>
+
   );
 }
 
-export default Help_model_Arcanas;
+export default HelpTopPModal;

@@ -10,7 +10,7 @@ function Model(props) {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         // Close the model when the Escape key is pressed
-        props.showModel(false);
+        props.showModal(false);
         // If setActionButtonToggle prop is provided, set it to false
         if (props.setActionButtonToggle) {
           props.setActionButtonToggle(false);
@@ -35,7 +35,7 @@ function Model(props) {
       } flex items-center justify-center w-full h-full`}
       onClick={() => {
         // Close the model when clicked outside of it
-        props.showModel(false);
+        props.showModal(false);
         // If setActionButtonToggle prop is provided, set it to false
         if (props.setActionButtonToggle) {
           props.setActionButtonToggle(false);

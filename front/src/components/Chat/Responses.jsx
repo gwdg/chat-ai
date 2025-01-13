@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Tooltip from "../Others/Tooltip";
-import { getDataFromLLM } from "../../apis/Completion";
+import { getDataFromLLM } from "../../apis/LlmRequestApi";
 
 //Assets
 import retry from "../../assets/icon_retry.svg";
@@ -23,11 +23,11 @@ function Responses({
   localState,
   setLocalState,
   loading,
-  setShowModelSession,
+  setShowModalSession,
   setShowBadRequest,
   setSelectedFiles,
-  setShowHistoryModel,
-  setShowFileModel,
+  setShowHistoryModal,
+  setShowFileModal,
   updateLocalState,
   adjustHeight,
   notifySuccess,
@@ -159,7 +159,7 @@ function Responses({
         localState.settings.top_p,
         localState.arcana,
         setLocalState,
-        setShowModelSession,
+        setShowModalSession,
         setShowBadRequest,
         updatedConversation
       );
@@ -271,7 +271,7 @@ function Responses({
         localState.settings.top_p,
         localState.arcana,
         setLocalState,
-        setShowModelSession,
+        setShowModalSession,
         setShowBadRequest,
         updatedConversation
       );
@@ -460,7 +460,7 @@ function Responses({
     if (localState.dontShow.dontShowAgain) {
       clearHistory();
     } else {
-      setShowHistoryModel(true);
+      setShowHistoryModal(true);
     }
   };
 
@@ -774,7 +774,7 @@ function Responses({
             <Tooltip text={t("description.export")}>
               <button
                 className="text-tertiary flex gap-2 items-center"
-                onClick={() => setShowFileModel(true)}
+                onClick={() => setShowFileModal(true)}
                 disabled={loading}
               >
                 <img

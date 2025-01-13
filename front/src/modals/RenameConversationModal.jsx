@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import Model from "./Model";
+import ContainerModal from "./ContainerModal";
 import cross from "../assets/cross.svg";
 import { Trans, useTranslation } from "react-i18next";
 import { updateConversation } from "../Redux/reducers/conversationsSlice";
 
 function RenameConversationModal({
-  showModel,
+  showModal,
   conversationId,
   currentTitle,
   onClose,
@@ -53,7 +53,7 @@ function RenameConversationModal({
   };
 
   return (
-    <Model showModel={showModel}>
+    <ContainerModal showModal={showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
@@ -109,7 +109,8 @@ function RenameConversationModal({
           </div>
         </div>
       </div>
-    </Model>
+    </ContainerModal>
+
   );
 }
 

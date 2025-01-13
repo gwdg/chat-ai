@@ -1,15 +1,15 @@
 // Importing necessary modules
 import { Trans } from "react-i18next"; // For translation
-import Model from "./Model"; // Importing Model component
+import ContainerModal from "./ContainerModal"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
 
 // Custom instructions model component
-function Cutom_Instructions_Model(props) {
+function CustomInstructionsModal(props) {
   return (
     // Model component with custom instructions content
-    <Model showModel={props.showModel}>
+    <ContainerModal showModal={props.showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
-        {/* Model header */}
+        {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
             {/* Translation for help title */}
@@ -20,7 +20,7 @@ function Cutom_Instructions_Model(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModel(false)} // Click handler to close model
+            onClick={() => props.showModal(false)} // Click handler to close model
           />
         </div>
         {/* Model body */}
@@ -31,8 +31,9 @@ function Cutom_Instructions_Model(props) {
           </p>
         </div>
       </div>
-    </Model>
+    </ContainerModal>
+
   );
 }
 
-export default Cutom_Instructions_Model;
+export default CustomInstructionsModal;

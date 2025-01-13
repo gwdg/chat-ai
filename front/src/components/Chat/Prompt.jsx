@@ -13,7 +13,7 @@ import upload from "../../assets/add.svg";
 import mic from "../../assets/icon_mic.svg";
 import stop from "../../assets/stop_listening.svg";
 import pause from "../../assets/pause.svg";
-import { abortFetch, getDataFromLLM } from "../../apis/Completion";
+import { abortFetch, getDataFromLLM } from "../../apis/LlmRequestApi";
 import Tooltip from "../Others/Tooltip";
 import { useTranslation } from "react-i18next";
 
@@ -32,10 +32,10 @@ function Prompt({
   selectedFiles,
   localState,
   setLocalState,
-  setShowMicModel,
+  setShowMicModal,
   setLoading,
   setSelectedFiles,
-  setShowModelSession,
+  setShowModalSession,
   setShowBadRequest,
   toggleAdvOpt,
   updateLocalState,
@@ -133,7 +133,7 @@ function Prompt({
         localState.settings.top_p,
         localState.arcana,
         setLocalState,
-        setShowModelSession,
+        setShowModalSession,
         setShowBadRequest,
         processedConversation
       );
@@ -586,7 +586,7 @@ function Prompt({
                             result.state === "prompt" ||
                             result.state === "denied"
                           ) {
-                            setShowMicModel(true);
+                            setShowMicModal(true);
                           } else {
                             let speechRecognitionLanguage =
                               languageMap[i18n.language];

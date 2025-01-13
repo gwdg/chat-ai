@@ -1,14 +1,14 @@
 // Importing necessary modules
 import { Trans } from "react-i18next"; // For translation
-import Model from "./Model"; // Importing Model component
+import ContainerModal from "./ContainerModal"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
 
-function Clear_Cache_Model(props) {
+function DeleteArcanaModal(props) {
   return (
     // Model component with export type selection form
-    <Model showModel={props.showModel}>
+    <ContainerModal showModal={props.showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
-        {/* Model header */}
+        {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
             {/* Translation for help title */}
@@ -19,14 +19,14 @@ function Clear_Cache_Model(props) {
             src={cross}
             alt="cross"
             className="h-[30px] w-[30px] cursor-pointer"
-            onClick={() => props.showModel(false)} // Click handler to close model
+            onClick={() => props.showModal(false)} // Click handler to close model
           />
         </div>
         <div className="flex flex-col gap-2 p-4">
           <div className="pt-0 pb-2">
             <p className="dark:text-white text-black text-justify">
               {/* Translation for mic permission message */}
-              <Trans i18nKey="description.cache1"></Trans>
+              <Trans i18nKey="description.delete_arcana"></Trans>
             </p>
           </div>{" "}
           {/* Buttons */}
@@ -35,22 +35,23 @@ function Clear_Cache_Model(props) {
             {/* Close button */}
             <button
               className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-              onClick={() => props.showModel(false)} // Click handler to close model
+              onClick={() => props.showModal(false)} // Click handler to close model
             >
               <Trans i18nKey="description.cache2"></Trans>
             </button>{" "}
             {/* Clear cache button */}
             <button
               className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none "
-              onClick={() => props.clearCache()}
+              onClick={() => props.handleDelete()}
             >
-              <Trans i18nKey="description.cache3"></Trans>
+              <Trans i18nKey="description.delete_arcana1"></Trans>
             </button>
           </div>
         </div>
       </div>
-    </Model>
+    </ContainerModal>
+
   );
 }
 
-export default Clear_Cache_Model;
+export default DeleteArcanaModal;

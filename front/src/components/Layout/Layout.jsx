@@ -4,12 +4,12 @@ import Footer from "./Footer";
 import Sidebar from "./Sidebar";
 import ChatWindow from "../Chat/ChatWindow";
 import footer_arrow from "../../assets/footer_arrow.svg";
-import Clear_Cache_Model from "../../model/Clear_Cache_Model";
+import ClearCacheModal from "../../modals/ClearCacheModal";
 import store, { persistor } from "../../Redux/store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../hooks/useToast";
-import ConfirmationPopup from "../../model/ConfirmationPopup";
+import ConfirmationModal from "../../modals/ConfirmationModal";
 import {
   addConversation,
   deleteConversation,
@@ -18,19 +18,19 @@ import {
   updateConversation,
   selectCurrentConversation,
 } from "../../Redux/reducers/conversationsSlice";
-import { getModels } from "../../apis/ModelLIst";
-import Offline_Model_Model from "../../model/Offline_Model_Model";
-import Settings_Model from "../../model/Settings_Model";
-import { getUserData } from "../../apis/UserData";
-import RenameConversationModal from "../../model/RenameConversationModal";
-import Session_Expired from "../../model/Session_Expired";
+import { getModels } from "../../apis/ModelListApi";
+import OfflineModelInfoModal from "../../modals/OfflineModelInfoModal";
+import SettingsModal from "../../modals/SettingsModal";
+import { getUserData } from "../../apis/GetUserDataApi";
+import RenameConversationModal from "../../modals/RenameConversationModal";
+import SessionExpiredModal from "../../modals/SessionExpiredModal";
 
 function Layout() {
   const [showFooter, setShowFooter] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showCacheModel, setShowCacheModel] = useState(false);
-  const [showModelOffline, setShowModelOffline] = useState(false);
-  const [showSettingsModel, setShowSettingsModel] = useState(false);
+  const [showCacheModal, setShowCacheModal] = useState(false);
+  const [showModalOffline, setShowModalOffline] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [userData, setUserData] = useState(null);
 
   const mainDiv = useRef(null);
@@ -45,7 +45,7 @@ function Layout() {
   const currentConversationId = useSelector(selectCurrentConversationId);
   const currentConversation = useSelector(selectCurrentConversation);
   const [conversationIds, setConversationIds] = useState([]);
-  const [showModelSession, setShowModelSession] = useState(false);
+  const [showModalSession, setShowModalSession] = useState(false);
 
   // Model states
   const [modelList, setModelList] = useState([]);
@@ -77,7 +77,7 @@ function Layout() {
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const data = await getModels(setShowModelSession);
+        const data = await getModels(setShowModalSession);
         setModelList(data);
       } catch (error) {
         notifyError("Error fetching models:", error);
@@ -104,7 +104,7 @@ function Layout() {
       (modelX) => modelX.name === modelSettings.model
     );
     if (currentModel?.status === "offline") {
-      setShowModelOffline(true);
+      setShowModalOffline(true);
     }
   }, [modelSettings.model, modelList]);
 
@@ -224,8 +224,8 @@ function Layout() {
         navigate(`/chat/${newId}`, { replace: true });
       }
 
-      setShowCacheModel(false);
-      setShowSettingsModel(false);
+      setShowCacheModal(false);
+      setShowSettingsModal(false);
     } catch (error) {
       notifyError("Failed to clear chats: " + error.message);
     }
@@ -243,7 +243,7 @@ function Layout() {
         modelSettings={modelSettings}
         modelList={modelList}
         onModelChange={handleModelChange}
-        setShowSettingsModel={setShowSettingsModel}
+        setShowSettingsModal={setShowSettingsModal}
         userData={userData}
       />
       <div className="flex flex-1 overflow-hidden relative bg-bg_light dark:bg-bg_dark">
@@ -314,35 +314,35 @@ function Layout() {
       </div>
       {/* Modals */}
       <div className="">
-        {showCacheModel ? (
-          <Clear_Cache_Model
-            showModel={setShowCacheModel}
+        {showCacheModal ? (
+          <ClearCacheModal
+            showModal={setShowCacheModal}
             clearCache={clearCache}
           />
         ) : null}
       </div>
       {showDeleteConfirm && (
-        <ConfirmationPopup
+        <ConfirmationModal
           onClose={() => setShowDeleteConfirm(false)}
           onConfirm={confirmDelete}
         />
       )}
-      {showModelOffline ? (
-        <Offline_Model_Model
-          showModel={setShowModelOffline}
+      {showModalOffline ? (
+        <OfflineModelInfoModal
+          showModal={setShowModalOffline}
           model={modelSettings.model_api}
         />
       ) : null}
-      {showSettingsModel ? (
-        <Settings_Model
-          showModel={setShowSettingsModel}
-          setShowCacheModel={setShowCacheModel}
+      {showSettingsModal ? (
+        <SettingsModal
+          showModal={setShowSettingsModal}
+          setShowCacheModal={setShowCacheModal}
           userData={userData}
         />
       ) : null}
       {showRenameModal && (
         <RenameConversationModal
-          showModel={setShowRenameModal}
+          showModal={setShowRenameModal}
           conversationId={renamingConversationId}
           currentTitle={
             conversations?.find((conv) => conv.id === renamingConversationId)
@@ -354,8 +354,8 @@ function Layout() {
           }}
         />
       )}{" "}
-      {showModelSession ? (
-        <Session_Expired showModel={setShowModelSession} />
+      {showModalSession ? (
+        <SessionExpiredModal showModal={setShowModalSession} />
       ) : null}
     </div>
   );

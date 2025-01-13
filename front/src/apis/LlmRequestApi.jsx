@@ -46,7 +46,7 @@ async function getDataFromLLM(
   tpopGlobal,
   arcana,
   setLocalState,
-  setShowModelSession,
+  setShowModalSession,
   setShowBadRequest,
   updatedConversation
 ) {
@@ -87,7 +87,7 @@ async function getDataFromLLM(
           prevState.conversation[prevState.conversation.length - 1].content,
         conversation: prevState.conversation.slice(0, -1),
       }));
-      setShowModelSession(true);
+      setShowModalSession(true);
       return;
     }
 

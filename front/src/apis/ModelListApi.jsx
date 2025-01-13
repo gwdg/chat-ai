@@ -1,9 +1,9 @@
 //This function fetch model list
-export async function getModels(setShowModelSession) {
+export async function getModels(setShowModalSession) {
   try {
     const response = await fetch("/models");
     if (response.status === 401) {
-      setShowModelSession(true);
+      setShowModalSession(true);
       return;
     }
     const jsonResponse = await response.json();

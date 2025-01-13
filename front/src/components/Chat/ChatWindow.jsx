@@ -7,18 +7,18 @@ import { useDispatch, useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
 
 //Components
-import Help_Model from "../../model/Help_Model";
-import Mic_Model from "../../model/Mic_Model";
-import Cutom_Instructions_Model from "../../model/Cutom_Instructions_Model";
-import ExportTypeModel from "../../model/ExportTypeModel";
-import Session_Expired from "../../model/Session_Expired";
-import Bad_Request_Model from "../../model/Bad_Request_Model";
-import Help_Model_Custom from "../../model/Help_Model_Custom";
-import Help_model_Arcanas from "../../model/Help_model_Arcanas";
-import Help_Model_System from "../../model/Help_Model_System";
-import Help_Model_Tpop from "../../model/Help_Model_Tpop";
-import Clear_History_Model from "../../model/Clear_History_Model";
-import Share_Settings_Model from "../../model/Share_Settings_Model";
+import HelpModal from "../../modals/HelpModal";
+import MicModal from "../../modals/MicModal";
+import CustomInstructionsModal from "../../modals/CustomInstructionsModal";
+import ExportTypeModal from "../../modals/ExportTypeModal";
+import SessionExpiredModal from "../../modals/SessionExpiredModal";
+import BadRequestModal from "../../modals/BadRequestModal";
+import HelpCustomInstructionsModal from "../../modals/HelpCustomInstructionsModal";
+import HelpArcanaModal from "../../modals/HelpArcanaModal";
+import HelpSystemModal from "../../modals/HelpSystemModal";
+import HelpTopPModal from "../../modals/HelpTopPModal";
+import ClearHistoryModal from "../../modals/ClearHistoryModal";
+import ShareSettingsModal from "../../modals/ShareSettingsModal";
 
 //Assets
 import Logo from "../../assets/chatai-logo-v3-preview.png";
@@ -30,7 +30,7 @@ import {
 } from "../../Redux/reducers/conversationsSlice";
 import { useToast } from "../../hooks/useToast";
 import Conversation from "./Conversation";
-import Settings_Panel from "./Settings_Panel";
+import SettingsPanel from "./SettingsPanel";
 
 function ChatWindow({ modelSettings, modelList, onModelChange }) {
   // Hooks
@@ -72,20 +72,20 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       key: "",
     },
   });
-  const [showModelSession, setShowModelSession] = useState(false);
+  const [showModalSession, setShowModalSession] = useState(false);
   const [showBadRequest, setShowBadRequest] = useState(false);
-  const [showHelpModel, setShowHelpModel] = useState(false);
-  const [showMicModel, setShowMicModel] = useState(false);
-  const [showCustomHelpModel, setShowCustomHelpModel] = useState(false);
-  const [showTpopHelpModel, setShowTpopHelpModel] = useState(false);
-  const [showSystemHelpModel, setShowSystemHelpModel] = useState(false);
-  const [showArcanasHelpModel, setShowArcanasHelpModel] = useState(false);
-  const [showCusModel, setShowCusModel] = useState(false);
-  const [showFileModel, setShowFileModel] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showMicModal, setShowMicModal] = useState(false);
+  const [showCustomHelpModal, setShowCustomHelpModal] = useState(false);
+  const [showTpopHelpModal, setShowTpopHelpModal] = useState(false);
+  const [showSystemHelpModal, setShowSystemHelpModal] = useState(false);
+  const [showArcanasHelpModal, setShowArcanasHelpModal] = useState(false);
+  const [showCusModal, setShowCusModal] = useState(false);
+  const [showFileModal, setShowFileModal] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
-  const [showHistoryModel, setShowHistoryModel] = useState(false);
-  const [shareSettingsModel, setShareSettingsModel] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [shareSettingsModal, setShareSettingsModal] = useState(false);
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen)
   );
@@ -215,7 +215,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           notifyError("Failed to copy URL to clipboard");
         });
 
-      setShareSettingsModel(false);
+      setShareSettingsModal(false);
     } catch (error) {
       console.error("Error generating settings URL:", error);
       notifyError("Failed to generate settings URL");
@@ -587,7 +587,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           : prevState.conversation,
     }));
 
-    setShowHistoryModel(false);
+    setShowHistoryModal(false);
     notifySuccess("History cleared");
   };
 
@@ -601,11 +601,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           isImageSupported={isImageSupported}
           setSelectedFiles={setSelectedFiles}
           setLocalState={setLocalState}
-          setShowModelSession={setShowModelSession}
+          setShowModalSession={setShowModalSession}
           setShowBadRequest={setShowBadRequest}
-          setShowFileModel={setShowFileModel}
-          setShowMicModel={setShowMicModel}
-          setShowHistoryModel={setShowHistoryModel}
+          setShowFileModal={setShowFileModal}
+          setShowMicModal={setShowMicModal}
+          setShowHistoryModal={setShowHistoryModal}
           toggleAdvOpt={toggleAdvOpt}
           updateLocalState={updateLocalState}
           updateSettings={updateSettings}
@@ -613,7 +613,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           notifySuccess={notifySuccess}
           notifyError={notifyError}
         />
-        <Settings_Panel
+        <SettingsPanel
           selectedFiles={selectedFiles}
           setSelectedFiles={setSelectedFiles}
           modelSettings={modelSettings}
@@ -626,57 +626,57 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           localState={localState}
           setLocalState={setLocalState}
           updateSettings={updateSettings}
-          showModel={setShareSettingsModel}
+          setShareSettingsModal={setShareSettingsModal}
           handleShareSettings={handleShareSettings}
-          setShowHelpModel={setShowHelpModel}
-          setShowArcanasHelpModel={setShowArcanasHelpModel}
-          setShowCustomHelpModel={setShowCustomHelpModel}
-          setShowTpopHelpModel={setShowTpopHelpModel}
-          setShowSystemHelpModel={setShowSystemHelpModel}
+          setShowHelpModal={setShowHelpModal}
+          setShowArcanasHelpModal={setShowArcanasHelpModal}
+          setShowCustomHelpModal={setShowCustomHelpModal}
+          setShowTpopHelpModal={setShowTpopHelpModal}
+          setShowSystemHelpModal={setShowSystemHelpModal}
           notifySuccess={notifySuccess}
           notifyError={notifyError}
         />
       </div>
 
-      <>{showHelpModel ? <Help_Model showModel={setShowHelpModel} /> : null}</>
+      <>{showHelpModal ? <HelpModal showModal={setShowHelpModal} /> : null}</>
 
       <>
-        {showCustomHelpModel ? (
-          <Help_Model_Custom showModel={setShowCustomHelpModel} />
+        {showCustomHelpModal ? (
+          <HelpCustomInstructionsModal showModal={setShowCustomHelpModal} />
         ) : null}
       </>
 
       <>
-        {showTpopHelpModel ? (
-          <Help_Model_Tpop showModel={setShowTpopHelpModel} />
+        {showTpopHelpModal ? (
+          <HelpTopPModal showModal={setShowTpopHelpModal} />
         ) : null}
       </>
 
       <>
-        {showSystemHelpModel ? (
-          <Help_Model_System showModel={setShowSystemHelpModel} />
+        {showSystemHelpModal ? (
+          <HelpSystemModal showModal={setShowSystemHelpModal} />
         ) : null}
       </>
 
       <>
-        {showArcanasHelpModel ? (
-          <Help_model_Arcanas showModel={setShowArcanasHelpModel} />
+        {showArcanasHelpModal ? (
+          <HelpArcanaModal showModal={setShowArcanasHelpModal} />
         ) : null}
       </>
 
-      <>{showMicModel ? <Mic_Model showModel={setShowMicModel} /> : null}</>
+      <>{showMicModal ? <MicModal showModal={setShowMicModal} /> : null}</>
 
       <>
-        {showCusModel ? (
-          <Cutom_Instructions_Model showModel={setShowCusModel} />
+        {showCusModal ? (
+          <CustomInstructionsModal showModal={setShowCusModal} />
         ) : null}
       </>
 
       <>
-        {showFileModel ? (
-          <ExportTypeModel
+        {showFileModal ? (
+          <ExportTypeModal
             arcana={localState.arcana}
-            showModel={setShowFileModel}
+            showModal={setShowFileModal}
             exportFile={exportFile}
             conversation={localState.conversation}
             exportSettings={localState.exportOptions.exportSettings}
@@ -688,21 +688,21 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       </>
 
       <>
-        {showModelSession ? (
-          <Session_Expired showModel={setShowModelSession} />
+        {showModalSession ? (
+          <SessionExpiredModal showModal={setShowModalSession} />
         ) : null}
       </>
 
       <>
         {showBadRequest ? (
-          <Bad_Request_Model showModel={setShowBadRequest} />
+          <BadRequestModal showModal={setShowBadRequest} />
         ) : null}
       </>
 
       <>
-        {showHistoryModel ? (
-          <Clear_History_Model
-            showModel={setShowHistoryModel}
+        {showHistoryModal ? (
+          <ClearHistoryModal
+            showModal={setShowHistoryModal}
             clearHistory={clearHistory}
             dontShowAgain={localState.dontShow.dontShowAgain}
             setLocalState={setLocalState}
@@ -711,11 +711,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       </>
 
       <>
-        {shareSettingsModel ? (
-          <Share_Settings_Model
+        {shareSettingsModal ? (
+          <ShareSettingsModal
             arcana={localState.arcana}
             exportArcana={localState.exportOptions.exportArcana}
-            showModel={setShareSettingsModel}
+            showModal={setShareSettingsModal}
             handleShareSettings={handleShareSettings}
             dontShowAgainShare={localState.dontShow.dontShowAgainShare}
             setLocalState={setLocalState}

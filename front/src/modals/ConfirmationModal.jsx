@@ -1,10 +1,10 @@
-import Model from "./Model";
+import ContainerModal from "./ContainerModal";
 import cross from "../assets/cross.svg";
 import { Trans } from "react-i18next";
 
-function ConfirmationPopup({ onClose, onConfirm }) {
+function ConfirmationModal({ onClose, onConfirm }) {
   return (
-    <Model showModel={onClose}>
+    <ContainerModal showModal={onClose}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         <div className="flex justify-between items-center px-4 pt-4">
           <p className="text-xl text-tertiary">
@@ -41,8 +41,9 @@ function ConfirmationPopup({ onClose, onConfirm }) {
           </div>
         </div>
       </div>
-    </Model>
+    </ContainerModal>
+
   );
 }
 
-export default ConfirmationPopup;
+export default ConfirmationModal;
