@@ -25,7 +25,9 @@ import { fetchCurrentUserProfile } from "../../apis/GetUserDataApi";
 import RenameConversationModal from "../../modals/RenameConversationModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
 
+// Main layout component that manages the overall structure and state of the chat application
 function Layout() {
+  // UI state management
   const [showFooter, setShowFooter] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showCacheModal, setShowCacheModal] = useState(false);
@@ -33,12 +35,13 @@ function Layout() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [userData, setUserData] = useState(null);
 
+  // Refs and hooks initialization
   const mainDiv = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useToast();
 
-  // Conversation states
+  // Conversation state management
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingConversationId, setDeletingConversationId] = useState(null);
   const conversations = useSelector(selectConversations);
@@ -47,7 +50,7 @@ function Layout() {
   const [conversationIds, setConversationIds] = useState([]);
   const [showModalSession, setShowModalSession] = useState(false);
 
-  // Model states
+  // Model configuration state
   const [modelList, setModelList] = useState([]);
   const [modelSettings, setModelSettings] = useState({
     model: currentConversation?.settings?.model || "",
@@ -56,6 +59,7 @@ function Layout() {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renamingConversationId, setRenamingConversationId] = useState(null);
 
+  // Fetch user profile data on component mount
   const fetchUserData = async () => {
     try {
       const data = await fetchCurrentUserProfile();
@@ -68,12 +72,13 @@ function Layout() {
   useEffect(() => {
     fetchUserData();
   }, []);
-  // Initialize conversation IDs
+
+  // Keep conversation IDs synchronized with the conversations list
   useEffect(() => {
     setConversationIds(conversations.map((conv) => conv.id));
   }, [conversations]);
 
-  // Fetch models and initialize model settings
+  // Initialize and periodically update available models
   useEffect(() => {
     const fetchModels = async () => {
       try {
@@ -85,11 +90,11 @@ function Layout() {
     };
 
     fetchModels();
-    const interval = setInterval(fetchModels, 30000);
+    const interval = setInterval(fetchModels, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
-  // Update model settings when conversation changes
+  // Sync model settings with current conversation
   useEffect(() => {
     if (currentConversation?.settings) {
       setModelSettings({
@@ -99,6 +104,7 @@ function Layout() {
     }
   }, [currentConversation]);
 
+  // Show offline model warning if selected model is offline
   useEffect(() => {
     const currentModel = modelList?.find(
       (modelX) => modelX.name === modelSettings.model
@@ -108,7 +114,7 @@ function Layout() {
     }
   }, [modelSettings.model, modelList]);
 
-  // Handle model change
+  // Handle model selection changes
   const handleModelChange = useCallback(
     (model, modelApi) => {
       if (!model || !modelApi) return;
@@ -118,6 +124,7 @@ function Layout() {
         model_api: modelApi,
       });
 
+      // Update conversation settings when model changes
       if (currentConversationId) {
         dispatch(
           updateConversation({
@@ -137,7 +144,7 @@ function Layout() {
     [dispatch, currentConversationId, currentConversation]
   );
 
-  // Conversation management functions
+  // Conversation deletion handlers
   const handleDeleteConversation = (id) => {
     setDeletingConversationId(id);
     setShowDeleteConfirm(true);
@@ -148,7 +155,6 @@ function Layout() {
     const currentIndex = conversations.findIndex((conv) => conv.id === id);
 
     if (currentIndex !== -1) {
-      // If deleting current conversation, navigate to the new conversation before deleting
       if (id === currentConversationId) {
         const isFirstConversation = currentIndex === 0;
         const nextConversationIndex = isFirstConversation
@@ -156,7 +162,7 @@ function Layout() {
           : currentIndex - 1;
 
         if (conversations.length === 1) {
-          // If it's the last conversation, create a new one first
+          // Create new conversation before deleting the last one
           const newAction = dispatch(addConversation());
           const newId = newAction.payload?.id;
           if (newId) {
@@ -166,13 +172,12 @@ function Layout() {
             }, 0);
           }
         } else {
-          // Navigate to the next conversation before deleting
+          // Navigate to adjacent conversation before deleting
           const nextConversationId = conversations[nextConversationIndex].id;
           navigate(`/chat/${nextConversationId}`);
           dispatch(deleteConversation(id));
         }
       } else {
-        // If not deleting current conversation, just delete it
         dispatch(deleteConversation(id));
       }
     }
@@ -187,7 +192,7 @@ function Layout() {
     deletingConversationId,
   ]);
 
-  // Scroll handlers
+  // Scroll utility functions
   const scrollToBottom = () => {
     if (mainDiv.current) {
       mainDiv.current.scrollTop = mainDiv.current.scrollHeight;
@@ -200,7 +205,7 @@ function Layout() {
     }
   };
 
-  // Handle responsive sidebar
+  // Responsive sidebar handling
   useEffect(() => {
     const handleResize = () => {
       setIsSidebarOpen(window.innerWidth > 1080);
@@ -210,12 +215,15 @@ function Layout() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-  // Clear cache handler
+
+  // Clear application cache and reset state
   const clearCache = async () => {
     try {
       await persistor.purge();
       dispatch({ type: "RESET_ALL" });
       notifySuccess("Chats cleared successfully");
+
+      // Navigate to new conversation after cache clear
       const state = store.getState();
       const newId = state.conversations.currentConversationId;
 
@@ -231,6 +239,7 @@ function Layout() {
     }
   };
 
+  // Handle conversation rename
   const handleRenameConversation = (id) => {
     setRenamingConversationId(id);
     setShowRenameModal(true);
@@ -247,7 +256,7 @@ function Layout() {
         userData={userData}
       />
       <div className="flex flex-1 overflow-hidden relative bg-bg_light dark:bg-bg_dark">
-        {/* Mobile Overlay */}
+        {/* Mobile overlay backdrop */}
         {isSidebarOpen && (
           <div
             className="custom:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
@@ -255,7 +264,7 @@ function Layout() {
           />
         )}
 
-        {/* Sidebar */}
+        {/* Collapsible sidebar with conversation list */}
         <div
           className={`
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -270,7 +279,7 @@ function Layout() {
           />
         </div>
 
-        {/* Main Content */}
+        {/* Main chat content area */}
         <div className="flex flex-col flex-1 w-full overflow-hidden">
           <div
             ref={mainDiv}
@@ -286,7 +295,8 @@ function Layout() {
           </div>
         </div>
       </div>
-      {/* Footer toggle and Footer */}
+
+      {/* Footer section with toggle */}
       <div className="w-full bg-bg_light dark:bg-bg_dark">
         {!showFooter && (
           <div className="flex justify-center items-center h-[22px] py-2">
@@ -312,7 +322,8 @@ function Layout() {
           />
         )}
       </div>
-      {/* Modals */}
+
+      {/* Modal components */}
       <div className="">
         {showCacheModal ? (
           <ClearCacheModal
@@ -353,7 +364,7 @@ function Layout() {
             setRenamingConversationId(null);
           }}
         />
-      )}{" "}
+      )}
       {showModalSession ? (
         <SessionExpiredModal showModal={setShowModalSession} />
       ) : null}
