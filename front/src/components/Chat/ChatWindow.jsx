@@ -1,12 +1,12 @@
 /* eslint-disable no-unused-vars */
-//Libraries
+// Core imports
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import jsPDF from "jspdf";
 import { useDispatch, useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
 
-//Components
+// Modals and components imports
 import HelpModal from "../../modals/HelpModal";
 import MicModal from "../../modals/MicModal";
 import CustomInstructionsModal from "../../modals/CustomInstructionsModal";
@@ -19,6 +19,8 @@ import HelpSystemModal from "../../modals/HelpSystemModal";
 import HelpTopPModal from "../../modals/HelpTopPModal";
 import ClearHistoryModal from "../../modals/ClearHistoryModal";
 import ShareSettingsModal from "../../modals/ShareSettingsModal";
+import Conversation from "./Conversation";
+import SettingsPanel from "./SettingsPanel";
 
 //Assets
 import Logo from "../../assets/chatai-logo-v3-preview.png";
@@ -29,8 +31,6 @@ import {
   updateConversation,
 } from "../../Redux/reducers/conversationsSlice";
 import { useToast } from "../../hooks/useToast";
-import Conversation from "./Conversation";
-import SettingsPanel from "./SettingsPanel";
 
 function ChatWindow({ modelSettings, modelList, onModelChange }) {
   // Hooks
@@ -38,7 +38,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
   const dispatch = useDispatch();
   const { conversationId } = useParams();
 
-  // Redux state
+  // Redux selectors
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const currentConversation = useSelector((state) =>
     state.conversations?.conversations?.find(
@@ -46,7 +46,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     )
   );
 
-  // Local useState
+  // Initialize chat state
   const [localState, setLocalState] = useState({
     prompt: "",
     responses: [],
@@ -72,6 +72,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       key: "",
     },
   });
+
+  // Modal states
   const [showModalSession, setShowModalSession] = useState(false);
   const [showBadRequest, setShowBadRequest] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -90,42 +92,55 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     useSelector((state) => state.advOptions.isOpen)
   );
 
-  //Effects
+  // ==== EFFECTS SECTION ====
+
+  // Effect 1: Initializes local state when conversation ID or current conversation changes
   useEffect(() => {
+    // Only proceed if both conversationId and currentConversation exist
     if (conversationId && currentConversation) {
+      // Update the current conversation in Redux store
       dispatch(setCurrentConversation(conversationId));
+
+      // Initialize local state with all conversation data
       setLocalState({
-        prompt: currentConversation.prompt,
-        responses: currentConversation.responses,
-        conversation: currentConversation.conversation,
-        settings: { ...currentConversation.settings },
-        exportOptions: { ...currentConversation.exportOptions },
-        dontShow: { ...currentConversation.dontShow },
-        arcana: { ...currentConversation.arcana },
+        prompt: currentConversation.prompt, // Current prompt text
+        responses: currentConversation.responses, // Array of AI responses
+        conversation: currentConversation.conversation, // Full conversation history
+        settings: { ...currentConversation.settings }, // Chat settings (temperature, etc.)
+        exportOptions: { ...currentConversation.exportOptions }, // Export preferences
+        dontShow: { ...currentConversation.dontShow }, // UI visibility settings
+        arcana: { ...currentConversation.arcana }, // Arcana-specific settings
       });
     }
   }, [conversationId, currentConversation, dispatch]);
 
+  // Effect 2: Debounced auto-save of conversation changes
   useEffect(() => {
+    // Create a 300ms debounced save timer
     const timer = setTimeout(() => {
       if (currentConversation) {
+        // Update conversation in store with latest local state
         dispatch(
           updateConversation({
             id: conversationId,
             updates: {
               ...localState,
-              lastModified: new Date().toISOString(),
+              lastModified: new Date().toISOString(), // Add timestamp
             },
           })
         );
       }
     }, 300);
 
+    // Cleanup timer on unmount or when dependencies change
     return () => clearTimeout(timer);
   }, [localState, currentConversation, conversationId, dispatch]);
+
+  // Effect 3: Handle dark mode toggling
   useEffect(() => {
     const root = window.document.documentElement;
 
+    // Toggle dark mode class on root element
     if (isDarkMode) {
       root.classList.add("dark");
     } else {
@@ -133,17 +148,23 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     }
   }, [isDarkMode]);
 
-  //Memo
+  // ==== MEMOIZED VALUES ====
+
+  // Memoize current model details to prevent unnecessary recalculations
   const currentModel = useMemo(
     () => modelList?.find((m) => m.name === modelSettings?.model),
     [modelList, modelSettings?.model]
   );
+
+  // Memoize whether current model supports image input
   const isImageSupported = useMemo(
     () => currentModel?.input.includes("image") || false,
     [currentModel]
   );
 
-  //Functions
+  // ==== UTILITY FUNCTIONS ====
+
+  // Update partial local state while preserving other values
   const updateLocalState = (updates) => {
     setLocalState((prev) => ({
       ...prev,
@@ -151,6 +172,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     }));
   };
 
+  // Update settings object within local state
   const updateSettings = (settingUpdates) => {
     setLocalState((prev) => ({
       ...prev,
@@ -161,18 +183,24 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     }));
   };
 
+  // Toggle advanced options visibility
   const toggleAdvOpt = () => {
     setShowAdvOpt(!showAdvOpt);
     dispatch({ type: "SET_ADV" });
   };
 
+  // ==== SHARING FUNCTIONALITY ====
+
+  // Generate and copy shareable settings URL
   const handleShareSettings = () => {
+    // Validate system prompt exists
     if (!localState.settings.systemPrompt) {
       notifyError("System prompt is missing");
       return;
     }
 
     try {
+      // Prepare settings object for sharing
       const settings = {
         systemPrompt: encodeURIComponent(localState.settings.systemPrompt),
         model_name: localState.settings.model,
@@ -187,6 +215,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           localState.settings.top_p !== null
             ? Number(localState.settings.top_p)
             : null,
+        // Include arcana settings if enabled
         ...(localState.exportOptions.exportArcana && {
           arcana: {
             id: localState.arcana.id,
@@ -195,16 +224,19 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
         }),
       };
 
+      // Validate all settings are defined
       if (Object.values(settings).some((value) => value === undefined)) {
         throw new Error("Invalid settings detected");
       }
 
+      // Convert settings to base64 URL
       const settingsString = JSON.stringify(settings);
       const encodedSettings = btoa(settingsString);
 
       const baseURL = window.location.origin;
       const url = `${baseURL}/chat?settings=${encodedSettings}`;
 
+      // Copy URL to clipboard
       navigator.clipboard
         .writeText(url)
         .then(() => {
@@ -222,6 +254,9 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     }
   };
 
+  // ==== EXPORT FUNCTIONALITY ====
+
+  // Handle different export format selections
   const exportFile = (value) => {
     if (value === "json") {
       exportJSON(localState.conversation);
@@ -232,6 +267,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     }
   };
 
+  // Generate timestamped filename for exports
   const generateFileName = (extension) => {
     const date = new Date();
     const year = date.getFullYear();
@@ -243,9 +279,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     return `chat-ai-${year}-${month}-${day}-${hour}${minute}${second}.${extension}`;
   };
 
+  // Export conversation as plain text
   const exportTextFile = (conversation) => {
     let exportData = [...conversation];
 
+    // Update system message with current system prompt
     const systemMessageIndex = exportData.findIndex(
       (msg) => msg.role === "system"
     );
@@ -256,6 +294,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       };
     }
 
+    // Convert messages to formatted text
     const textContent = exportData
       .map((msg) => {
         let contentString = `${msg.role.toUpperCase()}: `;
@@ -280,6 +319,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
     let finalTextContent = textContent;
 
+    // Add settings information if enabled
     if (localState.exportOptions.exportSettings) {
       const additionalText = `\n\nSettings used\nmodel-name: ${
         localState.settings.model
@@ -293,21 +333,21 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       finalTextContent += additionalText;
     }
 
+    // Create and download text file
     const blob = new Blob([finalTextContent], { type: "text/plain" });
-
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = generateFileName("txt");
-
     link.click();
-
     URL.revokeObjectURL(link.href);
   };
 
+  // Export conversation as JSON
   const exportJSON = (conversation) => {
     try {
       let exportData = [...conversation];
 
+      // Update system message
       const systemMessageIndex = exportData.findIndex(
         (msg) => msg.role === "system"
       );
@@ -318,6 +358,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
         };
       }
 
+      // Filter out images if not enabled
       if (!localState.exportOptions.exportImage) {
         exportData = exportData.map((msg) => {
           if (Array.isArray(msg.content)) {
@@ -332,6 +373,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
         });
       }
 
+      // Add settings if enabled
       if (localState.exportOptions.exportSettings) {
         const settingsObject = {
           "model-name": localState.settings.model,
@@ -349,6 +391,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
         exportData = { ...settingsObject, messages: exportData };
       }
 
+      // Create and download JSON file
       const content = JSON.stringify(exportData, null, 2);
       let file = new Blob([content], { type: "application/json" });
       let a = document.createElement("a");
@@ -364,7 +407,9 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     }
   };
 
+  // Export conversation as PDF
   const exportPDF = async (conversation) => {
+    // Initialize PDF document
     const doc = new jsPDF();
     doc.setProperties({
       title: "CHAT AI Conversation",
@@ -375,12 +420,14 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     });
     doc.setFont("helvetica");
 
+    // Define colors for PDF elements
     const COLORS = {
       DEFAULT: [0, 0, 0],
       HEADER_DATE: [150, 150, 150],
       ROLE: [0, 102, 204],
     };
 
+    // Set up page dimensions and margins
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
     const margin = 15;
@@ -389,6 +436,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     let y = margin;
     const headerHeight = 25;
 
+    // Add header to each page
     const addHeader = (isFirstPage) => {
       y = margin;
       if (isFirstPage) {
@@ -402,6 +450,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       y = headerHeight + 10;
     };
 
+    // Add page numbers to all pages
     const addPageNumbers = () => {
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
@@ -414,12 +463,14 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       }
     };
 
+    // Reset text styling to default
     const resetTextStyle = () => {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(...COLORS.DEFAULT);
     };
 
+    // Add new page if content would overflow
     const addNewPageIfNeeded = (spaceNeeded) => {
       if (y + spaceNeeded > pageHeight - margin) {
         doc.addPage();
@@ -428,11 +479,14 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       }
     };
 
+    // Initialize first page
     addHeader(true);
     resetTextStyle();
 
+    // Prepare conversation data
     let conversationData = [...conversation];
 
+    // Update system message
     const systemMessageIndex = conversationData.findIndex(
       (msg) => msg.role === "system"
     );
@@ -443,6 +497,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       };
     }
 
+    // Filter images if not enabled
     if (!localState.exportOptions.exportImage) {
       conversationData = conversationData.map((entry) => {
         if (Array.isArray(entry.content)) {
@@ -456,9 +511,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       });
     }
 
+    // Process each message in conversation
     for (const entry of conversationData) {
       addNewPageIfNeeded(lineHeight * 2);
 
+      // Add role label
       doc.setFontSize(10);
       doc.setTextColor(...COLORS.ROLE);
       doc.text(`${entry.role}:`, margin, y);
@@ -466,7 +523,9 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
       resetTextStyle();
 
+      // Handle different content types
       if (typeof entry.content === "string") {
+        // Handle code blocks and regular text
         if (entry.content.includes("```")) {
           const parts = entry.content.split(/(```[\s\S]+?```)/);
           for (const part of parts) {
@@ -480,6 +539,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
                 doc.text(language || "Code:", margin, y);
                 y += lineHeight * 0.5;
 
+                // Add gray background for code blocks
                 doc.setFillColor(240, 240, 240);
                 doc.rect(
                   margin,
@@ -488,6 +548,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
                   lineHeight * codeLines.length,
                   "F"
                 );
+
+                // Add code content with monospace font
                 doc.setFont("Courier", "normal");
                 codeLines.forEach((line, index) => {
                   doc.text(line, margin + 5, y + 5 + index * lineHeight);
@@ -496,6 +558,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
                 resetTextStyle();
               }
             } else {
+              // Handle regular text with word wrapping
               const lines = doc.splitTextToSize(part, contentWidth);
               lines.forEach((line) => {
                 addNewPageIfNeeded(lineHeight);
@@ -505,6 +568,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
             }
           }
         } else {
+          // Handle regular text without code blocks
           const lines = doc.splitTextToSize(entry.content, contentWidth);
           lines.forEach((line) => {
             addNewPageIfNeeded(lineHeight);
@@ -516,8 +580,10 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
         Array.isArray(entry.content) &&
         localState.exportOptions.exportImage
       ) {
+        // Handle mixed content (text and images)
         entry.content.forEach((item) => {
           if (item.type === "text") {
+            // Handle text content
             const lines = doc.splitTextToSize(item.text, contentWidth);
             lines.forEach((line) => {
               addNewPageIfNeeded(lineHeight);
@@ -525,6 +591,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
               y += lineHeight;
             });
           } else if (item.type === "image_url") {
+            // Handle image content
             addNewPageIfNeeded(lineHeight + 60);
             if (item.image_url.url.startsWith("data:image")) {
               doc.addImage(item.image_url.url, "JPEG", margin, y, 50, 50);
@@ -536,14 +603,16 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           }
         });
       } else {
+        // Handle unavailable content
         addNewPageIfNeeded(lineHeight);
         doc.text("Content unavailable", margin, y);
         y += lineHeight;
       }
 
-      y += lineHeight;
+      y += lineHeight; // Add spacing between messages
     }
 
+    // Add settings section if enabled
     if (localState.exportOptions.exportSettings) {
       addNewPageIfNeeded(
         lineHeight * (localState.exportOptions.exportArcana ? 7 : 5)
@@ -551,7 +620,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       y += lineHeight * 2;
 
       resetTextStyle();
-      doc.text(`Settings used`, margin, y);
+      doc.text("Settings used", margin, y);
       y += lineHeight;
       doc.text(`model-name: ${modelSettings.model}`, margin, y);
       y += lineHeight;
@@ -562,28 +631,32 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       doc.text(`top_p: ${localState.settings.top_p}`, margin, y);
       y += lineHeight;
 
+      // Add Arcana settings if enabled
       if (localState.exportOptions.exportArcana) {
-        doc.text(`Arcana: {`, margin, y);
+        doc.text("Arcana: {", margin, y);
         y += lineHeight;
         doc.text(`  id: ${localState.arcana.id}`, margin, y);
         y += lineHeight;
         doc.text(`  key: ${localState.arcana.key}`, margin, y);
         y += lineHeight;
-        doc.text(`}`, margin, y);
+        doc.text("}", margin, y);
         y += lineHeight;
       }
     }
+
+    // Add page numbers and save the PDF
     addPageNumbers();
     doc.save(generateFileName("pdf"));
   };
 
+  // Clear conversation history
   const clearHistory = () => {
     setLocalState((prevState) => ({
       ...prevState,
-      responses: [],
+      responses: [], // Clear all responses
       conversation:
         prevState.conversation.length > 0
-          ? [prevState.conversation[0]]
+          ? [prevState.conversation[0]] // Keep only system message if it exists
           : prevState.conversation,
     }));
 

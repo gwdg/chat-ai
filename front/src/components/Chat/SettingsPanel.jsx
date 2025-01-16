@@ -91,31 +91,40 @@ const SettingsPanel = ({
   const dropdownRef = useRef(null);
 
   //Functions
+  // Remove a file from the selectedFiles array at specified index
   const removeFile = (index) => {
+    // Create deep copy to avoid mutating state directly
     const newFiles = JSON.parse(JSON.stringify(selectedFiles));
     newFiles.splice(index, 1);
     setSelectedFiles(newFiles);
   };
 
+  // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
   function formatFileSize(bytes) {
     const units = ["Bytes", "KB", "MB", "GB", "TB"];
     let size = bytes;
     let unitIndex = 0;
 
+    // Keep dividing by 1024 until we reach the appropriate unit
     while (size >= 1024 && unitIndex < units.length - 1) {
       size /= 1024;
       unitIndex++;
     }
 
+    // Return formatted string with 2 decimal places and unit
     return `${size.toFixed(2)} ${units[unitIndex]}`;
   }
+
+  // Handle changes to the system instructions/prompt
   const handleInstructionsChange = (event) => {
     const { value } = event.target;
 
+    // Clear any existing error when user starts typing
     if (systemPromptError) {
       setSystemPromptError("");
     }
 
+    // Update system prompt in local state
     setLocalState((prevState) => ({
       ...prevState,
       settings: {
@@ -125,7 +134,9 @@ const SettingsPanel = ({
     }));
   };
 
+  // Reset settings to default values
   const resetDefault = () => {
+    // Update system prompt in conversation history
     let updatedConversation = localState.conversation.map((item) => {
       if (item.role === "system") {
         return { ...item, content: "You are a helpful assistant" };
@@ -133,6 +144,8 @@ const SettingsPanel = ({
         return item;
       }
     });
+
+    // Reset temperature, top_p, and system prompt to defaults
     setLocalState((prevState) => ({
       ...prevState,
       conversation: updatedConversation,
@@ -144,6 +157,8 @@ const SettingsPanel = ({
     }));
     updateSettings({ systemPrompt: "You are a helpful assistant" });
   };
+
+  // Validate the system prompt is not empty
   const validateSystemPrompt = () => {
     if (!localState.settings.systemPrompt?.trim()) {
       setSystemPromptError(t("description.custom6"));
@@ -151,22 +166,33 @@ const SettingsPanel = ({
     }
     return true;
   };
+
+  // Handle model selection change
   const handleChangeModel = (option) => {
     onModelChange(option.name, option.id);
     setIsOpen(false);
   };
+
+  // Toggle dropdown open/close state
   const toggleOpen = () => setIsOpen(!isOpen);
 
+  // Handle temperature setting change
   const handleChangeTemp = (newValue) => {
+    // Convert to float and update settings
     const numVal = parseFloat(newValue);
     updateSettings({ temperature: numVal });
   };
 
-  const handleChangeTopPhandleChangeTpophandleChangeTpop = (newValue) => {
+  // Handle top_p setting change
+  const handleChangeTopP = (newValue) => {
+    // Convert to float and update settings
     const numVal = parseFloat(newValue);
     updateSettings({ top_p: numVal });
   };
+
+  // Handle share settings modal display
   const handleShareSettingsModal = () => {
+    // Check if user has chosen to not show the modal again
     if (localState.dontShow.dontShowAgainShare) {
       handleShareSettings();
     } else {
@@ -174,19 +200,25 @@ const SettingsPanel = ({
     }
   };
 
-  //Effects
+  // Calculate dropdown direction based on available space
   useEffect(() => {
     if (dropdownRef.current) {
+      // Get dropdown position relative to viewport
       const rect = dropdownRef.current.getBoundingClientRect();
+      // Calculate available space above and below
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
+      // Set direction based on which has more space
       setDirection(spaceBelow > spaceAbove ? "down" : "up");
     }
-  }, [isOpen]);
+  }, [isOpen]); // Only recalculate when dropdown opens/closes
+
+  // Handle settings from URL parameters
   useEffect(() => {
     const handleSettings = async () => {
       const encodedSettings = searchParams.get("settings");
 
+      // Only process settings if they exist, we're on chat page, and haven't processed them yet
       if (
         encodedSettings &&
         location.pathname === "/chat" &&
@@ -195,13 +227,16 @@ const SettingsPanel = ({
         try {
           hasProcessedSettings.current = true;
 
+          // Decode and parse settings from URL
           const decodedSettings = atob(encodedSettings);
           const settings = JSON.parse(decodedSettings);
 
+          // Create new conversation
           const action = dispatch(addConversation());
           const newId = action.payload?.id;
 
           if (newId) {
+            // Update local state with decoded settings
             setLocalState((prev) => ({
               ...prev,
               settings: {
@@ -213,6 +248,7 @@ const SettingsPanel = ({
                 temperature: settings.temperature || 0.5,
                 top_p: settings.top_p || 0.5,
               },
+              // Include arcana settings if present
               ...(settings.arcana && {
                 arcana: {
                   id: settings.arcana.id,
@@ -221,6 +257,7 @@ const SettingsPanel = ({
               }),
             }));
 
+            // Update conversation in Redux store
             dispatch(
               updateConversation({
                 id: newId,
@@ -244,6 +281,7 @@ const SettingsPanel = ({
               })
             );
 
+            // Navigate to new conversation
             navigate(`/chat/${newId}`, { replace: true });
           }
         } catch (error) {
@@ -257,6 +295,7 @@ const SettingsPanel = ({
       }
     };
 
+    // Only process if conversations are loaded
     if (conversations.length > 0) {
       handleSettings();
     }
@@ -271,10 +310,12 @@ const SettingsPanel = ({
     setLocalState,
   ]);
 
+  // Handle importing chat from URL
   useEffect(() => {
     const handleImport = async () => {
       const importUrl = searchParams.get("import");
 
+      // Only process if URL exists, we're on chat page, and haven't processed yet
       if (
         importUrl &&
         location.pathname === "/chat" &&
@@ -284,6 +325,7 @@ const SettingsPanel = ({
           hasProcessedImport.current = true;
           const response = await fetch(importUrl);
 
+          // Handle different HTTP error cases
           if (!response.ok) {
             if (response.status >= 400 && response.status < 500) {
               throw new Error("Client Error: Failed to fetch the JSON file.");
@@ -299,8 +341,10 @@ const SettingsPanel = ({
           const newId = action.payload?.id;
 
           if (newId) {
+            // Handle nested messages format
             if (Array.isArray(parsedData.messages)) {
               let newArray = [];
+              // Process user-assistant message pairs
               for (let i = 0; i < parsedData.messages.length; i++) {
                 if (
                   parsedData.messages[i].role === "user" &&
@@ -313,10 +357,12 @@ const SettingsPanel = ({
                 }
               }
 
+              // Find system message if exists
               const systemMessage = parsedData?.messages?.find(
                 (message) => message.role === "system"
               );
 
+              // Update conversation with imported data
               dispatch(
                 updateConversation({
                   id: newId,
@@ -346,6 +392,7 @@ const SettingsPanel = ({
                 })
               );
             } else if (Array.isArray(parsedData)) {
+              // Handle flat array format
               let newArray = [];
               for (let i = 0; i < parsedData.length; i++) {
                 if (
@@ -383,26 +430,20 @@ const SettingsPanel = ({
               );
             }
 
+            // Navigate to new conversation
             navigate(`/chat/${newId}`, { replace: true });
             notifySuccess("Chat imported successfully");
           }
         } catch (error) {
+          // Handle different types of errors
           if (error.name === "TypeError") {
             notifyError("Network Error: Unable to reach the server.");
-            navigate(`/chat/${currentConversationId}`, { replace: true });
-            window.location.reload();
           } else if (error.message.includes("Client Error")) {
             notifyError("Client Error: The provided link might be incorrect.");
-            navigate(`/chat/${currentConversationId}`, { replace: true });
-            window.location.reload();
           } else if (error.message.includes("Server Error")) {
             notifyError("Server Error: Please try again later.");
-            navigate(`/chat/${currentConversationId}`, { replace: true });
-            window.location.reload();
           } else {
             notifyError(error.message || "An unexpected error occurred.");
-            navigate(`/chat/${currentConversationId}`, { replace: true });
-            window.location.reload();
           }
           console.error("Error:", error);
           navigate(`/chat/${currentConversationId}`, { replace: true });
@@ -426,11 +467,13 @@ const SettingsPanel = ({
     setLocalState,
   ]);
 
+  // Handle Arcana parameters from URL
   useEffect(() => {
     const handleArcanaParams = async () => {
       const arcanaID = searchParams.get("arcana");
       const arcanaKey = searchParams.get("arcana_key");
 
+      // Only process if both ID and key exist, we're on chat page, and haven't processed yet
       if (
         arcanaID &&
         arcanaKey &&
@@ -440,6 +483,7 @@ const SettingsPanel = ({
         try {
           hasProcessedArcana.current = true;
 
+          // Update local state with Arcana settings
           setLocalState((prev) => ({
             ...prev,
             arcana: {
@@ -452,9 +496,13 @@ const SettingsPanel = ({
               top_p: 0.05,
             },
           }));
+
+          // Find current conversation
           const currentConversation = conversations?.find(
             (conv) => conv.id === currentConversationId
           );
+
+          // Update conversation with Arcana settings
           dispatch(
             updateConversation({
               id: currentConversationId,
@@ -471,6 +519,8 @@ const SettingsPanel = ({
               },
             })
           );
+
+          // Navigate to conversation
           navigate(`/chat/${currentConversationId}`, { replace: true });
         } catch (error) {
           console.error("Error processing arcana parameters:", error);
@@ -760,7 +810,7 @@ const SettingsPanel = ({
                       step="0.05"
                       value={localState.settings.top_p}
                       className="slider-input"
-                      onChange={(event) => handleChangeTopPhandleChangeTpophandleChangeTpop(event.target.value)}
+                      onChange={(event) => handleChangeTopP(event.target.value)}
                       onMouseEnter={() => setHoveringTopP(true)}
                       onMouseLeave={() => setHoveringTopP(false)}
                     />
@@ -976,7 +1026,5 @@ const SettingsPanel = ({
     </div>
   );
 };
-
-SettingsPanel.defaultProps = {};
 
 export default SettingsPanel;

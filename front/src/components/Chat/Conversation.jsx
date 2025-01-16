@@ -156,6 +156,5 @@ const Conversation = ({
   );
 };
 
-Conversation.defaultProps = {};
 
 export default Conversation;

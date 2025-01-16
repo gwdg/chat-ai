@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
@@ -47,15 +47,12 @@ function Prompt({
   const { t, i18n } = useTranslation();
   const { listening, resetTranscript } = useSpeechRecognition();
 
-  //Local useState
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   //Refs
   const hiddenFileInput = useRef(null);
   const hiddenFileInputImage = useRef(null);
   const textareaRef = useRef(null);
 
-  //Functions
+  // Converts a file to base64 string format using FileReader
   const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -64,17 +61,22 @@ function Prompt({
       reader.readAsDataURL(file);
     });
   };
+
+  // Main function to fetch and process LLM response
   async function getRes(updatedConversation) {
     setLoading(true);
 
+    // Check if selected model supports image input
     const imageSupport = modelList.some(
       (modelX) =>
         modelX.name === localState.settings.model &&
         modelX.input.includes("image")
     );
 
+    // Process conversation based on image support
     let processedConversation = updatedConversation;
     if (!imageSupport) {
+      // Remove image content if model doesn't support images
       processedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
           return {
@@ -89,6 +91,7 @@ function Prompt({
       });
     }
 
+    // Update local state with new response entry, handling images if present
     if (selectedFiles.length > 0) {
       const imageFiles = selectedFiles.filter((file) => file.type === "image");
       const imageContent = imageFiles.map((imageFile) => ({
@@ -110,6 +113,7 @@ function Prompt({
         ],
       }));
     } else {
+      // Add response entry without images
       setLocalState((prevState) => ({
         ...prevState,
         responses: [
@@ -122,9 +126,11 @@ function Prompt({
       }));
     }
 
+    // Clear prompt after processing
     updateLocalState({ prompt: "" });
 
     try {
+      // Fetch response from LLM service
       const response = await fetchLLMResponse(
         processedConversation,
         localState.settings.systemPrompt,
@@ -138,14 +144,13 @@ function Prompt({
         processedConversation
       );
 
-      setIsSubmitting(false);
       setLoading(false);
       setSelectedFiles([]);
     } catch (error) {
-      setIsSubmitting(false);
       setLoading(false);
       setSelectedFiles([]);
 
+      // Handle different error types
       if (error.name === "AbortError") {
         notifyError("Request aborted.");
       } else if (error.message) {
@@ -156,10 +161,12 @@ function Prompt({
     }
   }
 
+  // Handle file drop events for images
   const handleDrop = async (event) => {
     if (!isImageSupported) return;
     event.preventDefault();
     try {
+      // Filter for supported image types
       const droppedFiles = Array.from(event.dataTransfer.files).filter(
         (file) =>
           file.type === "image/jpeg" ||
@@ -168,6 +175,7 @@ function Prompt({
           file.type === "image/webp"
       );
 
+      // Validate dropped files
       if (droppedFiles.length === 0) {
         notifyError("Only image files are allowed");
         return;
@@ -175,6 +183,7 @@ function Prompt({
         notifySuccess("Image(s) dropped");
       }
 
+      // Convert dropped images to base64 and update state
       const imageFileList = [];
       for (const file of droppedFiles) {
         const base64 = await readFileAsBase64(file);
@@ -191,37 +200,45 @@ function Prompt({
       notifyError("An error occurred while dropping the files: ", error);
     }
   };
+
+  // Handle changes in the prompt textarea
   const handleChange = (event) => {
     updateLocalState({ prompt: event.target.value });
     adjustHeight();
   };
 
-  const handlecancelRequest = () => {
+  // Handle cancellation of ongoing requests
+  const handleCancelRequest = () => {
     cancelRequest(notifyError);
-    setIsSubmitting(false);
     setLoading(false);
   };
 
+  // Handle form submission with prompt and files
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    // Skip empty prompts
     if (localState.prompt?.trim() === "") return;
 
+    // Stop speech recognition if active
     SpeechRecognition.stopListening();
     resetTranscript();
 
     let newConversation;
 
+    // Process submission with files
     if (selectedFiles.length > 0) {
       const textFiles = selectedFiles.filter((file) => file.type !== "image");
       const imageFiles = selectedFiles.filter((file) => file.type === "image");
 
+      // Combine text files content with prompt
       const allTextFilesText = textFiles
         .map((file) => `${file.name}: ${file.text}`)
         .join("\n");
 
       const fullPrompt = `${localState.prompt}\n${allTextFilesText}`;
 
+      // Process image files
       const imageContent = imageFiles.map((imageFile) => ({
         type: "image_url",
         image_url: {
@@ -229,6 +246,7 @@ function Prompt({
         },
       }));
 
+      // Create combined prompt content
       const newPromptContent = [
         {
           type: "text",
@@ -242,25 +260,29 @@ function Prompt({
         { role: "user", content: newPromptContent },
       ];
     } else {
+      // Simple text-only submission
       newConversation = [
         ...localState.conversation,
         { role: "user", content: localState.prompt },
       ];
     }
 
+    // Update conversation state and get response
     setLocalState((prevState) => ({
       ...prevState,
       conversation: newConversation,
     }));
 
-    setIsSubmitting(true);
     await getRes(newConversation);
   };
+
+  // Handle pasting images from clipboard
   const handlePaste = async (event) => {
     try {
       const clipboardItems = event.clipboardData.items;
       const imageItems = [];
 
+      // Extract image items from clipboard
       for (const item of clipboardItems) {
         if (item.type.startsWith("image/")) {
           imageItems.push(item.getAsFile());
@@ -270,6 +292,7 @@ function Prompt({
       if (imageItems.length > 0) {
         const imageFileList = [];
 
+        // Process each pasted image
         for (const file of imageItems) {
           const base64 = await readFileAsBase64(file);
           const timestamp = new Date()
@@ -293,10 +316,14 @@ function Prompt({
       notifyError("An error occurred while pasting: ", error);
     }
   };
+
+  // Trigger image file input click
   const handleClickImage = () => {
     hiddenFileInputImage.current.value = null;
     hiddenFileInputImage.current.click();
   };
+
+  // Read file content as text
   const readFileAsText = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -306,14 +333,17 @@ function Prompt({
     });
   };
 
+  // Format CSV text for display
   const formatCSVText = (csvText) => {
     const rows = csvText.split("\n");
     const formattedRows = rows.map((row) => row.split(",").join(" | "));
     return formattedRows.join("\n");
   };
 
+  // Handle text and CSV file uploads
   const handleFilesChange = async (e) => {
     try {
+      // Filter for text and CSV files
       const textFiles = Array.from(e.target.files).filter(
         (file) => file.type === "text/plain"
       );
@@ -321,12 +351,14 @@ function Prompt({
         (file) => file.type === "text/csv"
       );
 
+      // Validate file types
       if (textFiles.length + csvFiles.length !== e.target.files.length) {
         notifyError("All files must be text or CSV");
       } else {
         notifySuccess("File attached");
       }
 
+      // Process text files
       const filesWithText = [];
       for (const file of textFiles) {
         const text = await readFileAsText(file);
@@ -337,6 +369,7 @@ function Prompt({
         });
       }
 
+      // Process CSV files
       for (const file of csvFiles) {
         const text = await readFileAsText(file);
         filesWithText.push({
@@ -352,8 +385,10 @@ function Prompt({
     }
   };
 
+  // Handle image file uploads
   const handleFilesChangeImage = async (e) => {
     try {
+      // Filter for supported image types
       const imageFiles = Array.from(e.target.files).filter(
         (file) =>
           file.type === "image/jpeg" ||
@@ -362,12 +397,14 @@ function Prompt({
           file.type === "image/webp"
       );
 
+      // Validate file types
       if (imageFiles.length !== e.target.files.length) {
         notifyError("All files must be images");
       } else {
         notifySuccess("File attached");
       }
 
+      // Process image files
       const imageFileList = [];
       for (const file of imageFiles) {
         const text = await readFileAsBase64(file);
@@ -384,6 +421,8 @@ function Prompt({
       notifyError("An error occurred: ", error);
     }
   };
+
+  // Trigger file input click
   const handleClick = () => {
     hiddenFileInput.current.value = null;
     hiddenFileInput.current.click();
@@ -539,7 +578,7 @@ function Prompt({
                       className="cursor-pointer h-[30px] w-[30px]"
                       src={pause}
                       alt="pause"
-                      onClick={handlecancelRequest}
+                      onClick={handleCancelRequest}
                     />
                   </button>
                 </Tooltip>
