@@ -1,7 +1,8 @@
+// Controller for handling API request cancellation
 let controller = new AbortController();
 let signal = controller.signal;
 
-async function generateTitle(conversation, settings) {
+async function generateConversationTitle(conversation, settings) {
   const titlePrompt =
     "Create a very short title (maximum 4 words) for this conversation that captures its main topic. Respond only with the title - no quotes, punctuation, or additional text.";
   try {
@@ -24,10 +25,15 @@ async function generateTitle(conversation, settings) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let title = "";
+    let streamComplete = false;
 
-    while (true) {
+    // Stream response until complete
+    while (!streamComplete) {
       const { value, done } = await reader.read();
-      if (done) break;
+      if (done) {
+        streamComplete = true;
+        break;
+      }
       title += decoder.decode(value, { stream: true });
     }
 
@@ -38,12 +44,12 @@ async function generateTitle(conversation, settings) {
   }
 }
 
-async function getDataFromLLM(
+async function fetchLLMResponse(
   conversation,
   customInstructions,
-  chooseModelApi,
-  temperatureGlobal,
-  tpopGlobal,
+  modelName,
+  temperature,
+  topP,
   arcana,
   setLocalState,
   setShowModalSession,
@@ -51,14 +57,15 @@ async function getDataFromLLM(
   updatedConversation
 ) {
   try {
+    // Models that require different message formatting
     const instructModels = ["mixtral-8x7b-instruct"];
-    const isInstruct = instructModels.includes(chooseModelApi);
+    const isInstruct = instructModels.includes(modelName);
 
     const response = await fetch("/chat-ai-backend", {
       method: "post",
       headers: { "Content-type": "application/json" },
       body: JSON.stringify({
-        model: chooseModelApi,
+        model: modelName,
         messages: isInstruct
           ? [
               {
@@ -72,13 +79,14 @@ async function getDataFromLLM(
               { role: "system", content: customInstructions },
               ...updatedConversation.slice(1),
             ],
-        temperature: temperatureGlobal,
-        top_p: tpopGlobal,
+        temperature: temperature,
+        top_p: topP,
         arcana: arcana,
       }),
       signal: signal,
     });
 
+    // Handle auth error
     if (response.status === 401) {
       setLocalState((prevState) => ({
         ...prevState,
@@ -91,6 +99,7 @@ async function getDataFromLLM(
       return;
     }
 
+    // Handle request size error
     if (response.status === 413) {
       setLocalState((prevState) => ({
         ...prevState,
@@ -107,15 +116,20 @@ async function getDataFromLLM(
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let newResponse = "";
+    let currentResponse = "";
+    let streamComplete = false;
 
     try {
-      while (true) {
+      // Stream and process response chunks
+      while (!streamComplete) {
         const { value, done } = await reader.read();
-        if (done) break;
+        if (done) {
+          streamComplete = true;
+          break;
+        }
 
         const decodedChunk = decoder.decode(value, { stream: true });
-        newResponse += decodedChunk;
+        currentResponse += decodedChunk;
 
         setLocalState((prevState) => ({
           ...prevState,
@@ -123,7 +137,7 @@ async function getDataFromLLM(
             ...prevState.responses.slice(0, -1),
             {
               ...prevState.responses[prevState.responses.length - 1],
-              response: newResponse,
+              response: currentResponse,
             },
           ],
         }));
@@ -131,7 +145,7 @@ async function getDataFromLLM(
 
       const updatedConversation = [
         ...conversation,
-        { role: "assistant", content: newResponse },
+        { role: "assistant", content: currentResponse },
       ];
 
       setLocalState((prevState) => ({
@@ -139,12 +153,12 @@ async function getDataFromLLM(
         conversation: updatedConversation,
       }));
 
-      // Generate title if this is the first exchange
+      // Generate title for new conversations
       if (conversation.length <= 2) {
-        const title = await generateTitle(updatedConversation, {
-          model_api: chooseModelApi,
-          temperature: temperatureGlobal,
-          top_p: tpopGlobal,
+        const title = await generateConversationTitle(updatedConversation, {
+          model_api: modelName,
+          temperature: temperature,
+          top_p: topP,
         });
 
         setLocalState((prevState) => ({
@@ -153,14 +167,14 @@ async function getDataFromLLM(
         }));
       }
 
-      return newResponse;
+      return currentResponse;
     } catch (error) {
-      if (error.name === "AbortError" && newResponse) {
+      if (error.name === "AbortError" && currentResponse) {
         setLocalState((prevState) => ({
           ...prevState,
           conversation: [
             ...prevState.conversation,
-            { role: "assistant", content: newResponse },
+            { role: "assistant", content: currentResponse },
           ],
         }));
       }
@@ -172,10 +186,10 @@ async function getDataFromLLM(
   }
 }
 
-function abortFetch() {
+function cancelRequest() {
   controller.abort();
   controller = new AbortController();
   signal = controller.signal;
 }
 
-export { getDataFromLLM, abortFetch };
+export { fetchLLMResponse, cancelRequest };

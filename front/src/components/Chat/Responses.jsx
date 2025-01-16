@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Tooltip from "../Others/Tooltip";
-import { getDataFromLLM } from "../../apis/LlmRequestApi";
+import { fetchLLMResponse } from "../../apis/LlmRequestApi";
 
 //Assets
 import retry from "../../assets/icon_retry.svg";
@@ -151,7 +151,7 @@ function Responses({
     }
 
     try {
-      await getDataFromLLM(
+      await fetchLLMResponse(
         newConversation,
         localState.settings.systemPrompt,
         localState.settings.model_api,
@@ -263,7 +263,7 @@ function Responses({
     }
 
     try {
-      await getDataFromLLM(
+      await fetchLLMResponse(
         newConversation,
         localState.settings.systemPrompt,
         localState.settings.model_api,

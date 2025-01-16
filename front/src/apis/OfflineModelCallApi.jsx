@@ -1,4 +1,5 @@
-async function offlineModelCall(model) {
+// Tests if a specific model is available and responsive
+async function checkModelAvailability(modelName) {
   try {
     const response = await fetch("/chat-ai-backend", {
       method: "post",
@@ -6,7 +7,7 @@ async function offlineModelCall(model) {
         "Content-type": "application/json",
       },
       body: JSON.stringify({
-        model: model,
+        model: modelName,
         messages: [
           {
             role: "system",
@@ -24,9 +25,9 @@ async function offlineModelCall(model) {
 
     return response;
   } catch (error) {
-    console.error("An error occurred", error);
+    console.error("Model availability check failed:", error);
     throw error;
   }
 }
 
-export { offlineModelCall };
+export { checkModelAvailability };

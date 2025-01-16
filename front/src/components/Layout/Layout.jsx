@@ -18,10 +18,10 @@ import {
   updateConversation,
   selectCurrentConversation,
 } from "../../Redux/reducers/conversationsSlice";
-import { getModels } from "../../apis/ModelListApi";
+import { fetchAvailableModels } from "../../apis/ModelListApi";
 import OfflineModelInfoModal from "../../modals/OfflineModelInfoModal";
 import SettingsModal from "../../modals/SettingsModal";
-import { getUserData } from "../../apis/GetUserDataApi";
+import { fetchCurrentUserProfile } from "../../apis/GetUserDataApi";
 import RenameConversationModal from "../../modals/RenameConversationModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
 
@@ -58,7 +58,7 @@ function Layout() {
 
   const fetchUserData = async () => {
     try {
-      const data = await getUserData();
+      const data = await fetchCurrentUserProfile();
       setUserData(data);
     } catch (error) {
       console.error("Failed to fetch user data:", error);
@@ -77,7 +77,7 @@ function Layout() {
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const data = await getModels(setShowModalSession);
+        const data = await fetchAvailableModels(setShowModalSession);
         setModelList(data);
       } catch (error) {
         notifyError("Error fetching models:", error);

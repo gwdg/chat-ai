@@ -13,7 +13,7 @@ import upload from "../../assets/add.svg";
 import mic from "../../assets/icon_mic.svg";
 import stop from "../../assets/stop_listening.svg";
 import pause from "../../assets/pause.svg";
-import { abortFetch, getDataFromLLM } from "../../apis/LlmRequestApi";
+import { cancelRequest, fetchLLMResponse } from "../../apis/LlmRequestApi";
 import Tooltip from "../Others/Tooltip";
 import { useTranslation } from "react-i18next";
 
@@ -125,7 +125,7 @@ function Prompt({
     updateLocalState({ prompt: "" });
 
     try {
-      const response = await getDataFromLLM(
+      const response = await fetchLLMResponse(
         processedConversation,
         localState.settings.systemPrompt,
         localState.settings.model_api,
@@ -196,8 +196,8 @@ function Prompt({
     adjustHeight();
   };
 
-  const handleAbortFetch = () => {
-    abortFetch(notifyError);
+  const handlecancelRequest = () => {
+    cancelRequest(notifyError);
     setIsSubmitting(false);
     setLoading(false);
   };
@@ -539,7 +539,7 @@ function Prompt({
                       className="cursor-pointer h-[30px] w-[30px]"
                       src={pause}
                       alt="pause"
-                      onClick={handleAbortFetch}
+                      onClick={handlecancelRequest}
                     />
                   </button>
                 </Tooltip>

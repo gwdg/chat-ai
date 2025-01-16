@@ -77,7 +77,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showMicModal, setShowMicModal] = useState(false);
   const [showCustomHelpModal, setShowCustomHelpModal] = useState(false);
-  const [showTpopHelpModal, setShowTpopHelpModal] = useState(false);
+  const [showTopPHelpModal, setShowTopPHelpModal] = useState(false);
   const [showSystemHelpModal, setShowSystemHelpModal] = useState(false);
   const [showArcanasHelpModal, setShowArcanasHelpModal] = useState(false);
   const [showCusModal, setShowCusModal] = useState(false);
@@ -631,7 +631,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           setShowHelpModal={setShowHelpModal}
           setShowArcanasHelpModal={setShowArcanasHelpModal}
           setShowCustomHelpModal={setShowCustomHelpModal}
-          setShowTpopHelpModal={setShowTpopHelpModal}
+          setShowTopPHelpModal={setShowTopPHelpModal}
           setShowSystemHelpModal={setShowSystemHelpModal}
           notifySuccess={notifySuccess}
           notifyError={notifyError}
@@ -647,8 +647,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       </>
 
       <>
-        {showTpopHelpModal ? (
-          <HelpTopPModal showModal={setShowTpopHelpModal} />
+        {showTopPHelpModal ? (
+          <HelpTopPModal showModal={setShowTopPHelpModal} />
         ) : null}
       </>
 

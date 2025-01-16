@@ -3,12 +3,12 @@
 import { Trans } from "react-i18next"; // For translation
 import ContainerModal from "./ContainerModal"; // Importing Model component
 import cross from "../assets/cross.svg"; // Close icon
-import { offlineModelCall } from "../apis/OfflineModelCallApi";
+import { checkModelAvailability } from "../apis/checkModelAvailabilityApi";
 
 function OfflineModelInfoModal(props) {
   async function getRes() {
     try {
-      const response = await offlineModelCall(props?.model);
+      const response = await checkModelAvailability(props?.model);
     } catch (error) {
       console.error("An error occurred", error);
     }

@@ -41,7 +41,7 @@ const SettingsPanel = ({
   setShowHelpModal,
   setShowArcanasHelpModal,
   setShowCustomHelpModal,
-  setShowTpopHelpModal,
+  setShowTopPHelpModal,
   setShowSystemHelpModal,
   notifySuccess,
   notifyError,
@@ -81,7 +81,7 @@ const SettingsPanel = ({
   const [isOpen, setIsOpen] = useState(false);
   const [direction, setDirection] = useState("down");
   const [isHovering, setHovering] = useState(false);
-  const [isHoveringTpop, setHoveringTpop] = useState(false);
+  const [isHoveringTopP, setHoveringTopP] = useState(false);
   const [systemPromptError, setSystemPromptError] = useState("");
 
   //Refs
@@ -162,7 +162,7 @@ const SettingsPanel = ({
     updateSettings({ temperature: numVal });
   };
 
-  const handleChangeTpop = (newValue) => {
+  const handleChangeTopPhandleChangeTpophandleChangeTpop = (newValue) => {
     const numVal = parseFloat(newValue);
     updateSettings({ top_p: numVal });
   };
@@ -739,7 +739,7 @@ const SettingsPanel = ({
                     src={help}
                     alt="help"
                     className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowTpopHelpModal(true)}
+                    onClick={() => setShowTopPHelpModal(true)}
                   />
                 </div>
                 <div className="w-full">
@@ -760,11 +760,11 @@ const SettingsPanel = ({
                       step="0.05"
                       value={localState.settings.top_p}
                       className="slider-input"
-                      onChange={(event) => handleChangeTpop(event.target.value)}
-                      onMouseEnter={() => setHoveringTpop(true)}
-                      onMouseLeave={() => setHoveringTpop(false)}
+                      onChange={(event) => handleChangeTopPhandleChangeTpophandleChangeTpop(event.target.value)}
+                      onMouseEnter={() => setHoveringTopP(true)}
+                      onMouseLeave={() => setHoveringTopP(false)}
                     />
-                    {isHoveringTpop && (
+                    {isHoveringTopP && (
                       <output
                         className="slider-tooltip"
                         style={{

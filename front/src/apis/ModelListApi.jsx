@@ -1,14 +1,16 @@
-//This function fetch model list
-export async function getModels(setShowModalSession) {
+// Fetches available AI models from the server, handles auth errors
+export async function fetchAvailableModels(setShowModalSession) {
   try {
     const response = await fetch("/models");
+
     if (response.status === 401) {
       setShowModalSession(true);
       return;
     }
-    const jsonResponse = await response.json();
-    return jsonResponse.data;
+
+    const { data: modelsList } = await response.json();
+    return modelsList;
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Failed to fetch models:", error);
   }
 }
