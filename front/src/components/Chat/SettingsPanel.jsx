@@ -205,40 +205,40 @@ const SettingsPanel = ({
   // processing function
   const handlePdfProcess = async (file, index) => {
     try {
-      // Set processing state
       setProcessingFiles((prev) => new Set(prev).add(index));
 
-      // Call API processing function
+      // Pass the original File object
       const result = await processPdfDocument(file.file);
 
-      if (result.success) {
-        // Update file state with processed content
+      if (result.success && result.content) {
         setSelectedFiles((prevFiles) => {
           const newFiles = [...prevFiles];
           newFiles[index] = {
             ...newFiles[index],
             processed: true,
-            processedContent: result.content, // Store the processed text
+            processedContent: result.content,
           };
           return newFiles;
         });
 
-        console.log("Processed PDF content:", result.content);
         notifySuccess("PDF processed successfully");
       } else {
-        throw new Error(result.error || "Processing failed");
+        throw new Error(
+          result.error || "No content received from PDF processing"
+        );
       }
     } catch (error) {
-      // Reset processed state on error
       setSelectedFiles((prevFiles) => {
         const newFiles = [...prevFiles];
-        newFiles[index] = { ...newFiles[index], processed: false };
+        newFiles[index] = {
+          ...newFiles[index],
+          processed: false,
+        };
         return newFiles;
       });
       console.error("PDF processing error:", error);
       notifyError(`Failed to process PDF: ${error.message}`);
     } finally {
-      // Clean up processing state
       setProcessingFiles((prev) => {
         const newSet = new Set(prev);
         newSet.delete(index);
@@ -634,10 +634,7 @@ const SettingsPanel = ({
                     <div className="flex items-center gap-1 w-full">
                       <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[60%]">
                         {file.name}
-                      </p>
-                      <p className="mx-2">|</p>
-                      <p>{formatFileSize(file.size)}</p>
-
+                      </p>{" "}
                       {file.fileType === "pdf" && (
                         <div className="ml-4 flex items-center">
                           {file.processed ? (
@@ -674,13 +671,15 @@ const SettingsPanel = ({
                                 e.stopPropagation();
                                 handlePdfProcess(file, index);
                               }}
-                              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm transition-colors"
+                              className="px-3 py-1 bg-tertiary text-white rounded-md hover:bg-blue-500 text-sm transition-colors"
                             >
                               Process
                             </button>
                           )}
                         </div>
                       )}
+                      <p className="mx-2">|</p>
+                      <p>{formatFileSize(file.size)}</p>
                     </div>
                     <img
                       src={cross}

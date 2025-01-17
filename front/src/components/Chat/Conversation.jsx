@@ -37,6 +37,7 @@ const Conversation = ({
   clearHistory,
   notifySuccess,
   notifyError,
+  setPdfNotProcessedModal,
 }) => {
   // Hooks
   const dispatch = useDispatch();
@@ -151,10 +152,10 @@ const Conversation = ({
         notifySuccess={notifySuccess}
         notifyError={notifyError}
         adjustHeight={adjustHeight}
+        setPdfNotProcessedModal={setPdfNotProcessedModal}
       />
     </div>
   );
 };
-
 
 export default Conversation;

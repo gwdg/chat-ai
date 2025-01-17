@@ -42,6 +42,7 @@ function Prompt({
   notifySuccess,
   notifyError,
   adjustHeight,
+  setPdfNotProcessedModal,
 }) {
   //Hooks
   const { t, i18n } = useTranslation();
@@ -220,62 +221,94 @@ function Prompt({
     // Skip empty prompts
     if (localState.prompt?.trim() === "") return;
 
+    // Check for unprocessed PDF files
+    const hasUnprocessedPDF = selectedFiles.some(
+      (file) => file.fileType === "pdf" && !file.processed
+    );
+
+    if (hasUnprocessedPDF) {
+      setPdfNotProcessedModal(true);
+      return;
+    }
+
     // Stop speech recognition if active
     SpeechRecognition.stopListening();
     resetTranscript();
 
-    let newConversation;
+    try {
+      let newConversation;
 
-    // Process submission with files
-    if (selectedFiles.length > 0) {
-      const textFiles = selectedFiles.filter((file) => file.type !== "image");
-      const imageFiles = selectedFiles.filter((file) => file.type === "image");
+      // Process submission with files
+      if (selectedFiles.length > 0) {
+        const textFiles = selectedFiles.filter((file) => file.type !== "image");
+        const imageFiles = selectedFiles.filter(
+          (file) => file.type === "image"
+        );
 
-      // Combine text files content with prompt
-      const allTextFilesText = textFiles
-        .map((file) => `${file.name}: ${file.text}`)
-        .join("\n");
+        // Process text files, including processed PDFs
+        const allTextFilesText = textFiles
+          .map((file) => {
+            // If it's a processed PDF, use its processed content
+            if (file.fileType === "pdf") {
+              return `${file.name}: ${file.processedContent}`;
+            }
+            // For other text files, use regular content
+            return `${file.name}: ${file.content}`;
+          })
+          .filter(Boolean) // Remove any undefined or empty entries
+          .join("\n");
 
-      const fullPrompt = `${localState.prompt}\n${allTextFilesText}`;
+        const fullPrompt = `${localState.prompt}\n${allTextFilesText}`;
 
-      // Process image files
-      const imageContent = imageFiles.map((imageFile) => ({
-        type: "image_url",
-        image_url: {
-          url: imageFile.text,
-        },
+        // Process image files
+        const imageContent = imageFiles.map((imageFile) => ({
+          type: "image_url",
+          image_url: {
+            url: imageFile.text,
+          },
+        }));
+
+        // Create combined prompt content
+        const newPromptContent = [
+          {
+            type: "text",
+            text: fullPrompt,
+          },
+          ...imageContent,
+        ];
+
+        newConversation = [
+          ...localState.conversation,
+          { role: "user", content: newPromptContent },
+        ];
+      } else {
+        // Simple text-only submission
+        newConversation = [
+          ...localState.conversation,
+          { role: "user", content: localState.prompt },
+        ];
+      }
+
+      // Update conversation state
+      setLocalState((prevState) => ({
+        ...prevState,
+        conversation: newConversation,
       }));
 
-      // Create combined prompt content
-      const newPromptContent = [
-        {
-          type: "text",
-          text: fullPrompt,
-        },
-        ...imageContent,
-      ];
+      const stillHasUnprocessedPDF = selectedFiles.some(
+        (file) => file.fileType === "pdf" && !file.processed
+      );
 
-      newConversation = [
-        ...localState.conversation,
-        { role: "user", content: newPromptContent },
-      ];
-    } else {
-      // Simple text-only submission
-      newConversation = [
-        ...localState.conversation,
-        { role: "user", content: localState.prompt },
-      ];
+      if (stillHasUnprocessedPDF) {
+        setPdfNotProcessedModal(true);
+        return;
+      }
+
+      await getRes(newConversation);
+    } catch (error) {
+      console.error("Error in handleSubmit:", error);
     }
-
-    // Update conversation state and get response
-    setLocalState((prevState) => ({
-      ...prevState,
-      conversation: newConversation,
-    }));
-
-    await getRes(newConversation);
   };
-
   // Handle pasting images from clipboard
   const handlePaste = async (event) => {
     try {
@@ -364,14 +397,15 @@ function Prompt({
         notifySuccess("File attached");
       }
 
-      // Process text files
       const filesWithText = [];
+
+      // Process text files
       for (const file of textFiles) {
-        const text = await readFileAsText(file);
+        const content = await readFileAsText(file);
         filesWithText.push({
           name: file.name,
           size: file.size,
-          text,
+          content,
           fileType: "text",
         });
       }
@@ -382,19 +416,17 @@ function Prompt({
         filesWithText.push({
           name: file.name,
           size: file.size,
-          text: formatCSVText(text),
+          content: formatCSVText(text),
           fileType: "csv",
         });
       }
 
       // Process PDF files
       for (const file of pdfFiles) {
-        // Store PDF as blob
-        const blob = new Blob([file], { type: "application/pdf" });
         filesWithText.push({
           name: file.name,
           size: file.size,
-          file: blob,
+          file: file,
           fileType: "pdf",
           processed: false,
         });

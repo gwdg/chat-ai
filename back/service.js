@@ -3,6 +3,8 @@ var bodyParser = require("body-parser");
 var cors = require("cors");
 var fetch = require("node-fetch");
 const app = express();
+const fileUpload = require("express-fileupload");
+const FormData = require('form-data');
 
 require("dotenv").config();
 
@@ -11,13 +13,24 @@ const api_key = process.env.API_KEY;
 
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(
-  bodyParser.urlencoded({
-    limit: "50mb",
-    extended: true,
-    parameterLimit: 10000,
+  fileUpload({
+    createParentPath: true,
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB max file size
+    },
+    debug: true,
   })
 );
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+app.use((err, req, res, next) => {
+  if (err.name === "FileUploadError") {
+    console.error("File Upload Error:", err);
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
@@ -58,14 +71,38 @@ async function getCompletionLLM(
   return response;
 }
 
+// async function processPdfFile(file, inference_id) {
+//   const url = "https://chat-ai.academiccloud.de/v1/documents/convert";
+//   const formData = new FormData();
+//   formData.append("file", file);
+
+//   const headers = {
+//     "inference-id": inference_id,
+//     Authorization: "Bearer " + api_key,
+//   };
+
+//   const response = await fetch(url, {
+//     method: "POST",
+//     headers,
+//     body: formData,
+//   });
+//   return response;
+// }
+
 async function processPdfFile(file, inference_id) {
-  const url = "http://172.17.0.1:8000/inference/v1/documents/convert";
+  const url = "https://chat-ai.academiccloud.de/v1/documents/convert";
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("document", file.data, {
+    filename: file.name,
+    contentType: file.mimetype,
+  });
+  formData.append("extract_tables_as_images", "false");
+  formData.append("image_resolution_scale", "4");
+
+  console.log(file)
 
   const headers = {
-    "inference-id": inference_id,
-    Authorization: "Bearer " + api_key,
+    "inference-id": inference_id
   };
 
   const response = await fetch(url, {
@@ -73,56 +110,66 @@ async function processPdfFile(file, inference_id) {
     headers,
     body: formData,
   });
+
   return response;
 }
 
-app.post("/process-pdf", async (req, res) => {
-  const inference_id = req.headers["inference-id"];
+// app.post("/process-pdf", async (req, res) => {
+//   if (!req.files || !req.files.pdf) {
+//     return res.status(422).json({ error: "No PDF file provided" });
+//   }
 
-  if (!req.files || !req.files.pdf) {
+//   //const inference_id = req.headers["inference-id"];
+//   const inference_id = "8cdef4d5e72f09bd2b4b318ed54ff32c";
+//   try {
+//     const pdfFile = req.files.pdf;
+//     const response = await processPdfFile(pdfFile, inference_id);
+
+//     if (!response.ok) {
+//       return res.status(response.status).send(response.statusText);
+//     }
+
+//     const result = await response.json();
+//     return res.status(200).json(result);
+//   } catch (err) {
+//     console.error("Processing error:", err);
+//     return res.status(500).json({
+//       error: "An internal server error occurred while processing PDF",
+//     });
+//   }
+// });
+
+app.post("/process-pdf", async (req, res) => {
+  // Check for the presence of `document` file key
+
+  
+  if (!req.files || !req.files.document) {
     return res.status(422).json({ error: "No PDF file provided" });
   }
+  console.log(req.files.document)
 
+  // const inference_id = req.headers["inference-id"];
+  const inference_id = "8cdef4d5e72f09bd2b4b318ed54ff32c";
   try {
-    const pdfFile = req.files.pdf;
+    // Access the file using the correct key name
+    const pdfFile = req.files.document;
 
-    let timeout = new Promise((resolve, reject) => {
-      let id = setTimeout(() => {
-        clearTimeout(id);
-        reject("processPdfFile timed out");
-      }, 30000);
-    });
-
-    const processPromise = processPdfFile(pdfFile, inference_id);
-    const response = await Promise.race([processPromise, timeout]).catch(
-      (error) => {
-        console.error(error);
-        res
-          .status(503)
-          .json({ error: "The PDF processing failed to respond in time" });
-        throw error;
-      }
-    );
+    const response = await processPdfFile(pdfFile, inference_id);
 
     if (!response.ok) {
-      res.status(response.status).send(response.statusText);
-      return;
+      return res.status(response.status).send(response.statusText);
     }
 
-    // Assuming API returns JSON response
     const result = await response.json();
-    res.status(200).json(result);
+    return res.status(200).json(result);
   } catch (err) {
-    console.error(err);
-    try {
-      return res.status(500).json({
-        error: "An internal server error occurred while processing PDF",
-      });
-    } catch (err) {
-      return;
-    }
+    console.error("Processing error:", err);
+    return res.status(500).json({
+      error: "An internal server error occurred while processing PDF",
+    });
   }
 });
+
 
 app.get("/", async (req, res) => {
   const inference_id = req.headers["inference-id"];

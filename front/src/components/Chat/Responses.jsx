@@ -47,23 +47,61 @@ function Responses({
   const [copied, setCopied] = useState(false);
   const [indexChecked, setIndexChecked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [userScrolled, setUserScrolled] = useState(false);
-  const [showScrollButton, setShowScrollButton] = useState(false);
   const [loadingResend, setLoadingResend] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   //Refs
-  const containerRef = useRef(null);
   const containerRefs = useRef([]);
   const textareaRefs = useRef([]);
   const hiddenFileInputJSON = useRef(null);
-  const lastScrollPosition = useRef(0);
-  const messagesEndRef = useRef(null);
+  const containerRef = useRef(null);
+  const scrollTimeout = useRef(null);
+  const lastResponseLength = useRef(0);
 
-  //Variable
-  const isLoading = loading || loadingResend;
+  //Functions
+  const scrollToBottom = useCallback((forceSmooth = false) => {
+    if (!containerRef.current) return;
+
+    const container = containerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+    // If distance is small or we're forcing smooth scroll, use smooth behavior
+    const behavior =
+      forceSmooth || distanceFromBottom < 500 ? "smooth" : "auto";
+
+    container.scrollTo({
+      top: scrollHeight,
+      behavior,
+    });
+  }, []);
+
+  // Debounced scroll handler
+  const handleScroll = useCallback(() => {
+    if (!containerRef.current) return;
+
+    if (scrollTimeout.current) {
+      window.clearTimeout(scrollTimeout.current);
+    }
+
+    scrollTimeout.current = window.setTimeout(() => {
+      const container = containerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+
+      // Only show button if content is actually overflowing AND we're not at bottom
+      const hasOverflow = scrollHeight > clientHeight;
+      const scrolledFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+      setShowScrollButton(hasOverflow && scrolledFromBottom > 100);
+    }, 100);
+  }, []);
+
+  // Click handler for scroll button - always use smooth scrolling
+  const handleScrollButtonClick = useCallback(() => {
+    scrollToBottom(true); // force smooth scroll
+  }, [scrollToBottom]);
 
   // Function to handle resending a previous message
-  // Takes an index parameter to identify which message to resend
   const handleResendClick = async (index) => {
     // Set loading state while processing
     setLoadingResend(true);
@@ -196,23 +234,110 @@ function Responses({
   const handleSave = async (index) => {
     setLoadingResend(true);
 
-    // Validate index
     if (index < 0 || index >= localState.responses.length) {
       notifyError("Something went wrong");
       setLoadingResend(false);
       return;
     }
 
-    // Validate edited text
     if (!editedText || !editedText?.trim()) {
       notifyError("Prompt cannot be empty!");
       setLoadingResend(false);
       return;
     }
 
-    // Rest of the function follows similar pattern to handleResendClick
-    // but uses editedText instead of currentPrompt
-    // [Similar implementation to handleResendClick]
+    let imageFiles = [];
+
+    if (localState.responses[index]?.images?.length > 0) {
+      imageFiles = localState.responses[index]?.images;
+    }
+
+    let newConversation = [...localState.conversation].slice(0, index * 2 + 1);
+    let newResponses = [...localState.responses].slice(0, index);
+
+    updateLocalState({ responses: newResponses });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    if (imageFiles?.length > 0) {
+      const newPromptContent = [
+        {
+          type: "text",
+          text: editedText,
+        },
+        ...imageFiles,
+      ];
+      newConversation.push({ role: "user", content: newPromptContent });
+    } else {
+      newConversation.push({ role: "user", content: editedText });
+    }
+
+    if (imageFiles?.length > 0) {
+      setLocalState((prevState) => ({
+        ...prevState,
+        responses: [
+          ...prevState.responses,
+          {
+            prompt: editedText,
+            images: imageFiles,
+            response: "",
+          },
+        ],
+      }));
+    } else {
+      setLocalState((prevState) => ({
+        ...prevState,
+        responses: [
+          ...prevState.responses,
+          {
+            prompt: editedText,
+            response: "",
+          },
+        ],
+      }));
+    }
+
+    let updatedConversation = [...newConversation];
+    const imageSupport = modelList.some(
+      (modelX) =>
+        modelX.name === localState.settings.model &&
+        modelX.input.includes("image")
+    );
+
+    // Remove image part from the conversation if model doesn't support images
+    if (!imageSupport) {
+      updatedConversation = updatedConversation.map((message) => {
+        if (message.role === "user" && Array.isArray(message.content)) {
+          return {
+            role: "user",
+            content: message.content
+              .filter((item) => item.type === "text")
+              .map((item) => item.text)
+              .join("\n"),
+          };
+        }
+        return message;
+      });
+    }
+
+    try {
+      await fetchLLMResponse(
+        newConversation,
+        localState.settings.systemPrompt,
+        localState.settings.model_api,
+        localState.settings.temperature,
+        localState.settings.top_p,
+        localState.arcana,
+        setLocalState,
+        setShowModalSession,
+        setShowBadRequest,
+        updatedConversation
+      );
+      setLoadingResend(false);
+    } catch (error) {
+      setLoadingResend(false);
+      notifyError(error.message || "An unknown error occurred");
+    }
   };
 
   // Function to handle retry of last message
@@ -445,27 +570,6 @@ function Responses({
     return imageFileList.filter(Boolean);
   };
 
-  // Function to handle container scroll events
-  const handleScroll = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Calculate scroll positions and distances
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const distanceFromBottom = scrollHeight - clientHeight - scrollTop;
-    const isNotAtBottom = distanceFromBottom > 20;
-    const hasEnoughContent = scrollHeight > clientHeight + 100;
-
-    // Update scroll button visibility
-    setShowScrollButton(isNotAtBottom && hasEnoughContent);
-
-    // Track user scroll position
-    if (Math.abs(scrollTop - lastScrollPosition.current) > 10) {
-      setUserScrolled(isNotAtBottom);
-      lastScrollPosition.current = scrollTop;
-    }
-  }, []);
-
   // Function to adjust textarea height for specific index
   const adjustHeightRefs = (index) => {
     if (textareaRefs.current[index]) {
@@ -484,38 +588,6 @@ function Responses({
     }
     setIsEditing(true);
   };
-
-  // Function to scroll chat to bottom
-  const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-      setUserScrolled(false);
-      setShowScrollButton(false);
-    }
-  }, []);
-
-  //Effects
-  //Effects
-  useEffect(() => {
-    const container = containerRef.current;
-    if (container) {
-      // Add passive flag for better scroll performance
-      const throttledScroll = throttle(handleScroll, 150); // Add throttling to prevent excessive updates
-      container.addEventListener("scroll", throttledScroll, { passive: true });
-      return () => container?.removeEventListener("scroll", throttledScroll);
-    }
-  }, [handleScroll]);
-
-  useEffect(() => {
-    if (localState.responses.length === 0 && messagesEndRef.current) {
-      // Use requestAnimationFrame for smooth scrolling
-      requestAnimationFrame(() => {
-        messagesEndRef.current.scrollIntoView({ behavior: "auto" });
-        setShowScrollButton(false);
-        setUserScrolled(false);
-      });
-    }
-  }, [localState.responses.length]);
 
   useEffect(() => {
     if (editingIndex !== null) {
@@ -555,17 +627,7 @@ function Responses({
   }, [localState.prompt, editedText, adjustHeight]);
 
   useEffect(() => {
-    if (!userScrolled && messagesEndRef.current) {
-      const behavior = isLoading ? "auto" : "smooth";
-      // Use requestAnimationFrame for smooth scrolling
-      requestAnimationFrame(() => {
-        messagesEndRef.current.scrollIntoView({ behavior, block: "end" });
-      });
-    }
-  }, [localState.responses, isLoading, userScrolled]);
-
-  useEffect(() => {
-    if (!copied) return; // Early return if not copied
+    if (!copied) return;
 
     const timer = setTimeout(() => {
       setCopied(false);
@@ -574,17 +636,54 @@ function Responses({
     return () => clearTimeout(timer);
   }, [copied]);
 
-  // Throttle utility function
-  function throttle(func, limit) {
-    let inThrottle;
-    return function (...args) {
-      if (!inThrottle) {
-        func.apply(this, args);
-        inThrottle = true;
-        setTimeout(() => (inThrottle = false), limit);
+  useEffect(() => {
+    if (!containerRef.current || !localState.responses) return;
+
+    const currentLength = localState.responses.length;
+    const lastResponse = localState.responses[currentLength - 1];
+
+    // If we have a new response or the last response is updating
+    if (
+      currentLength > lastResponseLength.current ||
+      (lastResponse?.response && (loading || loadingResend))
+    ) {
+      // Check if user is already near bottom
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+      const isNearBottom = scrollHeight - (scrollTop + clientHeight) < 300;
+
+      // Scroll smoothly if user is near bottom or if it's a new response
+      if (isNearBottom || currentLength > lastResponseLength.current) {
+        scrollToBottom(true); // force smooth scroll
       }
-    };
-  }
+    }
+
+    lastResponseLength.current = currentLength;
+  }, [localState.responses, loading, scrollToBottom, loadingResend]);
+
+  useEffect(() => {
+    handleScroll();
+  }, [localState.responses, handleScroll]);
+
+  // Cleanup
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      // Initial check
+      handleScroll();
+
+      container.addEventListener("scroll", handleScroll);
+      // Also check on resize as container dimensions might change
+      window.addEventListener("resize", handleScroll);
+
+      return () => {
+        container.removeEventListener("scroll", handleScroll);
+        window.removeEventListener("resize", handleScroll);
+        if (scrollTimeout.current) {
+          window.clearTimeout(scrollTimeout.current);
+        }
+      };
+    }
+  }, [handleScroll]);
 
   return (
     <>
@@ -692,6 +791,7 @@ function Responses({
                   </div>
                 </div>
               )}
+              py-2
             </div>
 
             {res?.images?.length > 0 && (
@@ -726,28 +826,6 @@ function Responses({
             />
           </div>
         ))}
-        <div ref={messagesEndRef} />
-
-        {showScrollButton && (
-          <button
-            onClick={scrollToBottom}
-            style={{
-              left: "50%",
-              transform: "translateX(-50%)",
-            }}
-            className="bg-tertiary sticky bottom-0 hover:bg-blue-600 text-white w-fit rounded-full shadow-lg transition-all duration-200 flex items-center justify-center gap-1 py-2 px-4 group hover:shadow-xl"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="25"
-              height="25"
-              viewBox="0 0 24 24"
-              className="transform transition-transform group-hover:translate-y-0.5"
-            >
-              <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
-            </svg>
-          </button>
-        )}
       </div>
 
       {localState.responses.length > 0 ? (
@@ -765,7 +843,15 @@ function Responses({
               />
             </button>
           </Tooltip>
-
+          {showScrollButton && (
+            <button
+              onClick={handleScrollButtonClick}
+              aria-label="Scroll to bottom"
+              className="text-tertiary max-w-[150px] w-full p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl flex items-center justify-center gap-2 transition-colors"
+            >
+              <p> Scroll to bottom</p>
+            </button>
+          )}
           <div className="flex items-center gap-6">
             <Tooltip text={t("description.export")}>
               <button

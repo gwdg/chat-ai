@@ -31,6 +31,7 @@ import {
   updateConversation,
 } from "../../Redux/reducers/conversationsSlice";
 import { useToast } from "../../hooks/useToast";
+import PdfNotProcessedModal from "../../modals/PdfNotProcessedModal";
 
 function ChatWindow({ modelSettings, modelList, onModelChange }) {
   // Hooks
@@ -88,6 +89,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
   const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [shareSettingsModal, setShareSettingsModal] = useState(false);
+  const [pdfNotProcessedModal, setPdfNotProcessedModal] = useState(false);
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen)
   );
@@ -685,6 +687,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           clearHistory={clearHistory}
           notifySuccess={notifySuccess}
           notifyError={notifyError}
+          setPdfNotProcessedModal={setPdfNotProcessedModal}
         />
         <SettingsPanel
           selectedFiles={selectedFiles}
@@ -793,6 +796,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
             dontShowAgainShare={localState.dontShow.dontShowAgainShare}
             setLocalState={setLocalState}
           />
+        ) : null}
+      </>
+      <>
+        {pdfNotProcessedModal ? (
+          <PdfNotProcessedModal showModal={setPdfNotProcessedModal} />
         ) : null}
       </>
     </>

@@ -1,13 +1,11 @@
+// PDF processing function
 export const processPdfDocument = async (pdfFile) => {
   try {
     const formData = new FormData();
-    formData.append("pdf", pdfFile);
+    formData.append("document", pdfFile);
 
-    const response = await fetch("/process-pdf", {
+    const response = await fetch("/chat-ai-backend/process-pdf", {
       method: "POST",
-      headers: {
-        "inference-id": crypto.randomUUID(),
-      },
       body: formData,
     });
 
@@ -19,7 +17,7 @@ export const processPdfDocument = async (pdfFile) => {
 
     return {
       success: true,
-      content: data.text || data.content,
+      content: data.markdown,
       error: null,
     };
   } catch (error) {
