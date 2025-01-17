@@ -343,17 +343,23 @@ function Prompt({
   // Handle text and CSV file uploads
   const handleFilesChange = async (e) => {
     try {
-      // Filter for text and CSV files
+      // Filter for text, CSV and PDF files
       const textFiles = Array.from(e.target.files).filter(
         (file) => file.type === "text/plain"
       );
       const csvFiles = Array.from(e.target.files).filter(
         (file) => file.type === "text/csv"
       );
+      const pdfFiles = Array.from(e.target.files).filter(
+        (file) => file.type === "application/pdf"
+      );
 
       // Validate file types
-      if (textFiles.length + csvFiles.length !== e.target.files.length) {
-        notifyError("All files must be text or CSV");
+      if (
+        textFiles.length + csvFiles.length + pdfFiles.length !==
+        e.target.files.length
+      ) {
+        notifyError("All files must be text, CSV, or PDF");
       } else {
         notifySuccess("File attached");
       }
@@ -366,6 +372,7 @@ function Prompt({
           name: file.name,
           size: file.size,
           text,
+          fileType: "text",
         });
       }
 
@@ -376,6 +383,20 @@ function Prompt({
           name: file.name,
           size: file.size,
           text: formatCSVText(text),
+          fileType: "csv",
+        });
+      }
+
+      // Process PDF files
+      for (const file of pdfFiles) {
+        // Store PDF as blob
+        const blob = new Blob([file], { type: "application/pdf" });
+        filesWithText.push({
+          name: file.name,
+          size: file.size,
+          file: blob,
+          fileType: "pdf",
+          processed: false,
         });
       }
 
@@ -427,6 +448,7 @@ function Prompt({
     hiddenFileInput.current.value = null;
     hiddenFileInput.current.click();
   };
+
   return (
     <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
       <div className="flex flex-col gap-4 w-full">
@@ -527,7 +549,7 @@ function Prompt({
                 type="file"
                 ref={hiddenFileInput}
                 multiple
-                accept=".txt, .csv"
+                accept=".txt, .csv, .pdf"
                 onChange={handleFilesChange}
                 className="hidden"
               />

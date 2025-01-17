@@ -22,7 +22,14 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
-async function getCompletionLLM(model, messages, temperature = 0.5, top_p = 0.5, inference_id = "no_id", arcana = null) {
+async function getCompletionLLM(
+  model,
+  messages,
+  temperature = 0.5,
+  top_p = 0.5,
+  inference_id = "no_id",
+  arcana = null
+) {
   const url = "http://172.17.0.1:8000/inference/v1/chat/completions";
   const headers = {
     Accept: "application/json",
@@ -38,12 +45,84 @@ async function getCompletionLLM(model, messages, temperature = 0.5, top_p = 0.5,
     temperature: temperature,
     top_p: top_p,
     stream: true,
-    ...(arcana !== null && arcana !== undefined && arcana.id !== null && arcana.id !== undefined && arcana.id !== "" ? { arcana: arcana } : {})
+    ...(arcana !== null &&
+    arcana !== undefined &&
+    arcana.id !== null &&
+    arcana.id !== undefined &&
+    arcana.id !== ""
+      ? { arcana: arcana }
+      : {}),
   });
 
   const response = await fetch(url, { method: "POST", headers, body });
   return response;
 }
+
+async function processPdfFile(file, inference_id) {
+  const url = "http://172.17.0.1:8000/inference/v1/documents/convert";
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers = {
+    "inference-id": inference_id,
+    Authorization: "Bearer " + api_key,
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  return response;
+}
+
+app.post("/process-pdf", async (req, res) => {
+  const inference_id = req.headers["inference-id"];
+
+  if (!req.files || !req.files.pdf) {
+    return res.status(422).json({ error: "No PDF file provided" });
+  }
+
+  try {
+    const pdfFile = req.files.pdf;
+
+    let timeout = new Promise((resolve, reject) => {
+      let id = setTimeout(() => {
+        clearTimeout(id);
+        reject("processPdfFile timed out");
+      }, 30000);
+    });
+
+    const processPromise = processPdfFile(pdfFile, inference_id);
+    const response = await Promise.race([processPromise, timeout]).catch(
+      (error) => {
+        console.error(error);
+        res
+          .status(503)
+          .json({ error: "The PDF processing failed to respond in time" });
+        throw error;
+      }
+    );
+
+    if (!response.ok) {
+      res.status(response.status).send(response.statusText);
+      return;
+    }
+
+    // Assuming API returns JSON response
+    const result = await response.json();
+    res.status(200).json(result);
+  } catch (err) {
+    console.error(err);
+    try {
+      return res.status(500).json({
+        error: "An internal server error occurred while processing PDF",
+      });
+    } catch (err) {
+      return;
+    }
+  }
+});
 
 app.get("/", async (req, res) => {
   const inference_id = req.headers["inference-id"];
@@ -90,7 +169,14 @@ app.post("/", async (req, res) => {
       }, 30000); // here, 30000ms is the timeout. Adjust it as per your needs
     });
 
-    const streamPromise = getCompletionLLM(model, messages, temperature, top_p, inference_id, arcana);
+    const streamPromise = getCompletionLLM(
+      model,
+      messages,
+      temperature,
+      top_p,
+      inference_id,
+      arcana
+    );
     const response = await Promise.race([streamPromise, timeout]).catch(
       (error) => {
         console.error(error);
@@ -149,8 +235,10 @@ app.post("/", async (req, res) => {
   } catch (err) {
     console.error(err);
     try {
-      return res.status(500).json({ error: "An internal server error occurred" });
-    } catch(err) {
+      return res
+        .status(500)
+        .json({ error: "An internal server error occurred" });
+    } catch (err) {
       return;
     }
   }
