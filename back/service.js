@@ -71,23 +71,6 @@ async function getCompletionLLM(
   return response;
 }
 
-// async function processPdfFile(file, inference_id) {
-//   const url = "https://chat-ai.academiccloud.de/v1/documents/convert";
-//   const formData = new FormData();
-//   formData.append("file", file);
-
-//   const headers = {
-//     "inference-id": inference_id,
-//     Authorization: "Bearer " + api_key,
-//   };
-
-//   const response = await fetch(url, {
-//     method: "POST",
-//     headers,
-//     body: formData,
-//   });
-//   return response;
-// }
 
 async function processPdfFile(file, inference_id) {
   const url = "https://chat-ai.academiccloud.de/v1/documents/convert";
@@ -99,7 +82,6 @@ async function processPdfFile(file, inference_id) {
   formData.append("extract_tables_as_images", "false");
   formData.append("image_resolution_scale", "4");
 
-  console.log(file)
 
   const headers = {
     "inference-id": inference_id
@@ -114,30 +96,7 @@ async function processPdfFile(file, inference_id) {
   return response;
 }
 
-// app.post("/process-pdf", async (req, res) => {
-//   if (!req.files || !req.files.pdf) {
-//     return res.status(422).json({ error: "No PDF file provided" });
-//   }
 
-//   //const inference_id = req.headers["inference-id"];
-//   const inference_id = "8cdef4d5e72f09bd2b4b318ed54ff32c";
-//   try {
-//     const pdfFile = req.files.pdf;
-//     const response = await processPdfFile(pdfFile, inference_id);
-
-//     if (!response.ok) {
-//       return res.status(response.status).send(response.statusText);
-//     }
-
-//     const result = await response.json();
-//     return res.status(200).json(result);
-//   } catch (err) {
-//     console.error("Processing error:", err);
-//     return res.status(500).json({
-//       error: "An internal server error occurred while processing PDF",
-//     });
-//   }
-// });
 
 app.post("/process-pdf", async (req, res) => {
   // Check for the presence of `document` file key
@@ -146,7 +105,6 @@ app.post("/process-pdf", async (req, res) => {
   if (!req.files || !req.files.document) {
     return res.status(422).json({ error: "No PDF file provided" });
   }
-  console.log(req.files.document)
 
   // const inference_id = req.headers["inference-id"];
   const inference_id = "8cdef4d5e72f09bd2b4b318ed54ff32c";
