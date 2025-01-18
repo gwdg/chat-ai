@@ -92,7 +92,6 @@ async function processPdfFile(file, inference_id) {
     headers,
     body: formData,
   });
-  console.log(response)
   return response;
 }
 
