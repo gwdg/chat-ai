@@ -423,7 +423,7 @@ const SettingsPanel = ({
                       model:
                         parsedData["model-name"] ||
                         parsedData.model ||
-                        "Meta LLaMA 3.1 8B Instruct",
+                        "Meta Llama 3.1 8B Instruct",
                       model_api:
                         parsedData.model || "meta-llama-3.1-8b-instruct",
                       temperature: parsedData.temperature || 0.5,
