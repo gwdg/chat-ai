@@ -73,7 +73,7 @@ async function getCompletionLLM(
 
 
 async function processPdfFile(file, inference_id) {
-  const url = "https://chat-ai.academiccloud.de/v1/documents/convert";
+  const url = "http://172.17.0.1:8000/inference/v1/documents/convert";
   const formData = new FormData();
   formData.append("document", file.data, {
     filename: file.name,
@@ -92,7 +92,7 @@ async function processPdfFile(file, inference_id) {
     headers,
     body: formData,
   });
-
+  console.log(response)
   return response;
 }
 
@@ -106,8 +106,8 @@ app.post("/process-pdf", async (req, res) => {
     return res.status(422).json({ error: "No PDF file provided" });
   }
 
-  // const inference_id = req.headers["inference-id"];
-  const inference_id = "8cdef4d5e72f09bd2b4b318ed54ff32c";
+  const inference_id = req.headers["inference-id"];
+  
   try {
     // Access the file using the correct key name
     const pdfFile = req.files.document;
