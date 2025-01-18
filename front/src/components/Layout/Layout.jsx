@@ -4,12 +4,12 @@ import Footer from "./Footer";
 import Sidebar from "./Sidebar";
 import ChatWindow from "../Chat/ChatWindow";
 import footer_arrow from "../../assets/footer_arrow.svg";
-import Clear_Cache_Model from "../../model/Clear_Cache_Model";
+import ClearCacheModal from "../../modals/ClearCacheModal";
 import store, { persistor } from "../../Redux/store/store";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../hooks/useToast";
-import ConfirmationPopup from "../../model/ConfirmationPopup";
+import ConfirmationModal from "../../modals/ConfirmationModal";
 import {
   addConversation,
   deleteConversation,
@@ -18,36 +18,39 @@ import {
   updateConversation,
   selectCurrentConversation,
 } from "../../Redux/reducers/conversationsSlice";
-import { getModels } from "../../apis/ModelLIst";
-import Offline_Model_Model from "../../model/Offline_Model_Model";
-import Settings_Model from "../../model/Settings_Model";
-import { getUserData } from "../../apis/UserData";
-import RenameConversationModal from "../../model/RenameConversationModal";
-import Session_Expired from "../../model/Session_Expired";
+import { fetchAvailableModels } from "../../apis/ModelListApi";
+import OfflineModelInfoModal from "../../modals/OfflineModelInfoModal";
+import SettingsModal from "../../modals/SettingsModal";
+import { fetchCurrentUserProfile } from "../../apis/GetUserDataApi";
+import RenameConversationModal from "../../modals/RenameConversationModal";
+import SessionExpiredModal from "../../modals/SessionExpiredModal";
 
+// Main layout component that manages the overall structure and state of the chat application
 function Layout() {
+  // UI state management
   const [showFooter, setShowFooter] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showCacheModel, setShowCacheModel] = useState(false);
-  const [showModelOffline, setShowModelOffline] = useState(false);
-  const [showSettingsModel, setShowSettingsModel] = useState(false);
+  const [showCacheModal, setShowCacheModal] = useState(false);
+  const [showModalOffline, setShowModalOffline] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [userData, setUserData] = useState(null);
 
+  // Refs and hooks initialization
   const mainDiv = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useToast();
 
-  // Conversation states
+  // Conversation state management
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingConversationId, setDeletingConversationId] = useState(null);
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
   const currentConversation = useSelector(selectCurrentConversation);
   const [conversationIds, setConversationIds] = useState([]);
-  const [showModelSession, setShowModelSession] = useState(false);
+  const [showModalSession, setShowModalSession] = useState(false);
 
-  // Model states
+  // Model configuration state
   const [modelList, setModelList] = useState([]);
   const [modelSettings, setModelSettings] = useState({
     model: currentConversation?.settings?.model || "",
@@ -56,9 +59,10 @@ function Layout() {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renamingConversationId, setRenamingConversationId] = useState(null);
 
+  // Fetch user profile data on component mount
   const fetchUserData = async () => {
     try {
-      const data = await getUserData();
+      const data = await fetchCurrentUserProfile();
       setUserData(data);
     } catch (error) {
       console.error("Failed to fetch user data:", error);
@@ -68,16 +72,17 @@ function Layout() {
   useEffect(() => {
     fetchUserData();
   }, []);
-  // Initialize conversation IDs
+
+  // Keep conversation IDs synchronized with the conversations list
   useEffect(() => {
     setConversationIds(conversations.map((conv) => conv.id));
   }, [conversations]);
 
-  // Fetch models and initialize model settings
+  // Initialize and periodically update available models
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const data = await getModels(setShowModelSession);
+        const data = await fetchAvailableModels(setShowModalSession);
         setModelList(data);
       } catch (error) {
         notifyError("Error fetching models:", error);
@@ -85,11 +90,11 @@ function Layout() {
     };
 
     fetchModels();
-    const interval = setInterval(fetchModels, 30000);
+    const interval = setInterval(fetchModels, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
-  // Update model settings when conversation changes
+  // Sync model settings with current conversation
   useEffect(() => {
     if (currentConversation?.settings) {
       setModelSettings({
@@ -99,16 +104,17 @@ function Layout() {
     }
   }, [currentConversation]);
 
+  // Show offline model warning if selected model is offline
   useEffect(() => {
     const currentModel = modelList?.find(
       (modelX) => modelX.name === modelSettings.model
     );
     if (currentModel?.status === "offline") {
-      setShowModelOffline(true);
+      setShowModalOffline(true);
     }
   }, [modelSettings.model, modelList]);
 
-  // Handle model change
+  // Handle model selection changes
   const handleModelChange = useCallback(
     (model, modelApi) => {
       if (!model || !modelApi) return;
@@ -118,6 +124,7 @@ function Layout() {
         model_api: modelApi,
       });
 
+      // Update conversation settings when model changes
       if (currentConversationId) {
         dispatch(
           updateConversation({
@@ -137,7 +144,7 @@ function Layout() {
     [dispatch, currentConversationId, currentConversation]
   );
 
-  // Conversation management functions
+  // Conversation deletion handlers
   const handleDeleteConversation = (id) => {
     setDeletingConversationId(id);
     setShowDeleteConfirm(true);
@@ -148,7 +155,6 @@ function Layout() {
     const currentIndex = conversations.findIndex((conv) => conv.id === id);
 
     if (currentIndex !== -1) {
-      // If deleting current conversation, navigate to the new conversation before deleting
       if (id === currentConversationId) {
         const isFirstConversation = currentIndex === 0;
         const nextConversationIndex = isFirstConversation
@@ -156,7 +162,7 @@ function Layout() {
           : currentIndex - 1;
 
         if (conversations.length === 1) {
-          // If it's the last conversation, create a new one first
+          // Create new conversation before deleting the last one
           const newAction = dispatch(addConversation());
           const newId = newAction.payload?.id;
           if (newId) {
@@ -166,13 +172,12 @@ function Layout() {
             }, 0);
           }
         } else {
-          // Navigate to the next conversation before deleting
+          // Navigate to adjacent conversation before deleting
           const nextConversationId = conversations[nextConversationIndex].id;
           navigate(`/chat/${nextConversationId}`);
           dispatch(deleteConversation(id));
         }
       } else {
-        // If not deleting current conversation, just delete it
         dispatch(deleteConversation(id));
       }
     }
@@ -187,7 +192,7 @@ function Layout() {
     deletingConversationId,
   ]);
 
-  // Scroll handlers
+  // Scroll utility functions
   const scrollToBottom = () => {
     if (mainDiv.current) {
       mainDiv.current.scrollTop = mainDiv.current.scrollHeight;
@@ -200,7 +205,7 @@ function Layout() {
     }
   };
 
-  // Handle responsive sidebar
+  // Responsive sidebar handling
   useEffect(() => {
     const handleResize = () => {
       setIsSidebarOpen(window.innerWidth > 1080);
@@ -210,12 +215,15 @@ function Layout() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-  // Clear cache handler
+
+  // Clear application cache and reset state
   const clearCache = async () => {
     try {
       await persistor.purge();
       dispatch({ type: "RESET_ALL" });
       notifySuccess("Chats cleared successfully");
+
+      // Navigate to new conversation after cache clear
       const state = store.getState();
       const newId = state.conversations.currentConversationId;
 
@@ -224,13 +232,14 @@ function Layout() {
         navigate(`/chat/${newId}`, { replace: true });
       }
 
-      setShowCacheModel(false);
-      setShowSettingsModel(false);
+      setShowCacheModal(false);
+      setShowSettingsModal(false);
     } catch (error) {
       notifyError("Failed to clear chats: " + error.message);
     }
   };
 
+  // Handle conversation rename
   const handleRenameConversation = (id) => {
     setRenamingConversationId(id);
     setShowRenameModal(true);
@@ -243,11 +252,11 @@ function Layout() {
         modelSettings={modelSettings}
         modelList={modelList}
         onModelChange={handleModelChange}
-        setShowSettingsModel={setShowSettingsModel}
+        setShowSettingsModal={setShowSettingsModal}
         userData={userData}
       />
       <div className="flex flex-1 overflow-hidden relative bg-bg_light dark:bg-bg_dark">
-        {/* Mobile Overlay */}
+        {/* Mobile overlay backdrop */}
         {isSidebarOpen && (
           <div
             className="custom:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
@@ -255,7 +264,7 @@ function Layout() {
           />
         )}
 
-        {/* Sidebar */}
+        {/* Collapsible sidebar with conversation list */}
         <div
           className={`
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -270,7 +279,7 @@ function Layout() {
           />
         </div>
 
-        {/* Main Content */}
+        {/* Main chat content area */}
         <div className="flex flex-col flex-1 w-full overflow-hidden">
           <div
             ref={mainDiv}
@@ -286,7 +295,8 @@ function Layout() {
           </div>
         </div>
       </div>
-      {/* Footer toggle and Footer */}
+
+      {/* Footer section with toggle */}
       <div className="w-full bg-bg_light dark:bg-bg_dark">
         {!showFooter && (
           <div className="flex justify-center items-center h-[22px] py-2">
@@ -312,37 +322,38 @@ function Layout() {
           />
         )}
       </div>
-      {/* Modals */}
+
+      {/* Modal components */}
       <div className="">
-        {showCacheModel ? (
-          <Clear_Cache_Model
-            showModel={setShowCacheModel}
+        {showCacheModal ? (
+          <ClearCacheModal
+            showModal={setShowCacheModal}
             clearCache={clearCache}
           />
         ) : null}
       </div>
       {showDeleteConfirm && (
-        <ConfirmationPopup
+        <ConfirmationModal
           onClose={() => setShowDeleteConfirm(false)}
           onConfirm={confirmDelete}
         />
       )}
-      {showModelOffline ? (
-        <Offline_Model_Model
-          showModel={setShowModelOffline}
+      {showModalOffline ? (
+        <OfflineModelInfoModal
+          showModal={setShowModalOffline}
           model={modelSettings.model_api}
         />
       ) : null}
-      {showSettingsModel ? (
-        <Settings_Model
-          showModel={setShowSettingsModel}
-          setShowCacheModel={setShowCacheModel}
+      {showSettingsModal ? (
+        <SettingsModal
+          showModal={setShowSettingsModal}
+          setShowCacheModal={setShowCacheModal}
           userData={userData}
         />
       ) : null}
       {showRenameModal && (
         <RenameConversationModal
-          showModel={setShowRenameModal}
+          showModal={setShowRenameModal}
           conversationId={renamingConversationId}
           currentTitle={
             conversations?.find((conv) => conv.id === renamingConversationId)
@@ -353,9 +364,9 @@ function Layout() {
             setRenamingConversationId(null);
           }}
         />
-      )}{" "}
-      {showModelSession ? (
-        <Session_Expired showModel={setShowModelSession} />
+      )}
+      {showModalSession ? (
+        <SessionExpiredModal showModal={setShowModalSession} />
       ) : null}
     </div>
   );

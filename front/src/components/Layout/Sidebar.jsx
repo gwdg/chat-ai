@@ -1,3 +1,13 @@
+/**
+ * Sidebar Component
+ * Provides conversation management interface including:
+ * - Creating new conversations
+ * - Listing existing conversations
+ * - Selecting conversations
+ * - Renaming and deleting conversations
+ */
+
+// Redux and routing imports
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,6 +17,8 @@ import {
   selectCurrentConversationId,
 } from "../../Redux/reducers/conversationsSlice";
 import { useCallback } from "react";
+
+// Asset imports
 import cross from "../../assets/cross.svg";
 import edit_icon from "../../assets/edit_icon.svg";
 import back_arrow from "../../assets/back_arrow.svg";
@@ -17,11 +29,18 @@ function Sidebar({
   onRenameConversation,
   conversationIds,
 }) {
+  // Redux and routing hooks
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // Redux selectors for conversation state
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
 
+  /**
+   * Creates a new conversation and navigates to it
+   * Includes a page refresh to ensure clean state
+   */
   const handleNewChat = useCallback(() => {
     const action = dispatch(addConversation());
     const newId = action.payload?.id;
@@ -35,6 +54,10 @@ function Sidebar({
     }
   }, [dispatch, navigate, onClose]);
 
+  /**
+   * Handles selection of an existing conversation
+   * Updates current conversation in Redux and navigates to it
+   */
   const handleSelectConversation = useCallback(
     (id) => {
       dispatch(setCurrentConversation(id));
@@ -46,6 +69,7 @@ function Sidebar({
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-bg_secondary_dark border-r dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark select-none">
+      {/* Mobile Header - Only visible on mobile devices */}
       <div className="custom:hidden flex items-center justify-between p-4 border-b dark:border-border_dark">
         <p className="text-lg font-medium text-black dark:text-white">
           Conversations
@@ -58,6 +82,7 @@ function Sidebar({
         </button>
       </div>
 
+      {/* New Chat Button Section */}
       <div className="flex-shrink-0 p-2 border-b dark:border-border_dark">
         <button
           onClick={handleNewChat}
@@ -67,9 +92,11 @@ function Sidebar({
         </button>
       </div>
 
+      {/* Conversations List Container */}
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto p-2">
           <div className="space-y-2">
+            {/* Map through conversation IDs and render each conversation */}
             {conversationIds.map((id) => {
               const conv = conversations?.find((c) => c.id === id);
               if (!conv) return null;
@@ -85,6 +112,7 @@ function Sidebar({
                   }`}
                 >
                   <div className="flex items-center justify-between relative">
+                    {/* Conversation Title with Gradient Overflow Effect */}
                     <div
                       className="flex-1 overflow-hidden relative custom:group-hover:mr-2 transition-all duration-200"
                       title={conv.title}
@@ -92,6 +120,7 @@ function Sidebar({
                       <div
                         ref={(el) => {
                           if (el) {
+                            // Check if title has overflow and set data attribute
                             const hasOverflow = el.scrollWidth > el.clientWidth;
                             el.dataset.hasOverflow = hasOverflow.toString();
                           }
@@ -105,7 +134,10 @@ function Sidebar({
                         {conv.title || "Untitled Conversation"}
                       </div>
                     </div>
+
+                    {/* Action Buttons (Edit and Delete) */}
                     <div className="flex-shrink-0 flex items-center gap-2 custom:opacity-0 custom:group-hover:opacity-100 opacity-100 transition-all duration-200 w-0 custom:group-hover:w-auto">
+                      {/* Edit Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -114,6 +146,7 @@ function Sidebar({
                       >
                         <img src={edit_icon} alt="edit" className="w-5 h-5" />
                       </button>
+                      {/* Delete Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
