@@ -3,6 +3,8 @@ var bodyParser = require("body-parser");
 var cors = require("cors");
 var fetch = require("node-fetch");
 const app = express();
+const fileUpload = require("express-fileupload");
+const FormData = require('form-data');
 
 require("dotenv").config();
 
@@ -11,18 +13,36 @@ const api_key = process.env.API_KEY;
 
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(
-  bodyParser.urlencoded({
-    limit: "50mb",
-    extended: true,
-    parameterLimit: 10000,
+  fileUpload({
+    createParentPath: true,
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB max file size
+    },
+    debug: true,
   })
 );
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+app.use((err, req, res, next) => {
+  if (err.name === "FileUploadError") {
+    console.error("File Upload Error:", err);
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
-async function getCompletionLLM(model, messages, temperature = 0.5, top_p = 0.5, inference_id = "no_id", arcana = null) {
+async function getCompletionLLM(
+  model,
+  messages,
+  temperature = 0.5,
+  top_p = 0.5,
+  inference_id = "no_id",
+  arcana = null
+) {
   const url = "http://172.17.0.1:8000/inference/v1/chat/completions";
   const headers = {
     Accept: "application/json",
@@ -38,12 +58,76 @@ async function getCompletionLLM(model, messages, temperature = 0.5, top_p = 0.5,
     temperature: temperature,
     top_p: top_p,
     stream: true,
-    ...(arcana !== null && arcana !== undefined && arcana.id !== null && arcana.id !== undefined && arcana.id !== "" ? { arcana: arcana } : {})
+    ...(arcana !== null &&
+    arcana !== undefined &&
+    arcana.id !== null &&
+    arcana.id !== undefined &&
+    arcana.id !== ""
+      ? { arcana: arcana }
+      : {}),
   });
 
   const response = await fetch(url, { method: "POST", headers, body });
   return response;
 }
+
+
+async function processPdfFile(file, inference_id) {
+  const url = "http://172.17.0.1:8000/inference/v1/documents/convert";
+  const formData = new FormData();
+  formData.append("document", file.data, {
+    filename: file.name,
+    contentType: file.mimetype,
+  });
+  formData.append("extract_tables_as_images", "false");
+  formData.append("image_resolution_scale", "4");
+
+
+  const headers = {
+    "inference-id": inference_id
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  console.log(response)
+  return response;
+}
+
+
+
+app.post("/process-pdf", async (req, res) => {
+  // Check for the presence of `document` file key
+
+  
+  if (!req.files || !req.files.document) {
+    return res.status(422).json({ error: "No PDF file provided" });
+  }
+
+  const inference_id = req.headers["inference-id"];
+  
+  try {
+    // Access the file using the correct key name
+    const pdfFile = req.files.document;
+
+    const response = await processPdfFile(pdfFile, inference_id);
+
+    if (!response.ok) {
+      return res.status(response.status).send(response.statusText);
+    }
+
+    const result = await response.json();
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("Processing error:", err);
+    return res.status(500).json({
+      error: "An internal server error occurred while processing PDF",
+    });
+  }
+});
+
 
 app.get("/", async (req, res) => {
   const inference_id = req.headers["inference-id"];
@@ -90,7 +174,14 @@ app.post("/", async (req, res) => {
       }, 30000); // here, 30000ms is the timeout. Adjust it as per your needs
     });
 
-    const streamPromise = getCompletionLLM(model, messages, temperature, top_p, inference_id, arcana);
+    const streamPromise = getCompletionLLM(
+      model,
+      messages,
+      temperature,
+      top_p,
+      inference_id,
+      arcana
+    );
     const response = await Promise.race([streamPromise, timeout]).catch(
       (error) => {
         console.error(error);
@@ -149,8 +240,10 @@ app.post("/", async (req, res) => {
   } catch (err) {
     console.error(err);
     try {
-      return res.status(500).json({ error: "An internal server error occurred" });
-    } catch(err) {
+      return res
+        .status(500)
+        .json({ error: "An internal server error occurred" });
+    } catch (err) {
       return;
     }
   }

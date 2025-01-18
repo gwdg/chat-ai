@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState, useRef, useMemo } from "react";
 
-// Assets
+// Asset imports for icons and images
 import Light from "../../assets/light.svg";
 import Dark from "../../assets/dark.svg";
 import hamburger_icon from "../../assets/hamburger_icon.svg";
@@ -10,10 +10,10 @@ import profile_icon from "../../assets/profile_icon.svg";
 import Logo from "../../assets/chatai-logo-v3-preview.png";
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
-import Help_Model from "../../model/Help_Model";
-import Session_Expired from "../../model/Session_Expired";
-import AnnouncementBar from "../Others/AnnouncementBar";
+import HelpModal from "../../modals/HelpModal";
+import SessionExpiredModal from "../../modals/SessionExpiredModal";
 
+// Utility function to determine the status indicator color based on model status
 const getStatusColor = (status) => {
   switch (status) {
     case "ready":
@@ -27,40 +27,57 @@ const getStatusColor = (status) => {
   }
 };
 
+/**
+ * Header component that provides navigation, theme switching, and model selection functionality
+ * @param {Object} props - Component props
+ * @param {Function} props.onMenuClick - Handler for mobile menu toggle
+ * @param {Object} props.modelSettings - Current model configuration
+ * @param {Array} props.modelList - Available AI models
+ * @param {Function} props.onModelChange - Handler for model selection changes
+ * @param {Function} props.setShowSettingsModal - Toggle for settings modal
+ * @param {Object} props.userData - Current user information
+ */
 function Header({
   onMenuClick,
   modelSettings,
   modelList,
   onModelChange,
-  setShowSettingsModel,
+  setShowSettingsModal,
   userData,
 }) {
   const dispatch = useDispatch();
-  const closeCount = useSelector((state) => state.anncCount);
+  // Note: Announcement count functionality currently disabled
+  // const closeCount = useSelector((state) => state.anncCount);
 
-  // UI States
+  // UI state management
   const [isDarkMode, setIsDarkMode] = useState(
     useSelector((state) => state.theme.isDarkMode)
   );
-  const [isOpen, setIsOpen] = useState(false);
-  const [isIOSChrome, setIsIOSChrome] = useState(false);
-  const [showHelpModel, setShowHelpModel] = useState(false);
-  const [showModelSession, setShowModelSession] = useState(false);
-  const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [isOpen, setIsOpen] = useState(false); // Controls model selection dropdown
+  const [isIOSChrome, setIsIOSChrome] = useState(false); // iOS Chrome detection for styling
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showModalSession, setShowModalSession] = useState(false);
+  // Announcement state currently disabled
+  // const [showAnnouncement, setShowAnnouncement] = useState(true);
 
+  // Reference for handling dropdown click-outside behavior
   const dropdownRef = useRef(null);
 
-  // Computed properties using useMemo
+  // Memoized computed properties for performance optimization
 
+  // Find the currently selected model from the model list
   const currentModel = useMemo(
     () => modelList?.find((m) => m.name === modelSettings?.model),
     [modelList, modelSettings?.model]
   );
+
+  // Check if current model supports image input
   const isImageSupported = useMemo(
     () => currentModel?.input.includes("image") || false,
     [currentModel]
   );
 
+  // Get the status indicator color for the current model
   const modelStatus = useMemo(
     () => ({
       color: currentModel ? getStatusColor(currentModel.status) : "red",
@@ -68,12 +85,16 @@ function Header({
     [currentModel]
   );
 
-  // Handle model change
+  // Handler for model selection changes
   const handleChangeModel = (option) => {
     onModelChange(option.name, option.id);
     setIsOpen(false);
   };
 
+  /**
+   * Extracts initials from username for avatar display
+   * Handles both dot-separated names (e.g., "john.doe") and regular usernames
+   */
   const getInitials = (username) => {
     if (!username) return "";
 
@@ -84,36 +105,36 @@ function Header({
 
     return username.slice(0, 2).toUpperCase();
   };
-  // Theme handling
+
+  // Theme handling effect
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.toggle("dark", isDarkMode);
   }, [isDarkMode]);
 
+  // Theme toggle handler
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
     dispatch({ type: "SET_THEME" });
   };
 
-  // Detect iOS Chrome
+  // iOS Chrome detection for proper mobile styling
   useEffect(() => {
     setIsIOSChrome(!!navigator.userAgent.match("CriOS"));
   }, []);
 
-  useEffect(() => {
-    setShowAnnouncement(closeCount < 3);
-  }, []);
+  // Announcement functionality currently disabled
+  // useEffect(() => {
+  //   setShowAnnouncement(closeCount < 3);
+  // }, []);
 
-  const handleAnnouncementClose = () => {
-    // Immediately hide the announcement
-    setShowAnnouncement(false);
-
-    // Update the Redux store with the new count
-    dispatch({
-      type: "SET_ANNCCOUNT",
-      payload: closeCount + 1,
-    });
-  };
+  // const handleAnnouncementClose = () => {
+  //   setShowAnnouncement(false);
+  //   dispatch({
+  //     type: "SET_ANNCCOUNT",
+  //     payload: closeCount + 1,
+  //   });
+  // };
 
   return (
     <>
@@ -179,7 +200,7 @@ function Header({
           {userData?.username ? (
             <div
               className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
-              onClick={() => setShowSettingsModel(true)}
+              onClick={() => setShowSettingsModal(true)}
             >
               <div className="w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
                 <span className="text-tertiary font-medium">
@@ -192,7 +213,7 @@ function Header({
               className="h-[32px] w-[32px]"
               src={profile_icon}
               alt="Profile"
-              onClick={() => setShowSettingsModel(true)}
+              onClick={() => setShowSettingsModal(true)}
             />
           )}
         </div>
@@ -311,7 +332,7 @@ function Header({
               className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity"
               onClick={(event) => {
                 event.stopPropagation();
-                setShowHelpModel(true);
+                setShowHelpModal(true);
               }}
             />
 
@@ -337,7 +358,7 @@ function Header({
             {userData?.username ? (
               <div
                 className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
-                onClick={() => setShowSettingsModel(true)}
+                onClick={() => setShowSettingsModal(true)}
               >
                 <div className="w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
                   <span className="text-tertiary font-medium">
@@ -350,15 +371,17 @@ function Header({
                 className="h-[32px] w-[32px]"
                 src={profile_icon}
                 alt="Profile"
-                onClick={() => setShowSettingsModel(true)}
+                onClick={() => setShowSettingsModal(true)}
               />
             )}
           </div>
         </div>
       </nav>
 
-      {showHelpModel && <Help_Model showModel={setShowHelpModel} />}
-      {showModelSession && <Session_Expired showModel={setShowModelSession} />}
+      {showHelpModal && <HelpModal showModal={setShowHelpModal} />}
+      {showModalSession && (
+        <SessionExpiredModal showModal={setShowModalSession} />
+      )}
     </>
   );
 }

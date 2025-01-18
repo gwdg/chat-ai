@@ -400,3 +400,13 @@ html {
   margin: 1rem 0;
   overflow-x: auto;
 }
+
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}

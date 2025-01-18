@@ -1,4 +1,3 @@
-// ArcanaApis.jsx
 export const fetchArcanaInfo = async () => {
   try {
     const response = await fetch("/arcana/info", {

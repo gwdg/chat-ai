@@ -14,10 +14,10 @@ import reports from "../assets/icons_arcana/reports.svg";
 import studies from "../assets/icons_arcana/studies.svg";
 import work from "../assets/icons_arcana/work.svg";
 import FilesTable from "../components/Arcanas/FilesTable";
-import Help_Model from "../model/Help_Model";
+import HelpModal from "../model/HelpModal";
 import { getArcana, deleteArcana, buildArcana } from "../apis/ArcanaApis"; // Import buildArcana function
 import { useSelector } from "react-redux";
-import Delete_Arcana_Model from "../model/Delete_Arcana_Model";
+import DeleteArcanaModal from "../model/DeleteArcanaModal";
 
 const icons = [
   { name: "Books", icon: books },
@@ -32,7 +32,7 @@ const icons = [
 function Arcana() {
   const { t } = useTranslation();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [showHelpModel, setShowHelpModel] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [showDeleteModel, setShowDeleteModel] = useState(false);
 
   const popupRef = useRef(null);
@@ -204,7 +204,7 @@ function Arcana() {
                 <button
                   className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
                   type="button"
-                  onClick={() => setShowHelpModel(true)}
+                  onClick={() => setShowHelpModal(true)}
                 >
                   <Trans i18nKey="description.help"></Trans>
                 </button>
@@ -232,12 +232,12 @@ function Arcana() {
       <ToastContainer />
 
       {showDeleteModel ? (
-        <Delete_Arcana_Model
-          showModel={setShowDeleteModel}
+        <DeleteArcanaModal
+          showModal={setShowDeleteModel}
           handleDelete={handleDelete}
         />
       ) : null}
-      {showHelpModel ? <Help_Model showModel={setShowHelpModel} /> : null}
+      {showHelpModal ? <HelpModal showModal={setShowHelpModal} /> : null}
     </Layout>
   );
 }
