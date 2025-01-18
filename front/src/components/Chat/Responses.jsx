@@ -791,7 +791,6 @@ function Responses({
                   </div>
                 </div>
               )}
-              py-2
             </div>
 
             {res?.images?.length > 0 && (
