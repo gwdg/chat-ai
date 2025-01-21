@@ -10,6 +10,7 @@ import profile_icon from "../../assets/profile_icon.svg";
 import Logo from "../../assets/chatai-logo-v3-preview.png";
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
+import thought_supported from "../../assets/thought_supported.svg";
 import HelpModal from "../../modals/HelpModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
 
@@ -74,6 +75,12 @@ function Header({
   // Check if current model supports image input
   const isImageSupported = useMemo(
     () => currentModel?.input.includes("image") || false,
+    [currentModel]
+  );
+
+  // Check if current model supports thought output
+  const isThoughtSupported = useMemo(
+    () => currentModel?.output.includes("thought") || false,
     [currentModel]
   );
 
@@ -279,6 +286,13 @@ function Header({
                 <img
                   src={image_supported}
                   alt="image_supported"
+                  className="h-[18px] w-[18px] flex-shrink-0 "
+                />
+              )}
+              {isThoughtSupported && (
+                <img
+                  src={thought_supported}
+                  alt="thought_supported"
                   className="h-[18px] w-[18px] flex-shrink-0 "
                 />
               )}
