@@ -11,6 +11,7 @@ import ArcanaContainer from "../Arcanas/ArcanaContainer";
 //Assets
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
+import thought_supported from "../../assets/thought_supported.svg";
 import cross from "../../assets/cross.svg";
 import dropdown from "../../assets/icon_dropdown.svg";
 import uploaded from "../../assets/file_uploaded.svg";
@@ -31,6 +32,7 @@ const SettingsPanel = ({
   modelList,
   currentModel,
   isImageSupported,
+  isThoughtSupported,
   onModelChange,
   showAdvOpt,
   toggleAdvOpt,
@@ -748,6 +750,13 @@ const SettingsPanel = ({
                           className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
                         />
                       )}
+                      {isThoughtSupported && (
+                        <img
+                          src={thought_supported}
+                          alt="thought_supported"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                        />
+                      )}
                       <img
                         src={dropdown}
                         alt="drop-down"
@@ -787,6 +796,13 @@ const SettingsPanel = ({
                             <img
                               src={image_supported}
                               alt="image_supported"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                            />
+                          )}
+                          {option.output.includes("thought") && (
+                            <img
+                              src={thought_supported}
+                              alt="thought_supported"
                               className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
                             />
                           )}
@@ -1056,6 +1072,13 @@ const SettingsPanel = ({
                         className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mr-2"
                       />
                     )}
+                    {isThoughtSupported && (
+                        <img
+                          src={thought_supported}
+                          alt="thought_supported"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                        />
+                      )}
                     <img
                       src={dropdown}
                       alt="drop-down"
@@ -1094,6 +1117,13 @@ const SettingsPanel = ({
                             <img
                               src={image_supported}
                               alt="image_supported"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
+                            />
+                          )}
+                          {option.output.includes("thought") && (
+                            <img
+                              src={thought_supported}
+                              alt="thought_supported"
                               className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
                             />
                           )}
