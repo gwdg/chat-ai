@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Tooltip from "../Others/Tooltip";
 import { fetchLLMResponse } from "../../apis/LlmRequestApi";
@@ -11,8 +12,9 @@ import send from "../../assets/icon_send.svg";
 import edit_icon from "../../assets/edit_icon.svg";
 import icon_resend from "../../assets/icon_resend.svg";
 import ResponseItem from "../Markdown/ResponseItem";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
 
 //Variable
 const MAX_HEIGHT = 200;
@@ -37,6 +39,7 @@ function Responses({
 }) {
   // Hooks
   const { t } = useTranslation();
+  const dispatch = useDispatch();
 
   // Redux state
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
@@ -49,6 +52,8 @@ function Responses({
   const [isEditing, setIsEditing] = useState(false);
   const [loadingResend, setLoadingResend] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [editingResponseIndex, setEditingResponseIndex] = useState(-1);
+  const [editedResponse, setEditedResponse] = useState("");
 
   //Refs
   const containerRefs = useRef([]);
@@ -59,6 +64,43 @@ function Responses({
   const lastResponseLength = useRef(0);
 
   //Functions
+  const handleResponseEdit = (index, response) => {
+    setEditingIndex(-1);
+    setEditedResponse(response);
+    setEditingResponseIndex(index);
+  };
+  const handleResponseSave = (index) => {
+    // Find assistant response index in conversation array
+    const assistantIndex = localState.conversation.findIndex(
+      (msg) =>
+        msg.role === "assistant" &&
+        msg.content === localState.responses[index].response
+    );
+
+    // Update both responses and conversation
+    const newResponses = localState.responses.map((res, i) => {
+      if (i === index) {
+        return { ...res, response: editedResponse };
+      }
+      return res;
+    });
+
+    const newConversation = localState.conversation.map((msg, i) => {
+      if (i === assistantIndex) {
+        return { ...msg, content: editedResponse };
+      }
+      return msg;
+    });
+
+    setLocalState({
+      ...localState,
+      responses: newResponses,
+      conversation: newConversation,
+    });
+
+    setEditingResponseIndex(-1);
+    setEditedResponse("");
+  };
   const scrollToBottom = useCallback((forceSmooth = false) => {
     if (!containerRef.current) return;
 
@@ -104,6 +146,7 @@ function Responses({
   // Function to handle resending a previous message
   const handleResendClick = async (index) => {
     // Set loading state while processing
+    dispatch(setIsResponding(true));
     setLoadingResend(true);
 
     // Validate index is within bounds of responses array
@@ -218,6 +261,7 @@ function Responses({
         setShowBadRequest,
         updatedConversation
       );
+      dispatch(setIsResponding(false));
       setLoadingResend(false);
     } catch (error) {
       setLoadingResend(false);
@@ -232,6 +276,7 @@ function Responses({
   // Function to handle saving edited messages
   // Similar structure to handleResendClick but uses edited text
   const handleSave = async (index) => {
+    dispatch(setIsResponding(true));
     setLoadingResend(true);
 
     if (index < 0 || index >= localState.responses.length) {
@@ -333,6 +378,7 @@ function Responses({
         setShowBadRequest,
         updatedConversation
       );
+      dispatch(setIsResponding(false));
       setLoadingResend(false);
     } catch (error) {
       setLoadingResend(false);
@@ -385,9 +431,18 @@ function Responses({
 
   // Function to handle editing message at specific index
   const handleEditClick = (index, prompt) => {
-    setEditingIndex(index);
+    setEditingResponseIndex(-1);
     setEditedText(prompt);
-    setTimeout(() => adjustHeight(index), 0);
+    setEditingIndex(index);
+    // Focus after state updates
+    setTimeout(() => {
+      if (textareaRefs.current[index]) {
+        const textarea = textareaRefs.current[index];
+        textarea.focus();
+        textarea.selectionStart = prompt.length;
+        textarea.selectionEnd = prompt.length;
+      }
+    }, 0);
   };
 
   // Function to handle closing edit mode
@@ -581,45 +636,12 @@ function Responses({
     }
   };
 
-  // Function to focus textarea at specific index
-  const focusTextArea = (index) => {
-    if (textareaRefs.current[index]) {
-      textareaRefs.current[index].focus();
-    }
-    setIsEditing(true);
-  };
-
   useEffect(() => {
     if (editingIndex !== null) {
       // Use requestAnimationFrame for smoother height adjustments
       requestAnimationFrame(() => adjustHeightRefs(editingIndex));
     }
   }, [editedText, editingIndex]);
-
-  useEffect(() => {
-    if (!isEditing) return; // Early return if not editing
-
-    const handleOutsideClick = (event) => {
-      localState.responses.forEach((_, index) => {
-        const container = containerRefs.current[index];
-        const textarea = textareaRefs.current[index];
-
-        if (
-          container &&
-          !container.contains(event.target) &&
-          textarea !== event.target
-        ) {
-          handleCloseClick(index);
-          setIsEditing(false);
-        }
-      });
-    };
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [isEditing, localState.responses, handleCloseClick]);
 
   useEffect(() => {
     // Use requestAnimationFrame for smoother height adjustments
@@ -684,6 +706,22 @@ function Responses({
       };
     }
   }, [handleScroll]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target)
+      ) {
+        setEditingIndex(-1);
+        setEditingResponseIndex(-1);
+        setIsEditing(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <>
@@ -777,7 +815,6 @@ function Responses({
                     </button>
                     <button
                       onClick={() => {
-                        focusTextArea(index);
                         handleEditClick(index, res.prompt);
                       }}
                       disabled={loadingResend}
@@ -822,6 +859,12 @@ function Responses({
               loading={loading}
               loadingResend={loadingResend}
               responses={localState.responses}
+              editingResponseIndex={editingResponseIndex}
+              setEditedResponse={setEditedResponse}
+              handleResponseEdit={handleResponseEdit}
+              handleResponseSave={handleResponseSave}
+              editedResponse={editedResponse}
+              setEditingResponseIndex={setEditingResponseIndex}
             />
           </div>
         ))}
