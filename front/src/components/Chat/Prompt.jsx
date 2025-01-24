@@ -16,6 +16,8 @@ import pause from "../../assets/pause.svg";
 import { cancelRequest, fetchLLMResponse } from "../../apis/LlmRequestApi";
 import Tooltip from "../Others/Tooltip";
 import { useTranslation } from "react-i18next";
+import { useDispatch } from "react-redux";
+import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
 
 //Variable
 const languageMap = {
@@ -47,6 +49,7 @@ function Prompt({
   //Hooks
   const { t, i18n } = useTranslation();
   const { listening, resetTranscript } = useSpeechRecognition();
+  const dispatch = useDispatch();
 
   //Refs
   const hiddenFileInput = useRef(null);
@@ -65,6 +68,7 @@ function Prompt({
 
   // Main function to fetch and process LLM response
   async function getRes(updatedConversation) {
+    dispatch(setIsResponding(true));
     setLoading(true);
 
     // Check if selected model supports image input
@@ -144,7 +148,7 @@ function Prompt({
         setShowBadRequest,
         processedConversation
       );
-
+      dispatch(setIsResponding(false));
       setLoading(false);
       setSelectedFiles([]);
     } catch (error) {
@@ -376,7 +380,7 @@ function Prompt({
   // Handle text and CSV file uploads
   const handleFilesChange = async (e) => {
     try {
-      // Filter for text, CSV and PDF files
+      // Filter for text, CSV, PDF and Markdown files
       const textFiles = Array.from(e.target.files).filter(
         (file) => file.type === "text/plain"
       );
@@ -386,13 +390,19 @@ function Prompt({
       const pdfFiles = Array.from(e.target.files).filter(
         (file) => file.type === "application/pdf"
       );
+      const mdFiles = Array.from(e.target.files).filter(
+        (file) => file.type === "text/markdown" || file.name.endsWith(".md")
+      );
 
       // Validate file types
       if (
-        textFiles.length + csvFiles.length + pdfFiles.length !==
+        textFiles.length +
+          csvFiles.length +
+          pdfFiles.length +
+          mdFiles.length !==
         e.target.files.length
       ) {
-        notifyError("All files must be text, CSV, or PDF");
+        notifyError("All files must be text, CSV, PDF, or Markdown");
       } else {
         notifySuccess("File attached");
       }
@@ -418,6 +428,17 @@ function Prompt({
           size: file.size,
           content: formatCSVText(text),
           fileType: "csv",
+        });
+      }
+
+      // Process Markdown files
+      for (const file of mdFiles) {
+        const content = await readFileAsText(file);
+        filesWithText.push({
+          name: file.name,
+          size: file.size,
+          content,
+          fileType: "markdown",
         });
       }
 
@@ -581,7 +602,7 @@ function Prompt({
                 type="file"
                 ref={hiddenFileInput}
                 multiple
-                accept=".txt, .csv, .pdf"
+                accept=".txt, .csv, .pdf, .md"
                 onChange={handleFilesChange}
                 className="hidden"
               />

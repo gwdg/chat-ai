@@ -15,6 +15,7 @@ import {
   setCurrentConversation,
   selectConversations,
   selectCurrentConversationId,
+  selectIsResponding,
 } from "../../Redux/reducers/conversationsSlice";
 import { useCallback } from "react";
 
@@ -36,7 +37,7 @@ function Sidebar({
   // Redux selectors for conversation state
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
-
+  const isResponding = useSelector(selectIsResponding);
   /**
    * Creates a new conversation and navigates to it
    * Includes a page refresh to ensure clean state
@@ -86,7 +87,10 @@ function Sidebar({
       <div className="flex-shrink-0 p-2 border-b dark:border-border_dark">
         <button
           onClick={handleNewChat}
-          className="w-full bg-bg_light dark:bg-bg_dark hover:bg-light_hover dark:hover:bg-dark_hover active:bg-tertiary_pressed text-black dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+          disabled={isResponding}
+          className={`w-full bg-bg_light dark:bg-bg_dark hover:bg-light_hover dark:hover:bg-dark_hover active:bg-tertiary_pressed text-black dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
+            isResponding && "cursor-not-allowed opacity-50"
+          }`}
         >
           <span>Add New Chat</span>
         </button>

@@ -41,6 +41,7 @@ const defaultConversation = createDefaultConversation();
 const initialState = {
   conversations: [defaultConversation],
   currentConversationId: defaultConversation.id,
+  isResponding: false,
 };
 
 const conversationsSlice = createSlice({
@@ -127,6 +128,9 @@ const conversationsSlice = createSlice({
       state.conversations = [newConversation];
       state.currentConversationId = newConversation.id;
     },
+    setIsResponding: (state, action) => {
+      state.isResponding = action.payload;
+    },
   },
 });
 
@@ -137,13 +141,14 @@ export const selectCurrentConversation = (state) =>
   state?.conversations?.conversations?.find(
     (conv) => conv.id === state.conversations.currentConversationId
   );
-
+export const selectIsResponding = (state) => state.conversations.isResponding;
 export const {
   addConversation,
   deleteConversation,
   setCurrentConversation,
   updateConversation,
   resetStore,
+  setIsResponding,
 } = conversationsSlice.actions;
 
 export default conversationsSlice.reducer;
