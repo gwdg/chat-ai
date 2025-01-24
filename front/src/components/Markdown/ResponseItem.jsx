@@ -124,15 +124,13 @@ const ResponseItem = React.memo(
                   </div>
                 </div>
               ) : (
-                <>
+                <div className="group">
                   <MarkdownRenderer isDarkMode={isDarkModeGlobal}>
                     {res.response}
                   </MarkdownRenderer>
-                  <div className="flex justify-end w-full mt-1 gap-2 group">
+                  <div className="flex justify-end w-full mt-1 gap-2">
                     <button
-                      onClick={() => {
-                        handleResponseEdit(index, res.response);
-                      }}
+                      onClick={() => handleResponseEdit(index, res.response)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                     >
                       <img
@@ -149,7 +147,7 @@ const ResponseItem = React.memo(
                       />
                     </button>
                   </div>
-                </>
+                </div>
               )}
             </>
           )}
