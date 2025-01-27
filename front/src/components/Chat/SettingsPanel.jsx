@@ -364,140 +364,122 @@ const SettingsPanel = ({
     const handleImport = async () => {
       const importUrl = searchParams.get("import");
 
-      // Only process if URL exists, we're on chat page, and haven't processed yet
       if (
-        importUrl &&
-        location.pathname === "/chat" &&
-        !hasProcessedImport.current
+        !importUrl ||
+        location.pathname !== "/chat" ||
+        hasProcessedImport.current
       ) {
-        try {
-          hasProcessedImport.current = true;
-          const response = await fetch(importUrl);
+        return;
+      }
 
-          // Handle different HTTP error cases
-          if (!response.ok) {
-            if (response.status >= 400 && response.status < 500) {
-              throw new Error("Client Error: Failed to fetch the JSON file.");
-            } else if (response.status >= 500) {
-              throw new Error("Server Error: Please try again later.");
-            } else {
-              throw new Error("Unknown Error: Could not fetch the JSON file.");
-            }
-          }
+      try {
+        hasProcessedImport.current = true;
+        const response = await fetch(importUrl);
 
-          const parsedData = await response.json();
-          const action = dispatch(addConversation());
-          const newId = action.payload?.id;
-
-          if (newId) {
-            // Handle nested messages format
-            if (Array.isArray(parsedData.messages)) {
-              let newArray = [];
-              // Process user-assistant message pairs
-              for (let i = 0; i < parsedData.messages.length; i++) {
-                if (
-                  parsedData.messages[i].role === "user" &&
-                  parsedData.messages[i + 1]?.role === "assistant"
-                ) {
-                  newArray.push({
-                    prompt: parsedData.messages[i].content,
-                    response: parsedData.messages[i + 1]?.content,
-                  });
-                }
-              }
-
-              // Find system message if exists
-              const systemMessage = parsedData?.messages?.find(
-                (message) => message.role === "system"
-              );
-
-              // Update conversation with imported data
-              dispatch(
-                updateConversation({
-                  id: newId,
-                  updates: {
-                    title: parsedData.messages[1].content,
-                    conversation: parsedData.messages,
-                    responses: newArray,
-                    settings: {
-                      systemPrompt:
-                        systemMessage?.content || "You are a helpful assistant",
-                      model:
-                        parsedData["model-name"] ||
-                        parsedData.model ||
-                        "Meta Llama 3.1 8B Instruct",
-                      model_api:
-                        parsedData.model || "meta-llama-3.1-8b-instruct",
-                      temperature: parsedData.temperature || 0.5,
-                      top_p: parsedData.top_p || 0.5,
-                    },
-                    ...(parsedData.arcana && {
-                      arcana: {
-                        id: parsedData.arcana.id,
-                        key: parsedData.arcana.key,
-                      },
-                    }),
-                  },
-                })
-              );
-            } else if (Array.isArray(parsedData)) {
-              // Handle flat array format
-              let newArray = [];
-              for (let i = 0; i < parsedData.length; i++) {
-                if (
-                  parsedData[i].role === "user" &&
-                  parsedData[i + 1]?.role === "assistant"
-                ) {
-                  newArray.push({
-                    prompt: parsedData[i].content,
-                    response: parsedData[i + 1]?.content,
-                  });
-                }
-              }
-
-              const systemMessage = parsedData?.find(
-                (message) => message.role === "system"
-              );
-
-              dispatch(
-                updateConversation({
-                  id: newId,
-                  updates: {
-                    title: parsedData[1].content,
-                    conversation: parsedData,
-                    responses: newArray,
-                    settings: {
-                      systemPrompt:
-                        systemMessage?.content || "You are a helpful assistant",
-                      model: "Meta Llama 3.1 8B Instruct",
-                      model_api: "meta-llama-3.1-8b-instruct",
-                      temperature: 0.5,
-                      top_p: 0.5,
-                    },
-                  },
-                })
-              );
-            }
-
-            // Navigate to new conversation
-            navigate(`/chat/${newId}`, { replace: true });
-            notifySuccess("Chat imported successfully");
-          }
-        } catch (error) {
-          // Handle different types of errors
-          if (error.name === "TypeError") {
-            notifyError("Network Error: Unable to reach the server.");
-          } else if (error.message.includes("Client Error")) {
-            notifyError("Client Error: The provided link might be incorrect.");
-          } else if (error.message.includes("Server Error")) {
-            notifyError("Server Error: Please try again later.");
-          } else {
-            notifyError(error.message || "An unexpected error occurred.");
-          }
-          console.error("Error:", error);
-          navigate(`/chat/${currentConversationId}`, { replace: true });
-          window.location.reload();
+        if (!response.ok) {
+          throw new Error(
+            response.status >= 500
+              ? "Server Error: Please try again later."
+              : "Client Error: The provided link might be incorrect."
+          );
         }
+
+        const parsedData = await response.json();
+        const action = dispatch(addConversation());
+        const newId = action.payload?.id;
+
+        if (!newId) {
+          throw new Error("Failed to create new conversation");
+        }
+
+        // Handle both formats: array and object with messages
+        const messages = Array.isArray(parsedData)
+          ? parsedData
+          : parsedData.messages;
+
+        if (!Array.isArray(messages)) {
+          throw new Error("Invalid format: messages must be an array");
+        }
+
+        // Process messages into conversation format
+        const newArray = [];
+        for (let i = 0; i < messages.length - 1; i++) {
+          if (
+            messages[i].role === "user" &&
+            messages[i + 1]?.role === "assistant"
+          ) {
+            newArray.push({
+              prompt: messages[i].content,
+              response: messages[i + 1].content,
+            });
+          }
+        }
+
+        // Find system message
+        const systemMessage = messages.find((msg) => msg.role === "system");
+
+        // Get title from first non-system message or use default
+        const firstNonSystemMessage = messages.find(
+          (msg) => msg.role !== "system"
+        );
+        const title = firstNonSystemMessage?.content || "Imported Conversation";
+
+        // Prepare settings with optional fields
+        const settings = {
+          systemPrompt: systemMessage?.content || "You are a helpful assistant",
+          model: "Meta Llama 3.1 8B Instruct", // default value
+          model_api: "meta-llama-3.1-8b-instruct", // default value
+          temperature: 0.5, // default value
+          top_p: 0.5, // default value
+        };
+
+        // If it's object format, apply any provided settings
+        if (!Array.isArray(parsedData)) {
+          if (parsedData["model-name"])
+            settings.model = parsedData["model-name"];
+          if (parsedData.model) settings.model_api = parsedData.model;
+          if (parsedData.temperature !== undefined)
+            settings.temperature = Number(parsedData.temperature);
+          if (parsedData.top_p !== undefined)
+            settings.top_p = Number(parsedData.top_p);
+        }
+
+        // Prepare conversation update
+        const updates = {
+          conversation: messages,
+          responses: newArray,
+          title,
+          settings,
+        };
+
+        // Only add arcana if both id and key are present
+        if (
+          !Array.isArray(parsedData) &&
+          parsedData.arcana?.id &&
+          parsedData.arcana?.key
+        ) {
+          updates.arcana = {
+            id: parsedData.arcana.id,
+            key: parsedData.arcana.key,
+          };
+        }
+
+        // Update conversation
+        dispatch(
+          updateConversation({
+            id: newId,
+            updates,
+          })
+        );
+
+        // Navigate and notify
+        navigate(`/chat/${newId}`, { replace: true });
+        notifySuccess("Chat imported successfully");
+      } catch (error) {
+        console.error("Import error:", error);
+        notifyError(error.message || "An unexpected error occurred");
+        navigate(`/chat/${currentConversationId}`, { replace: true });
+        window.location.reload();
       }
     };
 
@@ -513,7 +495,6 @@ const SettingsPanel = ({
     navigate,
     notifyError,
     notifySuccess,
-    setLocalState,
   ]);
 
   // Handle Arcana parameters from URL
@@ -1073,12 +1054,12 @@ const SettingsPanel = ({
                       />
                     )}
                     {isThoughtSupported && (
-                        <img
-                          src={thought_supported}
-                          alt="thought_supported"
-                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
-                        />
-                      )}
+                      <img
+                        src={thought_supported}
+                        alt="thought_supported"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                      />
+                    )}
                     <img
                       src={dropdown}
                       alt="drop-down"
