@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
@@ -49,7 +49,7 @@ function Prompt({
 }) {
   //Hooks
   const { t, i18n } = useTranslation();
-  const { listening, resetTranscript } = useSpeechRecognition();
+  const { transcript, listening, resetTranscript } = useSpeechRecognition();
   const dispatch = useDispatch();
 
   //Refs
@@ -506,6 +506,10 @@ function Prompt({
     hiddenFileInput.current.click();
   };
 
+  useEffect(() => {
+    updateLocalState({ prompt: transcript });
+  }, [transcript]);
+
   return (
     <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
       <div className="flex flex-col gap-4 w-full">
@@ -519,7 +523,7 @@ function Prompt({
               <textarea
                 autoFocus
                 ref={textareaRef}
-                className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+                className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
                 value={localState.prompt}
                 name="prompt"
                 placeholder={t("description.placeholder")}
@@ -545,7 +549,7 @@ function Prompt({
             <textarea
               autoFocus
               ref={textareaRef}
-              className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+              className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
               value={localState.prompt}
               name="prompt"
               placeholder={t("description.placeholder")}
@@ -570,7 +574,7 @@ function Prompt({
             />
           )}
 
-          <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
+          <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
             {localState.prompt?.trim() !== "" ? (
               <Tooltip text={t("description.clear")}>
                 <button

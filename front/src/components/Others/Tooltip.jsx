@@ -1,8 +1,7 @@
-//When user hovers on button specifically with icons this component helps as tooltip
 function Tooltip({ text, children }) {
   return (
     <div className="relative cursor-pointer group h-fit flex justify-center items-center">
-      <div className="border dark:border-border_dark absolute z-10 hidden group-hover:block bg-white dark:bg-black text-black dark:text-white text-xs rounded p-1  bottom-full mb-2 whitespace-no-wrap">
+      <div className="fixed transform -translate-y-[120%] z-50 bg-white dark:bg-black text-black dark:text-white text-xs rounded p-1 border dark:border-border_dark max-w-[150px] break-words hidden group-hover:block">
         {text}
       </div>
       {children}
