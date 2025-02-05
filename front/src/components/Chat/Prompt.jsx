@@ -154,6 +154,7 @@ function Prompt({
       setLoading(false);
       setSelectedFiles([]);
     } catch (error) {
+      dispatch(setIsResponding(false));
       setLoading(false);
       setSelectedFiles([]);
 
@@ -217,6 +218,7 @@ function Prompt({
   // Handle cancellation of ongoing requests
   const handleCancelRequest = () => {
     cancelRequest(notifyError);
+    dispatch(setIsResponding(false));
     setLoading(false);
   };
 
