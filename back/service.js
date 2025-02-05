@@ -48,6 +48,7 @@ async function getCompletionLLM(
     Accept: "application/json",
     "inference-id": inference_id,
     "inference-service": model,
+    "inference-portal": "Chat AI",
     Authorization: "Bearer " + api_key,
     "Content-Type": "application/json",
   };
@@ -58,6 +59,7 @@ async function getCompletionLLM(
     temperature: temperature,
     top_p: top_p,
     stream: true,
+    stream_options: {"include_usage": true},
     ...(arcana !== null &&
     arcana !== undefined &&
     arcana.id !== null &&

@@ -11,6 +11,7 @@ import Logo from "../../assets/chatai-logo-v3-preview.png";
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
 import thought_supported from "../../assets/thought_supported.svg";
+import books from "../../assets/books.svg";
 import HelpModal from "../../modals/HelpModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
 
@@ -81,6 +82,12 @@ function Header({
   // Check if current model supports thought output
   const isThoughtSupported = useMemo(
     () => currentModel?.output.includes("thought") || false,
+    [currentModel]
+  );
+
+  // Check if current model supports arcana
+  const isArcanaSupported = useMemo(
+    () => currentModel?.input.includes("arcana") || false,
     [currentModel]
   );
 
@@ -296,6 +303,13 @@ function Header({
                   className="h-[18px] w-[18px] flex-shrink-0 "
                 />
               )}
+              {isArcanaSupported && (
+                <img
+                  src={books}
+                  alt="books"
+                  className="h-[18px] w-[18px] flex-shrink-0 "
+                />
+              )}
             </div>
 
             {isOpen && (
@@ -330,6 +344,20 @@ function Header({
                         src={image_supported}
                         alt="image_supported"
                         className="h-[18px] w-[18px] flex-shrink-0 "
+                      />
+                    )}
+                    {option.output.includes("thought") && (
+                      <img
+                        src={thought_supported}
+                        alt="thought_supported"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
+                      />
+                    )}
+                    {option.input.includes("arcana") && (
+                      <img
+                        src={books}
+                        alt="books"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
                       />
                     )}
                   </div>

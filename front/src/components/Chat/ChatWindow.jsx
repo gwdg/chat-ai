@@ -170,6 +170,12 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     [currentModel]
   );
 
+  // Memoize whether current model supports image input
+  const isArcanaSupported = useMemo(
+    () => currentModel?.input.includes("arcana") || false,
+    [currentModel]
+  );
+
   // ==== UTILITY FUNCTIONS ====
 
   // Update partial local state while preserving other values
@@ -224,12 +230,13 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
             ? Number(localState.settings.top_p)
             : null,
         // Include arcana settings if enabled
-        ...(localState.exportOptions.exportArcana && {
-          arcana: {
-            id: localState.arcana.id,
-            key: localState.arcana.key,
-          },
-        }),
+        ...(localState.exportOptions.exportArcana &&
+          isArcanaSupported && {
+            arcana: {
+              id: localState.arcana.id,
+              key: localState.arcana.key,
+            },
+          }),
       };
 
       // Validate all settings are defined
@@ -334,7 +341,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       }\nmodel: ${localState.settings.model_api}\ntemperature: ${
         localState.settings.temperature
       }\ntop_p: ${localState.settings.top_p}${
-        localState.exportOptions.exportArcana
+        localState.exportOptions.exportArcana && isArcanaSupported
           ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
           : ""
       }`;
@@ -388,12 +395,13 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           model: localState.settings.model_api,
           temperature: localState.settings.temperature,
           top_p: localState.settings.top_p,
-          ...(localState.exportOptions.exportArcana && {
-            arcana: {
-              id: localState.arcana.id,
-              key: localState.arcana.key,
-            },
-          }),
+          ...(localState.exportOptions.exportArcana &&
+            isArcanaSupported && {
+              arcana: {
+                id: localState.arcana.id,
+                key: localState.arcana.key,
+              },
+            }),
         };
 
         exportData = { ...settingsObject, messages: exportData };
@@ -623,7 +631,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     // Add settings section if enabled
     if (localState.exportOptions.exportSettings) {
       addNewPageIfNeeded(
-        lineHeight * (localState.exportOptions.exportArcana ? 7 : 5)
+        lineHeight *
+          (localState.exportOptions.exportArcana && isArcanaSupported ? 7 : 5)
       );
       y += lineHeight * 2;
 
@@ -640,7 +649,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       y += lineHeight;
 
       // Add Arcana settings if enabled
-      if (localState.exportOptions.exportArcana) {
+      if (localState.exportOptions.exportArcana && isArcanaSupported) {
         doc.text("Arcana: {", margin, y);
         y += lineHeight;
         doc.text(`  id: ${localState.arcana.id}`, margin, y);
@@ -681,6 +690,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           localState={localState}
           isImageSupported={isImageSupported}
           isThoughtSupported={isThoughtSupported}
+          isArcanaSupported={isArcanaSupported}
           setSelectedFiles={setSelectedFiles}
           setLocalState={setLocalState}
           setShowModalSession={setShowModalSession}
@@ -704,6 +714,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           currentModel={currentModel}
           isImageSupported={isImageSupported}
           isThoughtSupported={isThoughtSupported}
+          isArcanaSupported={isArcanaSupported}
           onModelChange={onModelChange}
           showAdvOpt={showAdvOpt}
           toggleAdvOpt={toggleAdvOpt}
@@ -767,6 +778,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
             exportImage={localState.exportOptions.exportImage}
             exportArcana={localState.exportOptions.exportArcana}
             setLocalState={setLocalState}
+            isArcanaSupported={isArcanaSupported}
           />
         ) : null}
       </>
@@ -803,6 +815,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
             handleShareSettings={handleShareSettings}
             dontShowAgainShare={localState.dontShow.dontShowAgainShare}
             setLocalState={setLocalState}
+            isArcanaSupported={isArcanaSupported}
           />
         ) : null}
       </>

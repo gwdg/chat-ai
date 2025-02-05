@@ -152,6 +152,7 @@ function Responses({
     // Validate index is within bounds of responses array
     if (index < 0 || index >= localState.responses.length) {
       notifyError("Something went wrong");
+      dispatch(setIsResponding(false));
       setLoadingResend(false);
       return;
     }
@@ -161,6 +162,7 @@ function Responses({
     // Validate prompt exists and isn't empty
     if (!currentPrompt || currentPrompt?.trim() === "") {
       notifyError("Invalid or empty prompt at the specified index.");
+      dispatch(setIsResponding(false));
       setLoadingResend(false);
       return;
     }
@@ -264,6 +266,7 @@ function Responses({
       dispatch(setIsResponding(false));
       setLoadingResend(false);
     } catch (error) {
+      dispatch(setIsResponding(false));
       setLoadingResend(false);
       if (error.name === "AbortError") {
         notifyError("Request aborted.");
@@ -281,12 +284,14 @@ function Responses({
 
     if (index < 0 || index >= localState.responses.length) {
       notifyError("Something went wrong");
+      dispatch(setIsResponding(false));
       setLoadingResend(false);
       return;
     }
 
     if (!editedText || !editedText?.trim()) {
       notifyError("Prompt cannot be empty!");
+      dispatch(setIsResponding(false));
       setLoadingResend(false);
       return;
     }
@@ -381,6 +386,7 @@ function Responses({
       dispatch(setIsResponding(false));
       setLoadingResend(false);
     } catch (error) {
+      dispatch(setIsResponding(false));
       setLoadingResend(false);
       notifyError(error.message || "An unknown error occurred");
     }
