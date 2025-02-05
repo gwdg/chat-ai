@@ -104,7 +104,22 @@ const ResponseItem = React.memo(
 
     const handleCopy = useCallback(async () => {
       try {
-        await navigator.clipboard.writeText(res.response);
+        let textToCopy = res.response;
+        // Remove thinking tags and their content
+        textToCopy = textToCopy.replace(/<think>[\s\S]*?<\/think>/g, "");
+        // Remove everything after References:
+        textToCopy = textToCopy.split("References:")[0];
+        // Remove userStyle tags and their content
+        textToCopy = textToCopy.replace(
+          /<userStyle>[\s\S]*?<\/userStyle>/g,
+          ""
+        );
+        // Remove dashed lines
+        textToCopy = textToCopy.replace(/^-+$/gm, "");
+        // Clean up extra newlines and whitespace
+        textToCopy = textToCopy.replace(/\n{3,}/g, "\n\n").trim();
+
+        await navigator.clipboard.writeText(textToCopy);
         setCopied(true);
         setIndexChecked(index);
       } catch (err) {

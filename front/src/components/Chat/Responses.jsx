@@ -900,7 +900,7 @@ function Responses({
               <p> Scroll to bottom</p>
             </button>
           )}
-          <div className="flex items-center gap-6">
+          <div className="flex items-baseline gap-6">
             <Tooltip text={t("description.export")}>
               <button
                 className="text-tertiary flex gap-2 items-center"

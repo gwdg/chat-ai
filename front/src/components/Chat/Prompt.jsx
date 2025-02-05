@@ -519,7 +519,7 @@ function Prompt({
               <textarea
                 autoFocus
                 ref={textareaRef}
-                className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+                className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
                 value={localState.prompt}
                 name="prompt"
                 placeholder={t("description.placeholder")}
@@ -545,7 +545,7 @@ function Prompt({
             <textarea
               autoFocus
               ref={textareaRef}
-              className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+              className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
               value={localState.prompt}
               name="prompt"
               placeholder={t("description.placeholder")}
@@ -570,7 +570,7 @@ function Prompt({
             />
           )}
 
-          <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
+          <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
             {localState.prompt?.trim() !== "" ? (
               <Tooltip text={t("description.clear")}>
                 <button
