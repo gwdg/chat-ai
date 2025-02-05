@@ -836,11 +836,13 @@ const SettingsPanel = ({
             ) : null}
 
             <div className="flex flex-col gap-4 items-center">
-              {localState.arcana.id && localState.arcana.key && (
-                <div className="text-yellow-600 text-sm w-full select-none">
-                  <Trans i18nKey="description.warning_arcana" />
-                </div>
-              )}
+              {localState.arcana.id &&
+                localState.arcana.key &&
+                isArcanaSupported && (
+                  <div className="text-yellow-600 text-sm w-full select-none">
+                    <Trans i18nKey="description.warning_arcana" />
+                  </div>
+                )}
 
               <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
                 <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">

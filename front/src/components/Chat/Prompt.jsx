@@ -31,6 +31,7 @@ function Prompt({
   modelList,
   loading,
   isImageSupported,
+  isArcanaSupported,
   selectedFiles,
   localState,
   setLocalState,
@@ -146,7 +147,8 @@ function Prompt({
         setLocalState,
         setShowModalSession,
         setShowBadRequest,
-        processedConversation
+        processedConversation,
+        isArcanaSupported
       );
       dispatch(setIsResponding(false));
       setLoading(false);
