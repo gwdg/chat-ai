@@ -151,7 +151,10 @@ const ResponseItem = React.memo(
               ) : (
                 <div className="group">
                   <ErrorBoundary>
-                    <MarkdownRenderer isDarkMode={isDarkModeGlobal}>
+                    <MarkdownRenderer
+                      isDarkMode={isDarkModeGlobal}
+                      isLoading={isLoading}
+                    >
                       {res.response}
                     </MarkdownRenderer>
                   </ErrorBoundary>
