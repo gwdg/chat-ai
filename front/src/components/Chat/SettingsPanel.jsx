@@ -12,6 +12,7 @@ import ArcanaContainer from "../Arcanas/ArcanaContainer";
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
 import thought_supported from "../../assets/thought_supported.svg";
+import books from "../../assets/books.svg";
 import cross from "../../assets/cross.svg";
 import dropdown from "../../assets/icon_dropdown.svg";
 import uploaded from "../../assets/file_uploaded.svg";
@@ -33,6 +34,7 @@ const SettingsPanel = ({
   currentModel,
   isImageSupported,
   isThoughtSupported,
+  isArcanaSupported,
   onModelChange,
   showAdvOpt,
   toggleAdvOpt,
@@ -738,6 +740,13 @@ const SettingsPanel = ({
                           className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
                         />
                       )}
+                      {isArcanaSupported && (
+                        <img
+                          src={books}
+                          alt="books"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                        />
+                      )}
                       <img
                         src={dropdown}
                         alt="drop-down"
@@ -787,6 +796,13 @@ const SettingsPanel = ({
                               className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
                             />
                           )}
+                          {option.input.includes("arcana") && (
+                            <img
+                              src={books}
+                              alt="books"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -801,21 +817,23 @@ const SettingsPanel = ({
               </div>
             )}
 
-            <div className="flex gap-4 w-full items-center">
-              <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                <p className="text-[18px]">Arcana</p>
-                <img
-                  src={help}
-                  alt="help"
-                  className="h-[20px] w-[20px] cursor-pointer"
-                  onClick={() => setShowArcanasHelpModal(true)}
+            {isArcanaSupported ? (
+              <div className="flex gap-4 w-full items-center">
+                <div className="flex-shrink-0 flex items-center gap-2 select-none">
+                  <p className="text-[18px]">Arcana</p>
+                  <img
+                    src={help}
+                    alt="help"
+                    className="h-[20px] w-[20px] cursor-pointer"
+                    onClick={() => setShowArcanasHelpModal(true)}
+                  />
+                </div>
+                <ArcanaContainer
+                  localState={localState}
+                  setLocalState={setLocalState}
                 />
               </div>
-              <ArcanaContainer
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-            </div>
+            ) : null}
 
             <div className="flex flex-col gap-4 items-center">
               {localState.arcana.id && localState.arcana.key && (
@@ -1060,6 +1078,13 @@ const SettingsPanel = ({
                         className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
                       />
                     )}
+                    {isArcanaSupported && (
+                      <img
+                        src={books}
+                        alt="books"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                      />
+                    )}
                     <img
                       src={dropdown}
                       alt="drop-down"
@@ -1106,6 +1131,13 @@ const SettingsPanel = ({
                               src={thought_supported}
                               alt="thought_supported"
                               className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
+                            />
+                          )}
+                          {option.input.includes("arcana") && (
+                            <img
+                              src={books}
+                              alt="books"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
                             />
                           )}
                         </div>

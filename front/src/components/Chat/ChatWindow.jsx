@@ -170,6 +170,12 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     [currentModel]
   );
 
+  // Memoize whether current model supports image input
+  const isArcanaSupported = useMemo(
+    () => currentModel?.input.includes("arcana") || false,
+    [currentModel]
+  );
+
   // ==== UTILITY FUNCTIONS ====
 
   // Update partial local state while preserving other values
@@ -681,6 +687,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           localState={localState}
           isImageSupported={isImageSupported}
           isThoughtSupported={isThoughtSupported}
+          isArcanaSupported={isArcanaSupported}
           setSelectedFiles={setSelectedFiles}
           setLocalState={setLocalState}
           setShowModalSession={setShowModalSession}
@@ -704,6 +711,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           currentModel={currentModel}
           isImageSupported={isImageSupported}
           isThoughtSupported={isThoughtSupported}
+          isArcanaSupported={isArcanaSupported}
           onModelChange={onModelChange}
           showAdvOpt={showAdvOpt}
           toggleAdvOpt={toggleAdvOpt}
