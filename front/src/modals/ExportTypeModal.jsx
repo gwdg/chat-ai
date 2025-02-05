@@ -125,7 +125,10 @@ function ExportTypeModal(props) {
                       ? "bg-gray-400 cursor-not-allowed"
                       : ""
                   }`}
-                  disabled={!props.arcana.id && !props.arcana.key}
+                  disabled={
+                    (!props.arcana.id && !props.arcana.key) ||
+                    !props.isArcanaSupported
+                  }
                 />
                 <label
                   htmlFor="exportArcana"
@@ -185,7 +188,6 @@ function ExportTypeModal(props) {
         </div>
       </div>
     </ContainerModal>
-
   );
 }
 

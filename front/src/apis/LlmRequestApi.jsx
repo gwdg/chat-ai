@@ -54,7 +54,8 @@ async function fetchLLMResponse(
   setLocalState,
   setShowModalSession,
   setShowBadRequest,
-  updatedConversation
+  updatedConversation,
+  isArcanaSupported
 ) {
   try {
     // Models that require different message formatting
@@ -81,7 +82,7 @@ async function fetchLLMResponse(
             ],
         temperature: temperature,
         top_p: topP,
-        arcana: arcana,
+        arcana: isArcanaSupported ? arcana : "",
       }),
       signal: signal,
     });

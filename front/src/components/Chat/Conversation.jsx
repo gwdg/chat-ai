@@ -24,6 +24,7 @@ const Conversation = ({
   selectedFiles,
   localState,
   isImageSupported,
+  isArcanaSupported,
   setSelectedFiles,
   setLocalState,
   setShowModalSession,
@@ -139,6 +140,7 @@ const Conversation = ({
         modelList={modelList}
         loading={loading}
         isImageSupported={isImageSupported}
+        isArcanaSupported={isArcanaSupported}
         selectedFiles={selectedFiles}
         localState={localState}
         setLocalState={setLocalState}
