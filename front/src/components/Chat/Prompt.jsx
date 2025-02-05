@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
@@ -49,7 +49,7 @@ function Prompt({
 }) {
   //Hooks
   const { t, i18n } = useTranslation();
-  const { listening, resetTranscript } = useSpeechRecognition();
+  const { transcript, listening, resetTranscript } = useSpeechRecognition();
   const dispatch = useDispatch();
 
   //Refs
@@ -505,6 +505,10 @@ function Prompt({
     hiddenFileInput.current.value = null;
     hiddenFileInput.current.click();
   };
+
+  useEffect(() => {
+    updateLocalState({ prompt: transcript });
+  }, [transcript]);
 
   return (
     <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
