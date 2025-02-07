@@ -26,6 +26,8 @@ import {
 } from "../../Redux/reducers/conversationsSlice";
 import { processPdfDocument } from "../../apis/PdfProcessApi";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
+import PreviewModal from "../../modals/PreviewModal";
+import FileAlertModal from "../../modals/FileAlertModal";
 
 const SettingsPanel = ({
   selectedFiles,
@@ -71,12 +73,15 @@ const SettingsPanel = ({
   const [isHoveringTopP, setHoveringTopP] = useState(false);
   const [systemPromptError, setSystemPromptError] = useState("");
   const [processingFiles, setProcessingFiles] = useState(new Set());
+  const [previewFile, setPreviewFile] = useState(null);
+  const [fileAlertModal, setFileAlertModal] = useState(null);
 
   //Refs
   const hasProcessedSettings = useRef(false);
   const hasProcessedImport = useRef(false);
   const hasProcessedArcana = useRef(false);
   const dropdownRef = useRef(null);
+  const isIntentionalRefresh = useRef(false);
 
   //Functions
   // Remove a file from the selectedFiles array at specified index
@@ -343,6 +348,13 @@ const SettingsPanel = ({
     setLocalState,
   ]);
 
+  const handleBeforeUnload = (e) => {
+    if (selectedFiles.length > 0) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  };
+
   // Handle importing chat from URL
   useEffect(() => {
     const handleImport = async () => {
@@ -561,6 +573,36 @@ const SettingsPanel = ({
     setLocalState,
   ]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "F5" || (e.ctrlKey && e.key === "r")) {
+        if (selectedFiles.length > 0) {
+          e.preventDefault();
+          setFileAlertModal(true);
+        }
+      }
+    };
+
+    const handleBeforeUnload = (e) => {
+      if (selectedFiles.length > 0 && !isIntentionalRefresh.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [selectedFiles]);
+
+  useEffect(() => {
+    console.log(selectedFiles);
+  }, [selectedFiles]);
+
   return (
     <div className="w-[40%] mobile:w-full p-2 text-tertiary flex flex-col justify-end">
       <div>
@@ -583,6 +625,7 @@ const SettingsPanel = ({
                 <li
                   key={`${file.name}-${index}`}
                   className="cursor-pointer flex gap-2 items-center"
+                  onClick={() => setPreviewFile(file)}
                 >
                   {file.type === "image" ? (
                     <img
@@ -1139,6 +1182,17 @@ const SettingsPanel = ({
           </div>
         )}
       </div>
+      {previewFile && (
+        <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
+      <>
+        {fileAlertModal ? (
+          <FileAlertModal
+            showModal={setFileAlertModal}
+            intentionalRefresh={isIntentionalRefresh}
+          />
+        ) : null}
+      </>
     </div>
   );
 };

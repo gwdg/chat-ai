@@ -221,6 +221,9 @@ i18n
               "Please process or remove the attached PDF to continue.",
             announcement:
               "Chat AI will be temporarily unavailable on Wednesday, 18.12.2024, from 10:00 to 12:00 due to maintenance. We apologize for the inconvenience.",
+
+            fileAlert:
+              "You have uploaded files that will be lost. Are you sure you want to leave?",
           },
         },
       },
@@ -434,6 +437,8 @@ i18n
 
             announcement:
               "Chat AI wird am Mittwoch, 18.12.2024, von 10:00 bis 12:00 Uhr aufgrund von Wartungsarbeiten vorübergehend nicht verfügbar sein. Wir entschuldigen uns für die Unannehmlichkeiten.",
+            fileAlert:
+              "Sie haben Dateien hochgeladen, die verloren gehen werden. Sind Sie sicher, dass Sie gehen wollen?",
           },
         },
       },
