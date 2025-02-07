@@ -14,20 +14,7 @@ import thought_supported from "../../assets/thought_supported.svg";
 import books from "../../assets/books.svg";
 import HelpModal from "../../modals/HelpModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
-
-// Utility function to determine the status indicator color based on model status
-const getStatusColor = (status) => {
-  switch (status) {
-    case "ready":
-      return "limegreen";
-    case "loading":
-      return "orange";
-    case "offline":
-      return "grey";
-    default:
-      return "red";
-  }
-};
+import DemandStatusIcon from "../Others/DemandStatusIcon";
 
 /**
  * Header component that provides navigation, theme switching, and model selection functionality
@@ -88,14 +75,6 @@ function Header({
   // Check if current model supports arcana
   const isArcanaSupported = useMemo(
     () => currentModel?.input.includes("arcana") || false,
-    [currentModel]
-  );
-
-  // Get the status indicator color for the current model
-  const modelStatus = useMemo(
-    () => ({
-      color: currentModel ? getStatusColor(currentModel.status) : "red",
-    }),
     [currentModel]
   );
 
@@ -282,10 +261,10 @@ function Header({
           transition-colors cursor-pointer"
               onClick={() => setIsOpen(!isOpen)}
             >
-              <div
-                className="h-[8px] w-[8px] flex-shrink-0 rounded-full"
-                style={{ backgroundColor: modelStatus.color }}
-              ></div>
+              <DemandStatusIcon
+                status={currentModel?.status}
+                demand={currentModel?.demand}
+              />
               <div className="flex-1 text-sm truncate">
                 {modelSettings.model}
               </div>
@@ -332,12 +311,10 @@ function Header({
                 transition-colors cursor-pointer"
                     onClick={() => handleChangeModel(option)}
                   >
-                    <div
-                      className="h-[8px] w-[8px] flex-shrink-0 rounded-full"
-                      style={{
-                        backgroundColor: getStatusColor(option.status),
-                      }}
-                    ></div>
+                    <DemandStatusIcon
+                      status={option?.status}
+                      demand={option?.demand}
+                    />
                     <div className="flex-1 text-sm">{option.name}</div>
                     {option.input.includes("image") && (
                       <img

@@ -25,6 +25,7 @@ import {
   updateConversation,
 } from "../../Redux/reducers/conversationsSlice";
 import { processPdfDocument } from "../../apis/PdfProcessApi";
+import DemandStatusIcon from "../Others/DemandStatusIcon";
 
 const SettingsPanel = ({
   selectedFiles,
@@ -51,25 +52,6 @@ const SettingsPanel = ({
   notifySuccess,
   notifyError,
 }) => {
-  //Variables and Functions
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "ready":
-        return "limegreen";
-      case "loading":
-        return "orange";
-      case "offline":
-        return "grey";
-      default:
-        return "red";
-    }
-  };
-  const modelStatus = useMemo(
-    () => ({
-      color: currentModel ? getStatusColor(currentModel.status) : "red",
-    }),
-    [currentModel]
-  );
   const conversations = useSelector(selectConversations);
 
   //Hooks
@@ -719,9 +701,9 @@ const SettingsPanel = ({
                     onClick={toggleOpen}
                   >
                     <div className="flex items-center gap-2 w-full">
-                      <div
-                        className="h-[8px] w-[8px] rounded-full flex-shrink-0"
-                        style={{ backgroundColor: modelStatus.color }}
+                      <DemandStatusIcon
+                        status={currentModel?.status}
+                        demand={currentModel?.demand}
                       />
                       <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
                         {modelSettings.model}
@@ -773,11 +755,9 @@ const SettingsPanel = ({
                           }`}
                           onClick={() => handleChangeModel(option)}
                         >
-                          <div
-                            className="h-[8px] w-[8px] rounded-full flex-shrink-0"
-                            style={{
-                              backgroundColor: getStatusColor(option.status),
-                            }}
+                          <DemandStatusIcon
+                            status={option?.status}
+                            demand={option?.demand}
                           />
                           <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                             {option.name}
@@ -1059,9 +1039,9 @@ const SettingsPanel = ({
                     className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
                     onClick={toggleOpen}
                   >
-                    <div
-                      className="h-[8px] w-[8px] rounded-full flex-shrink-0"
-                      style={{ backgroundColor: modelStatus.color }}
+                    <DemandStatusIcon
+                      status={currentModel?.status}
+                      demand={currentModel?.demand}
                     />
                     <div className="mx-2 text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
                       {modelSettings.model}
@@ -1112,11 +1092,9 @@ const SettingsPanel = ({
                           }`}
                           onClick={() => handleChangeModel(option)}
                         >
-                          <div
-                            className="h-[8px] w-[8px] rounded-full flex-shrink-0"
-                            style={{
-                              backgroundColor: getStatusColor(option.status),
-                            }}
+                          <DemandStatusIcon
+                            status={option?.status}
+                            demand={option?.demand}
                           />
                           <div className="flex-1 text-left overflow-hidden text-ellipsis whitespace-nowrap">
                             {option.name}
