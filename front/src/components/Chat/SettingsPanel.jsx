@@ -26,6 +26,7 @@ import {
 } from "../../Redux/reducers/conversationsSlice";
 import { processPdfDocument } from "../../apis/PdfProcessApi";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
+import PreviewModal from "../../modals/PreviewModal";
 
 const SettingsPanel = ({
   selectedFiles,
@@ -71,6 +72,7 @@ const SettingsPanel = ({
   const [isHoveringTopP, setHoveringTopP] = useState(false);
   const [systemPromptError, setSystemPromptError] = useState("");
   const [processingFiles, setProcessingFiles] = useState(new Set());
+  const [previewFile, setPreviewFile] = useState(null);
 
   //Refs
   const hasProcessedSettings = useRef(false);
@@ -561,6 +563,10 @@ const SettingsPanel = ({
     setLocalState,
   ]);
 
+  useEffect(() => {
+    console.log(selectedFiles);
+  }, [selectedFiles]);
+
   return (
     <div className="w-[40%] mobile:w-full p-2 text-tertiary flex flex-col justify-end">
       <div>
@@ -583,6 +589,7 @@ const SettingsPanel = ({
                 <li
                   key={`${file.name}-${index}`}
                   className="cursor-pointer flex gap-2 items-center"
+                  onClick={() => setPreviewFile(file)}
                 >
                   {file.type === "image" ? (
                     <img
@@ -1139,6 +1146,9 @@ const SettingsPanel = ({
           </div>
         )}
       </div>
+      {previewFile && (
+        <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
     </div>
   );
 };

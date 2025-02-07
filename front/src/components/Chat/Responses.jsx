@@ -15,6 +15,7 @@ import ResponseItem from "../Markdown/ResponseItem";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
+import PreviewImageModal from "../../modals/PreviewImageModal";
 
 //Variable
 const MAX_HEIGHT = 200;
@@ -54,6 +55,7 @@ function Responses({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [editingResponseIndex, setEditingResponseIndex] = useState(-1);
   const [editedResponse, setEditedResponse] = useState("");
+  const [previewFile, setPreviewFile] = useState(null);
 
   //Refs
   const containerRefs = useRef([]);
@@ -845,7 +847,8 @@ function Responses({
                         key={imgIndex}
                         src={imageObj.image_url.url}
                         alt="Base64 Image"
-                        className="h-[150px] w-[150px] rounded-2xl object-cover"
+                        className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                        onClick={() => setPreviewFile(imageObj.image_url.url)}
                       />
                     );
                   }
@@ -975,6 +978,12 @@ function Responses({
             </button>
           </Tooltip>
         </div>
+      )}
+      {previewFile && (
+        <PreviewImageModal
+          file={previewFile}
+          onClose={() => setPreviewFile(null)}
+        />
       )}
     </>
   );
