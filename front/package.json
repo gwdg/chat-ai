@@ -21,6 +21,7 @@
     "jspdf": "^2.5.1",
     "katex": "^0.16.15",
     "lucide-react": "^0.474.0",
+    "papaparse": "^5.5.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-i18next": "^14.1.0",

@@ -397,21 +397,52 @@ function Prompt({
       const mdFiles = Array.from(e.target.files).filter(
         (file) => file.type === "text/markdown" || file.name.endsWith(".md")
       );
-
+      const codeFiles = Array.from(e.target.files).filter(
+        (file) =>
+          file.name.endsWith(".py") ||
+          file.name.endsWith(".js") ||
+          file.name.endsWith(".java") ||
+          file.name.endsWith(".cpp") ||
+          file.name.endsWith(".c") ||
+          file.name.endsWith(".h") ||
+          file.name.endsWith(".cs") ||
+          file.name.endsWith(".rb") ||
+          file.name.endsWith(".php") ||
+          file.name.endsWith(".go") ||
+          file.name.endsWith(".rs") ||
+          file.name.endsWith(".swift") ||
+          file.name.endsWith(".kt") ||
+          file.name.endsWith(".ts") ||
+          file.name.endsWith(".jsx") ||
+          file.name.endsWith(".tsx")
+      );
       // Validate file types
       if (
         textFiles.length +
           csvFiles.length +
           pdfFiles.length +
-          mdFiles.length !==
+          mdFiles.length +
+          codeFiles.length !==
         e.target.files.length
       ) {
-        notifyError("All files must be text, CSV, PDF, or Markdown");
-      } else {
-        notifySuccess("File attached");
+        notifyError(
+          "All files must be text, CSV, PDF, Markdown, or code files"
+        );
+        return;
       }
 
       const filesWithText = [];
+
+      // Process code files
+      for (const file of codeFiles) {
+        const content = await readFileAsText(file);
+        filesWithText.push({
+          name: file.name,
+          size: file.size,
+          content,
+          fileType: "code",
+        });
+      }
 
       // Process text files
       for (const file of textFiles) {
@@ -610,7 +641,7 @@ function Prompt({
                 type="file"
                 ref={hiddenFileInput}
                 multiple
-                accept=".txt, .csv, .pdf, .md"
+                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx"
                 onChange={handleFilesChange}
                 className="hidden"
               />
