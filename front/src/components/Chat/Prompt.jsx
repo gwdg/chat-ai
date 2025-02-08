@@ -30,6 +30,7 @@ const MIN_HEIGHT = 56;
 function Prompt({
   modelList,
   loading,
+  loadingResend,
   isImageSupported,
   isArcanaSupported,
   selectedFiles,
@@ -614,7 +615,7 @@ function Prompt({
                     updateLocalState({ prompt: "" });
                     resetTranscript();
                   }}
-                  disabled={loading}
+                  disabled={loading || loadingResend}
                 >
                   <img
                     className="cursor-pointer h-[25px] w-[25px]"
@@ -649,7 +650,7 @@ function Prompt({
                 <button
                   className="h-[30px] w-[30px] cursor-pointer"
                   onClick={handleClick}
-                  disabled={loading}
+                  disabled={loading || loadingResend}
                 >
                   <img
                     className="cursor-pointer h-[30px] w-[30px]"
@@ -673,7 +674,7 @@ function Prompt({
                     <button
                       className="h-[30px] w-[30px] cursor-pointer"
                       onClick={handleClickImage}
-                      disabled={loading}
+                      disabled={loading || loadingResend}
                     >
                       <img
                         className="cursor-pointer h-[30px] w-[30px]"
@@ -685,7 +686,7 @@ function Prompt({
                 </>
               )}
 
-              {loading ? (
+              {loading || loadingResend ? (
                 <Tooltip text={t("description.pause")}>
                   <button className="h-[30px] w-[30px] cursor-pointer">
                     <img
@@ -722,7 +723,7 @@ function Prompt({
                       onClick={(event) => {
                         handleSubmit(event);
                       }}
-                      disabled={loading}
+                      disabled={loading || loadingResend}
                     />
                   </button>
                 </Tooltip>

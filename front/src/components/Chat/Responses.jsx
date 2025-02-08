@@ -37,6 +37,8 @@ function Responses({
   notifyError,
   clearHistory,
   updateSettings,
+  loadingResend,
+  setLoadingResend,
 }) {
   // Hooks
   const { t } = useTranslation();
@@ -51,7 +53,6 @@ function Responses({
   const [copied, setCopied] = useState(false);
   const [indexChecked, setIndexChecked] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [loadingResend, setLoadingResend] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [editingResponseIndex, setEditingResponseIndex] = useState(-1);
   const [editedResponse, setEditedResponse] = useState("");
@@ -775,7 +776,7 @@ function Responses({
                   <div className="flex gap-2 justify-between w-full">
                     <button
                       onClick={() => setEditedText("")}
-                      disabled={loadingResend}
+                      disabled={loading || loadingResend}
                     >
                       <img
                         src={clear}
@@ -788,7 +789,7 @@ function Responses({
                         handleCloseClick(index);
                         handleSave(index);
                       }}
-                      disabled={loadingResend}
+                      disabled={loading || loadingResend}
                     >
                       <img
                         className="cursor-pointer h-[25px] w-[25px]"
@@ -813,7 +814,7 @@ function Responses({
                   <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
                     <button
                       onClick={(e) => handleResendClick(index, e)}
-                      disabled={loadingResend}
+                      disabled={loading || loadingResend}
                     >
                       <img
                         src={icon_resend}
@@ -825,7 +826,7 @@ function Responses({
                       onClick={() => {
                         handleEditClick(index, res.prompt);
                       }}
-                      disabled={loadingResend}
+                      disabled={loading || loadingResend}
                     >
                       <img
                         src={edit_icon}
@@ -884,7 +885,7 @@ function Responses({
           <Tooltip text={t("description.clear")}>
             <button
               className="h-[30px] w-[30px] cursor-pointer"
-              disabled={loading}
+              disabled={loading || loadingResend}
               onClick={handleClearHistory}
             >
               <img
@@ -908,7 +909,7 @@ function Responses({
               <button
                 className="text-tertiary flex gap-2 items-center"
                 onClick={() => setShowFileModal(true)}
-                disabled={loading}
+                disabled={loading || loadingResend}
               >
                 <img
                   className="cursor-pointer h-[30px] w-[30px]"
@@ -930,7 +931,7 @@ function Responses({
                 <button
                   className="h-[30px] w-[30px] cursor-pointer"
                   onClick={handleClickJSON}
-                  disabled={loading}
+                  disabled={loading || loadingResend}
                 >
                   <img
                     className="h-[30px] w-[30px]"
@@ -944,7 +945,7 @@ function Responses({
               <button
                 className="h-[30px] w-[30px] cursor-pointer"
                 onClick={handleRetry}
-                disabled={loading}
+                disabled={loading || loadingResend}
               >
                 <img
                   className="cursor-pointer h-[30px] w-[30px]"
@@ -968,7 +969,7 @@ function Responses({
             <button
               className="h-[30px] w-[30px] cursor-pointer"
               onClick={handleClickJSON}
-              disabled={loading}
+              disabled={loading || loadingResend}
             >
               <img
                 className="cursor-pointer h-[30px] w-[30px]"

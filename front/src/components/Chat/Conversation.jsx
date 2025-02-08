@@ -51,6 +51,7 @@ const Conversation = ({
   const [count, setCount] = useState(countClose);
 
   const [loading, setLoading] = useState(false);
+  const [loadingResend, setLoadingResend] = useState(false);
 
   //Refs
   const textareaRef = useRef(null);
@@ -133,6 +134,8 @@ const Conversation = ({
           notifyError={notifyError}
           clearHistory={clearHistory}
           updateSettings={updateSettings}
+          loadingResend={loadingResend}
+          setLoadingResend={setLoadingResend}
         />
       </div>
 
@@ -155,6 +158,7 @@ const Conversation = ({
         notifyError={notifyError}
         adjustHeight={adjustHeight}
         setPdfNotProcessedModal={setPdfNotProcessedModal}
+        loadingResend={loadingResend}
       />
     </div>
   );
