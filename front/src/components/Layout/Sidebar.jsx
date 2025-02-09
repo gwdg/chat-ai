@@ -30,47 +30,40 @@ function Sidebar({
   onRenameConversation,
   conversationIds,
 }) {
-  // Redux and routing hooks
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
-  // Redux selectors for conversation state
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
   const isResponding = useSelector(selectIsResponding);
-  /**
-   * Creates a new conversation and navigates to it
-   * Includes a page refresh to ensure clean state
-   */
+
   const handleNewChat = useCallback(() => {
+    if (isResponding) return; // Prevent new chat while responding
+
     const action = dispatch(addConversation());
     const newId = action.payload?.id;
     if (newId) {
       navigate(`/chat/${newId}`);
       onClose?.();
-      // Add a slight delay before refreshing to ensure navigation completes
       setTimeout(() => {
         window.location.reload();
       }, 100);
     }
-  }, [dispatch, navigate, onClose]);
+  }, [dispatch, navigate, onClose, isResponding]);
 
-  /**
-   * Handles selection of an existing conversation
-   * Updates current conversation in Redux and navigates to it
-   */
   const handleSelectConversation = useCallback(
     (id) => {
+      if (isResponding) return; // Prevent switching while responding
+
       dispatch(setCurrentConversation(id));
       navigate(`/chat/${id}`);
       onClose?.();
     },
-    [dispatch, navigate, onClose]
+    [dispatch, navigate, onClose, isResponding]
   );
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-bg_secondary_dark border-r dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark select-none">
-      {/* Mobile Header - Only visible on mobile devices */}
+      {/* Mobile Header */}
       <div className="custom:hidden flex items-center justify-between p-4 border-b dark:border-border_dark">
         <p className="text-lg font-medium text-black dark:text-white">
           Conversations
@@ -83,7 +76,7 @@ function Sidebar({
         </button>
       </div>
 
-      {/* New Chat Button Section */}
+      {/* New Chat Button */}
       <div className="flex-shrink-0 p-2 border-b dark:border-border_dark">
         <button
           onClick={handleNewChat}
@@ -96,11 +89,10 @@ function Sidebar({
         </button>
       </div>
 
-      {/* Conversations List Container */}
+      {/* Conversations List */}
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto p-2">
           <div className="space-y-2">
-            {/* Map through conversation IDs and render each conversation */}
             {conversationIds.map((id) => {
               const conv = conversations?.find((c) => c.id === id);
               if (!conv) return null;
@@ -109,14 +101,16 @@ function Sidebar({
                 <div
                   key={id}
                   onClick={() => handleSelectConversation(id)}
-                  className={`group p-3 rounded-lg cursor-pointer transition-all relative ${
+                  className={`group p-3 rounded-lg transition-all relative ${
+                    isResponding ? "cursor-not-allowed" : "cursor-pointer"
+                  } ${
                     id === currentConversationId
                       ? "bg-bg_light/80 dark:bg-bg_dark/80 text-black dark:text-white"
                       : "text-black dark:text-white hover:bg-bg_light/50 dark:hover:bg-white/5"
                   }`}
                 >
                   <div className="flex items-center justify-between relative">
-                    {/* Conversation Title with Gradient Overflow Effect */}
+                    {/* Title with gradient overflow */}
                     <div
                       className="flex-1 overflow-hidden relative custom:group-hover:mr-2 transition-all duration-200"
                       title={conv.title}
@@ -124,7 +118,6 @@ function Sidebar({
                       <div
                         ref={(el) => {
                           if (el) {
-                            // Check if title has overflow and set data attribute
                             const hasOverflow = el.scrollWidth > el.clientWidth;
                             el.dataset.hasOverflow = hasOverflow.toString();
                           }
@@ -139,23 +132,33 @@ function Sidebar({
                       </div>
                     </div>
 
-                    {/* Action Buttons (Edit and Delete) */}
+                    {/* Action buttons */}
                     <div className="flex-shrink-0 flex items-center gap-2 custom:opacity-0 custom:group-hover:opacity-100 opacity-100 transition-all duration-200 w-0 custom:group-hover:w-auto">
-                      {/* Edit Button */}
                       <button
                         onClick={(e) => {
+                          if (isResponding) {
+                            e.stopPropagation();
+                            return;
+                          }
                           e.stopPropagation();
                           onRenameConversation(id);
                         }}
+                        disabled={isResponding}
+                        className={isResponding ? "cursor-not-allowed" : ""}
                       >
                         <img src={edit_icon} alt="edit" className="w-5 h-5" />
                       </button>
-                      {/* Delete Button */}
                       <button
                         onClick={(e) => {
+                          if (isResponding) {
+                            e.stopPropagation();
+                            return;
+                          }
                           e.stopPropagation();
                           onDeleteConversation(id);
                         }}
+                        disabled={isResponding}
+                        className={isResponding ? "cursor-not-allowed" : ""}
                       >
                         <img src={cross} alt="delete" className="w-5 h-5" />
                       </button>
