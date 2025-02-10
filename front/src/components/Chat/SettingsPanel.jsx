@@ -599,10 +599,6 @@ const SettingsPanel = ({
     };
   }, [selectedFiles]);
 
-  useEffect(() => {
-    console.log(selectedFiles);
-  }, [selectedFiles]);
-
   return (
     <div className="w-[40%] mobile:w-full p-2 text-tertiary flex flex-col justify-end">
       <div>
