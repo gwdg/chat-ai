@@ -249,9 +249,14 @@ function Prompt({
 
       // Process submission with files
       if (selectedFiles.length > 0) {
-        const textFiles = selectedFiles.filter((file) => file.type !== "image");
+        const textFiles = selectedFiles.filter(
+          (file) => file.type !== "image" && file.type !== "video"
+        );
         const imageFiles = selectedFiles.filter(
           (file) => file.type === "image"
+        );
+        const videoFiles = selectedFiles.filter(
+          (file) => file.type === "video"
         );
 
         // Process text files, including processed PDFs
@@ -277,6 +282,14 @@ function Prompt({
           },
         }));
 
+        // Process video files
+        const videoContent = videoFiles.map((videoFile) => ({
+          type: "video_url",
+          video_url: {
+            url: videoFile.text,
+          },
+        }));
+
         // Create combined prompt content
         const newPromptContent = [
           {
@@ -284,6 +297,7 @@ function Prompt({
             text: fullPrompt,
           },
           ...imageContent,
+          ...videoContent,
         ];
 
         newConversation = [
@@ -498,40 +512,40 @@ function Prompt({
   // Handle image file uploads
   const handleFilesChangeImage = async (e) => {
     try {
-      // Filter for supported image types
-      const imageFiles = Array.from(e.target.files).filter(
+      // Filter for supported image and video types
+      const files = Array.from(e.target.files).filter(
         (file) =>
           file.type === "image/jpeg" ||
           file.type === "image/png" ||
           file.type === "image/gif" ||
-          file.type === "image/webp"
+          file.type === "image/webp" ||
+          file.type === "video/mp4"
       );
 
       // Validate file types
-      if (imageFiles.length !== e.target.files.length) {
-        notifyError("All files must be images");
+      if (files.length !== e.target.files.length) {
+        notifyError("All files must be images or MP4 videos");
       } else {
         notifySuccess("File attached");
       }
 
-      // Process image files
-      const imageFileList = [];
-      for (const file of imageFiles) {
+      // Process files
+      const fileList = [];
+      for (const file of files) {
         const text = await readFileAsBase64(file);
-        imageFileList.push({
+        fileList.push({
           name: file.name,
-          type: "image",
+          type: file.type.startsWith("image/") ? "image" : "video",
           size: file.size,
           text,
         });
       }
 
-      setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
+      setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
     } catch (error) {
       notifyError("An error occurred: ", error);
     }
   };
-
   // Trigger file input click
   const handleClick = () => {
     hiddenFileInput.current.value = null;
@@ -666,7 +680,7 @@ function Prompt({
                     type="file"
                     ref={hiddenFileInputImage}
                     multiple
-                    accept=".jpg, .jpeg, .png, .gif, .webp"
+                    accept=".jpg, .jpeg, .png, .gif, .webp, .mp4"
                     onChange={handleFilesChangeImage}
                     className="hidden"
                   />
