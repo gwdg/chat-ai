@@ -32,6 +32,7 @@ function Prompt({
   loading,
   loadingResend,
   isImageSupported,
+  isVideoSupported,
   isArcanaSupported,
   selectedFiles,
   localState,
@@ -79,10 +80,16 @@ function Prompt({
         modelX.name === localState.settings.model &&
         modelX.input.includes("image")
     );
+    // Check if selected model supports image input
+    const videoSupport = modelList.some(
+      (modelX) =>
+        modelX.name === localState.settings.model &&
+        modelX.input.includes("video")
+    );
 
     // Process conversation based on image support
     let processedConversation = updatedConversation;
-    if (!imageSupport) {
+    if (!imageSupport || !videoSupport) {
       // Remove image content if model doesn't support images
       processedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
@@ -98,13 +105,21 @@ function Prompt({
       });
     }
 
-    // Update local state with new response entry, handling images if present
     if (selectedFiles.length > 0) {
       const imageFiles = selectedFiles.filter((file) => file.type === "image");
+      const videoFiles = selectedFiles.filter((file) => file.type === "video");
+
       const imageContent = imageFiles.map((imageFile) => ({
         type: "image_url",
         image_url: {
           url: imageFile.text,
+        },
+      }));
+
+      const videoContent = videoFiles.map(() => ({
+        type: "video_url",
+        video_url: {
+          url: "",
         },
       }));
 
@@ -115,6 +130,7 @@ function Prompt({
           {
             prompt: prevState.prompt,
             images: imageContent,
+            videos: videoContent,
             response: "",
           },
         ],
@@ -170,9 +186,9 @@ function Prompt({
     }
   }
 
-  // Handle file drop events for images
+  // Handle file drop events for images and videos
   const handleDrop = async (event) => {
-    if (!isImageSupported) return;
+    if (!isImageSupported || !isVideoSupported) return;
     event.preventDefault();
     try {
       // Filter for supported image types
@@ -181,39 +197,50 @@ function Prompt({
           file.type === "image/jpeg" ||
           file.type === "image/png" ||
           file.type === "image/gif" ||
-          file.type === "image/webp"
+          file.type === "image/webp" ||
+          file.type === "video/mp4"
       );
 
       // Validate dropped files
       if (droppedFiles.length === 0) {
-        notifyError("Only image files are allowed");
+        notifyError("Only image or video files are allowed");
         return;
       } else {
         notifySuccess("Image(s) dropped");
       }
 
       // Convert dropped images to base64 and update state
-      const imageFileList = [];
+      const fileList = [];
       for (const file of droppedFiles) {
         const base64 = await readFileAsBase64(file);
-        imageFileList.push({
+        fileList.push({
           name: file.name,
-          type: "image",
+          type: file.type.startsWith("image/") ? "image" : "video",
           size: file.size,
           text: base64,
         });
       }
 
-      setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
+      setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
     } catch (error) {
       notifyError("An error occurred while dropping the files: ", error);
     }
   };
-
   // Handle changes in the prompt textarea
   const handleChange = (event) => {
     updateLocalState({ prompt: event.target.value });
     adjustHeight();
+  };
+
+  const getAcceptedFileTypes = (isImageSupported, isVideoSupported) => {
+    const types = [];
+    if (isImageSupported) {
+      types.push(".jpg", ".jpeg", ".png", ".gif", ".webp");
+    }
+    if (isVideoSupported) {
+      types.push(".mp4");
+    }
+    return types.join(",");
   };
 
   // Handle cancellation of ongoing requests
@@ -560,7 +587,7 @@ function Prompt({
     <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
       <div className="flex flex-col gap-4 w-full">
         <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
-          {isImageSupported ? (
+          {isImageSupported || isVideoSupported ? (
             <div
               className="drag-drop-container"
               onDragOver={(e) => e.preventDefault()}
@@ -588,7 +615,9 @@ function Prompt({
                     handleSubmit(event);
                   }
                 }}
-                onPaste={isImageSupported ? handlePaste : null}
+                onPaste={
+                  isImageSupported || isVideoSupported ? handlePaste : null
+                }
               />
             </div>
           ) : (
@@ -674,26 +703,29 @@ function Prompt({
                 </button>
               </Tooltip>
 
-              {isImageSupported && (
+              {(isImageSupported || isVideoSupported) && (
                 <>
                   <input
                     type="file"
                     ref={hiddenFileInputImage}
                     multiple
-                    accept=".jpg, .jpeg, .png, .gif, .webp, .mp4"
+                    accept={getAcceptedFileTypes(
+                      isImageSupported,
+                      isVideoSupported
+                    )}
                     onChange={handleFilesChangeImage}
                     className="hidden"
                   />
-                  <Tooltip text={t("description.attachImage")}>
+                  <Tooltip text={t("description.attachFile")}>
                     <button
                       className="h-[30px] w-[30px] cursor-pointer"
-                      onClick={handleClickImage}
+                      onClick={() => hiddenFileInputImage.current?.click()}
                       disabled={loading || loadingResend}
                     >
                       <img
                         className="cursor-pointer h-[30px] w-[30px]"
                         src={image_icon}
-                        alt="attach image"
+                        alt="attach file"
                       />
                     </button>
                   </Tooltip>
