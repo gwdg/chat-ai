@@ -716,7 +716,7 @@ function Prompt({
                     onChange={handleFilesChangeImage}
                     className="hidden"
                   />
-                  <Tooltip text={t("description.attachFile")}>
+                  <Tooltip text={t("description.attachImage")}>
                     <button
                       className="h-[30px] w-[30px] cursor-pointer"
                       onClick={() => hiddenFileInputImage.current?.click()}
