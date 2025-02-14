@@ -892,6 +892,7 @@ function Responses({
               handleResponseSave={handleResponseSave}
               editedResponse={editedResponse}
               setEditingResponseIndex={setEditingResponseIndex}
+              handleResendClick={handleResendClick}
             />
           </div>
         ))}
