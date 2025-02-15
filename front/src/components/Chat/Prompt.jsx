@@ -89,7 +89,7 @@ function Prompt({
 
     // Process conversation based on image support
     let processedConversation = updatedConversation;
-    if (!imageSupport || !videoSupport) {
+    if (!imageSupport && !videoSupport) {
       // Remove image content if model doesn't support images
       processedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
@@ -188,7 +188,7 @@ function Prompt({
 
   // Handle file drop events for images and videos
   const handleDrop = async (event) => {
-    if (!isImageSupported || !isVideoSupported) return;
+    if (!isImageSupported && !isVideoSupported) return;
     event.preventDefault();
     try {
       // Filter for supported image types
