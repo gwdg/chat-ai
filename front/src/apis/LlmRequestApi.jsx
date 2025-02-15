@@ -3,6 +3,36 @@ let controller = new AbortController();
 let signal = controller.signal;
 
 async function generateConversationTitle(conversation, settings) {
+  let processedConversation = conversation.map((message) => {
+    // Handle case where content is an array (containing text and image objects)
+    if (message.role === "user" && Array.isArray(message.content)) {
+      return {
+        role: "user",
+        content: message.content
+          .filter((item) => item.type === "text")
+          .map((item) => item.text)
+          .join("\n"),
+      };
+    }
+    // Handle case where content is a string but contains image data
+    else if (
+      message.content &&
+      typeof message.content === "string" &&
+      message.content.includes("data:image")
+    ) {
+      // Remove the image data URL portion
+      return {
+        role: message.role,
+        content: message.content.replace(
+          /data:image\/[^;]+;base64,[^"]+/g,
+          "[Image]"
+        ),
+      };
+    }
+    // Return unchanged for other cases
+    return message;
+  });
+
   const titlePrompt =
     "Create a very short title (maximum 4 words) for this conversation that captures its main topic. Respond only with the title - no quotes, punctuation, or additional text.";
   try {
@@ -13,7 +43,7 @@ async function generateConversationTitle(conversation, settings) {
         model: "meta-llama-3.1-8b-instruct",
         messages: [
           { role: "system", content: "You are a helpful assistant." },
-          ...conversation.slice(1),
+          ...processedConversation.slice(1),
           { role: "user", content: titlePrompt },
         ],
         temperature: settings.temperature,
@@ -149,14 +179,35 @@ async function fetchLLMResponse(
         { role: "assistant", content: currentResponse },
       ];
 
+      const cleanedConversation = updatedConversation.map((message) => {
+        if (message.role === "user" && Array.isArray(message.content)) {
+          return {
+            role: "user",
+            content: message.content.map((item) => {
+              if (item.type === "video_url") {
+                return {
+                  type: "video_url",
+                  video_url: {
+                    hasVideo: true,
+                    url: "",
+                  },
+                };
+              }
+              return item;
+            }),
+          };
+        }
+        return message;
+      });
+
       setLocalState((prevState) => ({
         ...prevState,
-        conversation: updatedConversation,
+        conversation: cleanedConversation,
       }));
 
       // Generate title for new conversations
       if (conversation.length <= 2) {
-        const title = await generateConversationTitle(updatedConversation, {
+        const title = await generateConversationTitle(conversation, {
           model_api: modelName,
           temperature: temperature,
           top_p: topP,

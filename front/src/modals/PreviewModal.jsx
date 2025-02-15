@@ -132,6 +132,21 @@ const PreviewModal = ({ file, onClose }) => {
           </div>
         );
       }
+      if (file.type === "video") {
+        return (
+          <div className="flex justify-center">
+            <video
+              src={file.text}
+              controls
+              className="max-h-[85vh] max-w-full"
+              onError={() => setLoadError("Failed to load video")}
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        );
+      }
+
       if (file.fileType === "pdf") {
         if (file.processed && file.processedContent) {
           return (
