@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
@@ -9,6 +9,68 @@ import Code from "./Code";
 import "katex/dist/katex.min.css";
 import { forwardRef, useImperativeHandle } from "react";
 import ErrorBoundary from "./ErrorBoundary";
+
+// KaTeX configuration options
+const katexOptions = {
+  strict: false,
+  throwOnError: false,
+  displayMode: false,
+  output: "html",
+  trust: true,
+  // Add common macros here if needed
+  macros: {},
+};
+
+// Function to preprocess LaTeX in parentheses
+const preprocessLatex = (text) => {
+  if (!text) return "";
+
+  let conversionCount = 0;
+
+  // Match LaTeX expressions in parentheses
+  // Looks for patterns containing LaTeX commands, superscripts, subscripts, etc.
+  const latexPattern =
+    /\(([^()]*?(?:\([^()]*\)[^()]*?)*?(?:\\[a-zA-Z]+{.*?}|\^|_|\\frac|\\sqrt|\\sum|\\int|\\lim).*?)\)/g;
+
+  const processed = text.replace(latexPattern, (match, latexContent) => {
+    // Only convert if it contains LaTeX-like commands
+    if (latexContent.match(/\\[a-zA-Z]+|[\^_]|\{|\}/)) {
+      conversionCount++;
+      return `$${latexContent}$`;
+    }
+    return match;
+  });
+
+  if (conversionCount > 0) {
+    console.debug(
+      `Converted ${conversionCount} LaTeX expressions from parentheses`
+    );
+  }
+
+  return processed;
+};
+
+const MathComponent = React.memo(({ value }) => {
+  try {
+    // Remove any leftover parentheses if they somehow made it through
+    const cleanValue = value.replace(/^\((.*)\)$/, "$1");
+
+    return (
+      <span
+        role="math"
+        aria-label={cleanValue}
+        dangerouslySetInnerHTML={{
+          __html: katex.renderToString(cleanValue, katexOptions),
+        }}
+      />
+    );
+  } catch (error) {
+    console.error("LaTeX rendering error:", error);
+    return <span className="text-red-500">{value}</span>;
+  }
+});
+
+MathComponent.displayName = "MathComponent";
 
 const components = {
   code: ({ inline, className, children, ...props }) => {
@@ -24,20 +86,7 @@ const components = {
       <Code language={match?.[1]}>{children}</Code>
     );
   },
-  math: ({ value }) => {
-    try {
-      return (
-        <span
-          dangerouslySetInnerHTML={{
-            __html: katex.renderToString(value, { strict: false }),
-          }}
-        />
-      );
-    } catch (error) {
-      console.error("LaTeX rendering error:", error);
-      return <span className="text-red-500">{value}</span>;
-    }
-  },
+  math: MathComponent,
 };
 
 const ReferenceItem = forwardRef((props, ref) => {
@@ -78,6 +127,7 @@ const ReferenceItem = forwardRef((props, ref) => {
     </div>
   );
 });
+
 ReferenceItem.displayName = "ReferenceItem";
 
 const ReferencesSection = ({ content }) => {
@@ -184,15 +234,26 @@ const ThinkingBlock = ({ children, autoExpand = false }) => {
   );
 };
 
-const MarkdownRenderer = ({ children, isDarkMode, isLoading }) => {
+const MarkdownRenderer = ({
+  children,
+  isDarkMode,
+  isLoading,
+  convertParenthesesLatex = true, // New prop to control parentheses conversion
+}) => {
   const [displayedText, setDisplayedText] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingContent, setThinkingContent] = useState("");
   const bufferRef = useRef("");
   const processedIndexRef = useRef(0);
 
+  // Process the content before rendering
+  const processedContent = useMemo(() => {
+    if (!children) return "";
+    return convertParenthesesLatex ? preprocessLatex(children) : children;
+  }, [children, convertParenthesesLatex]);
+
   useEffect(() => {
-    if (!children || !isLoading) {
+    if (!processedContent || !isLoading) {
       setDisplayedText("");
       setThinkingContent("");
       setIsThinking(false);
@@ -202,9 +263,9 @@ const MarkdownRenderer = ({ children, isDarkMode, isLoading }) => {
     }
 
     const processNextChar = () => {
-      if (processedIndexRef.current >= children.length) return;
+      if (processedIndexRef.current >= processedContent.length) return;
 
-      const char = children[processedIndexRef.current];
+      const char = processedContent[processedIndexRef.current];
       bufferRef.current += char;
 
       if (bufferRef.current.includes("<think>")) {
@@ -228,11 +289,13 @@ const MarkdownRenderer = ({ children, isDarkMode, isLoading }) => {
     };
 
     processNextChar();
-  }, [children, isLoading]);
+  }, [processedContent, isLoading]);
 
-  if (!children) return null;
+  if (!processedContent) return null;
+
   if (isLoading) {
-    const [mainContent, referencesContent] = children.split("References:");
+    const [mainContent, referencesContent] =
+      processedContent.split("References:");
     return (
       <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
         {thinkingContent && (
@@ -256,8 +319,10 @@ const MarkdownRenderer = ({ children, isDarkMode, isLoading }) => {
     );
   }
 
-  const [mainContent, referencesContent] = children.split("References:");
+  const [mainContent, referencesContent] =
+    processedContent.split("References:");
   const parts = mainContent.split(/(<think>|<\/think>)/);
+
   return (
     <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
       {parts.map((part, index) => {

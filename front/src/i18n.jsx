@@ -119,7 +119,7 @@ i18n
             import: "Import",
             clear: "Clear",
             upload: "Attach File",
-            attachImage: "Attach Image",
+            attachImage: "Attach Media",
             pause: "Abort",
             send: "Send",
             stop: "Stop",

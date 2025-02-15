@@ -11,7 +11,8 @@ require("dotenv").config();
 const port = process.env.PORT || 7230;
 const api_key = process.env.API_KEY;
 
-app.use(bodyParser.json({ limit: "10mb" }));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 app.use(
   fileUpload({
     createParentPath: true,

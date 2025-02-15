@@ -5,6 +5,7 @@ import check from "../../assets/check.svg";
 import Typing from "../Others/Typing";
 import edit_icon from "../../assets/edit_icon.svg";
 import ErrorBoundary from "./ErrorBoundary";
+import { RotateCw } from "lucide-react";
 
 const ResponseItem = React.memo(
   ({
@@ -24,6 +25,7 @@ const ResponseItem = React.memo(
     handleResponseSave,
     editedResponse,
     setEditingResponseIndex,
+    handleResendClick,
   }) => {
     const responseRef = useRef(null);
     const textareaRef = useRef(null);
@@ -129,8 +131,27 @@ const ResponseItem = React.memo(
 
     const isLastItem = index === responses.length - 1;
     const isLoading = (loading || loadingResend) && isLastItem;
+    const hasError = !res?.response && !isLoading;
 
-    if (!res?.response && !isLoading) return null;
+    // Return early with error state if no response and not loading
+    if (hasError) {
+      return (
+        <div className="p-2" ref={responseRef}>
+          <div className="text-black dark:text-white overflow-hidden border dark:border-border_dark rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
+            <div className="flex flex-col items-start  py-2">
+              <button
+                onClick={() => handleResendClick(index)}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-tertiary rounded-lg hover:bg-tertiary/90 transition-colors"
+                disabled={isLoading}
+              >
+                <RotateCw className="w-4 h-4" />
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="p-2" ref={responseRef}>
@@ -165,7 +186,23 @@ const ResponseItem = React.memo(
                 </div>
               ) : (
                 <div className="group">
-                  <ErrorBoundary>
+                  <ErrorBoundary
+                    fallback={
+                      <div className="flex flex-col items-center justify-center gap-3 py-4">
+                        <p className="text-red-500 dark:text-red-400">
+                          Error rendering response
+                        </p>
+                        <button
+                          onClick={() => handleResendClick(index)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-tertiary rounded-lg hover:bg-tertiary/90 transition-colors"
+                          disabled={isLoading}
+                        >
+                          <RotateCw className="w-4 h-4" />
+                          Try Again
+                        </button>
+                      </div>
+                    }
+                  >
                     <MarkdownRenderer
                       isDarkMode={isDarkModeGlobal}
                       isLoading={isLoading}

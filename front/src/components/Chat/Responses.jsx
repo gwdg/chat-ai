@@ -8,6 +8,7 @@ import retry from "../../assets/icon_retry.svg";
 import clear from "../../assets/cross_icon.svg";
 import export_icon from "../../assets/export_icon.svg";
 import import_icon from "../../assets/import_icon.svg";
+import video_icon from "../../assets/video_icon.svg";
 import send from "../../assets/icon_send.svg";
 import edit_icon from "../../assets/edit_icon.svg";
 import icon_resend from "../../assets/icon_resend.svg";
@@ -839,17 +840,33 @@ function Responses({
               )}
             </div>
 
-            {res?.images?.length > 0 && (
+            {(res?.images?.length > 0 || res?.videos?.length > 0) && (
               <div className="flex gap-2 overflow-x-auto items-center p-3">
-                {res.images.map((imageObj, imgIndex) => {
+                {res.images?.map((imageObj, imgIndex) => {
                   if (imageObj.type === "image_url" && imageObj.image_url.url) {
                     return (
                       <img
-                        key={imgIndex}
+                        key={`img-${imgIndex}`}
                         src={imageObj.image_url.url}
                         alt="Base64 Image"
                         className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
                         onClick={() => setPreviewFile(imageObj.image_url.url)}
+                        onError={(e) => {
+                          e.target.src = video_icon;
+                        }}
+                      />
+                    );
+                  }
+                  return null;
+                })}
+                {res.videos?.map((videoObj, vidIndex) => {
+                  if (videoObj.type === "video_url") {
+                    return (
+                      <img
+                        key={`vid-${vidIndex}`}
+                        src={video_icon}
+                        alt="Video content"
+                        className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
                       />
                     );
                   }
@@ -875,6 +892,7 @@ function Responses({
               handleResponseSave={handleResponseSave}
               editedResponse={editedResponse}
               setEditingResponseIndex={setEditingResponseIndex}
+              handleResendClick={handleResendClick}
             />
           </div>
         ))}

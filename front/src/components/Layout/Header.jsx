@@ -10,6 +10,7 @@ import profile_icon from "../../assets/profile_icon.svg";
 import Logo from "../../assets/chatai-logo-v3-preview.png";
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
+import video_icon from "../../assets/video_icon.svg";
 import thought_supported from "../../assets/thought_supported.svg";
 import books from "../../assets/books.svg";
 import HelpModal from "../../modals/HelpModal";
@@ -66,6 +67,10 @@ function Header({
     [currentModel]
   );
 
+  const isVideoSupported = useMemo(
+    () => currentModel?.input.includes("video") || false,
+    [currentModel]
+  );
   // Check if current model supports thought output
   const isThoughtSupported = useMemo(
     () => currentModel?.output.includes("thought") || false,
@@ -275,6 +280,13 @@ function Header({
                   className="h-[18px] w-[18px] flex-shrink-0 "
                 />
               )}
+              {isVideoSupported && (
+                <img
+                  src={video_icon}
+                  alt="video_icon"
+                  className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                />
+              )}
               {isThoughtSupported && (
                 <img
                   src={thought_supported}
@@ -321,6 +333,13 @@ function Header({
                         src={image_supported}
                         alt="image_supported"
                         className="h-[18px] w-[18px] flex-shrink-0 "
+                      />
+                    )}
+                    {option.input.includes("video") && (
+                      <img
+                        src={video_icon}
+                        alt="video_icon"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
                       />
                     )}
                     {option.output.includes("thought") && (
