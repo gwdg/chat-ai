@@ -238,7 +238,7 @@ function Prompt({
       types.push(".jpg", ".jpeg", ".png", ".gif", ".webp");
     }
     if (isVideoSupported) {
-      types.push(".mp4");
+      types.push(".mp4", ".avi");
     }
     return types.join(",");
   };
@@ -537,42 +537,64 @@ function Prompt({
   };
 
   // Handle image file uploads
-  const handleFilesChangeImage = async (e) => {
-    try {
-      // Filter for supported image and video types
-      const files = Array.from(e.target.files).filter(
-        (file) =>
-          file.type === "image/jpeg" ||
-          file.type === "image/png" ||
-          file.type === "image/gif" ||
-          file.type === "image/webp" ||
-          file.type === "video/mp4"
-      );
+const handleFilesChangeImage = async (e) => {
+  try {
+    // Filter for supported image and video types
+    const files = Array.from(e.target.files).filter(
+      (file) =>
+        file.type === "image/jpeg" ||
+        file.type === "image/png" ||
+        file.type === "image/gif" ||
+        file.type === "image/webp" ||
+        file.type === "video/mp4" ||
+        file.type === "video/avi" ||
+        file.type === "video/msvideo"
+    );
 
-      // Validate file types
-      if (files.length !== e.target.files.length) {
-        notifyError("All files must be images or MP4 videos");
+    // Validate file types
+    if (files.length !== e.target.files.length) {
+      notifyError("All files must be images, MP4 videos, or AVI videos");
+      return;
+    }
+
+    // Process files
+    const validFiles = [];
+    for (const file of files) {
+      // Check file size
+      if (file.size > 50 * 1024 * 1024) { // 50MB
+        notifyError(`File too large: ${file.name}`);
       } else {
-        notifySuccess("File attached");
+        validFiles.push(file);
       }
+    }
 
-      // Process files
-      const fileList = [];
-      for (const file of files) {
-        const text = await readFileAsBase64(file);
-        fileList.push({
-          name: file.name,
-          type: file.type.startsWith("image/") ? "image" : "video",
-          size: file.size,
-          text,
-        });
-      }
+    // If there are no valid files left after size check, notify and return
+    if (validFiles.length === 0) {
+      // notifyError("No valid files to attach");
+      return;
+    }
 
-      setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
+    // If there are valid files, notify success
+    notifySuccess("File attached");
+
+    // Process valid files
+    const fileList = [];
+    for (const file of validFiles) {
+      const text = await readFileAsBase64(file);
+      fileList.push({
+        name: file.name,
+        type: file.type.startsWith("image/") ? "image" : "video",
+        size: file.size,
+        text,
+      });
+    }
+
+    setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
     } catch (error) {
       notifyError("An error occurred: ", error);
     }
   };
+
   // Trigger file input click
   const handleClick = () => {
     hiddenFileInput.current.value = null;

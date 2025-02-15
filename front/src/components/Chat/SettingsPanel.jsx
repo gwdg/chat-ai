@@ -759,28 +759,28 @@ const SettingsPanel = ({
                         <img
                           src={image_supported}
                           alt="image_supported"
-                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                         />
                       )}
                       {isVideoSupported && (
                         <img
                           src={video_icon}
                           alt="video_icon"
-                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                         />
                       )}
                       {isThoughtSupported && (
                         <img
                           src={thought_supported}
                           alt="thought_supported"
-                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                         />
                       )}
                       {isArcanaSupported && (
                         <img
                           src={books}
                           alt="books"
-                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                         />
                       )}
                       <img
@@ -820,28 +820,28 @@ const SettingsPanel = ({
                             <img
                               src={image_supported}
                               alt="image_supported"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                             />
                           )}
                           {option.input.includes("video") && (
                             <img
                               src={video_icon}
                               alt="video_icon"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                             />
                           )}
                           {option.output.includes("thought") && (
                             <img
                               src={thought_supported}
                               alt="thought_supported"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                             />
                           )}
                           {option.input.includes("arcana") && (
                             <img
                               src={books}
                               alt="books"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                             />
                           )}
                         </div>
@@ -1111,28 +1111,28 @@ const SettingsPanel = ({
                       <img
                         src={image_supported}
                         alt="image_supported"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mr-2"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                       />
                     )}
                     {isVideoSupported && (
                       <img
                         src={video_icon}
                         alt="video_icon"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                       />
                     )}
                     {isThoughtSupported && (
                       <img
                         src={thought_supported}
                         alt="thought_supported"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                       />
                     )}
                     {isArcanaSupported && (
                       <img
                         src={books}
                         alt="books"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                       />
                     )}
                     <img
@@ -1178,7 +1178,7 @@ const SettingsPanel = ({
                             <img
                               src={video_icon}
                               alt="video_icon"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                             />
                           )}
                           {option.output.includes("thought") && (
@@ -1192,7 +1192,7 @@ const SettingsPanel = ({
                             <img
                               src={books}
                               alt="books"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                             />
                           )}
                         </div>
