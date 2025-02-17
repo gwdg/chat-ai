@@ -80,17 +80,17 @@ function Prompt({
         modelX.name === localState.settings.model &&
         modelX.input.includes("image")
     );
-    // Check if selected model supports image input
+    // Check if selected model supports video input
     const videoSupport = modelList.some(
       (modelX) =>
         modelX.name === localState.settings.model &&
         modelX.input.includes("video")
     );
 
-    // Process conversation based on image support
+    // Process conversation based on image/video support
     let processedConversation = updatedConversation;
     if (!imageSupport && !videoSupport) {
-      // Remove image content if model doesn't support images
+      // Remove image content if model doesn't support images/videos
       processedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
           return {

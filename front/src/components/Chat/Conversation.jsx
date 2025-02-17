@@ -137,6 +137,7 @@ const Conversation = ({
           updateSettings={updateSettings}
           loadingResend={loadingResend}
           setLoadingResend={setLoadingResend}
+          isArcanaSupported={isArcanaSupported}
         />
       </div>
 

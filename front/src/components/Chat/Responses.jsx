@@ -40,6 +40,7 @@ function Responses({
   updateSettings,
   loadingResend,
   setLoadingResend,
+  isArcanaSupported,
 }) {
   // Hooks
   const { t } = useTranslation();
@@ -236,9 +237,15 @@ function Responses({
         modelX.name === localState.settings.model &&
         modelX.input.includes("image")
     );
+    // Check if selected model supports video input
+    const videoSupport = modelList.some(
+      (modelX) =>
+        modelX.name === localState.settings.model &&
+        modelX.input.includes("video")
+    );
 
-    // If model doesn't support images, remove image content
-    if (!imageSupport) {
+    // If model doesn't support images/videos, remove image/video content
+    if (!imageSupport && !videoSupport) {
       updatedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
           return {
@@ -265,7 +272,8 @@ function Responses({
         setLocalState,
         setShowModalSession,
         setShowBadRequest,
-        updatedConversation
+        updatedConversation,
+        isArcanaSupported
       );
       dispatch(setIsResponding(false));
       setLoadingResend(false);
@@ -357,9 +365,15 @@ function Responses({
         modelX.name === localState.settings.model &&
         modelX.input.includes("image")
     );
+    // Check if selected model supports image input
+    const videoSupport = modelList.some(
+      (modelX) =>
+        modelX.name === localState.settings.model &&
+        modelX.input.includes("video")
+    );
 
     // Remove image part from the conversation if model doesn't support images
-    if (!imageSupport) {
+    if (!imageSupport && !videoSupport) {
       updatedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
           return {
@@ -385,7 +399,8 @@ function Responses({
         setLocalState,
         setShowModalSession,
         setShowBadRequest,
-        updatedConversation
+        updatedConversation,
+        isArcanaSupported
       );
       dispatch(setIsResponding(false));
       setLoadingResend(false);
