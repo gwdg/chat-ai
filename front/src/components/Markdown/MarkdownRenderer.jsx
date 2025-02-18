@@ -27,18 +27,28 @@ const preprocessLatex = (text) => {
 
   let conversionCount = 0;
 
-  // Match LaTeX expressions in parentheses
-  // Looks for patterns containing LaTeX commands, superscripts, subscripts, etc.
-  const latexPattern =
-    /\(([^()]*?(?:\([^()]*\)[^()]*?)*?(?:\\[a-zA-Z]+{.*?}|\^|_|\\frac|\\sqrt|\\sum|\\int|\\lim).*?)\)/g;
+  // Split the text into code and non-code sections
+  const segments = text.split(/(```[\s\S]*?```|`[^`]+`)/g);
 
-  const processed = text.replace(latexPattern, (match, latexContent) => {
-    // Only convert if it contains LaTeX-like commands
-    if (latexContent.match(/\\[a-zA-Z]+|[\^_]|\{|\}/)) {
-      conversionCount++;
-      return `$${latexContent}$`;
+  // Process each segment
+  const processed = segments.map((segment, index) => {
+    // If this is a code block (odd indices in our split will be code blocks)
+    if (segment.startsWith("```") || segment.startsWith("`")) {
+      return segment; // Return code blocks unchanged
     }
-    return match;
+
+    // For non-code segments, process LaTeX
+    const latexPattern =
+      /\(([^()]*?(?:\([^()]*\)[^()]*?)*?(?:\\[a-zA-Z]+{.*?}|\^|_|\\frac|\\sqrt|\\sum|\\int|\\lim).*?)\)/g;
+
+    return segment.replace(latexPattern, (match, latexContent) => {
+      // Only convert if it contains LaTeX-like commands
+      if (latexContent.match(/\\[a-zA-Z]+|[\^_]|\{|\}/)) {
+        conversionCount++;
+        return `$${latexContent}$`;
+      }
+      return match;
+    });
   });
 
   if (conversionCount > 0) {
@@ -47,7 +57,7 @@ const preprocessLatex = (text) => {
     );
   }
 
-  return processed;
+  return processed.join("");
 };
 
 const MathComponent = React.memo(({ value }) => {
@@ -75,15 +85,17 @@ MathComponent.displayName = "MathComponent";
 const components = {
   code: ({ inline, className, children, ...props }) => {
     const match = /language-(\w+)/.exec(className || "");
+    const content = String(children).replace(/\n$/, "");
+
     return inline ? (
       <code
         className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-pink-600 dark:text-pink-400 font-mono text-sm"
         {...props}
       >
-        {children}
+        {content}
       </code>
     ) : (
-      <Code language={match?.[1]}>{children}</Code>
+      <Code language={match?.[1]}>{content}</Code>
     );
   },
   math: MathComponent,
