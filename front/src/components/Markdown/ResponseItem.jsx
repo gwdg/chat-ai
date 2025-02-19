@@ -180,7 +180,7 @@ const ResponseItem = React.memo(
                       onClick={() => handleResponseSave(index)}
                       className="bg-tertiary text-white rounded-2xl px-4 py-2"
                     >
-                      Save (⌘/Ctrl + Enter)
+                      Save
                     </button>
                   </div>
                 </div>

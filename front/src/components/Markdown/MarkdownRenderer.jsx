@@ -17,7 +17,6 @@ const katexOptions = {
   displayMode: false,
   output: "html",
   trust: true,
-  // Add common macros here if needed
   macros: {},
 };
 
@@ -27,43 +26,36 @@ const preprocessLatex = (text) => {
 
   let conversionCount = 0;
 
-  // Split the text into code and non-code sections
   const segments = text.split(/(```[\s\S]*?```|`[^`]+`)/g);
 
-  // Process each segment
-  const processed = segments.map((segment, index) => {
-    // If this is a code block (odd indices in our split will be code blocks)
-    if (segment.startsWith("```") || segment.startsWith("`")) {
-      return segment; // Return code blocks unchanged
-    }
-
-    // For non-code segments, process LaTeX
-    const latexPattern =
-      /\(([^()]*?(?:\([^()]*\)[^()]*?)*?(?:\\[a-zA-Z]+{.*?}|\^|_|\\frac|\\sqrt|\\sum|\\int|\\lim).*?)\)/g;
-
-    return segment.replace(latexPattern, (match, latexContent) => {
-      // Only convert if it contains LaTeX-like commands
-      if (latexContent.match(/\\[a-zA-Z]+|[\^_]|\{|\}/)) {
-        conversionCount++;
-        return `$${latexContent}$`;
+  return segments
+    .map((segment, index) => {
+      if (segment.startsWith("```") || segment.startsWith("`")) {
+        return segment;
       }
-      return match;
-    });
-  });
 
-  if (conversionCount > 0) {
-    console.debug(
-      `Converted ${conversionCount} LaTeX expressions from parentheses`
-    );
-  }
+      const latexPattern =
+        /\(([^()]*?(?:\([^()]*\)[^()]*?)*?(?:\\[a-zA-Z]+{.*?}|\^|_|\\frac|\\sqrt|\\sum|\\int|\\lim).*?)\)/g;
 
-  return processed.join("");
+      return segment.replace(latexPattern, (match, latexContent) => {
+        if (latexContent.match(/\\[a-zA-Z]+|[\^_]|\{|\}/)) {
+          conversionCount++;
+          return `$${latexContent}$`;
+        }
+        return match;
+      });
+    })
+    .join("");
 };
 
 const MathComponent = React.memo(({ value }) => {
   try {
-    // Remove any leftover parentheses if they somehow made it through
-    const cleanValue = value.replace(/^\((.*)\)$/, "$1");
+    if (!value || typeof value !== "string") {
+      return <span className="text-red-500">⚠️ Invalid LaTeX ⚠️</span>;
+    }
+
+    // Remove surrounding parentheses if they exist
+    const cleanValue = value.trim().replace(/^\((.*)\)$/, "$1");
 
     return (
       <span
@@ -76,7 +68,7 @@ const MathComponent = React.memo(({ value }) => {
     );
   } catch (error) {
     console.error("LaTeX rendering error:", error);
-    return <span className="text-red-500">{value}</span>;
+    return <span className="text-red-500">⚠️ Invalid LaTeX ⚠️</span>;
   }
 });
 
@@ -99,6 +91,85 @@ const components = {
     );
   },
   math: MathComponent,
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="text-blue-500 underline"
+    >
+      {children}
+    </a>
+  ),
+  h1: ({ children, id }) => (
+    <h1 className="text-2xl font-bold mt-4" id={id}>
+      {children}
+    </h1>
+  ),
+  h2: ({ children, id }) => (
+    <h2 className="text-xl font-semibold mt-3" id={id}>
+      {children}
+    </h2>
+  ),
+  h3: ({ children, id }) => (
+    <h3 className="text-lg font-medium mt-2" id={id}>
+      {children}
+    </h3>
+  ),
+  h4: ({ children, id }) => (
+    <h4 className="text-md font-medium mt-1" id={id}>
+      {children}
+    </h4>
+  ),
+  h5: ({ children, id }) => (
+    <h5 className="text-sm font-medium" id={id}>
+      {children}
+    </h5>
+  ),
+  h6: ({ children, id }) => (
+    <h6 className="text-xs font-medium text-gray-600" id={id}>
+      {children}
+    </h6>
+  ),
+  p: ({ children }) => <p className="mb-3">{children}</p>,
+  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+  ul: ({ children }) => <ul className="list-disc pl-6">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-6">{children}</ol>,
+  li: ({ children }) => <li className="mb-1">{children}</li>,
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-4 pl-4 italic text-gray-600">
+      {children}
+    </blockquote>
+  ),
+  table: ({ children }) => (
+    <div className="w-full overflow-x-auto my-4">
+      <table className="w-full border-collapse border border-gray-300 dark:border-gray-700">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-gray-100 dark:bg-gray-800">{children}</thead>
+  ),
+  tbody: ({ children }) => (
+    <tbody className="bg-white dark:bg-gray-900">{children}</tbody>
+  ),
+  tr: ({ children }) => (
+    <tr className="border-b border-gray-300 dark:border-gray-700">
+      {children}
+    </tr>
+  ),
+  th: ({ children }) => (
+    <th className="border border-gray-300 dark:border-gray-700 px-4 py-2 text-left font-medium">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">
+      {children}
+    </td>
+  ),
 };
 
 const ReferenceItem = forwardRef((props, ref) => {
@@ -279,6 +350,11 @@ const MarkdownRenderer = ({
 
       const char = processedContent[processedIndexRef.current];
       bufferRef.current += char;
+
+      // Don't allow stray $ signs to appear mid-render
+      if (!isThinking && bufferRef.current.endsWith("$")) {
+        bufferRef.current = bufferRef.current.slice(0, -1);
+      }
 
       if (bufferRef.current.includes("<think>")) {
         const [beforeThink] = bufferRef.current.split("<think>");
