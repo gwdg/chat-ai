@@ -29,6 +29,7 @@ import { processPdfDocument } from "../../apis/PdfProcessApi";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
 import PreviewModal from "../../modals/PreviewModal";
 import FileAlertModal from "../../modals/FileAlertModal";
+import { fetchAvailableModels } from "../../apis/ModelListApi";
 
 const SettingsPanel = ({
   selectedFiles,
@@ -55,6 +56,7 @@ const SettingsPanel = ({
   setShowSystemHelpModal,
   notifySuccess,
   notifyError,
+  setShowModalSession,
 }) => {
   const conversations = useSelector(selectConversations);
 
@@ -497,21 +499,37 @@ const SettingsPanel = ({
 
   // Handle Arcana parameters from URL
   useEffect(() => {
-    const handleArcanaParams = async () => {
+    const handleArcanaParams = async (modelsList) => {
       const arcanaID = searchParams.get("arcana");
       const arcanaKey = searchParams.get("arcana_key");
+      const modelParam = searchParams.get("model");
 
-      // Only process if both ID and key exist, we're on chat page, and haven't processed yet
       if (
         arcanaID &&
         arcanaKey &&
+        modelParam &&
+        modelsList?.length > 0 &&
         location.pathname === "/chat" &&
         !hasProcessedArcana.current
       ) {
         try {
           hasProcessedArcana.current = true;
 
-          // Update local state with Arcana settings
+          // Normalize model ID
+          const formattedModelParam = modelParam
+            .toLowerCase()
+            .replace(/\s+/g, "-");
+
+          // Check if model exists and supports "arcana" as input
+          const matchedModel = modelsList.find(
+            (m) => m.id === formattedModelParam && m.input.includes("arcana")
+          );
+
+          if (!matchedModel) {
+            throw new Error("Model not found or does not support Arcana.");
+          }
+
+          // Update local state
           setLocalState((prev) => ({
             ...prev,
             arcana: {
@@ -520,6 +538,8 @@ const SettingsPanel = ({
             },
             settings: {
               ...prev.settings,
+              model: matchedModel.name,
+              model_api: matchedModel.id,
               temperature: 0,
               top_p: 0.05,
             },
@@ -530,7 +550,7 @@ const SettingsPanel = ({
             (conv) => conv.id === currentConversationId
           );
 
-          // Update conversation with Arcana settings
+          // Update Redux store
           dispatch(
             updateConversation({
               id: currentConversationId,
@@ -540,7 +560,9 @@ const SettingsPanel = ({
                   key: decodeURIComponent(arcanaKey),
                 },
                 settings: {
-                  ...currentConversation.settings,
+                  ...currentConversation?.settings,
+                  model: matchedModel.name,
+                  model_api: matchedModel.id,
                   temperature: 0,
                   top_p: 0.05,
                 },
@@ -548,21 +570,40 @@ const SettingsPanel = ({
             })
           );
 
+          // Safe scrollTop access (if relevant)
+          const chatContainer = document.getElementById("chat-container");
+          if (chatContainer) {
+            chatContainer.scrollTop = chatContainer.scrollHeight; // ✅ Safe to access
+          }
+
           // Navigate to conversation
           navigate(`/chat/${currentConversationId}`, { replace: true });
         } catch (error) {
-          console.error("Error processing arcana parameters:", error);
           hasProcessedArcana.current = false;
           notifyError(
-            "Invalid arcana parameters in shared link. Redirecting to default chat."
+            "Invalid model or arcana parameters. Redirecting to default chat."
           );
           navigate(`/chat/${currentConversationId}`, { replace: true });
         }
       }
     };
 
+    const fetchModelsAndProcess = async () => {
+      try {
+        const modelsList = await fetchAvailableModels(setShowModalSession);
+
+        if (!modelsList || modelsList.length === 0) {
+          throw new Error("Failed to fetch models.");
+        }
+
+        handleArcanaParams(modelsList);
+      } catch (error) {
+        notifyError("Failed to fetch models. Please try again.");
+      }
+    };
+
     if (conversations.length > 0) {
-      handleArcanaParams();
+      fetchModelsAndProcess();
     }
   }, [
     searchParams,
@@ -573,6 +614,7 @@ const SettingsPanel = ({
     navigate,
     notifyError,
     setLocalState,
+    setShowModalSession,
   ]);
 
   useEffect(() => {
