@@ -21,8 +21,13 @@ const ChatRoute = ({
   hasImport,
   hasArcana,
   hasArcanaKey,
+  hasModelArcana,
 }) => {
-  if (hasSettings || hasImport || (hasArcana && hasArcanaKey)) {
+  if (
+    hasSettings ||
+    hasImport ||
+    (hasArcana && hasArcanaKey && hasModelArcana)
+  ) {
     return <Home />;
   }
   return <Navigate to={`/chat/${currentConversationId}`} replace />;
@@ -69,6 +74,7 @@ const PublicRoute = () => {
   const hasImport = searchParams.get("import");
   const hasArcana = searchParams.get("arcana");
   const hasArcanaKey = searchParams.get("arcana_key");
+  const hasModelArcana = searchParams.get("model");
 
   return (
     <ZoomWrapper>
@@ -91,6 +97,7 @@ const PublicRoute = () => {
                 hasImport={hasImport}
                 hasArcana={hasArcana}
                 hasArcanaKey={hasArcanaKey}
+                hasModelArcana={hasModelArcana}
               />
             }
           />

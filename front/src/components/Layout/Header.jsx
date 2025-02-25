@@ -7,7 +7,7 @@ import Light from "../../assets/light.svg";
 import Dark from "../../assets/dark.svg";
 import hamburger_icon from "../../assets/hamburger_icon.svg";
 import profile_icon from "../../assets/profile_icon.svg";
-import Logo from "../../assets/chatai-logo-v3-preview.png";
+import Logo from "../../assets/chatai-logo.svg";
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
 import video_icon from "../../assets/video_icon.svg";

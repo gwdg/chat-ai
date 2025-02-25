@@ -737,6 +737,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           setShowSystemHelpModal={setShowSystemHelpModal}
           notifySuccess={notifySuccess}
           notifyError={notifyError}
+          setShowModalSession={setShowModalSession}
         />
       </div>
 
