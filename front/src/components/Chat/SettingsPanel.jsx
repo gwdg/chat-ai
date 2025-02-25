@@ -84,6 +84,7 @@ const SettingsPanel = ({
   const hasProcessedSettings = useRef(false);
   const hasProcessedImport = useRef(false);
   const hasProcessedArcana = useRef(false);
+  const hasFetchedModels = useRef(false);
   const dropdownRef = useRef(null);
   const isIntentionalRefresh = useRef(false);
 
@@ -515,12 +516,10 @@ const SettingsPanel = ({
         try {
           hasProcessedArcana.current = true;
 
-          // Normalize model ID
           const formattedModelParam = modelParam
             .toLowerCase()
             .replace(/\s+/g, "-");
 
-          // Check if model exists and supports "arcana" as input
           const matchedModel = modelsList.find(
             (m) => m.id === formattedModelParam && m.input.includes("arcana")
           );
@@ -573,13 +572,13 @@ const SettingsPanel = ({
           // Safe scrollTop access (if relevant)
           const chatContainer = document.getElementById("chat-container");
           if (chatContainer) {
-            chatContainer.scrollTop = chatContainer.scrollHeight; // ✅ Safe to access
+            chatContainer.scrollTop = chatContainer.scrollHeight;
           }
 
           // Navigate to conversation
           navigate(`/chat/${currentConversationId}`, { replace: true });
         } catch (error) {
-          hasProcessedArcana.current = false;
+          hasProcessedArcana.current = false; // ✅ Reset flag if failed
           notifyError(
             "Invalid model or arcana parameters. Redirecting to default chat."
           );
@@ -589,7 +588,10 @@ const SettingsPanel = ({
     };
 
     const fetchModelsAndProcess = async () => {
+      if (hasFetchedModels.current) return;
+
       try {
+        hasFetchedModels.current = true;
         const modelsList = await fetchAvailableModels(setShowModalSession);
 
         if (!modelsList || modelsList.length === 0) {
@@ -599,10 +601,15 @@ const SettingsPanel = ({
         handleArcanaParams(modelsList);
       } catch (error) {
         notifyError("Failed to fetch models. Please try again.");
+        hasFetchedModels.current = false;
       }
     };
 
-    if (conversations.length > 0) {
+    if (
+      conversations.length > 0 &&
+      !hasFetchedModels.current &&
+      !hasProcessedArcana.current
+    ) {
       fetchModelsAndProcess();
     }
   }, [
