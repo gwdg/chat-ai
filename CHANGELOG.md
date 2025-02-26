@@ -1,5 +1,19 @@
 # Changelog 
 
+## Version: v0.7.1 (26.02.2025)
+
+Highlights:
+- Support for video input
+- Updated logo file
+- Improved support for arcanas
+- Improved markdown and LaTeX rendering
+- Added support for more file type attachments
+- Added support for PDF processing using docling
+- Added image and text attachment previews
+- Smoother response display
+- Improved support for multiple conversations
+- Added edit button for responses
+  
 ## Version: v0.7.0 (18.12.2024)
 
 Highlights:
