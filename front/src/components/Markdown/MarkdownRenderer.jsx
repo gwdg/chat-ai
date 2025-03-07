@@ -20,18 +20,43 @@ import ErrorBoundary from "./ErrorBoundary";
 
 // KaTeX configuration options - memoized to prevent unnecessary re-renders
 const katexOptions = {
-  strict: false,
   throwOnError: false,
   displayMode: false,
   output: "html",
   trust: true,
   macros: {},
+  strict: "ignore", // Ignore Unicode warnings
 };
 
 /**
- * Preprocesses LaTeX in parentheses to make it compatible with KaTeX
+ * Function to handle standalone LaTeX expressions that aren't in the standard format
+ * @param {string} content - The content to process
+ * @returns {string} Processed content with standalone LaTeX expressions properly formatted
+ */
+const processStandaloneLatex = (content) => {
+  if (!content) return content;
+
+  // Pattern to match equations that start with letter = expression
+  // Commonly used format in academic/technical writing
+  const standaloneEquationPattern =
+    /^([A-Za-z])\s*=\s*(\\frac[\s\S]*$|\\sum[\s\S]*$|\\int[\s\S]*$)/gm;
+
+  return content.replace(standaloneEquationPattern, (match) => {
+    // Skip if it's already wrapped in math delimiters
+    if (match.startsWith("$") || match.startsWith("\\(")) return match;
+
+    // Clean any internal math delimiters
+    const cleanedMatch = match.replace(/\$([^$]+)\$/g, "\\text{$1}");
+
+    // Wrap in math delimiters
+    return `$${cleanedMatch}$`;
+  });
+};
+
+/**
+ * Comprehensive preprocessor for LaTeX expressions in markdown
  * @param {string} text - The markdown text to process
- * @returns {string} Processed text with LaTeX expressions converted to KaTeX format
+ * @returns {string} Processed text with all LaTeX expressions properly formatted
  */
 const preprocessLatex = (text) => {
   if (!text) return "";
@@ -46,17 +71,91 @@ const preprocessLatex = (text) => {
         return segment;
       }
 
-      // Pattern to match LaTeX expressions in parentheses
+      let processedSegment = segment;
+
+      // 1. Handle common equation patterns (variable = expression)
+      const equationPatterns = [
+        // L = expression pattern (common in ML/stats)
+        /([A-Za-z](?:\([^)]*\))?\s*=\s*)(\\frac|\\sum|\\prod|\\int|\\lim|\\sup|\\inf|\\max|\\min)[\s\S]*?(?=\n\n|\n[A-Z]|$)/g,
+
+        // Equation with numbered reference (common in academic papers)
+        /([A-Za-z][^\n=]*?=\s*(?:.*?))(\([\d\.]+\))$/gm,
+
+        // Multi-line equation blocks
+        /^(\\begin\{(?:equation|align|gather|eqnarray)\*?\}[\s\S]*?\\end\{(?:equation|align|gather|eqnarray)\*?\})$/gm,
+
+        // Standalone LaTeX expressions starting with common commands
+        /^(\\frac|\\sum|\\prod|\\int|\\lim|\\sup|\\inf|\\max|\\min)[\s\S]*?(?=\n\n|\n[A-Z]|$)/gm,
+      ];
+
+      // Process each equation pattern
+      equationPatterns.forEach((pattern) => {
+        processedSegment = processedSegment.replace(pattern, (match) => {
+          // Skip if already in math delimiters
+          if (match.startsWith("$") || match.startsWith("\\(")) return match;
+
+          // Clean internal dollar signs
+          const cleanedMatch = match.replace(/\$([^$]+)\$/g, "\\text{$1}");
+
+          // Wrap in math delimiters
+          return `$${cleanedMatch}$`;
+        });
+      });
+
+      // 2. Handle parenthesized LaTeX (already in your code)
       const latexPattern =
         /\(([^()]*?(?:\([^()]*\)[^()]*?)*?(?:\\[a-zA-Z]+{.*?}|\^|_|\\frac|\\sqrt|\\sum|\\int|\\lim).*?)\)/g;
 
-      // Replace matched patterns with KaTeX compatible format
-      return segment.replace(latexPattern, (match, latexContent) => {
-        if (latexContent.match(/\\[a-zA-Z]+|[\^_]|\{|\}/)) {
-          return `$${latexContent}$`;
+      processedSegment = processedSegment.replace(
+        latexPattern,
+        (match, latexContent) => {
+          if (latexContent.match(/\\[a-zA-Z]+|[\^_]|\{|\}/)) {
+            // Clean internal dollar signs
+            const cleanedLatex = latexContent.replace(
+              /\$([^$]+)\$/g,
+              "\\text{$1}"
+            );
+            return `$${cleanedLatex}$`;
+          }
+          return match;
         }
-        return match;
+      );
+
+      // 3. Handle inline math expressions that might be missed
+      // Look for patterns like x^2, \alpha, etc. that aren't in delimiters
+      const inlineMathPatterns = [
+        /\b([a-zA-Z])_([a-zA-Z0-9])\b/g, // Subscripts like x_i
+        /\b([a-zA-Z])(?:\^|\*\*)([a-zA-Z0-9])\b/g, // Superscripts like x^2
+        /\\[a-zA-Z]+(?:\{[^}]*\})?/g, // LaTeX commands like \alpha
+      ];
+
+      inlineMathPatterns.forEach((pattern) => {
+        processedSegment = processedSegment.replace(pattern, (match) => {
+          // Don't wrap if inside code, already in math, or in URL
+          const prevChar = processedSegment.charAt(
+            processedSegment.indexOf(match) - 1
+          );
+          const nextChar = processedSegment.charAt(
+            processedSegment.indexOf(match) + match.length
+          );
+
+          if (
+            prevChar === "`" ||
+            nextChar === "`" ||
+            prevChar === "$" ||
+            nextChar === "$" ||
+            prevChar === "/" ||
+            prevChar === "."
+          ) {
+            return match;
+          }
+
+          // Wrap in inline math delimiters
+          return `$${match}$`;
+        });
       });
+
+      return processedSegment;
     })
     .join("");
 };
@@ -73,12 +172,14 @@ const MathComponent = React.memo(({ value }) => {
     // Remove surrounding parentheses if they exist
     const cleanValue = value.trim().replace(/^\((.*)\)$/, "$1");
 
+    const sanitizedValue = cleanValue.replace(/([ŷŵǔǚńḿǹ])/g, "\\text{$1}");
+
     return (
       <span
         role="math"
         aria-label={cleanValue}
         dangerouslySetInnerHTML={{
-          __html: katex.renderToString(cleanValue, katexOptions),
+          __html: katex.renderToString(sanitizedValue, katexOptions),
         }}
       />
     );
@@ -193,35 +294,107 @@ const components = {
 /**
  * Component for displaying a single reference item
  */
-const ReferenceItem = forwardRef(({ reference, isExpanded }, ref) => {
+const ReferenceItem = forwardRef(({ reference }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    setIsOpen(isExpanded);
-  }, [isExpanded]);
 
   useImperativeHandle(
     ref,
     () => (open) => setIsOpen(typeof open === "boolean" ? open : !isOpen)
   );
 
+  // Extract title components intelligently
+  const { displayTitle, urlPart, restPart } = useMemo(() => {
+    const firstLine = reference.content.split("\n")[0];
+
+    // Remove the RREF part to get just the content
+    const contentWithoutRef = firstLine.replace(/\[RREF\d+\]\s*/, "").trim();
+
+    // Try to extract URL if present
+    let urlPart = "";
+    let restPart = "";
+
+    if (contentWithoutRef.includes("http")) {
+      // Handle URL reference
+      const urlMatch = contentWithoutRef.match(/(https?:\/\/[^,\s]+)([^]*)/);
+      if (urlMatch) {
+        urlPart = urlMatch[1];
+        restPart = urlMatch[2] || "";
+      }
+    } else {
+      // Handle non-URL case - it could be a filename with score or just a score
+      const parts = contentWithoutRef.split(",");
+
+      if (
+        parts.length > 1 &&
+        parts[0].trim().length > 0 &&
+        !parts[0].startsWith("y:")
+      ) {
+        // It's a filename with score
+        urlPart = parts[0].trim();
+        restPart = "," + parts.slice(1).join(",");
+      } else {
+        // It's just a score or other text
+        urlPart = "";
+        restPart = contentWithoutRef;
+      }
+    }
+
+    // Clean up any $ in the display
+    const cleanUrlPart = urlPart.replace(/\$/g, "");
+
+    return {
+      displayTitle: contentWithoutRef,
+      urlPart: cleanUrlPart,
+      restPart: restPart,
+    };
+  }, [reference.content]);
+
+  // Content without the title line
+  const contentWithoutTitle = useMemo(() => {
+    const lines = reference.content.split("\n");
+    return lines.slice(1).join("\n").trim();
+  }, [reference.content]);
+
+  // Check if it's a URL
+  const isUrl = urlPart.startsWith("http");
+
   return (
     <div className="border-l-4 border-l-blue-500/50 hover:border-l-blue-500 transition-colors">
       <button
-        aria-expanded={isOpen}
-        aria-controls={`reference-${reference.number}`}
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center justify-between group"
+        aria-expanded={isOpen}
+        aria-controls={`reference-${reference.number}`}
       >
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200">
-            RREF {reference.number}
+        <div className="flex items-center gap-2 flex-grow overflow-hidden">
+          <span className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 whitespace-nowrap">
+            RREF {reference.number + 1}
           </span>
-          <span className="text-sm text-gray-700 dark:text-gray-300 line-clamp-1">
-            {reference.content.split("\n")[0]}
-          </span>
+          <div className="text-sm font-bold truncate text-gray-700 dark:text-gray-300">
+            {isUrl ? (
+              <>
+                <a
+                  href={urlPart}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-blue-500 hover:underline"
+                >
+                  {urlPart}
+                </a>
+                {restPart}
+              </>
+            ) : (
+              <>
+                {urlPart && <span>{urlPart}</span>}
+                {restPart}
+              </>
+            )}
+          </div>
         </div>
-        {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        <div className="shrink-0 ml-2">
+          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </div>
       </button>
       {isOpen && (
         <div
@@ -233,7 +406,7 @@ const ReferenceItem = forwardRef(({ reference, isExpanded }, ref) => {
             rehypePlugins={[rehypeKatex, rehypeRaw]}
             components={components}
           >
-            {reference.content}
+            {contentWithoutTitle}
           </ReactMarkdown>
         </div>
       )}
@@ -248,73 +421,41 @@ ReferenceItem.displayName = "ReferenceItem";
  */
 const ReferencesSection = ({ content }) => {
   const [isVisible, setIsVisible] = useState(true);
-  const [allExpanded, setAllExpanded] = useState(false);
-  const itemRefs = useRef(new Map());
 
   // Parse references from content
-  const references = useMemo(
-    () =>
-      content
-        .split(/\d+\.\s+\[RREF\s+\d+\]:\s+/)
-        .filter(Boolean)
-        .map((ref, index) => ({
-          number: index,
-          content: ref.trim(),
-        })),
-    [content]
-  );
+  const references = useMemo(() => {
+    if (!content) return [];
 
-  // Toggle all references open/closed
-  const toggleAll = useCallback(() => {
-    setAllExpanded(!allExpanded);
-    itemRefs.current.forEach((ref) => ref(!allExpanded));
-  }, [allExpanded]);
+    // Extract references in format [RREF#] filename
+    const refRegex = /\[RREF(\d+)\].*?(?=\n\[RREF|$)/gs;
+    const matches = [...content.matchAll(refRegex)];
+
+    return matches.map((match, index) => ({
+      number: index,
+      content: match[0].trim(),
+    }));
+  }, [content]);
 
   if (references.length === 0) return null;
 
-  return isVisible ? (
+  return (
     <div className="mt-8 border rounded-xl border-gray-200 dark:border-gray-700 overflow-hidden">
-      <button onClick={() => setIsVisible(false)} className="w-full">
-        <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between hover:bg-gray-200 dark:hover:bg-gray-700">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-              References
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              ({references.length})
-            </span>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleAll();
-            }}
-            className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 min-h-[25px]"
-          >
-            {allExpanded ? "Collapse all" : "Expand all"}
-          </button>
+      <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+            References
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            ({references.length})
+          </span>
         </div>
-      </button>
+      </div>
       <div>
         {references.map((ref) => (
-          <ReferenceItem
-            key={ref.number}
-            reference={ref}
-            ref={(toggleFn) =>
-              toggleFn && itemRefs.current.set(ref.number, toggleFn)
-            }
-            isExpanded={allExpanded}
-          />
+          <ReferenceItem key={ref.number} reference={ref} />
         ))}
       </div>
     </div>
-  ) : (
-    <button
-      onClick={() => setIsVisible(true)}
-      className="mt-8 px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-    >
-      Show References ({references.length})
-    </button>
   );
 };
 
@@ -382,7 +523,16 @@ const MarkdownRenderer = ({
   // Process the content before rendering
   const processedContent = useMemo(() => {
     if (!children) return "";
-    return convertParenthesesLatex ? preprocessLatex(children) : children;
+
+    // First, apply standard LaTeX preprocessing
+    let processed = convertParenthesesLatex
+      ? preprocessLatex(children)
+      : children;
+
+    // Then handle standalone LaTeX equations like "L = \frac{...}"
+    processed = processStandaloneLatex(processed);
+
+    return processed;
   }, [children, convertParenthesesLatex]);
 
   // Function to handle streaming updates with better performance
