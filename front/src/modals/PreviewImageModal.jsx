@@ -11,11 +11,7 @@ const PreviewModal = ({ file, onClose }) => {
   const isTextContent =
     typeof file === "object" && file.content && file.fileType !== "image";
   const content =
-    typeof file === "string"
-      ? file
-      : isTextContent
-      ? file.content
-      : file.text;
+    typeof file === "string" ? file : isTextContent ? file.content : file.text;
 
   const title =
     typeof file === "string"
@@ -35,6 +31,76 @@ const PreviewModal = ({ file, onClose }) => {
       if (type === "out" && prev > 0.5) return prev - 0.5;
       return prev;
     });
+  };
+
+  // Function to handle file download
+  const handleDownload = () => {
+    try {
+      // Generate file name with appropriate extension
+      let fileName = title;
+      if (!fileName.includes(".")) {
+        // Add extension if not present
+        if (isTextContent) {
+          fileName += ".txt";
+        } else {
+          // For images, try to detect format or default to .png
+          if (
+            typeof content === "string" &&
+            content.startsWith("data:image/")
+          ) {
+            const match = content.match(/data:image\/([a-zA-Z0-9]+);/);
+            if (match && match[1]) {
+              fileName += `.${match[1]}`;
+            } else {
+              fileName += ".png";
+            }
+          } else {
+            fileName += ".png";
+          }
+        }
+      }
+
+      // Create downloadable content
+      let downloadUrl;
+      let blob;
+
+      if (isTextContent) {
+        // For text content
+        blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      } else {
+        // For image content (already a URL or data URL)
+        if (content.startsWith("data:")) {
+          // It's a data URL, use as is
+          downloadUrl = content;
+        } else {
+          // It's a URL, need to fetch it first
+          // For simplicity, we'll create a temporary link to the same URL
+          downloadUrl = content;
+        }
+      }
+
+      if (!downloadUrl) {
+        // If we created a blob (for text), create an object URL
+        downloadUrl = URL.createObjectURL(blob);
+      }
+
+      // Create a temporary anchor element and trigger download
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      document.body.removeChild(a);
+      if (blob) {
+        // Only revoke if we created an object URL from a blob
+        URL.revokeObjectURL(downloadUrl);
+      }
+    } catch (err) {
+      console.error("Download failed:", err);
+      alert("Failed to download file");
+    }
   };
 
   return (
@@ -92,6 +158,16 @@ const PreviewModal = ({ file, onClose }) => {
                 </button>
               </>
             )}
+
+            {/* Download button */}
+            <button
+              onClick={handleDownload}
+              className="px-3 py-1.5 bg-tertiary hover:bg-blue-600 rounded-2xl text-white font-medium text-sm transition-colors"
+              aria-label="Save"
+              title="Save file"
+            >
+              Save
+            </button>
             <img
               src={cross}
               alt="close"
