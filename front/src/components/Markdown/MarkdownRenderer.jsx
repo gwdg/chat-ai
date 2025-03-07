@@ -79,7 +79,7 @@ const preprocessLatex = (text) => {
         /([A-Za-z](?:\([^)]*\))?\s*=\s*)(\\frac|\\sum|\\prod|\\int|\\lim|\\sup|\\inf|\\max|\\min)[\s\S]*?(?=\n\n|\n[A-Z]|$)/g,
 
         // Equation with numbered reference (common in academic papers)
-        /([A-Za-z][^\n=]*?=\s*(?:.*?))(\([\d\.]+\))$/gm,
+        /([A-Za-z][^\n=]*?=\s*(?:.*?))(\([\d.]+\))$/gm,
 
         // Multi-line equation blocks
         /^(\\begin\{(?:equation|align|gather|eqnarray)\*?\}[\s\S]*?\\end\{(?:equation|align|gather|eqnarray)\*?\})$/gm,
@@ -314,37 +314,38 @@ const ReferenceItem = forwardRef(({ reference }, ref) => {
     let restPart = "";
 
     if (contentWithoutRef.includes("http")) {
-      // Handle URL reference
+      // Handle URL reference - extract URL and remove $ at the end of score
       const urlMatch = contentWithoutRef.match(/(https?:\/\/[^,\s]+)([^]*)/);
       if (urlMatch) {
         urlPart = urlMatch[1];
-        restPart = urlMatch[2] || "";
+        // Remove $ from the score part
+        restPart = urlMatch[2] ? urlMatch[2].replace(/\$(\s*)$/, "$1") : "";
       }
+    } else if (contentWithoutRef.startsWith("y:")) {
+      // Handle the case where it's just a score starting with y:
+      // Remove $ at the end
+      urlPart = "";
+      restPart = contentWithoutRef.replace(/\$(\s*)$/, "$1");
     } else {
-      // Handle non-URL case - it could be a filename with score or just a score
+      // Handle non-URL case - it could be a filename with score
       const parts = contentWithoutRef.split(",");
 
-      if (
-        parts.length > 1 &&
-        parts[0].trim().length > 0 &&
-        !parts[0].startsWith("y:")
-      ) {
+      if (parts.length > 1 && !parts[0].startsWith("y:")) {
         // It's a filename with score
         urlPart = parts[0].trim();
-        restPart = "," + parts.slice(1).join(",");
+        // Join the rest but remove $ at the end
+        const joinedRest = "," + parts.slice(1).join(",");
+        restPart = joinedRest.replace(/\$(\s*)$/, "$1");
       } else {
-        // It's just a score or other text
+        // It's just a score or other text - remove $ at the end
         urlPart = "";
-        restPart = contentWithoutRef;
+        restPart = contentWithoutRef.replace(/\$(\s*)$/, "$1");
       }
     }
 
-    // Clean up any $ in the display
-    const cleanUrlPart = urlPart.replace(/\$/g, "");
-
     return {
-      displayTitle: contentWithoutRef,
-      urlPart: cleanUrlPart,
+      displayTitle: contentWithoutRef.replace(/\$(\s*)$/, "$1"),
+      urlPart: urlPart,
       restPart: restPart,
     };
   }, [reference.content]);
@@ -367,10 +368,10 @@ const ReferenceItem = forwardRef(({ reference }, ref) => {
         aria-controls={`reference-${reference.number}`}
       >
         <div className="flex items-center gap-2 flex-grow overflow-hidden">
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 whitespace-nowrap">
+          <span className="text-[15px] font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 whitespace-nowrap">
             RREF {reference.number + 1}
           </span>
-          <div className="text-sm font-bold truncate text-gray-700 dark:text-gray-300">
+          <div className="text-[15px] font-bold truncate text-gray-700 dark:text-gray-300">
             {isUrl ? (
               <>
                 <a
