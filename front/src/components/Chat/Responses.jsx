@@ -179,6 +179,13 @@ function Responses({
       imageFiles = localState.responses[index]?.images;
     }
 
+    // Initialize array for any attached texts
+    let textFiles = [];
+    // If the original message had texts, copy them
+    if (localState.responses[index]?.textFiles?.length > 0) {
+      textFiles = localState.responses[index]?.textFiles;
+    }
+
     // Slice conversation history up to the selected message
     let newConversation = [...localState.conversation].slice(0, index * 2 + 1);
     let newResponses = [...localState.responses].slice(0, index);
@@ -188,22 +195,43 @@ function Responses({
     // Add small delay to ensure state updates properly
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Prepare new message content based on whether there are images
-    if (imageFiles?.length > 0) {
+    // Prepare new message content based on whether there are images or text files
+    if (imageFiles?.length > 0 || textFiles?.length > 0) {
+      // Start with the prompt text
       const newPromptContent = [
         {
           type: "text",
           text: currentPrompt,
         },
-        ...imageFiles,
       ];
+
+      // Add images if they exist (keeping the original image structure)
+      if (imageFiles?.length > 0) {
+        newPromptContent.push(...imageFiles);
+      }
+
+      // Add text content if text files exist
+      if (textFiles?.length > 0) {
+        // Process all text files and append their content
+        const textContent = textFiles.map((file) => file.content).join("\n\n");
+
+        // Only add if there's actually content
+        if (textContent.trim()) {
+          newPromptContent.push({
+            type: "text",
+            text: textContent,
+          });
+        }
+      }
+
       newConversation.push({ role: "user", content: newPromptContent });
     } else {
+      // If no attachments, just use the text prompt
       newConversation.push({ role: "user", content: currentPrompt });
     }
 
     // Update local state with new response entry
-    if (imageFiles?.length > 0) {
+    if (imageFiles?.length > 0 || textFiles?.length > 0) {
       setLocalState((prevState) => ({
         ...prevState,
         responses: [
@@ -211,6 +239,7 @@ function Responses({
           {
             prompt: currentPrompt,
             images: imageFiles,
+            textFiles: textFiles,
             response: "",
           },
         ],
@@ -314,6 +343,13 @@ function Responses({
       imageFiles = localState.responses[index]?.images;
     }
 
+    // Initialize array for any attached texts
+    let textFiles = [];
+    // If the original message had texts, copy them
+    if (localState.responses[index]?.textFiles?.length > 0) {
+      textFiles = localState.responses[index]?.textFiles;
+    }
+
     let newConversation = [...localState.conversation].slice(0, index * 2 + 1);
     let newResponses = [...localState.responses].slice(0, index);
 
@@ -321,20 +357,42 @@ function Responses({
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    if (imageFiles?.length > 0) {
+    // Prepare new message content based on whether there are images or text files
+    if (imageFiles?.length > 0 || textFiles?.length > 0) {
+      // Start with the prompt text
       const newPromptContent = [
         {
           type: "text",
           text: editedText,
         },
-        ...imageFiles,
       ];
+
+      // Add images if they exist (keeping the original image structure)
+      if (imageFiles?.length > 0) {
+        newPromptContent.push(...imageFiles);
+      }
+
+      // Add text content if text files exist
+      if (textFiles?.length > 0) {
+        // Process all text files and append their content
+        const textContent = textFiles.map((file) => file.content).join("\n\n");
+
+        // Only add if there's actually content
+        if (textContent.trim()) {
+          newPromptContent.push({
+            type: "text",
+            text: textContent,
+          });
+        }
+      }
+
       newConversation.push({ role: "user", content: newPromptContent });
     } else {
+      // If no attachments, just use the text prompt
       newConversation.push({ role: "user", content: editedText });
     }
 
-    if (imageFiles?.length > 0) {
+    if (imageFiles?.length > 0 || textFiles?.length > 0) {
       setLocalState((prevState) => ({
         ...prevState,
         responses: [
@@ -342,6 +400,7 @@ function Responses({
           {
             prompt: editedText,
             images: imageFiles,
+            textFiles: textFiles,
             response: "",
           },
         ],
@@ -430,6 +489,27 @@ function Responses({
       );
 
       setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
+    }
+
+    // Handle any textFiles from last response
+    if (
+      localState.responses[localState.responses.length - 1]?.textFiles?.length >
+      0
+    ) {
+      const textFileList = localState.responses[
+        localState.responses.length - 1
+      ].textFiles.map((file) => {
+        // Check if it's a PDF file
+        if (file.fileType === "pdf") {
+          return {
+            ...file,
+            content: file.content,
+          };
+        }
+        return file;
+      });
+
+      setSelectedFiles((prevFiles) => [...prevFiles, ...textFileList]);
     }
 
     // Adjust textarea height after short delay
@@ -855,7 +935,9 @@ function Responses({
               )}
             </div>
 
-            {(res?.images?.length > 0 || res?.videos?.length > 0) && (
+            {(res?.images?.length > 0 ||
+              res?.videos?.length > 0 ||
+              res?.textFiles?.length > 0) && (
               <div className="flex gap-2 overflow-x-auto items-center p-3">
                 {res.images?.map((imageObj, imgIndex) => {
                   if (imageObj.type === "image_url" && imageObj.image_url.url) {
@@ -883,6 +965,59 @@ function Responses({
                         alt="Video content"
                         className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
                       />
+                    );
+                  }
+                  return null;
+                })}
+                {res.textFiles?.map((textObj, textIndex) => {
+                  if (textObj.fileType === "text") {
+                    // The correct path to access text content
+                    const textContent = textObj.content;
+
+                    // Get file type from content or default to "txt"
+                    const fileType = textObj.content.fileType || "txt";
+
+                    // Get a preview of the text (first 50 characters)
+                    const textPreview =
+                      textContent.substring(0, 100) +
+                      (textContent.length > 100 ? "..." : "");
+
+                    // Get file name if available
+                    const fileName = textContent.split(":")[0] || "File";
+
+                    return (
+                      <div
+                        key={`text-${textIndex}`}
+                        className="h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-md transition-all"
+                        onClick={() =>
+                          setPreviewFile({
+                            content: textObj.content,
+                            name: fileName,
+                            isText: true,
+                          })
+                        }
+                      >
+                        {/* File name at top */}
+                        <div className="px-3 py-2 font-medium text-sm truncate border-b text-black dark:text-white">
+                          {fileName}
+                        </div>
+
+                        {/* Text preview in middle */}
+                        <div className="flex-1 p-3 text-xs overflow-hidden text-tertiary">
+                          {textPreview}
+                        </div>
+
+                        {/* File type indicator at bottom */}
+                        <div className="flex justify-center items-center pb-2">
+                          <span
+                            className="px-3 py-1 text-xs font-medium rounded-full 
+                        bg-blue-100 dark:bg-blue-900 
+                        text-blue-800 dark:text-blue-200 uppercase"
+                          >
+                            {fileType}
+                          </span>
+                        </div>
+                      </div>
                     );
                   }
                   return null;

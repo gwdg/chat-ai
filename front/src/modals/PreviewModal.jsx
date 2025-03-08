@@ -95,9 +95,42 @@ const CSVTable = ({ content }) => {
 const PreviewModal = ({ file, onClose }) => {
   const [loadError, setLoadError] = useState(null);
 
+  // Helper function to safely extract text content
+  const getTextContent = (file) => {
+    if (typeof file === "string") return file;
+    if (file?.content) return file.content;
+    if (file?.text) return file.text;
+    return "";
+  };
+
+  // Helper function to get file type
+  const getFileType = (file) => {
+    if (file?.type) return file.type;
+    if (file?.content?.type) return file.content.type;
+    if (file?.fileType) return file.fileType;
+    return "unknown";
+  };
+
+  const fileName = useMemo(() => {
+    if (file?.name) return file.name;
+    if (typeof file === "string") return "Preview";
+
+    // If we have content with text, try to extract filename from text content
+    const textContent = getTextContent(file);
+    if (textContent && typeof textContent === "string") {
+      const firstLine = textContent.split("\n")[0];
+      if (firstLine && firstLine.includes(":")) {
+        return firstLine.split(":")[0].trim();
+      }
+    }
+
+    return "Preview";
+  }, [file]);
+
   const pdfUrl = useMemo(() => {
     try {
-      return file?.fileType === "pdf" ? URL.createObjectURL(file.file) : null;
+      const fileType = getFileType(file);
+      return fileType === "pdf" ? URL.createObjectURL(file.file) : null;
     } catch (error) {
       setLoadError("Failed to load PDF file");
       return null;
@@ -120,23 +153,27 @@ const PreviewModal = ({ file, onClose }) => {
         return <div className="p-4">No file to preview</div>;
       }
 
-      if (file.type === "image") {
+      const fileType = getFileType(file);
+      const textContent = getTextContent(file);
+
+      if (fileType === "image") {
         return (
           <div className="flex justify-center">
             <img
-              src={file.text}
-              alt={file.name}
+              src={textContent}
+              alt={fileName}
               className="max-h-[85vh] max-w-full object-contain"
               onError={() => setLoadError("Failed to load image")}
             />
           </div>
         );
       }
-      if (file.type === "video") {
+
+      if (fileType === "video") {
         return (
           <div className="flex justify-center">
             <video
-              src={file.text}
+              src={textContent}
               controls
               className="max-h-[85vh] max-w-full"
               onError={() => setLoadError("Failed to load video")}
@@ -147,7 +184,7 @@ const PreviewModal = ({ file, onClose }) => {
         );
       }
 
-      if (file.fileType === "pdf") {
+      if (fileType === "pdf") {
         if (file.processed && file.processedContent) {
           return (
             <div className="bg-white p-6 overflow-auto max-h-[80vh] w-full whitespace-pre-wrap">
@@ -189,37 +226,54 @@ const PreviewModal = ({ file, onClose }) => {
             src={pdfUrl}
             className="w-full h-[85vh]"
             style={{ minWidth: "800px" }}
-            title={file.name}
+            title={fileName}
           />
         );
       }
 
-      if (file.fileType === "csv") {
-        return <CSVTable content={file.content} />;
+      if (fileType === "csv") {
+        return <CSVTable content={file.content || textContent} />;
       }
 
-      if (file.fileType === "text" || file.fileType === "markdown") {
+      if (
+        fileType === "text" ||
+        fileType === "markdown" ||
+        fileType === "txt"
+      ) {
         return (
           <pre className="bg-gray-100 p-6 rounded-lg overflow-auto max-h-[85vh] w-full font-mono text-sm">
-            {file.content || "No content available"}
+            {textContent || "No content available"}
           </pre>
         );
       }
 
-      if (isCodeFile(file.name)) {
+      if (isCodeFile(fileName)) {
         return (
           <pre className="bg-gray-50 p-6 rounded-lg overflow-auto max-h-[85vh] w-full">
             <code className="font-mono text-sm whitespace-pre-wrap">
-              {file.content || "No content available"}
+              {textContent || "No content available"}
             </code>
           </pre>
+        );
+      }
+
+      // Default text display for any other file type
+      if (textContent && typeof textContent === "string") {
+        return (
+          <div className="bg-white p-6 overflow-auto max-h-[80vh] w-full whitespace-pre-wrap">
+            {textContent}
+          </div>
         );
       }
 
       return <div className="p-4">Unsupported file type</div>;
     } catch (error) {
       console.error("Error rendering content:", error);
-      return <div className="p-4 text-red-500">Error displaying content</div>;
+      return (
+        <div className="p-4 text-red-500">
+          Error displaying content: {error.message}
+        </div>
+      );
     }
   };
 
@@ -228,12 +282,12 @@ const PreviewModal = ({ file, onClose }) => {
       <div className="rounded-2xl bg-white dark:bg-black p-4 w-[90vw] max-w-[1000px] max-h-[95vh] overflow-hidden flex flex-col">
         <div className="flex justify-between items-center mb-4 px-2">
           <p className="text-lg font-medium text-tertiary truncate max-w-[80%]">
-            {file?.name || "Preview"}
+            {fileName || "Preview"}
           </p>
 
           <img
             src={cross}
-            alt="cross"
+            alt="close"
             className="h-[30px] w-[30px] cursor-pointer"
             onClick={onClose}
           />

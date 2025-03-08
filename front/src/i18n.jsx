@@ -205,7 +205,7 @@ i18n
             delete_cancelText: "Cancel",
 
             warning_settings:
-              "Below settings won't be applied as you are using external model",
+              "You are using an external model. Your messages will be processed outside of GWDG, and the following settings will not be applied.",
             warning_arcana:
               "Keep temperature at 0 and top_p at 0.05 for optimal arcana results",
             offline:
@@ -420,7 +420,7 @@ i18n
             delete_cancelText: "Abbrechen",
 
             warning_settings:
-              "Da Sie ein externes Modell verwenden, werden die folgenden Einstellungen nicht übernommen",
+              "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die folgenden Einstellungen werden nicht angewendet.",
             warning_arcana:
               "Halten Sie Temperatur auf 0 und top_p auf 0.05 für optimale Arcana-Ergebnisse",
             offline:

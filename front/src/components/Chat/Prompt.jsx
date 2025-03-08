@@ -108,6 +108,9 @@ function Prompt({
     if (selectedFiles.length > 0) {
       const imageFiles = selectedFiles.filter((file) => file.type === "image");
       const videoFiles = selectedFiles.filter((file) => file.type === "video");
+      const textFiles = selectedFiles.filter(
+        (file) => file.type !== "image" && file.type !== "video"
+      );
 
       const imageContent = imageFiles.map((imageFile) => ({
         type: "image_url",
@@ -123,6 +126,17 @@ function Prompt({
         },
       }));
 
+      const textContent = textFiles.map((file) => ({
+        name: file.name,
+        fileType: "text",
+        content:
+          file.fileType === "pdf"
+            ? `${file.name}: ${file.processedContent}`
+            : `${file.name}: ${file.content}`,
+        type: "text",
+        size: file.size,
+      }));
+
       setLocalState((prevState) => ({
         ...prevState,
         responses: [
@@ -131,6 +145,7 @@ function Prompt({
             prompt: prevState.prompt,
             images: imageContent,
             videos: videoContent,
+            textFiles: textContent,
             response: "",
           },
         ],
@@ -296,7 +311,7 @@ function Prompt({
             // For other text files, use regular content
             return `${file.name}: ${file.content}`;
           })
-          .filter(Boolean) // Remove any undefined or empty entries
+          .filter(Boolean)
           .join("\n");
 
         const fullPrompt = `${localState.prompt}\n${allTextFilesText}`;
@@ -537,59 +552,60 @@ function Prompt({
   };
 
   // Handle image file uploads
-const handleFilesChangeImage = async (e) => {
-  try {
-    // Filter for supported image and video types
-    const files = Array.from(e.target.files).filter(
-      (file) =>
-        file.type === "image/jpeg" ||
-        file.type === "image/png" ||
-        file.type === "image/gif" ||
-        file.type === "image/webp" ||
-        file.type === "video/mp4" ||
-        file.type === "video/avi" ||
-        file.type === "video/msvideo"
-    );
+  const handleFilesChangeImage = async (e) => {
+    try {
+      // Filter for supported image and video types
+      const files = Array.from(e.target.files).filter(
+        (file) =>
+          file.type === "image/jpeg" ||
+          file.type === "image/png" ||
+          file.type === "image/gif" ||
+          file.type === "image/webp" ||
+          file.type === "video/mp4" ||
+          file.type === "video/avi" ||
+          file.type === "video/msvideo"
+      );
 
-    // Validate file types
-    if (files.length !== e.target.files.length) {
-      notifyError("All files must be images, MP4 videos, or AVI videos");
-      return;
-    }
-
-    // Process files
-    const validFiles = [];
-    for (const file of files) {
-      // Check file size
-      if (file.size > 50 * 1024 * 1024) { // 50MB
-        notifyError(`File too large: ${file.name}`);
-      } else {
-        validFiles.push(file);
+      // Validate file types
+      if (files.length !== e.target.files.length) {
+        notifyError("All files must be images, MP4 videos, or AVI videos");
+        return;
       }
-    }
 
-    // If there are no valid files left after size check, notify and return
-    if (validFiles.length === 0) {
-      // notifyError("No valid files to attach");
-      return;
-    }
+      // Process files
+      const validFiles = [];
+      for (const file of files) {
+        // Check file size
+        if (file.size > 50 * 1024 * 1024) {
+          // 50MB
+          notifyError(`File too large: ${file.name}`);
+        } else {
+          validFiles.push(file);
+        }
+      }
 
-    // If there are valid files, notify success
-    notifySuccess("File attached");
+      // If there are no valid files left after size check, notify and return
+      if (validFiles.length === 0) {
+        // notifyError("No valid files to attach");
+        return;
+      }
 
-    // Process valid files
-    const fileList = [];
-    for (const file of validFiles) {
-      const text = await readFileAsBase64(file);
-      fileList.push({
-        name: file.name,
-        type: file.type.startsWith("image/") ? "image" : "video",
-        size: file.size,
-        text,
-      });
-    }
+      // If there are valid files, notify success
+      notifySuccess("File attached");
 
-    setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
+      // Process valid files
+      const fileList = [];
+      for (const file of validFiles) {
+        const text = await readFileAsBase64(file);
+        fileList.push({
+          name: file.name,
+          type: file.type.startsWith("image/") ? "image" : "video",
+          size: file.size,
+          text,
+        });
+      }
+
+      setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
     } catch (error) {
       notifyError("An error occurred: ", error);
     }
