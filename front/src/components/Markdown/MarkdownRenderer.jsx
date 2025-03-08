@@ -321,13 +321,27 @@ const ReferenceItem = forwardRef(({ reference }, ref) => {
         // Remove $ from the score part
         restPart = urlMatch[2] ? urlMatch[2].replace(/\$(\s*)$/, "$1") : "";
       }
+    } else if (contentWithoutRef.startsWith("$")) {
+      // Handle case where filename starts with $
+      const parts = contentWithoutRef.substring(1).split(",");
+      urlPart = parts[0].trim();
+      if (parts.length > 1) {
+        restPart =
+          "," +
+          parts
+            .slice(1)
+            .join(",")
+            .replace(/\$(\s*)$/, "$1");
+      } else {
+        restPart = "";
+      }
     } else if (contentWithoutRef.startsWith("y:")) {
       // Handle the case where it's just a score starting with y:
       // Remove $ at the end
       urlPart = "";
       restPart = contentWithoutRef.replace(/\$(\s*)$/, "$1");
     } else {
-      // Handle non-URL case - it could be a filename with score
+      // Handle other non-URL cases
       const parts = contentWithoutRef.split(",");
 
       if (parts.length > 1 && !parts[0].startsWith("y:")) {
@@ -368,10 +382,10 @@ const ReferenceItem = forwardRef(({ reference }, ref) => {
         aria-controls={`reference-${reference.number}`}
       >
         <div className="flex items-center gap-2 flex-grow overflow-hidden">
-          <span className="text-[15px] font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 whitespace-nowrap">
+          <span className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 whitespace-nowrap">
             RREF {reference.number + 1}
           </span>
-          <div className="text-[15px] font-bold truncate text-gray-700 dark:text-gray-300">
+          <div className="text-sm font-bold truncate text-gray-700 dark:text-gray-300">
             {isUrl ? (
               <>
                 <a
