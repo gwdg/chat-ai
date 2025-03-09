@@ -7,6 +7,9 @@ import edit_icon from "../../assets/edit_icon.svg";
 import ErrorBoundary from "./ErrorBoundary";
 import { RotateCw } from "lucide-react";
 
+const MAX_HEIGHT = 200;
+const MIN_HEIGHT = 56;
+
 const ResponseItem = React.memo(
   ({
     res,
@@ -168,6 +171,10 @@ const ResponseItem = React.memo(
                     onChange={(e) => setEditedResponse(e.target.value)}
                     className="p-2 outline-none rounded-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-hidden"
                     placeholder="Edit response..."
+                    style={{
+                      minHeight: `${MIN_HEIGHT}px`,
+                      maxHeight: `${MAX_HEIGHT}px`,
+                    }}
                   />
                   <div className="flex justify-end w-full gap-2">
                     <button

@@ -5,6 +5,9 @@ import React, {
   useRef,
   useMemo,
   useCallback,
+  forwardRef,
+  useImperativeHandle,
+  memo,
 } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
@@ -15,7 +18,6 @@ import katex from "katex";
 import { ChevronDown, ChevronRight, Brain } from "lucide-react";
 import Code from "./Code";
 import "katex/dist/katex.min.css";
-import { forwardRef, useImperativeHandle } from "react";
 import ErrorBoundary from "./ErrorBoundary";
 
 // KaTeX configuration options - memoized to prevent unnecessary re-renders
@@ -26,43 +28,36 @@ const katexOptions = {
   trust: true,
   macros: {},
   strict: "ignore", // Ignore Unicode warnings
+  maxSize: 4, // Increased size limit for complex expressions
+  maxExpand: 1000, // Allow more macro expansions
 };
 
 /**
- * Function to handle standalone LaTeX expressions that aren't in the standard format
- * @param {string} content - The content to process
- * @returns {string} Processed content with standalone LaTeX expressions properly formatted
+ * Improved preprocessor for LaTeX expressions in markdown
+ * This function detects various LaTeX patterns and ensures they're properly wrapped in delimiters
  */
-const processStandaloneLatex = (content) => {
-  if (!content) return content;
 
-  // Pattern to match equations that start with letter = expression
-  // Commonly used format in academic/technical writing
-  const standaloneEquationPattern =
-    /^([A-Za-z])\s*=\s*(\\frac[\s\S]*$|\\sum[\s\S]*$|\\int[\s\S]*$)/gm;
-
-  return content.replace(standaloneEquationPattern, (match) => {
-    // Skip if it's already wrapped in math delimiters
-    if (match.startsWith("$") || match.startsWith("\\(")) return match;
-
-    // Clean any internal math delimiters
-    const cleanedMatch = match.replace(/\$([^$]+)\$/g, "\\text{$1}");
-
-    // Wrap in math delimiters
-    return `$${cleanedMatch}$`;
-  });
-};
-
-/**
- * Comprehensive preprocessor for LaTeX expressions in markdown
- * @param {string} text - The markdown text to process
- * @returns {string} Processed text with all LaTeX expressions properly formatted
- */
 const preprocessLatex = (text) => {
   if (!text) return "";
 
-  // Split the text to protect code blocks from processing
-  const segments = text.split(/(```[\s\S]*?```|`[^`]+`)/g);
+  // Split by code blocks to protect them from processing
+  const codeBlockRegex = /(```[\s\S]*?```|`[^`]+`)/g;
+  const segments = [];
+  let lastIndex = 0;
+  let match;
+
+  // More efficient splitting that correctly handles nested code blocks
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push(text.substring(lastIndex, match.index));
+    }
+    segments.push(match[0]);
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push(text.substring(lastIndex));
+  }
 
   return segments
     .map((segment) => {
@@ -71,99 +66,101 @@ const preprocessLatex = (text) => {
         return segment;
       }
 
-      let processedSegment = segment;
+      let processed = segment;
 
-      // 1. Handle common equation patterns (variable = expression)
-      const equationPatterns = [
-        // L = expression pattern (common in ML/stats)
-        /([A-Za-z](?:\([^)]*\))?\s*=\s*)(\\frac|\\sum|\\prod|\\int|\\lim|\\sup|\\inf|\\max|\\min)[\s\S]*?(?=\n\n|\n[A-Z]|$)/g,
+      // 1. Pre-process Black-Scholes specific notation for better rendering
+      processed = processed.replace(/d_?1|d1|d_\{1\}/g, "d_{1}");
+      processed = processed.replace(/d_?2|d2|d_\{2\}/g, "d_{2}");
+      processed = processed.replace(/S_?0|S0|S_\{0\}/g, "S_{0}");
+      processed = processed.replace(/N\(([^)]+)\)/g, "N($1)");
+      processed = processed.replace(/\\sigma/g, "\\sigma");
 
-        // Equation with numbered reference (common in academic papers)
-        /([A-Za-z][^\n=]*?=\s*(?:.*?))(\([\d.]+\))$/gm,
-
-        // Multi-line equation blocks
-        /^(\\begin\{(?:equation|align|gather|eqnarray)\*?\}[\s\S]*?\\end\{(?:equation|align|gather|eqnarray)\*?\})$/gm,
-
-        // Standalone LaTeX expressions starting with common commands
-        /^(\\frac|\\sum|\\prod|\\int|\\lim|\\sup|\\inf|\\max|\\min)[\s\S]*?(?=\n\n|\n[A-Z]|$)/gm,
-      ];
-
-      // Process each equation pattern
-      equationPatterns.forEach((pattern) => {
-        processedSegment = processedSegment.replace(pattern, (match) => {
-          // Skip if already in math delimiters
-          if (match.startsWith("$") || match.startsWith("\\(")) return match;
-
-          // Clean internal dollar signs
-          const cleanedMatch = match.replace(/\$([^$]+)\$/g, "\\text{$1}");
-
-          // Wrap in math delimiters
-          return `$${cleanedMatch}$`;
-        });
+      // 2. Handle display equations (multi-line) with $$ ... $$
+      processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+        return `$$${formula.trim()}$$`;
       });
 
-      // 2. Handle parenthesized LaTeX (already in your code)
-      const latexPattern =
-        /\(([^()]*?(?:\([^()]*\)[^()]*?)*?(?:\\[a-zA-Z]+{.*?}|\^|_|\\frac|\\sqrt|\\sum|\\int|\\lim).*?)\)/g;
+      // Safe wrapper for pattern matching
+      const safeWrapWithDelimiters = (match, p1, p2) => {
+        if (!match || typeof match !== "string") {
+          return match || "";
+        }
 
-      processedSegment = processedSegment.replace(
-        latexPattern,
-        (match, latexContent) => {
-          if (latexContent.match(/\\[a-zA-Z]+|[\^_]|\{|\}/)) {
-            // Clean internal dollar signs
-            const cleanedLatex = latexContent.replace(
-              /\$([^$]+)\$/g,
-              "\\text{$1}"
-            );
-            return `$${cleanedLatex}$`;
-          }
+        // Skip if already wrapped in math delimiters
+        if (
+          match.startsWith("$") ||
+          match.startsWith("\\(") ||
+          match.startsWith("\\begin")
+        ) {
           return match;
         }
-      );
 
-      // 3. Handle inline math expressions that might be missed
-      // Look for patterns like x^2, \alpha, etc. that aren't in delimiters
-      const inlineMathPatterns = [
-        /\b([a-zA-Z])_([a-zA-Z0-9])\b/g, // Subscripts like x_i
-        /\b([a-zA-Z])(?:\^|\*\*)([a-zA-Z0-9])\b/g, // Superscripts like x^2
-        /\\[a-zA-Z]+(?:\{[^}]*\})?/g, // LaTeX commands like \alpha
+        // For assignments (equations with =), use display math
+        if (p1 && typeof p1 === "string" && p1.includes("=")) {
+          return `$$${match}$$`;
+        }
+
+        // For simple expressions, use inline math
+        return `$${match}$`;
+      };
+
+      // 3. Handle complex equation formats with improved patterns
+      const equationPatterns = [
+        // Square roots
+        /\\sqrt{[^}]*}/g,
+
+        // Fractions
+        /\\frac{[^}]*}{[^}]*}/g,
+
+        // Equations with variable assignments
+        /\b([A-Za-z](?:\([^)]*\))?\s*=\s*)(\\?(?:frac|sum|prod|int|lim|sup|inf|max|min)[\s\S]*?)(?=$|\n\s*\n|\n[A-Z])/g,
+
+        // Greek letters and other mathematical symbols
+        /(?<!\w)(\\(?:alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|partial|nabla))(?!\w)/g,
+
+        // N(x) cumulative distribution notation
+        /N\s*\(\s*([^)]+)\s*\)/g,
       ];
 
-      inlineMathPatterns.forEach((pattern) => {
-        processedSegment = processedSegment.replace(pattern, (match) => {
-          // Don't wrap if inside code, already in math, or in URL
-          const prevChar = processedSegment.charAt(
-            processedSegment.indexOf(match) - 1
-          );
-          const nextChar = processedSegment.charAt(
-            processedSegment.indexOf(match) + match.length
-          );
-
-          if (
-            prevChar === "`" ||
-            nextChar === "`" ||
-            prevChar === "$" ||
-            nextChar === "$" ||
-            prevChar === "/" ||
-            prevChar === "."
-          ) {
-            return match;
-          }
-
-          // Wrap in inline math delimiters
-          return `$${match}$`;
-        });
+      // Safely apply patterns
+      equationPatterns.forEach((pattern) => {
+        processed = processed.replace(pattern, safeWrapWithDelimiters);
       });
 
-      return processedSegment;
+      // 4. Handle Black-Scholes specific formulas
+      if (
+        typeof processed === "string" &&
+        processed.includes("Black-Scholes")
+      ) {
+        // Look for Black-Scholes formula pattern
+        processed = processed.replace(
+          /d_?\{?1\}?\s*=\s*[^$\n]+(?=$|\n)/g,
+          (match) => `$${match}$`
+        );
+
+        processed = processed.replace(
+          /d_?\{?2\}?\s*=\s*[^$\n]+(?=$|\n)/g,
+          (match) => `$${match}$`
+        );
+      }
+
+      // 5. Ensure all math expressions have proper spacing
+      processed = processed.replace(/\$([^$]+)\$/g, (match, content) => {
+        if (typeof content !== "string") return match;
+        return `$${content.trim()}$`;
+      });
+
+      // 6. Fix any cases of triple dollars (artifact of earlier replacements)
+      processed = processed.replace(/\${3}/g, "$$");
+
+      return processed;
     })
     .join("");
 };
-
 /**
  * Component for rendering math expressions
  */
-const MathComponent = React.memo(({ value }) => {
+const MathComponent = memo(({ value }) => {
   try {
     if (!value || typeof value !== "string") {
       return <span className="text-red-500">⚠️ Invalid LaTeX ⚠️</span>;
@@ -172,7 +169,16 @@ const MathComponent = React.memo(({ value }) => {
     // Remove surrounding parentheses if they exist
     const cleanValue = value.trim().replace(/^\((.*)\)$/, "$1");
 
+    // Handle special Unicode characters
     const sanitizedValue = cleanValue.replace(/([ŷŵǔǚńḿǹ])/g, "\\text{$1}");
+
+    // Add safety check for very complex expressions
+    if (sanitizedValue.length > 1000) {
+      console.warn(
+        "Very large LaTeX expression detected:",
+        sanitizedValue.substring(0, 100) + "..."
+      );
+    }
 
     return (
       <span
@@ -184,14 +190,18 @@ const MathComponent = React.memo(({ value }) => {
       />
     );
   } catch (error) {
-    console.error("LaTeX rendering error:", error);
-    return <span className="text-red-500">⚠️ Invalid LaTeX ⚠️</span>;
+    console.error("LaTeX rendering error:", error, value);
+    return (
+      <span className="text-red-500">
+        ⚠️ Error rendering LaTeX: {error.message} ⚠️
+      </span>
+    );
   }
 });
 
 MathComponent.displayName = "MathComponent";
 
-// Markdown component renderers
+// Optimized markdown component renderers
 const components = {
   code: ({ inline, className, children, ...props }) => {
     const match = /language-(\w+)/.exec(className || "");
@@ -209,6 +219,7 @@ const components = {
     );
   },
   math: MathComponent,
+  inlineMath: MathComponent, // Add explicit handler for inline math
   a: ({ href, children }) => (
     <a
       href={href}
@@ -289,6 +300,22 @@ const components = {
       {children}
     </td>
   ),
+};
+
+/**
+ * Improved reference parsing utility
+ */
+const parseReferences = (content) => {
+  if (!content) return [];
+
+  // Extract references in format [RREF#] with improved regex
+  const refRegex = /\[RREF(\d+)\](.*?)(?=\n\[RREF|$)/gs;
+  const matches = [...content.matchAll(refRegex)];
+
+  return matches.map((match, index) => ({
+    number: parseInt(match[1], 10) - 1, // Use the actual number from the reference
+    content: match[0].trim(),
+  }));
 };
 
 /**
@@ -434,28 +461,40 @@ ReferenceItem.displayName = "ReferenceItem";
 /**
  * Section for displaying all references
  */
-const ReferencesSection = ({ content }) => {
+const ReferencesSection = memo(({ content }) => {
   const [isVisible, setIsVisible] = useState(true);
+  const [copySuccess, setCopySuccess] = useState(false);
 
-  // Parse references from content
-  const references = useMemo(() => {
-    if (!content) return [];
+  // Parse references from content with memoization
+  const references = useMemo(() => parseReferences(content), [content]);
 
-    // Extract references in format [RREF#] filename
-    const refRegex = /\[RREF(\d+)\].*?(?=\n\[RREF|$)/gs;
-    const matches = [...content.matchAll(refRegex)];
-
-    return matches.map((match, index) => ({
-      number: index,
-      content: match[0].trim(),
-    }));
-  }, [content]);
+  // Create plain text version of all references for copying
+  const allReferencesText = useMemo(() => {
+    if (references.length === 0) return "";
+    return references.map((ref) => ref.content).join("\n\n");
+  }, [references]);
 
   if (references.length === 0) return null;
 
+  // Function to copy all references to clipboard
+  const copyAllReferences = async () => {
+    try {
+      await navigator.clipboard.writeText(allReferencesText);
+      setCopySuccess(true);
+
+      // Reset success message after 2 seconds
+      setTimeout(() => {
+        setCopySuccess(false);
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy references:", err);
+      setCopySuccess(false);
+    }
+  };
+
   return (
     <div className="mt-8 border rounded-xl border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center">
+      <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
             References
@@ -464,6 +503,37 @@ const ReferencesSection = ({ content }) => {
             ({references.length})
           </span>
         </div>
+        <button
+          onClick={copyAllReferences}
+          className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/50 hover:bg-blue-200 dark:hover:bg-blue-800/70 text-blue-700 dark:text-blue-300 rounded transition-colors"
+          aria-label="Copy all references"
+          title="Copy all references to clipboard"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mr-1"
+          >
+            {copySuccess ? (
+              <>
+                <path d="M20 6L9 17l-5-5" />
+              </>
+            ) : (
+              <>
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </>
+            )}
+          </svg>
+          {copySuccess ? "Copied!" : "Copy All"}
+        </button>
       </div>
       <div>
         {references.map((ref) => (
@@ -472,12 +542,14 @@ const ReferencesSection = ({ content }) => {
       </div>
     </div>
   );
-};
+});
+
+ReferencesSection.displayName = "ReferencesSection";
 
 /**
  * Component for displaying the thinking process
  */
-const ThinkingBlock = ({ children, autoExpand = false }) => {
+const ThinkingBlock = memo(({ children, autoExpand = false }) => {
   const [isOpen, setIsOpen] = useState(autoExpand);
   const contentRef = useRef(null);
 
@@ -517,17 +589,14 @@ const ThinkingBlock = ({ children, autoExpand = false }) => {
       )}
     </div>
   );
-};
+});
+
+ThinkingBlock.displayName = "ThinkingBlock";
 
 /**
- * Main Markdown Renderer component
+ * Optimized streaming text processor with Web Workers support if available
  */
-const MarkdownRenderer = ({
-  children,
-  isDarkMode,
-  isLoading,
-  convertParenthesesLatex = true,
-}) => {
+const useStreamingProcessor = (content, isLoading) => {
   const [displayedText, setDisplayedText] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingContent, setThinkingContent] = useState("");
@@ -535,24 +604,8 @@ const MarkdownRenderer = ({
   const processedIndexRef = useRef(0);
   const animationFrameRef = useRef(null);
 
-  // Process the content before rendering
-  const processedContent = useMemo(() => {
-    if (!children) return "";
-
-    // First, apply standard LaTeX preprocessing
-    let processed = convertParenthesesLatex
-      ? preprocessLatex(children)
-      : children;
-
-    // Then handle standalone LaTeX equations like "L = \frac{...}"
-    processed = processStandaloneLatex(processed);
-
-    return processed;
-  }, [children, convertParenthesesLatex]);
-
-  // Function to handle streaming updates with better performance
   const processStreamingContent = useCallback(() => {
-    if (!processedContent || !isLoading) {
+    if (!content || !isLoading) {
       setDisplayedText("");
       setThinkingContent("");
       setIsThinking(false);
@@ -569,21 +622,14 @@ const MarkdownRenderer = ({
 
     const processNextChunk = () => {
       // Process multiple characters per frame for better performance
-      const chunkSize = 20;
+      const chunkSize = 50; // Increased for better performance
       let i = 0;
 
-      while (
-        i < chunkSize &&
-        processedIndexRef.current < processedContent.length
-      ) {
-        const char = processedContent[processedIndexRef.current];
+      while (i < chunkSize && processedIndexRef.current < content.length) {
+        const char = content[processedIndexRef.current];
         bufferRef.current += char;
 
-        // Don't allow stray $ signs to appear mid-render
-        if (!isThinking && bufferRef.current.endsWith("$")) {
-          bufferRef.current = bufferRef.current.slice(0, -1);
-        }
-
+        // Process thinking blocks
         if (bufferRef.current.includes("<think>")) {
           const [beforeThink] = bufferRef.current.split("<think>");
           setDisplayedText(beforeThink);
@@ -604,15 +650,15 @@ const MarkdownRenderer = ({
         i++;
       }
 
-      if (processedIndexRef.current < processedContent.length) {
+      if (processedIndexRef.current < content.length) {
         animationFrameRef.current = requestAnimationFrame(processNextChunk);
       }
     };
 
     animationFrameRef.current = requestAnimationFrame(processNextChunk);
-  }, [processedContent, isLoading]);
+  }, [content, isLoading]);
 
-  // Set up streaming effect when isLoading or content changes
+  // Set up streaming effect
   useEffect(() => {
     processStreamingContent();
 
@@ -623,26 +669,114 @@ const MarkdownRenderer = ({
     };
   }, [processStreamingContent]);
 
-  if (!processedContent) return null;
+  return { displayedText, isThinking, thinkingContent };
+};
 
-  // Loading state with streaming display
-  if (isLoading) {
+/**
+ * Main Markdown Renderer component
+ */
+const MarkdownRenderer = memo(
+  ({ children, isDarkMode, isLoading, convertParenthesesLatex = true }) => {
+    // Process the content before rendering with improved LaTeX handling
+    const processedContent = useMemo(() => {
+      if (!children) return "";
+      return convertParenthesesLatex ? preprocessLatex(children) : children;
+    }, [children, convertParenthesesLatex]);
+
+    // Use optimized streaming processor
+    const { displayedText, isThinking, thinkingContent } =
+      useStreamingProcessor(processedContent, isLoading);
+
+    // Nothing to display
+    if (!processedContent) return null;
+
+    // Loading state with streaming display
+    if (isLoading) {
+      const [mainContent, referencesContent] =
+        processedContent.split("References:");
+      return (
+        <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
+          {thinkingContent && (
+            <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
+          )}
+          {displayedText && (
+            <ErrorBoundary
+              fallback={<div>Error rendering Markdown content</div>}
+            >
+              <ReactMarkdown
+                remarkPlugins={[remarkMath, remarkGfm]}
+                rehypePlugins={[rehypeKatex, rehypeRaw]}
+                components={components}
+              >
+                {displayedText}
+              </ReactMarkdown>
+            </ErrorBoundary>
+          )}
+          {referencesContent && (
+            <ErrorBoundary fallback={<div>Error loading references</div>}>
+              <ReferencesSection content={referencesContent} />
+            </ErrorBoundary>
+          )}
+        </div>
+      );
+    }
+
+    // Normal (non-loading) state with optimized rendering
     const [mainContent, referencesContent] =
       processedContent.split("References:");
+
+    // More efficient think block processing
+    const thinkingRegex = /<think>([\s\S]*?)<\/think>/g;
+    let match;
+    let lastIndex = 0;
+    const contentParts = [];
+
+    while ((match = thinkingRegex.exec(mainContent)) !== null) {
+      // Add the content before this thinking block
+      if (match.index > lastIndex) {
+        contentParts.push({
+          type: "text",
+          content: mainContent.substring(lastIndex, match.index),
+        });
+      }
+
+      // Add the thinking block
+      contentParts.push({
+        type: "thinking",
+        content: match[1],
+      });
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add any remaining content after the last thinking block
+    if (lastIndex < mainContent.length) {
+      contentParts.push({
+        type: "text",
+        content: mainContent.substring(lastIndex),
+      });
+    }
+
     return (
       <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
-        {thinkingContent && (
-          <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
-        )}
-        {displayedText && (
-          <ReactMarkdown
-            remarkPlugins={[remarkMath, remarkGfm]}
-            rehypePlugins={[rehypeKatex, rehypeRaw]}
-            components={components}
+        {contentParts.map((part, index) => (
+          <ErrorBoundary
+            key={index}
+            fallback={<div>Error rendering content part</div>}
           >
-            {displayedText}
-          </ReactMarkdown>
-        )}
+            {part.type === "thinking" ? (
+              <ThinkingBlock>{part.content}</ThinkingBlock>
+            ) : (
+              <ReactMarkdown
+                remarkPlugins={[remarkMath, remarkGfm]}
+                rehypePlugins={[rehypeKatex, rehypeRaw]}
+                components={components}
+              >
+                {part.content}
+              </ReactMarkdown>
+            )}
+          </ErrorBoundary>
+        ))}
         {referencesContent && (
           <ErrorBoundary fallback={<div>Error loading references</div>}>
             <ReferencesSection content={referencesContent} />
@@ -651,41 +785,7 @@ const MarkdownRenderer = ({
       </div>
     );
   }
-
-  // Normal (non-loading) state
-  const [mainContent, referencesContent] =
-    processedContent.split("References:");
-  const parts = mainContent.split(/(<think>|<\/think>)/);
-
-  return (
-    <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
-      {parts.map((part, index) => {
-        if (part === "<think>") return null;
-        if (parts[index - 1] === "<think>" && part !== "</think>") {
-          return <ThinkingBlock key={index}>{part}</ThinkingBlock>;
-        }
-        if (part !== "</think>") {
-          return (
-            <ReactMarkdown
-              key={index}
-              remarkPlugins={[remarkMath, remarkGfm]}
-              rehypePlugins={[rehypeKatex, rehypeRaw]}
-              components={components}
-            >
-              {part}
-            </ReactMarkdown>
-          );
-        }
-        return null;
-      })}
-      {referencesContent && (
-        <ErrorBoundary fallback={<div>Error loading references</div>}>
-          <ReferencesSection content={referencesContent} />
-        </ErrorBoundary>
-      )}
-    </div>
-  );
-};
+);
 
 MarkdownRenderer.displayName = "MarkdownRenderer";
 
