@@ -10,6 +10,23 @@ const highlightCache = new Map();
 const MAX_CACHE_SIZE = 100;
 
 /**
+ * Custom style based on vscDarkPlus but with larger font
+ */
+const customStyle = {
+  ...vscDarkPlus,
+  'code[class*="language-"]': {
+    ...vscDarkPlus['code[class*="language-"]'],
+    fontSize: "1rem", // Increased from default (usually 0.875rem)
+    lineHeight: "1.5",
+  },
+  'pre[class*="language-"]': {
+    ...vscDarkPlus['pre[class*="language-"]'],
+    fontSize: "1rem", // Increased from default
+    lineHeight: "1.5",
+  },
+};
+
+/**
  * Code component for syntax highlighting of code blocks
  * @param {Object} props - Component props
  * @param {string} props.language - Programming language for syntax highlighting
@@ -59,8 +76,8 @@ const Code = memo(({ language, children }) => {
     // Generate new highlighted component
     const result = (
       <SyntaxHighlighter
-        style={vscDarkPlus}
-        className="custom-syntax-highlighter !bg-transparent"
+        style={customStyle}
+        className="custom-syntax-highlighter !bg-transparent text-base"
         language={codeLanguage}
         PreTag="div"
         wrapLines={true}
@@ -84,7 +101,7 @@ const Code = memo(({ language, children }) => {
 
   return (
     <div
-      className="relative block bg-neutral-800 rounded-lg p-1 my-4"
+      className="relative block bg-neutral-800 rounded-lg p-1 my-4 text-base"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       data-language={codeLanguage}
