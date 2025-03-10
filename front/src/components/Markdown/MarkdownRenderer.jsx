@@ -1,8 +1,8 @@
-/* eslint-disable no-unused-vars */
 import { useState, useEffect, useRef, memo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import { MathJaxContext, MathJax } from "better-react-mathjax";
 import mermaid from "mermaid";
 import Code from "./Code";
 import ThinkingBlock from "./ThinkingBlock";
@@ -10,6 +10,25 @@ import ReferencesSection from "./ReferencesSection";
 
 // Initialize mermaid
 mermaid.initialize({ startOnLoad: false, theme: "forest" });
+
+// MathJax configuration
+const mathJaxConfig = {
+  loader: { load: ["[tex]/html"] },
+  tex: {
+    packages: { "[+]": ["html"] },
+    inlineMath: [
+      ["$", "$"],
+      ["\\(", "\\)"],
+    ],
+    displayMath: [
+      ["$$", "$$"],
+      ["\\[", "\\]"],
+    ],
+  },
+  startup: {
+    typeset: false,
+  },
+};
 
 // MermaidDiagram component
 const MermaidDiagram = memo(({ content }) => {
@@ -48,6 +67,68 @@ const MermaidDiagram = memo(({ content }) => {
 
 MermaidDiagram.displayName = "MermaidDiagram";
 
+// Helper function to convert inline LaTeX to a form MathJax can recognize directly
+const convertInlineLatex = (text) => {
+  if (!text) return text;
+
+  // Replace the \( ... \) LaTeX notation to ensure it's properly processed
+  return text.replace(/\\[(]([^)]+)\\[)]/g, (match, latex) => {
+    return `$${latex}$`;
+  });
+};
+
+// Pre-process content to handle special LaTeX format [f(x) = ...]
+const preprocessContent = (content) => {
+  if (!content) return content;
+
+  let processedContent = content;
+
+  // Convert \( ... \) to $...$ for better compatibility
+  processedContent = convertInlineLatex(processedContent);
+
+  // Match formula patterns like [f(x) = ...] or similar mathematical expressions in square brackets
+  const squareBracketFormulaRegex =
+    /\[(f\(x\)|f\([^\)]+\))[^=\n]*=\s*[\s\S]*?\]/g;
+
+  // Replace square bracket formulas with standard LaTeX display mode
+  processedContent = processedContent.replace(
+    squareBracketFormulaRegex,
+    (match) => {
+      // Remove the square brackets
+      const formula = match.substring(1, match.length - 1);
+      // Wrap with standard LaTeX delimiters
+      return `$$${formula}$$`;
+    }
+  );
+
+  // Handle other special cases of square brackets containing LaTeX-like content
+  const latexInSquareBracketsRegex =
+    /\[[^\]]*\\(?:frac|sigma|mu|pi|sum|int|alpha|beta|gamma)[^\]]*\]/g;
+
+  processedContent = processedContent.replace(
+    latexInSquareBracketsRegex,
+    (match) => {
+      // Remove the square brackets
+      const formula = match.substring(1, match.length - 1);
+      // Wrap with standard LaTeX delimiters
+      return `$$${formula}$$`;
+    }
+  );
+
+  return processedContent;
+};
+
+// Define a custom MathJax-enabled component for each markdown element
+const createMathComponent = (Component) => {
+  return ({ children, ...props }) => {
+    return (
+      <MathJax>
+        <Component {...props}>{children}</Component>
+      </MathJax>
+    );
+  };
+};
+
 // Markdown component renderers
 export const rendererComponents = {
   code: ({ inline, className, children }) => {
@@ -69,55 +150,95 @@ export const rendererComponents = {
     return <Code language={match?.[1]}>{content}</Code>;
   },
   a: ({ href, children }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="text-blue-500 underline"
-    >
-      {children}
-    </a>
+    <MathJax>
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="text-blue-500 underline"
+      >
+        {children}
+      </a>
+    </MathJax>
   ),
-  p: ({ children }) => <p className="mb-3">{children}</p>,
+  p: ({ children }) => (
+    <MathJax>
+      <p className="mb-3">{children}</p>
+    </MathJax>
+  ),
   h1: ({ children, id }) => (
-    <h1 className="text-2xl font-bold mt-4" id={id}>
-      {children}
-    </h1>
+    <MathJax>
+      <h1 className="text-2xl font-bold mt-4" id={id}>
+        {children}
+      </h1>
+    </MathJax>
   ),
   h2: ({ children, id }) => (
-    <h2 className="text-xl font-semibold mt-3" id={id}>
-      {children}
-    </h2>
+    <MathJax>
+      <h2 className="text-xl font-semibold mt-3" id={id}>
+        {children}
+      </h2>
+    </MathJax>
   ),
   h3: ({ children, id }) => (
-    <h3 className="text-lg font-medium mt-2" id={id}>
-      {children}
-    </h3>
+    <MathJax>
+      <h3 className="text-lg font-medium mt-2" id={id}>
+        {children}
+      </h3>
+    </MathJax>
   ),
   h4: ({ children, id }) => (
-    <h4 className="text-md font-medium mt-1" id={id}>
-      {children}
-    </h4>
+    <MathJax>
+      <h4 className="text-md font-medium mt-1" id={id}>
+        {children}
+      </h4>
+    </MathJax>
   ),
   h5: ({ children, id }) => (
-    <h5 className="text-sm font-medium" id={id}>
-      {children}
-    </h5>
+    <MathJax>
+      <h5 className="text-sm font-medium" id={id}>
+        {children}
+      </h5>
+    </MathJax>
   ),
   h6: ({ children, id }) => (
-    <h6 className="text-xs font-medium text-gray-600" id={id}>
-      {children}
-    </h6>
+    <MathJax>
+      <h6 className="text-xs font-medium text-gray-600" id={id}>
+        {children}
+      </h6>
+    </MathJax>
   ),
-  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-  em: ({ children }) => <em className="italic">{children}</em>,
-  ul: ({ children }) => <ul className="list-disc pl-6">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal pl-6">{children}</ol>,
-  li: ({ children }) => <li className="mb-1">{children}</li>,
+  strong: ({ children }) => (
+    <MathJax>
+      <strong className="font-bold">{children}</strong>
+    </MathJax>
+  ),
+  em: ({ children }) => (
+    <MathJax>
+      <em className="italic">{children}</em>
+    </MathJax>
+  ),
+  ul: ({ children }) => (
+    <MathJax>
+      <ul className="list-disc pl-6">{children}</ul>
+    </MathJax>
+  ),
+  ol: ({ children }) => (
+    <MathJax>
+      <ol className="list-decimal pl-6">{children}</ol>
+    </MathJax>
+  ),
+  li: ({ children }) => (
+    <MathJax>
+      <li className="mb-1">{children}</li>
+    </MathJax>
+  ),
   blockquote: ({ children }) => (
-    <blockquote className="border-l-4 pl-4 italic text-gray-600">
-      {children}
-    </blockquote>
+    <MathJax>
+      <blockquote className="border-l-4 pl-4 italic text-gray-600">
+        {children}
+      </blockquote>
+    </MathJax>
   ),
   table: ({ children }) => (
     <div className="w-full overflow-x-auto my-4">
@@ -138,14 +259,18 @@ export const rendererComponents = {
     </tr>
   ),
   th: ({ children }) => (
-    <th className="border border-gray-300 dark:border-gray-700 px-4 py-2 text-left font-medium">
-      {children}
-    </th>
+    <MathJax>
+      <th className="border border-gray-300 dark:border-gray-700 px-4 py-2 text-left font-medium">
+        {children}
+      </th>
+    </MathJax>
   ),
   td: ({ children }) => (
-    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">
-      {children}
-    </td>
+    <MathJax>
+      <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">
+        {children}
+      </td>
+    </MathJax>
   ),
 };
 
@@ -235,14 +360,20 @@ const useStreamingProcessor = (content, isLoading) => {
 
 // Main Markdown Renderer component
 const MarkdownRenderer = memo(({ children, isDarkMode, isLoading }) => {
-  // Use optimized streaming processor
+  // Always call hooks at the top level before any conditional returns
   const { displayedText, isThinking, thinkingContent } = useStreamingProcessor(
-    children,
+    children || "", // Provide default empty string to avoid null
     isLoading
   );
 
-  // Nothing to display
+  // Nothing to display - moved after the hook call
   if (!children) return null;
+
+  // Pre-process content to handle special LaTeX formats
+  const processContent = (content) => {
+    if (!content) return content;
+    return preprocessContent(content);
+  };
 
   // Split content for references section
   const hasReferences = children.includes("References:");
@@ -251,42 +382,44 @@ const MarkdownRenderer = memo(({ children, isDarkMode, isLoading }) => {
     : [children, null];
 
   return (
-    <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
-      {isLoading ? (
-        <>
-          {thinkingContent && (
-            <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
-          )}
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw]}
-            components={rendererComponents}
-          >
-            {displayedText}
-          </ReactMarkdown>
-        </>
-      ) : (
-        <>
-          {/* Process thinking blocks for non-streaming mode */}
-          {mainContent.split(/<think>([\s\S]*?)<\/think>/g).map((part, i) => {
-            // Even indices are regular text, odd indices are thinking content
-            return i % 2 === 0 ? (
-              <ReactMarkdown
-                key={i}
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
-                components={rendererComponents}
-              >
-                {part}
-              </ReactMarkdown>
-            ) : (
-              <ThinkingBlock key={i}>{part}</ThinkingBlock>
-            );
-          })}
-        </>
-      )}
-      {referencesContent && <ReferencesSection content={referencesContent} />}
-    </div>
+    <MathJaxContext config={mathJaxConfig}>
+      <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
+        {isLoading ? (
+          <>
+            {thinkingContent && (
+              <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
+            )}
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
+              components={rendererComponents}
+            >
+              {processContent(displayedText)}
+            </ReactMarkdown>
+          </>
+        ) : (
+          <>
+            {/* Process thinking blocks for non-streaming mode */}
+            {mainContent.split(/<think>([\s\S]*?)<\/think>/g).map((part, i) => {
+              // Even indices are regular text, odd indices are thinking content
+              return i % 2 === 0 ? (
+                <ReactMarkdown
+                  key={i}
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
+                  components={rendererComponents}
+                >
+                  {processContent(part)}
+                </ReactMarkdown>
+              ) : (
+                <ThinkingBlock key={i}>{part}</ThinkingBlock>
+              );
+            })}
+          </>
+        )}
+        {referencesContent && <ReferencesSection content={referencesContent} />}
+      </div>
+    </MathJaxContext>
   );
 });
 

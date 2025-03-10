@@ -15,6 +15,7 @@
     "@emotion/styled": "^11.11.5",
     "@reduxjs/toolkit": "^2.2.1",
     "@tailwindcss/postcss": "^4.0.12",
+    "better-react-mathjax": "^2.1.0",
     "caniuse-lite": "^1.0.30001679",
     "formik": "^2.4.5",
     "highlight.js": "^11.11.1",
