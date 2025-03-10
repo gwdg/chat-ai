@@ -169,7 +169,7 @@ const ResponseItem = React.memo(
                     ref={textareaRef}
                     value={editedResponse}
                     onChange={(e) => setEditedResponse(e.target.value)}
-                    className="p-2 outline-none rounded-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-hidden"
+                    className="p-2 outline-none rounded-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-y-auto"
                     placeholder="Edit response..."
                     style={{
                       minHeight: `${MIN_HEIGHT}px`,
