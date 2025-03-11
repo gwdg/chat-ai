@@ -5,7 +5,7 @@ import rehypeRaw from "rehype-raw";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 // Import shared markdown components
-import { rendererComponents } from "./MarkdownRenderer";
+import { rendererComponents } from "./rendererComponents";
 
 // Reference parsing utility
 const parseReferences = (content) => {

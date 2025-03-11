@@ -5,7 +5,7 @@ import rehypeRaw from "rehype-raw";
 import { ChevronDown, ChevronRight, Brain } from "lucide-react";
 
 // Import shared markdown components
-import { rendererComponents } from "./MarkdownRenderer";
+import { rendererComponents } from "./rendererComponents";
 
 const ThinkingBlock = memo(({ children, autoExpand = false }) => {
   const [isOpen, setIsOpen] = useState(autoExpand);
