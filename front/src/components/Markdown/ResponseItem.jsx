@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import copy from "../../assets/icon_copy.svg";
 import check from "../../assets/check.svg";
@@ -33,6 +33,7 @@ const ResponseItem = React.memo(
     const responseRef = useRef(null);
     const textareaRef = useRef(null);
     const lastEditingIndex = useRef(-1);
+    const [renderMode, setRenderMode] = useState("Default");
 
     const adjustTextareaHeight = () => {
       if (textareaRef.current) {
@@ -110,18 +111,13 @@ const ResponseItem = React.memo(
     const handleCopy = useCallback(async () => {
       try {
         let textToCopy = res.response;
-        // Remove thinking tags and their content
         textToCopy = textToCopy.replace(/<think>[\s\S]*?<\/think>/g, "");
-        // Remove everything after References:
         textToCopy = textToCopy.split("References:")[0];
-        // Remove userStyle tags and their content
         textToCopy = textToCopy.replace(
           /<userStyle>[\s\S]*?<\/userStyle>/g,
           ""
         );
-        // Remove dashed lines
         textToCopy = textToCopy.replace(/^-+$/gm, "");
-        // Clean up extra newlines and whitespace
         textToCopy = textToCopy.replace(/\n{3,}/g, "\n\n").trim();
 
         await navigator.clipboard.writeText(textToCopy);
@@ -136,12 +132,11 @@ const ResponseItem = React.memo(
     const isLoading = (loading || loadingResend) && isLastItem;
     const hasError = !res?.response && !isLoading;
 
-    // Return early with error state if no response and not loading
     if (hasError) {
       return (
         <div className="p-2" ref={responseRef}>
           <div className="text-black dark:text-white overflow-hidden border dark:border-border_dark rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
-            <div className="flex flex-col items-start  py-2">
+            <div className="flex flex-col items-start py-2">
               <button
                 onClick={() => handleResendClick(index)}
                 className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-tertiary rounded-lg hover:bg-tertiary/90 transition-colors"
@@ -193,6 +188,29 @@ const ResponseItem = React.memo(
                 </div>
               ) : (
                 <div className="group">
+                  {/* Render mode selection at the top of the response */}
+                  <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
+                      {["Default", "Markdown", "Plain Text"].map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => !isLoading && setRenderMode(mode)}
+                          className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out
+                            ${isLoading ? "cursor-not-allowed opacity-50" : ""}
+                            ${
+                              renderMode === mode
+                                ? "bg-tertiary text-white"
+                                : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                            }
+                          `}
+                          disabled={isLoading}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <ErrorBoundary
                     fallback={
                       <div className="flex flex-col items-center justify-center gap-3 py-4">
@@ -210,18 +228,26 @@ const ResponseItem = React.memo(
                       </div>
                     }
                   >
-                    <MarkdownRenderer
-                      isDarkMode={isDarkModeGlobal}
-                      isLoading={isLoading}
-                    >
-                      {res.response}
-                    </MarkdownRenderer>
+                    {renderMode === "Plain Text" ? (
+                      <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto">
+                        {res.response}
+                      </pre>
+                    ) : (
+                      <MarkdownRenderer
+                        isDarkMode={isDarkModeGlobal}
+                        isLoading={isLoading}
+                        renderMode={renderMode}
+                      >
+                        {res.response}
+                      </MarkdownRenderer>
+                    )}
                   </ErrorBoundary>
                   <div className="flex justify-end w-full mt-1 gap-2">
                     <button
                       onClick={() => handleResponseEdit(index, res.response)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      title="Edit (double click)"
+                      title="Edit"
+                      disabled={isLoading}
                     >
                       <img
                         src={edit_icon}

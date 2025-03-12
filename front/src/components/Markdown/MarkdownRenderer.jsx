@@ -1,4 +1,3 @@
-// MarkdownRenderer.jsx
 import { useState, useEffect, useRef, memo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -10,15 +9,9 @@ import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import { rendererComponents } from "./rendererComponents";
 
-/**
- * Preprocesses LaTeX content by replacing delimiters and escaping certain characters.
- * @param {string} content - The input string containing LaTeX expressions.
- * @returns {string} - The processed string with replaced delimiters and escaped characters.
- */
 const preprocessLaTeX = (content) => {
   if (!content) return "";
 
-  // Step 1: Protect code blocks
   const codeBlocks = [];
   let processedContent = content.replace(
     /(```[\s\S]*?```|`[^`\n]+`)/g,
@@ -28,7 +21,6 @@ const preprocessLaTeX = (content) => {
     }
   );
 
-  // Step 2: Protect existing LaTeX expressions
   const latexExpressions = [];
   processedContent = processedContent.replace(
     /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g,
@@ -38,32 +30,27 @@ const preprocessLaTeX = (content) => {
     }
   );
 
-  // Step 3: Escape dollar signs that are likely currency indicators
   processedContent = processedContent.replace(/\$(?=\d)/g, "\\$");
 
-  // Step 4: Restore LaTeX expressions
   processedContent = processedContent.replace(
     /<<LATEX_(\d+)>>/g,
     (_, index) => latexExpressions[parseInt(index)]
   );
 
-  // Step 5: Restore code blocks
   processedContent = processedContent.replace(
     /<<CODE_BLOCK_(\d+)>>/g,
     (_, index) => codeBlocks[parseInt(index)]
   );
 
-  // Step 6: Convert LaTeX delimiters to KaTeX-compatible format
   processedContent = processedContent
-    .replace(/\\\[/g, "$$") // Replace '\[' with '$$'
-    .replace(/\\\]/g, "$$") // Replace '\]' with '$$'
-    .replace(/\\\(/g, "$") // Replace '\(' with '$'
-    .replace(/\\\)/g, "$"); // Replace '\)' with '$'
+    .replace(/\\\[/g, "$$")
+    .replace(/\\\]/g, "$$")
+    .replace(/\\\(/g, "$")
+    .replace(/\\\)/g, "$");
 
   return processedContent;
 };
 
-// Optimized streaming text processor
 const useStreamingProcessor = (content, isLoading) => {
   const [displayedText, setDisplayedText] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -96,7 +83,6 @@ const useStreamingProcessor = (content, isLoading) => {
         const char = content[processedIndexRef.current];
         bufferRef.current += char;
 
-        // Process thinking blocks
         if (bufferRef.current.includes("<think>")) {
           const [beforeThink] = bufferRef.current.split("<think>");
           setDisplayedText(beforeThink);
@@ -122,7 +108,6 @@ const useStreamingProcessor = (content, isLoading) => {
       }
     };
 
-    // Reset state when starting to stream
     if (processedIndexRef.current === 0) {
       setDisplayedText("");
       setThinkingContent("");
@@ -133,7 +118,6 @@ const useStreamingProcessor = (content, isLoading) => {
     animationFrameRef.current = requestAnimationFrame(processNextChunk);
   }, [content, isLoading, isThinking]);
 
-  // Set up streaming effect
   useEffect(() => {
     processStreamingContent();
 
@@ -147,12 +131,24 @@ const useStreamingProcessor = (content, isLoading) => {
   return { displayedText, isThinking, thinkingContent };
 };
 
-// Main Markdown Renderer component
-const MarkdownRenderer = memo(({ children, isDarkMode, isLoading }) => {
-  // Add CSS for centered math
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
+// Extract references and thinking content
+const extractSpecialContent = (content) => {
+  if (!content) return { mainContent: "", referencesContent: "" };
+
+  // Extract references
+  const hasReferences = content.includes("References:");
+  const [mainContent, referencesContent] = hasReferences
+    ? content.split("References:")
+    : [content, null];
+
+  return { mainContent, referencesContent };
+};
+
+const MarkdownRenderer = memo(
+  ({ children, isDarkMode, isLoading, renderMode = "Default" }) => {
+    useEffect(() => {
+      const style = document.createElement("style");
+      style.textContent = `
       .katex-display {
         display: flex !important;
         justify-content: center !important;
@@ -160,65 +156,90 @@ const MarkdownRenderer = memo(({ children, isDarkMode, isLoading }) => {
         margin: 1em 0 !important;
       }
     `;
-    document.head.appendChild(style);
+      document.head.appendChild(style);
 
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
+      return () => {
+        document.head.removeChild(style);
+      };
+    }, []);
 
-  // Use optimized streaming processor
-  const { displayedText, thinkingContent } = useStreamingProcessor(
-    children,
-    isLoading
-  );
+    const { displayedText, thinkingContent } = useStreamingProcessor(
+      children,
+      isLoading
+    );
 
-  // Nothing to display
-  if (!children) return null;
+    if (!children) return null;
 
-  // Process the content for LaTeX
-  const processContent = (text) => {
-    if (!text) return "";
-    return preprocessLaTeX(text);
-  };
+    // Extract references section for all modes
+    const { mainContent, referencesContent } = extractSpecialContent(
+      isLoading ? displayedText : children
+    );
 
-  // Split content for references section
-  const hasReferences = children.includes("References:");
-  const [mainContent, referencesContent] = hasReferences
-    ? children.split("References:")
-    : [children, null];
+    // Markdown mode - display raw markdown with only code blocks rendered
+    if (renderMode === "Markdown") {
+      // Custom components for Markdown mode - only render code blocks
+      const markdownModeComponents = {
+        ...rendererComponents,
+        // Override math components to show raw LaTeX
+        math: ({ value }) => <code className="text-pink-500">${value}$</code>,
+        inlineMath: ({ value }) => (
+          <code className="text-pink-500">${value}$</code>
+        ),
+      };
 
-  // Configure KaTeX options
-  const katexOptions = {
-    output: "htmlAndMathml",
-    throwOnError: false,
-    trust: true,
-    strict: false,
-    macros: {
-      "\\f": "#1f(#2)",
-    },
-  };
-
-  return (
-    <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
-      {isLoading ? (
-        <>
-          {thinkingContent && (
+      return (
+        <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
+          {isLoading && thinkingContent && (
             <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
           )}
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeRaw, [rehypeKatex, katexOptions]]}
-            components={rendererComponents}
-          >
-            {processContent(displayedText)}
-          </ReactMarkdown>
-        </>
-      ) : (
-        <>
-          {/* Process thinking blocks for non-streaming mode */}
-          {mainContent.split(/<think>([\s\S]*?)<\/think>/g).map((part, i) => {
-            // Even indices are regular text, odd indices are thinking content
+
+          {/* Main content */}
+          {(isLoading ? displayedText : mainContent)
+            .split(/<think>([\s\S]*?)<\/think>/g)
+            .map((part, i) => {
+              return i % 2 === 0 ? (
+                <ReactMarkdown
+                  key={`part-${i}`}
+                  remarkPlugins={[remarkGfm]} // No math plugins
+                  components={markdownModeComponents}
+                >
+                  {part}
+                </ReactMarkdown>
+              ) : (
+                <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
+              );
+            })}
+
+          {/* References section */}
+          {referencesContent && (
+            <ReferencesSection content={referencesContent} />
+          )}
+        </div>
+      );
+    }
+
+    // Default mode - full rendering
+    // Configure KaTeX options
+    const katexOptions = {
+      output: "htmlAndMathml",
+      throwOnError: false,
+      trust: true,
+      strict: false,
+      macros: {
+        "\\f": "#1f(#2)",
+      },
+    };
+
+    return (
+      <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
+        {isLoading && thinkingContent && (
+          <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
+        )}
+
+        {/* Main content */}
+        {(isLoading ? displayedText : mainContent)
+          .split(/<think>([\s\S]*?)<\/think>/g)
+          .map((part, i) => {
             return i % 2 === 0 ? (
               <ReactMarkdown
                 key={`part-${i}`}
@@ -226,18 +247,19 @@ const MarkdownRenderer = memo(({ children, isDarkMode, isLoading }) => {
                 rehypePlugins={[rehypeRaw, [rehypeKatex, katexOptions]]}
                 components={rendererComponents}
               >
-                {processContent(part)}
+                {preprocessLaTeX(part)}
               </ReactMarkdown>
             ) : (
               <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
             );
           })}
-        </>
-      )}
-      {referencesContent && <ReferencesSection content={referencesContent} />}
-    </div>
-  );
-});
+
+        {/* References section */}
+        {referencesContent && <ReferencesSection content={referencesContent} />}
+      </div>
+    );
+  }
+);
 
 MarkdownRenderer.displayName = "MarkdownRenderer";
 
