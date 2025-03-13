@@ -188,29 +188,6 @@ const ResponseItem = React.memo(
                 </div>
               ) : (
                 <div className="group">
-                  {/* Render mode selection at the top of the response */}
-                  <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
-                      {["Default", "Markdown", "Plain Text"].map((mode) => (
-                        <button
-                          key={mode}
-                          onClick={() => !isLoading && setRenderMode(mode)}
-                          className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out
-                            ${isLoading ? "cursor-not-allowed opacity-50" : ""}
-                            ${
-                              renderMode === mode
-                                ? "bg-tertiary text-white"
-                                : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                            }
-                          `}
-                          disabled={isLoading}
-                        >
-                          {mode}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
                   <ErrorBoundary
                     fallback={
                       <div className="flex flex-col items-center justify-center gap-3 py-4">
@@ -242,26 +219,51 @@ const ResponseItem = React.memo(
                       </MarkdownRenderer>
                     )}
                   </ErrorBoundary>
-                  <div className="flex justify-end w-full mt-1 gap-2">
-                    <button
-                      onClick={() => handleResponseEdit(index, res.response)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      title="Edit"
-                      disabled={isLoading}
-                    >
-                      <img
-                        src={edit_icon}
-                        alt="edit"
-                        className="h-[22px] w-[22px]"
-                      />
-                    </button>
-                    <button onClick={handleCopy} title="Copy to clipboard">
-                      <img
-                        src={copied && indexChecked === index ? check : copy}
-                        alt="copy"
-                        className="h-[20px] w-[20px]"
-                      />
-                    </button>
+                  <div className="flex justify-between w-full mt-1 gap-2">
+                    {" "}
+                    {/* Render mode selection at the top of the response */}
+                    <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
+                        {["Default", "Markdown", "Plain Text"].map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => !isLoading && setRenderMode(mode)}
+                            className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out
+                            ${isLoading ? "cursor-not-allowed opacity-50" : ""}
+                            ${
+                              renderMode === mode
+                                ? "bg-tertiary text-white"
+                                : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                            }
+                          `}
+                            disabled={isLoading}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleResponseEdit(index, res.response)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        title="Edit"
+                        disabled={isLoading}
+                      >
+                        <img
+                          src={edit_icon}
+                          alt="edit"
+                          className="h-[22px] w-[22px]"
+                        />
+                      </button>
+                      <button onClick={handleCopy} title="Copy to clipboard">
+                        <img
+                          src={copied && indexChecked === index ? check : copy}
+                          alt="copy"
+                          className="h-[20px] w-[20px]"
+                        />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
