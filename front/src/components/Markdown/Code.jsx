@@ -25,6 +25,9 @@ const Code = memo(({ language, children }) => {
         PreTag="div"
         wrapLines={true}
         wrapLongLines={true}
+        customStyle={{
+          fontSize: "1.05rem",
+        }}
       >
         {codeString}
       </SyntaxHighlighter>
