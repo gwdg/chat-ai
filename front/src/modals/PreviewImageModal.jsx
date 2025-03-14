@@ -38,7 +38,17 @@ const PreviewModal = ({ file, onClose }) => {
     try {
       // Generate file name with appropriate extension
       let fileName = title;
-      if (!fileName.includes(".")) {
+
+      // Check if this is a PDF file that needs to be converted to markdown
+      if (
+        isTextContent &&
+        typeof file === "object" &&
+        file.name &&
+        file.name.toLowerCase().endsWith(".pdf")
+      ) {
+        // For PDF files, replace the .pdf extension with .md
+        fileName = fileName.replace(/\.pdf$/i, ".md");
+      } else if (!fileName.includes(".")) {
         // Add extension if not present
         if (isTextContent) {
           fileName += ".txt";
