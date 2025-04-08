@@ -35,8 +35,8 @@ body:
   - type: input
     attributes:
       label: Environment
-      description: Which OS or platform are you on? Which version of the project are you using?
-      placeholder: "e.g. Ubuntu 22.04, project version v1.2.3"
+      description: Which model for ChatAI are you using?
+      placeholder: "e.g. OpenAI GPT 4"
 
   - type: checkboxes
     attributes:
