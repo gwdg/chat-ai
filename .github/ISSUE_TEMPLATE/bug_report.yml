@@ -45,3 +45,5 @@ body:
       options:
         - label: I have confirmed this bug exists on the latest version
         - label: I have searched through existing issues
+        - label: I have checked the Network connection
+        - label: I reproduced the bug couple of times to ensure the source of that
