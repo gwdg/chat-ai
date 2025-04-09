@@ -22,6 +22,12 @@ body:
       description: Add any other context, screenshots, or related references that might help us understand your request better.
       placeholder: "Additional notes..."
 
+  - type: textarea
+    attributes:
+      label: suggestion/implementation
+      description: Do you have any suggestion how to implement or apply your requested feature? if we find it useful, you will be acknowledged in our Chat AI homepage ;).
+      placeholder: "Additional notes..."
+
   - type: checkboxes
     attributes:
       label: Confirmation
