@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Support
-    url: https://docs.hpc.gwdg.de/services/chat-ai/index.html
+    url: https://github.com/gwdg/chat-ai/issues
     about: Ask questions and highlight issues by mailing support@gwdg.de
