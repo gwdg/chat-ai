@@ -1,37 +1,36 @@
 name: Feature request
-about: Suggest an idea or enhancement for this project
+description: Suggest a new feature or improvement for this project
 title: "[Feature Request] "
-labels: enhancement
-assignees: ""
+labels: [enhancement]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for suggesting an idea to improve our project. Please fill in the details below.
-        Before submitting, check our open issues to see if a similar request already exists.
+        Thank you for suggesting a feature to improve this project. Please fill out the form below to help us understand your idea.
 
   - type: textarea
     attributes:
-      label: Description
-      description: Explain your idea in detail. What problem does it solve?
-      placeholder: "It would be great if..."
+      label: Feature description
+      description: Clearly describe the feature or enhancement you are requesting.
+      placeholder: "I would like the system to..."
+
+  - type: textarea
+    attributes:
+      label: Use case or problem
+      description: What problem would this solve? Why is this feature useful?
+      placeholder: "Currently, I have to..."
 
   - type: textarea
     attributes:
       label: Additional context
-      description: Add any other context, screenshots, or related references that might help us understand your request better.
-      placeholder: "Additional notes..."
-
-  - type: textarea
-    attributes:
-      label: suggestion/implementation
-      description: Do you have any suggestion how to implement or apply your requested feature? if we find it useful, you will be acknowledged in our Chat AI homepage ;).
-      placeholder: "Additional notes..."
+      description: Add any links, mockups, or references to existing features that are relevant.
+      placeholder: "See also issue #123, or this design..."
 
   - type: checkboxes
     attributes:
       label: Confirmation
-      description: Confirm you've considered the following:
+      description: "Please confirm the following before submitting:"
       options:
-        - label: I have checked if this feature is already requested
-        - label: I have described why this feature would be valuable
+        - label: I have searched existing issues for this feature
+        - label: I have described why this feature would be helpful
+        - label: I am willing to help implement this feature (optional)
