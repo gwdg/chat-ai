@@ -1,4 +1,5 @@
 name: Bug report
+description: Submit a detailed report for a bug you encountered
 title: "[BUG] "
 labels: [bug]
 body:
