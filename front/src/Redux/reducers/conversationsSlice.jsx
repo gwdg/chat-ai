@@ -115,6 +115,49 @@ const conversationsSlice = createSlice({
       }
       // If deleted conversation wasn't current, currentConversationId stays the same
     },
+    syncOnTabChange: (state, action) => {
+      const {
+        persistedConversations,
+        currentConversations,
+        currentConversationId,
+        currentPrompt,
+      } = action.payload;
+
+      // Create a map of current conversations for easy lookup
+      const currentConversationsMap = {};
+      currentConversations.forEach((conv) => {
+        currentConversationsMap[conv.id] = conv;
+      });
+
+      // Create a merged array with the persisted conversations as the base
+      const mergedConversations = [...persistedConversations];
+
+      // Preserve the current prompt in the active conversation
+      const activeConversationIndex = mergedConversations.findIndex(
+        (conv) => conv.id === currentConversationId
+      );
+
+      if (activeConversationIndex !== -1) {
+        // Update the prompt of the active conversation
+        mergedConversations[activeConversationIndex] = {
+          ...mergedConversations[activeConversationIndex],
+          prompt: currentPrompt,
+        };
+      }
+
+      // Update the state with the merged conversations
+      state.conversations = mergedConversations;
+
+      // Make sure the current conversation still exists
+      const conversationExists = mergedConversations.some(
+        (conv) => conv.id === currentConversationId
+      );
+      if (conversationExists) {
+        state.currentConversationId = currentConversationId;
+      } else if (mergedConversations.length > 0) {
+        state.currentConversationId = mergedConversations[0].id;
+      }
+    },
     setCurrentConversation: (state, action) => {
       const conversationId = action.payload;
       if (state.conversations.some((conv) => conv.id === conversationId)) {

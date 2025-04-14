@@ -1,12 +1,3 @@
-/**
- * Sidebar Component
- * Provides conversation management interface including:
- * - Creating new conversations
- * - Listing existing conversations
- * - Selecting conversations
- * - Renaming and deleting conversations
- */
-
 // Redux and routing imports
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +14,7 @@ import { useCallback } from "react";
 import cross from "../../assets/cross.svg";
 import edit_icon from "../../assets/edit_icon.svg";
 import back_arrow from "../../assets/back_arrow.svg";
+import { persistor } from "../../Redux/store/store";
 
 function Sidebar({
   onClose,
@@ -39,16 +31,34 @@ function Sidebar({
   const handleNewChat = useCallback(() => {
     if (isResponding) return; // Prevent new chat while responding
 
+    // Temporarily disable interaction
+    dispatch({ type: "conversations/setIsResponding", payload: true });
+
+    // Add the conversation
     const action = dispatch(addConversation());
     const newId = action.payload?.id;
+
     if (newId) {
-      navigate(`/chat/${newId}`);
-      onClose?.();
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
+      // Force persistence to localStorage BEFORE navigation
+      // This ensures the new conversation is saved before we try to navigate to it
+      persistor.flush().then(() => {
+        // Small delay to ensure localStorage is updated
+        setTimeout(() => {
+          // Navigate to the new conversation
+          navigate(`/chat/${newId}`);
+          onClose?.();
+
+          // Re-enable interaction after navigation
+          setTimeout(() => {
+            dispatch({ type: "conversations/setIsResponding", payload: false });
+          }, 300);
+        }, 100);
+      });
+    } else {
+      // If no ID was created (unlikely), still re-enable interaction
+      dispatch({ type: "conversations/setIsResponding", payload: false });
     }
-  }, [dispatch, navigate, onClose, isResponding]);
+  }, [dispatch, navigate, onClose, isResponding, persistor]);
 
   const handleSelectConversation = useCallback(
     (id) => {
