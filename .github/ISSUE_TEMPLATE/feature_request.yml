@@ -1,6 +1,6 @@
-name: Feature request
+name: Feature 
 description: Suggest a new feature or improvement for this project
-title: "[Feature Request] "
+title: "[Feature] "
 labels: [enhancement]
 body:
   - type: markdown
