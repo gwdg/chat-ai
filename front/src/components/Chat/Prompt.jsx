@@ -18,6 +18,7 @@ import Tooltip from "../Others/Tooltip";
 import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
+import SettingsPanel from "./SettingsPanel";
 
 //Variable
 const languageMap = {
@@ -48,6 +49,19 @@ function Prompt({
   notifyError,
   adjustHeight,
   setPdfNotProcessedModal,
+  modelSettings,
+  currentModel,
+  onModelChange,
+  showAdvOpt,
+  setShareSettingsModal,
+  handleShareSettings,
+  setShowHelpModal,
+  setShowArcanasHelpModal,
+  setShowCustomHelpModal,
+  setShowTopPHelpModal,
+  setShowSystemHelpModal,
+  isThoughtSupported,
+  updateSettings,
 }) {
   //Hooks
   const { t, i18n } = useTranslation();
@@ -471,7 +485,9 @@ function Prompt({
           file.name.endsWith(".kt") ||
           file.name.endsWith(".ts") ||
           file.name.endsWith(".jsx") ||
-          file.name.endsWith(".tsx")
+          file.name.endsWith(".tsx") ||
+          file.name.endsWith(".html") ||
+          file.name.endsWith(".json")
       );
       // Validate file types
       if (
@@ -619,12 +635,53 @@ function Prompt({
 
   useEffect(() => {
     updateLocalState({ prompt: transcript });
-  }, [transcript]);
+  }, [transcript, updateLocalState]);
 
   return (
-    <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
+    <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
+      {/* Remove overflow-y-auto from parent container to prevent clipping */}
       <div className="flex flex-col gap-4 w-full">
-        <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
+        {/* Main textarea and buttons container */}
+        <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-visible">
+          {/* Settings panel positioned absolutely with higher z-index */}
+          {showAdvOpt && (
+            <div
+              className="absolute w-full z-[999]"
+              style={{
+                bottom: "50px",
+                position: "absolute",
+                overflow: "visible",
+              }}
+            >
+              <SettingsPanel
+                modelSettings={modelSettings}
+                modelList={modelList}
+                currentModel={currentModel}
+                isImageSupported={isImageSupported}
+                isVideoSupported={isVideoSupported}
+                isThoughtSupported={isThoughtSupported}
+                isArcanaSupported={isArcanaSupported}
+                onModelChange={onModelChange}
+                showAdvOpt={showAdvOpt}
+                toggleAdvOpt={toggleAdvOpt}
+                localState={localState}
+                setLocalState={setLocalState}
+                updateSettings={updateSettings}
+                setShareSettingsModal={setShareSettingsModal}
+                handleShareSettings={handleShareSettings}
+                setShowHelpModal={setShowHelpModal}
+                setShowArcanasHelpModal={setShowArcanasHelpModal}
+                setShowCustomHelpModal={setShowCustomHelpModal}
+                setShowTopPHelpModal={setShowTopPHelpModal}
+                setShowSystemHelpModal={setShowSystemHelpModal}
+                notifySuccess={notifySuccess}
+                notifyError={notifyError}
+                setShowModalSession={setShowModalSession}
+              />
+            </div>
+          )}
+
+          {/* Textarea with drag-drop support */}
           {isImageSupported || isVideoSupported ? (
             <div
               className="drag-drop-container"
@@ -687,6 +744,7 @@ function Prompt({
             />
           )}
 
+          {/* Button toolbar */}
           <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
             {localState.prompt?.trim() !== "" ? (
               <Tooltip text={t("description.clear")}>
@@ -709,7 +767,7 @@ function Prompt({
 
             <div className="flex gap-4 w-full justify-end items-center">
               <button
-                className="hidden mobile:flex h-[30px] w-[30px] cursor-pointer"
+                className="flex h-[30px] w-[30px] cursor-pointer"
                 onClick={toggleAdvOpt}
               >
                 <img
@@ -723,7 +781,7 @@ function Prompt({
                 type="file"
                 ref={hiddenFileInput}
                 multiple
-                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx"
+                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json"
                 onChange={handleFilesChange}
                 className="hidden"
               />
@@ -741,6 +799,7 @@ function Prompt({
                 </button>
               </Tooltip>
 
+              {/* Other buttons (image upload, mic, send, etc.) */}
               {(isImageSupported || isVideoSupported) && (
                 <>
                   <input

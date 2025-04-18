@@ -40,6 +40,17 @@ const Conversation = ({
   notifySuccess,
   notifyError,
   setPdfNotProcessedModal,
+  modelSettings,
+  currentModel,
+  onModelChange,
+  showAdvOpt,
+  setShareSettingsModal,
+  handleShareSettings,
+  setShowHelpModal,
+  setShowArcanasHelpModal,
+  setShowCustomHelpModal,
+  setShowTopPHelpModal,
+  setShowSystemHelpModal,
 }) => {
   // Hooks
   const dispatch = useDispatch();
@@ -70,7 +81,7 @@ const Conversation = ({
   };
 
   return (
-    <div className="flex flex-col items-center mobile:w-full w-[60%] h-full gap-3 sm:justify-between relative p-2 bg-bg_light dark:bg-bg_dark">
+    <div className="flex flex-col items-center mobile:w-full w-[75%] h-full gap-3 sm:justify-between relative mobile:p-0 py-2 pr-2 pl-[2%] bg-bg_light dark:bg-bg_dark">
       <div className="desktop:max-h-full flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-12px)] mobile:w-full border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
         {showModal && count < 3 && (
           <div className="w-[calc(100%-16px)] sticky select-none m-2 h-fit bg-white dark:bg-black p-2 rounded-2xl flex justify-between items-center border dark:border-border_dark shadow-lg dark:shadow-dark">
@@ -162,6 +173,17 @@ const Conversation = ({
         adjustHeight={adjustHeight}
         setPdfNotProcessedModal={setPdfNotProcessedModal}
         loadingResend={loadingResend}
+        modelSettings={modelSettings}
+        currentModel={currentModel}
+        onModelChange={onModelChange}
+        showAdvOpt={showAdvOpt}
+        setShareSettingsModal={setShareSettingsModal}
+        handleShareSettings={handleShareSettings}
+        setShowHelpModal={setShowHelpModal}
+        setShowArcanasHelpModal={setShowArcanasHelpModal}
+        setShowCustomHelpModal={setShowCustomHelpModal}
+        setShowTopPHelpModal={setShowTopPHelpModal}
+        setShowSystemHelpModal={setShowSystemHelpModal}
       />
     </div>
   );

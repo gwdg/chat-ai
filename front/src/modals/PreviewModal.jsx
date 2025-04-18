@@ -20,6 +20,8 @@ const CODE_EXTENSIONS = [
   ".ts",
   ".jsx",
   ".tsx",
+  ".html",
+  ".json",
 ];
 
 const isCodeFile = (filename) => {

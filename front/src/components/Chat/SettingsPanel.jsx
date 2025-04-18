@@ -1,9 +1,10 @@
 /* eslint-disable no-unused-vars */
 //Libraries
 import { Trans, useTranslation } from "react-i18next";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import ReactDOM from "react-dom";
 
 //Components
 import ArcanaContainer from "../Arcanas/ArcanaContainer";
@@ -14,9 +15,7 @@ import image_supported from "../../assets/image_supported.svg";
 import video_icon from "../../assets/video_icon.svg";
 import thought_supported from "../../assets/thought_supported.svg";
 import books from "../../assets/books.svg";
-import cross from "../../assets/cross.svg";
 import dropdown from "../../assets/icon_dropdown.svg";
-import uploaded from "../../assets/file_uploaded.svg";
 import share_icon from "../../assets/share_icon.svg";
 
 //Redux
@@ -25,15 +24,10 @@ import {
   selectConversations,
   updateConversation,
 } from "../../Redux/reducers/conversationsSlice";
-import { processPdfDocument } from "../../apis/PdfProcessApi";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
-import PreviewModal from "../../modals/PreviewModal";
-import FileAlertModal from "../../modals/FileAlertModal";
 import { fetchAvailableModels } from "../../apis/ModelListApi";
 
 const SettingsPanel = ({
-  selectedFiles,
-  setSelectedFiles,
   modelSettings,
   modelList,
   currentModel,
@@ -76,9 +70,6 @@ const SettingsPanel = ({
   const [isHovering, setHovering] = useState(false);
   const [isHoveringTopP, setHoveringTopP] = useState(false);
   const [systemPromptError, setSystemPromptError] = useState("");
-  const [processingFiles, setProcessingFiles] = useState(new Set());
-  const [previewFile, setPreviewFile] = useState(null);
-  const [fileAlertModal, setFileAlertModal] = useState(null);
 
   //Refs
   const hasProcessedSettings = useRef(false);
@@ -88,31 +79,46 @@ const SettingsPanel = ({
   const dropdownRef = useRef(null);
   const isIntentionalRefresh = useRef(false);
 
-  //Functions
-  // Remove a file from the selectedFiles array at specified index
-  const removeFile = (index) => {
-    // Create deep copy to avoid mutating state directly
-    const newFiles = JSON.parse(JSON.stringify(selectedFiles));
-    newFiles.splice(index, 1);
-    setSelectedFiles(newFiles);
+  const Portal = ({ children }) => {
+    const [container] = useState(() => document.createElement("div"));
+
+    useEffect(() => {
+      // Append to body when component mounts
+      document.body.appendChild(container);
+
+      // Cleanup on unmount
+      return () => {
+        document.body.removeChild(container);
+      };
+    }, [container]);
+
+    return ReactDOM.createPortal(children, container);
   };
 
-  // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
-  function formatFileSize(bytes) {
-    const units = ["Bytes", "KB", "MB", "GB", "TB"];
-    let size = bytes;
-    let unitIndex = 0;
+  // Add this useEffect for dropdown positioning adjustment
+  useEffect(() => {
+    if (isOpen && dropdownRef.current) {
+      // Get the dropdown element (this would need a ref as well)
+      const dropdownElement = document.querySelector(".model-dropdown");
+      if (dropdownElement) {
+        // Check if dropdown is visible within viewport
+        const rect = dropdownElement.getBoundingClientRect();
+        const viewHeight = Math.max(
+          document.documentElement.clientHeight,
+          window.innerHeight
+        );
 
-    // Keep dividing by 1024 until we reach the appropriate unit
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
+        // If dropdown extends beyond viewport bottom, switch direction to up
+        if (rect.bottom > viewHeight) {
+          setDirection("up");
+        } else {
+          setDirection("down");
+        }
+      }
     }
+  }, [isOpen]);
 
-    // Return formatted string with 2 decimal places and unit
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
-  }
-
+  //Functions
   // Handle changes to the system instructions/prompt
   const handleInstructionsChange = (event) => {
     const { value } = event.target;
@@ -195,51 +201,6 @@ const SettingsPanel = ({
       handleShareSettings();
     } else {
       setShareSettingsModal(true);
-    }
-  };
-
-  // processing function
-  const handlePdfProcess = async (file, index) => {
-    try {
-      setProcessingFiles((prev) => new Set(prev).add(index));
-
-      // Pass the original File object
-      const result = await processPdfDocument(file.file);
-
-      if (result.success && result.content) {
-        setSelectedFiles((prevFiles) => {
-          const newFiles = [...prevFiles];
-          newFiles[index] = {
-            ...newFiles[index],
-            processed: true,
-            processedContent: result.content,
-          };
-          return newFiles;
-        });
-
-        notifySuccess("PDF processed successfully");
-      } else {
-        throw new Error(
-          result.error || "No content received from PDF processing"
-        );
-      }
-    } catch (error) {
-      setSelectedFiles((prevFiles) => {
-        const newFiles = [...prevFiles];
-        newFiles[index] = {
-          ...newFiles[index],
-          processed: false,
-        };
-        return newFiles;
-      });
-      console.error("PDF processing error:", error);
-      notifyError(`Failed to process PDF: ${error.message}`);
-    } finally {
-      setProcessingFiles((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(index);
-        return newSet;
-      });
     }
   };
 
@@ -352,13 +313,6 @@ const SettingsPanel = ({
     notifyError,
     setLocalState,
   ]);
-
-  const handleBeforeUnload = (e) => {
-    if (selectedFiles.length > 0) {
-      e.preventDefault();
-      e.returnValue = "";
-    }
-  };
 
   // Handle importing chat from URL
   useEffect(() => {
@@ -624,656 +578,346 @@ const SettingsPanel = ({
     setShowModalSession,
   ]);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "F5" || (e.ctrlKey && e.key === "r")) {
-        if (selectedFiles.length > 0) {
-          e.preventDefault();
-          setFileAlertModal(true);
-        }
-      }
-    };
-
-    const handleBeforeUnload = (e) => {
-      if (selectedFiles.length > 0 && !isIntentionalRefresh.current) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [selectedFiles]);
-
   return (
-    <div className="w-[40%] mobile:w-full p-2 text-tertiary flex flex-col justify-end">
-      <div>
-        {selectedFiles.length > 0 && (
-          <div className="flex flex-col gap-3 select-none">
-            <div className="flex items-center justify-between">
-              <p>
-                <Trans i18nKey="description.file1" />
-              </p>
-              <p
-                className="text-tertiary cursor-pointer"
-                onClick={() => setSelectedFiles([])}
-              >
-                <Trans i18nKey="description.file2" />
-              </p>
-            </div>
-
-            <ul className="flex flex-col gap-4 overflow-auto max-h-[400px] pb-4">
-              {Array.from(selectedFiles).map((file, index) => (
-                <li
-                  key={`${file.name}-${index}`}
-                  className="cursor-pointer flex gap-2 items-center"
-                  onClick={() => setPreviewFile(file)}
-                >
-                  {file.type === "image" ? (
-                    <img
-                      className="h-[30px] w-[30px] rounded-md"
-                      src={file.text}
-                      alt={file.name}
-                    />
-                  ) : file.type === "video" ? (
-                    <img
-                      className="h-[30px] w-[30px]"
-                      src={video_icon}
-                      alt="video"
-                    />
-                  ) : (
-                    <img
-                      className="h-[30px] w-[30px]"
-                      src={uploaded}
-                      alt="uploaded"
-                    />
-                  )}
-                  <div className="flex justify-between items-center w-full">
-                    <div className="flex items-center gap-1 w-full">
-                      <p className="overflow-hidden whitespace-nowrap overflow-ellipsis w-[60%]">
-                        {file.name}
-                      </p>{" "}
-                      {file.fileType === "pdf" && (
-                        <div className="ml-4 flex items-center">
-                          {file.processed ? (
-                            <span className="text-green-500 font-medium">
-                              Processed
-                            </span>
-                          ) : processingFiles.has(index) ? (
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <svg
-                                className="animate-spin h-4 w-4"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                              >
-                                <circle
-                                  className="opacity-25"
-                                  cx="12"
-                                  cy="12"
-                                  r="10"
-                                  stroke="currentColor"
-                                  strokeWidth="4"
-                                />
-                                <path
-                                  className="opacity-75"
-                                  fill="currentColor"
-                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                />
-                              </svg>
-                              <span>Processing...</span>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePdfProcess(file, index);
-                              }}
-                              className="px-3 py-1 bg-tertiary text-white rounded-md hover:bg-blue-500 text-sm transition-colors"
-                            >
-                              Process
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      <p className="mx-2">|</p>
-                      <p>{formatFileSize(file.size)}</p>
-                    </div>
-                    <img
-                      src={cross}
-                      alt="cross"
-                      className="h-[30px] w-[30px]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFile(index);
-                      }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
+    <div
+      className="flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark 
+  rounded-2xl bg-white dark:bg-bg_secondary_dark h-fit w-full overflow-visible max-h-[80vh]"
+      style={{
+        boxShadow:
+          "0px -10px 20px -5px rgba(0, 0, 0, 0.5), 0px 10px 20px -5px rgba(0, 0, 0, 0.5)",
+      }}
+    >
+      <div className="flex flex-col mobile:hidden gap-4">
+        <div className="flex flex-wrap items-center gap-4 select-none">
+          <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
+            <p className="flex-shrink-0 text-[18px] whitespace-nowrap">
+              <Trans i18nKey="description.choose" />
+            </p>
+            <img
+              src={help}
+              alt="help"
+              className="h-[20px] w-[20px] cursor-pointer"
+              onClick={() => setShowHelpModal(true)}
+            />
           </div>
-        )}
-      </div>
 
-      <div className="static flex justify-center mobile:absolute bottom-0 w-[calc(100%-12px)] shadow-lg dark:shadow-dark">
-        {showAdvOpt ? (
           <div
-            className={`transform transition-all duration-300 ${
-              showAdvOpt
-                ? "translate-y-0 opacity-100"
-                : "translate-y-full opacity-0"
-            } flex flex-col gap-4 sm:p-6 py-4 px-3 border dark:border-border_dark 
-      rounded-2xl shadow-lg dark:shadow-dark bg-white 
-      dark:bg-bg_secondary_dark h-fit w-full`}
+            className="relative flex-1 min-w-[200px]"
+            ref={dropdownRef}
+            tabIndex={0}
+            onBlur={() => setIsOpen(false)}
           >
-            <div className="flex flex-col mobile:hidden gap-4">
-              <div className="flex flex-wrap items-center gap-4 select-none">
-                <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
-                  <p className="flex-shrink-0 text-[18px] whitespace-nowrap">
-                    <Trans i18nKey="description.choose" />
-                  </p>
+            <div
+              className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+              onClick={toggleOpen}
+            >
+              <div className="flex items-center gap-2 w-full">
+                <DemandStatusIcon
+                  status={currentModel?.status}
+                  demand={currentModel?.demand}
+                />
+                <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
+                  {modelSettings.model}
+                </div>
+                {isImageSupported && (
                   <img
-                    src={help}
-                    alt="help"
-                    className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowHelpModal(true)}
+                    src={image_supported}
+                    alt="image_supported"
+                    className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                   />
-                </div>
-
-                <div
-                  className="relative flex-1 min-w-[200px]"
-                  ref={dropdownRef}
-                  tabIndex={0}
-                  onBlur={() => setIsOpen(false)}
-                >
-                  <div
-                    className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
-                    onClick={toggleOpen}
-                  >
-                    <div className="flex items-center gap-2 w-full">
-                      <DemandStatusIcon
-                        status={currentModel?.status}
-                        demand={currentModel?.demand}
-                      />
-                      <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
-                        {modelSettings.model}
-                      </div>
-                      {isImageSupported && (
-                        <img
-                          src={image_supported}
-                          alt="image_supported"
-                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
-                        />
-                      )}
-                      {isVideoSupported && (
-                        <img
-                          src={video_icon}
-                          alt="video_icon"
-                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
-                        />
-                      )}
-                      {isThoughtSupported && (
-                        <img
-                          src={thought_supported}
-                          alt="thought_supported"
-                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
-                        />
-                      )}
-                      {isArcanaSupported && (
-                        <img
-                          src={books}
-                          alt="books"
-                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
-                        />
-                      )}
-                      <img
-                        src={dropdown}
-                        alt="drop-down"
-                        className="h-[30px] w-[30px] cursor-pointer flex-shrink-0"
-                      />
-                    </div>
-                  </div>
-
-                  {isOpen && (
-                    <div
-                      className={`absolute w-full ${
-                        direction === "up" ? "bottom-full" : "top-full"
-                      } mt-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto bg-white dark:bg-black`}
-                    >
-                      {modelList.map((option, index) => (
-                        <div
-                          key={index}
-                          className={`flex items-center gap-2 text-tertiary text-xl w-full px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                            index === 0
-                              ? "rounded-t-2xl"
-                              : index === modelList.length - 1
-                              ? "rounded-b-2xl"
-                              : ""
-                          }`}
-                          onClick={() => handleChangeModel(option)}
-                        >
-                          <DemandStatusIcon
-                            status={option?.status}
-                            demand={option?.demand}
-                          />
-                          <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                            {option.name}
-                          </div>
-                          {option.input.includes("image") && (
-                            <img
-                              src={image_supported}
-                              alt="image_supported"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
-                          {option.input.includes("video") && (
-                            <img
-                              src={video_icon}
-                              alt="video_icon"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
-                          {option.output.includes("thought") && (
-                            <img
-                              src={thought_supported}
-                              alt="thought_supported"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
-                          {option.input.includes("arcana") && (
-                            <img
-                              src={books}
-                              alt="books"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {localState.settings.model.toLowerCase().includes("external") && (
-              <div className="text-yellow-600 text-sm mb-3 select-none">
-                <Trans i18nKey="description.warning_settings" />
-              </div>
-            )}
-
-            {isArcanaSupported ? (
-              <div className="flex gap-4 w-full items-center">
-                <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                  <p className="text-[18px]">Arcana</p>
+                )}
+                {isVideoSupported && (
                   <img
-                    src={help}
-                    alt="help"
-                    className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowArcanasHelpModal(true)}
+                    src={video_icon}
+                    alt="video_icon"
+                    className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
                   />
-                </div>
-                <ArcanaContainer
-                  localState={localState}
-                  setLocalState={setLocalState}
+                )}
+                {isThoughtSupported && (
+                  <img
+                    src={thought_supported}
+                    alt="thought_supported"
+                    className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                  />
+                )}
+                {isArcanaSupported && (
+                  <img
+                    src={books}
+                    alt="books"
+                    className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                  />
+                )}
+                <img
+                  src={dropdown}
+                  alt="drop-down"
+                  className="h-[30px] w-[30px] cursor-pointer flex-shrink-0"
                 />
               </div>
-            ) : null}
-
-            <div className="flex flex-col gap-4 items-center">
-              {localState.arcana.id &&
-                localState.arcana.key &&
-                isArcanaSupported && (
-                  <div className="text-yellow-600 text-sm w-full select-none">
-                    <Trans i18nKey="description.warning_arcana" />
-                  </div>
-                )}
-
-              <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-                <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
-                  <p className="text-[18px]">temp</p>
-                  <img
-                    src={help}
-                    alt="help"
-                    className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowCustomHelpModal(true)}
-                  />
-                </div>
-                <div className="w-full">
-                  <div className="relative w-full">
-                    <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
-                      <span>Logical</span>
-                      <span>Creative</span>
-                    </div>
-                    <div className="tick-marks-container cursor-pointer">
-                      {[...Array(21)].map((_, i) => (
-                        <div key={i} className="tick-mark"></div>
-                      ))}
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="2"
-                      step="0.1"
-                      value={localState.settings.temperature}
-                      className="slider-input"
-                      onChange={(event) => handleChangeTemp(event.target.value)}
-                      onMouseEnter={() => setHovering(true)}
-                      onMouseLeave={() => setHovering(false)}
-                    />
-                    {isHovering && (
-                      <output
-                        className="slider-tooltip"
-                        style={{
-                          left: `calc(${
-                            (localState.settings.temperature / 2) * 100
-                          }% - 15px)`,
-                        }}
-                      >
-                        {Number(localState.settings.temperature).toFixed(1)}
-                      </output>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-                <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
-                  <p className="text-[18px]">top_p</p>
-                  <img
-                    src={help}
-                    alt="help"
-                    className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowTopPHelpModal(true)}
-                  />
-                </div>
-                <div className="w-full">
-                  <div className="relative w-full">
-                    <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
-                      <span>Focused</span>
-                      <span>Diverse</span>
-                    </div>
-                    <div className="tick-marks-container cursor-pointer">
-                      {[...Array(20)].map((_, i) => (
-                        <div key={i} className="tick-mark"></div>
-                      ))}
-                    </div>
-                    <input
-                      type="range"
-                      min="0.05"
-                      max="1"
-                      step="0.05"
-                      value={localState.settings.top_p}
-                      className="slider-input"
-                      onChange={(event) => handleChangeTopP(event.target.value)}
-                      onMouseEnter={() => setHoveringTopP(true)}
-                      onMouseLeave={() => setHoveringTopP(false)}
-                    />
-                    {isHoveringTopP && (
-                      <output
-                        className="slider-tooltip"
-                        style={{
-                          left: `calc(${
-                            ((localState.settings.top_p - 0.05) / 0.95) * 100
-                          }% - 15px)`,
-                        }}
-                      >
-                        {Number(localState.settings.top_p).toFixed(2)}
-                      </output>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="w-full flex flex-col gap-4">
-                <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                  <p className="text-[18px]">System prompt</p>
-                  <img
-                    src={help}
-                    alt="help"
-                    className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowSystemHelpModal(true)}
-                  />
-                </div>
-                <div className="w-full relative">
-                  <div className="relative z-10">
-                    <textarea
-                      className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border ${
-                        systemPromptError
-                          ? "border-red-500"
-                          : "dark:border-border_dark"
-                      } outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
-                      type="text"
-                      name="systemPrompt"
-                      placeholder={t("description.custom4")}
-                      value={localState.settings.systemPrompt}
-                      onChange={handleInstructionsChange}
-                      onBlur={() => validateSystemPrompt()}
-                    />
-                  </div>
-                  {systemPromptError && (
-                    <p className="text-red-600 text-12-500">
-                      {systemPromptError}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
-                <div
-                  className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
-                  onClick={toggleAdvOpt}
-                >
-                  <p className="hidden desktop:block text-[18px] h-full text-tertiary cursor-pointer">
-                    <Trans i18nKey="description.text9" />
-                  </p>
-                  <p className="block desktop:hidden text-[18px] h-full text-tertiary cursor-pointer">
-                    <Trans i18nKey="description.text10" />
-                  </p>
-                </div>
-
-                <button
-                  className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
-                  type="reset"
-                  onClick={() => handleShareSettingsModal()}
-                >
-                  <div className="hidden desktop:block">
-                    <Trans i18nKey="description.custom9" />
-                  </div>
-                  <img
-                    src={share_icon}
-                    alt="share_icon"
-                    className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
-                  />
-                  <img
-                    src={share_icon}
-                    alt="share_icon"
-                    className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
-                  />
-                </button>
-
-                <button
-                  className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
-                  type="reset"
-                  onClick={resetDefault}
-                >
-                  <div className="hidden desktop:block">
-                    <Trans i18nKey="description.custom7" />
-                  </div>
-                  <div className="block desktop:hidden">
-                    <Trans i18nKey="description.custom10" />
-                  </div>
-                </button>
-              </div>
             </div>
-          </div>
-        ) : (
-          <div
-            className={`transform transition-all duration-300 motion-safe:duration-300
-              ${
-                showAdvOpt
-                  ? "translate-y-0 opacity-100 scale-100"
-                  : "translate-y-0 opacity-100 scale-100"
-              }
-              mobile:hidden flex flex-col gap-4 sm:px-6 py-4 px-3 border 
-              dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark 
-              bg-white dark:bg-bg_secondary_dark h-fit w-full
-              ease-[cubic-bezier(0.34,1.56,0.64,1)]`}
-          >
-            <div className="sm:flex flex-col hidden gap-4">
-              <div className="flex flex-wrap items-center gap-4 select-none">
-                <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
-                  <p className="flex-shrink-0 text-[18px] whitespace-nowrap">
-                    <Trans i18nKey="description.choose" />
-                  </p>
-                  <img
-                    src={help}
-                    alt="help"
-                    className="h-[20px] w-[20px] cursor-pointer"
-                    onClick={() => setShowHelpModal(true)}
-                  />
-                </div>
 
-                <div
-                  className="relative flex-1 min-w-[200px]"
-                  ref={dropdownRef}
-                  tabIndex={0}
-                  onBlur={() => setIsOpen(false)}
-                >
+            {isOpen && (
+              <div className="absolute w-full bottom-full mb-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[300px] overflow-y-auto bg-white dark:bg-black shadow-lg">
+                {modelList.map((option, index) => (
                   <div
-                    className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
-                    onClick={toggleOpen}
+                    key={index}
+                    className={`flex items-center gap-2 text-tertiary text-xl w-full px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                      index === 0
+                        ? "rounded-t-2xl"
+                        : index === modelList.length - 1
+                        ? "rounded-b-2xl"
+                        : ""
+                    }`}
+                    onClick={() => handleChangeModel(option)}
                   >
                     <DemandStatusIcon
-                      status={currentModel?.status}
-                      demand={currentModel?.demand}
+                      status={option?.status}
+                      demand={option?.demand}
                     />
-                    <div className="mx-2 text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
-                      {modelSettings.model}
+                    <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                      {option.name}
                     </div>
-                    {isImageSupported && (
+                    {option.input.includes("image") && (
                       <img
                         src={image_supported}
                         alt="image_supported"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                       />
                     )}
-                    {isVideoSupported && (
+                    {option.input.includes("video") && (
                       <img
                         src={video_icon}
                         alt="video_icon"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                       />
                     )}
-                    {isThoughtSupported && (
+                    {option.output.includes("thought") && (
                       <img
                         src={thought_supported}
                         alt="thought_supported"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                       />
                     )}
-                    {isArcanaSupported && (
+                    {option.input.includes("arcana") && (
                       <img
                         src={books}
                         alt="books"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                       />
                     )}
-                    <img
-                      src={dropdown}
-                      alt="drop-down"
-                      className="h-[30px] w-[30px] cursor-pointer flex-shrink-0"
-                    />
                   </div>
-
-                  {isOpen && (
-                    <div
-                      className={`absolute w-full ${
-                        direction === "up" ? "bottom-full" : "top-full"
-                      } mt-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto bg-white dark:bg-black`}
-                    >
-                      {modelList.map((option, index) => (
-                        <div
-                          key={index}
-                          className={`flex items-center gap-2 text-tertiary text-xl w-full p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                            index === 0
-                              ? "rounded-t-2xl"
-                              : index === modelList.length - 1
-                              ? "rounded-b-2xl"
-                              : ""
-                          }`}
-                          onClick={() => handleChangeModel(option)}
-                        >
-                          <DemandStatusIcon
-                            status={option?.status}
-                            demand={option?.demand}
-                          />
-                          <div className="flex-1 text-left overflow-hidden text-ellipsis whitespace-nowrap">
-                            {option.name}
-                          </div>
-                          {option.input.includes("image") && (
-                            <img
-                              src={image_supported}
-                              alt="image_supported"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
-                            />
-                          )}
-                          {option.input.includes("video") && (
-                            <img
-                              src={video_icon}
-                              alt="video_icon"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
-                          {option.output.includes("thought") && (
-                            <img
-                              src={thought_supported}
-                              alt="thought_supported"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
-                            />
-                          )}
-                          {option.input.includes("arcana") && (
-                            <img
-                              src={books}
-                              alt="books"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
-            </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-            <div
-              className="cursor-pointer select-none flex gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit w-full"
-              onClick={toggleAdvOpt}
-            >
-              <p className="text-[18px] h-full text-tertiary">
-                <Trans i18nKey="description.text6" />
-              </p>
-            </div>
+      {localState.settings.model.toLowerCase().includes("external") && (
+        <div className="text-yellow-600 text-sm mb-3 select-none">
+          <Trans i18nKey="description.warning_settings" />
+        </div>
+      )}
+
+      {isArcanaSupported ? (
+        <div className="flex gap-4 w-full items-center">
+          <div className="flex-shrink-0 flex items-center gap-2 select-none">
+            <p className="text-[18px]">Arcana</p>
+            <img
+              src={help}
+              alt="help"
+              className="h-[20px] w-[20px] cursor-pointer"
+              onClick={() => setShowArcanasHelpModal(true)}
+            />
+          </div>
+          <ArcanaContainer
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+        </div>
+      ) : null}
+
+      <div className="flex flex-col gap-4 items-center">
+        {localState.arcana.id && localState.arcana.key && isArcanaSupported && (
+          <div className="text-yellow-600 text-sm w-full select-none">
+            <Trans i18nKey="description.warning_arcana" />
           </div>
         )}
+
+        <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
+          <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+            <p className="text-[18px]">temp</p>
+            <img
+              src={help}
+              alt="help"
+              className="h-[20px] w-[20px] cursor-pointer"
+              onClick={() => setShowCustomHelpModal(true)}
+            />
+          </div>
+          <div className="w-full">
+            <div className="relative w-full">
+              <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                <span>Logical</span>
+                <span>Creative</span>
+              </div>
+              <div className="tick-marks-container cursor-pointer">
+                {[...Array(21)].map((_, i) => (
+                  <div key={i} className="tick-mark"></div>
+                ))}
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="2"
+                step="0.1"
+                value={localState.settings.temperature}
+                className="slider-input"
+                onChange={(event) => handleChangeTemp(event.target.value)}
+                onMouseEnter={() => setHovering(true)}
+                onMouseLeave={() => setHovering(false)}
+              />
+              {isHovering && (
+                <output
+                  className="slider-tooltip"
+                  style={{
+                    left: `calc(${
+                      (localState.settings.temperature / 2) * 100
+                    }% - 15px)`,
+                  }}
+                >
+                  {Number(localState.settings.temperature).toFixed(1)}
+                </output>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
+          <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+            <p className="text-[18px]">top_p</p>
+            <img
+              src={help}
+              alt="help"
+              className="h-[20px] w-[20px] cursor-pointer"
+              onClick={() => setShowTopPHelpModal(true)}
+            />
+          </div>
+          <div className="w-full">
+            <div className="relative w-full">
+              <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                <span>Focused</span>
+                <span>Diverse</span>
+              </div>
+              <div className="tick-marks-container cursor-pointer">
+                {[...Array(20)].map((_, i) => (
+                  <div key={i} className="tick-mark"></div>
+                ))}
+              </div>
+              <input
+                type="range"
+                min="0.05"
+                max="1"
+                step="0.05"
+                value={localState.settings.top_p}
+                className="slider-input"
+                onChange={(event) => handleChangeTopP(event.target.value)}
+                onMouseEnter={() => setHoveringTopP(true)}
+                onMouseLeave={() => setHoveringTopP(false)}
+              />
+              {isHoveringTopP && (
+                <output
+                  className="slider-tooltip"
+                  style={{
+                    left: `calc(${
+                      ((localState.settings.top_p - 0.05) / 0.95) * 100
+                    }% - 15px)`,
+                  }}
+                >
+                  {Number(localState.settings.top_p).toFixed(2)}
+                </output>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full flex flex-col gap-4">
+          <div className="flex-shrink-0 flex items-center gap-2 select-none">
+            <p className="text-[18px]">System prompt</p>
+            <img
+              src={help}
+              alt="help"
+              className="h-[20px] w-[20px] cursor-pointer"
+              onClick={() => setShowSystemHelpModal(true)}
+            />
+          </div>
+          <div className="w-full relative">
+            <div className="relative z-10">
+              <textarea
+                className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border ${
+                  systemPromptError
+                    ? "border-red-500"
+                    : "dark:border-border_dark"
+                } outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                type="text"
+                name="systemPrompt"
+                placeholder={t("description.custom4")}
+                value={localState.settings.systemPrompt}
+                onChange={handleInstructionsChange}
+                onBlur={() => validateSystemPrompt()}
+              />
+            </div>
+            {systemPromptError && (
+              <p className="text-red-600 text-12-500">{systemPromptError}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
+          <div
+            className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
+            onClick={toggleAdvOpt}
+          >
+            <p className="hidden desktop:block text-[18px] h-full text-tertiary cursor-pointer">
+              <Trans i18nKey="description.text9" />
+            </p>
+            <p className="block desktop:hidden text-[18px] h-full text-tertiary cursor-pointer">
+              <Trans i18nKey="description.text10" />
+            </p>
+          </div>
+
+          <button
+            className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
+            type="reset"
+            onClick={() => handleShareSettingsModal()}
+          >
+            <div className="hidden desktop:block">
+              <Trans i18nKey="description.custom9" />
+            </div>
+            <img
+              src={share_icon}
+              alt="share_icon"
+              className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
+            />
+            <img
+              src={share_icon}
+              alt="share_icon"
+              className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
+            />
+          </button>
+
+          <button
+            className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
+            type="reset"
+            onClick={resetDefault}
+          >
+            <div className="hidden desktop:block">
+              <Trans i18nKey="description.custom7" />
+            </div>
+            <div className="block desktop:hidden">
+              <Trans i18nKey="description.custom10" />
+            </div>
+          </button>
+        </div>
       </div>
-      {previewFile && (
-        <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
-      )}
-      <>
-        {fileAlertModal ? (
-          <FileAlertModal
-            showModal={setFileAlertModal}
-            intentionalRefresh={isIntentionalRefresh}
-          />
-        ) : null}
-      </>
     </div>
   );
 };

@@ -32,6 +32,7 @@ import {
 } from "../../Redux/reducers/conversationsSlice";
 import { useToast } from "../../hooks/useToast";
 import PdfNotProcessedModal from "../../modals/PdfNotProcessedModal";
+import Files from "./FIles";
 
 function ChatWindow({ modelSettings, modelList, onModelChange }) {
   // Hooks
@@ -711,23 +712,10 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           notifySuccess={notifySuccess}
           notifyError={notifyError}
           setPdfNotProcessedModal={setPdfNotProcessedModal}
-        />
-        <SettingsPanel
-          selectedFiles={selectedFiles}
-          setSelectedFiles={setSelectedFiles}
           modelSettings={modelSettings}
-          modelList={modelList}
           currentModel={currentModel}
-          isImageSupported={isImageSupported}
-          isVideoSupported={isVideoSupported}
-          isThoughtSupported={isThoughtSupported}
-          isArcanaSupported={isArcanaSupported}
           onModelChange={onModelChange}
           showAdvOpt={showAdvOpt}
-          toggleAdvOpt={toggleAdvOpt}
-          localState={localState}
-          setLocalState={setLocalState}
-          updateSettings={updateSettings}
           setShareSettingsModal={setShareSettingsModal}
           handleShareSettings={handleShareSettings}
           setShowHelpModal={setShowHelpModal}
@@ -735,10 +723,15 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           setShowCustomHelpModal={setShowCustomHelpModal}
           setShowTopPHelpModal={setShowTopPHelpModal}
           setShowSystemHelpModal={setShowSystemHelpModal}
-          notifySuccess={notifySuccess}
-          notifyError={notifyError}
-          setShowModalSession={setShowModalSession}
         />
+        {selectedFiles?.length > 0 ? (
+          <Files
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+            notifyError={notifyError}
+            notifySuccess={notifySuccess}
+          />
+        ) : null}
       </div>
 
       <>{showHelpModal ? <HelpModal showModal={setShowHelpModal} /> : null}</>
