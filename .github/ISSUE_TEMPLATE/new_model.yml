@@ -1,5 +1,5 @@
 name: New Model
-description: Submit a support request to integrate a new model from Hugging Face
+description: Submit a support request to integrate a new model
 title: "[New Model] "
 labels: [new model]
 body:
@@ -13,7 +13,7 @@ body:
   - type: textarea
     attributes:
       label: Model to consider
-      description: A Hugging Face model URL to be added, e.g., https://huggingface.co/openai-community/gpt2
+      description: A Hugging Face or any other model URL to be added, e.g., https://huggingface.co/openai-community/gpt2
       placeholder: "https://huggingface.co/..."
     validations:
       required: true
