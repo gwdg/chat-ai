@@ -709,7 +709,7 @@ function Prompt({
 
             <div className="flex gap-4 w-full justify-end items-center">
               <button
-                className="hidden mobile:flex h-[30px] w-[30px] cursor-pointer"
+                className="flex h-[30px] w-[30px] cursor-pointer"
                 onClick={toggleAdvOpt}
               >
                 <img
