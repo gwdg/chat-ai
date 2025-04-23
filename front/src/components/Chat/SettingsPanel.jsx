@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 //Libraries
 import { Trans, useTranslation } from "react-i18next";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect,  useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -27,8 +27,6 @@ import {
 } from "../../Redux/reducers/conversationsSlice";
 import { processPdfDocument } from "../../apis/PdfProcessApi";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
-import PreviewModal from "../../modals/PreviewModal";
-import FileAlertModal from "../../modals/FileAlertModal";
 import { fetchAvailableModels } from "../../apis/ModelListApi";
 
 const SettingsPanel = ({
@@ -57,6 +55,7 @@ const SettingsPanel = ({
   notifySuccess,
   notifyError,
   setShowModalSession,
+  setPreviewFile,
 }) => {
   const conversations = useSelector(selectConversations);
 
@@ -77,8 +76,6 @@ const SettingsPanel = ({
   const [isHoveringTopP, setHoveringTopP] = useState(false);
   const [systemPromptError, setSystemPromptError] = useState("");
   const [processingFiles, setProcessingFiles] = useState(new Set());
-  const [previewFile, setPreviewFile] = useState(null);
-  const [fileAlertModal, setFileAlertModal] = useState(null);
 
   //Refs
   const hasProcessedSettings = useRef(false);
@@ -86,7 +83,6 @@ const SettingsPanel = ({
   const hasProcessedArcana = useRef(false);
   const hasFetchedModels = useRef(false);
   const dropdownRef = useRef(null);
-  const isIntentionalRefresh = useRef(false);
 
   //Functions
   // Remove a file from the selectedFiles array at specified index
@@ -624,532 +620,504 @@ const SettingsPanel = ({
     setShowModalSession,
   ]);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "F5" || (e.ctrlKey && e.key === "r")) {
-        if (selectedFiles.length > 0) {
-          e.preventDefault();
-          setFileAlertModal(true);
-        }
-      }
-    };
-
-    const handleBeforeUnload = (e) => {
-      if (selectedFiles.length > 0 && !isIntentionalRefresh.current) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [selectedFiles]);
-
   return (
     <div
-      className={`relative flex-col items-center ${
-        showAdvOpt ? "w-[40%] mobile:w-full flex p-2" : ""
-      } mobile:p-0 p-2 text-tertiary flex flex-col gap-4 mobile:max-h-[40px]`}
+      className={`relative transition-all duration-300 ease-in-out
+    ${
+      showAdvOpt
+        ? "opacity-100 w-[40%] mobile:w-full flex p-2 transform translate-y-0"
+        : "opacity-0 max-h-0 transform -translate-y-4 overflow-hidden"
+    }`}
     >
-      {/* Settings Panel */}
       <div
-        className={`${
-          showAdvOpt
-            ? "flex static mobile:absolute bottom-0 left-0"
-            : "hidden"
-        } mobile:w-full w-[calc(100%-12px)] border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
+        className={`relative w-full flex-col items-center mobile:p-0 text-tertiary flex gap-4 mobile:max-h-[40px]`}
       >
+        {/* Settings Panel */}
         <div
-          className={`transform transition-all duration-300 ${
+          className={`${
             showAdvOpt
-              ? "translate-y-0 opacity-100"
-              : "translate-y-full opacity-0"
-          } flex flex-col gap-4 p-3 sm:p-4 h-fit w-full`}
+              ? "flex static mobile:absolute bottom-0 left-0"
+              : "hidden"
+          } mobile:w-full w-[calc(100%-12px)] border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
         >
-          <div className="flex flex-col mobile:hidden gap-4">
-            <div className="flex flex-wrap items-center gap-4 select-none">
-              <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
-                <p className="flex-shrink-0 text-[18px] whitespace-nowrap">
-                  <Trans i18nKey="description.choose" />
-                </p>
-                <img
-                  src={help}
-                  alt="help"
-                  className="h-[20px] w-[20px] cursor-pointer"
-                  onClick={() => setShowHelpModal(true)}
-                />
-              </div>
-
-              <div
-                className="relative flex-1 min-w-[200px]"
-                ref={dropdownRef}
-                tabIndex={0}
-                onBlur={() => setIsOpen(false)}
-              >
-                <div
-                  className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
-                  onClick={toggleOpen}
-                >
-                  <div className="flex items-center gap-2 w-full">
-                    <DemandStatusIcon
-                      status={currentModel?.status}
-                      demand={currentModel?.demand}
-                    />
-                    <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
-                      {modelSettings.model}
-                    </div>
-                    {isImageSupported && (
-                      <img
-                        src={image_supported}
-                        alt="image_supported"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
-                      />
-                    )}
-                    {isVideoSupported && (
-                      <img
-                        src={video_icon}
-                        alt="video_icon"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
-                      />
-                    )}
-                    {isThoughtSupported && (
-                      <img
-                        src={thought_supported}
-                        alt="thought_supported"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
-                      />
-                    )}
-                    {isArcanaSupported && (
-                      <img
-                        src={books}
-                        alt="books"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
-                      />
-                    )}
-                    <img
-                      src={dropdown}
-                      alt="drop-down"
-                      className="h-[30px] w-[30px] cursor-pointer flex-shrink-0"
-                    />
-                  </div>
-                </div>
-
-                {isOpen && (
-                  <div
-                    className={`absolute w-full ${
-                      direction === "up" ? "bottom-full" : "top-full"
-                    } mt-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto bg-white dark:bg-black`}
-                  >
-                    {modelList.map((option, index) => (
-                      <div
-                        key={index}
-                        className={`flex items-center gap-2 text-tertiary text-xl w-full px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                          index === 0
-                            ? "rounded-t-2xl"
-                            : index === modelList.length - 1
-                            ? "rounded-b-2xl"
-                            : ""
-                        }`}
-                        onClick={() => handleChangeModel(option)}
-                      >
-                        <DemandStatusIcon
-                          status={option?.status}
-                          demand={option?.demand}
-                        />
-                        <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                          {option.name}
-                        </div>
-                        {option.input.includes("image") && (
-                          <img
-                            src={image_supported}
-                            alt="image_supported"
-                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                          />
-                        )}
-                        {option.input.includes("video") && (
-                          <img
-                            src={video_icon}
-                            alt="video_icon"
-                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                          />
-                        )}
-                        {option.output.includes("thought") && (
-                          <img
-                            src={thought_supported}
-                            alt="thought_supported"
-                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                          />
-                        )}
-                        {option.input.includes("arcana") && (
-                          <img
-                            src={books}
-                            alt="books"
-                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {localState.settings.model.toLowerCase().includes("external") && (
-            <div className="text-yellow-600 text-sm mb-3 select-none">
-              <Trans i18nKey="description.warning_settings" />
-            </div>
-          )}
-
-          {isArcanaSupported ? (
-            <div className="flex gap-4 w-full items-center">
-              <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                <p className="text-[18px]">Arcana</p>
-                <img
-                  src={help}
-                  alt="help"
-                  className="h-[20px] w-[20px] cursor-pointer"
-                  onClick={() => setShowArcanasHelpModal(true)}
-                />
-              </div>
-              <ArcanaContainer
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-4 items-center">
-            {localState.arcana.id &&
-              localState.arcana.key &&
-              isArcanaSupported && (
-                <div className="text-yellow-600 text-sm w-full select-none">
-                  <Trans i18nKey="description.warning_arcana" />
-                </div>
-              )}
-
-            <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-              <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
-                <p className="text-[18px]">temp</p>
-                <img
-                  src={help}
-                  alt="help"
-                  className="h-[20px] w-[20px] cursor-pointer"
-                  onClick={() => setShowCustomHelpModal(true)}
-                />
-              </div>
-              <div className="w-full">
-                <div className="relative w-full">
-                  <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
-                    <span>Logical</span>
-                    <span>Creative</span>
-                  </div>
-                  <div className="tick-marks-container cursor-pointer">
-                    {[...Array(21)].map((_, i) => (
-                      <div key={i} className="tick-mark"></div>
-                    ))}
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    value={localState.settings.temperature}
-                    className="slider-input"
-                    onChange={(event) => handleChangeTemp(event.target.value)}
-                    onMouseEnter={() => setHovering(true)}
-                    onMouseLeave={() => setHovering(false)}
-                  />
-                  {isHovering && (
-                    <output
-                      className="slider-tooltip"
-                      style={{
-                        left: `calc(${
-                          (localState.settings.temperature / 2) * 100
-                        }% - 15px)`,
-                      }}
-                    >
-                      {Number(localState.settings.temperature).toFixed(1)}
-                    </output>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
-              <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
-                <p className="text-[18px]">top_p</p>
-                <img
-                  src={help}
-                  alt="help"
-                  className="h-[20px] w-[20px] cursor-pointer"
-                  onClick={() => setShowTopPHelpModal(true)}
-                />
-              </div>
-              <div className="w-full">
-                <div className="relative w-full">
-                  <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
-                    <span>Focused</span>
-                    <span>Diverse</span>
-                  </div>
-                  <div className="tick-marks-container cursor-pointer">
-                    {[...Array(20)].map((_, i) => (
-                      <div key={i} className="tick-mark"></div>
-                    ))}
-                  </div>
-                  <input
-                    type="range"
-                    min="0.05"
-                    max="1"
-                    step="0.05"
-                    value={localState.settings.top_p}
-                    className="slider-input"
-                    onChange={(event) => handleChangeTopP(event.target.value)}
-                    onMouseEnter={() => setHoveringTopP(true)}
-                    onMouseLeave={() => setHoveringTopP(false)}
-                  />
-                  {isHoveringTopP && (
-                    <output
-                      className="slider-tooltip"
-                      style={{
-                        left: `calc(${
-                          ((localState.settings.top_p - 0.05) / 0.95) * 100
-                        }% - 15px)`,
-                      }}
-                    >
-                      {Number(localState.settings.top_p).toFixed(2)}
-                    </output>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="w-full flex flex-col gap-4">
-              <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                <p className="text-[18px]">System prompt</p>
-                <img
-                  src={help}
-                  alt="help"
-                  className="h-[20px] w-[20px] cursor-pointer"
-                  onClick={() => setShowSystemHelpModal(true)}
-                />
-              </div>
-              <div className="w-full relative">
-                <div className="relative z-10">
-                  <textarea
-                    className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border ${
-                      systemPromptError
-                        ? "border-red-500"
-                        : "dark:border-border_dark"
-                    } outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
-                    type="text"
-                    name="systemPrompt"
-                    placeholder={t("description.custom4")}
-                    value={localState.settings.systemPrompt}
-                    onChange={handleInstructionsChange}
-                    onBlur={() => validateSystemPrompt()}
-                  />
-                </div>
-                {systemPromptError && (
-                  <p className="text-red-600 text-12-500">
-                    {systemPromptError}
+          <div
+            className={`transform transition-all duration-300 ${
+              showAdvOpt
+                ? "translate-y-0 opacity-100"
+                : "translate-y-full opacity-0"
+            } flex flex-col gap-4 p-3 sm:p-4 h-fit w-full`}
+          >
+            <div className="flex flex-col mobile:hidden gap-4">
+              <div className="flex flex-wrap items-center gap-4 select-none">
+                <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
+                  <p className="flex-shrink-0 text-[18px] whitespace-nowrap">
+                    <Trans i18nKey="description.choose" />
                   </p>
-                )}
+                  <img
+                    src={help}
+                    alt="help"
+                    className="h-[20px] w-[20px] cursor-pointer"
+                    onClick={() => setShowHelpModal(true)}
+                  />
+                </div>
+
+                <div
+                  className="relative flex-1 min-w-[200px]"
+                  ref={dropdownRef}
+                  tabIndex={0}
+                  onBlur={() => setIsOpen(false)}
+                >
+                  <div
+                    className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                    onClick={toggleOpen}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      <DemandStatusIcon
+                        status={currentModel?.status}
+                        demand={currentModel?.demand}
+                      />
+                      <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
+                        {modelSettings.model}
+                      </div>
+                      {isImageSupported && (
+                        <img
+                          src={image_supported}
+                          alt="image_supported"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                        />
+                      )}
+                      {isVideoSupported && (
+                        <img
+                          src={video_icon}
+                          alt="video_icon"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                        />
+                      )}
+                      {isThoughtSupported && (
+                        <img
+                          src={thought_supported}
+                          alt="thought_supported"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                        />
+                      )}
+                      {isArcanaSupported && (
+                        <img
+                          src={books}
+                          alt="books"
+                          className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                        />
+                      )}
+                      <img
+                        src={dropdown}
+                        alt="drop-down"
+                        className="h-[30px] w-[30px] cursor-pointer flex-shrink-0"
+                      />
+                    </div>
+                  </div>
+
+                  {isOpen && (
+                    <div
+                      className={`absolute w-full ${
+                        direction === "up" ? "bottom-full" : "top-full"
+                      } mt-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto bg-white dark:bg-black`}
+                    >
+                      {modelList.map((option, index) => (
+                        <div
+                          key={index}
+                          className={`flex items-center gap-2 text-tertiary text-xl w-full px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                            index === 0
+                              ? "rounded-t-2xl"
+                              : index === modelList.length - 1
+                              ? "rounded-b-2xl"
+                              : ""
+                          }`}
+                          onClick={() => handleChangeModel(option)}
+                        >
+                          <DemandStatusIcon
+                            status={option?.status}
+                            demand={option?.demand}
+                          />
+                          <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                            {option.name}
+                          </div>
+                          {option.input.includes("image") && (
+                            <img
+                              src={image_supported}
+                              alt="image_supported"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                            />
+                          )}
+                          {option.input.includes("video") && (
+                            <img
+                              src={video_icon}
+                              alt="video_icon"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                            />
+                          )}
+                          {option.output.includes("thought") && (
+                            <img
+                              src={thought_supported}
+                              alt="thought_supported"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                            />
+                          )}
+                          {option.input.includes("arcana") && (
+                            <img
+                              src={books}
+                              alt="books"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
-              <div
-                className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
-                onClick={toggleAdvOpt}
-              >
-                <p className="hidden desktop:block text-[18px] h-full text-tertiary cursor-pointer">
-                  <Trans i18nKey="description.text9" />
-                </p>
-                <p className="block desktop:hidden text-[18px] h-full text-tertiary cursor-pointer">
-                  <Trans i18nKey="description.text10" />
-                </p>
+            {localState.settings.model.toLowerCase().includes("external") && (
+              <div className="text-yellow-600 text-sm mb-3 select-none">
+                <Trans i18nKey="description.warning_settings" />
+              </div>
+            )}
+
+            {isArcanaSupported ? (
+              <div className="flex gap-4 w-full items-center">
+                <div className="flex-shrink-0 flex items-center gap-2 select-none">
+                  <p className="text-[18px]">Arcana</p>
+                  <img
+                    src={help}
+                    alt="help"
+                    className="h-[20px] w-[20px] cursor-pointer"
+                    onClick={() => setShowArcanasHelpModal(true)}
+                  />
+                </div>
+                <ArcanaContainer
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-4 items-center">
+              {localState.arcana.id &&
+                localState.arcana.key &&
+                isArcanaSupported && (
+                  <div className="text-yellow-600 text-sm w-full select-none">
+                    <Trans i18nKey="description.warning_arcana" />
+                  </div>
+                )}
+
+              <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
+                <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+                  <p className="text-[18px]">temp</p>
+                  <img
+                    src={help}
+                    alt="help"
+                    className="h-[20px] w-[20px] cursor-pointer"
+                    onClick={() => setShowCustomHelpModal(true)}
+                  />
+                </div>
+                <div className="w-full">
+                  <div className="relative w-full">
+                    <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                      <span>Logical</span>
+                      <span>Creative</span>
+                    </div>
+                    <div className="tick-marks-container cursor-pointer">
+                      {[...Array(21)].map((_, i) => (
+                        <div key={i} className="tick-mark"></div>
+                      ))}
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      value={localState.settings.temperature}
+                      className="slider-input"
+                      onChange={(event) => handleChangeTemp(event.target.value)}
+                      onMouseEnter={() => setHovering(true)}
+                      onMouseLeave={() => setHovering(false)}
+                    />
+                    {isHovering && (
+                      <output
+                        className="slider-tooltip"
+                        style={{
+                          left: `calc(${
+                            (localState.settings.temperature / 2) * 100
+                          }% - 15px)`,
+                        }}
+                      >
+                        {Number(localState.settings.temperature).toFixed(1)}
+                      </output>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <button
-                className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
-                type="reset"
-                onClick={() => handleShareSettingsModal()}
-              >
-                <div className="hidden desktop:block">
-                  <Trans i18nKey="description.custom9" />
+              <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
+                <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+                  <p className="text-[18px]">top_p</p>
+                  <img
+                    src={help}
+                    alt="help"
+                    className="h-[20px] w-[20px] cursor-pointer"
+                    onClick={() => setShowTopPHelpModal(true)}
+                  />
                 </div>
-                <img
-                  src={share_icon}
-                  alt="share_icon"
-                  className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
-                />
-                <img
-                  src={share_icon}
-                  alt="share_icon"
-                  className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
-                />
-              </button>
+                <div className="w-full">
+                  <div className="relative w-full">
+                    <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                      <span>Focused</span>
+                      <span>Diverse</span>
+                    </div>
+                    <div className="tick-marks-container cursor-pointer">
+                      {[...Array(20)].map((_, i) => (
+                        <div key={i} className="tick-mark"></div>
+                      ))}
+                    </div>
+                    <input
+                      type="range"
+                      min="0.05"
+                      max="1"
+                      step="0.05"
+                      value={localState.settings.top_p}
+                      className="slider-input"
+                      onChange={(event) => handleChangeTopP(event.target.value)}
+                      onMouseEnter={() => setHoveringTopP(true)}
+                      onMouseLeave={() => setHoveringTopP(false)}
+                    />
+                    {isHoveringTopP && (
+                      <output
+                        className="slider-tooltip"
+                        style={{
+                          left: `calc(${
+                            ((localState.settings.top_p - 0.05) / 0.95) * 100
+                          }% - 15px)`,
+                        }}
+                      >
+                        {Number(localState.settings.top_p).toFixed(2)}
+                      </output>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-              <button
-                className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
-                type="reset"
-                onClick={resetDefault}
-              >
-                <div className="hidden desktop:block">
-                  <Trans i18nKey="description.custom7" />
+              <div className="w-full flex flex-col gap-4">
+                <div className="flex-shrink-0 flex items-center gap-2 select-none">
+                  <p className="text-[18px]">System prompt</p>
+                  <img
+                    src={help}
+                    alt="help"
+                    className="h-[20px] w-[20px] cursor-pointer"
+                    onClick={() => setShowSystemHelpModal(true)}
+                  />
                 </div>
-                <div className="block desktop:hidden">
-                  <Trans i18nKey="description.custom10" />
+                <div className="w-full relative">
+                  <div className="relative z-10">
+                    <textarea
+                      className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border ${
+                        systemPromptError
+                          ? "border-red-500"
+                          : "dark:border-border_dark"
+                      } outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                      type="text"
+                      name="systemPrompt"
+                      placeholder={t("description.custom4")}
+                      value={localState.settings.systemPrompt}
+                      onChange={handleInstructionsChange}
+                      onBlur={() => validateSystemPrompt()}
+                    />
+                  </div>
+                  {systemPromptError && (
+                    <p className="text-red-600 text-12-500">
+                      {systemPromptError}
+                    </p>
+                  )}
                 </div>
-              </button>
+              </div>
+
+              <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
+                <div
+                  className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
+                  onClick={toggleAdvOpt}
+                >
+                  <p className="hidden desktop:block text-[18px] h-full text-tertiary cursor-pointer">
+                    <Trans i18nKey="description.text9" />
+                  </p>
+                  <p className="block desktop:hidden text-[18px] h-full text-tertiary cursor-pointer">
+                    <Trans i18nKey="description.text10" />
+                  </p>
+                </div>
+
+                <button
+                  className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2"
+                  type="reset"
+                  onClick={() => handleShareSettingsModal()}
+                >
+                  <div className="hidden desktop:block">
+                    <Trans i18nKey="description.custom9" />
+                  </div>
+                  <img
+                    src={share_icon}
+                    alt="share_icon"
+                    className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
+                  />
+                  <img
+                    src={share_icon}
+                    alt="share_icon"
+                    className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
+                  />
+                </button>
+
+                <button
+                  className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
+                  type="reset"
+                  onClick={resetDefault}
+                >
+                  <div className="hidden desktop:block">
+                    <Trans i18nKey="description.custom7" />
+                  </div>
+                  <div className="block desktop:hidden">
+                    <Trans i18nKey="description.custom10" />
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      {/* Files mapping */}
-      <div
-        className={`${
-          showAdvOpt ? "flex" : "mobile:flex hidden"
-        } mobile:w-full w-[calc(100%-12px)] mt-[YourFirstChildHeight] border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
-      >
-        <div className="w-full">
-          {selectedFiles.length > 0 && (
-            <div className="flex flex-col gap-4 select-none p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-base sm:text-lg font-medium">
-                  <Trans i18nKey="description.file1" />
-                </p>
-                <p
-                  className="text-red-400 hover:text-red-300 cursor-pointer text-xs sm:text-sm font-medium"
-                  onClick={() => setSelectedFiles([])}
-                >
-                  <Trans i18nKey="description.file2" />
-                </p>
-              </div>
+        {/* Files mapping */}
+        {selectedFiles.length > 0 ? (
+          <div
+            className={`${
+              showAdvOpt ? "flex" : "mobile:flex hidden"
+            } mobile:w-full w-[calc(100%-12px)] mt-[YourFirstChildHeight] border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
+          >
+            <div className="w-full">
+              {selectedFiles.length > 0 && (
+                <div className="flex flex-col gap-4 select-none p-3 sm:p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-base sm:text-lg font-medium">
+                      <Trans i18nKey="description.file1" />
+                    </p>
+                    <p
+                      className="text-red-400 hover:text-red-300 cursor-pointer text-xs sm:text-sm font-medium"
+                      onClick={() => setSelectedFiles([])}
+                    >
+                      <Trans i18nKey="description.file2" />
+                    </p>
+                  </div>
 
-              <ul className="flex flex-col gap-3 sm:gap-4 overflow-auto max-h-[400px] pb-2 sm:pb-4">
-                {Array.from(selectedFiles).map((file, index) => (
-                  <li
-                    key={`${file.name}-${index}`}
-                    className="cursor-pointer flex gap-2 sm:gap-3 items-center bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-850 p-2 sm:p-3 rounded-xl sm:rounded-2xl transition-colors duration-150"
-                    onClick={() => setPreviewFile(file)}
-                  >
-                    {file.type === "image" ? (
-                      <img
-                        className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] rounded-md object-cover flex-shrink-0"
-                        src={file.text}
-                        alt={file.name}
-                      />
-                    ) : file.type === "video" ? (
-                      <img
-                        className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] flex-shrink-0"
-                        src={video_icon}
-                        alt="video"
-                      />
-                    ) : (
-                      <img
-                        className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] flex-shrink-0"
-                        src={uploaded}
-                        alt="uploaded"
-                      />
-                    )}
+                  <ul className="flex flex-col gap-3 sm:gap-4 overflow-auto max-h-[400px] pb-2 sm:pb-4">
+                    {Array.from(selectedFiles).map((file, index) => (
+                      <li
+                        key={`${file.name}-${index}`}
+                        className="cursor-pointer flex gap-2 sm:gap-3 items-center bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-850 p-2 sm:p-3 rounded-xl sm:rounded-2xl transition-colors duration-150"
+                        onClick={() => setPreviewFile(file)}
+                      >
+                        {file.type === "image" ? (
+                          <img
+                            className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] rounded-md object-cover flex-shrink-0"
+                            src={file.text}
+                            alt={file.name}
+                          />
+                        ) : file.type === "video" ? (
+                          <img
+                            className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] flex-shrink-0"
+                            src={video_icon}
+                            alt="video"
+                          />
+                        ) : (
+                          <img
+                            className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] flex-shrink-0"
+                            src={uploaded}
+                            alt="uploaded"
+                          />
+                        )}
 
-                    <div className="flex justify-between items-start sm:items-center w-full min-w-0">
-                      <div className="flex flex-col gap-1 min-w-0 pr-2 w-full">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-0 sm:gap-2">
-                          <p className="overflow-hidden whitespace-nowrap text-ellipsis w-full max-w-[150px] sm:max-w-[200px] font-medium text-sm sm:text-base">
-                            {file.name}
-                          </p>
-                          <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-                            {formatFileSize(file.size)}
-                          </p>
-                        </div>
+                        <div className="flex justify-between items-start sm:items-center w-full min-w-0">
+                          <div className="flex flex-col gap-1 min-w-0 pr-2 w-full">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-0 sm:gap-2">
+                              <p className="overflow-hidden whitespace-nowrap text-ellipsis w-full max-w-[150px] sm:max-w-[200px] font-medium text-sm sm:text-base">
+                                {file.name}
+                              </p>
+                              <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                                {formatFileSize(file.size)}
+                              </p>
+                            </div>
 
-                        {file.fileType === "pdf" && (
-                          <div className="flex items-center mt-1">
-                            {file.processed ? (
-                              <span className="text-green-500 text-xs sm:text-sm font-medium px-2 py-0.5 sm:py-1 bg-green-100 dark:bg-green-900 bg-opacity-30 rounded">
-                                Processed
-                              </span>
-                            ) : processingFiles.has(index) ? (
-                              <div className="flex items-center gap-1 sm:gap-2 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
-                                <svg
-                                  className="animate-spin h-3 w-3 sm:h-4 sm:w-4"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <circle
-                                    className="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeWidth="4"
-                                  />
-                                  <path
-                                    className="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                  />
-                                </svg>
-                                <span>Processing...</span>
+                            {file.fileType === "pdf" && (
+                              <div className="flex items-center mt-1">
+                                {file.processed ? (
+                                  <span className="text-green-500 text-xs sm:text-sm font-medium px-2 py-0.5 sm:py-1 bg-green-100 dark:bg-green-900 bg-opacity-30 rounded-2xl">
+                                    Processed
+                                  </span>
+                                ) : processingFiles.has(index) ? (
+                                  <div className="flex items-center gap-1 sm:gap-2 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                                    <svg
+                                      className="animate-spin h-3 w-3 sm:h-4 sm:w-4"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      />
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      />
+                                    </svg>
+                                    <span>Processing...</span>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePdfProcess(file, index);
+                                    }}
+                                    className="px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-600 text-white rounded-2xl hover:bg-blue-500 text-xs sm:text-sm transition-colors"
+                                  >
+                                    Process
+                                  </button>
+                                )}
                               </div>
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePdfProcess(file, index);
-                                }}
-                                className="px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-600 text-white rounded-2xl hover:bg-blue-500 text-xs sm:text-sm transition-colors"
-                              >
-                                Process
-                              </button>
                             )}
                           </div>
-                        )}
-                      </div>
 
-                      {/* Cross icon with improved tap area for mobile */}
-                      <button
-                        className="p-1.5 sm:p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full flex-shrink-0 focus:outline-none"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeFile(index);
-                        }}
-                        aria-label="Remove file"
-                      >
-                        <img
-                          src={cross}
-                          alt="remove"
-                          className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]"
-                        />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                          {/* Cross icon with improved tap area for mobile */}
+                          <button
+                            className="p-1.5 sm:p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full flex-shrink-0 focus:outline-none"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFile(index);
+                            }}
+                            aria-label="Remove file"
+                          >
+                            <img
+                              src={cross}
+                              alt="remove"
+                              className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]"
+                            />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-      {previewFile && (
-        <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
-      )}
-      <>
-        {fileAlertModal ? (
-          <FileAlertModal
-            showModal={setFileAlertModal}
-            intentionalRefresh={isIntentionalRefresh}
-          />
+          </div>
         ) : null}
-      </>
+      </div>
     </div>
   );
 };
