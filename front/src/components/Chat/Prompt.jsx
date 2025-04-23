@@ -471,7 +471,9 @@ function Prompt({
           file.name.endsWith(".kt") ||
           file.name.endsWith(".ts") ||
           file.name.endsWith(".jsx") ||
-          file.name.endsWith(".tsx")
+          file.name.endsWith(".tsx") ||
+          file.name.endsWith(".html") ||
+          file.name.endsWith(".json")
       );
       // Validate file types
       if (
@@ -723,7 +725,7 @@ function Prompt({
                 type="file"
                 ref={hiddenFileInput}
                 multiple
-                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx"
+                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json"
                 onChange={handleFilesChange}
                 className="hidden"
               />
