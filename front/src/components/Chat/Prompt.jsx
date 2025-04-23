@@ -619,7 +619,7 @@ function Prompt({
 
   useEffect(() => {
     updateLocalState({ prompt: transcript });
-  }, [transcript]);
+  }, [transcript, updateLocalState]);
 
   return (
     <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
