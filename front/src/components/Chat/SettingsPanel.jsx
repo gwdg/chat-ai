@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 //Libraries
 import { Trans, useTranslation } from "react-i18next";
-import { useEffect,  useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -991,9 +991,7 @@ const SettingsPanel = ({
         {/* Files mapping */}
         {selectedFiles.length > 0 ? (
           <div
-            className={`${
-              showAdvOpt ? "flex" : "mobile:flex hidden"
-            } mobile:w-full w-[calc(100%-12px)] mt-[YourFirstChildHeight] border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
+            className={`mobile:w-full mobile:flex hidden mt-[YourFirstChildHeight] border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
           >
             <div className="w-full">
               {selectedFiles.length > 0 && (
