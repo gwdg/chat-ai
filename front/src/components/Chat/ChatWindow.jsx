@@ -745,6 +745,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           notifyError={notifyError}
           setPdfNotProcessedModal={setPdfNotProcessedModal}
           showAdvOpt={showAdvOpt}
+          setPreviewFile={setPreviewFile}
         />
         <SettingsPanel
           selectedFiles={selectedFiles}

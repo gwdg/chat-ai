@@ -7,12 +7,15 @@ import { checkModelAvailability } from "../apis/checkModelAvailabilityApi";
 
 function OfflineModelInfoModal(props) {
   async function getRes() {
+    // Close modal first
+    props?.showModal(false);
+
+    // Then make the request
     try {
       const response = await checkModelAvailability(props?.model);
     } catch (error) {
       console.error("An error occurred", error);
     }
-    props?.showModal(false);
   }
 
   return (
@@ -46,7 +49,6 @@ function OfflineModelInfoModal(props) {
         </div>
       </div>
     </ContainerModal>
-
   );
 }
 

@@ -41,6 +41,7 @@ const Conversation = ({
   notifyError,
   setPdfNotProcessedModal,
   showAdvOpt,
+  setPreviewFile,
 }) => {
   // Hooks
   const dispatch = useDispatch();
@@ -167,6 +168,7 @@ const Conversation = ({
         adjustHeight={adjustHeight}
         setPdfNotProcessedModal={setPdfNotProcessedModal}
         loadingResend={loadingResend}
+        setPreviewFile={setPreviewFile}
       />
     </div>
   );

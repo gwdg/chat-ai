@@ -410,3 +410,11 @@ html {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
 }
+
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
