@@ -721,61 +721,63 @@ function Prompt({
                 {Array.from(selectedFiles).map((file, index) => (
                   <div
                     key={`${file.name}-${index}`}
-                    className="cursor-pointer flex-shrink-0 w-[160px] bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg transition-colors duration-150"
+                    className="cursor-pointer min-w-[220px] bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg transition-colors duration-150 overflow-hidden"
                     onClick={() => setPreviewFile(file)}
                   >
-                    <div className="p-2"> 
-                      <div className="flex items-center justify-between mb-1">
-                        {file.type === "image" ? (
-                          <img
-                            className="h-[28px] w-[28px] rounded-md object-cover flex-shrink-0"
-                            src={file.text}
-                            alt={file.name}
-                          />
-                        ) : file.type === "video" ? (
-                          <img
-                            className="h-[28px] w-[28px] flex-shrink-0"
-                            src={video_icon}
-                            alt="video"
-                          />
-                        ) : (
-                          <img
-                            className="h-[28px] w-[28px] flex-shrink-0"
-                            src={uploaded}
-                            alt="uploaded"
-                          />
-                        )}
+                    <div className="p-2 w-full">
+                      <div className="flex items-center gap-2 w-full">
+                        <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded overflow-hidden bg-gray-200 dark:bg-gray-800">
+                          {file.type === "image" ? (
+                            <img
+                              className="h-full w-full object-cover"
+                              src={file.text}
+                              alt={file.name}
+                            />
+                          ) : file.type === "video" ? (
+                            <img
+                              className="h-5 w-5"
+                              src={video_icon}
+                              alt="video"
+                            />
+                          ) : (
+                            <img
+                              className="h-5 w-5"
+                              src={uploaded}
+                              alt="uploaded"
+                            />
+                          )}
+                        </div>
 
-                        <button
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full flex-shrink-0 focus:outline-none ml-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeFile(index);
-                          }}
-                          aria-label="Remove file"
-                        >
-                          <img
-                            src={cross}
-                            alt="remove"
-                            className="h-[16px] w-[16px]"
-                          />
-                        </button>
-                      </div>
+                        <div className="min-w-0 flex-grow pr-8 relative">
+                          <p
+                            className="overflow-hidden whitespace-nowrap text-ellipsis font-medium text-xs"
+                            title={file.name}
+                          >
+                            {file.name}
+                          </p>
+                          <p className="text-gray-500 dark:text-gray-400 text-xs">
+                            {formatFileSize(file.size)}
+                          </p>
 
-                      <div className="w-full">
-                        <p
-                          className="overflow-hidden whitespace-nowrap text-ellipsis font-medium text-xs"
-                          title={file.name}
-                        >
-                          {file.name}
-                        </p>
-                        <p className="text-gray-500 dark:text-gray-400 text-xs">
-                          {formatFileSize(file.size)}
-                        </p>
+                          <button
+                            className="absolute right-0 top-0 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full flex-shrink-0 focus:outline-none"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFile(index);
+                            }}
+                            aria-label="Remove file"
+                          >
+                            <img
+                              src={cross}
+                              alt="remove"
+                              className="h-[14px] w-[14px]"
+                            />
+                          </button>
+                        </div>
                       </div>
 
                       {file.fileType === "pdf" && (
-                        <div className="flex items-center mt-1 w-full">
+                        <div className="flex items-center mt-2 w-full">
                           {file.processed ? (
                             <span className="text-green-500 text-xs font-medium px-2 py-0.5 bg-green-100 dark:bg-green-900 bg-opacity-30 rounded-full w-full text-center">
                               Processed
