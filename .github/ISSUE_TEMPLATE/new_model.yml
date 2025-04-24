@@ -1,0 +1,49 @@
+name: New Model
+description: Submit a support request to integrate a new model
+title: "[New Model] "
+labels: [new model]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        #### Before submitting this request:
+
+        - Please make sure the issue hasn't already been addressed by searching through [existing and past issues](https://github.com/gwdg/chat-ai/issues).
+
+  - type: textarea
+    attributes:
+      label: Model to consider
+      description: A Hugging Face or any other model URL to be added, e.g., https://huggingface.co/openai-community/gpt2
+      placeholder: "https://huggingface.co/..."
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Closest model already supported
+      description: "Refer to the list of supported models: https://docs.hpc.gwdg.de/services/chat-ai/models/index.html"
+      placeholder: "e.g. OpenAI GPT-4o, OpenAI GPT-4o Mini..."
+      
+  - type: textarea
+    attributes:
+      label: Special features of the proposed model
+      description: Describe why adding this model would be worth it besides the existing models. What advantages does it have over other existing models?
+      placeholder: "Faster inference, etc."
+      
+  - type: textarea
+    attributes:
+      label: Difficulties or blockers
+      description: Describe what makes adding this model hard. Are there new operators, architectural changes, or something else?
+      placeholder: "New architecture, custom tokenizer, etc."
+
+  - type: markdown
+    attributes:
+      value: "Thanks for contributing!"
+
+  - type: checkboxes
+    attributes:
+      label: Before submitting this request
+      description: "Please confirm the following:"
+      options:
+        - label: I have searched existing issues to ensure this model request hasn't already been submitted
+          required: true
