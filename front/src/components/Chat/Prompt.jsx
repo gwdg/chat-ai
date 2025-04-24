@@ -717,11 +717,11 @@ function Prompt({
                 </p>
               </div>
 
-              <div className="flex gap-2 overflow-x-auto w-full">
+              <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 hide-scrollbar">
                 {Array.from(selectedFiles).map((file, index) => (
                   <div
                     key={`${file.name}-${index}`}
-                    className="cursor-pointer min-w-[220px] bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg transition-colors duration-150 overflow-hidden"
+                    className="cursor-pointer flex-shrink-0 w-[220px] bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg transition-colors duration-150 overflow-hidden"
                     onClick={() => setPreviewFile(file)}
                   >
                     <div className="p-2 w-full">
@@ -827,6 +827,7 @@ function Prompt({
           )}
         </div>
       ) : null}
+
       <div className="flex flex-col gap-4 w-full">
         <div
           className={`relative select-none ${
