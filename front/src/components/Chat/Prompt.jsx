@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
@@ -15,9 +15,13 @@ import stop from "../../assets/stop_listening.svg";
 import pause from "../../assets/pause.svg";
 import { cancelRequest, fetchLLMResponse } from "../../apis/LlmRequestApi";
 import Tooltip from "../Others/Tooltip";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
+import video_icon from "../../assets/video_icon.svg";
+import cross from "../../assets/cross.svg";
+import uploaded from "../../assets/file_uploaded.svg";
+import { processPdfDocument } from "../../apis/PdfProcessApi";
 
 //Variable
 const languageMap = {
@@ -48,6 +52,7 @@ function Prompt({
   notifyError,
   adjustHeight,
   setPdfNotProcessedModal,
+  setPreviewFile,
 }) {
   //Hooks
   const { t, i18n } = useTranslation();
@@ -58,6 +63,9 @@ function Prompt({
   const hiddenFileInput = useRef(null);
   const hiddenFileInputImage = useRef(null);
   const textareaRef = useRef(null);
+
+  //Local useStates
+  const [processingFiles, setProcessingFiles] = useState(new Set());
 
   // Converts a file to base64 string format using FileReader
   const readFileAsBase64 = (file) => {
@@ -200,6 +208,74 @@ function Prompt({
       }
     }
   }
+  // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
+  function formatFileSize(bytes) {
+    const units = ["Bytes", "KB", "MB", "GB", "TB"];
+    let size = bytes;
+    let unitIndex = 0;
+
+    // Keep dividing by 1024 until we reach the appropriate unit
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    // Return formatted string with 2 decimal places and unit
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
+  }
+
+  // processing function
+  const handlePdfProcess = async (file, index) => {
+    try {
+      setProcessingFiles((prev) => new Set(prev).add(index));
+
+      // Pass the original File object
+      const result = await processPdfDocument(file.file);
+
+      if (result.success && result.content) {
+        setSelectedFiles((prevFiles) => {
+          const newFiles = [...prevFiles];
+          newFiles[index] = {
+            ...newFiles[index],
+            processed: true,
+            processedContent: result.content,
+          };
+          return newFiles;
+        });
+
+        notifySuccess("PDF processed successfully");
+      } else {
+        throw new Error(
+          result.error || "No content received from PDF processing"
+        );
+      }
+    } catch (error) {
+      setSelectedFiles((prevFiles) => {
+        const newFiles = [...prevFiles];
+        newFiles[index] = {
+          ...newFiles[index],
+          processed: false,
+        };
+        return newFiles;
+      });
+      console.error("PDF processing error:", error);
+      notifyError(`Failed to process PDF: ${error.message}`);
+    } finally {
+      setProcessingFiles((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(index);
+        return newSet;
+      });
+    }
+  };
+
+  // Remove a file from the selectedFiles array at specified index
+  const removeFile = (index) => {
+    // Create deep copy to avoid mutating state directly
+    const newFiles = JSON.parse(JSON.stringify(selectedFiles));
+    newFiles.splice(index, 1);
+    setSelectedFiles(newFiles);
+  };
 
   // Handle file drop events for images and videos
   const handleDrop = async (event) => {
@@ -625,6 +701,132 @@ function Prompt({
 
   return (
     <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto sm:gap-3 rounded-2xl shadow-bottom dark:shadow-darkBottom bg-bg_light dark:bg-bg_dark">
+      {selectedFiles.length > 0 ? (
+        <div
+          className={`flex w-full mt-[YourFirstChildHeight] border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
+        >
+          <div className="w-full">
+            {selectedFiles.length > 0 && (
+              <div className="flex flex-col gap-4 select-none p-3 sm:p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-base sm:text-lg font-medium">
+                    <Trans i18nKey="description.file1" />
+                  </p>
+                  <p
+                    className="text-red-400 hover:text-red-300 cursor-pointer text-xs sm:text-sm font-medium"
+                    onClick={() => setSelectedFiles([])}
+                  >
+                    <Trans i18nKey="description.file2" />
+                  </p>
+                </div>
+
+                <ul className="flex flex-col gap-3 sm:gap-4 overflow-auto max-h-[400px] pb-2 sm:pb-4">
+                  {Array.from(selectedFiles).map((file, index) => (
+                    <li
+                      key={`${file.name}-${index}`}
+                      className="cursor-pointer flex gap-2 sm:gap-3 items-center bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-850 p-2 sm:p-3 rounded-xl sm:rounded-2xl transition-colors duration-150"
+                      onClick={() => setPreviewFile(file)}
+                    >
+                      {file.type === "image" ? (
+                        <img
+                          className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] rounded-md object-cover flex-shrink-0"
+                          src={file.text}
+                          alt={file.name}
+                        />
+                      ) : file.type === "video" ? (
+                        <img
+                          className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] flex-shrink-0"
+                          src={video_icon}
+                          alt="video"
+                        />
+                      ) : (
+                        <img
+                          className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] flex-shrink-0"
+                          src={uploaded}
+                          alt="uploaded"
+                        />
+                      )}
+
+                      <div className="flex justify-between items-start sm:items-center w-full min-w-0">
+                        <div className="flex flex-col gap-1 min-w-0 pr-2 w-full">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-0 sm:gap-2">
+                            <p className="overflow-hidden whitespace-nowrap text-ellipsis w-full max-w-[150px] sm:max-w-[200px] font-medium text-sm sm:text-base">
+                              {file.name}
+                            </p>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                              {formatFileSize(file.size)}
+                            </p>
+                          </div>
+
+                          {file.fileType === "pdf" && (
+                            <div className="flex items-center mt-1">
+                              {file.processed ? (
+                                <span className="text-green-500 text-xs sm:text-sm font-medium px-2 py-0.5 sm:py-1 bg-green-100 dark:bg-green-900 bg-opacity-30 rounded-2xl">
+                                  Processed
+                                </span>
+                              ) : processingFiles.has(index) ? (
+                                <div className="flex items-center gap-1 sm:gap-2 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                                  <svg
+                                    className="animate-spin h-3 w-3 sm:h-4 sm:w-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    />
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    />
+                                  </svg>
+                                  <span>Processing...</span>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePdfProcess(file, index);
+                                  }}
+                                  className="px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-600 text-white rounded-2xl hover:bg-blue-500 text-xs sm:text-sm transition-colors"
+                                >
+                                  Process
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Cross icon with improved tap area for mobile */}
+                        <button
+                          className="p-1.5 sm:p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full flex-shrink-0 focus:outline-none"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(index);
+                          }}
+                          aria-label="Remove file"
+                        >
+                          <img
+                            src={cross}
+                            alt="remove"
+                            className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]"
+                          />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-col gap-4 w-full">
         <div className="relative select-none border dark:border-border_dark rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark">
           {isImageSupported || isVideoSupported ? (
