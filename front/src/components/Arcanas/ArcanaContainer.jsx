@@ -21,13 +21,13 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
         className="dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full max-h-[47px]"
       />
 
-      <input
+      {/* <input
         type="text"
         value={localState.arcana.key}
         onChange={handleArcanaChange("key")}
         placeholder="key"
         className="dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border outline-none rounded-2xl shadow-lg dark:shadow-dark w-full max-h-[47px] dark:border-border_dark"
-      />
+      /> */}
     </div>
   );
 };

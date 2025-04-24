@@ -40,6 +40,8 @@ const Conversation = ({
   notifySuccess,
   notifyError,
   setPdfNotProcessedModal,
+  showAdvOpt,
+  setPreviewFile,
 }) => {
   // Hooks
   const dispatch = useDispatch();
@@ -70,7 +72,11 @@ const Conversation = ({
   };
 
   return (
-    <div className="flex flex-col items-center mobile:w-full w-[60%] h-full gap-3 sm:justify-between relative p-2 bg-bg_light dark:bg-bg_dark">
+    <div
+      className={`flex flex-col items-center mobile:w-full ${
+        !showAdvOpt ? "w-[80%] py-2 mx-auto my-0" : "w-[60%] p-2"
+      } h-full gap-3 sm:justify-between relative bg-bg_light dark:bg-bg_dark`}
+    >
       <div className="desktop:max-h-full flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-12px)] mobile:w-full border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
         {showModal && count < 3 && (
           <div className="w-[calc(100%-16px)] sticky select-none m-2 h-fit bg-white dark:bg-black p-2 rounded-2xl flex justify-between items-center border dark:border-border_dark shadow-lg dark:shadow-dark">
@@ -162,6 +168,7 @@ const Conversation = ({
         adjustHeight={adjustHeight}
         setPdfNotProcessedModal={setPdfNotProcessedModal}
         loadingResend={loadingResend}
+        setPreviewFile={setPreviewFile}
       />
     </div>
   );

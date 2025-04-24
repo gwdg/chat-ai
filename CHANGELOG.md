@@ -1,5 +1,26 @@
 # Changelog 
 
+## Version: v0.7.3 (24.04.2025)
+
+Highlights:
+- Settings panel replaced with hideable sidebar
+- Attachments displayed as boxes with thumbnails in prompt
+- Added attachment support for more file types
+- Version number displayed in footer
+- "key" field removed from arcana settings
+
+## Version: v0.7.2 (15.04.2025)
+
+Highlights:
+- Fixed text attachments display with comprehensive support for all functionalities: resend, edit, and undo.
+- Added support for more file types for attachment
+- Updated references format as per RAG requirements.
+- Fixed issues with LaTeX, code, and markdown renderings.
+- Added a feature to choose the rendering mode of the response.
+- The preview of the responses can be downloaded as a PDF.
+- Fixed UI scrollbar issue when editing text.
+- Resolved multiple tab/window issues.
+
 ## Version: v0.7.1 (26.02.2025)
 
 Highlights:
