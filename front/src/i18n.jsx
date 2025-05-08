@@ -198,6 +198,23 @@ i18n
                 "Don't worry! You can start a new conversation by clicking the button below.",
               buttonText: "Go to chat",
             },
+            
+            landing: {
+              title: "You are not logged in",
+              description:
+                "Please login to use Chat AI.",
+              reasonsTitle: "You can login if you are:",
+              reasons: {
+                deleted: "• member of a German university or research institution",
+                outdatedLink:
+                  "• member of an organization in DFN",
+                incorrectId: "• a registered user in AcademicCloud",
+                historyCleared: "• granted access by the GWDG",
+              },
+              reassurance:
+                "Simply use the button below to log in.",
+              buttonText: "Login with AcademicCloud SSO",
+            },
             delete_title: "Delete Conversation",
             delete_message:
               "Are you sure you want to delete this conversation?",
@@ -412,6 +429,22 @@ i18n
               reassurance:
                 "Keine Sorge! Sie können eine neue Unterhaltung starten, indem Sie auf den Button unten klicken.",
               buttonText: "Zum Chat gehen",
+            },
+            landing: {
+              title: "Sie sind nicht angemeldet",
+              description:
+                "Bitte melden Sie sich an, um Chat AI zu verwenden.",
+              reasonsTitle: "Sie können sich anmelden, wenn Sie:",
+              reasons: {
+                deleted: "• Mitglied einer deutschen Universität oder Forschungseinrichtung sind",
+                outdatedLink:
+                  "• Mitglied einer Organisation im DFN sind",
+                incorrectId: "• ein registrierter Benutzer in AcademicCloud sind",
+                historyCleared: "• von der GWDG Zugriff gewährt wurde",
+              },
+              reassurance:
+                "Verwenden Sie einfach den Button unten, um sich anzumelden.",
+              buttonText: "Anmelden mit AcademicCloud SSO",
             },
             delete_title: "Konversation löschen",
             delete_message:
