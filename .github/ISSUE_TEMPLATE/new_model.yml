@@ -23,7 +23,13 @@ body:
       label: Closest model already supported
       description: "Refer to the list of supported models: https://docs.hpc.gwdg.de/services/chat-ai/models/index.html"
       placeholder: "e.g. OpenAI GPT-4o, OpenAI GPT-4o Mini..."
-
+      
+  - type: textarea
+    attributes:
+      label: Special features of the proposed model
+      description: Describe why adding this model would be worth it besides the existing models. What advantages does it have over other existing models?
+      placeholder: "Faster inference, etc."
+      
   - type: textarea
     attributes:
       label: Difficulties or blockers

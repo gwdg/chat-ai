@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 // Core imports
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams } from "react-router-dom";
 import jsPDF from "jspdf";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,6 +32,8 @@ import {
 } from "../../Redux/reducers/conversationsSlice";
 import { useToast } from "../../hooks/useToast";
 import PdfNotProcessedModal from "../../modals/PdfNotProcessedModal";
+import PreviewModal from "../../modals/PreviewModal";
+import FileAlertModal from "../../modals/FileAlertModal";
 
 function ChatWindow({ modelSettings, modelList, onModelChange }) {
   // Hooks
@@ -93,6 +95,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen)
   );
+  const [previewFile, setPreviewFile] = useState(null);
+  const [fileAlertModal, setFileAlertModal] = useState(null);
+
+  //Refs
+  const isIntentionalRefresh = useRef(false);
 
   // ==== EFFECTS SECTION ====
 
@@ -686,6 +693,32 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     notifySuccess("History cleared");
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "F5" || (e.ctrlKey && e.key === "r")) {
+        if (selectedFiles.length > 0) {
+          e.preventDefault();
+          setFileAlertModal(true);
+        }
+      }
+    };
+
+    const handleBeforeUnload = (e) => {
+      if (selectedFiles.length > 0 && !isIntentionalRefresh.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [selectedFiles]);
+
   return (
     <>
       <div className="flex mobile:flex-col flex-row h-full sm:justify-between relative">
@@ -711,6 +744,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           notifySuccess={notifySuccess}
           notifyError={notifyError}
           setPdfNotProcessedModal={setPdfNotProcessedModal}
+          showAdvOpt={showAdvOpt}
+          setPreviewFile={setPreviewFile}
         />
         <SettingsPanel
           selectedFiles={selectedFiles}
@@ -738,6 +773,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           notifySuccess={notifySuccess}
           notifyError={notifyError}
           setShowModalSession={setShowModalSession}
+          setPreviewFile={setPreviewFile}
         />
       </div>
 
@@ -830,6 +866,17 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       <>
         {pdfNotProcessedModal ? (
           <PdfNotProcessedModal showModal={setPdfNotProcessedModal} />
+        ) : null}
+      </>
+      {previewFile && (
+        <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
+      <>
+        {fileAlertModal ? (
+          <FileAlertModal
+            showModal={setFileAlertModal}
+            intentionalRefresh={isIntentionalRefresh}
+          />
         ) : null}
       </>
     </>

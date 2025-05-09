@@ -8,6 +8,7 @@ import {
 import { useSelector } from "react-redux";
 import Home from "../Pages/Home";
 import NotFoundPage from "../Pages/NotFoundPage";
+import LandingPage from "../Pages/LandingPage";
 import ZoomWrapper from "../components/Layout/ZoomWrapper";
 
 // Separate route components
@@ -86,6 +87,12 @@ const PublicRoute = () => {
             path="/"
             element={
               <RootRoute currentConversationId={currentConversationId} />
+            }
+          />
+          <Route
+            path="/landing"
+            element={
+              <LandingPage />
             }
           />
           <Route
