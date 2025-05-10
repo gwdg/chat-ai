@@ -1,3 +1,5 @@
+import { setIsResponding } from "../Redux/reducers/conversationsSlice";
+
 export function setupTabChangeSync(store) {
   // Track if we're currently syncing
   let isSyncing = false;
@@ -42,7 +44,7 @@ export function setupTabChangeSync(store) {
       }
 
       // Set isResponding to indicate sync in progress
-      store.dispatch({ type: "conversations/setIsResponding", payload: true });
+      store.dispatch(setIsResponding(true)); // Use the action creator
 
       const currentConversationId =
         currentState.conversations.currentConversationId;
@@ -98,7 +100,7 @@ export function setupTabChangeSync(store) {
   // Clean up after sync
   const finishSync = () => {
     setTimeout(() => {
-      store.dispatch({ type: "conversations/setIsResponding", payload: false });
+      store.dispatch(setIsResponding(false)); // Use the action creator
       isSyncing = false;
     }, 300);
   };

@@ -7,6 +7,7 @@ import {
   selectConversations,
   selectCurrentConversationId,
   selectIsResponding,
+  setIsResponding, // Import the action creator properly
 } from "../../Redux/reducers/conversationsSlice";
 import { useCallback } from "react";
 
@@ -32,11 +33,11 @@ function Sidebar({
     if (isResponding) return; // Prevent new chat while responding
 
     // Temporarily disable interaction
-    dispatch({ type: "conversations/setIsResponding", payload: true });
+    dispatch(setIsResponding(true)); // Use the action creator instead of type string
 
     // Add the conversation
     const action = dispatch(addConversation());
-    const newId = action.payload?.id;
+    const newId = action.meta.id; // Fix: Get ID from meta instead of payload.id
 
     if (newId) {
       // Force persistence to localStorage BEFORE navigation
@@ -50,15 +51,15 @@ function Sidebar({
 
           // Re-enable interaction after navigation
           setTimeout(() => {
-            dispatch({ type: "conversations/setIsResponding", payload: false });
+            dispatch(setIsResponding(false)); // Use the action creator
           }, 300);
         }, 100);
       });
     } else {
       // If no ID was created (unlikely), still re-enable interaction
-      dispatch({ type: "conversations/setIsResponding", payload: false });
+      dispatch(setIsResponding(false)); // Use the action creator
     }
-  }, [dispatch, navigate, onClose, isResponding, persistor]);
+  }, [dispatch, navigate, onClose, isResponding]);
 
   const handleSelectConversation = useCallback(
     (id) => {
