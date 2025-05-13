@@ -1,4 +1,3 @@
-// Redux and routing imports
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -8,7 +7,7 @@ import {
   selectCurrentConversationId,
   selectIsResponding,
 } from "../../Redux/reducers/conversationsSlice";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 // Asset imports
 import cross from "../../assets/cross.svg";
@@ -28,6 +27,20 @@ function Sidebar({
   const currentConversationId = useSelector(selectCurrentConversationId);
   const isResponding = useSelector(selectIsResponding);
 
+  // Ensure the current conversation ID is synced with the URL
+  useEffect(() => {
+    const urlPath = window.location.pathname;
+    const pathMatch = urlPath.match(/\/chat\/([^/]+)/);
+
+    if (pathMatch && pathMatch[1] && pathMatch[1] !== currentConversationId) {
+      // If URL contains a conversation ID that doesn't match current selection
+      const urlConversationId = pathMatch[1];
+      if (conversations.some((conv) => conv.id === urlConversationId)) {
+        dispatch(setCurrentConversation(urlConversationId));
+      }
+    }
+  }, [currentConversationId, conversations, dispatch]);
+
   const handleNewChat = useCallback(() => {
     if (isResponding) return; // Prevent new chat while responding
 
@@ -36,39 +49,35 @@ function Sidebar({
 
     // Add the conversation
     const action = dispatch(addConversation());
-    const newId = action.payload?.id;
+    const newId = action.meta?.id;
 
     if (newId) {
       // Force persistence to localStorage BEFORE navigation
-      // This ensures the new conversation is saved before we try to navigate to it
       persistor.flush().then(() => {
-        // Small delay to ensure localStorage is updated
-        setTimeout(() => {
-          // Navigate to the new conversation
-          navigate(`/chat/${newId}`);
-          onClose?.();
+        // Navigate to the new conversation
+        navigate(`/chat/${newId}`);
+        onClose?.();
 
-          // Re-enable interaction after navigation
-          setTimeout(() => {
-            dispatch({ type: "conversations/setIsResponding", payload: false });
-          }, 300);
-        }, 100);
+        // Re-enable interaction after navigation
+        setTimeout(() => {
+          dispatch({ type: "conversations/setIsResponding", payload: false });
+        }, 300);
       });
     } else {
       // If no ID was created (unlikely), still re-enable interaction
       dispatch({ type: "conversations/setIsResponding", payload: false });
     }
-  }, [dispatch, navigate, onClose, isResponding, persistor]);
+  }, [dispatch, navigate, onClose, isResponding]);
 
   const handleSelectConversation = useCallback(
     (id) => {
-      if (isResponding) return; // Prevent switching while responding
+      if (isResponding || id === currentConversationId) return;
 
       dispatch(setCurrentConversation(id));
       navigate(`/chat/${id}`);
       onClose?.();
     },
-    [dispatch, navigate, onClose, isResponding]
+    [dispatch, navigate, onClose, isResponding, currentConversationId]
   );
 
   return (
@@ -92,7 +101,7 @@ function Sidebar({
           onClick={handleNewChat}
           disabled={isResponding}
           className={`w-full bg-bg_light dark:bg-bg_dark hover:bg-light_hover dark:hover:bg-dark_hover active:bg-tertiary_pressed text-black dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
-            isResponding && "cursor-not-allowed opacity-50"
+            isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
         >
           <span>Add New Chat</span>
@@ -107,6 +116,9 @@ function Sidebar({
               const conv = conversations?.find((c) => c.id === id);
               if (!conv) return null;
 
+              // Determine if this is the current conversation
+              const isCurrentConversation = id === currentConversationId;
+
               return (
                 <div
                   key={id}
@@ -114,10 +126,11 @@ function Sidebar({
                   className={`group p-3 rounded-lg transition-all relative ${
                     isResponding ? "cursor-not-allowed" : "cursor-pointer"
                   } ${
-                    id === currentConversationId
+                    isCurrentConversation
                       ? "bg-bg_light/80 dark:bg-bg_dark/80 text-black dark:text-white"
                       : "text-black dark:text-white hover:bg-bg_light/50 dark:hover:bg-white/5"
                   }`}
+                  data-current={isCurrentConversation ? "true" : "false"}
                 >
                   <div className="flex items-center justify-between relative">
                     {/* Title with gradient overflow */}
@@ -133,7 +146,7 @@ function Sidebar({
                           }
                         }}
                         className={`relative whitespace-nowrap ${
-                          id === currentConversationId
+                          isCurrentConversation
                             ? 'truncate group-hover:truncate-none group-hover:[&[data-has-overflow="true"]]:before:absolute group-hover:[&[data-has-overflow="true"]]:before:right-0 group-hover:[&[data-has-overflow="true"]]:before:content-[\'\'] group-hover:[&[data-has-overflow="true"]]:before:w-full group-hover:[&[data-has-overflow="true"]]:before:h-full group-hover:[&[data-has-overflow="true"]]:before:bg-gradient-to-r group-hover:[&[data-has-overflow="true"]]:before:from-transparent group-hover:[&[data-has-overflow="true"]]:before:to-bg_light/90 dark:group-hover:[&[data-has-overflow="true"]]:before:to-bg_dark/90'
                             : "truncate group-hover:truncate-none"
                         } transition-all duration-200`}
@@ -146,10 +159,7 @@ function Sidebar({
                     <div className="flex-shrink-0 flex items-center gap-2 custom:opacity-0 custom:group-hover:opacity-100 opacity-100 transition-all duration-200 w-0 custom:group-hover:w-auto">
                       <button
                         onClick={(e) => {
-                          if (isResponding) {
-                            e.stopPropagation();
-                            return;
-                          }
+                          if (isResponding) return;
                           e.stopPropagation();
                           onRenameConversation(id);
                         }}
@@ -160,10 +170,7 @@ function Sidebar({
                       </button>
                       <button
                         onClick={(e) => {
-                          if (isResponding) {
-                            e.stopPropagation();
-                            return;
-                          }
+                          if (isResponding) return;
                           e.stopPropagation();
                           onDeleteConversation(id);
                         }}

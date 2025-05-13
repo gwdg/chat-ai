@@ -34,6 +34,7 @@ import { useToast } from "../../hooks/useToast";
 import PdfNotProcessedModal from "../../modals/PdfNotProcessedModal";
 import PreviewModal from "../../modals/PreviewModal";
 import FileAlertModal from "../../modals/FileAlertModal";
+import { toggleOption } from "../../Redux/actions/advancedOptionsAction";
 
 function ChatWindow({ modelSettings, modelList, onModelChange }) {
   // Hooks
@@ -212,7 +213,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
   // Toggle advanced options visibility
   const toggleAdvOpt = () => {
     setShowAdvOpt(!showAdvOpt);
-    dispatch({ type: "SET_ADV" });
+    dispatch(toggleOption());
   };
 
   // ==== SHARING FUNCTIONALITY ====
