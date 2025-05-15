@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from "uuid";
 const persistConfig = {
   key: "root",
   storage,
+  whitelist: ["theme", "conversations", "advOptions"],
 };
 
 // Create a custom reducer that handles the RESET_ALL action
@@ -64,7 +65,7 @@ const rootReducerWithReset = (state, action) => {
         isResponding: false,
       },
       // Preserve specified states
-      theme: theme || state.theme,
+      theme: theme || state?.theme || { isDarkMode: false },
       advOption: advOption || state.advOption,
     };
   }
@@ -87,9 +88,9 @@ const stateSyncConfig = {
     "conversations/setCurrentConversation",
     "conversations/resetStore",
     "conversations/setIsResponding",
+    "theme/toggleTheme",
     "theme/setDarkMode",
     "theme/setLightMode",
-    "theme/toggleTheme",
     "SET_ADV",
     "RESET_ALL",
   ],

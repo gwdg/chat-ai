@@ -76,6 +76,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       key: "",
     },
   });
+  const [isActive, setIsActive] = useState(false);
 
   // Modal states
   const [showModalSession, setShowModalSession] = useState(false);
@@ -126,25 +127,42 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
   // Effect 2: Debounced auto-save of conversation changes
   useEffect(() => {
-    // Create a 300ms debounced save timer
+    const handleVisibilityChange = () => {
+      setIsActive(!document.hidden);
+    };
+
+    // Initial state
+    setIsActive(!document.hidden);
+
+    // Listen for visibility changes
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Only dispatch updateConversation if this tab has focus
+  useEffect(() => {
+    // Only update if this tab is active
+    if (!isActive) return;
+
     const timer = setTimeout(() => {
       if (currentConversation) {
-        // Update conversation in store with latest local state
         dispatch(
           updateConversation({
             id: conversationId,
             updates: {
               ...localState,
-              lastModified: new Date().toISOString(), // Add timestamp
+              lastModified: new Date().toISOString(),
             },
           })
         );
       }
     }, 300);
 
-    // Cleanup timer on unmount or when dependencies change
     return () => clearTimeout(timer);
-  }, [localState, currentConversation, conversationId, dispatch]);
+  }, [localState, currentConversation, conversationId, dispatch, isActive]);
 
   // Effect 3: Handle dark mode toggling
   useEffect(() => {
