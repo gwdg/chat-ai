@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+
 import Header from "./Header";
 import Footer from "./Footer";
 import Sidebar from "./Sidebar";
@@ -17,6 +19,7 @@ import {
   selectCurrentConversationId,
   updateConversation,
   selectCurrentConversation,
+  resetStore,
 } from "../../Redux/reducers/conversationsSlice";
 import { fetchAvailableModels } from "../../apis/ModelListApi";
 import OfflineModelInfoModal from "../../modals/OfflineModelInfoModal";
@@ -34,6 +37,11 @@ function Layout() {
   const [showModalOffline, setShowModalOffline] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [showModalSession, setShowModalSession] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renamingConversationId, setRenamingConversationId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingConversationId, setDeletingConversationId] = useState(null);
 
   // Refs and hooks initialization
   const mainDiv = useRef(null);
@@ -42,36 +50,31 @@ function Layout() {
   const { notifySuccess, notifyError } = useToast();
 
   // Conversation state management
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deletingConversationId, setDeletingConversationId] = useState(null);
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
   const currentConversation = useSelector(selectCurrentConversation);
   const [conversationIds, setConversationIds] = useState([]);
-  const [showModalSession, setShowModalSession] = useState(false);
 
   // Model configuration state
   const [modelList, setModelList] = useState([]);
   const [modelSettings, setModelSettings] = useState({
-    model: currentConversation?.settings?.model || "",
-    model_api: currentConversation?.settings?.model_api || "",
+    model: "",
+    model_api: "",
   });
-  const [showRenameModal, setShowRenameModal] = useState(false);
-  const [renamingConversationId, setRenamingConversationId] = useState(null);
 
   // Fetch user profile data on component mount
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       const data = await fetchCurrentUserProfile();
       setUserData(data);
     } catch (error) {
       console.error("Failed to fetch user data:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUserData();
-  }, []);
+  }, [fetchUserData]);
 
   // Keep conversation IDs synchronized with the conversations list
   useEffect(() => {
@@ -85,14 +88,14 @@ function Layout() {
         const data = await fetchAvailableModels(setShowModalSession);
         setModelList(data);
       } catch (error) {
-        notifyError("Error fetching models:", error);
+        notifyError("Error fetching models");
       }
     };
 
     fetchModels();
     const interval = setInterval(fetchModels, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [notifyError]);
 
   // Sync model settings with current conversation
   useEffect(() => {
@@ -117,7 +120,7 @@ function Layout() {
   // Handle model selection changes
   const handleModelChange = useCallback(
     (model, modelApi) => {
-      if (!model || !modelApi) return;
+      if (!model || !modelApi || !currentConversationId) return;
 
       setModelSettings({
         model,
@@ -125,31 +128,29 @@ function Layout() {
       });
 
       // Update conversation settings when model changes
-      if (currentConversationId) {
-        dispatch(
-          updateConversation({
-            id: currentConversationId,
-            updates: {
-              settings: {
-                ...currentConversation.settings,
-                model,
-                model_api: modelApi,
-              },
-              lastModified: new Date().toISOString(),
+      dispatch(
+        updateConversation({
+          id: currentConversationId,
+          updates: {
+            settings: {
+              ...currentConversation.settings,
+              model,
+              model_api: modelApi,
             },
-          })
-        );
-      }
+          },
+        })
+      );
     },
     [dispatch, currentConversationId, currentConversation]
   );
 
   // Conversation deletion handlers
-  const handleDeleteConversation = (id) => {
+  const handleDeleteConversation = useCallback((id) => {
     setDeletingConversationId(id);
     setShowDeleteConfirm(true);
-  };
+  }, []);
 
+  // Updated confirmDelete function
   const confirmDelete = useCallback(() => {
     const id = deletingConversationId;
     const currentIndex = conversations.findIndex((conv) => conv.id === id);
@@ -162,15 +163,22 @@ function Layout() {
           : currentIndex - 1;
 
         if (conversations.length === 1) {
-          // Create new conversation before deleting the last one
-          const newAction = dispatch(addConversation());
-          const newId = newAction.payload?.id;
-          if (newId) {
-            navigate(`/chat/${newId}`);
+          // Create new conversation with a known ID before deleting the last one
+          const newConversationId = uuidv4();
+
+          // First create the new conversation to ensure it exists
+          dispatch(addConversation(newConversationId));
+
+          // Then navigate to it
+          navigate(`/chat/${newConversationId}`);
+
+          // Force persistence to ensure other tabs pick up the change
+          persistor.flush().then(() => {
+            // Then delete the old conversation
             setTimeout(() => {
               dispatch(deleteConversation(id));
-            }, 0);
-          }
+            }, 100);
+          });
         } else {
           // Navigate to adjacent conversation before deleting
           const nextConversationId = conversations[nextConversationIndex].id;
@@ -193,17 +201,17 @@ function Layout() {
   ]);
 
   // Scroll utility functions
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (mainDiv.current) {
       mainDiv.current.scrollTop = mainDiv.current.scrollHeight;
     }
-  };
+  }, []);
 
-  const scrollToTop = () => {
+  const scrollToTop = useCallback(() => {
     if (mainDiv.current) {
       mainDiv.current.scrollTop = 0;
     }
-  };
+  }, []);
 
   // Responsive sidebar handling
   useEffect(() => {
@@ -216,20 +224,41 @@ function Layout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Clear application cache and reset state
-  const clearCache = async () => {
+  // Clear cache and reset the application state
+  const clearCache = useCallback(async () => {
     try {
+      // Generate a new ID that will be used across all tabs
+      const newConversationId = uuidv4();
+
+      // Save the current theme and advanced options state before purging
+      const currentState = store.getState();
+      const currentTheme = currentState.theme;
+      const currentAdvOption = currentState.advOption;
+
       await persistor.purge();
-      dispatch({ type: "RESET_ALL" });
+
+      // Dispatch RESET_ALL with the new conversation ID and preserved states
+      dispatch({
+        type: "RESET_ALL",
+        payload: {
+          newConversationId,
+          theme: currentTheme,
+          advOption: currentAdvOption,
+        },
+        meta: {
+          sync: true, // This tells redux-state-sync to broadcast to other tabs
+        },
+      });
+
+      // Reset the store with the same ID
+      dispatch(resetStore(newConversationId));
+
       notifySuccess("Chats cleared successfully");
 
       // Navigate to new conversation after cache clear
-      const state = store.getState();
-      const newId = state.conversations.currentConversationId;
-
-      if (newId) {
-        window.history.replaceState(null, "", `/chat/${newId}`);
-        navigate(`/chat/${newId}`, { replace: true });
+      if (newConversationId) {
+        window.history.replaceState(null, "", `/chat/${newConversationId}`);
+        navigate(`/chat/${newConversationId}`, { replace: true });
       }
 
       setShowCacheModal(false);
@@ -237,13 +266,22 @@ function Layout() {
     } catch (error) {
       notifyError("Failed to clear chats: " + error.message);
     }
-  };
+  }, [dispatch, navigate, notifySuccess, notifyError]);
 
   // Handle conversation rename
-  const handleRenameConversation = (id) => {
+  const handleRenameConversation = useCallback((id) => {
     setRenamingConversationId(id);
     setShowRenameModal(true);
-  };
+  }, []);
+
+  // Toggle footer and scroll accordingly
+  const toggleFooter = useCallback(() => {
+    setShowFooter((prev) => {
+      const newState = !prev;
+      setTimeout(newState ? scrollToTop : scrollToBottom, 0);
+      return newState;
+    });
+  }, [scrollToTop, scrollToBottom]);
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-white dark:bg-black">
@@ -301,15 +339,10 @@ function Layout() {
         {!showFooter && (
           <div className="flex justify-center items-center h-[22px] py-2">
             <img
-              onClick={() => {
-                setShowFooter(!showFooter);
-                setTimeout(showFooter ? scrollToTop : scrollToBottom, 0);
-              }}
-              className={`cursor-pointer h-[15px] w-[55px] ${
-                !showFooter ? "rotate-180" : ""
-              }`}
+              onClick={toggleFooter}
+              className="cursor-pointer h-[15px] w-[55px] rotate-180"
               src={footer_arrow}
-              alt={showFooter ? "Hide footer" : "Show footer"}
+              alt="Show footer"
             />
           </div>
         )}
@@ -323,34 +356,36 @@ function Layout() {
         )}
       </div>
 
-      {/* Modal components */}
-      <div className="">
-        {showCacheModal ? (
-          <ClearCacheModal
-            showModal={setShowCacheModal}
-            clearCache={clearCache}
-          />
-        ) : null}
-      </div>
+      {/* Modal components - render only when needed */}
+      {showCacheModal && (
+        <ClearCacheModal
+          showModal={setShowCacheModal}
+          clearCache={clearCache}
+        />
+      )}
+
       {showDeleteConfirm && (
         <ConfirmationModal
           onClose={() => setShowDeleteConfirm(false)}
           onConfirm={confirmDelete}
         />
       )}
-      {showModalOffline ? (
+
+      {showModalOffline && (
         <OfflineModelInfoModal
           showModal={setShowModalOffline}
           model={modelSettings.model_api}
         />
-      ) : null}
-      {showSettingsModal ? (
+      )}
+
+      {showSettingsModal && (
         <SettingsModal
           showModal={setShowSettingsModal}
           setShowCacheModal={setShowCacheModal}
           userData={userData}
         />
-      ) : null}
+      )}
+
       {showRenameModal && (
         <RenameConversationModal
           showModal={setShowRenameModal}
@@ -365,9 +400,10 @@ function Layout() {
           }}
         />
       )}
-      {showModalSession ? (
+
+      {showModalSession && (
         <SessionExpiredModal showModal={setShowModalSession} />
-      ) : null}
+      )}
     </div>
   );
 }

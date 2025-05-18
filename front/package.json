@@ -36,6 +36,7 @@
     "react-toastify": "^10.0.6",
     "redux": "^5.0.1",
     "redux-persist": "^6.0.0",
+    "redux-state-sync": "^3.1.4",
     "regenerator-runtime": "^0.14.1",
     "rehype-katex": "^6.0.3",
     "rehype-raw": "^6.1.1",
