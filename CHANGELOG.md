@@ -1,5 +1,10 @@
 # Changelog 
 
+## Version: v0.7.4 (18.05.2025)
+Highlights:
+- Fixed syncing issues when multiple Chat AI tabs are open
+- Updated URL parsing for arcanas
+
 ## Version: v0.7.3 (24.04.2025)
 
 Highlights:
