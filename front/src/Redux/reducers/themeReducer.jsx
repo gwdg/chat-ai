@@ -1,16 +1,21 @@
-// Reducer function for managing the theme state
-const initialTheme = { isDarkMode: false };
+// themeReducer.js
+import { createSlice } from "@reduxjs/toolkit";
 
-function themeReducer(state = initialTheme, action) {
-  switch (action.type) {
-    // Action type for toggling theme
-    case "SET_THEME":
-      // Toggle the isDarkMode value in the state
-      return { ...state, isDarkMode: !state.isDarkMode };
-    default:
-      // Return the current state if action type doesn't match
-      return state;
-  }
-}
+const themeSlice = createSlice({
+  name: "theme",
+  initialState: { isDarkMode: false },
+  reducers: {
+    toggleTheme: (state) => {
+      state.isDarkMode = !state.isDarkMode;
+    },
+    setDarkMode: (state) => {
+      state.isDarkMode = true;
+    },
+    setLightMode: (state) => {
+      state.isDarkMode = false;
+    },
+  },
+});
 
-export default themeReducer;
+export const { toggleTheme, setDarkMode, setLightMode } = themeSlice.actions;
+export default themeSlice.reducer;

@@ -501,9 +501,9 @@ const SettingsPanel = ({
       const arcanaKey = searchParams.get("arcana_key");
       const modelParam = searchParams.get("model");
 
+      // Check if we have an arcana ID and model param (key is now optional)
       if (
         arcanaID &&
-        arcanaKey &&
         modelParam &&
         modelsList?.length > 0 &&
         location.pathname === "/chat" &&
@@ -524,13 +524,18 @@ const SettingsPanel = ({
             throw new Error("Model not found or does not support Arcana.");
           }
 
+          // Create arcana object with optional key
+          const arcanaObject = {
+            id: decodeURIComponent(arcanaID),
+            // Only include key if it exists, otherwise use null or empty string
+            // depending on what your backend expects for missing key
+            key: arcanaKey ? decodeURIComponent(arcanaKey) : null,
+          };
+
           // Update local state
           setLocalState((prev) => ({
             ...prev,
-            arcana: {
-              id: decodeURIComponent(arcanaID),
-              key: decodeURIComponent(arcanaKey),
-            },
+            arcana: arcanaObject,
             settings: {
               ...prev.settings,
               model: matchedModel.name,
@@ -550,10 +555,7 @@ const SettingsPanel = ({
             updateConversation({
               id: currentConversationId,
               updates: {
-                arcana: {
-                  id: decodeURIComponent(arcanaID),
-                  key: decodeURIComponent(arcanaKey),
-                },
+                arcana: arcanaObject,
                 settings: {
                   ...currentConversation?.settings,
                   model: matchedModel.name,
@@ -574,7 +576,7 @@ const SettingsPanel = ({
           // Navigate to conversation
           navigate(`/chat/${currentConversationId}`, { replace: true });
         } catch (error) {
-          hasProcessedArcana.current = false; // ✅ Reset flag if failed
+          hasProcessedArcana.current = false; // Reset flag if failed
           notifyError(
             "Invalid model or arcana parameters. Redirecting to default chat."
           );
@@ -801,13 +803,11 @@ const SettingsPanel = ({
             ) : null}
 
             <div className="flex flex-col gap-4 items-center">
-              {localState.arcana.id &&
-                localState.arcana.key &&
-                isArcanaSupported && (
-                  <div className="text-yellow-600 text-sm w-full select-none">
-                    <Trans i18nKey="description.warning_arcana" />
-                  </div>
-                )}
+              {localState.arcana.id && isArcanaSupported && (
+                <div className="text-yellow-600 text-sm w-full select-none">
+                  <Trans i18nKey="description.warning_arcana" />
+                </div>
+              )}
 
               <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
                 <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">

@@ -21,13 +21,13 @@ const ChatRoute = ({
   hasSettings,
   hasImport,
   hasArcana,
-  hasArcanaKey,
   hasModelArcana,
 }) => {
+  // Modified condition to make arcanaKey optional when arcana and model are present
   if (
     hasSettings ||
     hasImport ||
-    (hasArcana && hasArcanaKey && hasModelArcana)
+    (hasArcana && hasModelArcana) // removed hasArcanaKey requirement
   ) {
     return <Home />;
   }
@@ -89,12 +89,7 @@ const PublicRoute = () => {
               <RootRoute currentConversationId={currentConversationId} />
             }
           />
-          <Route
-            path="/landing"
-            element={
-              <LandingPage />
-            }
-          />
+          <Route path="/landing" element={<LandingPage />} />
           <Route
             path="/chat"
             element={

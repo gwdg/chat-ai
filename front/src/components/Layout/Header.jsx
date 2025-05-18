@@ -16,6 +16,7 @@ import books from "../../assets/books.svg";
 import HelpModal from "../../modals/HelpModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
+import { toggleTheme } from "../../Redux/reducers/themeReducer";
 
 /**
  * Header component that provides navigation, theme switching, and model selection functionality
@@ -40,9 +41,8 @@ function Header({
   // const closeCount = useSelector((state) => state.anncCount);
 
   // UI state management
-  const [isDarkMode, setIsDarkMode] = useState(
-    useSelector((state) => state.theme.isDarkMode)
-  );
+  const isDarkMode = useSelector((state) => state.theme.isDarkMode);
+
   const [isOpen, setIsOpen] = useState(false); // Controls model selection dropdown
   const [isIOSChrome, setIsIOSChrome] = useState(false); // iOS Chrome detection for styling
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -112,8 +112,7 @@ function Header({
 
   // Theme toggle handler
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    dispatch({ type: "SET_THEME" });
+    dispatch(toggleTheme());
   };
 
   // iOS Chrome detection for proper mobile styling
