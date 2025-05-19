@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -7,35 +7,50 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 // Import shared markdown components
 import { rendererComponents } from "./rendererComponents";
 
-// Reference parsing utility
-const parseReferences = (content) => {
-  if (!content) return [];
-  const refRegex = /\[RREF(\d+)\](.*?)(?=\n\[RREF|$)/gs;
-  const matches = [...content.matchAll(refRegex)];
-
-  return matches.map((match) => ({
-    number: parseInt(match[1], 10) - 1,
-    content: match[0].trim(),
-  }));
-};
+// Import utility from separate file
+import { parseReferences } from "./parseReferences";
 
 // ReferenceItem component
 const ReferenceItem = memo(({ reference }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Extract title and content
-  const firstLine = reference.content.split("\n")[0];
-  const contentWithoutTitle = reference.content
-    .split("\n")
-    .slice(1)
-    .join("\n")
-    .trim();
+  // Extract title and content - memoize to avoid recalculation on re-renders
+  const { titleText, contentWithoutTitle } = useMemo(() => {
+    const firstLine = reference.content.split("\n")[0];
+    return {
+      titleText: firstLine.replace(/\[RREF\d+\]\s*/, "").trim(),
+      contentWithoutTitle: reference.content
+        .split("\n")
+        .slice(1)
+        .join("\n")
+        .trim(),
+    };
+  }, [reference.content]);
+
+  // Create custom link renderer to ensure links are clickable
+  const linkRenderer = useMemo(
+    () => ({
+      ...rendererComponents,
+      a: ({ ...props }) => (
+        <a
+          {...props}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+          onClick={(e) => e.stopPropagation()} // Prevent button click when clicking on links
+        >
+          {props.children}
+        </a>
+      ),
+    }),
+    []
+  );
 
   return (
     <div className="border-l-4 border-l-blue-500/50 hover:border-l-blue-500 transition-colors">
-      <button
+      <div
+        className="w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center justify-between group cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center justify-between group"
         aria-expanded={isOpen}
         aria-controls={`reference-${reference.number}`}
       >
@@ -44,13 +59,20 @@ const ReferenceItem = memo(({ reference }) => {
             RREF {reference.number + 1}
           </span>
           <div className="text-sm font-bold truncate text-gray-700 dark:text-gray-300">
-            {firstLine.replace(/\[RREF\d+\]\s*/, "").trim()}
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
+              components={linkRenderer}
+              className="inline"
+            >
+              {titleText}
+            </ReactMarkdown>
           </div>
         </div>
         <div className="shrink-0 ml-2">
           {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </div>
-      </button>
+      </div>
       {isOpen && (
         <div
           id={`reference-${reference.number}`}
@@ -59,7 +81,7 @@ const ReferenceItem = memo(({ reference }) => {
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
-            components={rendererComponents}
+            components={linkRenderer}
           >
             {contentWithoutTitle}
           </ReactMarkdown>
@@ -74,11 +96,18 @@ ReferenceItem.displayName = "ReferenceItem";
 // ReferencesSection component
 const ReferencesSection = memo(({ content }) => {
   const [copySuccess, setCopySuccess] = useState(false);
-  const references = parseReferences(content);
 
+  // Memoize references parsing to avoid recalculation on re-renders
+  const references = useMemo(() => parseReferences(content), [content]);
+
+  // Memoize the concatenated references text
+  const allReferencesText = useMemo(
+    () => references.map((ref) => ref.content).join("\n\n"),
+    [references]
+  );
+
+  // Early return if no references
   if (references.length === 0) return null;
-
-  const allReferencesText = references.map((ref) => ref.content).join("\n\n");
 
   const copyAllReferences = async () => {
     try {
@@ -143,4 +172,3 @@ const ReferencesSection = memo(({ content }) => {
 ReferencesSection.displayName = "ReferencesSection";
 
 export default ReferencesSection;
-export { parseReferences };
