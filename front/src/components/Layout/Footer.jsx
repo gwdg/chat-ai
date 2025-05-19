@@ -127,7 +127,7 @@ function Footer(props) {
                 rel="noopener noreferrer"
                 className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center"
               >
-                Chat AI v0.7.3
+                Chat AI v0.7.4
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
