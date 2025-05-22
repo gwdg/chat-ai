@@ -59,7 +59,7 @@ i18n
               "The system prompt is a special command or instruction given at the beginning of a conversation to set the tone, context, or constraints for our interaction. It's a way to guide the model's behavior and ensure that it responds in a helpful and appropriate manner.",
             custom4: "Enter the system prompt here",
             custom5: "Apply",
-            custom6: "System prompt is required",
+            custom6: "System prompt is empty. Model may not respond.",
             custom7: "Reset default",
             custom8: "Clear",
             custom9: "Share",
@@ -198,21 +198,19 @@ i18n
                 "Don't worry! You can start a new conversation by clicking the button below.",
               buttonText: "Go to chat",
             },
-            
+
             landing: {
               title: "You are not logged in",
-              description:
-                "Please login to use Chat AI.",
+              description: "Please login to use Chat AI.",
               reasonsTitle: "You can login if you are:",
               reasons: {
-                deleted: "• member of a German university or research institution",
-                outdatedLink:
-                  "• member of an organization in DFN",
+                deleted:
+                  "• member of a German university or research institution",
+                outdatedLink: "• member of an organization in DFN",
                 incorrectId: "• a registered user in AcademicCloud",
                 historyCleared: "• granted access by the GWDG",
               },
-              reassurance:
-                "Simply use the button below to log in.",
+              reassurance: "Simply use the button below to log in.",
               buttonText: "Login with AcademicCloud SSO",
             },
             delete_title: "Delete Conversation",
@@ -287,7 +285,8 @@ i18n
               "Der Systemprompt ist ein spezieller Befehl oder eine Anweisung, die zu Beginn eines Gesprächs gegeben wird, um den Ton, den Kontext oder die Einschränkungen für unsere Interaktion festzulegen. Damit wird das Verhalten des Modells gelenkt und sichergestellt, dass es auf hilfreiche und angemessene Weise reagiert.",
             custom4: "Geben Sie hier die Systemaufforderung ein",
             custom5: "Anwenden",
-            custom6: "Anweisungen sind erforderlich",
+            custom6:
+              "System-Eingabeaufforderung ist leer. Das Modell reagiert möglicherweise nicht.",
             custom7: "Standard zurücksetzen",
             custom8: "Löschen",
             custom9: "Teilen",
@@ -432,14 +431,14 @@ i18n
             },
             landing: {
               title: "Sie sind nicht angemeldet",
-              description:
-                "Bitte melden Sie sich an, um Chat AI zu verwenden.",
+              description: "Bitte melden Sie sich an, um Chat AI zu verwenden.",
               reasonsTitle: "Sie können sich anmelden, wenn Sie:",
               reasons: {
-                deleted: "• Mitglied einer deutschen Universität oder Forschungseinrichtung sind",
-                outdatedLink:
-                  "• Mitglied einer Organisation im DFN sind",
-                incorrectId: "• ein registrierter Benutzer in AcademicCloud sind",
+                deleted:
+                  "• Mitglied einer deutschen Universität oder Forschungseinrichtung sind",
+                outdatedLink: "• Mitglied einer Organisation im DFN sind",
+                incorrectId:
+                  "• ein registrierter Benutzer in AcademicCloud sind",
                 historyCleared: "• von der GWDG Zugriff gewährt wurde",
               },
               reassurance:

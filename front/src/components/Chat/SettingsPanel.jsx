@@ -150,6 +150,9 @@ const SettingsPanel = ({
       },
     }));
     updateSettings({ systemPrompt: "You are a helpful assistant" });
+    if (systemPromptError) {
+      setSystemPromptError("");
+    }
   };
 
   // Validate the system prompt is not empty
@@ -918,11 +921,7 @@ const SettingsPanel = ({
                 <div className="w-full relative">
                   <div className="relative z-10">
                     <textarea
-                      className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border ${
-                        systemPromptError
-                          ? "border-red-500"
-                          : "dark:border-border_dark"
-                      } outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                      className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
                       type="text"
                       name="systemPrompt"
                       placeholder={t("description.custom4")}
@@ -931,9 +930,9 @@ const SettingsPanel = ({
                       onBlur={() => validateSystemPrompt()}
                     />
                   </div>
-                  {systemPromptError && (
-                    <p className="text-red-600 text-12-500">
-                      {systemPromptError}
+                  {(systemPromptError || !localState.settings.systemPrompt) && (
+                    <p className="text-yellow-600 text-12-500">
+                      <Trans i18nKey="description.custom6" />
                     </p>
                   )}
                 </div>
