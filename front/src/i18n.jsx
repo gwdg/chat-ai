@@ -137,6 +137,7 @@ i18n
             send: "Send",
             stop: "Stop",
             listen: "Listen",
+            settings_toggle: "Open Settings",
 
             //Bad request
             bad: "Bad request was sent: Please clear conversation, reattempt within the limit, and save your chat history for future reference.",
@@ -378,6 +379,7 @@ i18n
             send: "Senden",
             stop: "Anhalten",
             listen: "Anhören",
+            settings_toggle: "Einstellungen öffnen",
 
             //Bad request
             bad: "Fehlerhafte Anfrage wurde gesendet: Bitte löschen Sie die Konversation, versuchen Sie es innerhalb des Limits erneut, und speichern Sie Ihren Chatverlauf für spätere Zwecke.",

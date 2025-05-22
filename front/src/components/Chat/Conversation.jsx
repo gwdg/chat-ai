@@ -169,6 +169,7 @@ const Conversation = ({
         setPdfNotProcessedModal={setPdfNotProcessedModal}
         loadingResend={loadingResend}
         setPreviewFile={setPreviewFile}
+        showAdvOpt={showAdvOpt}
       />
     </div>
   );

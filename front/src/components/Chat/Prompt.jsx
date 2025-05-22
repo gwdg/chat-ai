@@ -53,6 +53,7 @@ function Prompt({
   adjustHeight,
   setPdfNotProcessedModal,
   setPreviewFile,
+  showAdvOpt,
 }) {
   //Hooks
   const { t, i18n } = useTranslation();
@@ -917,17 +918,20 @@ function Prompt({
             ) : null}
 
             <div className="flex gap-4 w-full justify-end items-center">
-              <button
-                className="flex h-[30px] w-[30px] cursor-pointer"
-                onClick={toggleAdvOpt}
-              >
-                <img
-                  className="cursor-pointer h-[30px] w-[30px]"
-                  src={settings_icon}
-                  alt="settings"
-                />
-              </button>
-
+              {!showAdvOpt ? (
+                <Tooltip text={t("description.settings_toggle")}>
+                  <button
+                    className="flex h-[30px] w-[30px] cursor-pointer"
+                    onClick={toggleAdvOpt}
+                  >
+                    <img
+                      className="cursor-pointer h-[30px] w-[30px]"
+                      src={settings_icon}
+                      alt="settings"
+                    />
+                  </button>
+                </Tooltip>
+              ) : null}
               <input
                 type="file"
                 ref={hiddenFileInput}
@@ -949,7 +953,6 @@ function Prompt({
                   />
                 </button>
               </Tooltip>
-
               {(isImageSupported || isVideoSupported) && (
                 <>
                   <input
@@ -978,7 +981,6 @@ function Prompt({
                   </Tooltip>
                 </>
               )}
-
               {loading || loadingResend ? (
                 <Tooltip text={t("description.pause")}>
                   <button className="h-[30px] w-[30px] cursor-pointer">
