@@ -20,6 +20,19 @@ i18n
       en: {
         translation: {
           description: {
+            settings: {
+              userProfileSettings: "User Profile Settings",
+              logout: "Logout",
+              defaultModel: "Default Model",
+              defaultModelDescription:
+                "Select the default model for new conversations. Current: {{currentModel}}",
+              clearAllChats: "Clear All Chats",
+              clearAllChatsDescription:
+                "This will permanently delete all your chat history and cannot be undone.",
+            },
+            common: {
+              loading: "Loading...",
+            },
             //Announcement bar
             titleAnnouncement:
               "Service Announcement: Changes to Chat AI Model Availability",
@@ -245,6 +258,19 @@ i18n
       de: {
         translation: {
           description: {
+            settings: {
+              userProfileSettings: "Benutzerprofil-Einstellungen",
+              logout: "Abmelden",
+              defaultModel: "Standard-Modell",
+              defaultModelDescription:
+                "Wählen Sie das Standard-Modell für neue Unterhaltungen. Aktuell: {{currentModel}}",
+              clearAllChats: "Alle Chats löschen",
+              clearAllChatsDescription:
+                "Dies wird Ihren gesamten Chat-Verlauf dauerhaft löschen und kann nicht rückgängig gemacht werden.",
+            },
+            common: {
+              loading: "Lädt...",
+            },
             //Announcement bar
             titleAnnouncement:
               "Service-Ankündigung: Änderungen an der Verfügbarkeit von Chat-AI-Modellen",

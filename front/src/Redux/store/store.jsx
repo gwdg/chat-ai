@@ -11,14 +11,22 @@ import { v4 as uuidv4 } from "uuid";
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["theme", "conversations", "advOptions"],
+  whitelist: ["theme", "conversations", "advOptions", "defaultModel"], // Added defaultModel
 };
 
 // Create a custom reducer that handles the RESET_ALL action
 const rootReducerWithReset = (state, action) => {
   if (action.type === "RESET_ALL") {
     // Extract the newConversationId and preserved states
-    const { newConversationId, theme, advOption } = action.payload || {};
+    const { newConversationId, theme, advOption, defaultModel } =
+      action.payload || {};
+
+    // Use the provided default model, or get from current state, or use fallback
+    const currentDefaultModel = defaultModel ||
+      state?.defaultModel || {
+        name: "Meta Llama 3.1 8B Instruct",
+        id: "meta-llama-3.1-8b-instruct",
+      };
 
     // Create a new conversation with the provided ID or generate a new one
     const newConversation = {
@@ -33,8 +41,8 @@ const rootReducerWithReset = (state, action) => {
       responses: [],
       prompt: "",
       settings: {
-        model: "Meta Llama 3.1 8B Instruct",
-        model_api: "meta-llama-3.1-8b-instruct",
+        model: currentDefaultModel.name,
+        model_api: currentDefaultModel.id,
         temperature: 0.5,
         top_p: 0.5,
         systemPrompt: "You are a helpful assistant",
@@ -67,6 +75,7 @@ const rootReducerWithReset = (state, action) => {
       // Preserve specified states
       theme: theme || state?.theme || { isDarkMode: false },
       advOption: advOption || state.advOption,
+      defaultModel: currentDefaultModel, 
     };
   }
 
@@ -88,6 +97,8 @@ const stateSyncConfig = {
     "conversations/setCurrentConversation",
     "conversations/resetStore",
     "conversations/setIsResponding",
+    "defaultModel/setDefaultModel", // Added default model actions
+    "defaultModel/resetDefaultModel",
     "theme/toggleTheme",
     "theme/setDarkMode",
     "theme/setLightMode",
