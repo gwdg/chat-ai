@@ -5,11 +5,35 @@ var fetch = require("node-fetch");
 const app = express();
 const fileUpload = require("express-fileupload");
 const FormData = require('form-data');
+const fs = require('fs');
+const path = require('path');
 
-require("dotenv").config();
+// Path to the external config file
+const configPath = path.resolve('/run/secrets/back');
 
-const port = process.env.PORT || 7230;
-const api_key = process.env.API_KEY;
+// Default port if config file is missing or invalid
+let port = 8081;
+let apiEndpoint = "https://chat-ai.academiccloud.de/v1";
+let apiKey = "";
+let serviceName = "Chat AI"
+
+try {
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  // Extract the port from the config (ensure it's a valid number)
+  if (typeof config.port === 'number' && config.port > 0) {
+    port = config.port;
+    console.log('Port:', port);
+  } else {
+    console.warn('Invalid port in back.json. Falling back to default port 8081.');
+  }
+  apiEndpoint = config.apiEndpoint;
+  apiKey = config.apiKey;
+  serviceName = config.serviceName;
+} catch (error) {
+  console.error('Failed to read back.json. Using default values.', error);
+}
+
+// Request size limitations
 
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
@@ -36,6 +60,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
+// Handle message request
+
 async function getCompletionLLM(
   model,
   messages,
@@ -44,15 +70,21 @@ async function getCompletionLLM(
   inference_id = "no_id",
   arcana = null
 ) {
-  const url = "http://172.17.0.1:8000/inference/v1/chat/completions";
+  const url = apiEndpoint + "/chat/completions";
   const headers = {
     Accept: "application/json",
-    "inference-id": inference_id,
     "inference-service": model,
-    "inference-portal": "Chat AI",
-    Authorization: "Bearer " + api_key,
-    "Content-Type": "application/json",
+    "inference-portal": serviceName,
+    "Content-Type": "application/json"
   };
+
+  // Only add Authorization header if apiKey is present and non-empty
+  if (apiKey) {
+    headers.Authorization = "Bearer " + apiKey;
+  } else {
+    // Only add inference-id header if apiKey is empty or non-existent
+    headers["inference-id"] = inference_id;
+  }
   const body = JSON.stringify({
     model: model,
     messages: messages,
@@ -71,12 +103,13 @@ async function getCompletionLLM(
   });
 
   const response = await fetch(url, { method: "POST", headers, body });
+  console.log(response)
   return response;
 }
 
 
 async function processPdfFile(file, inference_id) {
-  const url = "http://172.17.0.1:8000/inference/v1/documents/convert";
+  const url = apiEndpoint + "/documents/convert";
   const formData = new FormData();
   formData.append("document", file.data, {
     filename: file.name,
@@ -87,8 +120,16 @@ async function processPdfFile(file, inference_id) {
 
 
   const headers = {
-    "inference-id": inference_id
+    "inference-portal": serviceName
   };
+
+  // Only add Authorization header if apiKey is present and non-empty
+  if (apiKey) {
+    headers.Authorization = "Bearer " + apiKey;
+  } else {
+    // Only add inference-id header if apiKey is empty or non-existent
+    headers["inference-id"] = inference_id;
+  }
 
   const response = await fetch(url, {
     method: "POST",
@@ -131,11 +172,17 @@ app.post("/process-pdf", async (req, res) => {
 });
 
 
-app.get("/", async (req, res) => {
-  const inference_id = req.headers["inference-id"];
+app.get("/models", async (req, res) => {
   try {
-    const models = await getModels(inference_id);
-    res.status(200).json({ data: models });
+    const url = apiEndpoint + "/models";
+    const headers = {
+      Accept: "application/json",
+      Authorization: "Bearer " + apiKey,
+      "inference-portal": "Chat AI",
+    };
+    const response = await fetch(url, { method: "GET", headers });
+    //console.log(await response.json())
+    res.status(200).json(await response.json());
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch models." });
@@ -252,5 +299,5 @@ app.post("/", async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`LLM service app listening on port ${port}`);
+  console.log(`Chat AI backend listening on port ${port}`);
 });
