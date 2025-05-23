@@ -11,15 +11,15 @@ const path = require('path');
 // Path to the external config file
 const configPath = path.resolve('/run/secrets/back');
 
-// Default port if config file is missing or invalid
+// Default configuration if config file is missing or invalid
 let port = 8081;
 let apiEndpoint = "https://chat-ai.academiccloud.de/v1";
 let apiKey = "";
-let serviceName = "Chat AI"
+let serviceName = "Custom Chat AI"
 
+// Load configuration
 try {
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  // Extract the port from the config (ensure it's a valid number)
   if (typeof config.port === 'number' && config.port > 0) {
     port = config.port;
     console.log('Port:', port);
@@ -33,8 +33,7 @@ try {
   console.error('Failed to read back.json. Using default values.', error);
 }
 
-// Request size limitations
-
+// Global request limitations
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 app.use(
@@ -60,8 +59,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
-// Handle message request
-
+// Function to handle message request
 async function getCompletionLLM(
   model,
   messages,
@@ -106,7 +104,7 @@ async function getCompletionLLM(
   return response;
 }
 
-
+// Function to process PDF file
 async function processPdfFile(file, inference_id) {
   const url = apiEndpoint + "/documents/convert";
   const formData = new FormData();
@@ -138,28 +136,21 @@ async function processPdfFile(file, inference_id) {
   return response;
 }
 
-
-
+// Process PDF file
 app.post("/process-pdf", async (req, res) => {
   // Check for the presence of `document` file key
-
-  
   if (!req.files || !req.files.document) {
     return res.status(422).json({ error: "No PDF file provided" });
   }
 
   const inference_id = req.headers["inference-id"];
-  
   try {
     // Access the file using the correct key name
     const pdfFile = req.files.document;
-
     const response = await processPdfFile(pdfFile, inference_id);
-
     if (!response.ok) {
       return res.status(response.status).send(response.statusText);
     }
-
     const result = await response.json();
     return res.status(200).json(result);
   } catch (err) {
@@ -170,7 +161,7 @@ app.post("/process-pdf", async (req, res) => {
   }
 });
 
-
+// Get list of models
 app.get("/models", async (req, res) => {
   try {
     const url = apiEndpoint + "/models";
@@ -188,6 +179,17 @@ app.get("/models", async (req, res) => {
   }
 });
 
+// Get placeholder user data
+app.get("/user", async (req, res) => {
+  try {
+    res.status(200).json({"email": "user@example.com", "firstname": "Sample", "lastname": "User", "organization": "GWDG", "username": "sample-user"});
+  } catch (error) {
+    console.error(`Error: ${error}`);
+    res.status(500).json({ error: "Failed to fetch models." });
+  }
+});
+
+// Get response from LLM
 app.post("/", async (req, res) => {
   const {
     messages,
@@ -297,6 +299,7 @@ app.post("/", async (req, res) => {
   }
 });
 
+// Start Chat AI Backend App
 app.listen(port, () => {
   console.log(`Chat AI backend listening on port ${port}`);
 });

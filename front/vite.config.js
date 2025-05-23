@@ -30,6 +30,10 @@ try {
       process.env["VITE_BACKEND_ENDPOINT"] = value;
       console.log('Backend path:', value);
     }
+    else if (key == 'userDataPath') {
+      process.env["VITE_USERDATA_ENDPOINT"] = value;
+      console.log('User data path:', value);
+    }
   }
 }
  catch (error) {
