@@ -103,7 +103,6 @@ async function getCompletionLLM(
   });
 
   const response = await fetch(url, { method: "POST", headers, body });
-  console.log(response)
   return response;
 }
 
