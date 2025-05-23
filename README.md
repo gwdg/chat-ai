@@ -30,7 +30,7 @@ Together these repos provide the entire underyling mechanism for Chat AI, which 
 
 Note that Chat AI's web interface provided in this repository can be set up on any device independently from the rest of the architecture, to act solely as a wrapper for an OpenAI-compatible API endpoint.
 
-1. Ensure that Docker is installed. Follow the [guides](https://docs.docker.com/engine/install/) to install Docker on your specific operating system. 
+1. Ensure that Docker is installed. Follow the [guides](https://docs.docker.com/engine/install/) to install Docker on your operating system. 
     ```bash
     docker --version
     ```
@@ -41,7 +41,7 @@ Note that Chat AI's web interface provided in this repository can be set up on a
     cd chat-ai
     ```
 
-3. In the `secrets` directory, rename `front.json.sample` to `front.json` and `back.json.sample` to `back.json`, and configure them accordingly. For a local installation with a valid Chat AI API key, you only need to set the value of `apiKey` in `back.json`:
+3. In the `secrets` directory, rename `front.json.sample` to `front.json` and `back.json.sample` to `back.json`, and configure them accordingly. For a local installation with a valid Chat AI API key, you only need to replace the value of `apiKey` in `back.json`:
     ```bash
     {
       "port": 8081,
@@ -56,11 +56,11 @@ Note that Chat AI's web interface provided in this repository can be set up on a
     docker compose up
     ```
 
-5. Open your browser and navigate to `http://localhost:8080/` or the path you set in the configuration file.
+5. Open your browser and navigate to `http://localhost:8080/`, or whichever path and port number you have configured.
 
 ## Getting Started
 
-The web interface consists of two docker containers, `front` and `back`. The `front` service is a ReactJS app which is served by ViteJS and runs entirely on the user browser. `back` is simply a wrapper for message requests which gives the developer more control over the requests and prevents CORS errors on the user browser.  
+The web interface consists of two Docker containers, `front` and `back`. The `front` service is a ReactJS app served by ViteJS and runs entirely on the client's browser. The `back` service is simply a wrapper for message requests which gives the developer more control over the requests and prevents CORS errors on the user's browser.  
 
 To build the images, run:
 
@@ -75,7 +75,7 @@ docker compose up front -d
 docker compose up back -d
 ```
 
-You should then be able to access the web interface via the port number specified in the config file.
+You should then be able to access the web interface via the path and port number specified in the config file.
 
 -----
 To apply any changes in the configuration and/or source code, run:
@@ -90,21 +90,21 @@ Note that in some cases rebuilding the docker image might be necessary.
 
 You can set the port numbers for both the `front` and `back` services in the `front.json` and `back.json` files.
 
-The `front` service requires the following configuration in `front.json` for their respective purposes:
+The `front` service uses the following configurable attributes in `front.json`:
 - `port`: Port number to listen on. Default: 8080
 - `backendPath`: Path to `back` service, used for sending messages and processing PDF files, e.g. `http://localhost:8081/` or `/backend`
 - `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure
 - `userDataPath`: (Optional) Path to get user data. Simply set to `<backendPath>/user` if unsure
 
-The `back` service listens to requests from `front` and interacts with an OpenAI-compatible API endpoint to produce responses. It uses the following configuration defined in `back.json`:
+The `back` service listens to requests from `front` and interacts with an OpenAI-compatible API endpoint to produce responses. It uses the following configurable attributes in `back.json`:
 - `port`: Port number to listen on. Default: 8081
 - "apiEndpoint": Endpoint of your API provider. If you have a Chat AI API key, set this to `https://chat-ai.academiccloud.de/v1`
 - "apiKey": Your valid API key
 - "serviceName": (Optional) A custom service name to be sent as a header in API requests to your provider. Will not be visible in the interface
 
-Note that if you wish to avoid using a different port (e.g. 8081) for the backend service, you must set up a reverse proxy or virtual host to route paths such as `/models` and `/backend` to the backend service listening on its own port. This can be done with common software such as Apache or Nginx.
+If you wish to avoid using different ports for the `front` and `back` services, you must set up a reverse proxy or virtual host to route paths such as `/models` and `/backend` to the backend service listening on its own distinguished port. This can be done with popular server software such as Apache or Nginx.
 
-Also, if you wish to customize the list of available models, you must create a path that returns an OpenAI-style JSON response containing the model ids and names, and set the `modelsPath` in `front.json` accordingly. If configured correctly, your custom list will be displayed in the dropdown menu in the interface. 
+Also, if you wish to customize the list of available models, you must create a path that returns an OpenAI-style JSON response containing the model ids and names, and set the `modelsPath` in `front.json` accordingly. If configured correctly, your custom list will be displayed in the dropdown menu in the interface instead of what you get from your API provider.
 
 ## Acknowledgements
 We thank Priyeshkumar Chikhaliya <p.chikhaliya@stud.uni-goettingen.de> for the design and implementation of the web interface.
