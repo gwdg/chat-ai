@@ -13,9 +13,6 @@ RUN npm install
 # Copy the rest of the application to the app directory
 COPY . .
 
-# Expose the port app runs on
-EXPOSE 7220
-
 # Set the VITE_ROOT environment variable to point to the dist directory
 ENV VITE_ROOT=/usr/src/app/dist
 

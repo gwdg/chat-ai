@@ -4,7 +4,7 @@ export const processPdfDocument = async (pdfFile) => {
     const formData = new FormData();
     formData.append("document", pdfFile);
 
-    const response = await fetch("/chat-ai-backend/process-pdf", {
+    const response = await fetch(import.meta.env.VITE_BACKEND_ENDPOINT + '/process-pdf', {
       method: "POST",
       body: formData,
     });

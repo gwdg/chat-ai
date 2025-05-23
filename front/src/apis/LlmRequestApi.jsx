@@ -36,7 +36,7 @@ async function generateConversationTitle(conversation, settings) {
   const titlePrompt =
     "Create a very short title (maximum 4 words) for this conversation that captures its main topic. Respond only with the title - no quotes, punctuation, or additional text.";
   try {
-    const response = await fetch("/chat-ai-backend", {
+    const response = await fetch(import.meta.env.VITE_BACKEND_ENDPOINT, {
       method: "post",
       headers: { "Content-type": "application/json" },
       body: JSON.stringify({
@@ -92,7 +92,7 @@ async function fetchLLMResponse(
     const instructModels = ["mixtral-8x7b-instruct"];
     const isInstruct = instructModels.includes(modelName);
 
-    const response = await fetch("/chat-ai-backend", {
+    const response = await fetch(import.meta.env.VITE_BACKEND_ENDPOINT, {
       method: "post",
       headers: { "Content-type": "application/json" },
       body: JSON.stringify({
