@@ -21,9 +21,11 @@ function Sidebar({
   onDeleteConversation,
   onRenameConversation,
   conversationIds,
+  setShowRepoModal,
 }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
   const isResponding = useSelector(selectIsResponding);
@@ -205,6 +207,20 @@ function Sidebar({
             })}
           </div>
         </div>
+      </div>
+      {/* Persona button */}
+      <div className="flex-shrink-0 p-2 border-b dark:border-border_dark">
+        <button
+          onClick={() => {
+            setShowRepoModal(true);
+          }}
+          disabled={isResponding}
+          className={`w-full bg-bg_light dark:bg-bg_dark hover:bg-light_hover dark:hover:bg-dark_hover active:bg-tertiary_pressed text-black dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
+            isResponding ? "cursor-not-allowed opacity-50" : ""
+          }`}
+        >
+          <span>Import Persona</span>
+        </button>
       </div>
     </div>
   );

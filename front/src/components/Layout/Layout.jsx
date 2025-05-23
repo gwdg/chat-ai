@@ -26,6 +26,8 @@ import SettingsModal from "../../modals/SettingsModal";
 import { fetchCurrentUserProfile } from "../../apis/GetUserDataApi";
 import RenameConversationModal from "../../modals/RenameConversationModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
+import GitHubRepoModal from "../../modals/GitHubRepoModal";
+import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Main layout component that manages the overall structure and state of the chat application
 function Layout() {
@@ -41,6 +43,7 @@ function Layout() {
   const [renamingConversationId, setRenamingConversationId] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingConversationId, setDeletingConversationId] = useState(null);
+  const [showRepoModal, setShowRepoModal] = useState(false);
 
   // Refs and hooks initialization
   const mainDiv = useRef(null);
@@ -53,6 +56,7 @@ function Layout() {
   const currentConversationId = useSelector(selectCurrentConversationId);
   const currentConversation = useSelector(selectCurrentConversation);
   const [conversationIds, setConversationIds] = useState([]);
+  const defaultModel = useSelector(selectDefaultModel);
 
   // Model configuration state
   const [modelList, setModelList] = useState([]);
@@ -60,6 +64,110 @@ function Layout() {
     model: "",
     model_api: "",
   });
+
+  const handlePersonaImport = async (parsedData, personaName) => {
+    try {
+      // Create new conversation (same as your import logic)
+      const action = dispatch(addConversation());
+      const newId = action.payload?.id;
+
+      if (!newId) {
+        throw new Error("Failed to create new conversation");
+      }
+
+      // Handle both formats: array and object with messages
+      const messages = Array.isArray(parsedData)
+        ? parsedData
+        : parsedData.messages;
+
+      if (!Array.isArray(messages)) {
+        throw new Error("Invalid format: messages must be an array");
+      }
+
+      // Process messages into conversation format
+      const newArray = [];
+      for (let i = 0; i < messages.length - 1; i++) {
+        if (
+          messages[i].role === "user" &&
+          messages[i + 1]?.role === "assistant"
+        ) {
+          newArray.push({
+            prompt: messages[i].content,
+            response: messages[i + 1].content,
+          });
+        }
+      }
+
+      // Find system message
+      const systemMessage = messages.find((msg) => msg.role === "system");
+
+      // Get title from persona name or first non-system message
+      const firstNonSystemMessage = messages.find(
+        (msg) => msg.role !== "system"
+      );
+      const title =
+        personaName || firstNonSystemMessage?.content || "Imported Persona";
+
+      // Prepare settings with optional fields
+      const settings = {
+        systemPrompt: systemMessage?.content || "You are a helpful assistant",
+        model: defaultModel.name,
+        model_api: defaultModel.id,
+        temperature: 0.5, // default value
+        top_p: 0.5, // default value
+      };
+
+      // If it's object format, apply any provided settings
+      if (!Array.isArray(parsedData)) {
+        if (parsedData["model-name"]) settings.model = parsedData["model-name"];
+        if (parsedData.model) settings.model_api = parsedData.model;
+        if (parsedData.temperature !== undefined)
+          settings.temperature = Number(parsedData.temperature);
+        if (parsedData.top_p !== undefined)
+          settings.top_p = Number(parsedData.top_p);
+      }
+
+      // Prepare conversation update
+      const updates = {
+        conversation: messages,
+        responses: newArray,
+        title,
+        settings,
+      };
+
+      // Only add arcana if both id and key are present
+      if (
+        !Array.isArray(parsedData) &&
+        parsedData.arcana?.id &&
+        parsedData.arcana?.key
+      ) {
+        updates.arcana = {
+          id: parsedData.arcana.id,
+          key: parsedData.arcana.key,
+        };
+      }
+
+      // Update conversation
+      dispatch(
+        updateConversation({
+          id: newId,
+          updates,
+        })
+      );
+
+      // Navigate and notify
+      navigate(`/chat/${newId}`, { replace: true });
+      notifySuccess(`Persona "${personaName}" imported successfully`);
+    } catch (error) {
+      console.error("Persona import error:", error);
+      notifyError(error.message || "Failed to import persona");
+      throw error; // Re-throw so modal can handle loading state
+    }
+  };
+
+  const handleImportError = (error) => {
+    notifyError(error);
+  };
 
   // Fetch user profile data on component mount
   const fetchUserData = useCallback(async () => {
@@ -352,6 +460,7 @@ function Layout() {
             onDeleteConversation={handleDeleteConversation}
             onRenameConversation={handleRenameConversation}
             conversationIds={conversationIds}
+            setShowRepoModal={setShowRepoModal}
           />
         </div>
 
@@ -442,6 +551,17 @@ function Layout() {
 
       {showModalSession && (
         <SessionExpiredModal showModal={setShowModalSession} />
+      )}
+
+      {showRepoModal && (
+        <GitHubRepoModal
+          showModal={setShowRepoModal}
+          repoOwner="gwdg"
+          repoName="chat-ai-personas"
+          branch="main"
+          onPersonaImport={handlePersonaImport} // New prop for handling persona import
+          onError={handleImportError} // New prop for handling errors
+        />
       )}
     </div>
   );

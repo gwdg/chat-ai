@@ -20,6 +20,18 @@ i18n
       en: {
         translation: {
           description: {
+            persona: {
+              selectPersona: "Select Persona",
+              browsePersonas: "Browse available personas from repository",
+              personas: "Personas",
+              back: "Back",
+              errorLoading: "Error loading personas",
+              retry: "Retry",
+              noPersonas: "No personas found in this folder",
+              configuration: "Persona configuration",
+              folder: "Folder",
+              createOwn: "Create Your Own Persona",
+            },
             settings: {
               userProfileSettings: "User Profile Settings",
               logout: "Logout",
@@ -259,6 +271,19 @@ i18n
       de: {
         translation: {
           description: {
+            persona: {
+              selectPersona: "Persona auswählen",
+              browsePersonas:
+                "Verfügbare Personas aus dem Repository durchsuchen",
+              personas: "Personas",
+              back: "Zurück",
+              errorLoading: "Fehler beim Laden der Personas",
+              retry: "Wiederholen",
+              noPersonas: "Keine Personas in diesem Ordner gefunden",
+              configuration: "Persona-Konfiguration",
+              folder: "Ordner",
+              createOwn: "Eigene Persona erstellen",
+            },
             settings: {
               userProfileSettings: "Benutzerprofil-Einstellungen",
               logout: "Abmelden",
