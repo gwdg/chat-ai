@@ -22,49 +22,63 @@ This repository contains the stand-alone web interface of Chat AI. The implement
 
 Together these repos provide the entire underyling mechanism for Chat AI, which can be generalized as a slurm-native HPC web service.
 
-## Web interface
-
-Note that the web interface provided in this repository can be set up on any device independently from the rest of the architecture, to act solely as a wrapper for an OpenAI-compatible API endpoint. 
-
 <p align="center">
 <img alt="Web Interface" src="assets/example.png" width="100%">
 </p>
 
-## Getting started
+## Quick Installation Guide
 
-Make sure you have docker installed.
+Note that Chat AI's web interface provided in this repository can be set up on any device independently from the rest of the architecture, to act solely as a wrapper for an OpenAI-compatible API endpoint.
 
-```bash
-docker --version
-```
+1. Ensure that Docker is installed. Follow the [guides](https://docs.docker.com/engine/install/) to install Docker on your specific operating system. 
+    ```bash
+    docker --version
+    ```
 
-Clone this repository and navigate to the root folder.
+2. Clone this repository and navigate to the root folder.
+    ```bash
+    git clone https://github.com/gwdg/chat-ai
+    cd chat-ai
+    ```
 
-```bash
-git clone https://github.com/gwdg/chat-ai
-cd chat-ai
-```
+3. In the `secrets` directory, rename `front.json.sample` to `front.json` and `back.json.sample` to `back.json`, and configure them accordingly. For a local installation with a valid Chat AI API key, you only need to set the value of `apiKey` in `back.json`:
+    ```bash
+    {
+      "port": 8081,
+      "apiEndpoint": "https://chat-ai.academiccloud.de/v1",
+      "apiKey": "<your_chat_ai_api_key>",
+      "serviceName": "Custom Chat AI"
+    }
+    ```
 
-Build the docker images.
+4. Run the components using `docker-compose`:
+    ```bash
+    docker compose up
+    ```
+
+5. Open your browser and navigate to `http://localhost:8080/` or the path you set in the configuration file.
+
+## Getting Started
+
+The web interface consists of two docker containers, `front` and `back`. The `front` service is a ReactJS app which is served by ViteJS and runs entirely on the user browser. `back` is simply a wrapper for message requests which gives the developer more control over the requests and prevents CORS errors on the user browser.  
+
+To build the images, run:
 
 ```bash
 docker compose build front
 docker compose build back
 ```
 
-Start the web interface.
-
+To start either of the two components, run:
 ```bash
 docker compose up front -d
 docker compose up back -d
 ```
 
-The `front` service is a ReactJS app which is served by ViteJS and runs entirely on the user browser. `back` is simply a wrapper for message requests which gives the developer more control over the requests and prevents CORS errors on the user browser.  
-
-You should then be able to access the web interface via the specified port number.
+You should then be able to access the web interface via the port number specified in the config file.
 
 -----
-To apply any changes in the source code, run:
+To apply any changes in the configuration and/or source code, run:
 ```bash
 docker compose up restart front
 docker compose up restart back
@@ -74,15 +88,23 @@ Note that in some cases rebuilding the docker image might be necessary.
 
 ## Configuration
 
-You can set the port numbers for both the `front` and `back` services in the `docker-compose.yml` file. The path to the `back` must be set via a reverse-proxy or virtual-host 
+You can set the port numbers for both the `front` and `back` services in the `front.json` and `back.json` files.
 
-The `front` interacts with the following endpoints to function properly:
-- Getting the model list by `/chat-ai/models`, defined in `/front/src/apis/ModelList.jsx`
-- Communicate with the `back` service by `/chat-ai-backend`, defined in `/front/src/apis/Completion.jsx`.
+The `front` service requires the following configuration in `front.json` for their respective purposes:
+- `port`: Port number to listen on. Default: 8080
+- `backendPath`: Path to `back` service, used for sending messages and processing PDF files, e.g. `http://localhost:8081/` or `/backend`
+- `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure
+- `userDataPath`: (Optional) Path to get user data. Simply set to `<backendPath>/user` if unsure
 
-The `back` interacts with the Kong API gateway to route requests into the HPC services or alternatively connects to an OpenAI-compatible service endpoint. This can be configured in `/back/service.js`.
+The `back` service listens to requests from `front` and interacts with an OpenAI-compatible API endpoint to produce responses. It uses the following configuration defined in `back.json`:
+- `port`: Port number to listen on. Default: 8081
+- "apiEndpoint": Endpoint of your API provider. If you have a Chat AI API key, set this to `https://chat-ai.academiccloud.de/v1`
+- "apiKey": Your valid API key
+- "serviceName": (Optional) A custom service name to be sent as a header in API requests to your provider. Will not be visible in the interface
 
-To connect the front to the back service, a route such as `/chat-ai-backend` must be created to its port number, or alternatively, the paths can be changed in the aforementioned source files. The route specified in `ModelList.jsx` must return a OpenAI-style JSON response containing the model ids and names, which will be displayed in the dropdown menu in the interface. 
+Note that if you wish to avoid using a different port (e.g. 8081) for the backend service, you must set up a reverse proxy or virtual host to route paths such as `/models` and `/backend` to the backend service listening on its own port. This can be done with common software such as Apache or Nginx.
+
+Also, if you wish to customize the list of available models, you must create a path that returns an OpenAI-style JSON response containing the model ids and names, and set the `modelsPath` in `front.json` accordingly. If configured correctly, your custom list will be displayed in the dropdown menu in the interface. 
 
 ## Acknowledgements
 We thank Priyeshkumar Chikhaliya <p.chikhaliya@stud.uni-goettingen.de> for the design and implementation of the web interface.
