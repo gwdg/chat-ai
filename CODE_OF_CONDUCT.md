@@ -39,7 +39,7 @@ It also extends to interactions where individuals represent the community in pub
 
 ## Enforcement
 
-Instances of unacceptable behavior may be reported confidentially to the working group leadership team via direct **message/email to "?"**. All concerns will be reviewed and addressed promptly, respectfully, and fairly.
+Instances of unacceptable behavior may be reported confidentially to the working group leadership team via direct **support@gwdg.de**. All concerns will be reviewed and addressed promptly, respectfully, and fairly.
 
 We are committed to protecting the identity and safety of reporters.
 
