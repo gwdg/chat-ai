@@ -86,27 +86,61 @@ function Layout() {
 
       // Process messages into conversation format
       const newArray = [];
-      for (let i = 0; i < messages.length - 1; i++) {
+      for (let i = 0; i < messages.length; i++) {
+        const currentMessage = messages[i];
+
+        if (currentMessage.role === "info") {
+          newArray.push({
+            info: currentMessage.content,
+          });
+          continue;
+        }
         if (
-          messages[i].role === "user" &&
+          currentMessage.role === "user" &&
           messages[i + 1]?.role === "assistant"
         ) {
-          newArray.push({
-            prompt: messages[i].content,
-            response: messages[i + 1].content,
-          });
+          let userContent = currentMessage.content;
+          let images = [];
+
+          // Handle different content types (text and images)
+          if (Array.isArray(userContent)) {
+            let textContent = "";
+
+            userContent.forEach((item) => {
+              if (item.type === "text") {
+                textContent += item.text + "\n";
+              } else if (item.type === "image_url" && item.image_url) {
+                images.push({
+                  type: item.type,
+                  image_url: {
+                    url: item.image_url.url,
+                  },
+                });
+              }
+            });
+
+            const responseObj = {
+              prompt: textContent?.trim(),
+              images: images,
+              response: messages[i + 1]?.content,
+            };
+
+            newArray.push(responseObj);
+          } else {
+            const responseObj = {
+              prompt: userContent,
+              response: messages[i + 1]?.content,
+            };
+
+            newArray.push(responseObj);
+          }
         }
       }
 
       // Find system message
       const systemMessage = messages.find((msg) => msg.role === "system");
 
-      // Get title from persona name or first non-system message
-      const firstNonSystemMessage = messages.find(
-        (msg) => msg.role !== "system"
-      );
-      const title =
-        personaName || firstNonSystemMessage?.content || "Imported Persona";
+      const title = parsedData.title || "Imported Persona";
 
       // Prepare settings with optional fields
       const settings = {
@@ -120,7 +154,7 @@ function Layout() {
       // If it's object format, apply any provided settings
       if (!Array.isArray(parsedData)) {
         if (parsedData["model-name"]) settings.model = parsedData["model-name"];
-        if (parsedData.model) settings.model_api = parsedData.model;
+        if (parsedData.model_api) settings.model_api = parsedData.model_api;
         if (parsedData.temperature !== undefined)
           settings.temperature = Number(parsedData.temperature);
         if (parsedData.top_p !== undefined)
@@ -136,11 +170,7 @@ function Layout() {
       };
 
       // Only add arcana if both id and key are present
-      if (
-        !Array.isArray(parsedData) &&
-        parsedData.arcana?.id &&
-        parsedData.arcana?.key
-      ) {
+      if (!Array.isArray(parsedData) && parsedData.arcana?.id) {
         updates.arcana = {
           id: parsedData.arcana.id,
           key: parsedData.arcana.key,

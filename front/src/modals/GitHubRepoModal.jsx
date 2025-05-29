@@ -118,7 +118,6 @@ function GitHubRepoModal(props) {
         } else if (props.onFileSelect) {
           props.onFileSelect(item, parsedData);
         } else {
-          console.log("Parsed persona data:", parsedData);
           // Default behavior: open in new tab if no handlers provided
           window.open(item.html_url, "_blank");
         }

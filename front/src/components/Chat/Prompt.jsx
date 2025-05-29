@@ -114,6 +114,11 @@ function Prompt({
       });
     }
 
+    // Filter out info messages only for API call
+    const conversationForAPI = processedConversation.filter(
+      (message) => message.role !== "info"
+    );
+
     if (selectedFiles.length > 0) {
       const imageFiles = selectedFiles.filter((file) => file.type === "image");
       const videoFiles = selectedFiles.filter((file) => file.type === "video");
@@ -188,7 +193,7 @@ function Prompt({
         setLocalState,
         setShowModalSession,
         setShowBadRequest,
-        processedConversation,
+        conversationForAPI,
         isArcanaSupported
       );
       dispatch(setIsResponding(false));
@@ -209,6 +214,7 @@ function Prompt({
       }
     }
   }
+
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
   function formatFileSize(bytes) {
     const units = ["Bytes", "KB", "MB", "GB", "TB"];
