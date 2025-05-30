@@ -29,6 +29,8 @@ import { processPdfDocument } from "../../apis/PdfProcessApi";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
 import { fetchAvailableModels } from "../../apis/ModelListApi";
 
+const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
+
 const SettingsPanel = ({
   selectedFiles,
   setSelectedFiles,
@@ -599,6 +601,7 @@ const SettingsPanel = ({
         handleArcanaParams(modelsList);
       } catch (error) {
         notifyError("Failed to fetch models. Please try again.");
+        await sleep(1000);
         hasFetchedModels.current = false;
       }
     };

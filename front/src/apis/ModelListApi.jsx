@@ -12,5 +12,6 @@ export async function fetchAvailableModels(setShowModalSession) {
     return modelsList;
   } catch (error) {
     console.error("Failed to fetch models:", error);
+    return []
   }
 }
