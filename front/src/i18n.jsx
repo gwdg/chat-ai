@@ -295,7 +295,7 @@ i18n
                 "Dies wird Ihren gesamten Chat-Verlauf dauerhaft löschen und kann nicht rückgängig gemacht werden.",
             },
             common: {
-              loading: "Lädt...",
+              loading: "Laden...",
             },
             //Announcement bar
             titleAnnouncement:

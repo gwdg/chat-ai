@@ -52,22 +52,24 @@ function SettingsModal(props) {
         <div className="p-4 flex items-center justify-between gap-3 border-b dark:border-border_dark">
           <div className="flex flex-col">
             <span className="font-medium text-lg dark:text-white">
-              {props.userData.firstname + " " + props.userData.lastname || (
-                <Trans i18nKey="common.loading" />
-              )}
+               {(() => {
+                const first = props.userData?.firstname ?? "";
+                const last = props.userData?.lastname ?? "";
+                return first === "" && last === ""
+                  ? <Trans i18nKey="description.common.loading" />
+                  : `${first} ${last}`.trim();
+              })()}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {props.userData.organization || (
-                <Trans i18nKey="common.loading" />
-              )}
+              {props.userData?.organization ?? <Trans i18nKey="description.common.loading" />}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="font-medium text-lg dark:text-white">
-              {props.userData.username || <Trans i18nKey="common.loading" />}
+              {props.userData?.username ?? <Trans i18nKey="description.common.loading" />}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {props.userData.email || <Trans i18nKey="common.loading" />}
+              {props.userData?.email ?? <Trans i18nKey="description.common.loading" />}
             </span>
           </div>
           {/* Logout Button */}
