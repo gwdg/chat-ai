@@ -615,11 +615,6 @@ function Responses({
           ) {
             let newArray = [];
 
-            // Handle system prompt if present - replace existing one
-            if (parsedData[0].role === "system") {
-              updateSettings({ systemPrompt: parsedData[0].content });
-            }
-
             // Process each message
             for (let i = 0; i < parsedData.length; i++) {
               const currentMessage = parsedData[i];
@@ -715,8 +710,14 @@ function Responses({
             parsedData.messages &&
             Array.isArray(parsedData.messages)
           ) {
+            const systemMessage = parsedData.messages.find(
+              (msg) => msg.role === "system"
+            );
+
             // Format 1: Object with messages array and settings
             const settings = {
+              systemPrompt:
+                systemMessage?.content || "You are a helpful assistant",
               model: parsedData.model || parsedData["model-name"],
               model_api: parsedData.model_api,
               temperature: parsedData.temperature,
