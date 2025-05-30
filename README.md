@@ -62,6 +62,13 @@ Note that Chat AI's web interface provided in this repository can be set up on a
 
 The web interface consists of two Docker containers, `front` and `back`. The `front` service is a ReactJS app served by ViteJS and runs entirely on the client's browser. The `back` service is simply a wrapper for message requests which gives the developer more control over the requests and prevents CORS errors on the user's browser.  
 
+Make sure you have docker installed and docker compose.
+
+For Ubuntu 24.04, install docker compose with:
+```bash
+aptitude install docker-compose-v2
+```
+
 To build the images, run:
 
 ```bash
@@ -80,8 +87,8 @@ You should then be able to access the web interface via the path and port number
 -----
 To apply any changes in the configuration and/or source code, run:
 ```bash
-docker compose up restart front
-docker compose up restart back
+docker compose restart front
+docker compose restart back
 ```
 
 Note that in some cases rebuilding the docker image might be necessary.
