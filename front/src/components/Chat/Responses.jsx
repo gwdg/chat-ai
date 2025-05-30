@@ -1124,7 +1124,7 @@ function Responses({
             ) : (
               <div key={index} className="flex flex-col gap-1">
                 {res.info && (
-                  <div className="text-sm text-tertiary p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <div className="text-md font-bold text-tertiary p-2 bg-gray-100 dark:bg-gray-800 rounded-xl">
                     {res.info}
                   </div>
                 )}
