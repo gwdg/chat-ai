@@ -10,6 +10,7 @@ require("dotenv").config();
 
 const port = process.env.PORT || 7230;
 const api_key = process.env.API_KEY;
+const endpoint = process.env.API_ENDPOINT;
 
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
@@ -44,7 +45,7 @@ async function getCompletionLLM(
   inference_id = "no_id",
   arcana = null
 ) {
-  const url = "http://172.17.0.1:8000/inference/v1/chat/completions";
+  const url = endpoint + "/inference/v1/chat/completions";
   const headers = {
     Accept: "application/json",
     "inference-id": inference_id,
@@ -76,7 +77,7 @@ async function getCompletionLLM(
 
 
 async function processPdfFile(file, inference_id) {
-  const url = "http://172.17.0.1:8000/inference/v1/documents/convert";
+  const url = endpoint + "/inference/v1/documents/convert";
   const formData = new FormData();
   formData.append("document", file.data, {
     filename: file.name,

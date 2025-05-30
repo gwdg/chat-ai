@@ -32,10 +32,21 @@ Note that the web interface provided in this repository can be set up on any dev
 
 ## Getting started
 
-Make sure you have docker installed.
+Make sure you have docker installed and docker compose.
 
 ```bash
 docker --version
+```
+
+For Ubuntu 24.04, install docker compose with:
+```bash
+aptitude install docker-compose-v2
+```
+
+To test with a GWDG SAIA API key, request an API key before then use:
+``` 
+export API_KEY=<YOUR_KEY>
+export API_ENDPOINT=https://chat-ai.academiccloud.de
 ```
 
 Clone this repository and navigate to the root folder.
@@ -55,13 +66,13 @@ docker compose build back
 Start the web interface.
 
 ```bash
-docker compose up front -d
 docker compose up back -d
+docker compose up front
 ```
 
-The `front` service is a ReactJS app which is served by ViteJS and runs entirely on the user browser. `back` is simply a wrapper for message requests which gives the developer more control over the requests and prevents CORS errors on the user browser.  
+You should then be able to access the web interface via the port number printed.
 
-You should then be able to access the web interface via the specified port number.
+The `front` service is a ReactJS app which is served by ViteJS and runs entirely on the user browser. `back` is simply a wrapper for message requests which gives the developer more control over the requests and prevents CORS errors on the user browser.  
 
 -----
 To apply any changes in the source code, run:
