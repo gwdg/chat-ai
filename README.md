@@ -77,8 +77,8 @@ The `front` service is a ReactJS app which is served by ViteJS and runs entirely
 -----
 To apply any changes in the source code, run:
 ```bash
-docker compose up restart front
-docker compose up restart back
+docker compose restart front
+docker compose restart back
 ```
 
 Note that in some cases rebuilding the docker image might be necessary.

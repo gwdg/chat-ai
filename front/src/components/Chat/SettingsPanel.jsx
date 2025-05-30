@@ -601,7 +601,7 @@ const SettingsPanel = ({
         handleArcanaParams(modelsList);
       } catch (error) {
         notifyError("Failed to fetch models. Please try again.");
-        await sleep(1000);
+        await sleep(10000);
         hasFetchedModels.current = false;
       }
     };

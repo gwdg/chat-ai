@@ -430,7 +430,6 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
             isArcanaSupported && {
               arcana: {
                 id: localState.arcana.id,
-                key: localState.arcana.key,
               },
             }),
         };
