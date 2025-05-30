@@ -7,6 +7,7 @@
 // External dependencies
 import { Link } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
+import packageJson from '../../../package.json';
 
 // Asset imports
 import arrow_down from "../../assets/footer_arrow.svg";
@@ -127,7 +128,7 @@ function Footer(props) {
                 rel="noopener noreferrer"
                 className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center"
               >
-                Chat AI v0.7.4
+                {packageJson.displayName}{' v'}{packageJson.version}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -142,7 +143,7 @@ function Footer(props) {
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                 </svg>
               </a>{" "}
-              | © 2024 GWDG | <Trans i18nKey="description.copyright"></Trans>
+              | © 2025 GWDG | <Trans i18nKey="description.copyright"></Trans>
             </p>
           </div>
         </div>

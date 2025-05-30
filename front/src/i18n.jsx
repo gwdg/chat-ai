@@ -108,7 +108,7 @@ i18n
             other: "Other",
 
             // Footer Copyrights
-            copyright: "All rights reserved",
+            copyright: "All Rights Reserved",
 
             // Help note
             help_title: "Note",
