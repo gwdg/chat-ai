@@ -53,6 +53,7 @@ function Prompt({
   adjustHeight,
   setPdfNotProcessedModal,
   setPreviewFile,
+  showAdvOpt,
 }) {
   //Hooks
   const { t, i18n } = useTranslation();
@@ -112,6 +113,11 @@ function Prompt({
         return message;
       });
     }
+
+    // Filter out info messages only for API call
+    const conversationForAPI = processedConversation.filter(
+      (message) => message.role !== "info"
+    );
 
     if (selectedFiles.length > 0) {
       const imageFiles = selectedFiles.filter((file) => file.type === "image");
@@ -187,7 +193,7 @@ function Prompt({
         setLocalState,
         setShowModalSession,
         setShowBadRequest,
-        processedConversation,
+        conversationForAPI,
         isArcanaSupported
       );
       dispatch(setIsResponding(false));
@@ -208,6 +214,7 @@ function Prompt({
       }
     }
   }
+
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
   function formatFileSize(bytes) {
     const units = ["Bytes", "KB", "MB", "GB", "TB"];
@@ -917,17 +924,20 @@ function Prompt({
             ) : null}
 
             <div className="flex gap-4 w-full justify-end items-center">
-              <button
-                className="flex h-[30px] w-[30px] cursor-pointer"
-                onClick={toggleAdvOpt}
-              >
-                <img
-                  className="cursor-pointer h-[30px] w-[30px]"
-                  src={settings_icon}
-                  alt="settings"
-                />
-              </button>
-
+              {!showAdvOpt ? (
+                <Tooltip text={t("description.settings_toggle")}>
+                  <button
+                    className="flex h-[30px] w-[30px] cursor-pointer"
+                    onClick={toggleAdvOpt}
+                  >
+                    <img
+                      className="cursor-pointer h-[30px] w-[30px]"
+                      src={settings_icon}
+                      alt="settings"
+                    />
+                  </button>
+                </Tooltip>
+              ) : null}
               <input
                 type="file"
                 ref={hiddenFileInput}
@@ -949,7 +959,6 @@ function Prompt({
                   />
                 </button>
               </Tooltip>
-
               {(isImageSupported || isVideoSupported) && (
                 <>
                   <input
@@ -978,7 +987,6 @@ function Prompt({
                   </Tooltip>
                 </>
               )}
-
               {loading || loadingResend ? (
                 <Tooltip text={t("description.pause")}>
                   <button className="h-[30px] w-[30px] cursor-pointer">

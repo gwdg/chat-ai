@@ -7,6 +7,7 @@ import {
   selectCurrentConversationId,
   selectIsResponding,
 } from "../../Redux/reducers/conversationsSlice";
+import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 import { useCallback, useEffect } from "react";
 
 // Asset imports
@@ -20,12 +21,15 @@ function Sidebar({
   onDeleteConversation,
   onRenameConversation,
   conversationIds,
+  setShowRepoModal,
 }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
   const isResponding = useSelector(selectIsResponding);
+  const defaultModel = useSelector(selectDefaultModel);
 
   // Ensure the current conversation ID is synced with the URL
   useEffect(() => {
@@ -47,11 +51,28 @@ function Sidebar({
     // Temporarily disable interaction
     dispatch({ type: "conversations/setIsResponding", payload: true });
 
-    // Add the conversation
+    // Add the conversation with the current default model
     const action = dispatch(addConversation());
     const newId = action.meta?.id;
 
     if (newId) {
+      // Update the conversation with the current default model
+      dispatch({
+        type: "conversations/updateConversation",
+        payload: {
+          id: newId,
+          updates: {
+            settings: {
+              model: defaultModel.name,
+              model_api: defaultModel.id,
+              temperature: 0.5,
+              top_p: 0.5,
+              systemPrompt: "You are a helpful assistant",
+            },
+          },
+        },
+      });
+
       // Force persistence to localStorage BEFORE navigation
       persistor.flush().then(() => {
         // Navigate to the new conversation
@@ -67,7 +88,7 @@ function Sidebar({
       // If no ID was created (unlikely), still re-enable interaction
       dispatch({ type: "conversations/setIsResponding", payload: false });
     }
-  }, [dispatch, navigate, onClose, isResponding]);
+  }, [dispatch, navigate, onClose, isResponding, defaultModel]);
 
   const handleSelectConversation = useCallback(
     (id) => {
@@ -186,6 +207,20 @@ function Sidebar({
             })}
           </div>
         </div>
+      </div>
+      {/* Persona button */}
+      <div className="flex-shrink-0 p-2 border-b dark:border-border_dark">
+        <button
+          onClick={() => {
+            setShowRepoModal(true);
+          }}
+          disabled={isResponding}
+          className={`w-full bg-bg_light dark:bg-bg_dark hover:bg-light_hover dark:hover:bg-dark_hover active:bg-tertiary_pressed text-black dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
+            isResponding ? "cursor-not-allowed opacity-50" : ""
+          }`}
+        >
+          <span>Import Persona</span>
+        </button>
       </div>
     </div>
   );

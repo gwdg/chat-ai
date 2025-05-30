@@ -19,7 +19,6 @@ import {
   selectCurrentConversationId,
   updateConversation,
   selectCurrentConversation,
-  resetStore,
 } from "../../Redux/reducers/conversationsSlice";
 import { fetchAvailableModels } from "../../apis/ModelListApi";
 import OfflineModelInfoModal from "../../modals/OfflineModelInfoModal";
@@ -27,6 +26,8 @@ import SettingsModal from "../../modals/SettingsModal";
 import { fetchCurrentUserProfile } from "../../apis/GetUserDataApi";
 import RenameConversationModal from "../../modals/RenameConversationModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
+import GitHubRepoModal from "../../modals/GitHubRepoModal";
+import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Main layout component that manages the overall structure and state of the chat application
 function Layout() {
@@ -42,6 +43,7 @@ function Layout() {
   const [renamingConversationId, setRenamingConversationId] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingConversationId, setDeletingConversationId] = useState(null);
+  const [showRepoModal, setShowRepoModal] = useState(false);
 
   // Refs and hooks initialization
   const mainDiv = useRef(null);
@@ -54,6 +56,7 @@ function Layout() {
   const currentConversationId = useSelector(selectCurrentConversationId);
   const currentConversation = useSelector(selectCurrentConversation);
   const [conversationIds, setConversationIds] = useState([]);
+  const defaultModel = useSelector(selectDefaultModel);
 
   // Model configuration state
   const [modelList, setModelList] = useState([]);
@@ -61,6 +64,140 @@ function Layout() {
     model: "",
     model_api: "",
   });
+
+  const handlePersonaImport = async (parsedData, personaName) => {
+    try {
+      // Create new conversation (same as your import logic)
+      const action = dispatch(addConversation());
+      const newId = action.payload?.id;
+
+      if (!newId) {
+        throw new Error("Failed to create new conversation");
+      }
+
+      // Handle both formats: array and object with messages
+      const messages = Array.isArray(parsedData)
+        ? parsedData
+        : parsedData.messages;
+
+      if (!Array.isArray(messages)) {
+        throw new Error("Invalid format: messages must be an array");
+      }
+
+      // Process messages into conversation format
+      const newArray = [];
+      for (let i = 0; i < messages.length; i++) {
+        const currentMessage = messages[i];
+
+        if (currentMessage.role === "info") {
+          newArray.push({
+            info: currentMessage.content,
+          });
+          continue;
+        }
+        if (
+          currentMessage.role === "user" &&
+          messages[i + 1]?.role === "assistant"
+        ) {
+          let userContent = currentMessage.content;
+          let images = [];
+
+          // Handle different content types (text and images)
+          if (Array.isArray(userContent)) {
+            let textContent = "";
+
+            userContent.forEach((item) => {
+              if (item.type === "text") {
+                textContent += item.text + "\n";
+              } else if (item.type === "image_url" && item.image_url) {
+                images.push({
+                  type: item.type,
+                  image_url: {
+                    url: item.image_url.url,
+                  },
+                });
+              }
+            });
+
+            const responseObj = {
+              prompt: textContent?.trim(),
+              images: images,
+              response: messages[i + 1]?.content,
+            };
+
+            newArray.push(responseObj);
+          } else {
+            const responseObj = {
+              prompt: userContent,
+              response: messages[i + 1]?.content,
+            };
+
+            newArray.push(responseObj);
+          }
+        }
+      }
+
+      // Find system message
+      const systemMessage = messages.find((msg) => msg.role === "system");
+
+      const title = parsedData.title || "Imported Persona";
+
+      // Prepare settings with optional fields
+      const settings = {
+        systemPrompt: systemMessage?.content || "You are a helpful assistant",
+        model: defaultModel.name,
+        model_api: defaultModel.id,
+        temperature: 0.5, // default value
+        top_p: 0.5, // default value
+      };
+
+      // If it's object format, apply any provided settings
+      if (!Array.isArray(parsedData)) {
+        if (parsedData["model-name"]) settings.model = parsedData["model-name"];
+        if (parsedData.model_api) settings.model_api = parsedData.model_api;
+        if (parsedData.temperature !== undefined)
+          settings.temperature = Number(parsedData.temperature);
+        if (parsedData.top_p !== undefined)
+          settings.top_p = Number(parsedData.top_p);
+      }
+
+      // Prepare conversation update
+      const updates = {
+        conversation: messages,
+        responses: newArray,
+        title,
+        settings,
+      };
+
+      // Only add arcana if both id and key are present
+      if (!Array.isArray(parsedData) && parsedData.arcana?.id) {
+        updates.arcana = {
+          id: parsedData.arcana.id,
+          key: parsedData.arcana.key,
+        };
+      }
+
+      // Update conversation
+      dispatch(
+        updateConversation({
+          id: newId,
+          updates,
+        })
+      );
+
+      // Navigate and notify
+      navigate(`/chat/${newId}`, { replace: true });
+      notifySuccess(`Persona "${personaName}" imported successfully`);
+    } catch (error) {
+      console.error("Persona import error:", error);
+      notifyError(error.message || "Failed to import persona");
+      throw error; // Re-throw so modal can handle loading state
+    }
+  };
+
+  const handleImportError = (error) => {
+    notifyError(error);
+  };
 
   // Fetch user profile data on component mount
   const fetchUserData = useCallback(async () => {
@@ -230,28 +367,67 @@ function Layout() {
       // Generate a new ID that will be used across all tabs
       const newConversationId = uuidv4();
 
-      // Save the current theme and advanced options state before purging
+      // Save the current state BEFORE purging (this is crucial)
       const currentState = store.getState();
       const currentTheme = currentState.theme;
       const currentAdvOption = currentState.advOption;
+      const currentDefaultModel = currentState.defaultModel; // Get BEFORE purge
 
       await persistor.purge();
 
-      // Dispatch RESET_ALL with the new conversation ID and preserved states
+      // Dispatch RESET_ALL with all preserved states
       dispatch({
         type: "RESET_ALL",
         payload: {
           newConversationId,
           theme: currentTheme,
           advOption: currentAdvOption,
+          defaultModel: currentDefaultModel, // Pass the saved default model
         },
         meta: {
-          sync: true, // This tells redux-state-sync to broadcast to other tabs
+          sync: true,
         },
       });
 
-      // Reset the store with the same ID
-      dispatch(resetStore(newConversationId));
+      // Create the new conversation with the correct default model settings
+      dispatch({
+        type: "conversations/resetStore",
+        payload: {
+          id: newConversationId,
+          title: "Untitled Conversation",
+          conversation: [
+            {
+              role: "system",
+              content: "You are a helpful assistant",
+            },
+          ],
+          responses: [],
+          prompt: "",
+          settings: {
+            model: currentDefaultModel?.name || "Meta Llama 3.1 8B Instruct",
+            model_api: currentDefaultModel?.id || "meta-llama-3.1-8b-instruct",
+            temperature: 0.5,
+            top_p: 0.5,
+            systemPrompt: "You are a helpful assistant",
+          },
+          exportOptions: {
+            exportSettings: false,
+            exportImage: false,
+            exportArcana: false,
+          },
+          dontShow: {
+            dontShowAgain: false,
+            dontShowAgainShare: false,
+          },
+          arcana: {
+            id: "",
+            key: "",
+          },
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        },
+        meta: { id: newConversationId, sync: true },
+      });
 
       notifySuccess("Chats cleared successfully");
 
@@ -314,6 +490,7 @@ function Layout() {
             onDeleteConversation={handleDeleteConversation}
             onRenameConversation={handleRenameConversation}
             conversationIds={conversationIds}
+            setShowRepoModal={setShowRepoModal}
           />
         </div>
 
@@ -383,6 +560,7 @@ function Layout() {
           showModal={setShowSettingsModal}
           setShowCacheModal={setShowCacheModal}
           userData={userData}
+          modelList={modelList}
         />
       )}
 
@@ -403,6 +581,17 @@ function Layout() {
 
       {showModalSession && (
         <SessionExpiredModal showModal={setShowModalSession} />
+      )}
+
+      {showRepoModal && (
+        <GitHubRepoModal
+          showModal={setShowRepoModal}
+          repoOwner="gwdg"
+          repoName="chat-ai-personas"
+          branch="main"
+          onPersonaImport={handlePersonaImport} // New prop for handling persona import
+          onError={handleImportError} // New prop for handling errors
+        />
       )}
     </div>
   );

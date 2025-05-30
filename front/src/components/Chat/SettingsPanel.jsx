@@ -150,6 +150,9 @@ const SettingsPanel = ({
       },
     }));
     updateSettings({ systemPrompt: "You are a helpful assistant" });
+    if (systemPromptError) {
+      setSystemPromptError("");
+    }
   };
 
   // Validate the system prompt is not empty
@@ -400,15 +403,54 @@ const SettingsPanel = ({
 
         // Process messages into conversation format
         const newArray = [];
-        for (let i = 0; i < messages.length - 1; i++) {
+        for (let i = 0; i < messages.length; i++) {
+          const currentMessage = messages[i];
+
+          if (currentMessage.role === "info") {
+            newArray.push({
+              info: currentMessage.content,
+            });
+            continue;
+          }
           if (
-            messages[i].role === "user" &&
+            currentMessage.role === "user" &&
             messages[i + 1]?.role === "assistant"
           ) {
-            newArray.push({
-              prompt: messages[i].content,
-              response: messages[i + 1].content,
-            });
+            let userContent = currentMessage.content;
+            let images = [];
+
+            // Handle different content types (text and images)
+            if (Array.isArray(userContent)) {
+              let textContent = "";
+
+              userContent.forEach((item) => {
+                if (item.type === "text") {
+                  textContent += item.text + "\n";
+                } else if (item.type === "image_url" && item.image_url) {
+                  images.push({
+                    type: item.type,
+                    image_url: {
+                      url: item.image_url.url,
+                    },
+                  });
+                }
+              });
+
+              const responseObj = {
+                prompt: textContent?.trim(),
+                images: images,
+                response: messages[i + 1]?.content,
+              };
+
+              newArray.push(responseObj);
+            } else {
+              const responseObj = {
+                prompt: userContent,
+                response: messages[i + 1]?.content,
+              };
+
+              newArray.push(responseObj);
+            }
           }
         }
 
@@ -434,7 +476,7 @@ const SettingsPanel = ({
         if (!Array.isArray(parsedData)) {
           if (parsedData["model-name"])
             settings.model = parsedData["model-name"];
-          if (parsedData.model) settings.model_api = parsedData.model;
+          if (parsedData.model_api) settings.model_api = parsedData.model_api;
           if (parsedData.temperature !== undefined)
             settings.temperature = Number(parsedData.temperature);
           if (parsedData.top_p !== undefined)
@@ -918,11 +960,7 @@ const SettingsPanel = ({
                 <div className="w-full relative">
                   <div className="relative z-10">
                     <textarea
-                      className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border ${
-                        systemPromptError
-                          ? "border-red-500"
-                          : "dark:border-border_dark"
-                      } outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                      className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
                       type="text"
                       name="systemPrompt"
                       placeholder={t("description.custom4")}
@@ -931,9 +969,9 @@ const SettingsPanel = ({
                       onBlur={() => validateSystemPrompt()}
                     />
                   </div>
-                  {systemPromptError && (
-                    <p className="text-red-600 text-12-500">
-                      {systemPromptError}
+                  {(systemPromptError || !localState.settings.systemPrompt) && (
+                    <p className="text-yellow-600 text-12-500">
+                      <Trans i18nKey="description.custom6" />
                     </p>
                   )}
                 </div>

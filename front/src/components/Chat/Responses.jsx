@@ -15,8 +15,12 @@ import icon_resend from "../../assets/icon_resend.svg";
 import ResponseItem from "../Markdown/ResponseItem";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
-import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
+import {
+  setIsResponding,
+  updateConversation,
+} from "../../Redux/reducers/conversationsSlice";
 import PreviewImageModal from "../../modals/PreviewImageModal";
+import { useParams } from "react-router-dom";
 
 //Variable
 const MAX_HEIGHT = 200;
@@ -48,6 +52,7 @@ function Responses({
 
   // Redux state
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
+  const { conversationId } = useParams();
 
   // Local useState
   const [editingIndex, setEditingIndex] = useState(null);
@@ -186,8 +191,7 @@ function Responses({
       textFiles = localState.responses[index]?.textFiles;
     }
 
-    // Slice conversation history up to the selected message
-    let newConversation = [...localState.conversation].slice(0, index * 2 + 1);
+    let newConversation = [...localState.conversation].slice(0, index * 2);
     let newResponses = [...localState.responses].slice(0, index);
 
     // Update local state with trimmed responses
@@ -257,8 +261,10 @@ function Responses({
       }));
     }
 
-    // Create updated conversation array for processing
-    let updatedConversation = [...newConversation];
+    // Create updated conversation array for processing - REMOVE "info" role objects
+    let updatedConversation = [...newConversation].filter(
+      (message) => message.role !== "info"
+    );
 
     // Check if selected model supports image input
     const imageSupport = modelList.some(
@@ -292,7 +298,7 @@ function Responses({
     // Try to fetch response from LLM
     try {
       await fetchLLMResponse(
-        newConversation,
+        newConversation, // Original conversation with "info" objects (for local state)
         localState.settings.systemPrompt,
         localState.settings.model_api,
         localState.settings.temperature,
@@ -301,7 +307,7 @@ function Responses({
         setLocalState,
         setShowModalSession,
         setShowBadRequest,
-        updatedConversation,
+        updatedConversation, // Filtered conversation without "info" objects (for API)
         isArcanaSupported
       );
       dispatch(setIsResponding(false));
@@ -323,6 +329,7 @@ function Responses({
     dispatch(setIsResponding(true));
     setLoadingResend(true);
 
+    // Validate index is within bounds of responses array
     if (index < 0 || index >= localState.responses.length) {
       notifyError("Something went wrong");
       dispatch(setIsResponding(false));
@@ -330,6 +337,7 @@ function Responses({
       return;
     }
 
+    // Validate edited text exists and isn't empty
     if (!editedText || !editedText?.trim()) {
       notifyError("Prompt cannot be empty!");
       dispatch(setIsResponding(false));
@@ -337,8 +345,8 @@ function Responses({
       return;
     }
 
+    // Initialize array for any attached images
     let imageFiles = [];
-
     if (localState.responses[index]?.images?.length > 0) {
       imageFiles = localState.responses[index]?.images;
     }
@@ -350,7 +358,9 @@ function Responses({
       textFiles = localState.responses[index]?.textFiles;
     }
 
-    let newConversation = [...localState.conversation].slice(0, index * 2 + 1);
+    // Slice conversation history up to (but not including) the selected message
+    // Each response corresponds to a user-assistant pair, so index * 2 gives us everything before that pair
+    let newConversation = [...localState.conversation].slice(0, index * 2);
     let newResponses = [...localState.responses].slice(0, index);
 
     updateLocalState({ responses: newResponses });
@@ -392,6 +402,7 @@ function Responses({
       newConversation.push({ role: "user", content: editedText });
     }
 
+    // Update local state with new response entry
     if (imageFiles?.length > 0 || textFiles?.length > 0) {
       setLocalState((prevState) => ({
         ...prevState,
@@ -418,20 +429,25 @@ function Responses({
       }));
     }
 
-    let updatedConversation = [...newConversation];
+    // Create updated conversation array for processing - REMOVE "info" role objects
+    let updatedConversation = [...newConversation].filter(
+      (message) => message.role !== "info"
+    );
+
+    // Check if selected model supports image input
     const imageSupport = modelList.some(
       (modelX) =>
         modelX.name === localState.settings.model &&
         modelX.input.includes("image")
     );
-    // Check if selected model supports image input
+    // Check if selected model supports video input
     const videoSupport = modelList.some(
       (modelX) =>
         modelX.name === localState.settings.model &&
         modelX.input.includes("video")
     );
 
-    // Remove image part from the conversation if model doesn't support images
+    // If model doesn't support images/videos, remove image/video content
     if (!imageSupport && !videoSupport) {
       updatedConversation = updatedConversation.map((message) => {
         if (message.role === "user" && Array.isArray(message.content)) {
@@ -447,9 +463,10 @@ function Responses({
       });
     }
 
+    // Try to fetch response from LLM
     try {
       await fetchLLMResponse(
-        newConversation,
+        newConversation, // Original conversation with "info" objects (for local state)
         localState.settings.systemPrompt,
         localState.settings.model_api,
         localState.settings.temperature,
@@ -458,7 +475,7 @@ function Responses({
         setLocalState,
         setShowModalSession,
         setShowBadRequest,
-        updatedConversation,
+        updatedConversation, // Filtered conversation without "info" objects (for API)
         isArcanaSupported
       );
       dispatch(setIsResponding(false));
@@ -466,7 +483,11 @@ function Responses({
     } catch (error) {
       dispatch(setIsResponding(false));
       setLoadingResend(false);
-      notifyError(error.message || "An unknown error occurred");
+      if (error.name === "AbortError") {
+        notifyError("Request aborted.");
+      } else {
+        notifyError(error.message || "An unknown error occurred");
+      }
     }
   };
 
@@ -586,24 +607,37 @@ function Responses({
       reader.onload = async () => {
         // Inner function to process message data
         function processMessages(parsedData) {
-          // Validate data structure and handle system prompt
+          // Validate data structure
           if (
             parsedData.length > 0 &&
             Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
             Object.prototype.hasOwnProperty.call(parsedData[0], "content")
           ) {
             let newArray = [];
+
+            // Handle system prompt if present - replace existing one
             if (parsedData[0].role === "system") {
               updateSettings({ systemPrompt: parsedData[0].content });
             }
 
-            // Process each message pair (user + assistant)
+            // Process each message
             for (let i = 0; i < parsedData.length; i++) {
+              const currentMessage = parsedData[i];
+
+              // Handle info role - always create standalone info object
+              if (currentMessage.role === "info") {
+                newArray.push({
+                  info: currentMessage.content,
+                });
+                continue;
+              }
+
+              // Handle user-assistant pairs
               if (
-                parsedData[i].role === "user" &&
+                currentMessage.role === "user" &&
                 parsedData[i + 1]?.role === "assistant"
               ) {
-                let userContent = parsedData[i].content;
+                let userContent = currentMessage.content;
                 let images = [];
 
                 // Handle different content types (text and images)
@@ -623,26 +657,41 @@ function Responses({
                     }
                   });
 
-                  newArray.push({
+                  const responseObj = {
                     prompt: textContent?.trim(),
                     images: images,
                     response: parsedData[i + 1]?.content,
-                  });
+                  };
+
+                  newArray.push(responseObj);
                 } else {
-                  newArray.push({
+                  const responseObj = {
                     prompt: userContent,
                     response: parsedData[i + 1]?.content,
-                  });
+                  };
+
+                  newArray.push(responseObj);
                 }
               }
             }
 
-            // Update local state with processed data
             setLocalState((prevState) => ({
               ...prevState,
               responses: newArray,
               conversation: parsedData,
             }));
+
+            // Only update conversation and responses in Redux
+            dispatch(
+              updateConversation({
+                id: conversationId,
+                updates: {
+                  conversation: parsedData,
+                  responses: newArray,
+                },
+              })
+            );
+
             notifySuccess("Chat imported successfully");
           } else {
             notifyError("Invalid structure of JSON.");
@@ -651,43 +700,63 @@ function Responses({
 
         // Parse and process JSON data
         try {
-          const data = reader.result;
+          let data = reader.result;
+
+          // Fix common JSON issues like trailing commas
+          data = data.replace(/,(\s*[}\]])/g, "$1"); // Remove trailing commas
+
           const parsedData = JSON.parse(data);
 
           if (Array.isArray(parsedData)) {
+            // Format 2: Direct array of messages
             processMessages(parsedData);
           } else if (
             parsedData &&
             parsedData.messages &&
             Array.isArray(parsedData.messages)
           ) {
-            // Handle additional settings if present
-            if (parsedData.temperature) {
-              updateSettings({ temperature: parsedData.temperature });
+            // Format 1: Object with messages array and settings
+            const settings = {
+              model: parsedData.model || parsedData["model-name"],
+              model_api: parsedData.model_api,
+              temperature: parsedData.temperature,
+              top_p: parsedData.top_p,
+            };
+
+            // Get title from parsedData or use default
+            const title = parsedData.title || "Imported Conversation";
+
+            // Update settings and title before processing messages
+            const updates = {
+              title,
+              settings: {
+                ...localState.settings,
+                ...settings,
+              },
+            };
+
+            if (parsedData.arcana?.id) {
+              updates.arcana = {
+                id: parsedData.arcana.id,
+                key: parsedData.arcana.key,
+              };
             }
-            if (parsedData.top_p) {
-              updateSettings({ top_p: parsedData.top_p });
-            }
-            if (parsedData.arcana) {
-              setLocalState((prev) => ({
-                ...prev,
-                arcana: parsedData.arcana,
-              }));
-            }
-            if (parsedData.model) {
-              updateSettings({ model_api: parsedData.model });
-            }
-            if (parsedData["model-name"]) {
-              updateSettings({ model: parsedData["model-name"] });
-            } else {
-              updateSettings({ model: parsedData.model });
-            }
+
+            dispatch(
+              updateConversation({
+                id: conversationId,
+                updates,
+              })
+            );
+
+            // Now process messages (this will only update conversation and responses)
             processMessages(parsedData.messages);
           } else {
             notifyError("Invalid structure of JSON.");
           }
         } catch (jsonError) {
-          notifyError("Invalid JSON file format.");
+          console.error("JSON Parse Error:", jsonError);
+          notifyError("Invalid JSON file format: " + jsonError.message);
         }
       };
 
@@ -835,216 +904,233 @@ function Responses({
         className="p-2 flex flex-col gap-2 overflow-y-auto flex-1 relative"
       >
         {localState.responses?.map((res, index) => (
-          <div key={index} className="flex flex-col gap-1">
-            <div
-              ref={(el) => (containerRefs.current[index] = el)}
-              className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
-                editingIndex === index ? "p-0" : "p-3"
-              } flex flex-col gap-2`}
-            >
-              {editingIndex === index ? (
-                <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
-                  <textarea
-                    ref={(el) => (textareaRefs.current[index] = el)}
-                    className="p-2 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
-                    value={editedText}
-                    style={{
-                      minHeight: `${MIN_HEIGHT}px`,
-                      maxHeight: `${MAX_HEIGHT}px`,
-                    }}
-                    onChange={(e) => {
-                      setEditedText(e.target.value);
-                      adjustHeight(index);
-                    }}
-                    onKeyDown={(event) => {
-                      if (
-                        event.key === "Enter" &&
-                        !event.shiftKey &&
-                        editedText?.trim() !== ""
-                      ) {
-                        event.preventDefault();
-                        handleCloseClick(index);
-                        handleSave(index);
-                        setIsEditing(false);
-                      }
-                    }}
-                  />
-                  <div className="flex gap-2 justify-between w-full">
-                    <button
-                      onClick={() => setEditedText("")}
-                      disabled={loading || loadingResend}
-                    >
-                      <img
-                        src={clear}
-                        alt="clear"
-                        className="h-[25px] w-[25px] cursor-pointer"
-                      />
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleCloseClick(index);
-                        handleSave(index);
-                      }}
-                      disabled={loading || loadingResend}
-                    >
-                      <img
-                        className="cursor-pointer h-[25px] w-[25px]"
-                        src={send}
-                        alt="send"
-                      />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex gap-2 justify-between items-start group">
-                  <pre
-                    className="font-sans flex-grow min-w-0"
-                    style={{
-                      overflow: "hidden",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                    }}
-                  >
-                    {res.prompt}
-                  </pre>
-                  <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
-                    <button
-                      onClick={(e) => handleResendClick(index, e)}
-                      disabled={loading || loadingResend}
-                    >
-                      <img
-                        src={icon_resend}
-                        alt="icon_resend"
-                        className="h-[25px] w-[25px] cursor-pointer"
-                      />
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleEditClick(index, res.prompt);
-                      }}
-                      disabled={loading || loadingResend}
-                    >
-                      <img
-                        src={edit_icon}
-                        alt="edit_icon"
-                        className="h-[25px] w-[25px] cursor-pointer"
-                      />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {(res?.images?.length > 0 ||
-              res?.videos?.length > 0 ||
-              res?.textFiles?.length > 0) && (
-              <div className="flex gap-2 overflow-x-auto items-center p-3">
-                {res.images?.map((imageObj, imgIndex) => {
-                  if (imageObj.type === "image_url" && imageObj.image_url.url) {
-                    return (
-                      <img
-                        key={`img-${imgIndex}`}
-                        src={imageObj.image_url.url}
-                        alt="Base64 Image"
-                        className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
-                        onClick={() => setPreviewFile(imageObj.image_url.url)}
-                        onError={(e) => {
-                          e.target.src = video_icon;
+          <>
+            {!res.info ? (
+              <div key={index} className="flex flex-col gap-1">
+                <div
+                  ref={(el) => (containerRefs.current[index] = el)}
+                  className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
+                    editingIndex === index ? "p-0" : "p-3"
+                  } flex flex-col gap-2`}
+                >
+                  {editingIndex === index ? (
+                    <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
+                      <textarea
+                        ref={(el) => (textareaRefs.current[index] = el)}
+                        className="p-2 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+                        value={editedText}
+                        style={{
+                          minHeight: `${MIN_HEIGHT}px`,
+                          maxHeight: `${MAX_HEIGHT}px`,
+                        }}
+                        onChange={(e) => {
+                          setEditedText(e.target.value);
+                          adjustHeight(index);
+                        }}
+                        onKeyDown={(event) => {
+                          if (
+                            event.key === "Enter" &&
+                            !event.shiftKey &&
+                            editedText?.trim() !== ""
+                          ) {
+                            event.preventDefault();
+                            handleCloseClick(index);
+                            handleSave(index);
+                            setIsEditing(false);
+                          }
                         }}
                       />
-                    );
-                  }
-                  return null;
-                })}
-                {res.videos?.map((videoObj, vidIndex) => {
-                  if (videoObj.type === "video_url") {
-                    return (
-                      <img
-                        key={`vid-${vidIndex}`}
-                        src={video_icon}
-                        alt="Video content"
-                        className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
-                      />
-                    );
-                  }
-                  return null;
-                })}
-                {res.textFiles?.map((textObj, textIndex) => {
-                  if (textObj.fileType === "text") {
-                    // The correct path to access text content
-                    const textContent = textObj.content;
-
-                    // Get file type from content or default to "txt"
-                    const fileType = textObj.content.fileType || "txt";
-
-                    // Get a preview of the text (first 50 characters)
-                    const textPreview =
-                      textContent.substring(0, 100) +
-                      (textContent.length > 100 ? "..." : "");
-
-                    // Get file name if available
-                    const fileName = textContent.split(":")[0] || "File";
-
-                    return (
-                      <div
-                        key={`text-${textIndex}`}
-                        className="h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-md transition-all"
-                        onClick={() =>
-                          setPreviewFile({
-                            content: textObj.content,
-                            name: fileName,
-                            isText: true,
-                          })
-                        }
+                      <div className="flex gap-2 justify-between w-full">
+                        <button
+                          onClick={() => setEditedText("")}
+                          disabled={loading || loadingResend}
+                        >
+                          <img
+                            src={clear}
+                            alt="clear"
+                            className="h-[25px] w-[25px] cursor-pointer"
+                          />
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleCloseClick(index);
+                            handleSave(index);
+                          }}
+                          disabled={loading || loadingResend}
+                        >
+                          <img
+                            className="cursor-pointer h-[25px] w-[25px]"
+                            src={send}
+                            alt="send"
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 justify-between items-start group">
+                      <pre
+                        className="font-sans flex-grow min-w-0"
+                        style={{
+                          overflow: "hidden",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                        }}
                       >
-                        {/* File name at top */}
-                        <div className="px-3 py-2 font-medium text-sm truncate border-b text-black dark:text-white">
-                          {fileName}
-                        </div>
+                        {res.prompt}
+                      </pre>
+                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
+                        <button
+                          onClick={(e) => handleResendClick(index, e)}
+                          disabled={loading || loadingResend}
+                        >
+                          <img
+                            src={icon_resend}
+                            alt="icon_resend"
+                            className="h-[25px] w-[25px] cursor-pointer"
+                          />
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleEditClick(index, res.prompt);
+                          }}
+                          disabled={loading || loadingResend}
+                        >
+                          <img
+                            src={edit_icon}
+                            alt="edit_icon"
+                            className="h-[25px] w-[25px] cursor-pointer"
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                        {/* Text preview in middle */}
-                        <div className="flex-1 p-3 text-xs overflow-hidden text-tertiary">
-                          {textPreview}
-                        </div>
+                {(res?.images?.length > 0 ||
+                  res?.videos?.length > 0 ||
+                  res?.textFiles?.length > 0) && (
+                  <div className="flex gap-2 overflow-x-auto items-center p-3">
+                    {res.images?.map((imageObj, imgIndex) => {
+                      if (
+                        imageObj.type === "image_url" &&
+                        imageObj.image_url.url
+                      ) {
+                        return (
+                          <img
+                            key={`img-${imgIndex}`}
+                            src={imageObj.image_url.url}
+                            alt="Base64 Image"
+                            className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                            onClick={() =>
+                              setPreviewFile(imageObj.image_url.url)
+                            }
+                            onError={(e) => {
+                              e.target.src = video_icon;
+                            }}
+                          />
+                        );
+                      }
+                      return null;
+                    })}
+                    {res.videos?.map((videoObj, vidIndex) => {
+                      if (videoObj.type === "video_url") {
+                        return (
+                          <img
+                            key={`vid-${vidIndex}`}
+                            src={video_icon}
+                            alt="Video content"
+                            className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                          />
+                        );
+                      }
+                      return null;
+                    })}
+                    {res.textFiles?.map((textObj, textIndex) => {
+                      if (textObj.fileType === "text") {
+                        // The correct path to access text content
+                        const textContent = textObj.content;
 
-                        {/* File type indicator at bottom */}
-                        <div className="flex justify-center items-center pb-2">
-                          <span
-                            className="px-3 py-1 text-xs font-medium rounded-full 
+                        // Get file type from content or default to "txt"
+                        const fileType = textObj.content.fileType || "txt";
+
+                        // Get a preview of the text (first 50 characters)
+                        const textPreview =
+                          textContent.substring(0, 100) +
+                          (textContent.length > 100 ? "..." : "");
+
+                        // Get file name if available
+                        const fileName = textContent.split(":")[0] || "File";
+
+                        return (
+                          <div
+                            key={`text-${textIndex}`}
+                            className="h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-md transition-all"
+                            onClick={() =>
+                              setPreviewFile({
+                                content: textObj.content,
+                                name: fileName,
+                                isText: true,
+                              })
+                            }
+                          >
+                            {/* File name at top */}
+                            <div className="px-3 py-2 font-medium text-sm truncate border-b text-black dark:text-white">
+                              {fileName}
+                            </div>
+
+                            {/* Text preview in middle */}
+                            <div className="flex-1 p-3 text-xs overflow-hidden text-tertiary">
+                              {textPreview}
+                            </div>
+
+                            {/* File type indicator at bottom */}
+                            <div className="flex justify-center items-center pb-2">
+                              <span
+                                className="px-3 py-1 text-xs font-medium rounded-full 
                         bg-blue-100 dark:bg-blue-900 
                         text-blue-800 dark:text-blue-200 uppercase"
-                          >
-                            {fileType}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })}
+                              >
+                                {fileType}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
+
+                <ResponseItem
+                  res={res}
+                  index={index}
+                  isDarkModeGlobal={isDarkModeGlobal}
+                  copied={copied}
+                  setCopied={setCopied}
+                  indexChecked={indexChecked}
+                  setIndexChecked={setIndexChecked}
+                  loading={loading}
+                  loadingResend={loadingResend}
+                  responses={localState.responses}
+                  editingResponseIndex={editingResponseIndex}
+                  setEditedResponse={setEditedResponse}
+                  handleResponseEdit={handleResponseEdit}
+                  handleResponseSave={handleResponseSave}
+                  editedResponse={editedResponse}
+                  setEditingResponseIndex={setEditingResponseIndex}
+                  handleResendClick={handleResendClick}
+                />
+              </div>
+            ) : (
+              <div key={index} className="flex flex-col gap-1">
+                {res.info && (
+                  <div className="text-md font-bold text-tertiary p-2 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                    {res.info}
+                  </div>
+                )}
               </div>
             )}
-
-            <ResponseItem
-              res={res}
-              index={index}
-              isDarkModeGlobal={isDarkModeGlobal}
-              copied={copied}
-              setCopied={setCopied}
-              indexChecked={indexChecked}
-              setIndexChecked={setIndexChecked}
-              loading={loading}
-              loadingResend={loadingResend}
-              responses={localState.responses}
-              editingResponseIndex={editingResponseIndex}
-              setEditedResponse={setEditedResponse}
-              handleResponseEdit={handleResponseEdit}
-              handleResponseSave={handleResponseSave}
-              editedResponse={editedResponse}
-              setEditingResponseIndex={setEditingResponseIndex}
-              handleResendClick={handleResendClick}
-            />
-          </div>
+          </>
         ))}
       </div>
 

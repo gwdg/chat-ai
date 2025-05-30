@@ -423,7 +423,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       if (localState.exportOptions.exportSettings) {
         const settingsObject = {
           "model-name": localState.settings.model,
-          model: localState.settings.model_api,
+          model_api: localState.settings.model_api,
           temperature: localState.settings.temperature,
           top_p: localState.settings.top_p,
           ...(localState.exportOptions.exportArcana &&

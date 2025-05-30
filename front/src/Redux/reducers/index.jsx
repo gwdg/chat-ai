@@ -5,6 +5,7 @@ import alertReducer from "./alertReducer";
 import anncAlertReducer from "./anncAlertReducer";
 import advOptionReducer from "./advancedOptionsReducer";
 import conversationsReducer from "./conversationsSlice";
+import defaultModelReducer from "./defaultModelSlice";
 
 const rootReducer = combineReducers({
   theme: themeReducer,
@@ -12,6 +13,7 @@ const rootReducer = combineReducers({
   anncCount: anncAlertReducer,
   conversations: conversationsReducer,
   advOptions: advOptionReducer,
+  defaultModel: defaultModelReducer,
 });
 
 export default rootReducer;
