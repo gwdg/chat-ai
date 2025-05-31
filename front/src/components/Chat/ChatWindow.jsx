@@ -56,8 +56,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     responses: [],
     conversation: [],
     settings: {
+      ["model-name"]: "",
       model: "",
-      model_api: "",
       temperature: null,
       top_p: null,
       systemPrompt: "",
@@ -180,8 +180,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
   // Memoize current model details to prevent unnecessary recalculations
   const currentModel = useMemo(
-    () => modelList?.find((m) => m.name === modelSettings?.model),
-    [modelList, modelSettings?.model]
+    () => modelList?.find((m) => m.name === modelSettings["model-name"]),
+    [modelList, modelSettings]
   );
 
   // Memoize whether current model supports image input
@@ -248,8 +248,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       // Prepare settings object for sharing
       const settings = {
         systemPrompt: encodeURIComponent(localState.settings.systemPrompt),
-        model_name: localState.settings.model,
-        model_api: localState.settings.model_api,
+        ["model-name"]: localState.settings["model-name"],
+        model: localState.settings.model,
         temperature:
           localState.settings.temperature !== undefined &&
           localState.settings.temperature !== null
@@ -368,8 +368,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     // Add settings information if enabled
     if (localState.exportOptions.exportSettings) {
       const additionalText = `\n\nSettings used\nmodel-name: ${
-        localState.settings.model
-      }\nmodel_api: ${localState.settings.model_api}\ntemperature: ${
+        localState.settings["model-name"]
+      }\nmodel_api: ${localState.settings.model}\ntemperature: ${
         localState.settings.temperature
       }\ntop_p: ${localState.settings.top_p}${
         localState.exportOptions.exportArcana && isArcanaSupported
@@ -422,8 +422,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       // Add settings if enabled
       if (localState.exportOptions.exportSettings) {
         const settingsObject = {
+          ["model-name"]: localState.settings["model-name"],
           model: localState.settings.model,
-          model_api: localState.settings.model_api,
           temperature: localState.settings.temperature,
           top_p: localState.settings.top_p,
           ...(localState.exportOptions.exportArcana &&
@@ -670,9 +670,9 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       resetTextStyle();
       doc.text("Settings used", margin, y);
       y += lineHeight;
-      doc.text(`model: ${modelSettings.model}`, margin, y);
+      doc.text(`["model-name"]: ${modelSettings["model-name"]}`, margin, y);
       y += lineHeight;
-      doc.text(`model_api: ${localState.settings.model_api}`, margin, y);
+      doc.text(`model: ${localState.settings.model}`, margin, y);
       y += lineHeight;
       doc.text(`temperature: ${localState.settings.temperature}`, margin, y);
       y += lineHeight;

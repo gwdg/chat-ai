@@ -14,9 +14,7 @@ import image_supported from "../../assets/image_supported.svg";
 import video_icon from "../../assets/video_icon.svg";
 import thought_supported from "../../assets/thought_supported.svg";
 import books from "../../assets/books.svg";
-import cross from "../../assets/cross.svg";
 import dropdown from "../../assets/icon_dropdown.svg";
-import uploaded from "../../assets/file_uploaded.svg";
 import share_icon from "../../assets/share_icon.svg";
 
 //Redux
@@ -55,7 +53,6 @@ const SettingsPanel = ({
   notifySuccess,
   notifyError,
   setShowModalSession,
-  setPreviewFile,
 }) => {
   const conversations = useSelector(selectConversations);
 
@@ -285,8 +282,9 @@ const SettingsPanel = ({
                 systemPrompt: settings.systemPrompt
                   ? decodeURIComponent(settings.systemPrompt)
                   : "You are a helpful assistant",
-                model: settings.model || "Meta Llama 3.1 8B Instruct",
-                model_api: settings.model_api || "meta-llama-3.1-8b-instruct",
+                ["model-name"]:
+                  settings["model-name"] || "Meta Llama 3.1 8B Instruct",
+                model: settings.model || "meta-llama-3.1-8b-instruct",
                 temperature: settings.temperature || 0.5,
                 top_p: settings.top_p || 0.5,
               },
@@ -308,9 +306,9 @@ const SettingsPanel = ({
                     systemPrompt: settings.systemPrompt
                       ? decodeURIComponent(settings.systemPrompt)
                       : "You are a helpful assistant",
-                    model: settings.model || "Meta Llama 3.1 8B Instruct",
-                    model_api:
-                      settings.model_api || "meta-llama-3.1-8b-instruct",
+                    ["model-name"]:
+                      settings["model-name"] || "Meta Llama 3.1 8B Instruct",
+                    model: settings.model || "meta-llama-3.1-8b-instruct",
                     temperature: settings.temperature ?? 0.5,
                     top_p: settings.top_p ?? 0.5,
                   },
@@ -467,8 +465,8 @@ const SettingsPanel = ({
         // Prepare settings with optional fields
         const settings = {
           systemPrompt: systemMessage?.content || "You are a helpful assistant",
-          model: "Meta Llama 3.1 8B Instruct", // default value
-          model_api: "meta-llama-3.1-8b-instruct", // default value
+          ["model-name"]: "Meta Llama 3.1 8B Instruct", // default value
+          model: "meta-llama-3.1-8b-instruct", // default value
           temperature: 0.5, // default value
           top_p: 0.5, // default value
         };
@@ -476,7 +474,7 @@ const SettingsPanel = ({
         // If it's object format, apply any provided settings
         if (!Array.isArray(parsedData)) {
           if (parsedData.model) settings.model = parsedData.model;
-          if (parsedData.model_api) settings.model_api = parsedData.model_api;
+          if (parsedData.model) settings.model = parsedData.model;
           if (parsedData.temperature !== undefined)
             settings.temperature = Number(parsedData.temperature);
           if (parsedData.top_p !== undefined)
@@ -580,8 +578,8 @@ const SettingsPanel = ({
             arcana: arcanaObject,
             settings: {
               ...prev.settings,
-              model: matchedModel.name,
-              model_api: matchedModel.id,
+              ["model-name"]: matchedModel.name,
+              model: matchedModel.id,
               temperature: 0,
               top_p: 0.05,
             },
@@ -600,8 +598,8 @@ const SettingsPanel = ({
                 arcana: arcanaObject,
                 settings: {
                   ...currentConversation?.settings,
-                  model: matchedModel.name,
-                  model_api: matchedModel.id,
+                  ["model-name"]: matchedModel.name,
+                  model: matchedModel.id,
                   temperature: 0,
                   top_p: 0.05,
                 },
@@ -721,7 +719,7 @@ const SettingsPanel = ({
                         demand={currentModel?.demand}
                       />
                       <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
-                        {modelSettings.model}
+                        {modelSettings["model-name"]}
                       </div>
                       {isImageSupported && (
                         <img

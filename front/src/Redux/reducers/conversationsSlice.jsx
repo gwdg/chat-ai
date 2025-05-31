@@ -13,8 +13,8 @@ const createDefaultConversation = () => ({
   responses: [],
   prompt: "",
   settings: {
-    model: "Meta Llama 3.1 8B Instruct",
-    model_api: "meta-llama-3.1-8b-instruct",
+    ["model-name"]: "Meta Llama 3.1 8B Instruct",
+    model: "meta-llama-3.1-8b-instruct",
     temperature: 0.5,
     top_p: 0.5,
     systemPrompt: "You are a helpful assistant",
@@ -153,8 +153,8 @@ const conversationsSlice = createSlice({
           responses: [],
           prompt: "",
           settings: {
-            model: "Meta Llama 3.1 8B Instruct",
-            model_api: "meta-llama-3.1-8b-instruct",
+            ["model-name"]: "Meta Llama 3.1 8B Instruct",
+            model: "meta-llama-3.1-8b-instruct",
             temperature: 0.5,
             top_p: 0.5,
             systemPrompt: "You are a helpful assistant",

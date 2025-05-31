@@ -61,8 +61,8 @@ function Layout() {
   // Model configuration state
   const [modelList, setModelList] = useState([]);
   const [modelSettings, setModelSettings] = useState({
+    ["model-name"]: "",
     model: "",
-    model_api: "",
   });
 
   const handlePersonaImport = async (parsedData, personaName) => {
@@ -145,16 +145,17 @@ function Layout() {
       // Prepare settings with optional fields
       const settings = {
         systemPrompt: systemMessage?.content || "You are a helpful assistant",
-        model: defaultModel.name,
-        model_api: defaultModel.id,
+        ["model-name"]: defaultModel.name,
+        model: defaultModel.id,
         temperature: 0.5, // default value
         top_p: 0.5, // default value
       };
 
       // If it's object format, apply any provided settings
       if (!Array.isArray(parsedData)) {
+        if (parsedData["model-name"])
+          settings["model-name"] = parsedData["model-name"];
         if (parsedData.model) settings.model = parsedData.model;
-        if (parsedData.model_api) settings.model_api = parsedData.model_api;
         if (parsedData.temperature !== undefined)
           settings.temperature = Number(parsedData.temperature);
         if (parsedData.top_p !== undefined)
@@ -238,8 +239,8 @@ function Layout() {
   useEffect(() => {
     if (currentConversation?.settings) {
       setModelSettings({
+        ["model-name"]: currentConversation.settings["model-name"],
         model: currentConversation.settings.model,
-        model_api: currentConversation.settings.model_api,
       });
     }
   }, [currentConversation]);
@@ -260,8 +261,8 @@ function Layout() {
       if (!model || !modelApi || !currentConversationId) return;
 
       setModelSettings({
-        model,
-        model_api: modelApi,
+        ["model-name"]: model,
+        model: modelApi,
       });
 
       // Update conversation settings when model changes
@@ -271,8 +272,8 @@ function Layout() {
           updates: {
             settings: {
               ...currentConversation.settings,
-              model,
-              model_api: modelApi,
+              ["model-name"]: model,
+              model: modelApi,
             },
           },
         })
@@ -404,8 +405,9 @@ function Layout() {
           responses: [],
           prompt: "",
           settings: {
-            model: currentDefaultModel?.name || "Meta Llama 3.1 8B Instruct",
-            model_api: currentDefaultModel?.id || "meta-llama-3.1-8b-instruct",
+            ["model-name"]:
+              currentDefaultModel?.name || "Meta Llama 3.1 8B Instruct",
+            model: currentDefaultModel?.id || "meta-llama-3.1-8b-instruct",
             temperature: 0.5,
             top_p: 0.5,
             systemPrompt: "You are a helpful assistant",
@@ -551,7 +553,7 @@ function Layout() {
       {showModalOffline && (
         <OfflineModelInfoModal
           showModal={setShowModalOffline}
-          model={modelSettings.model_api}
+          model={modelSettings["model-name"]}
         />
       )}
 

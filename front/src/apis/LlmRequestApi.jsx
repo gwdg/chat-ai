@@ -208,7 +208,6 @@ async function fetchLLMResponse(
       // Generate title for new conversations
       if (conversation.length <= 2) {
         const title = await generateConversationTitle(conversation, {
-          model_api: modelName,
           temperature: temperature,
           top_p: topP,
         });
