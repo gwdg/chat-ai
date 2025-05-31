@@ -54,6 +54,11 @@ function Responses({
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const { conversationId } = useParams();
 
+  useEffect(() => {
+    console.log("Local state res:", localState.responses);
+    console.log("Local state con:", localState.conversation);
+  }, [localState.responses, localState.conversation]);
+
   // Local useState
   const [editingIndex, setEditingIndex] = useState(null);
   const [editedText, setEditedText] = useState("");
@@ -191,7 +196,65 @@ function Responses({
       textFiles = localState.responses[index]?.textFiles;
     }
 
-    let newConversation = [...localState.conversation].slice(0, index * 2);
+    // Keep copy of original conversation for info message positions
+    const originalConversation = [...localState.conversation];
+
+    // Count actual user-assistant pairs in responses (excluding info objects)
+    let actualPairIndex = 0;
+    for (let i = 0; i <= index; i++) {
+      if (!localState.responses[i]?.info) {
+        if (i === index) break;
+        actualPairIndex++;
+      }
+    }
+
+    console.log("Index clicked:", index);
+    console.log("Actual pair index:", actualPairIndex);
+
+    // Filter out info messages to do proper slicing
+    const filteredConversation = localState.conversation.filter(
+      (message) => message.role !== "info"
+    );
+
+    console.log("Filtered conversation:", filteredConversation);
+
+    // Do the slice on filtered conversation using the actual pair index
+    const slicedFiltered = filteredConversation.slice(
+      0,
+      actualPairIndex * 2 + 1
+    );
+    console.log("Filtered sliced conversation:", slicedFiltered);
+
+    // Now reconstruct conversation with info messages back in their original positions
+    let newConversation = [];
+    let filteredIndex = 0;
+
+    for (const originalMessage of originalConversation) {
+      if (originalMessage.role === "info") {
+        // Check if this info message should be included (appears before our cutoff)
+        // Find the position of the last message we kept in the original array
+        const lastKeptMessage = slicedFiltered[slicedFiltered.length - 1];
+        const lastKeptOriginalIndex =
+          originalConversation.indexOf(lastKeptMessage);
+        const currentOriginalIndex =
+          originalConversation.indexOf(originalMessage);
+
+        if (currentOriginalIndex <= lastKeptOriginalIndex) {
+          newConversation.push(originalMessage);
+        }
+      } else {
+        // Non-info message - check if it's in our sliced array
+        if (
+          filteredIndex < slicedFiltered.length &&
+          originalMessage === slicedFiltered[filteredIndex]
+        ) {
+          newConversation.push(originalMessage);
+          filteredIndex++;
+        }
+      }
+    }
+    console.log("New conversation after slicing:", newConversation);
+
     let newResponses = [...localState.responses].slice(0, index);
 
     // Update local state with trimmed responses
@@ -358,9 +421,58 @@ function Responses({
       textFiles = localState.responses[index]?.textFiles;
     }
 
-    // Slice conversation history up to (but not including) the selected message
-    // Each response corresponds to a user-assistant pair, so index * 2 gives us everything before that pair
-    let newConversation = [...localState.conversation].slice(0, index * 2);
+    // Keep copy of original conversation for info message positions
+    const originalConversation = [...localState.conversation];
+
+    // Count actual user-assistant pairs in responses (excluding info objects)
+    let actualPairIndex = 0;
+    for (let i = 0; i <= index; i++) {
+      if (!localState.responses[i]?.info) {
+        if (i === index) break;
+        actualPairIndex++;
+      }
+    }
+
+    // Filter out info messages to do proper slicing
+    const filteredConversation = localState.conversation.filter(
+      (message) => message.role !== "info"
+    );
+
+    // Do the slice on filtered conversation using the actual pair index
+    const slicedFiltered = filteredConversation.slice(
+      0,
+      actualPairIndex * 2 + 1
+    );
+
+    // Now reconstruct conversation with info messages back in their original positions
+    let newConversation = [];
+    let filteredIndex = 0;
+
+    for (const originalMessage of originalConversation) {
+      if (originalMessage.role === "info") {
+        // Check if this info message should be included (appears before our cutoff)
+        // Find the position of the last message we kept in the original array
+        const lastKeptMessage = slicedFiltered[slicedFiltered.length - 1];
+        const lastKeptOriginalIndex =
+          originalConversation.indexOf(lastKeptMessage);
+        const currentOriginalIndex =
+          originalConversation.indexOf(originalMessage);
+
+        if (currentOriginalIndex <= lastKeptOriginalIndex) {
+          newConversation.push(originalMessage);
+        }
+      } else {
+        // Non-info message - check if it's in our sliced array
+        if (
+          filteredIndex < slicedFiltered.length &&
+          originalMessage === slicedFiltered[filteredIndex]
+        ) {
+          newConversation.push(originalMessage);
+          filteredIndex++;
+        }
+      }
+    }
+
     let newResponses = [...localState.responses].slice(0, index);
 
     updateLocalState({ responses: newResponses });
@@ -606,7 +718,7 @@ function Responses({
       // Handle file content after loading
       reader.onload = async () => {
         // Inner function to process message data
-        function processMessages(parsedData) {
+        function processMessages(parsedData, additionalSettings = {}) {
           // Validate data structure
           if (
             parsedData.length > 0 &&
@@ -614,6 +726,13 @@ function Responses({
             Object.prototype.hasOwnProperty.call(parsedData[0], "content")
           ) {
             let newArray = [];
+
+            // Extract system prompt from messages
+            const systemMessage = parsedData.find(
+              (msg) => msg.role === "system"
+            );
+            const systemPrompt =
+              systemMessage?.content || "You are a helpful assistant";
 
             // Process each message
             for (let i = 0; i < parsedData.length; i++) {
@@ -670,20 +789,43 @@ function Responses({
               }
             }
 
+            // Update local state
             setLocalState((prevState) => ({
               ...prevState,
               responses: newArray,
               conversation: parsedData,
+              settings: {
+                ...prevState.settings,
+                systemPrompt: systemPrompt,
+                ...additionalSettings,
+              },
             }));
 
-            // Only update conversation and responses in Redux
+            // Update Redux with everything at once (this triggers isImportOperation = true)
+            const reduxUpdates = {
+              conversation: parsedData,
+              responses: newArray,
+              settings: {
+                ...localState.settings,
+                systemPrompt: systemPrompt,
+                ...additionalSettings,
+              },
+            };
+
+            // Add arcana if present
+            if (additionalSettings.arcana) {
+              reduxUpdates.arcana = additionalSettings.arcana;
+            }
+
+            // Add title if present
+            if (additionalSettings.title) {
+              reduxUpdates.title = additionalSettings.title;
+            }
+
             dispatch(
               updateConversation({
                 id: conversationId,
-                updates: {
-                  conversation: parsedData,
-                  responses: newArray,
-                },
+                updates: reduxUpdates,
               })
             );
 
@@ -710,48 +852,30 @@ function Responses({
             parsedData.messages &&
             Array.isArray(parsedData.messages)
           ) {
-            const systemMessage = parsedData.messages.find(
-              (msg) => msg.role === "system"
-            );
-
             // Format 1: Object with messages array and settings
-            const settings = {
-              systemPrompt:
-                systemMessage?.content || "You are a helpful assistant",
-              model: parsedData.model || parsedData["model-name"],
-              model_api: parsedData.model_api,
-              temperature: parsedData.temperature,
-              top_p: parsedData.top_p,
+            const additionalSettings = {
+              title: parsedData.title || "Imported Conversation",
             };
 
-            // Get title from parsedData or use default
-            const title = parsedData.title || "Imported Conversation";
+            // Add other settings if present
+            if (parsedData.model) additionalSettings.model = parsedData.model;
+            if (parsedData.model_api)
+              additionalSettings.model_api = parsedData.model_api;
+            if (parsedData.temperature !== undefined)
+              additionalSettings.temperature = parsedData.temperature;
+            if (parsedData.top_p !== undefined)
+              additionalSettings.top_p = parsedData.top_p;
 
-            // Update settings and title before processing messages
-            const updates = {
-              title,
-              settings: {
-                ...localState.settings,
-                ...settings,
-              },
-            };
-
+            // Add arcana if present
             if (parsedData.arcana?.id) {
-              updates.arcana = {
+              additionalSettings.arcana = {
                 id: parsedData.arcana.id,
                 key: parsedData.arcana.key,
               };
             }
 
-            dispatch(
-              updateConversation({
-                id: conversationId,
-                updates,
-              })
-            );
-
-            // Now process messages (this will only update conversation and responses)
-            processMessages(parsedData.messages);
+            // Process messages with additional settings
+            processMessages(parsedData.messages, additionalSettings);
           } else {
             notifyError("Invalid structure of JSON.");
           }

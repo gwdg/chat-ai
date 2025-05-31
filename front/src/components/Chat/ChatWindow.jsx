@@ -249,7 +249,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       const settings = {
         systemPrompt: encodeURIComponent(localState.settings.systemPrompt),
         model_name: localState.settings.model,
-        model: localState.settings.model_api,
+        model_api: localState.settings.model_api,
         temperature:
           localState.settings.temperature !== undefined &&
           localState.settings.temperature !== null
@@ -369,7 +369,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     if (localState.exportOptions.exportSettings) {
       const additionalText = `\n\nSettings used\nmodel-name: ${
         localState.settings.model
-      }\nmodel: ${localState.settings.model_api}\ntemperature: ${
+      }\nmodel_api: ${localState.settings.model_api}\ntemperature: ${
         localState.settings.temperature
       }\ntop_p: ${localState.settings.top_p}${
         localState.exportOptions.exportArcana && isArcanaSupported
@@ -422,7 +422,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       // Add settings if enabled
       if (localState.exportOptions.exportSettings) {
         const settingsObject = {
-          "model-name": localState.settings.model,
+          model: localState.settings.model,
           model_api: localState.settings.model_api,
           temperature: localState.settings.temperature,
           top_p: localState.settings.top_p,
@@ -670,9 +670,9 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       resetTextStyle();
       doc.text("Settings used", margin, y);
       y += lineHeight;
-      doc.text(`model-name: ${modelSettings.model}`, margin, y);
+      doc.text(`model: ${modelSettings.model}`, margin, y);
       y += lineHeight;
-      doc.text(`model: ${localState.settings.model_api}`, margin, y);
+      doc.text(`model_api: ${localState.settings.model_api}`, margin, y);
       y += lineHeight;
       doc.text(`temperature: ${localState.settings.temperature}`, margin, y);
       y += lineHeight;

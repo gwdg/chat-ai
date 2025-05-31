@@ -285,8 +285,8 @@ const SettingsPanel = ({
                 systemPrompt: settings.systemPrompt
                   ? decodeURIComponent(settings.systemPrompt)
                   : "You are a helpful assistant",
-                model: settings.model_name || "Meta Llama 3.1 8B Instruct",
-                model_api: settings.model || "meta-llama-3.1-8b-instruct",
+                model: settings.model || "Meta Llama 3.1 8B Instruct",
+                model_api: settings.model_api || "meta-llama-3.1-8b-instruct",
                 temperature: settings.temperature || 0.5,
                 top_p: settings.top_p || 0.5,
               },
@@ -308,8 +308,9 @@ const SettingsPanel = ({
                     systemPrompt: settings.systemPrompt
                       ? decodeURIComponent(settings.systemPrompt)
                       : "You are a helpful assistant",
-                    model: settings.model_name || "Meta Llama 3.1 8B Instruct",
-                    model_api: settings.model || "meta-llama-3.1-8b-instruct",
+                    model: settings.model || "Meta Llama 3.1 8B Instruct",
+                    model_api:
+                      settings.model_api || "meta-llama-3.1-8b-instruct",
                     temperature: settings.temperature ?? 0.5,
                     top_p: settings.top_p ?? 0.5,
                   },
@@ -474,8 +475,7 @@ const SettingsPanel = ({
 
         // If it's object format, apply any provided settings
         if (!Array.isArray(parsedData)) {
-          if (parsedData["model-name"])
-            settings.model = parsedData["model-name"];
+          if (parsedData.model) settings.model = parsedData.model;
           if (parsedData.model_api) settings.model_api = parsedData.model_api;
           if (parsedData.temperature !== undefined)
             settings.temperature = Number(parsedData.temperature);

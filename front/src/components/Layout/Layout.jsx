@@ -153,7 +153,7 @@ function Layout() {
 
       // If it's object format, apply any provided settings
       if (!Array.isArray(parsedData)) {
-        if (parsedData["model-name"]) settings.model = parsedData["model-name"];
+        if (parsedData.model) settings.model = parsedData.model;
         if (parsedData.model_api) settings.model_api = parsedData.model_api;
         if (parsedData.temperature !== undefined)
           settings.temperature = Number(parsedData.temperature);
