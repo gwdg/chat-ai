@@ -371,7 +371,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     if (localState.exportOptions.exportSettings) {
       const additionalText = `\n\nSettings used\ntitle: ${
         localState.title
-      }\nmodel-name: ${localState.settings["model-name"]}\nmodel: ${
+      }\nmodel-name: ${localState.settings["model-name"]}\nmodel_api: ${
         localState.settings.model
       }\ntemperature: ${localState.settings.temperature}\ntop_p: ${
         localState.settings.top_p
@@ -466,7 +466,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     doc.setProperties({
       title: "Chat AI Conversation",
       subject: "History",
-      author: "Chat AI",
+      author: "CHAT AI",
       keywords: "LLM Generated",
       creator: "GWDG",
     });
@@ -677,9 +677,9 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       y += lineHeight;
       doc.text(`title: ${localState.title}`, margin, y);
       y += lineHeight;
-      doc.text(`model-name: ${modelSettings["model-name"]}`, margin, y);
+      doc.text(`model-name: ${localState.settings.model}`, margin, y);
       y += lineHeight;
-      doc.text(`model: ${localState.settings.model}`, margin, y);
+      doc.text(`model-name: ${modelSettings["model-name"]}`, margin, y);
       y += lineHeight;
       doc.text(`temperature: ${localState.settings.temperature}`, margin, y);
       y += lineHeight;
