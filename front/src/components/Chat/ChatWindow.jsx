@@ -52,6 +52,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
   // Initialize chat state
   const [localState, setLocalState] = useState({
+    title: "",
     prompt: "",
     responses: [],
     conversation: [],
@@ -114,6 +115,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
       // Initialize local state with all conversation data
       setLocalState({
+        title: currentConversation.title, // Current title
         prompt: currentConversation.prompt, // Current prompt text
         responses: currentConversation.responses, // Array of AI responses
         conversation: currentConversation.conversation, // Full conversation history
@@ -369,7 +371,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     if (localState.exportOptions.exportSettings) {
       const additionalText = `\n\nSettings used\ntitle: ${
         localState.title
-      }\nmodel-name: ${localState.settings["model-name"]}\nmodel_api: ${
+      }\nmodel-name: ${localState.settings["model-name"]}\nmodel: ${
         localState.settings.model
       }\ntemperature: ${localState.settings.temperature}\ntop_p: ${
         localState.settings.top_p
@@ -462,11 +464,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     // Initialize PDF document
     const doc = new jsPDF();
     doc.setProperties({
-      title: "CHAT AI Conversation",
+      title: "Chat AI Conversation",
       subject: "History",
-      author: "CHAT-AI",
+      author: "Chat AI",
       keywords: "LLM Generated",
-      creator: "LLM",
+      creator: "GWDG",
     });
     doc.setFont("helvetica");
 
