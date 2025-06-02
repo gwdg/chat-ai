@@ -677,7 +677,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       y += lineHeight;
       doc.text(`title: ${localState.title}`, margin, y);
       y += lineHeight;
-      doc.text(`["model-name"]: ${modelSettings["model-name"]}`, margin, y);
+      doc.text(`model-name: ${modelSettings["model-name"]}`, margin, y);
       y += lineHeight;
       doc.text(`model: ${localState.settings.model}`, margin, y);
       y += lineHeight;
