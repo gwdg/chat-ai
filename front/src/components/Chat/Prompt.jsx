@@ -86,13 +86,13 @@ function Prompt({
     // Check if selected model supports image input
     const imageSupport = modelList.some(
       (modelX) =>
-        modelX.name === localState.settings.model &&
+        modelX.name === localState.settings["model-name"] &&
         modelX.input.includes("image")
     );
     // Check if selected model supports video input
     const videoSupport = modelList.some(
       (modelX) =>
-        modelX.name === localState.settings.model &&
+        modelX.name === localState.settings["model-name"] &&
         modelX.input.includes("video")
     );
 
@@ -186,7 +186,7 @@ function Prompt({
       const response = await fetchLLMResponse(
         processedConversation,
         localState.settings.systemPrompt,
-        localState.settings.model_api,
+        localState.settings.model,
         localState.settings.temperature,
         localState.settings.top_p,
         localState.arcana,

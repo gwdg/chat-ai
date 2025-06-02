@@ -105,7 +105,10 @@ function GitHubRepoModal(props) {
           );
         }
 
-        const parsedData = await response.json();
+        // ADD THE FIX HERE:
+        const rawText = await response.text(); // Get as text first
+        const cleanedText = rawText.replace(/,(\s*[}\]])/g, "$1"); // Remove trailing commas
+        const parsedData = JSON.parse(cleanedText); // Then parse
 
         // Call the provided import handler if available
         if (props.onPersonaImport) {

@@ -63,8 +63,8 @@ function Sidebar({
           id: newId,
           updates: {
             settings: {
-              model: defaultModel.name,
-              model_api: defaultModel.id,
+              ["model-name"]: defaultModel.name,
+              model: defaultModel.id,
               temperature: 0.5,
               top_p: 0.5,
               systemPrompt: "You are a helpful assistant",
