@@ -367,11 +367,13 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
     // Add settings information if enabled
     if (localState.exportOptions.exportSettings) {
-      const additionalText = `\n\nSettings used\nmodel-name: ${
-        localState.settings["model-name"]
-      }\nmodel_api: ${localState.settings.model}\ntemperature: ${
-        localState.settings.temperature
-      }\ntop_p: ${localState.settings.top_p}${
+      const additionalText = `\n\nSettings used\ntitle: ${
+        localState.title
+      }\nmodel-name: ${localState.settings["model-name"]}\nmodel_api: ${
+        localState.settings.model
+      }\ntemperature: ${localState.settings.temperature}\ntop_p: ${
+        localState.settings.top_p
+      }${
         localState.exportOptions.exportArcana && isArcanaSupported
           ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
           : ""
@@ -422,6 +424,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       // Add settings if enabled
       if (localState.exportOptions.exportSettings) {
         const settingsObject = {
+          title: localState.title,
           ["model-name"]: localState.settings["model-name"],
           model: localState.settings.model,
           temperature: localState.settings.temperature,
@@ -669,6 +672,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
       resetTextStyle();
       doc.text("Settings used", margin, y);
+      y += lineHeight;
+      doc.text(`title: ${localState.title}`, margin, y);
       y += lineHeight;
       doc.text(`["model-name"]: ${modelSettings["model-name"]}`, margin, y);
       y += lineHeight;
