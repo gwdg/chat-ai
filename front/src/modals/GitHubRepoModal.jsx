@@ -59,7 +59,35 @@ function GitHubRepoModal(props) {
         return a.name.localeCompare(b.name);
       });
 
-      setContents(sortedData);
+      // Process files to extract titles
+      const fileItems = sortedData.filter((item) => item.type === "file");
+      const dirItems = sortedData.filter((item) => item.type === "dir");
+
+      const filePromises = fileItems.map(async (item) => {
+        try {
+          const response = await fetch(item.download_url);
+          if (!response.ok) {
+            return { ...item, title: null, subtitle: null };
+          }
+
+          const text = await response.text();
+          // Fix for trailing commas in JSON
+          const cleanedText = text.replace(/,(\s*[}$])/g, "$1");
+          const parsedData = JSON.parse(cleanedText);
+
+          return { ...item, title: parsedData.title || null, subtitle: parsedData.subtitle || null};
+        } catch (error) {
+          console.error("Error fetching or parsing JSON for title:", error);
+          return { ...item, title: null, subtitle: null};
+        }
+      });
+
+      const filesWithTitle = await Promise.all(filePromises);
+
+      // Combine directories and files with titles
+      const updatedSortedData = [...dirItems, ...filesWithTitle];
+
+      setContents(updatedSortedData);
     } catch (err) {
       setError(err.message);
       setContents([]);
@@ -150,7 +178,7 @@ function GitHubRepoModal(props) {
     }
 
     // Since we only show JSON files now
-    return <span className="text-green-600 text-xl">⚙️</span>;
+    return <span className="text-green-600 text-xl">🤖</span>;
   };
 
   const formatFileSize = (bytes) => {
@@ -260,13 +288,14 @@ function GitHubRepoModal(props) {
                     <div className="flex-1">
                       <div className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {item.type === "file"
-                          ? item.name.replace(".json", "") // Remove .json extension for display
+                          ? item.title || item.name.replace(".json", "")
                           : item.name}
                       </div>
                       {item.type === "file" && (
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          <Trans i18nKey="description.persona.configuration" />{" "}
-                          • {formatFileSize(item.size)}
+                          {item.subtitle ? item.subtitle: (
+                              <><Trans i18nKey="description.persona.configuration" /> • {formatFileSize(item.size)}</>
+                            )}
                         </div>
                       )}
                       {item.type === "dir" && (
