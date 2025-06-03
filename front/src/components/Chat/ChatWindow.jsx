@@ -52,6 +52,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
   // Initialize chat state
   const [localState, setLocalState] = useState({
+    title: "",
     prompt: "",
     responses: [],
     conversation: [],
@@ -114,6 +115,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
       // Initialize local state with all conversation data
       setLocalState({
+        title: currentConversation.title, // Current title
         prompt: currentConversation.prompt, // Current prompt text
         responses: currentConversation.responses, // Array of AI responses
         conversation: currentConversation.conversation, // Full conversation history
@@ -367,11 +369,13 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
 
     // Add settings information if enabled
     if (localState.exportOptions.exportSettings) {
-      const additionalText = `\n\nSettings used\nmodel-name: ${
-        localState.settings["model-name"]
-      }\nmodel_api: ${localState.settings.model}\ntemperature: ${
-        localState.settings.temperature
-      }\ntop_p: ${localState.settings.top_p}${
+      const additionalText = `\n\nSettings used\ntitle: ${
+        localState.title
+      }\nmodel-name: ${localState.settings["model-name"]}\nmodel: ${
+        localState.settings.model
+      }\ntemperature: ${localState.settings.temperature}\ntop_p: ${
+        localState.settings.top_p
+      }${
         localState.exportOptions.exportArcana && isArcanaSupported
           ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
           : ""
@@ -422,6 +426,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       // Add settings if enabled
       if (localState.exportOptions.exportSettings) {
         const settingsObject = {
+          title: localState.title,
           ["model-name"]: localState.settings["model-name"],
           model: localState.settings.model,
           temperature: localState.settings.temperature,
@@ -459,11 +464,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     // Initialize PDF document
     const doc = new jsPDF();
     doc.setProperties({
-      title: "CHAT AI Conversation",
+      title: "Chat AI Conversation",
       subject: "History",
-      author: "CHAT-AI",
+      author: "CHAT AI",
       keywords: "LLM Generated",
-      creator: "LLM",
+      creator: "GWDG",
     });
     doc.setFont("helvetica");
 
@@ -487,12 +492,12 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     const addHeader = (isFirstPage) => {
       y = margin;
       if (isFirstPage) {
-        doc.addImage(Logo, "PNG", margin, margin, 20, 10);
+        doc.addImage(Logo, "PNG", margin, margin, 20, 8);
       }
       const date = new Date().toLocaleDateString();
       doc.setFontSize(10);
       doc.setTextColor(...COLORS.HEADER_DATE);
-      doc.text(date, pageWidth - margin - 5, margin + 10, { align: "right" });
+      doc.text(date, pageWidth - margin - 5, margin + 8, { align: "right" });
       doc.line(margin, headerHeight, pageWidth - margin, headerHeight);
       y = headerHeight + 10;
     };
@@ -670,9 +675,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       resetTextStyle();
       doc.text("Settings used", margin, y);
       y += lineHeight;
-      doc.text(`["model-name"]: ${modelSettings["model-name"]}`, margin, y);
+      doc.text(`title: ${localState.title}`, margin, y);
       y += lineHeight;
-      doc.text(`model: ${localState.settings.model}`, margin, y);
+      doc.text(`model-name: ${localState.settings.model}`, margin, y);
+      y += lineHeight;
+      doc.text(`model-name: ${modelSettings["model-name"]}`, margin, y);
       y += lineHeight;
       doc.text(`temperature: ${localState.settings.temperature}`, margin, y);
       y += lineHeight;
