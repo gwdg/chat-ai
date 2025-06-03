@@ -2,9 +2,10 @@
 
 ## Version: v0.8.0 (xx.06.2025)
 Highlights:
-- Import personas directly from https://github.com/gwdg/chat-ai-personas
-- Display "info" messages in imported conversations and personas
-- Made Chat AI easy to run and configure as standalone UI, compatible with SAIA API key
+- Added selectable Personas in the UI, loaded from https://github.com/gwdg/chat-ai-personas
+- "Info" messages supported in imported conversations and personas
+- Simplified running and configuring Chat AI as standalone UI, compatible with SAIA API key
+- Improved import/export function for conversations
 
 ## Version: v0.7.4 (19.05.2025)
 Highlights:
