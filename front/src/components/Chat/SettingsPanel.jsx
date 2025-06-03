@@ -26,6 +26,7 @@ import {
 import { processPdfDocument } from "../../apis/PdfProcessApi";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
 import { fetchAvailableModels } from "../../apis/ModelListApi";
+import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
@@ -75,6 +76,7 @@ const SettingsPanel = ({
   const [isHoveringTopP, setHoveringTopP] = useState(false);
   const [systemPromptError, setSystemPromptError] = useState("");
   const [processingFiles, setProcessingFiles] = useState(new Set());
+  const defaultModel = useSelector(selectDefaultModel);
 
   //Refs
   const hasProcessedSettings = useRef(false);
@@ -386,6 +388,8 @@ const SettingsPanel = ({
         }
 
         const parsedData = await response.json();
+
+        // Create new conversation
         const action = dispatch(addConversation());
         const newId = action.payload?.id;
 
@@ -457,31 +461,29 @@ const SettingsPanel = ({
 
         // Find system message
         const systemMessage = messages.find((msg) => msg.role === "system");
-
-        // Get title from first non-system message or use default
-        const firstNonSystemMessage = messages.find(
-          (msg) => msg.role !== "system"
-        );
-        const title = firstNonSystemMessage?.content || "Imported Conversation";
+        
+        // Get title
+        const title = parsedData.title || "Imported Persona";
 
         // Prepare settings with optional fields
         const settings = {
           systemPrompt: systemMessage?.content || "You are a helpful assistant",
-          ["model-name"]: "Meta Llama 3.1 8B Instruct", // default value
-          model: "meta-llama-3.1-8b-instruct", // default value
+          ["model-name"]: defaultModel.name,
+          model: defaultModel.id,
           temperature: 0.5, // default value
           top_p: 0.5, // default value
         };
 
         // If it's object format, apply any provided settings
-        if (!Array.isArray(parsedData)) {
-          if (parsedData.model) settings.model = parsedData.model;
-          if (parsedData.model) settings.model = parsedData.model;
-          if (parsedData.temperature !== undefined)
-            settings.temperature = Number(parsedData.temperature);
-          if (parsedData.top_p !== undefined)
-            settings.top_p = Number(parsedData.top_p);
-        }
+      if (!Array.isArray(parsedData)) {
+        if (parsedData["model-name"])
+          settings["model-name"] = parsedData["model-name"];
+        if (parsedData.model) settings.model = parsedData.model;
+        if (parsedData.temperature !== undefined)
+          settings.temperature = Number(parsedData.temperature);
+        if (parsedData.top_p !== undefined)
+          settings.top_p = Number(parsedData.top_p);
+      }
 
         // Prepare conversation update
         const updates = {
@@ -491,13 +493,8 @@ const SettingsPanel = ({
           settings,
         };
 
-        // Only add arcana if both id is present
-        if (
-          !Array.isArray(parsedData) &&
-          parsedData.arcana?.id
-          //parsedData.arcana?.id &&
-          //parsedData.arcana?.key
-        ) {
+        // Only add arcana if both id and key are present
+        if (!Array.isArray(parsedData) && parsedData.arcana?.id) {
           updates.arcana = {
             id: parsedData.arcana.id,
             // key: parsedData.arcana.key,

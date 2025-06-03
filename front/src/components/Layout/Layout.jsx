@@ -67,7 +67,7 @@ function Layout() {
 
   const handlePersonaImport = async (parsedData, personaName) => {
     try {
-      // Create new conversation (same as your import logic)
+      // Create new conversation
       const action = dispatch(addConversation());
       const newId = action.payload?.id;
 
@@ -174,7 +174,7 @@ function Layout() {
       if (!Array.isArray(parsedData) && parsedData.arcana?.id) {
         updates.arcana = {
           id: parsedData.arcana.id,
-          key: parsedData.arcana.key,
+          // key: parsedData.arcana.key,
         };
       }
 
@@ -423,7 +423,7 @@ function Layout() {
           },
           arcana: {
             id: "",
-            key: "",
+            // key: "",
           },
           createdAt: new Date().toISOString(),
           lastModified: new Date().toISOString(),

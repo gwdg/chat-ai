@@ -465,9 +465,9 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     // Initialize PDF document
     const doc = new jsPDF();
     doc.setProperties({
-      title: "Chat AI Conversation",
+      title: "Chat AI Conversation", // TODO Replace with actual title
       subject: "History",
-      author: "CHAT AI",
+      author: "Chat AI",
       keywords: "LLM Generated",
       creator: "GWDG",
     });
