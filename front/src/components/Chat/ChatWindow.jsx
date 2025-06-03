@@ -371,7 +371,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     if (localState.exportOptions.exportSettings) {
       const additionalText = `\n\nSettings used\ntitle: ${
         localState.title
-      }\nmodel-name: ${localState.settings["model-name"]}\nmodel_api: ${
+      }\nmodel-name: ${localState.settings["model-name"]}\nmodel: ${
         localState.settings.model
       }\ntemperature: ${localState.settings.temperature}\ntop_p: ${
         localState.settings.top_p
@@ -492,12 +492,12 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     const addHeader = (isFirstPage) => {
       y = margin;
       if (isFirstPage) {
-        doc.addImage(Logo, "PNG", margin, margin, 20, 10);
+        doc.addImage(Logo, "PNG", margin, margin, 20, 8);
       }
       const date = new Date().toLocaleDateString();
       doc.setFontSize(10);
       doc.setTextColor(...COLORS.HEADER_DATE);
-      doc.text(date, pageWidth - margin - 5, margin + 10, { align: "right" });
+      doc.text(date, pageWidth - margin - 5, margin + 8, { align: "right" });
       doc.line(margin, headerHeight, pageWidth - margin, headerHeight);
       y = headerHeight + 10;
     };
