@@ -919,7 +919,7 @@ function Responses({
             if (parsedData.arcana?.id) {
               additionalSettings.arcana = {
                 id: parsedData.arcana.id,
-                key: parsedData.arcana.key,
+                // key: parsedData.arcana.key,
               };
             }
 

@@ -27,6 +27,8 @@ import { processPdfDocument } from "../../apis/PdfProcessApi";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
 import { fetchAvailableModels } from "../../apis/ModelListApi";
 
+const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
+
 const SettingsPanel = ({
   selectedFiles,
   setSelectedFiles,
@@ -292,7 +294,7 @@ const SettingsPanel = ({
               ...(settings.arcana && {
                 arcana: {
                   id: settings.arcana.id,
-                  key: settings.arcana.key,
+                  // key: settings.arcana.key,
                 },
               }),
             }));
@@ -315,7 +317,7 @@ const SettingsPanel = ({
                   ...(settings.arcana && {
                     arcana: {
                       id: settings.arcana.id,
-                      key: settings.arcana.key,
+                      // key: settings.arcana.key,
                     },
                   }),
                 },
@@ -489,15 +491,16 @@ const SettingsPanel = ({
           settings,
         };
 
-        // Only add arcana if both id and key are present
+        // Only add arcana if both id is present
         if (
           !Array.isArray(parsedData) &&
-          parsedData.arcana?.id &&
-          parsedData.arcana?.key
+          parsedData.arcana?.id
+          //parsedData.arcana?.id &&
+          //parsedData.arcana?.key
         ) {
           updates.arcana = {
             id: parsedData.arcana.id,
-            key: parsedData.arcana.key,
+            // key: parsedData.arcana.key,
           };
         }
 
@@ -538,7 +541,7 @@ const SettingsPanel = ({
   useEffect(() => {
     const handleArcanaParams = async (modelsList) => {
       const arcanaID = searchParams.get("arcana");
-      const arcanaKey = searchParams.get("arcana_key");
+      // const arcanaKey = searchParams.get("arcana_key");
       const modelParam = searchParams.get("model");
 
       // Check if we have an arcana ID and model param (key is now optional)
@@ -569,7 +572,7 @@ const SettingsPanel = ({
             id: decodeURIComponent(arcanaID),
             // Only include key if it exists, otherwise use null or empty string
             // depending on what your backend expects for missing key
-            key: arcanaKey ? decodeURIComponent(arcanaKey) : null,
+            // key: arcanaKey ? decodeURIComponent(arcanaKey) : null,
           };
 
           // Update local state
@@ -639,6 +642,7 @@ const SettingsPanel = ({
         handleArcanaParams(modelsList);
       } catch (error) {
         notifyError("Failed to fetch models. Please try again.");
+        await sleep(10000)
         hasFetchedModels.current = false;
       }
     };

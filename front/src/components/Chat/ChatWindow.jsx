@@ -74,7 +74,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     },
     arcana: {
       id: "",
-      key: "",
+//      key: "",
     },
   });
   const [isActive, setIsActive] = useState(false);
@@ -267,7 +267,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           isArcanaSupported && {
             arcana: {
               id: localState.arcana.id,
-              key: localState.arcana.key,
+              // key: localState.arcana.key,
             },
           }),
       };
@@ -377,7 +377,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
         localState.settings.top_p
       }${
         localState.exportOptions.exportArcana && isArcanaSupported
-          ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
+          // ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
+          ? `\nArcana: {\n  id: ${localState.arcana.id}}`
           : ""
       }`;
       finalTextContent += additionalText;
@@ -435,7 +436,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
             isArcanaSupported && {
               arcana: {
                 id: localState.arcana.id,
-                key: localState.arcana.key,
+                //key: localState.arcana.key,
               },
             }),
         };
@@ -691,8 +692,6 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
         doc.text("Arcana: {", margin, y);
         y += lineHeight;
         doc.text(`  id: ${localState.arcana.id}`, margin, y);
-        y += lineHeight;
-        doc.text(`  key: ${localState.arcana.key}`, margin, y);
         y += lineHeight;
         doc.text("}", margin, y);
         y += lineHeight;
