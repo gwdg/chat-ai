@@ -47,7 +47,7 @@ const migrations = {
 // Function to apply migrations
 const applyMigrations = (state) => {
   const latestVersion = Object.keys(migrations).length + 1;
-  console.log("Loaded Chat AI state version: ", state.version)
+  console.log("Loaded Chat AI state version:", state.version)
   state.version = state.version || 1;
 
   // If the version is outdated, apply migrations
