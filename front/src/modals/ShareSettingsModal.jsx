@@ -48,7 +48,7 @@ function ShareSettingsModal(props) {
             </p>
           </div>
 
-          {props.arcana.id && props.arcana.key ? (
+          {props.arcana.id ? (
             <>
               <div className="">
                 <p className="text-red-600">
@@ -62,14 +62,9 @@ function ShareSettingsModal(props) {
                   checked={props.exportArcana}
                   onChange={handleCheckboxChangeArcana}
                   className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
-                    !props.arcana.id && !props.arcana.key
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : ""
+                    !props.arcana.id ? "bg-gray-400 cursor-not-allowed" : ""
                   }`}
-                  disabled={
-                    (!props.arcana.id && !props.arcana.key) ||
-                    !props.isArcanaSupported
-                  }
+                  disabled={!props.arcana.id || !props.isArcanaSupported}
                 />
                 <label
                   htmlFor="exportArcana"

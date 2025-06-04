@@ -14,9 +14,7 @@ import image_supported from "../../assets/image_supported.svg";
 import video_icon from "../../assets/video_icon.svg";
 import thought_supported from "../../assets/thought_supported.svg";
 import books from "../../assets/books.svg";
-import cross from "../../assets/cross.svg";
 import dropdown from "../../assets/icon_dropdown.svg";
-import uploaded from "../../assets/file_uploaded.svg";
 import share_icon from "../../assets/share_icon.svg";
 
 //Redux
@@ -28,6 +26,12 @@ import {
 import { processPdfDocument } from "../../apis/PdfProcessApi";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
 import { fetchAvailableModels } from "../../apis/ModelListApi";
+import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
+
+// Hooks
+import { importConversation } from "../../hooks/importConversation"
+
+const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 const SettingsPanel = ({
   selectedFiles,
@@ -55,7 +59,6 @@ const SettingsPanel = ({
   notifySuccess,
   notifyError,
   setShowModalSession,
-  setPreviewFile,
 }) => {
   const conversations = useSelector(selectConversations);
 
@@ -76,6 +79,7 @@ const SettingsPanel = ({
   const [isHoveringTopP, setHoveringTopP] = useState(false);
   const [systemPromptError, setSystemPromptError] = useState("");
   const [processingFiles, setProcessingFiles] = useState(new Set());
+  const defaultModel = useSelector(selectDefaultModel);
 
   //Refs
   const hasProcessedSettings = useRef(false);
@@ -150,6 +154,9 @@ const SettingsPanel = ({
       },
     }));
     updateSettings({ systemPrompt: "You are a helpful assistant" });
+    if (systemPromptError) {
+      setSystemPromptError("");
+    }
   };
 
   // Validate the system prompt is not empty
@@ -282,8 +289,9 @@ const SettingsPanel = ({
                 systemPrompt: settings.systemPrompt
                   ? decodeURIComponent(settings.systemPrompt)
                   : "You are a helpful assistant",
-                model: settings.model_name || "Meta Llama 3.1 8B Instruct",
-                model_api: settings.model || "meta-llama-3.1-8b-instruct",
+                ["model-name"]:
+                  settings["model-name"] || "Meta Llama 3.1 8B Instruct",
+                model: settings.model || "meta-llama-3.1-8b-instruct",
                 temperature: settings.temperature || 0.5,
                 top_p: settings.top_p || 0.5,
               },
@@ -291,7 +299,7 @@ const SettingsPanel = ({
               ...(settings.arcana && {
                 arcana: {
                   id: settings.arcana.id,
-                  key: settings.arcana.key,
+                  // key: settings.arcana.key,
                 },
               }),
             }));
@@ -305,15 +313,16 @@ const SettingsPanel = ({
                     systemPrompt: settings.systemPrompt
                       ? decodeURIComponent(settings.systemPrompt)
                       : "You are a helpful assistant",
-                    model: settings.model_name || "Meta Llama 3.1 8B Instruct",
-                    model_api: settings.model || "meta-llama-3.1-8b-instruct",
+                    ["model-name"]:
+                      settings["model-name"] || "Meta Llama 3.1 8B Instruct",
+                    model: settings.model || "meta-llama-3.1-8b-instruct",
                     temperature: settings.temperature ?? 0.5,
                     top_p: settings.top_p ?? 0.5,
                   },
                   ...(settings.arcana && {
                     arcana: {
                       id: settings.arcana.id,
-                      key: settings.arcana.key,
+                      // key: settings.arcana.key,
                     },
                   }),
                 },
@@ -358,130 +367,34 @@ const SettingsPanel = ({
 
   // Handle importing chat from URL
   useEffect(() => {
-    const handleImport = async () => {
+    const handleImportUrl = async () => {
       const importUrl = searchParams.get("import");
-
       if (
         !importUrl ||
         location.pathname !== "/chat" ||
         hasProcessedImport.current
-      ) {
+        ) {
         return;
-      }
+        }
 
-      try {
-        hasProcessedImport.current = true;
-        const response = await fetch(importUrl);
+      hasProcessedImport.current = true;
 
-        if (!response.ok) {
+      // Download JSON file
+      const response = await fetch(importUrl, dispatch);
+
+      if (!response.ok) {
           throw new Error(
-            response.status >= 500
+          response.status >= 500
               ? "Server Error: Please try again later."
               : "Client Error: The provided link might be incorrect."
           );
-        }
-
-        const parsedData = await response.json();
-        const action = dispatch(addConversation());
-        const newId = action.payload?.id;
-
-        if (!newId) {
-          throw new Error("Failed to create new conversation");
-        }
-
-        // Handle both formats: array and object with messages
-        const messages = Array.isArray(parsedData)
-          ? parsedData
-          : parsedData.messages;
-
-        if (!Array.isArray(messages)) {
-          throw new Error("Invalid format: messages must be an array");
-        }
-
-        // Process messages into conversation format
-        const newArray = [];
-        for (let i = 0; i < messages.length - 1; i++) {
-          if (
-            messages[i].role === "user" &&
-            messages[i + 1]?.role === "assistant"
-          ) {
-            newArray.push({
-              prompt: messages[i].content,
-              response: messages[i + 1].content,
-            });
-          }
-        }
-
-        // Find system message
-        const systemMessage = messages.find((msg) => msg.role === "system");
-
-        // Get title from first non-system message or use default
-        const firstNonSystemMessage = messages.find(
-          (msg) => msg.role !== "system"
-        );
-        const title = firstNonSystemMessage?.content || "Imported Conversation";
-
-        // Prepare settings with optional fields
-        const settings = {
-          systemPrompt: systemMessage?.content || "You are a helpful assistant",
-          model: "Meta Llama 3.1 8B Instruct", // default value
-          model_api: "meta-llama-3.1-8b-instruct", // default value
-          temperature: 0.5, // default value
-          top_p: 0.5, // default value
-        };
-
-        // If it's object format, apply any provided settings
-        if (!Array.isArray(parsedData)) {
-          if (parsedData["model-name"])
-            settings.model = parsedData["model-name"];
-          if (parsedData.model) settings.model_api = parsedData.model;
-          if (parsedData.temperature !== undefined)
-            settings.temperature = Number(parsedData.temperature);
-          if (parsedData.top_p !== undefined)
-            settings.top_p = Number(parsedData.top_p);
-        }
-
-        // Prepare conversation update
-        const updates = {
-          conversation: messages,
-          responses: newArray,
-          title,
-          settings,
-        };
-
-        // Only add arcana if both id and key are present
-        if (
-          !Array.isArray(parsedData) &&
-          parsedData.arcana?.id &&
-          parsedData.arcana?.key
-        ) {
-          updates.arcana = {
-            id: parsedData.arcana.id,
-            key: parsedData.arcana.key,
-          };
-        }
-
-        // Update conversation
-        dispatch(
-          updateConversation({
-            id: newId,
-            updates,
-          })
-        );
-
-        // Navigate and notify
-        navigate(`/chat/${newId}`, { replace: true });
-        notifySuccess("Chat imported successfully");
-      } catch (error) {
-        console.error("Import error:", error);
-        notifyError(error.message || "An unexpected error occurred");
-        navigate(`/chat/${currentConversationId}`, { replace: true });
-        window.location.reload();
       }
-    };
+      const parsedData = await response.json();
+      return importConversation(parsedData, dispatch, currentConversationId, defaultModel, notifyError, notifySuccess, navigate)
+    }
 
     if (conversations.length > 0) {
-      handleImport();
+      handleImportUrl();
     }
   }, [
     searchParams,
@@ -498,7 +411,7 @@ const SettingsPanel = ({
   useEffect(() => {
     const handleArcanaParams = async (modelsList) => {
       const arcanaID = searchParams.get("arcana");
-      const arcanaKey = searchParams.get("arcana_key");
+      // const arcanaKey = searchParams.get("arcana_key");
       const modelParam = searchParams.get("model");
 
       // Check if we have an arcana ID and model param (key is now optional)
@@ -529,7 +442,7 @@ const SettingsPanel = ({
             id: decodeURIComponent(arcanaID),
             // Only include key if it exists, otherwise use null or empty string
             // depending on what your backend expects for missing key
-            key: arcanaKey ? decodeURIComponent(arcanaKey) : null,
+            // key: arcanaKey ? decodeURIComponent(arcanaKey) : null,
           };
 
           // Update local state
@@ -538,8 +451,8 @@ const SettingsPanel = ({
             arcana: arcanaObject,
             settings: {
               ...prev.settings,
-              model: matchedModel.name,
-              model_api: matchedModel.id,
+              ["model-name"]: matchedModel.name,
+              model: matchedModel.id,
               temperature: 0,
               top_p: 0.05,
             },
@@ -558,8 +471,8 @@ const SettingsPanel = ({
                 arcana: arcanaObject,
                 settings: {
                   ...currentConversation?.settings,
-                  model: matchedModel.name,
-                  model_api: matchedModel.id,
+                  ["model-name"]: matchedModel.name,
+                  model: matchedModel.id,
                   temperature: 0,
                   top_p: 0.05,
                 },
@@ -599,6 +512,7 @@ const SettingsPanel = ({
         handleArcanaParams(modelsList);
       } catch (error) {
         notifyError("Failed to fetch models. Please try again.");
+        await sleep(10000)
         hasFetchedModels.current = false;
       }
     };
@@ -679,7 +593,7 @@ const SettingsPanel = ({
                         demand={currentModel?.demand}
                       />
                       <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
-                        {modelSettings.model}
+                        {modelSettings["model-name"]}
                       </div>
                       {isImageSupported && (
                         <img
@@ -918,11 +832,7 @@ const SettingsPanel = ({
                 <div className="w-full relative">
                   <div className="relative z-10">
                     <textarea
-                      className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border ${
-                        systemPromptError
-                          ? "border-red-500"
-                          : "dark:border-border_dark"
-                      } outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                      className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
                       type="text"
                       name="systemPrompt"
                       placeholder={t("description.custom4")}
@@ -931,9 +841,9 @@ const SettingsPanel = ({
                       onBlur={() => validateSystemPrompt()}
                     />
                   </div>
-                  {systemPromptError && (
-                    <p className="text-red-600 text-12-500">
-                      {systemPromptError}
+                  {(systemPromptError || !localState.settings.systemPrompt) && (
+                    <p className="text-yellow-600 text-12-500">
+                      <Trans i18nKey="description.custom6" />
                     </p>
                   )}
                 </div>

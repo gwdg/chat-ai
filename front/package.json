@@ -1,14 +1,15 @@
 {
-  "name": "llm-service",
+  "name": "chat-ai",
+  "displayName": "Chat AI",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.8.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 7220",
+    "dev": "vite --host --no-open",
+    "prod": "vite build && vite preview --host --no-open",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview --port 7220 --host --no-open",
-    "build-preview": "vite build && vite preview --port 7220 --host --no-open"
+    "preview": "vite preview --host --no-open"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",

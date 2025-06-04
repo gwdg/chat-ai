@@ -270,7 +270,7 @@ function Header({
                 demand={currentModel?.demand}
               />
               <div className="flex-1 text-sm truncate">
-                {modelSettings.model}
+                {modelSettings["model-name"]}
               </div>
               {isImageSupported && (
                 <img

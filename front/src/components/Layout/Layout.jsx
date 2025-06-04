@@ -19,7 +19,6 @@ import {
   selectCurrentConversationId,
   updateConversation,
   selectCurrentConversation,
-  resetStore,
 } from "../../Redux/reducers/conversationsSlice";
 import { fetchAvailableModels } from "../../apis/ModelListApi";
 import OfflineModelInfoModal from "../../modals/OfflineModelInfoModal";
@@ -27,6 +26,11 @@ import SettingsModal from "../../modals/SettingsModal";
 import { fetchCurrentUserProfile } from "../../apis/GetUserDataApi";
 import RenameConversationModal from "../../modals/RenameConversationModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
+import GitHubRepoModal from "../../modals/GitHubRepoModal";
+import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
+
+// Hooks
+import { importConversation } from "../../hooks/importConversation"
 
 // Main layout component that manages the overall structure and state of the chat application
 function Layout() {
@@ -42,6 +46,7 @@ function Layout() {
   const [renamingConversationId, setRenamingConversationId] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingConversationId, setDeletingConversationId] = useState(null);
+  const [showRepoModal, setShowRepoModal] = useState(false);
 
   // Refs and hooks initialization
   const mainDiv = useRef(null);
@@ -54,13 +59,22 @@ function Layout() {
   const currentConversationId = useSelector(selectCurrentConversationId);
   const currentConversation = useSelector(selectCurrentConversation);
   const [conversationIds, setConversationIds] = useState([]);
+  const defaultModel = useSelector(selectDefaultModel);
 
   // Model configuration state
   const [modelList, setModelList] = useState([]);
   const [modelSettings, setModelSettings] = useState({
+    ["model-name"]: "",
     model: "",
-    model_api: "",
   });
+
+  const handleImportPersona = async (parsedData) => {
+    return importConversation(parsedData, dispatch, currentConversationId, defaultModel, notifyError, notifySuccess, navigate)
+  }
+
+  const handleImportError = (error) => {
+    notifyError(error);
+  };
 
   // Fetch user profile data on component mount
   const fetchUserData = useCallback(async () => {
@@ -101,8 +115,8 @@ function Layout() {
   useEffect(() => {
     if (currentConversation?.settings) {
       setModelSettings({
+        ["model-name"]: currentConversation.settings["model-name"],
         model: currentConversation.settings.model,
-        model_api: currentConversation.settings.model_api,
       });
     }
   }, [currentConversation]);
@@ -123,8 +137,8 @@ function Layout() {
       if (!model || !modelApi || !currentConversationId) return;
 
       setModelSettings({
-        model,
-        model_api: modelApi,
+        ["model-name"]: model,
+        model: modelApi,
       });
 
       // Update conversation settings when model changes
@@ -134,8 +148,8 @@ function Layout() {
           updates: {
             settings: {
               ...currentConversation.settings,
-              model,
-              model_api: modelApi,
+              ["model-name"]: model,
+              model: modelApi,
             },
           },
         })
@@ -230,28 +244,68 @@ function Layout() {
       // Generate a new ID that will be used across all tabs
       const newConversationId = uuidv4();
 
-      // Save the current theme and advanced options state before purging
+      // Save the current state BEFORE purging (this is crucial)
       const currentState = store.getState();
       const currentTheme = currentState.theme;
       const currentAdvOption = currentState.advOption;
+      const currentDefaultModel = currentState.defaultModel; // Get BEFORE purge
 
       await persistor.purge();
 
-      // Dispatch RESET_ALL with the new conversation ID and preserved states
+      // Dispatch RESET_ALL with all preserved states
       dispatch({
         type: "RESET_ALL",
         payload: {
           newConversationId,
           theme: currentTheme,
           advOption: currentAdvOption,
+          defaultModel: currentDefaultModel, // Pass the saved default model
         },
         meta: {
-          sync: true, // This tells redux-state-sync to broadcast to other tabs
+          sync: true,
         },
       });
 
-      // Reset the store with the same ID
-      dispatch(resetStore(newConversationId));
+      // Create the new conversation with the correct default model settings
+      dispatch({
+        type: "conversations/resetStore",
+        payload: {
+          id: newConversationId,
+          title: "Untitled Conversation",
+          conversation: [
+            {
+              role: "system",
+              content: "You are a helpful assistant",
+            },
+          ],
+          responses: [],
+          prompt: "",
+          settings: {
+            ["model-name"]:
+              currentDefaultModel?.name || "Meta Llama 3.1 8B Instruct",
+            model: currentDefaultModel?.id || "meta-llama-3.1-8b-instruct",
+            temperature: 0.5,
+            top_p: 0.5,
+            systemPrompt: "You are a helpful assistant",
+          },
+          exportOptions: {
+            exportSettings: false,
+            exportImage: false,
+            exportArcana: false,
+          },
+          dontShow: {
+            dontShowAgain: false,
+            dontShowAgainShare: false,
+          },
+          arcana: {
+            id: "",
+            // key: "",
+          },
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+        },
+        meta: { id: newConversationId, sync: true },
+      });
 
       notifySuccess("Chats cleared successfully");
 
@@ -314,6 +368,7 @@ function Layout() {
             onDeleteConversation={handleDeleteConversation}
             onRenameConversation={handleRenameConversation}
             conversationIds={conversationIds}
+            setShowRepoModal={setShowRepoModal}
           />
         </div>
 
@@ -374,7 +429,7 @@ function Layout() {
       {showModalOffline && (
         <OfflineModelInfoModal
           showModal={setShowModalOffline}
-          model={modelSettings.model_api}
+          model={modelSettings["model-name"]}
         />
       )}
 
@@ -383,6 +438,7 @@ function Layout() {
           showModal={setShowSettingsModal}
           setShowCacheModal={setShowCacheModal}
           userData={userData}
+          modelList={modelList}
         />
       )}
 
@@ -403,6 +459,17 @@ function Layout() {
 
       {showModalSession && (
         <SessionExpiredModal showModal={setShowModalSession} />
+      )}
+
+      {showRepoModal && (
+        <GitHubRepoModal
+          showModal={setShowRepoModal}
+          repoOwner="gwdg"
+          repoName="chat-ai-personas"
+          branch="main"
+          onPersonaImport={handleImportPersona} // New prop for handling persona import
+          onError={handleImportError} // New prop for handling errors
+        />
       )}
     </div>
   );

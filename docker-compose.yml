@@ -3,31 +3,26 @@ services:
     image: chat-ai-front:latest
     build: ./front
     network_mode: "host"
-    ports:
-      - '7220:7220' # port mapping
     volumes:
       - ./front:/usr/src/app
       - /usr/src/app/node_modules
+    secrets:
+      - front
     restart: on-failure
 
   back:
     image: chat-ai-back:latest
     build: ./back
     network_mode: "host"
-    ports:
-      - '7230:7230' # port mapping
     volumes:
       - ./back:/usr/src/app
       - /usr/src/app/node_modules
+    secrets:
+      - back
     restart: on-failure
 
-  arcana:
-    image: chat-ai-arcana:latest
-    build: ./arcana
-    network_mode: "host"
-    ports:
-      - '3000:3000' # port mapping
-    volumes:
-      - ./arcana:/usr/src/app
-      - /usr/src/app/node_modules
-    restart: on-failure
+secrets:
+  front:
+    file: ./secrets/front.json
+  back:
+    file: ./secrets/back.json

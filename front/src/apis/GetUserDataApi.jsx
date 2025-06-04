@@ -1,7 +1,7 @@
 // Fetches authenticated user's profile data from the server
 export const fetchCurrentUserProfile = async () => {
   try {
-    const response = await fetch("/user");
+    const response = await fetch(import.meta.env.VITE_USERDATA_ENDPOINT);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

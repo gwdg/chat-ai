@@ -13,12 +13,8 @@ RUN npm install
 # Copy the rest of the application to the app directory
 COPY . .
 
-# Expose the port app runs on
-EXPOSE 7220
-
 # Set the VITE_ROOT environment variable to point to the dist directory
 ENV VITE_ROOT=/usr/src/app/dist
 
-# Run the application
-#CMD [ "npm", "run", "serve", "--", "--host", "--open"]
-CMD [ "npm", "run", "build-preview"]
+# Use an entrypoint script to determine which command to run
+ENTRYPOINT ["/usr/src/app/entrypoint.sh"]

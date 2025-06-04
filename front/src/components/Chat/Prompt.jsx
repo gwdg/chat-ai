@@ -53,6 +53,7 @@ function Prompt({
   adjustHeight,
   setPdfNotProcessedModal,
   setPreviewFile,
+  showAdvOpt,
 }) {
   //Hooks
   const { t, i18n } = useTranslation();
@@ -85,13 +86,13 @@ function Prompt({
     // Check if selected model supports image input
     const imageSupport = modelList.some(
       (modelX) =>
-        modelX.name === localState.settings.model &&
+        modelX.name === localState.settings["model-name"] &&
         modelX.input.includes("image")
     );
     // Check if selected model supports video input
     const videoSupport = modelList.some(
       (modelX) =>
-        modelX.name === localState.settings.model &&
+        modelX.name === localState.settings["model-name"] &&
         modelX.input.includes("video")
     );
 
@@ -112,6 +113,11 @@ function Prompt({
         return message;
       });
     }
+
+    // Filter out info messages only for API call
+    const conversationForAPI = processedConversation.filter(
+      (message) => message.role !== "info"
+    );
 
     if (selectedFiles.length > 0) {
       const imageFiles = selectedFiles.filter((file) => file.type === "image");
@@ -180,14 +186,14 @@ function Prompt({
       const response = await fetchLLMResponse(
         processedConversation,
         localState.settings.systemPrompt,
-        localState.settings.model_api,
+        localState.settings.model,
         localState.settings.temperature,
         localState.settings.top_p,
         localState.arcana,
         setLocalState,
         setShowModalSession,
         setShowBadRequest,
-        processedConversation,
+        conversationForAPI,
         isArcanaSupported
       );
       dispatch(setIsResponding(false));
@@ -208,6 +214,7 @@ function Prompt({
       }
     }
   }
+
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
   function formatFileSize(bytes) {
     const units = ["Bytes", "KB", "MB", "GB", "TB"];
@@ -549,7 +556,40 @@ function Prompt({
           file.name.endsWith(".jsx") ||
           file.name.endsWith(".tsx") ||
           file.name.endsWith(".html") ||
-          file.name.endsWith(".json")
+          file.name.endsWith(".json") || 
+          file.name.endsWith(".tex") || 
+          file.name.endsWith(".yaml") || 
+          file.name.endsWith(".toml") || 
+          file.name.endsWith(".dart") || 
+          file.name.endsWith(".tex") || 
+          file.name.endsWith(".xml") ||
+          file.name.endsWith(".yaml") ||
+          file.name.endsWith(".yml") ||
+          file.name.endsWith(".csv") ||
+          file.name.endsWith(".ini") ||
+          file.name.endsWith(".toml") ||
+          file.name.endsWith(".properties") ||
+          file.name.endsWith(".css") ||
+          file.name.endsWith(".scss") ||
+          file.name.endsWith(".sass") ||
+          file.name.endsWith(".less") ||
+          file.name.endsWith(".md") ||
+          file.name.endsWith(".markdown") ||
+          file.name.endsWith(".sh") ||
+          file.name.endsWith(".ps1") ||
+          file.name.endsWith(".pl") ||
+          file.name.endsWith(".lua") ||
+          file.name.endsWith(".r") ||
+          file.name.endsWith(".m") ||
+          file.name.endsWith(".mat") ||
+          file.name.endsWith(".asm") ||
+          file.name.endsWith(".sql") ||
+          file.name.endsWith(".ipynb") ||
+          file.name.endsWith(".rmd") ||
+          file.name.endsWith(".dockerfile") ||
+          file.name.endsWith(".proto") ||
+          file.name.endsWith(".cfg") ||
+          file.name.endsWith(".bat")
       );
       // Validate file types
       if (
@@ -917,26 +957,29 @@ function Prompt({
             ) : null}
 
             <div className="flex gap-4 w-full justify-end items-center">
-              <button
-                className="flex h-[30px] w-[30px] cursor-pointer"
-                onClick={toggleAdvOpt}
-              >
-                <img
-                  className="cursor-pointer h-[30px] w-[30px]"
-                  src={settings_icon}
-                  alt="settings"
-                />
-              </button>
-
+              {!showAdvOpt ? (
+                <Tooltip text={t("description.settings_toggle")}>
+                  <button
+                    className="flex h-[30px] w-[30px] cursor-pointer"
+                    onClick={toggleAdvOpt}
+                  >
+                    <img
+                      className="cursor-pointer h-[30px] w-[30px]"
+                      src={settings_icon}
+                      alt="settings"
+                    />
+                  </button>
+                </Tooltip>
+              ) : null}
               <input
                 type="file"
                 ref={hiddenFileInput}
                 multiple
-                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json"
+                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json, .tex, .xml, .yaml, .yml, .ini, .toml, .properties, .css, .scss, .sass, .less, .sh, .ps1, .pl, .lua, .r, .m, .mat, .asm, .sql, .ipynb, .rmd, .dockerfile, .proto, .cfg, .bat"
                 onChange={handleFilesChange}
                 className="hidden"
               />
-              <Tooltip text={t("description.upload")}>
+              <Tooltip text={t("description.attachFile")}>
                 <button
                   className="h-[30px] w-[30px] cursor-pointer"
                   onClick={handleClick}
@@ -949,7 +992,6 @@ function Prompt({
                   />
                 </button>
               </Tooltip>
-
               {(isImageSupported || isVideoSupported) && (
                 <>
                   <input
@@ -978,7 +1020,6 @@ function Prompt({
                   </Tooltip>
                 </>
               )}
-
               {loading || loadingResend ? (
                 <Tooltip text={t("description.pause")}>
                   <button className="h-[30px] w-[30px] cursor-pointer">

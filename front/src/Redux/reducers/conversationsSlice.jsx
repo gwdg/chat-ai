@@ -13,8 +13,8 @@ const createDefaultConversation = () => ({
   responses: [],
   prompt: "",
   settings: {
-    model: "Meta Llama 3.1 8B Instruct",
-    model_api: "meta-llama-3.1-8b-instruct",
+    ["model-name"]: "Meta Llama 3.1 8B Instruct",
+    model: "meta-llama-3.1-8b-instruct",
     temperature: 0.5,
     top_p: 0.5,
     systemPrompt: "You are a helpful assistant",
@@ -72,14 +72,16 @@ const conversationsSlice = createSlice({
       const { id, updates } = action.payload;
       const conversation = state.conversations?.find((conv) => conv.id === id);
       if (conversation) {
-        // Ensure system message remains at the start when updating conversation array
-        if (updates.conversation) {
-          const hasSystemMessage = updates.conversation.some(
-            (msg) =>
-              msg.role === "system" &&
-              msg.content === conversation.settings.systemPrompt
-          );
+        // Skip auto-adding system message if we're updating both conversation and settings
+        // (which indicates an import operation)
+        const isImportOperation =
+          updates.conversation && updates.settings?.systemPrompt;
 
+        if (updates.conversation && !isImportOperation) {
+          // Only auto-add system message for regular updates, not imports
+          const hasSystemMessage = updates.conversation.some(
+            (msg) => msg.role === "system"
+          );
           if (!hasSystemMessage) {
             updates.conversation = [
               {
@@ -91,10 +93,7 @@ const conversationsSlice = createSlice({
           }
         }
 
-        // Update the conversation with the provided updates
         Object.assign(conversation, updates);
-
-        // Always update lastModified when conversation is updated
         conversation.lastModified = new Date().toISOString();
       }
     },
@@ -154,8 +153,8 @@ const conversationsSlice = createSlice({
           responses: [],
           prompt: "",
           settings: {
-            model: "Meta Llama 3.1 8B Instruct",
-            model_api: "meta-llama-3.1-8b-instruct",
+            ["model-name"]: "Meta Llama 3.1 8B Instruct",
+            model: "meta-llama-3.1-8b-instruct",
             temperature: 0.5,
             top_p: 0.5,
             systemPrompt: "You are a helpful assistant",
