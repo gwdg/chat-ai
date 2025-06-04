@@ -5,17 +5,73 @@ import rootReducer from "../reducers/index";
 import {
   createStateSyncMiddleware,
   initMessageListener,
+  isActionSynced,
 } from "redux-state-sync";
 import { v4 as uuidv4 } from "uuid";
 
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["theme", "conversations", "advOptions", "defaultModel"], // Added defaultModel
+  whitelist: ["theme", "conversations", "advOptions", "defaultModel", "version", ],
+};
+
+// Migration functions for different versions
+const migrations = {
+  1: (state) => {
+    // Migrate from version 1 to 2
+    state.version = 2;
+  
+    // Migrate all conversations
+    state.conversations = {
+      ...state.conversations,
+      conversations: state.conversations.conversations.map((conv) => {
+        const newSettings = { ...conv.settings};
+        // Convert old version to new
+        if (newSettings.model_api !== undefined) {
+          newSettings["model-name"] = newSettings.model;
+          newSettings.model = newSettings.model_api;
+          delete newSettings.model_api;
+        }
+        return {
+          ...conv,
+          settings: newSettings,
+        }
+      }),
+    }
+
+    return state;
+  },
+  // Future migrations here (e.g., 2: (state) => {...})
+};
+
+// Function to apply migrations
+const applyMigrations = (state) => {
+  const latestVersion = Object.keys(migrations).length + 1;
+  console.log("Loaded Chat AI state version:", state.version)
+  state.version = state.version || 1;
+
+  // If the version is outdated, apply migrations
+  while (state.version < latestVersion) {
+    if (migrations[state.version]) {
+      try {
+        console.log("Migrating from", state.version, " to ", state.version + 1)
+        state = migrations[state.version](state);
+      } catch (error) {
+        console.error(`Migration from version ${state.version} failed:`, error);
+        break; // Stop migration on error
+      }
+    } else {
+      console.log("No migrations left")
+      break;
+    }
+  }
+
+  return { ...state, version: state.version }
 };
 
 // Create a custom reducer that handles the RESET_ALL action
 const rootReducerWithReset = (state, action) => {
+  let newState;
   if (action.type === "RESET_ALL") {
     // Extract the newConversationId and preserved states
     const { newConversationId, theme, advOption, defaultModel } =
@@ -58,15 +114,15 @@ const rootReducerWithReset = (state, action) => {
       },
       arcana: {
         id: "",
-        key: "",
       },
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
     };
 
     // Reset the entire state but preserve the specified states
-    return {
+    newState = {
       ...rootReducer(undefined, { type: "@@INIT" }),
+      version: 2,
       conversations: {
         conversations: [newConversation],
         currentConversationId: newConversation.id,
@@ -77,9 +133,13 @@ const rootReducerWithReset = (state, action) => {
       advOption: advOption || state.advOption,
       defaultModel: currentDefaultModel, 
     };
+  } else if (action.type === "MIGRATE") {
+    // Apply migrations to the new state
+    newState = applyMigrations(rootReducer(state, action));
+  } else {
+    newState = rootReducer(state, action);
   }
-
-  return rootReducer(state, action);
+  return newState;
 };
 
 const persistedRootReducer = persistReducer(
@@ -104,6 +164,7 @@ const stateSyncConfig = {
     "theme/setLightMode",
     "SET_ADV",
     "RESET_ALL",
+    "MIGRATE",
   ],
   // Use localStorage for better compatibility
   broadcastChannelOption: {
@@ -124,6 +185,8 @@ export const store = configureStore({
 initMessageListener(store);
 
 // Create the persistor object to persist the Redux store
-export const persistor = persistStore(store);
-
+export const persistor = persistStore(store, null, () => {
+  // this will be invoked after rehydration is complete
+  store.dispatch({ type: "MIGRATE" });
+});
 export default store;

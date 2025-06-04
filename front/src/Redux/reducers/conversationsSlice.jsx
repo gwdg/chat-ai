@@ -30,7 +30,6 @@ const createDefaultConversation = () => ({
   },
   arcana: {
     id: "",
-    key: "",
   },
   createdAt: new Date().toISOString(),
   lastModified: new Date().toISOString(),
