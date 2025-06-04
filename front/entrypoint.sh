@@ -4,8 +4,8 @@ set -e
 # Read the config.json file
 CONFIG=$(cat /run/secrets/front)
 
-# Extract the mode using jq (install jq if not already present)
-MODE=$(echo "$CONFIG" | jq -r '.mode')
+# Extract the mode using bash string manipulation, handling variable spacing
+MODE=$(echo "$CONFIG" | grep -oP '"mode"\s*:\s*"\K[^"]+')
 
 # Determine the command to run
 if [ "$MODE" == "dev" ]; then

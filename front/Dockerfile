@@ -4,9 +4,6 @@ FROM node:latest
 # Create a directory for your application
 WORKDIR /usr/src/app
 
-# Install jq
-RUN apt-get update && apt-get install -y jq
-
 # Copy package.json and package-lock.json files to your app directory
 COPY package*.json ./
 
