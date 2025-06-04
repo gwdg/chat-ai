@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
 import {
   addConversation,
   setCurrentConversation,
@@ -25,6 +26,7 @@ function Sidebar({
 }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
@@ -125,7 +127,7 @@ function Sidebar({
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
         >
-          <span>Add New Chat</span>
+          <span><Trans i18nKey="description.newConversation" /></span>
         </button>
       </div>
 
@@ -219,7 +221,7 @@ function Sidebar({
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
         >
-          <span>Import Persona</span>
+          <span><Trans i18nKey="description.importPersona" /></span>
         </button>
       </div>
     </div>

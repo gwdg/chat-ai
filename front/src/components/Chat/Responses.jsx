@@ -13,14 +13,20 @@ import send from "../../assets/icon_send.svg";
 import edit_icon from "../../assets/edit_icon.svg";
 import icon_resend from "../../assets/icon_resend.svg";
 import ResponseItem from "../Markdown/ResponseItem";
+import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
   setIsResponding,
   updateConversation,
+  selectCurrentConversationId
 } from "../../Redux/reducers/conversationsSlice";
 import PreviewImageModal from "../../modals/PreviewImageModal";
 import { useParams } from "react-router-dom";
+import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
+
+// Hooks
+import { importConversation } from "../../hooks/importConversation"
 
 //Variable
 const MAX_HEIGHT = 200;
@@ -49,10 +55,13 @@ function Responses({
   // Hooks
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   // Redux state
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
   const { conversationId } = useParams();
+  const currentConversationId = useSelector(selectCurrentConversationId);
+  const defaultModel = useSelector(selectDefaultModel);
 
   // Local useState
   const [editingIndex, setEditingIndex] = useState(null);
@@ -766,168 +775,17 @@ function Responses({
 
       // Handle file content after loading
       reader.onload = async () => {
-        // Inner function to process message data
-        function processMessages(parsedData, additionalSettings = {}) {
-          // Validate data structure
-          if (
-            parsedData.length > 0 &&
-            Object.prototype.hasOwnProperty.call(parsedData[0], "role") &&
-            Object.prototype.hasOwnProperty.call(parsedData[0], "content")
-          ) {
-            let newArray = [];
-
-            // Extract system prompt from messages
-            const systemMessage = parsedData.find(
-              (msg) => msg.role === "system"
-            );
-            const systemPrompt =
-              systemMessage?.content || "You are a helpful assistant";
-
-            // Process each message
-            for (let i = 0; i < parsedData.length; i++) {
-              const currentMessage = parsedData[i];
-
-              // Handle info role - always create standalone info object
-              if (currentMessage.role === "info") {
-                newArray.push({
-                  info: currentMessage.content,
-                });
-                continue;
-              }
-
-              // Handle user-assistant pairs
-              if (
-                currentMessage.role === "user" &&
-                parsedData[i + 1]?.role === "assistant"
-              ) {
-                let userContent = currentMessage.content;
-                let images = [];
-
-                // Handle different content types (text and images)
-                if (Array.isArray(userContent)) {
-                  let textContent = "";
-
-                  userContent.forEach((item) => {
-                    if (item.type === "text") {
-                      textContent += item.text + "\n";
-                    } else if (item.type === "image_url" && item.image_url) {
-                      images.push({
-                        type: item.type,
-                        image_url: {
-                          url: item.image_url.url,
-                        },
-                      });
-                    }
-                  });
-
-                  const responseObj = {
-                    prompt: textContent?.trim(),
-                    images: images,
-                    response: parsedData[i + 1]?.content,
-                  };
-
-                  newArray.push(responseObj);
-                } else {
-                  const responseObj = {
-                    prompt: userContent,
-                    response: parsedData[i + 1]?.content,
-                  };
-
-                  newArray.push(responseObj);
-                }
-              }
-            }
-
-            // Update local state
-            setLocalState((prevState) => ({
-              ...prevState,
-              responses: newArray,
-              conversation: parsedData,
-              settings: {
-                ...prevState.settings,
-                systemPrompt: systemPrompt,
-                ...additionalSettings,
-              },
-            }));
-
-            // Update Redux with everything at once (this triggers isImportOperation = true)
-            const reduxUpdates = {
-              conversation: parsedData,
-              responses: newArray,
-              settings: {
-                ...localState.settings,
-                systemPrompt: systemPrompt,
-                ...additionalSettings,
-              },
-            };
-
-            // Add arcana if present
-            if (additionalSettings.arcana) {
-              reduxUpdates.arcana = additionalSettings.arcana;
-            }
-
-            // Add title if present
-            if (additionalSettings.title) {
-              reduxUpdates.title = additionalSettings.title;
-            }
-
-            dispatch(
-              updateConversation({
-                id: conversationId,
-                updates: reduxUpdates,
-              })
-            );
-
-            notifySuccess("Chat imported successfully");
-          } else {
-            notifyError("Invalid structure of JSON.");
-          }
-        }
-
+        
         // Parse and process JSON data
         try {
           let data = reader.result;
 
           // Fix common JSON issues like trailing commas
           data = data.replace(/,(\s*[}\]])/g, "$1"); // Remove trailing commas
-
           const parsedData = JSON.parse(data);
 
-          if (Array.isArray(parsedData)) {
-            // Format 2: Direct array of messages
-            processMessages(parsedData);
-          } else if (
-            parsedData &&
-            parsedData.messages &&
-            Array.isArray(parsedData.messages)
-          ) {
-            // Format 1: Object with messages array and settings
-            const additionalSettings = {
-              title: parsedData.title || "Imported Conversation",
-            };
-
-            // Add other settings if present
-            if (parsedData["model-name"])
-              additionalSettings["model-name"] = parsedData["model-name"];
-            if (parsedData.model) additionalSettings.model = parsedData.model;
-            if (parsedData.temperature !== undefined)
-              additionalSettings.temperature = parsedData.temperature;
-            if (parsedData.top_p !== undefined)
-              additionalSettings.top_p = parsedData.top_p;
-
-            // Add arcana if present
-            if (parsedData.arcana?.id) {
-              additionalSettings.arcana = {
-                id: parsedData.arcana.id,
-                // key: parsedData.arcana.key,
-              };
-            }
-
-            // Process messages with additional settings
-            processMessages(parsedData.messages, additionalSettings);
-          } else {
-            notifyError("Invalid structure of JSON.");
-          }
+          // Import
+          importConversation(parsedData, dispatch, currentConversationId, defaultModel, notifyError, notifySuccess, navigate)
         } catch (jsonError) {
           console.error("JSON Parse Error:", jsonError);
           notifyError("Invalid JSON file format: " + jsonError.message);

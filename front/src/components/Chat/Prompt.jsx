@@ -556,7 +556,40 @@ function Prompt({
           file.name.endsWith(".jsx") ||
           file.name.endsWith(".tsx") ||
           file.name.endsWith(".html") ||
-          file.name.endsWith(".json")
+          file.name.endsWith(".json") || 
+          file.name.endsWith(".tex") || 
+          file.name.endsWith(".yaml") || 
+          file.name.endsWith(".toml") || 
+          file.name.endsWith(".dart") || 
+          file.name.endsWith(".tex") || 
+          file.name.endsWith(".xml") ||
+          file.name.endsWith(".yaml") ||
+          file.name.endsWith(".yml") ||
+          file.name.endsWith(".csv") ||
+          file.name.endsWith(".ini") ||
+          file.name.endsWith(".toml") ||
+          file.name.endsWith(".properties") ||
+          file.name.endsWith(".css") ||
+          file.name.endsWith(".scss") ||
+          file.name.endsWith(".sass") ||
+          file.name.endsWith(".less") ||
+          file.name.endsWith(".md") ||
+          file.name.endsWith(".markdown") ||
+          file.name.endsWith(".sh") ||
+          file.name.endsWith(".ps1") ||
+          file.name.endsWith(".pl") ||
+          file.name.endsWith(".lua") ||
+          file.name.endsWith(".r") ||
+          file.name.endsWith(".m") ||
+          file.name.endsWith(".mat") ||
+          file.name.endsWith(".asm") ||
+          file.name.endsWith(".sql") ||
+          file.name.endsWith(".ipynb") ||
+          file.name.endsWith(".rmd") ||
+          file.name.endsWith(".dockerfile") ||
+          file.name.endsWith(".proto") ||
+          file.name.endsWith(".cfg") ||
+          file.name.endsWith(".bat")
       );
       // Validate file types
       if (
@@ -942,11 +975,11 @@ function Prompt({
                 type="file"
                 ref={hiddenFileInput}
                 multiple
-                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json"
+                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json, .tex, .xml, .yaml, .yml, .ini, .toml, .properties, .css, .scss, .sass, .less, .sh, .ps1, .pl, .lua, .r, .m, .mat, .asm, .sql, .ipynb, .rmd, .dockerfile, .proto, .cfg, .bat"
                 onChange={handleFilesChange}
                 className="hidden"
               />
-              <Tooltip text={t("description.upload")}>
+              <Tooltip text={t("description.attachFile")}>
                 <button
                   className="h-[30px] w-[30px] cursor-pointer"
                   onClick={handleClick}

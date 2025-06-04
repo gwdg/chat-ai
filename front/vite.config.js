@@ -51,5 +51,6 @@ export default defineConfig({
   },
   preview: {
     port: port,
+    open: false,
   },
 });

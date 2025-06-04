@@ -11,7 +11,7 @@ A Seamless Slurm-Native Solution for HPC-Based Services
 <p align="center">
 <a href="https://docs.hpc.gwdg.de/services/chat-ai"><b>Documentation</b></a> | <a href="https://arxiv.org/abs/2407.00110"><b>Paper</b></a>
 </p>
-f
+
 This repository contains the stand-alone web interface of Chat AI. The implementation of the remaining components of the complete architecture can be found in two other repos:
 - Server components, incl. API gateway and SSH proxy: https://github.com/gwdg/saia-hub 
 - HPC components, incl. scheduler and slurm scripts: https://github.com/gwdg/saia-hpc
@@ -98,6 +98,7 @@ Note that in some cases rebuilding the docker image might be necessary.
 You can set the port numbers for both the `front` and `back` services in the `front.json` and `back.json` files.
 
 The `front` service uses the following configurable attributes in `front.json`:
+- `mode`: Set to `dev` to enable development environment and `prod` for production.
 - `port`: Port number to listen on. Default: 8080
 - `backendPath`: Path to `back` service, used for sending messages and processing PDF files, e.g. `http://localhost:8081/` or `/backend`
 - `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure

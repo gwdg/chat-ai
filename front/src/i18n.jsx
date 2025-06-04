@@ -20,6 +20,8 @@ i18n
       en: {
         translation: {
           description: {
+            newConversation: "+ New Conversation",
+            importPersona: "Import Persona",
             persona: {
               selectPersona: "Select Persona",
               browsePersonas: "Browse available personas from repository",
@@ -143,7 +145,7 @@ i18n
             undo: "Undo",
             import: "Import",
             clear: "Clear",
-            upload: "Attach File",
+            attachFile: "Attach File",
             attachImage: "Attach Media",
             pause: "Abort",
             send: "Send",
@@ -271,6 +273,8 @@ i18n
       de: {
         translation: {
           description: {
+            newConversation: "+ Neues Gespräch",
+            importPersona: "Persona importieren",
             persona: {
               selectPersona: "Persona auswählen",
               browsePersonas:
@@ -398,7 +402,7 @@ i18n
             undo: "Rückgängig",
             import: "Importieren",
             clear: "Löschen",
-            upload: "Datei anhängen",
+            attachFile: "Datei anhängen",
             attachImage: "Bild Anhängen",
             pause: "Abbrechen",
             send: "Senden",

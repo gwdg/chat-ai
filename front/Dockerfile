@@ -4,6 +4,9 @@ FROM node:latest
 # Create a directory for your application
 WORKDIR /usr/src/app
 
+# Install jq
+RUN apt-get update && apt-get install -y jq
+
 # Copy package.json and package-lock.json files to your app directory
 COPY package*.json ./
 
@@ -16,6 +19,5 @@ COPY . .
 # Set the VITE_ROOT environment variable to point to the dist directory
 ENV VITE_ROOT=/usr/src/app/dist
 
-# Run the application
-#CMD [ "npm", "run", "serve", "--", "--host", "--open"]
-CMD [ "npm", "run", "build-preview"]
+# Use an entrypoint script to determine which command to run
+ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
