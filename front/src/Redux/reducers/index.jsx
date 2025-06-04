@@ -6,11 +6,7 @@ import anncAlertReducer from "./anncAlertReducer";
 import advOptionReducer from "./advancedOptionsReducer";
 import conversationsReducer from "./conversationsSlice";
 import defaultModelReducer from "./defaultModelSlice";
-
-// Version reducer to track the global data version
-const versionReducer = (state = 1, action) => {
-  return state;
-};
+import versionReducer from "./versionReducer";
 
 // Root reducer
 const rootReducer = combineReducers({
