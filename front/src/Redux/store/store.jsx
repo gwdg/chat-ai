@@ -11,11 +11,54 @@ import { v4 as uuidv4 } from "uuid";
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["theme", "conversations", "advOptions", "defaultModel"], // Added defaultModel
+  whitelist: ["theme", "conversations", "advOptions", "defaultModel", "version"],
+};
+
+// Migration functions for different versions
+const migrations = {
+  1: (state) => {
+    // Migrate from version 1 to 2
+    state.version = 2;
+
+    // Migrate all conversations
+    state.conversations.conversations.forEach((conv) => {
+      const settings = conv.settings;
+      // Convert old version to new
+      if (settings.model_api !== undefined) {
+        settings["model-name"] = settings.model;
+        settings.model = settings.model_api;
+        delete settings.model_api;
+      }
+    });
+  },
+  // Future migrations here (e.g., 2: (state) => {...})
+};
+
+// Function to apply migrations
+const applyMigrations = (state) => {
+  const currentVersion = Object.keys(migrations).length;
+  const targetVersion = state.version;
+  if (targetVersion === undefined) {
+    targetVersion = 1; // Assume missing version means version 1
+  }
+
+  // If the version is outdated, apply migrations
+  while (targetVersion < currentVersion) {
+    const nextVersion = targetVersion + 1;
+    if (migrations[nextVersion]) {
+      migrations[nextVersion](state);
+      targetVersion = nextVersion;
+    } else {
+      break;
+    }
+  }
+
+  return state;
 };
 
 // Create a custom reducer that handles the RESET_ALL action
 const rootReducerWithReset = (state, action) => {
+  let newState;
   if (action.type === "RESET_ALL") {
     // Extract the newConversationId and preserved states
     const { newConversationId, theme, advOption, defaultModel } =
@@ -58,15 +101,15 @@ const rootReducerWithReset = (state, action) => {
       },
       arcana: {
         id: "",
-        key: "",
       },
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
     };
 
     // Reset the entire state but preserve the specified states
-    return {
+    newState = {
       ...rootReducer(undefined, { type: "@@INIT" }),
+      version: 1,
       conversations: {
         conversations: [newConversation],
         currentConversationId: newConversation.id,
@@ -77,9 +120,13 @@ const rootReducerWithReset = (state, action) => {
       advOption: advOption || state.advOption,
       defaultModel: currentDefaultModel, 
     };
+  } else {
+    newState = rootReducer(state, action);
   }
 
-  return rootReducer(state, action);
+  // Apply migrations to the new state
+  // return applyMigrations(rootReducer(state, action));
+  return applyMigrations(newState);
 };
 
 const persistedRootReducer = persistReducer(

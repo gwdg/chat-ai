@@ -13,14 +13,10 @@ import {
 import { selectDefaultModel } from "../Redux/reducers/defaultModelSlice";
 
 export const importConversation = async (data, dispatch, currentConversationId, defaultModel, notifyError, notifySuccess, navigate) => {
-    // Get app context
-    console.log("Got context")
     try {
         // Create new conversation
         const action = dispatch(addConversation());
         const newId = action.payload?.id;
-
-        console.log("I'm here")
 
         if (!newId) {
             throw new Error("Failed to create new conversation");
