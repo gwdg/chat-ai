@@ -1,6 +1,6 @@
 # Changelog 
 
-## Version: v0.8.0 (xx.06.2025)
+## Version: v0.8.0 (04.06.2025)
 Highlights:
 - Added selectable Personas in the UI, loaded from https://github.com/gwdg/chat-ai-personas
 - "Info" messages supported in imported conversations and personas
