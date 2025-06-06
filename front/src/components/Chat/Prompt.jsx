@@ -556,12 +556,12 @@ function Prompt({
           file.name.endsWith(".jsx") ||
           file.name.endsWith(".tsx") ||
           file.name.endsWith(".html") ||
-          file.name.endsWith(".json") || 
-          file.name.endsWith(".tex") || 
-          file.name.endsWith(".yaml") || 
-          file.name.endsWith(".toml") || 
-          file.name.endsWith(".dart") || 
-          file.name.endsWith(".tex") || 
+          file.name.endsWith(".json") ||
+          file.name.endsWith(".tex") ||
+          file.name.endsWith(".yaml") ||
+          file.name.endsWith(".toml") ||
+          file.name.endsWith(".dart") ||
+          file.name.endsWith(".tex") ||
           file.name.endsWith(".xml") ||
           file.name.endsWith(".yaml") ||
           file.name.endsWith(".yml") ||
@@ -724,6 +724,7 @@ function Prompt({
       }
 
       setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
+      e.target.value = "";
     } catch (error) {
       notifyError("An error occurred: ", error);
     }
