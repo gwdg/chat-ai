@@ -47,21 +47,18 @@ const migrations = {
 // Function to apply migrations
 const applyMigrations = (state) => {
   const latestVersion = Object.keys(migrations).length + 1;
-  console.log("Loaded Chat AI state version:", state.version)
   state.version = state.version || 1;
 
   // If the version is outdated, apply migrations
   while (state.version < latestVersion) {
     if (migrations[state.version]) {
       try {
-        console.log("Migrating from", state.version, " to ", state.version + 1)
         state = migrations[state.version](state);
       } catch (error) {
         console.error(`Migration from version ${state.version} failed:`, error);
         break; // Stop migration on error
       }
     } else {
-      console.log("No migrations left")
       break;
     }
   }

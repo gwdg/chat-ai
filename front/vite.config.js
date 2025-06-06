@@ -15,7 +15,6 @@ try {
   // Extract the port from the config (ensure it's a valid number)
   if (typeof config.port === 'number' && config.port > 0) {
     port = config.port;
-    console.log('Port:', port);
   } else {
     console.warn('Invalid port in config.json. Falling back to default port 8080.');
   }
@@ -24,15 +23,12 @@ try {
   for (const [key, value] of Object.entries(config)) {
     if (key == 'modelsPath') {
       process.env["VITE_MODELS_ENDPOINT"] = value;
-      console.log('Models path:', value);
     }
     else if (key == 'backendPath') {
       process.env["VITE_BACKEND_ENDPOINT"] = value;
-      console.log('Backend path:', value);
     }
     else if (key == 'userDataPath') {
       process.env["VITE_USERDATA_ENDPOINT"] = value;
-      console.log('User data path:', value);
     }
   }
 }
