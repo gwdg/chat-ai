@@ -710,7 +710,9 @@ const SettingsPanel = ({
               </div>
             </div>
 
-            {localState.settings.model.toLowerCase().includes("external") && (
+            {localState.settings["model-name"]
+              .toLowerCase()
+              .includes("external") && (
               <div className="text-yellow-600 text-sm mb-3 select-none">
                 <Trans i18nKey="description.warning_settings" />
               </div>

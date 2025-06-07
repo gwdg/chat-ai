@@ -35,6 +35,7 @@ async function generateConversationTitle(conversation, settings) {
 
   const titlePrompt =
     "Create a very short title (maximum 4 words) for this conversation that captures its main topic. Respond only with the title - no quotes, punctuation, or additional text.";
+
   try {
     const response = await fetch(import.meta.env.VITE_BACKEND_ENDPOINT, {
       method: "post",
@@ -69,6 +70,10 @@ async function generateConversationTitle(conversation, settings) {
 
     return title?.trim();
   } catch (error) {
+    // Handle AbortError specifically
+    if (error.name === "AbortError") {
+      return "Untitled Conversation";
+    }
     console.error("Title generation failed:", error);
     return "Untitled Conversation";
   }
@@ -220,27 +225,48 @@ async function fetchLLMResponse(
 
       return currentResponse;
     } catch (error) {
-      if (error.name === "AbortError" && currentResponse) {
-        setLocalState((prevState) => ({
-          ...prevState,
-          conversation: [
-            ...prevState.conversation,
-            { role: "assistant", content: currentResponse },
-          ],
-        }));
+      // Handle AbortError specifically during streaming
+      if (error.name === "AbortError") {
+        // Only update state with partial response if we have content
+        if (currentResponse) {
+          setLocalState((prevState) => ({
+            ...prevState,
+            conversation: [
+              ...prevState.conversation,
+              { role: "assistant", content: currentResponse },
+            ],
+          }));
+        }
+        // Don't re-throw AbortError - it's expected behavior
+        return currentResponse;
       }
       throw error;
     }
   } catch (error) {
+    // Handle AbortError at the top level
+    if (error.name === "AbortError") {
+      return null; // or handle as appropriate for your app
+    }
+
     console.error("An error occurred", error);
     throw error;
   }
 }
 
 function cancelRequest() {
-  controller.abort();
+  // Check if there's an active request to cancel
+  if (!controller.signal.aborted) {
+    controller.abort();
+  }
+
+  // Create new controller for next request
   controller = new AbortController();
   signal = controller.signal;
 }
 
-export { fetchLLMResponse, cancelRequest };
+// Additional helper function to check if a request is active
+function isRequestActive() {
+  return !controller.signal.aborted;
+}
+
+export { fetchLLMResponse, cancelRequest, isRequestActive };
