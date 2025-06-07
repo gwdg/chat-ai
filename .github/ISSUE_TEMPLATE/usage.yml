@@ -1,5 +1,5 @@
 name: Usage
-description: Submit your usage issue or question in detail
+description: Ask questions regarding the usage of Chat AI and report related issues
 title: "[Usage] "
 labels: [Usage]
 body:
@@ -11,13 +11,13 @@ body:
   - type: textarea
     attributes:
       label: Describe the issue or question
-      description: A clear and concise description of what the issue is, including steps to reproduce if applicable.
+      description: A clear and concise description of what the issue is, including screenshots and steps to reproduce if applicable.
       placeholder: "When I do X, it caused Y..."
 
   - type: textarea
     attributes:
       label: Screenshots or logs
-      description: You can add any relevant screenshots, error logs, or stack traces here.
+      description: You can add any relevant error logs, or stack traces here.
       render: shell
       placeholder: |
         ```bash
@@ -28,7 +28,7 @@ body:
     attributes:
       label: Environment
       description: In which context does this issue occur?
-      placeholder: "e.g. Running Chat AI locally or using chat-ai.academiccloud.de"
+      placeholder: "e.g. Running locally, using chat-ai.academiccloud.de"
 
   - type: checkboxes
     attributes:
