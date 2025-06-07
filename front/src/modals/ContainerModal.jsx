@@ -1,32 +1,62 @@
 /* eslint-disable react/prop-types */ // Disabling prop-types linting for this file
 
 // Importing necessary modules
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+
+// Global modal stack to track which modal should handle ESC
+let modalStack = [];
+let modalIdCounter = 0;
 
 // Model component
 function Model(props) {
+  const modalId = useRef(null);
+
   useEffect(() => {
+    // Generate unique ID for this modal instance
+    modalId.current = modalIdCounter++;
+
+    // Add this modal to the stack when it mounts
+    modalStack.push(modalId.current);
+
     const handleKeyDown = (event) => {
-      // Only close on Escape if not a forced action modal
       if (event.key === "Escape" && !props.isForceAction) {
-        props.showModal(false);
-        if (props.setActionButtonToggle) {
-          props.setActionButtonToggle(false);
+        // Only handle ESC if this is the topmost modal in the stack
+        const isTopModal =
+          modalStack[modalStack.length - 1] === modalId.current;
+
+        if (isTopModal) {
+          event.stopPropagation();
+          event.preventDefault();
+
+          props.showModal(false);
+          if (props.setActionButtonToggle) {
+            props.setActionButtonToggle(false);
+          }
         }
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Cleanup function
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      // Remove this modal from the stack when it unmounts
+      modalStack = modalStack.filter((id) => id !== modalId.current);
     };
-  }, []);
+  }, [props.isForceAction, props.showModal, props.setActionButtonToggle]);
+
+  // Determine z-index based on modal type
+  const getZIndex = () => {
+    if (props.isConfirmationModal) return "z-[1200]"; // Highest for confirmation modals
+    if (props.isMemoryModal) return "z-[1100]"; // Memory modal
+    if (props.isSettingsModel) return "z-[1000]"; // Settings modal
+    return "z-[999]"; // Default modal z-index
+  };
 
   return (
     <div
-      className={`fixed inset-0 ${
-        props.isSettingsModel ? "z-[999]" : "z-[1000]"
-      } flex items-center justify-center w-full h-full`}
+      className={`fixed inset-0 ${getZIndex()} flex items-center justify-center w-full h-full`}
       onClick={() => {
         // Only close on outside click if not a forced action modal
         if (!props.isForceAction) {

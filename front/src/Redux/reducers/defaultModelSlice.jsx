@@ -15,8 +15,10 @@ const defaultModelSlice = createSlice({
       state.id = action.payload.id;
     },
     resetDefaultModel: (state) => {
-      state.name = "Meta Llama 3.1 8B Instruct";
-      state.id = "meta-llama-3.1-8b-instruct";
+      state.name =
+        import.meta.env.VITE_DEFAULT_MODEL_NAME || "Meta Llama 3.1 8B Instruct";
+      state.id =
+        import.meta.env.VITE_DEFAULT_MODEL || "meta-llama-3.1-8b-instruct";
     },
   },
 });

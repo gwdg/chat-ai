@@ -1,6 +1,12 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { v4 as uuidv4 } from "uuid";
 
+console.log(
+  "Conversations slice loaded",
+  import.meta.env.VITE_DEFAULT_MODEL_NAME,
+  import.meta.env.VITE_DEFAULT_MODEL
+);
+
 const createDefaultConversation = () => ({
   id: uuidv4(),
   title: "Untitled Conversation",
@@ -13,8 +19,9 @@ const createDefaultConversation = () => ({
   responses: [],
   prompt: "",
   settings: {
-    ["model-name"]: "Meta Llama 3.1 8B Instruct",
-    model: "meta-llama-3.1-8b-instruct",
+    ["model-name"]:
+      import.meta.env.VITE_DEFAULT_MODEL_NAME || "Meta Llama 3.1 8B Instruct",
+    model: import.meta.env.VITE_DEFAULT_MODEL || "meta-llama-3.1-8b-instruct",
     temperature: 0.5,
     top_p: 0.5,
     systemPrompt: "You are a helpful assistant",
@@ -27,6 +34,7 @@ const createDefaultConversation = () => ({
   dontShow: {
     dontShowAgain: false,
     dontShowAgainShare: false,
+    dontShowAgainMemory: false,
   },
   arcana: {
     id: "",
@@ -152,8 +160,12 @@ const conversationsSlice = createSlice({
           responses: [],
           prompt: "",
           settings: {
-            ["model-name"]: "Meta Llama 3.1 8B Instruct",
-            model: "meta-llama-3.1-8b-instruct",
+            ["model-name"]:
+              import.meta.env.VITE_DEFAULT_MODEL_NAME ||
+              "Meta Llama 3.1 8B Instruct",
+            model:
+              import.meta.env.VITE_DEFAULT_MODEL ||
+              "meta-llama-3.1-8b-instruct",
             temperature: 0.5,
             top_p: 0.5,
             systemPrompt: "You are a helpful assistant",
@@ -166,6 +178,7 @@ const conversationsSlice = createSlice({
           dontShow: {
             dontShowAgain: false,
             dontShowAgainShare: false,
+            dontShowAgainMemory: false,
           },
           arcana: {
             id: "",

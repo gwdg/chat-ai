@@ -13,10 +13,12 @@ import {
   selectDefaultModel,
   setDefaultModel,
 } from "../Redux/reducers/defaultModelSlice";
+import { selectAllMemories } from "../Redux/reducers/userMemorySlice";
 
 function SettingsModal(props) {
   const dispatch = useDispatch();
   const currentDefaultModel = useSelector(selectDefaultModel);
+  const memories = useSelector(selectAllMemories);
 
   const handleLogout = () => {
     window.location.href =
@@ -52,24 +54,32 @@ function SettingsModal(props) {
         <div className="p-4 flex items-center justify-between gap-3 border-b dark:border-border_dark">
           <div className="flex flex-col">
             <span className="font-medium text-lg dark:text-white">
-               {(() => {
+              {(() => {
                 const first = props.userData?.firstname ?? "";
                 const last = props.userData?.lastname ?? "";
-                return first === "" && last === ""
-                  ? <Trans i18nKey="description.common.loading" />
-                  : `${first} ${last}`.trim();
+                return first === "" && last === "" ? (
+                  <Trans i18nKey="description.common.loading" />
+                ) : (
+                  `${first} ${last}`.trim()
+                );
               })()}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {props.userData?.organization ?? <Trans i18nKey="description.common.loading" />}
+              {props.userData?.organization ?? (
+                <Trans i18nKey="description.common.loading" />
+              )}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="font-medium text-lg dark:text-white">
-              {props.userData?.username ?? <Trans i18nKey="description.common.loading" />}
+              {props.userData?.username ?? (
+                <Trans i18nKey="description.common.loading" />
+              )}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {props.userData?.email ?? <Trans i18nKey="description.common.loading" />}
+              {props.userData?.email ?? (
+                <Trans i18nKey="description.common.loading" />
+              )}
             </span>
           </div>
           {/* Logout Button */}
@@ -144,13 +154,42 @@ function SettingsModal(props) {
                       className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                     />
                   )}
-                  {/* {currentDefaultModel?.id === option.id && (
-                    <div className="text-blue-500 text-sm font-medium">
-                      ✓ Selected
-                    </div>
-                  )} */}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* User Memory Management Section */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <p className="text-base font-medium dark:text-white">
+                <Trans
+                  i18nKey="description.settings.userMemory"
+                  defaultValue="User Memory"
+                />
+              </p>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              <Trans
+                i18nKey="description.settings.userMemoryDescription"
+                defaultValue="Manage your personal memories that help the AI remember important details about you. You currently have {{count}} memories saved."
+                values={{ count: memories.length }}
+              />
+            </p>
+            <div className="w-full flex justify-center">
+              <button
+                className="max-w-[250px] w-full p-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
+                onClick={() => props.setShowMemoryModal(true)}
+              >
+                <span>🧠</span>
+                <Trans
+                  i18nKey="description.settings.manageMemory"
+                  defaultValue="Manage Memory"
+                />
+                <span className="text-xs bg-blue-500 px-2 py-1 rounded-full">
+                  {memories.length}
+                </span>
+              </button>
             </div>
           </div>
 

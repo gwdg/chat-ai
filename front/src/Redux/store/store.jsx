@@ -5,14 +5,20 @@ import rootReducer from "../reducers/index";
 import {
   createStateSyncMiddleware,
   initMessageListener,
-  isActionSynced,
 } from "redux-state-sync";
 import { v4 as uuidv4 } from "uuid";
 
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["theme", "conversations", "advOptions", "defaultModel", "version", ],
+  whitelist: [
+    "theme",
+    "conversations",
+    "advOptions",
+    "defaultModel",
+    "version",
+    "userMemory",
+  ],
 };
 
 // Migration functions for different versions
@@ -20,12 +26,12 @@ const migrations = {
   1: (state) => {
     // Migrate from version 1 to 2
     state.version = 2;
-  
+
     // Migrate all conversations
     state.conversations = {
       ...state.conversations,
       conversations: state.conversations.conversations.map((conv) => {
-        const newSettings = { ...conv.settings};
+        const newSettings = { ...conv.settings };
         // Convert old version to new
         if (newSettings.model_api !== undefined) {
           newSettings["model-name"] = newSettings.model;
@@ -35,9 +41,9 @@ const migrations = {
         return {
           ...conv,
           settings: newSettings,
-        }
+        };
       }),
-    }
+    };
 
     return state;
   },
@@ -47,26 +53,26 @@ const migrations = {
 // Function to apply migrations
 const applyMigrations = (state) => {
   const latestVersion = Object.keys(migrations).length + 1;
-  console.log("Loaded Chat AI state version:", state.version)
+  console.log("Loaded Chat AI state version:", state.version);
   state.version = state.version || 1;
 
   // If the version is outdated, apply migrations
   while (state.version < latestVersion) {
     if (migrations[state.version]) {
       try {
-        console.log("Migrating from", state.version, " to ", state.version + 1)
+        console.log("Migrating from", state.version, " to ", state.version + 1);
         state = migrations[state.version](state);
       } catch (error) {
         console.error(`Migration from version ${state.version} failed:`, error);
         break; // Stop migration on error
       }
     } else {
-      console.log("No migrations left")
+      console.log("No migrations left");
       break;
     }
   }
 
-  return { ...state, version: state.version }
+  return { ...state, version: state.version };
 };
 
 // Create a custom reducer that handles the RESET_ALL action
@@ -74,14 +80,21 @@ const rootReducerWithReset = (state, action) => {
   let newState;
   if (action.type === "RESET_ALL") {
     // Extract the newConversationId and preserved states
-    const { newConversationId, theme, advOption, defaultModel } =
-      action.payload || {};
+    const {
+      newConversationId,
+      theme,
+      advOption,
+      defaultModel,
+      preserveMemories,
+    } = action.payload || {};
 
     // Use the provided default model, or get from current state, or use fallback
     const currentDefaultModel = defaultModel ||
       state?.defaultModel || {
-        name: "Meta Llama 3.1 8B Instruct",
-        id: "meta-llama-3.1-8b-instruct",
+        name:
+          import.meta.env.VITE_DEFAULT_MODEL_NAME ||
+          "Meta Llama 3.1 8B Instruct",
+        id: import.meta.env.VITE_DEFAULT_MODEL || "meta-llama-3.1-8b-instruct",
       };
 
     // Create a new conversation with the provided ID or generate a new one
@@ -111,6 +124,7 @@ const rootReducerWithReset = (state, action) => {
       dontShow: {
         dontShowAgain: false,
         dontShowAgainShare: false,
+        dontShowAgainMemory: false,
       },
       arcana: {
         id: "",
@@ -131,7 +145,17 @@ const rootReducerWithReset = (state, action) => {
       // Preserve specified states
       theme: theme || state?.theme || { isDarkMode: false },
       advOption: advOption || state.advOption,
-      defaultModel: currentDefaultModel, 
+      defaultModel: currentDefaultModel,
+      // Conditionally preserve memories
+      userMemory: preserveMemories
+        ? state?.userMemory || {
+            memories: [],
+            nextId: 1,
+          }
+        : {
+            memories: [],
+            nextId: 1,
+          },
     };
   } else if (action.type === "MIGRATE") {
     // Apply migrations to the new state
@@ -157,11 +181,15 @@ const stateSyncConfig = {
     "conversations/setCurrentConversation",
     "conversations/resetStore",
     "conversations/setIsResponding",
-    "defaultModel/setDefaultModel", // Added default model actions
+    "defaultModel/setDefaultModel",
     "defaultModel/resetDefaultModel",
     "theme/toggleTheme",
     "theme/setDarkMode",
     "theme/setLightMode",
+    "userMemory/addMemory",
+    "userMemory/editMemory",
+    "userMemory/deleteMemory",
+    "userMemory/deleteAllMemories",
     "SET_ADV",
     "RESET_ALL",
     "MIGRATE",

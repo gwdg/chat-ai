@@ -7,6 +7,7 @@ import advOptionReducer from "./advancedOptionsReducer";
 import conversationsReducer from "./conversationsSlice";
 import defaultModelReducer from "./defaultModelSlice";
 import versionReducer from "./versionReducer";
+import userMemoryReducer from "./userMemorySlice";
 
 // Root reducer
 const rootReducer = combineReducers({
@@ -17,6 +18,7 @@ const rootReducer = combineReducers({
   advOptions: advOptionReducer,
   defaultModel: defaultModelReducer,
   version: versionReducer,
+  userMemory: userMemoryReducer,
 });
 
 export default rootReducer;

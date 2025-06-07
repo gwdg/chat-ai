@@ -30,7 +30,7 @@ import GitHubRepoModal from "../../modals/GitHubRepoModal";
 import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
-import { importConversation } from "../../hooks/importConversation"
+import { importConversation } from "../../hooks/importConversation";
 
 // Main layout component that manages the overall structure and state of the chat application
 function Layout() {
@@ -38,6 +38,8 @@ function Layout() {
   const [showFooter, setShowFooter] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showCacheModal, setShowCacheModal] = useState(false);
+  const [showMemoryModal, setShowMemoryModal] = useState(false);
+  const [showClearMemoryModal, setShowClearMemoryModal] = useState(false);
   const [showModalOffline, setShowModalOffline] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -69,8 +71,16 @@ function Layout() {
   });
 
   const handleImportPersona = async (parsedData) => {
-    return importConversation(parsedData, dispatch, currentConversationId, defaultModel, notifyError, notifySuccess, navigate)
-  }
+    return importConversation(
+      parsedData,
+      dispatch,
+      currentConversationId,
+      defaultModel,
+      notifyError,
+      notifySuccess,
+      navigate
+    );
+  };
 
   const handleImportError = (error) => {
     notifyError(error);
@@ -282,8 +292,13 @@ function Layout() {
           prompt: "",
           settings: {
             ["model-name"]:
-              currentDefaultModel?.name || "Meta Llama 3.1 8B Instruct",
-            model: currentDefaultModel?.id || "meta-llama-3.1-8b-instruct",
+              currentDefaultModel?.name ||
+              import.meta.env.VITE_DEFAULT_MODEL_NAME ||
+              "Meta Llama 3.1 8B Instruct",
+            model:
+              currentDefaultModel?.id ||
+              import.meta.env.VITE_DEFAULT_MODEL ||
+              "meta-llama-3.1-8b-instruct",
             temperature: 0.5,
             top_p: 0.5,
             systemPrompt: "You are a helpful assistant",
@@ -296,6 +311,7 @@ function Layout() {
           dontShow: {
             dontShowAgain: false,
             dontShowAgainShare: false,
+            dontShowAgainMemory: false,
           },
           arcana: {
             id: "",
@@ -384,6 +400,10 @@ function Layout() {
               modelSettings={modelSettings}
               modelList={modelList}
               onModelChange={handleModelChange}
+              setShowClearMemoryModal={setShowClearMemoryModal}
+              showClearMemoryModal={showClearMemoryModal}
+              showMemoryModal={showMemoryModal}
+              setShowMemoryModal={setShowMemoryModal}
             />
           </div>
         </div>
@@ -439,6 +459,7 @@ function Layout() {
           setShowCacheModal={setShowCacheModal}
           userData={userData}
           modelList={modelList}
+          setShowMemoryModal={setShowMemoryModal}
         />
       )}
 

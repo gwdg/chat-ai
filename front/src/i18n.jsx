@@ -20,6 +20,30 @@ i18n
       en: {
         translation: {
           description: {
+            memory: {
+              userMemory: "User Memory",
+              memoryCount_one: "{{count}} memory stored",
+              memoryCount_other: "{{count}} memories stored",
+              addNew: "Add New Memory",
+              add: "Add",
+              savedMemories: "Saved Memories",
+              deleteAll: "Delete All",
+              noMemories: "No memories saved yet.",
+              addFirst: "Add your first memory above!",
+              save: "Save",
+              cancel: "Cancel",
+              created: "Created: {{date}}",
+              edit: "Edit",
+              delete: "Delete",
+              clearAllTitle: "Clear All Memories",
+              clearAllWarning:
+                "Are you sure you want to delete all {{count}} memories? This action cannot be undone and will permanently remove all your saved memories.",
+              warningTitle: "Warning",
+              warningText:
+                "You will lose all personal memories that help the AI understand your preferences and context. Consider exporting them first if needed.",
+              dontShowAgain: "Don't show this warning again",
+              clearAll: "Clear All Memories ({{count}})",
+            },
             newConversation: "+ New Conversation",
             importPersona: "Import Persona",
             persona: {
@@ -35,6 +59,10 @@ i18n
               createOwn: "Create Your Own Persona",
             },
             settings: {
+              userMemory: "User Memory",
+              userMemoryDescription:
+                "Manage your personal memories that help the AI remember important details about you. You currently have {{count}} memories saved.",
+              manageMemory: "Manage Memory",
               userProfileSettings: "User Profile Settings",
               logout: "Logout",
               defaultModel: "Default Model",
@@ -273,6 +301,30 @@ i18n
       de: {
         translation: {
           description: {
+            memory: {
+              userMemory: "Benutzerspeicher",
+              memoryCount_one: "{{count}} Erinnerung gespeichert",
+              memoryCount_other: "{{count}} Erinnerungen gespeichert",
+              addNew: "Neue Erinnerung hinzufügen",
+              add: "Hinzufügen",
+              savedMemories: "Gespeicherte Erinnerungen",
+              deleteAll: "Alle löschen",
+              noMemories: "Noch keine Erinnerungen gespeichert.",
+              addFirst: "Fügen Sie Ihre erste Erinnerung oben hinzu!",
+              save: "Speichern",
+              cancel: "Abbrechen",
+              created: "Erstellt: {{date}}",
+              edit: "Bearbeiten",
+              delete: "Löschen",
+              clearAllTitle: "Alle Erinnerungen löschen",
+              clearAllWarning:
+                "Sind Sie sicher, dass Sie alle {{count}} Erinnerungen löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden und entfernt dauerhaft alle Ihre gespeicherten Erinnerungen.",
+              warningTitle: "Warnung",
+              warningText:
+                "Sie verlieren alle persönlichen Erinnerungen, die der KI helfen, Ihre Präferenzen und Ihren Kontext zu verstehen. Erwägen Sie, sie zuerst zu exportieren, falls erforderlich.",
+              dontShowAgain: "Diese Warnung nicht mehr anzeigen",
+              clearAll: "Alle Erinnerungen löschen ({{count}})",
+            },
             newConversation: "+ Neues Gespräch",
             importPersona: "Persona importieren",
             persona: {
@@ -289,6 +341,10 @@ i18n
               createOwn: "Eigene Persona erstellen",
             },
             settings: {
+              userMemory: "Benutzerspeicher",
+              userMemoryDescription:
+                "Verwalten Sie Ihre persönlichen Erinnerungen, die der KI helfen, wichtige Details über Sie zu behalten. Sie haben derzeit {{count}} Erinnerungen gespeichert.",
+              manageMemory: "Speicher verwalten",
               userProfileSettings: "Benutzerprofil-Einstellungen",
               logout: "Abmelden",
               defaultModel: "Standard-Modell",
