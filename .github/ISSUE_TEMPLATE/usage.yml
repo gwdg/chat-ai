@@ -1,0 +1,38 @@
+name: Usage
+description: Submit your usage issue or question in detail
+title: "[Usage] "
+labels: [Usage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to submit an issue. Please make sure you’ve looked through current issues to see if it’s already been reported.
+
+  - type: textarea
+    attributes:
+      label: Describe the issue or question
+      description: A clear and concise description of what the issue is, including steps to reproduce if applicable.
+      placeholder: "When I do X, it caused Y..."
+
+  - type: textarea
+    attributes:
+      label: Screenshots or logs
+      description: You can add any relevant screenshots, error logs, or stack traces here.
+      render: shell
+      placeholder: |
+        ```bash
+        # Paste logs or stack trace here
+        ```
+
+  - type: input
+    attributes:
+      label: Environment
+      description: In which context does this issue occur?
+      placeholder: "e.g. Running Chat AI locally or using chat-ai.academiccloud.de"
+
+  - type: checkboxes
+    attributes:
+      label: Confirmation
+      description: "Confirm you have done the following"
+      options:
+        - label: I have searched for similar existing issues
