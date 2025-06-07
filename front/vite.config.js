@@ -34,12 +34,9 @@ try {
     } else if (key == "userDataPath") {
       process.env["VITE_USERDATA_ENDPOINT"] = value;
       console.log("User data path:", value);
-    } else if (key == "defaultModel") {
-      process.env["VITE_DEFAULT_MODEL"] = value;
-      console.log("Default Model:", value);
-    } else if (key == "defaultModelName") {
-      process.env["VITE_DEFAULT_MODEL_NAME"] = value;
-      console.log("Default Model Name:", value);
+    } else if (key == "defaultSettings") {
+      process.env["VITE_DEFAULT_SETTINGS"] = value;
+      console.log("Default settings:", value);
     }
   }
 } catch (error) {
