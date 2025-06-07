@@ -29,9 +29,9 @@ import { fetchAvailableModels } from "../../apis/ModelListApi";
 import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
-import { importConversation } from "../../hooks/importConversation"
+import { importConversation } from "../../hooks/importConversation";
 
-const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
+const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
 const SettingsPanel = ({
   selectedFiles,
@@ -373,9 +373,9 @@ const SettingsPanel = ({
         !importUrl ||
         location.pathname !== "/chat" ||
         hasProcessedImport.current
-        ) {
+      ) {
         return;
-        }
+      }
 
       hasProcessedImport.current = true;
 
@@ -383,15 +383,23 @@ const SettingsPanel = ({
       const response = await fetch(importUrl, dispatch);
 
       if (!response.ok) {
-          throw new Error(
+        throw new Error(
           response.status >= 500
-              ? "Server Error: Please try again later."
-              : "Client Error: The provided link might be incorrect."
-          );
+            ? "Server Error: Please try again later."
+            : "Client Error: The provided link might be incorrect."
+        );
       }
       const parsedData = await response.json();
-      return importConversation(parsedData, dispatch, currentConversationId, defaultModel, notifyError, notifySuccess, navigate)
-    }
+      return importConversation(
+        parsedData,
+        dispatch,
+        currentConversationId,
+        defaultModel,
+        notifyError,
+        notifySuccess,
+        navigate
+      );
+    };
 
     if (conversations.length > 0) {
       handleImportUrl();
@@ -512,7 +520,7 @@ const SettingsPanel = ({
         handleArcanaParams(modelsList);
       } catch (error) {
         notifyError("Failed to fetch models. Please try again.");
-        await sleep(10000)
+        await sleep(10000);
         hasFetchedModels.current = false;
       }
     };
@@ -692,7 +700,9 @@ const SettingsPanel = ({
               </div>
             </div>
 
-            {localState.settings.model.toLowerCase().includes("external") && (
+            {localState.settings["model-name"]
+              .toLowerCase()
+              .includes("external") && (
               <div className="text-yellow-600 text-sm mb-3 select-none">
                 <Trans i18nKey="description.warning_settings" />
               </div>
