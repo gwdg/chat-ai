@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Usage
-    url: https://github.com/gwdg/chat-ai/issues
-    about:  Ask questions and report issues when using Chat AI
+  - name: Ask GWDG Support
+    url: https://gwdg.de/en/about-us/contact/
+    about:  For private inquiries, please contact us at support@gwdg.de
