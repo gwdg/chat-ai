@@ -112,9 +112,10 @@ const rootReducerWithReset = (state, action) => {
       settings: {
         ["model-name"]: currentDefaultModel.name,
         model: currentDefaultModel.id,
+        systemPrompt: "You are a helpful assistant",
         temperature: 0.5,
         top_p: 0.5,
-        systemPrompt: "You are a helpful assistant",
+        memory: 0,
       },
       exportOptions: {
         exportSettings: false,

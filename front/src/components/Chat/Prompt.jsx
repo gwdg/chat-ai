@@ -16,12 +16,13 @@ import pause from "../../assets/pause.svg";
 import { cancelRequest, fetchLLMResponse } from "../../apis/LlmRequestApi";
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
 import video_icon from "../../assets/video_icon.svg";
 import cross from "../../assets/cross.svg";
 import uploaded from "../../assets/file_uploaded.svg";
 import { processPdfDocument } from "../../apis/PdfProcessApi";
+import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
 
 //Variable
 const languageMap = {
@@ -59,6 +60,7 @@ function Prompt({
   const { t, i18n } = useTranslation();
   const { transcript, listening, resetTranscript } = useSpeechRecognition();
   const dispatch = useDispatch();
+  const memories = useSelector(selectAllMemories);
 
   //Refs
   const hiddenFileInput = useRef(null);
@@ -118,6 +120,15 @@ function Prompt({
     const conversationForAPI = processedConversation.filter(
       (message) => message.role !== "info"
     );
+
+    // Prepare system prompt with memory if enabled
+    let finalSystemPrompt = localState.settings.systemPrompt;
+
+    if (localState.settings.memory >= 1 && memories.length > 0) {
+      const memoryContext = memories.map((memory) => memory.text).join("\n");
+      const memorySection = `\n\n--- User Memory ---\nThe following information represents the user's preferences, important details, and context from previous conversations. Use this information when relevant to provide a more personalized and contextual response:\n\n${memoryContext}\n--- End User Memory ---`;
+      finalSystemPrompt = finalSystemPrompt + memorySection;
+    }
 
     if (selectedFiles.length > 0) {
       const imageFiles = selectedFiles.filter((file) => file.type === "image");
@@ -182,10 +193,9 @@ function Prompt({
     updateLocalState({ prompt: "" });
 
     try {
-      // Fetch response from LLM service
       const response = await fetchLLMResponse(
         processedConversation,
-        localState.settings.systemPrompt,
+        finalSystemPrompt,
         localState.settings.model,
         localState.settings.temperature,
         localState.settings.top_p,

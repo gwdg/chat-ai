@@ -55,6 +55,7 @@ const SettingsPanel = ({
   setShowArcanasHelpModal,
   setShowCustomHelpModal,
   setShowTopPHelpModal,
+  setShowMemoryHelpModal,
   setShowSystemHelpModal,
   notifySuccess,
   notifyError,
@@ -151,6 +152,7 @@ const SettingsPanel = ({
         ...prevState.settings,
         temperature: 0.5,
         top_p: 0.5,
+        memory: 0,
       },
     }));
     updateSettings({ systemPrompt: "You are a helpful assistant" });
@@ -838,7 +840,82 @@ const SettingsPanel = ({
                   </div>
                 </div>
               </div>
+              {/* Memory */}
+              <div className="w-full flex gap-4">
+                <div className="flex-shrink-0 flex items-center gap-2 select-none">
+                  <p className="text-[18px]">Memory</p>
+                  <img
+                    src={help}
+                    alt="help"
+                    className="h-[20px] w-[20px] cursor-pointer"
+                    onClick={() => setShowMemoryHelpModal(true)}
+                  />
+                </div>
 
+                <div className="w-full">
+                  <div className="flex bg-white dark:bg-bg_secondary_dark border dark:border-border_dark rounded-xl shadow-lg dark:shadow-dark overflow-hidden">
+                    {/* Off Option */}
+                    <div
+                      className={`flex-1 p-2 text-center cursor-pointer transition-all duration-200 select-none ${
+                        localState.settings.memory === 0
+                          ? "bg-tertiary text-white"
+                          : "text-tertiary hover:bg-gray-100 dark:hover:bg-gray-800"
+                      }`}
+                      onClick={() =>
+                        setLocalState((prev) => ({
+                          ...prev,
+                          settings: {
+                            ...prev.settings,
+                            memory: 0,
+                          },
+                        }))
+                      }
+                    >
+                      <p className="text-[16px] font-medium">Off</p>
+                    </div>
+
+                    {/* Recall Option */}
+                    <div
+                      className={`flex-1 p-2 text-center cursor-pointer transition-all duration-200 select-none border-l border-r dark:border-border_dark ${
+                        localState.settings.memory === 1
+                          ? "bg-tertiary text-white"
+                          : "text-tertiary hover:bg-gray-100 dark:hover:bg-gray-800"
+                      }`}
+                      onClick={() =>
+                        setLocalState((prev) => ({
+                          ...prev,
+                          settings: {
+                            ...prev.settings,
+                            memory: 1,
+                          },
+                        }))
+                      }
+                    >
+                      <p className="text-[16px] font-medium">Recall</p>
+                    </div>
+
+                    {/* On Option */}
+                    <div
+                      className={`flex-1 p-2 text-center cursor-pointer transition-all duration-200 select-none ${
+                        localState.settings.memory === 2
+                          ? "bg-tertiary text-white"
+                          : "text-tertiary hover:bg-gray-100 dark:hover:bg-gray-800"
+                      }`}
+                      onClick={() =>
+                        setLocalState((prev) => ({
+                          ...prev,
+                          settings: {
+                            ...prev.settings,
+                            memory: 2,
+                          },
+                        }))
+                      }
+                    >
+                      <p className="text-[16px] font-medium">On</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="w-full flex flex-col gap-4">
                 <div className="flex-shrink-0 flex items-center gap-2 select-none">
                   <p className="text-[18px]">System prompt</p>

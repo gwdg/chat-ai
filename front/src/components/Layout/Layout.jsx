@@ -299,9 +299,10 @@ function Layout() {
               currentDefaultModel?.id ||
               import.meta.env.VITE_DEFAULT_MODEL ||
               "meta-llama-3.1-8b-instruct",
+            systemPrompt: "You are a helpful assistant",
             temperature: 0.5,
             top_p: 0.5,
-            systemPrompt: "You are a helpful assistant",
+            memory: 0,
           },
           exportOptions: {
             exportSettings: false,

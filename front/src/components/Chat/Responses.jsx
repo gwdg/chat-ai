@@ -19,14 +19,15 @@ import { useTranslation } from "react-i18next";
 import {
   setIsResponding,
   updateConversation,
-  selectCurrentConversationId
+  selectCurrentConversationId,
 } from "../../Redux/reducers/conversationsSlice";
 import PreviewImageModal from "../../modals/PreviewImageModal";
 import { useParams } from "react-router-dom";
 import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
-import { importConversation } from "../../hooks/importConversation"
+import { importConversation } from "../../hooks/importConversation";
+import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
 
 //Variable
 const MAX_HEIGHT = 200;
@@ -62,6 +63,7 @@ function Responses({
   const { conversationId } = useParams();
   const currentConversationId = useSelector(selectCurrentConversationId);
   const defaultModel = useSelector(selectDefaultModel);
+  const memories = useSelector(selectAllMemories);
 
   // Local useState
   const [editingIndex, setEditingIndex] = useState(null);
@@ -355,11 +357,20 @@ function Responses({
       });
     }
 
+    // Prepare system prompt with memory if enabled
+    let finalSystemPrompt = localState.settings.systemPrompt;
+
+    if (localState.settings.memory >= 1 && memories.length > 0) {
+      const memoryContext = memories.map((memory) => memory.text).join("\n");
+      const memorySection = `\n\n--- User Memory ---\nThe following information represents the user's preferences, important details, and context from previous conversations. Use this information when relevant to provide a more personalized and contextual response:\n\n${memoryContext}\n--- End User Memory ---`;
+      finalSystemPrompt = finalSystemPrompt + memorySection;
+    }
+
     // Try to fetch response from LLM
     try {
       await fetchLLMResponse(
         newConversation, // Original conversation with "info" objects (for local state)
-        localState.settings.systemPrompt,
+        finalSystemPrompt,
         localState.settings.model,
         localState.settings.temperature,
         localState.settings.top_p,
@@ -572,11 +583,20 @@ function Responses({
       });
     }
 
+    // Prepare system prompt with memory if enabled
+    let finalSystemPrompt = localState.settings.systemPrompt;
+
+    if (localState.settings.memory >= 1 && memories.length > 0) {
+      const memoryContext = memories.map((memory) => memory.text).join("\n");
+      const memorySection = `\n\n--- User Memory ---\nThe following information represents the user's preferences, important details, and context from previous conversations. Use this information when relevant to provide a more personalized and contextual response:\n\n${memoryContext}\n--- End User Memory ---`;
+      finalSystemPrompt = finalSystemPrompt + memorySection;
+    }
+
     // Try to fetch response from LLM
     try {
       await fetchLLMResponse(
         newConversation, // Original conversation with "info" objects (for local state)
-        localState.settings.systemPrompt,
+        finalSystemPrompt,
         localState.settings.model,
         localState.settings.temperature,
         localState.settings.top_p,
@@ -775,7 +795,6 @@ function Responses({
 
       // Handle file content after loading
       reader.onload = async () => {
-        
         // Parse and process JSON data
         try {
           let data = reader.result;
@@ -785,7 +804,15 @@ function Responses({
           const parsedData = JSON.parse(data);
 
           // Import
-          importConversation(parsedData, dispatch, currentConversationId, defaultModel, notifyError, notifySuccess, navigate)
+          importConversation(
+            parsedData,
+            dispatch,
+            currentConversationId,
+            defaultModel,
+            notifyError,
+            notifySuccess,
+            navigate
+          );
         } catch (jsonError) {
           console.error("JSON Parse Error:", jsonError);
           notifyError("Invalid JSON file format: " + jsonError.message);

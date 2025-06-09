@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import {
   addConversation,
   setCurrentConversation,
@@ -26,7 +26,6 @@ function Sidebar({
 }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { t } = useTranslation();
 
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
@@ -67,9 +66,10 @@ function Sidebar({
             settings: {
               ["model-name"]: defaultModel.name,
               model: defaultModel.id,
+              systemPrompt: "You are a helpful assistant",
               temperature: 0.5,
               top_p: 0.5,
-              systemPrompt: "You are a helpful assistant",
+              memory: 0,
             },
           },
         },
@@ -127,7 +127,9 @@ function Sidebar({
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
         >
-          <span><Trans i18nKey="description.newConversation" /></span>
+          <span>
+            <Trans i18nKey="description.newConversation" />
+          </span>
         </button>
       </div>
 
@@ -221,7 +223,9 @@ function Sidebar({
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
         >
-          <span><Trans i18nKey="description.importPersona" /></span>
+          <span>
+            <Trans i18nKey="description.importPersona" />
+          </span>
         </button>
       </div>
     </div>

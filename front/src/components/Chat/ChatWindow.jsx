@@ -37,6 +37,7 @@ import FileAlertModal from "../../modals/FileAlertModal";
 import { toggleOption } from "../../Redux/actions/advancedOptionsAction";
 import ClearMemoryModal from "../../modals/ClearMemoryModal";
 import UserMemoryModal from "../../modals/UserMemoryModal";
+import HelpMemoryModal from "../../modals/HelpMemoryModal";
 
 function ChatWindow({
   modelSettings,
@@ -72,6 +73,7 @@ function ChatWindow({
       temperature: null,
       top_p: null,
       systemPrompt: "",
+      memory: 0,
     },
     exportOptions: {
       exportSettings: false,
@@ -97,6 +99,7 @@ function ChatWindow({
   const [showMicModal, setShowMicModal] = useState(false);
   const [showCustomHelpModal, setShowCustomHelpModal] = useState(false);
   const [showTopPHelpModal, setShowTopPHelpModal] = useState(false);
+  const [showMemoryHelpModal, setShowMemoryHelpModal] = useState(false);
   const [showSystemHelpModal, setShowSystemHelpModal] = useState(false);
   const [showArcanasHelpModal, setShowArcanasHelpModal] = useState(false);
   const [showCusModal, setShowCusModal] = useState(false);
@@ -805,6 +808,7 @@ function ChatWindow({
           setShowArcanasHelpModal={setShowArcanasHelpModal}
           setShowCustomHelpModal={setShowCustomHelpModal}
           setShowTopPHelpModal={setShowTopPHelpModal}
+          setShowMemoryHelpModal={setShowMemoryHelpModal}
           setShowSystemHelpModal={setShowSystemHelpModal}
           notifySuccess={notifySuccess}
           notifyError={notifyError}
@@ -824,6 +828,12 @@ function ChatWindow({
       <>
         {showTopPHelpModal ? (
           <HelpTopPModal showModal={setShowTopPHelpModal} />
+        ) : null}
+      </>
+
+      <>
+        {showMemoryHelpModal ? (
+          <HelpMemoryModal showModal={setShowMemoryHelpModal} />
         ) : null}
       </>
 

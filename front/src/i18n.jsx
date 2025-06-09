@@ -197,6 +197,8 @@ i18n
             //t_pop
             t_pop:
               "top_p is a slider from 0 to 1 which adjusts the total population of probabilities considered for the next token. A top_p of 0.1 would mean only the top 10% of cumulative probabilities is considered. Variating top_p has a similar effect on predictability and creativity as temperature.",
+            memory_help:
+              "Memory enhances conversation continuity by remembering context from previous messages. 'Off' disables memory functionality - each message is treated independently. 'Recall' adds memory context to the system prompt, allowing the AI to reference earlier parts of your conversation. 'On' currently works the same as Recall, but will include automatic memory updates in future versions. This feature provides a more natural conversational experience similar to other AI services.",
             // Help arcana note
             help_arcana_title: "Note",
             help_arcana_note:
@@ -482,6 +484,8 @@ i18n
             //t_pop
             t_pop:
               "top_p ist ein Schieberegler von 0 bis 1, der den Gesamtbestand der Wahrscheinlichkeiten anpasst, die für das nächste Token in Betracht gezogen werden. Ein top_p von 0,1 würde bedeuten, dass nur die oberen 10% der kumulativen Wahrscheinlichkeiten berücksichtigt werden. Die Variation von top_p hat einen ähnlichen Effekt auf Vorhersagbarkeit und Kreativität wie die Temperatur.",
+            memory_help:
+              "Memory verbessert die Kontinuität von Gesprächen, indem es den Kontext aus vorherigen Nachrichten speichert. 'Off' deaktiviert die Memory-Funktion - jede Nachricht wird unabhängig behandelt. 'Recall' fügt Memory-Kontext zum System-Prompt hinzu, wodurch die KI auf frühere Teile Ihres Gesprächs verweisen kann. 'On' funktioniert derzeit genauso wie Recall, wird aber in zukünftigen Versionen automatische Memory-Updates enthalten. Diese Funktion bietet eine natürlichere Gesprächserfahrung ähnlich anderen KI-Diensten.",
 
             // Help arcana note
             help_arcana_title: "Note",
