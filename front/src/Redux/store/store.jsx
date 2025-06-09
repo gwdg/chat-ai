@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore } from "redux-persist";
 import storage from "redux-persist/lib/storage";
@@ -167,19 +168,35 @@ const rootReducerWithReset = (state, action) => {
   return newState;
 };
 
+// Custom middleware to prevent certain actions from syncing
+const preventSyncMiddleware = (store) => (next) => (action) => {
+  // Don't sync navigation-related actions - each tab should handle its own navigation
+  if (
+    action.type === "conversations/setCurrentConversation" &&
+    action.meta?.skipSync
+  ) {
+    // This is a local navigation action, don't sync it
+    return next({
+      ...action,
+      meta: { ...action.meta, skipBroadcast: true },
+    });
+  }
+
+  return next(action);
+};
+
 const persistedRootReducer = persistReducer(
   persistConfig,
   rootReducerWithReset
 );
 
-// Configuration for redux-state-sync
+// Configuration for redux-state-sync - REMOVED setCurrentConversation from whitelist
 const stateSyncConfig = {
   // Whitelist the actions that should sync across tabs
   whitelist: [
     "conversations/addConversation",
     "conversations/updateConversation",
     "conversations/deleteConversation",
-    "conversations/setCurrentConversation",
     "conversations/resetStore",
     "conversations/setIsResponding",
     "defaultModel/setDefaultModel",
@@ -207,7 +224,9 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false, // Ignore checking non-serializable values
-    }).concat(createStateSyncMiddleware(stateSyncConfig)),
+    })
+      .concat(preventSyncMiddleware)
+      .concat(createStateSyncMiddleware(stateSyncConfig)),
 });
 
 // Initialize the message listener to respond to changes from other tabs
@@ -218,4 +237,5 @@ export const persistor = persistStore(store, null, () => {
   // this will be invoked after rehydration is complete
   store.dispatch({ type: "MIGRATE" });
 });
+
 export default store;
