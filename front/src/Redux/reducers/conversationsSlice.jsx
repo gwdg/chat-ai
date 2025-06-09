@@ -3,8 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 console.log(
   "Conversations slice loaded",
-  import.meta.env.VITE_DEFAULT_MODEL_NAME,
-  import.meta.env.VITE_DEFAULT_MODEL
+  import.meta.env.VITE_DEFAULT_SETTINGS
 );
 
 const createDefaultConversation = () => ({

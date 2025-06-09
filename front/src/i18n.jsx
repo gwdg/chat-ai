@@ -93,6 +93,7 @@ i18n
               "This feature allows you to customize your workflow by setting the System Prompt, which provides context and guidance for the model's response, and adjusting the Temperature, which influences the model's creativity and randomness. By tweaking these settings, you can tailor the model's output to suit your specific needs and preferences.",
             // Text area placeholder
             placeholder: "Ask me",
+            placeholder_modelList: "Search models...",
             tryAgain: "Please try again...",
 
             // Footer text
@@ -378,6 +379,7 @@ i18n
               "Diese Funktion ermöglicht es Ihnen, Ihren Workflow anzupassen, indem Sie den System-Prompt einstellen, der Kontext und Anleitung für die Antwort des Modells bereitstellt, und die Temperatur anpassen, die die Kreativität und Zufälligkeit des Modells beeinflusst. Durch Anpassen dieser Einstellungen können Sie die Ausgabe des Modells an Ihre spezifischen Bedürfnisse und Vorlieben anpassen.",
             // Text area placeholder
             placeholder: "Fragen Sie mich",
+            placeholder_modelList: "Modelle suchen...",
             tryAgain: "Bitte versuchen Sie es noch einmal...",
 
             // Footer text

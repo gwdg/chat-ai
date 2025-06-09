@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 //Libraries
 import { Trans, useTranslation } from "react-i18next";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -81,6 +81,7 @@ const SettingsPanel = ({
   const [systemPromptError, setSystemPromptError] = useState("");
   const [processingFiles, setProcessingFiles] = useState(new Set());
   const defaultModel = useSelector(selectDefaultModel);
+  const [searchQuery, setSearchQuery] = useState("");
 
   //Refs
   const hasProcessedSettings = useRef(false);
@@ -113,6 +114,40 @@ const SettingsPanel = ({
     // Return formatted string with 2 decimal places and unit
     return `${size.toFixed(2)} ${units[unitIndex]}`;
   }
+
+  // Filter function to search through models
+  const filteredModelList = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return modelList;
+    }
+
+    const query = searchQuery.toLowerCase();
+
+    return modelList.filter((model) => {
+      // Search by model name
+      const nameMatch = model.name.toLowerCase().includes(query);
+
+      // Search by input types (text, image, video, arcana)
+      const inputMatch = model.input.some((inputType) =>
+        inputType.toLowerCase().includes(query)
+      );
+
+      // Search by output types (text, thought)
+      const outputMatch = model.output.some((outputType) =>
+        outputType.toLowerCase().includes(query)
+      );
+
+      // Search by status
+      const statusMatch = model.status.toLowerCase().includes(query);
+
+      // Search by owner
+      const ownerMatch = model.owned_by.toLowerCase().includes(query);
+
+      return (
+        nameMatch || inputMatch || outputMatch || statusMatch || ownerMatch
+      );
+    });
+  }, [modelList, searchQuery]);
 
   // Handle changes to the system instructions/prompt
   const handleInstructionsChange = (event) => {
@@ -601,7 +636,12 @@ const SettingsPanel = ({
                   className="relative flex-1 min-w-[200px]"
                   ref={dropdownRef}
                   tabIndex={0}
-                  onBlur={() => setIsOpen(false)}
+                  onBlur={(e) => {
+                    // Only close if the new focus target is not within this dropdown
+                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                      setIsOpen(false);
+                    }
+                  }}
                 >
                   <div
                     className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
@@ -655,57 +695,96 @@ const SettingsPanel = ({
                     <div
                       className={`absolute w-full ${
                         direction === "up" ? "bottom-full" : "top-full"
-                      } mt-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[200px] overflow-y-auto bg-white dark:bg-black`}
+                      } mt-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[280px] bg-white dark:bg-black shadow-lg`}
+                      onMouseDown={(e) => e.preventDefault()}
                     >
-                      {modelList.map((option, index) => (
-                        <div
-                          key={index}
-                          className={`flex items-center gap-2 text-tertiary text-xl w-full px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                            index === 0
-                              ? "rounded-t-2xl"
-                              : index === modelList.length - 1
-                              ? "rounded-b-2xl"
-                              : ""
-                          }`}
-                          onClick={() => handleChangeModel(option)}
-                        >
-                          <DemandStatusIcon
-                            status={option?.status}
-                            demand={option?.demand}
+                      {/* Search Input */}
+                      <div className="p-3 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-black rounded-t-2xl">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder={t("description.placeholder_modelList")}
+                            value={searchQuery}
+                            autoFocus={true}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
+                            onMouseDown={(e) => e.stopPropagation()}
                           />
-                          <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                            {option.name}
-                          </div>
-                          {option.input.includes("image") && (
-                            <img
-                              src={image_supported}
-                              alt="image_supported"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
-                          {option.input.includes("video") && (
-                            <img
-                              src={video_icon}
-                              alt="video_icon"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
-                          {option.output.includes("thought") && (
-                            <img
-                              src={thought_supported}
-                              alt="thought_supported"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
-                          {option.input.includes("arcana") && (
-                            <img
-                              src={books}
-                              alt="books"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
-                            />
-                          )}
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Model List Container */}
+                      <div className="max-h-[200px] overflow-y-auto overflow-x-hidden">
+                        {filteredModelList.length > 0 ? (
+                          <div className="py-1">
+                            {filteredModelList.map((option, index) => (
+                              <div
+                                key={option.id}
+                                className={`group flex items-center gap-2 w-full px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                                  index === filteredModelList.length - 1
+                                    ? "rounded-b-2xl"
+                                    : ""
+                                }`}
+                                onClick={() => {
+                                  handleChangeModel(option);
+                                  setSearchQuery("");
+                                }}
+                              >
+                                {/* Status Icon */}
+                                <div className="flex-shrink-0">
+                                  <DemandStatusIcon
+                                    status={option?.status}
+                                    demand={option?.demand}
+                                  />
+                                </div>
+
+                                {/* Model Name - with proper text handling */}
+                                <div className="flex-1 min-w-0 mr-2">
+                                  <div className="text-xl text-tertiary truncate">
+                                    {option.name}
+                                  </div>
+                                </div>
+
+                                {/* Capability Icons */}
+                                <div className="flex items-center gap-0.5 flex-shrink-0">
+                                  {option.input.includes("image") && (
+                                    <img
+                                      src={image_supported}
+                                      alt="image_supported"
+                                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                    />
+                                  )}
+                                  {option.input.includes("video") && (
+                                    <img
+                                      src={video_icon}
+                                      alt="video_icon"
+                                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                    />
+                                  )}
+                                  {option.output.includes("thought") && (
+                                    <img
+                                      src={thought_supported}
+                                      alt="thought_supported"
+                                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                    />
+                                  )}
+                                  {option.input.includes("arcana") && (
+                                    <img
+                                      src={books}
+                                      alt="books"
+                                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                            No models found matching &quot;{searchQuery}&quot;
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
