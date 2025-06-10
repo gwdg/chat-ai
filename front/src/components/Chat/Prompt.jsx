@@ -13,7 +13,7 @@ import upload from "../../assets/add.svg";
 import mic from "../../assets/icon_mic.svg";
 import stop from "../../assets/stop_listening.svg";
 import pause from "../../assets/pause.svg";
-import { cancelRequest, fetchLLMResponse } from "../../apis/LlmRequestApi";
+import { cancelRequest, fetchLLMResponse, updateMemory } from "../../apis/LlmRequestApi";
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -22,7 +22,13 @@ import video_icon from "../../assets/video_icon.svg";
 import cross from "../../assets/cross.svg";
 import uploaded from "../../assets/file_uploaded.svg";
 import { processPdfDocument } from "../../apis/PdfProcessApi";
-import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
+import {
+  addMemory,
+  editMemory,
+  deleteMemory,
+  selectAllMemories,
+  deleteAllMemories,
+} from "../../Redux/reducers/userMemorySlice";
 
 //Variable
 const languageMap = {
@@ -206,6 +212,23 @@ function Prompt({
         conversationForAPI,
         isArcanaSupported
       );
+
+      try {
+        // TODO Update memory when necessary
+        if (localState.settings.memory >= 2) {
+          const response = await updateMemory(processedConversation, memories);
+          const cleanedResponse = response.replace(/,(\s*[}$])/g, "$1");
+          const jsonResponse = JSON.parse(cleanedResponse);
+          if (jsonResponse.store) {
+            const memoryText = jsonResponse.memory_sentence.trim();
+            dispatch(addMemory({ text: memoryText }));
+            console.log ("New memory:", memoryText);
+          }
+        }
+      } catch (error) {
+        console.log("Failed to update memory: ", error.name, error.message)
+      }
+ 
       dispatch(setIsResponding(false));
       setLoading(false);
       setSelectedFiles([]);

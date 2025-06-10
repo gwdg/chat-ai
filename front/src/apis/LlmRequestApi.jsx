@@ -79,6 +79,82 @@ async function generateConversationTitle(conversation, settings) {
   }
 }
 
+async function updateMemory(conversation, memories) {
+
+    const memoryPrompt = 'Determine if the new user message provided below contains any NEW personal information worth storing for future conversations, that is not already stored in current memory.\n' +
+    'Current memory was provided in the system prompt, DO NOT repeat anything from the current memory!' +
+    'Look for personal information in the new user message including new details about name, nickname, pronouns, projects, preferences, interests, and other useful context. ' +
+    'If there is no useful information, or if the info was already in the current memory list provided in the system prompt, respond like this:\n' +
+    '{' +
+      '"store": false,' +
+      '"memory_sentence": ""' +
+    '}\n\n' +
+    'Otherwise, only if there is new information in the new user message THAT IS NOT GIVEN IN THE CURRENT MEMORY LIST, respond with JSON as in the following example:\n' +
+    '{' +
+      '"store": true,' +
+      '"memory_sentence": "User likes chocolate cookies"' +
+    '}\n\n' +
+    'It is always safer to respond store=false when you are unsure. Only create a new memory when the info is new and not provided in the system prompt.\nHere is the new user message:\n' + conversation.at(-1).content
+
+  const memoryUpdateSchema = {
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+      "store": {
+        "type": "boolean"
+      },
+      "memory_sentence": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "store",
+      "memory_sentence"
+    ]
+}
+
+  try {
+    const response = await fetch(import.meta.env.VITE_BACKEND_ENDPOINT, {
+      method: "post",
+      headers: { "Content-type": "application/json" },
+      body: JSON.stringify({
+        model: "meta-llama-3.1-8b-instruct",
+        messages: [
+          { role: "system", content: "You are a helpful assistant. Here is the current memory list:\n" + memories.map((memory) => memory.text).join("\n") },
+          { role: "user", content: memoryPrompt },
+        ],
+        temperature: 0.1,
+        top_p: 0.1,
+        extra_body: {"guided_json": memoryUpdateSchema},
+      }),
+    });
+    if (!response.ok) throw new Error(response.statusText);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let memory = "";
+    let streamComplete = false;
+
+    // Stream response until complete
+    while (!streamComplete) {
+      const { value, done } = await reader.read();
+      if (done) {
+        streamComplete = true;
+        break;
+      }
+      memory += decoder.decode(value, { stream: true });
+    }
+
+    return memory?.trim();
+  } catch (error) {
+    // Handle AbortError specifically
+    if (error.name === "AbortError") {
+      return "";
+    }
+    console.error("Memory update failed:", error);
+    return "";
+  }
+}
+
 async function fetchLLMResponse(
   conversation,
   customInstructions,
@@ -222,7 +298,6 @@ async function fetchLLMResponse(
           title,
         }));
       }
-
       return currentResponse;
     } catch (error) {
       // Handle AbortError specifically during streaming
@@ -269,4 +344,4 @@ function isRequestActive() {
   return !controller.signal.aborted;
 }
 
-export { fetchLLMResponse, cancelRequest, isRequestActive };
+export { fetchLLMResponse, cancelRequest, isRequestActive, updateMemory };
