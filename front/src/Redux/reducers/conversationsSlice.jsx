@@ -6,6 +6,9 @@ console.log(
   import.meta.env.VITE_DEFAULT_SETTINGS
 );
 
+const default_model = JSON.parse(import.meta.env.VITE_DEFAULT_SETTINGS).model;
+console.log("Default model is", default_model);
+
 const createDefaultConversation = () => ({
   id: uuidv4(),
   title: "Untitled Conversation",
