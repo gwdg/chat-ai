@@ -1,50 +1,46 @@
+// store/conversationsSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 import { v4 as uuidv4 } from "uuid";
+import { getDefaultSettings } from "../../utils/settingsUtils";
 
 console.log(
   "Conversations slice loaded",
   import.meta.env.VITE_DEFAULT_SETTINGS
 );
 
-const default_model = JSON.parse(import.meta.env.VITE_DEFAULT_SETTINGS).model;
-console.log("Default model is", default_model);
+const createDefaultConversation = (customSettings = {}) => {
+  const defaultSettings = getDefaultSettings();
+  const settings = { ...defaultSettings, ...customSettings };
 
-const createDefaultConversation = () => ({
-  id: uuidv4(),
-  title: "Untitled Conversation",
-  conversation: [
-    {
-      role: "system",
-      content: "You are a helpful assistant",
+  return {
+    id: uuidv4(),
+    title: "Untitled Conversation",
+    conversation: [
+      {
+        role: "system",
+        content: settings.systemPrompt,
+      },
+    ],
+    responses: [],
+    prompt: "",
+    settings,
+    exportOptions: {
+      exportSettings: false,
+      exportImage: false,
+      exportArcana: false,
     },
-  ],
-  responses: [],
-  prompt: "",
-  settings: {
-    ["model-name"]:
-      import.meta.env.VITE_DEFAULT_MODEL_NAME || "Meta Llama 3.1 8B Instruct",
-    model: import.meta.env.VITE_DEFAULT_MODEL || "meta-llama-3.1-8b-instruct",
-    temperature: 0.5,
-    top_p: 0.5,
-    systemPrompt: "You are a helpful assistant",
-    memory: 0,
-  },
-  exportOptions: {
-    exportSettings: false,
-    exportImage: false,
-    exportArcana: false,
-  },
-  dontShow: {
-    dontShowAgain: false,
-    dontShowAgainShare: false,
-    dontShowAgainMemory: false,
-  },
-  arcana: {
-    id: "",
-  },
-  createdAt: new Date().toISOString(),
-  lastModified: new Date().toISOString(),
-});
+    dontShow: {
+      dontShowAgain: false,
+      dontShowAgainShare: false,
+      dontShowAgainMemory: false,
+    },
+    arcana: {
+      id: "",
+    },
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+  };
+};
 
 const defaultConversation = createDefaultConversation();
 
@@ -64,8 +60,8 @@ const conversationsSlice = createSlice({
         state.conversations.unshift(newConversation);
         state.currentConversationId = newConversation.id;
       },
-      prepare: (providedId = null) => {
-        const newConversation = createDefaultConversation();
+      prepare: (providedId = null, customSettings = {}) => {
+        const newConversation = createDefaultConversation(customSettings);
 
         // If an ID is provided (for syncing), use it instead
         if (providedId) {
@@ -148,8 +144,10 @@ const conversationsSlice = createSlice({
         state.currentConversationId = newConversation.id;
         state.isResponding = false;
       },
-      prepare: (providedId = null) => {
+      prepare: (providedId = null, customSettings = {}) => {
         const newId = providedId || uuidv4();
+        const defaultSettings = getDefaultSettings();
+        const settings = { ...defaultSettings, ...customSettings };
 
         const newConversation = {
           id: newId,
@@ -157,23 +155,12 @@ const conversationsSlice = createSlice({
           conversation: [
             {
               role: "system",
-              content: "You are a helpful assistant",
+              content: settings.systemPrompt,
             },
           ],
           responses: [],
           prompt: "",
-          settings: {
-            ["model-name"]:
-              import.meta.env.VITE_DEFAULT_MODEL_NAME ||
-              "Meta Llama 3.1 8B Instruct",
-            model:
-              import.meta.env.VITE_DEFAULT_MODEL ||
-              "meta-llama-3.1-8b-instruct",
-            systemPrompt: "You are a helpful assistant",
-            temperature: 0.5,
-            top_p: 0.5,
-            memory: 0,
-          },
+          settings,
           exportOptions: {
             exportSettings: false,
             exportImage: false,

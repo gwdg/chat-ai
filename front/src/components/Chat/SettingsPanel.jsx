@@ -30,6 +30,7 @@ import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
 import { importConversation } from "../../hooks/importConversation";
+import { getDefaultSettings } from "../../utils/settingsUtils";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -283,6 +284,20 @@ const SettingsPanel = ({
     }
   };
 
+  // Helper function to process URL settings
+  const processUrlSettings = (urlSettings) => {
+    const defaultSettings = getDefaultSettings();
+
+    return {
+      ...defaultSettings,
+      ...urlSettings,
+      // Handle systemPrompt decoding specifically
+      systemPrompt: urlSettings.systemPrompt
+        ? decodeURIComponent(urlSettings.systemPrompt)
+        : defaultSettings.systemPrompt,
+    };
+  };
+
   // Calculate dropdown direction based on available space
   useEffect(() => {
     if (dropdownRef.current) {
@@ -312,67 +327,38 @@ const SettingsPanel = ({
 
           // Decode and parse settings from URL
           const decodedSettings = atob(encodedSettings);
-          const settings = JSON.parse(decodedSettings);
+          const urlSettings = JSON.parse(decodedSettings);
+
+          // Process settings with defaults
+          const processedSettings = processUrlSettings(urlSettings);
 
           // Create new conversation
           const action = dispatch(addConversation());
           const newId = action.payload?.id;
 
           if (newId) {
-            // Update local state with decoded settings
-            setLocalState((prev) => ({
-              ...prev,
-              settings: {
-                systemPrompt: settings.systemPrompt
-                  ? decodeURIComponent(settings.systemPrompt)
-                  : "You are a helpful assistant",
-                ["model-name"]:
-                  settings["model-name"] ||
-                  import.meta.env.VITE_DEFAULT_MODEL_NAME ||
-                  "Meta Llama 3.1 8B Instruct",
-                model:
-                  settings.model ||
-                  import.meta.env.VITE_DEFAULT_MODEL ||
-                  "meta-llama-3.1-8b-instruct",
-                temperature: settings.temperature || 0.5,
-                top_p: settings.top_p || 0.5,
-              },
-              // Include arcana settings if present
-              ...(settings.arcana && {
+            // Prepare update object
+            const conversationUpdates = {
+              settings: processedSettings,
+              ...(urlSettings.arcana && {
                 arcana: {
-                  id: settings.arcana.id,
-                  // key: settings.arcana.key,
+                  id: urlSettings.arcana.id,
+                  // key: urlSettings.arcana.key,
                 },
               }),
+            };
+
+            // Update local state
+            setLocalState((prev) => ({
+              ...prev,
+              ...conversationUpdates,
             }));
 
             // Update conversation in Redux store
             dispatch(
               updateConversation({
                 id: newId,
-                updates: {
-                  settings: {
-                    systemPrompt: settings.systemPrompt
-                      ? decodeURIComponent(settings.systemPrompt)
-                      : "You are a helpful assistant",
-                    ["model-name"]:
-                      settings["model-name"] ||
-                      import.meta.env.VITE_DEFAULT_MODEL_NAME ||
-                      "Meta Llama 3.1 8B Instruct",
-                    model:
-                      settings.model ||
-                      import.meta.env.VITE_DEFAULT_MODEL ||
-                      "meta-llama-3.1-8b-instruct",
-                    temperature: settings.temperature ?? 0.5,
-                    top_p: settings.top_p ?? 0.5,
-                  },
-                  ...(settings.arcana && {
-                    arcana: {
-                      id: settings.arcana.id,
-                      // key: settings.arcana.key,
-                    },
-                  }),
-                },
+                updates: conversationUpdates,
               })
             );
 

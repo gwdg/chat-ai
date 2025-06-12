@@ -31,6 +31,7 @@ import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
 import { importConversation } from "../../hooks/importConversation";
+import { getDefaultSettings } from "../../utils/settingsUtils";
 
 // Main layout component that manages the overall structure and state of the chat application
 function Layout() {
@@ -248,7 +249,52 @@ function Layout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Clear cache and reset the application state
+  // Helper function to create conversation payload
+  const createConversationPayload = (
+    conversationId,
+    currentDefaultModel = null
+  ) => {
+    const defaultSettings = getDefaultSettings();
+    const settings = {
+      ...defaultSettings,
+      // Override with current default model if available
+      ...(currentDefaultModel && {
+        ["model-name"]: currentDefaultModel.name,
+        model: currentDefaultModel.id,
+      }),
+    };
+
+    return {
+      id: conversationId,
+      title: "Untitled Conversation",
+      conversation: [
+        {
+          role: "system",
+          content: settings.systemPrompt,
+        },
+      ],
+      responses: [],
+      prompt: "",
+      settings,
+      exportOptions: {
+        exportSettings: false,
+        exportImage: false,
+        exportArcana: false,
+      },
+      dontShow: {
+        dontShowAgain: false,
+        dontShowAgainShare: false,
+        dontShowAgainMemory: false,
+      },
+      arcana: {
+        id: "",
+        // key: "",
+      },
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+    };
+  };
+
   const clearCache = useCallback(async () => {
     try {
       // Generate a new ID that will be used across all tabs
@@ -276,51 +322,15 @@ function Layout() {
         },
       });
 
-      // Create the new conversation with the correct default model settings
+      // Create the new conversation with proper settings
+      const conversationPayload = createConversationPayload(
+        newConversationId,
+        currentDefaultModel
+      );
+
       dispatch({
         type: "conversations/resetStore",
-        payload: {
-          id: newConversationId,
-          title: "Untitled Conversation",
-          conversation: [
-            {
-              role: "system",
-              content: "You are a helpful assistant",
-            },
-          ],
-          responses: [],
-          prompt: "",
-          settings: {
-            ["model-name"]:
-              currentDefaultModel?.name ||
-              import.meta.env.VITE_DEFAULT_MODEL_NAME ||
-              "Meta Llama 3.1 8B Instruct",
-            model:
-              currentDefaultModel?.id ||
-              import.meta.env.VITE_DEFAULT_MODEL ||
-              "meta-llama-3.1-8b-instruct",
-            systemPrompt: "You are a helpful assistant",
-            temperature: 0.5,
-            top_p: 0.5,
-            memory: 0,
-          },
-          exportOptions: {
-            exportSettings: false,
-            exportImage: false,
-            exportArcana: false,
-          },
-          dontShow: {
-            dontShowAgain: false,
-            dontShowAgainShare: false,
-            dontShowAgainMemory: false,
-          },
-          arcana: {
-            id: "",
-            // key: "",
-          },
-          createdAt: new Date().toISOString(),
-          lastModified: new Date().toISOString(),
-        },
+        payload: conversationPayload,
         meta: { id: newConversationId, sync: true },
       });
 

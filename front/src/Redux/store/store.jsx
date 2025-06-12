@@ -8,6 +8,7 @@ import {
   initMessageListener,
 } from "redux-state-sync";
 import { v4 as uuidv4 } from "uuid";
+import { getDefaultSettings } from "../../utils/settingsUtils";
 
 const persistConfig = {
   key: "root",
@@ -22,26 +23,88 @@ const persistConfig = {
   ],
 };
 
+// Helper function to get default model from settings
+const getDefaultModelFromSettings = () => {
+  const defaultSettings = getDefaultSettings();
+  return {
+    name: defaultSettings["model-name"],
+    id: defaultSettings.model,
+  };
+};
+
+// Helper function to create a new conversation with proper defaults
+const createNewConversation = (conversationId, defaultModel) => {
+  const defaultSettings = getDefaultSettings();
+  const settings = {
+    ...defaultSettings,
+    // Override with provided default model if available
+    ...(defaultModel && {
+      ["model-name"]: defaultModel.name,
+      model: defaultModel.id,
+    }),
+  };
+
+  return {
+    id: conversationId || uuidv4(),
+    title: "Untitled Conversation",
+    conversation: [
+      {
+        role: "system",
+        content: settings.systemPrompt,
+      },
+    ],
+    responses: [],
+    prompt: "",
+    settings,
+    exportOptions: {
+      exportSettings: false,
+      exportImage: false,
+      exportArcana: false,
+    },
+    dontShow: {
+      dontShowAgain: false,
+      dontShowAgainShare: false,
+      dontShowAgainMemory: false,
+    },
+    arcana: {
+      id: "",
+    },
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+  };
+};
+
 // Migration functions for different versions
 const migrations = {
   1: (state) => {
     // Migrate from version 1 to 2
     state.version = 2;
 
+    // Get default settings for migration
+    const defaultSettings = getDefaultSettings();
+
     // Migrate all conversations
     state.conversations = {
       ...state.conversations,
       conversations: state.conversations.conversations.map((conv) => {
         const newSettings = { ...conv.settings };
+
         // Convert old version to new
         if (newSettings.model_api !== undefined) {
           newSettings["model-name"] = newSettings.model;
           newSettings.model = newSettings.model_api;
           delete newSettings.model_api;
         }
+
+        // Ensure all settings have proper defaults
+        const migratedSettings = {
+          ...defaultSettings,
+          ...newSettings,
+        };
+
         return {
           ...conv,
-          settings: newSettings,
+          settings: migratedSettings,
         };
       }),
     };
@@ -89,51 +152,15 @@ const rootReducerWithReset = (state, action) => {
       preserveMemories,
     } = action.payload || {};
 
-    // Use the provided default model, or get from current state, or use fallback
-    const currentDefaultModel = defaultModel ||
-      state?.defaultModel || {
-        name:
-          import.meta.env.VITE_DEFAULT_MODEL_NAME ||
-          "Meta Llama 3.1 8B Instruct",
-        id: import.meta.env.VITE_DEFAULT_MODEL || "meta-llama-3.1-8b-instruct",
-      };
+    // Use the provided default model, or get from current state, or use fallback from settings
+    const currentDefaultModel =
+      defaultModel || state?.defaultModel || getDefaultModelFromSettings();
 
-    // Create a new conversation with the provided ID or generate a new one
-    const newConversation = {
-      id: newConversationId || uuidv4(),
-      title: "Untitled Conversation",
-      conversation: [
-        {
-          role: "system",
-          content: "You are a helpful assistant",
-        },
-      ],
-      responses: [],
-      prompt: "",
-      settings: {
-        ["model-name"]: currentDefaultModel.name,
-        model: currentDefaultModel.id,
-        systemPrompt: "You are a helpful assistant",
-        temperature: 0.5,
-        top_p: 0.5,
-        memory: 0,
-      },
-      exportOptions: {
-        exportSettings: false,
-        exportImage: false,
-        exportArcana: false,
-      },
-      dontShow: {
-        dontShowAgain: false,
-        dontShowAgainShare: false,
-        dontShowAgainMemory: false,
-      },
-      arcana: {
-        id: "",
-      },
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-    };
+    // Create a new conversation with proper defaults
+    const newConversation = createNewConversation(
+      newConversationId,
+      currentDefaultModel
+    );
 
     // Reset the entire state but preserve the specified states
     newState = {
