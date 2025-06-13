@@ -1,13 +1,15 @@
-// utils/settingsUtils.js
-
-/**
- * Get default settings from environment variables with fallbacks
- * @returns {Object} Default settings object
- */
 export const getDefaultSettings = () => {
-  const envSettings = import.meta.env.VITE_DEFAULT_SETTINGS || {};
+  let envSettings = {};
 
-  return {
+  if (import.meta.env.VITE_DEFAULT_SETTINGS) {
+    try {
+      envSettings = JSON.parse(import.meta.env.VITE_DEFAULT_SETTINGS);
+    } catch (e) {
+      envSettings = {};
+    }
+  }
+
+  const result = {
     ["model-name"]: envSettings.modelName,
     model: envSettings.model,
     temperature: envSettings.temperature,
@@ -15,4 +17,6 @@ export const getDefaultSettings = () => {
     systemPrompt: "You are a helpful assistant",
     memory: 0,
   };
+
+  return result;
 };

@@ -3,6 +3,7 @@ import {
   addConversation,
   updateConversation,
 } from "../Redux/reducers/conversationsSlice";
+import { getDefaultSettings } from "../utils/settingsUtils";
 
 export const importConversation = async (
   data,
@@ -14,6 +15,8 @@ export const importConversation = async (
   navigate
 ) => {
   try {
+    const defaultSettings = getDefaultSettings();
+
     // Create new conversation
     const action = dispatch(addConversation());
     const newId = action.payload?.id;
@@ -93,8 +96,8 @@ export const importConversation = async (
       systemPrompt: systemMessage?.content || "You are a helpful assistant",
       ["model-name"]: defaultModel.name,
       model: defaultModel.id,
-      temperature: 0.5, // default value
-      top_p: 0.5, // default value
+      temperature: defaultSettings.temperature,
+      top_p: defaultSettings.top_p,
       memory: 0,
     };
 

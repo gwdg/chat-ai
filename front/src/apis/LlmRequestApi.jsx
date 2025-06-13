@@ -1,8 +1,12 @@
+import { getDefaultSettings } from "../utils/settingsUtils";
+
 // Controller for handling API request cancellation
 let controller = new AbortController();
 let signal = controller.signal;
 
 async function generateConversationTitle(conversation, settings) {
+  const defaultSettings = getDefaultSettings();
+
   let processedConversation = conversation.map((message) => {
     // Handle case where content is an array (containing text and image objects)
     if (message.role === "user" && Array.isArray(message.content)) {
@@ -41,7 +45,7 @@ async function generateConversationTitle(conversation, settings) {
       method: "post",
       headers: { "Content-type": "application/json" },
       body: JSON.stringify({
-        model: "meta-llama-3.1-8b-instruct",
+        model: defaultSettings.model,
         messages: [
           { role: "system", content: "You are a helpful assistant." },
           ...processedConversation.slice(1),
@@ -80,6 +84,8 @@ async function generateConversationTitle(conversation, settings) {
 }
 
 async function updateMemory(conversation, memories) {
+  const defaultSettings = getDefaultSettings();
+
   const memoryPrompt =
     "Determine if the new user message provided below contains any NEW personal information worth storing for future conversations, that is not already stored in current memory.\n" +
     "Current memory was provided in the system prompt, DO NOT repeat anything from the current memory!" +
@@ -116,7 +122,7 @@ async function updateMemory(conversation, memories) {
       method: "post",
       headers: { "Content-type": "application/json" },
       body: JSON.stringify({
-        model: "meta-llama-3.1-8b-instruct",
+        model: defaultSettings.model,
         messages: [
           {
             role: "system",

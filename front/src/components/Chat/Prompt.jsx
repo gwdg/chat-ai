@@ -226,7 +226,7 @@ function Prompt({
           }
         }
       } catch (error) {
-        console.log("Failed to update memory: ", error.name, error.message)
+        console.error("Failed to update memory: ", error.name, error.message)
       }
  
       dispatch(setIsResponding(false));

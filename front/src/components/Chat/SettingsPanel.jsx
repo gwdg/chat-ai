@@ -171,6 +171,8 @@ const SettingsPanel = ({
 
   // Reset settings to default values
   const resetDefault = () => {
+    const defaultSettings = getDefaultSettings();
+
     // Update system prompt in conversation history
     let updatedConversation = localState.conversation.map((item) => {
       if (item.role === "system") {
@@ -186,8 +188,8 @@ const SettingsPanel = ({
       conversation: updatedConversation,
       settings: {
         ...prevState.settings,
-        temperature: 0.5,
-        top_p: 0.5,
+        temperature: defaultSettings.temperature,
+        top_p: defaultSettings.top_p,
         memory: 0,
       },
     }));

@@ -16,6 +16,7 @@ import cross from "../../assets/cross.svg";
 import edit_icon from "../../assets/edit_icon.svg";
 import back_arrow from "../../assets/back_arrow.svg";
 import { persistor } from "../../Redux/store/store";
+import { getDefaultSettings } from "../../utils/settingsUtils";
 
 function Sidebar({
   onClose,
@@ -48,6 +49,7 @@ function Sidebar({
 
   const handleNewChat = useCallback(() => {
     if (isResponding) return; // Prevent new chat while responding
+    const defaultSettings = getDefaultSettings();
 
     // Temporarily disable interaction
     dispatch({ type: "conversations/setIsResponding", payload: true });
@@ -67,8 +69,8 @@ function Sidebar({
               ["model-name"]: defaultModel.name,
               model: defaultModel.id,
               systemPrompt: "You are a helpful assistant",
-              temperature: 0.5,
-              top_p: 0.5,
+              temperature: defaultSettings.temperature,
+              top_p: defaultSettings.top_p,
               memory: 0,
             },
           },

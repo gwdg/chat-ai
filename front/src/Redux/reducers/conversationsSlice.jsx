@@ -3,13 +3,9 @@ import { createSlice } from "@reduxjs/toolkit";
 import { v4 as uuidv4 } from "uuid";
 import { getDefaultSettings } from "../../utils/settingsUtils";
 
-console.log(
-  "Conversations slice loaded",
-  import.meta.env.VITE_DEFAULT_SETTINGS
-);
-
 const createDefaultConversation = (customSettings = {}) => {
   const defaultSettings = getDefaultSettings();
+
   const settings = { ...defaultSettings, ...customSettings };
 
   return {
