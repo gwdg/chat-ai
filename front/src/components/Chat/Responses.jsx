@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Tooltip from "../Others/Tooltip";
-import { fetchLLMResponse } from "../../apis/LlmRequestApi";
+import { fetchLLMResponse, updateMemory } from "../../apis/LlmRequestApi";
 
 //Assets
 import retry from "../../assets/icon_retry.svg";
@@ -27,7 +27,10 @@ import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
 import { importConversation } from "../../hooks/importConversation";
-import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
+import {
+  addMemory,
+  selectAllMemories,
+} from "../../Redux/reducers/userMemorySlice";
 
 //Variable
 const MAX_HEIGHT = 200;
@@ -381,6 +384,21 @@ function Responses({
         updatedConversation, // Filtered conversation without "info" objects (for API)
         isArcanaSupported
       );
+      try {
+        // TODO Update memory when necessary
+        if (localState.settings.memory >= 2) {
+          const response = await updateMemory(newConversation, memories);
+          const cleanedResponse = response.replace(/,(\s*[}$])/g, "$1");
+          const jsonResponse = JSON.parse(cleanedResponse);
+          if (jsonResponse.store) {
+            const memoryText = jsonResponse.memory_sentence.trim();
+            dispatch(addMemory({ text: memoryText }));
+            console.log("New memory:", memoryText);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to update memory: ", error.name, error.message);
+      }
       dispatch(setIsResponding(false));
       setLoadingResend(false);
     } catch (error) {
@@ -607,6 +625,21 @@ function Responses({
         updatedConversation, // Filtered conversation without "info" objects (for API)
         isArcanaSupported
       );
+      try {
+        // TODO Update memory when necessary
+        if (localState.settings.memory >= 2) {
+          const response = await updateMemory(newConversation, memories);
+          const cleanedResponse = response.replace(/,(\s*[}$])/g, "$1");
+          const jsonResponse = JSON.parse(cleanedResponse);
+          if (jsonResponse.store) {
+            const memoryText = jsonResponse.memory_sentence.trim();
+            dispatch(addMemory({ text: memoryText }));
+            console.log("New memory:", memoryText);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to update memory: ", error.name, error.message);
+      }
       dispatch(setIsResponding(false));
       setLoadingResend(false);
     } catch (error) {

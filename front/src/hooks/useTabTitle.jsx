@@ -17,7 +17,8 @@ export const useTabTitle = () => {
 
     if (currentConversation) {
       const title = currentConversation.title || "Untitled Conversation";
-      document.title = title === "Untitled Conversation" ? "Chat AI" : title;
+      document.title =
+        title === "Untitled Conversation" ? "Chat AI" : title + " - Chat AI";
     } else {
       document.title = "Chat AI";
     }
