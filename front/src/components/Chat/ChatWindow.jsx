@@ -73,7 +73,7 @@ function ChatWindow({
       temperature: null,
       top_p: null,
       systemPrompt: "",
-      memory: 0,
+      memory: 2,
     },
     exportOptions: {
       exportSettings: false,

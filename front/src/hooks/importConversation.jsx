@@ -98,7 +98,7 @@ export const importConversation = async (
       model: defaultModel.id,
       temperature: defaultSettings.temperature,
       top_p: defaultSettings.top_p,
-      memory: 0,
+      memory: 2,
     };
 
     // If it's object format, apply any provided settings

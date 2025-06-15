@@ -15,7 +15,7 @@ export const getDefaultSettings = () => {
     temperature: envSettings.temperature,
     top_p: envSettings.top_p,
     systemPrompt: "You are a helpful assistant",
-    memory: 0,
+    memory: 2,
   };
 
   return result;

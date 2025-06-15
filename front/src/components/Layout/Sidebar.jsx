@@ -71,7 +71,7 @@ function Sidebar({
               systemPrompt: "You are a helpful assistant",
               temperature: defaultSettings.temperature,
               top_p: defaultSettings.top_p,
-              memory: 0,
+              memory: 2,
             },
           },
         },

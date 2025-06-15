@@ -190,7 +190,7 @@ const SettingsPanel = ({
         ...prevState.settings,
         temperature: defaultSettings.temperature,
         top_p: defaultSettings.top_p,
-        memory: 0,
+        memory: 2,
       },
     }));
     updateSettings({ systemPrompt: "You are a helpful assistant" });
