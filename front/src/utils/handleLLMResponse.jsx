@@ -33,6 +33,7 @@ const handleLLMResponse = async ({
   notifySuccess,
   setShowModalSession,
   setShowBadRequest,
+  timeoutTime
 }) => {
   // Set loading state
   dispatch(setIsResponding(true));
@@ -373,7 +374,8 @@ const handleLLMResponse = async ({
       setShowModalSession,
       setShowBadRequest,
       conversationForAPI, // Filtered conversation without "info" objects (for API)
-      isArcanaSupported
+      isArcanaSupported,
+      timeoutTime
     );
 
     // Update memory if necessary

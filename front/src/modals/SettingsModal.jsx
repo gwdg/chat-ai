@@ -14,11 +14,14 @@ import {
   setDefaultModel,
 } from "../Redux/reducers/defaultModelSlice";
 import { selectAllMemories } from "../Redux/reducers/userMemorySlice";
+import { setTimeoutTime } from "../Redux/reducers/timeoutReducer";
+import { useEffect } from "react";
 
 function SettingsModal(props) {
   const dispatch = useDispatch();
   const currentDefaultModel = useSelector(selectDefaultModel);
   const memories = useSelector(selectAllMemories);
+  const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
 
   const handleLogout = () => {
     window.location.href =
@@ -32,6 +35,22 @@ function SettingsModal(props) {
         id: selectedModel.id,
       })
     );
+  };
+
+  useEffect(() => {
+    // Initialize timeout if it's not set (first load)
+    if (!timeoutTime || timeoutTime === 0) {
+      dispatch(setTimeoutTime(30000)); // Default 30 seconds
+    }
+  }, [timeoutTime, dispatch]);
+
+  // Convert milliseconds to seconds for display, with fallback
+  const timeoutInSeconds = timeoutTime ? Math.round(timeoutTime / 1000) : 30;
+
+  const handleTimeoutChange = (event) => {
+    const newTimeoutSeconds = parseInt(event.target.value) || 30;
+    const newTimeoutMs = newTimeoutSeconds * 1000;
+    dispatch(setTimeoutTime(newTimeoutMs));
   };
 
   return (
@@ -156,6 +175,57 @@ function SettingsModal(props) {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+          {/* Request Timeout Section */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⏱️</span>
+              <p className="text-base font-medium dark:text-white">
+                <Trans
+                  i18nKey="description.settings_timeout.requestTimeout"
+                  defaultValue="Request Timeout"
+                />
+              </p>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              <Trans
+                i18nKey="description.settings_timeout.requestTimeoutDescription"
+                defaultValue="Set how long to wait for AI responses before timing out."
+              />
+            </p>
+
+            {/* Fixed timeout input */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <Trans
+                    i18nKey="description.settings_timeout.timeoutSeconds"
+                    defaultValue="Timeout (seconds)"
+                  />
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="5"
+                    max="300"
+                    step="5"
+                    value={timeoutInSeconds}
+                    onChange={handleTimeoutChange}
+                    className="w-full pl-3 pr-16 py-2 border dark:border-border_dark rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="30"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400 pointer-events-none">
+                    secs
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <Trans
+                    i18nKey="description.settings_timeout.timeoutRange"
+                    defaultValue="Range: 5-300 seconds"
+                  />
+                </p>
+              </div>
             </div>
           </div>
 

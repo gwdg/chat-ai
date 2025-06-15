@@ -68,6 +68,7 @@ function Responses({
   const currentConversationId = useSelector(selectCurrentConversationId);
   const defaultModel = useSelector(selectDefaultModel);
   const memories = useSelector(selectAllMemories);
+  const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
 
   // Local useState
   const [editingIndex, setEditingIndex] = useState(null);
@@ -187,6 +188,7 @@ function Responses({
       notifySuccess,
       setShowModalSession,
       setShowBadRequest,
+      timeoutTime,
     });
   };
 
@@ -210,6 +212,7 @@ function Responses({
       notifySuccess,
       setShowModalSession,
       setShowBadRequest,
+      timeoutTime,
     });
   };
   // Function to handle retry of last message

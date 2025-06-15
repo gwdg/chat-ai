@@ -8,6 +8,7 @@ import conversationsReducer from "./conversationsSlice";
 import defaultModelReducer from "./defaultModelSlice";
 import versionReducer from "./versionReducer";
 import userMemoryReducer from "./userMemorySlice";
+import timeoutReducer from "./timeoutReducer";
 
 // Root reducer
 const rootReducer = combineReducers({
@@ -19,6 +20,7 @@ const rootReducer = combineReducers({
   defaultModel: defaultModelReducer,
   version: versionReducer,
   userMemory: userMemoryReducer,
+  timeout: timeoutReducer,
 });
 
 export default rootReducer;

@@ -72,6 +72,7 @@ function Prompt({
   const { transcript, listening, resetTranscript } = useSpeechRecognition();
   const dispatch = useDispatch();
   const memories = useSelector(selectAllMemories);
+  const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
 
   //Refs
   const hiddenFileInput = useRef(null);
@@ -112,6 +113,7 @@ function Prompt({
       notifySuccess,
       setShowModalSession,
       setShowBadRequest,
+      timeoutTime,
     });
   };
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)

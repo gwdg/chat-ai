@@ -175,7 +175,8 @@ async function fetchLLMResponse(
   setShowModalSession,
   setShowBadRequest,
   updatedConversation,
-  isArcanaSupported
+  isArcanaSupported,
+  timeoutTime = 30000
 ) {
   try {
     // Models that require different message formatting
@@ -203,6 +204,7 @@ async function fetchLLMResponse(
         temperature: temperature,
         top_p: topP,
         arcana: isArcanaSupported ? arcana : "",
+        timeout: timeoutTime,
       }),
       signal: signal,
     });

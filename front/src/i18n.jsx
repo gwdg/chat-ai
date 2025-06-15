@@ -20,6 +20,13 @@ i18n
       en: {
         translation: {
           description: {
+            settings_timeout: {
+              requestTimeout: "Request Timeout",
+              requestTimeoutDescription:
+                "Set how long to wait for AI responses before timing out.",
+              timeoutSeconds: "Timeout (seconds)",
+              timeoutRange: "Range: 5-300 seconds",
+            },
             memory: {
               userMemory: "User Memory",
               memoryCount_one: "{{count}} memory stored",
@@ -304,6 +311,13 @@ i18n
       de: {
         translation: {
           description: {
+            settings_timeout: {
+              requestTimeout: "Wartezeit für Antworten",
+              requestTimeoutDescription:
+                "Bestimmen Sie, wie lange auf KI-Antworten gewartet wird.",
+              timeoutSeconds: "Wartezeit (Sekunden)",
+              timeoutRange: "Bereich: 5-300 Sekunden",
+            },
             memory: {
               userMemory: "Benutzerspeicher",
               memoryCount_one: "{{count}} Erinnerung gespeichert",

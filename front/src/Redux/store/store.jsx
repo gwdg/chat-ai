@@ -20,6 +20,7 @@ const persistConfig = {
     "defaultModel",
     "version",
     "userMemory",
+    "timeout",
   ],
 };
 
@@ -235,6 +236,9 @@ const stateSyncConfig = {
     "userMemory/editMemory",
     "userMemory/deleteMemory",
     "userMemory/deleteAllMemories",
+    "timeout/setTimeoutTime",
+    "timeout/resetTimeoutTime",
+    "timeout/setTimeoutInSeconds",
     "SET_ADV",
     "RESET_ALL",
     "MIGRATE",

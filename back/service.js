@@ -4,33 +4,35 @@ var cors = require("cors");
 var fetch = require("node-fetch");
 const app = express();
 const fileUpload = require("express-fileupload");
-const FormData = require('form-data');
-const fs = require('fs');
-const path = require('path');
+const FormData = require("form-data");
+const fs = require("fs");
+const path = require("path");
 
 // Path to the external config file
-const configPath = path.resolve('/run/secrets/back');
+const configPath = path.resolve("/run/secrets/back");
 
 // Default configuration if config file is missing or invalid
 let port = 8081;
 let apiEndpoint = "https://chat-ai.academiccloud.de/v1";
 let apiKey = "";
-let serviceName = "Custom Chat AI"
+let serviceName = "Custom Chat AI";
 
 // Load configuration
 try {
-  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  if (typeof config.port === 'number' && config.port > 0) {
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  if (typeof config.port === "number" && config.port > 0) {
     port = config.port;
-    console.log('Port:', port);
+    console.log("Port:", port);
   } else {
-    console.warn('Invalid port in back.json. Falling back to default port 8081.');
+    console.warn(
+      "Invalid port in back.json. Falling back to default port 8081."
+    );
   }
   apiEndpoint = config.apiEndpoint;
   apiKey = config.apiKey;
   serviceName = config.serviceName;
 } catch (error) {
-  console.error('Failed to read back.json. Using default values.', error);
+  console.error("Failed to read back.json. Using default values.", error);
 }
 
 // Global request limitations
@@ -73,7 +75,7 @@ async function getCompletionLLM(
     Accept: "application/json",
     "inference-service": model,
     "inference-portal": serviceName,
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
   };
 
   // Only add Authorization header if apiKey is present and non-empty
@@ -90,7 +92,7 @@ async function getCompletionLLM(
     temperature: temperature,
     top_p: top_p,
     stream: true,
-    stream_options: {"include_usage": true},
+    stream_options: { include_usage: true },
     ...(arcana !== null &&
     arcana !== undefined &&
     arcana.id !== null &&
@@ -115,9 +117,8 @@ async function processPdfFile(file, inference_id) {
   formData.append("extract_tables_as_images", "false");
   formData.append("image_resolution_scale", "4");
 
-
   const headers = {
-    "inference-portal": serviceName
+    "inference-portal": serviceName,
   };
 
   // Only add Authorization header if apiKey is present and non-empty
@@ -182,7 +183,13 @@ app.get("/models", async (req, res) => {
 // Get placeholder user data
 app.get("/user", async (req, res) => {
   try {
-    res.status(200).json({"email": "user@example.com", "firstname": "Sample", "lastname": "User", "organization": "GWDG", "username": "sample-user"});
+    res.status(200).json({
+      email: "user@example.com",
+      firstname: "Sample",
+      lastname: "User",
+      organization: "GWDG",
+      username: "sample-user",
+    });
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch models." });
@@ -197,6 +204,7 @@ app.post("/", async (req, res) => {
     temperature = 0.5,
     top_p = 0.5,
     arcana = null,
+    timeout = 30000,
   } = req.body;
   const inference_id = req.headers["inference-id"];
 
@@ -204,24 +212,30 @@ app.post("/", async (req, res) => {
     return res.status(422).json({ error: "Invalid messages provided" });
   }
 
-  // const totalTokens = messages.reduce(
-  //   (total, message) => total + message.length,
-  //   0
-  // );
-
-  // if (totalTokens > 10000) {
-  //   return res.status(403).json({ error: "Token limit exceeded" });
-  // }
+  const validatedTimeout = Math.min(Math.max(timeout, 5000), 300000);
+  console.log(
+    `Request timeout set to: ${validatedTimeout}ms (${
+      validatedTimeout / 1000
+    }s)`
+  );
 
   try {
     const es = require("event-stream");
     const JSONStream = require("JSONStream");
 
-    let timeout = new Promise((resolve, reject) => {
-      let id = setTimeout(() => {
-        clearTimeout(id);
-        reject("getCompletionLLM timed out");
-      }, 30000); // here, 30000ms is the timeout. Adjust it as per your needs
+    // Create a single timeout that applies to the entire request
+    let timeoutId;
+    let isTimedOut = false;
+
+    const timeoutPromise = new Promise((resolve, reject) => {
+      timeoutId = setTimeout(() => {
+        isTimedOut = true;
+        reject(
+          new Error(
+            `Request timed out after ${validatedTimeout / 1000} seconds`
+          )
+        );
+      }, validatedTimeout);
     });
 
     const streamPromise = getCompletionLLM(
@@ -232,61 +246,99 @@ app.post("/", async (req, res) => {
       inference_id,
       arcana
     );
-    const response = await Promise.race([streamPromise, timeout]).catch(
-      (error) => {
-        console.error(error);
-        res.status(503).json({ error: "The model failed to respond in time" });
-        throw error;
-      }
-    );
 
-    if (!response.ok) {
-      res.status(response.status).send(response.statusText);
-      return;
+    try {
+      const response = await Promise.race([streamPromise, timeoutPromise]);
+
+      if (!response.ok) {
+        clearTimeout(timeoutId);
+        res.status(response.status).send(response.statusText);
+        return;
+      }
+
+      const stream = response.body;
+
+      let jsonParseStream = new JSONStream.parse([
+        "choices",
+        true,
+        "delta",
+        "content",
+      ]);
+
+      let stripData = es.mapSync((data) => {
+        // Check if timed out during streaming
+        if (isTimedOut) {
+          return undefined;
+        }
+
+        if (data.trim() === "data: [DONE]" || data.trim() === "DONE") {
+          return undefined;
+        } else if (data.startsWith("data: ")) {
+          return data.slice("data: ".length);
+        } else {
+          return data;
+        }
+      });
+
+      // Pipe the input into the line splitter, then the data stripper, then the JSON parser
+      stream.pipe(es.split()).pipe(stripData).pipe(jsonParseStream);
+
+      jsonParseStream.on("data", (data) => {
+        try {
+          // Check if timed out before writing
+          if (isTimedOut) {
+            return;
+          }
+          res.write(data || "");
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      jsonParseStream.on("end", () => {
+        try {
+          clearTimeout(timeoutId); // Clear timeout on successful completion
+          if (!isTimedOut) {
+            res.status(200).end();
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      jsonParseStream.on("error", (err) => {
+        clearTimeout(timeoutId);
+        if (!isTimedOut) {
+          res.status(500).json({ error: "Could not parse JSON" });
+        }
+        console.error(err);
+      });
+
+      // Handle timeout during streaming
+      timeoutPromise.catch((error) => {
+        console.error("Stream timeout:", error.message);
+        try {
+          if (!res.headersSent) {
+            res.status(503).json({
+              error: error.message,
+              timeout: validatedTimeout,
+            });
+          } else {
+            // Response already started, just end it
+            res.end();
+          }
+        } catch (err) {
+          console.error("Error handling timeout:", err);
+        }
+      });
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error("Initial request timeout:", error);
+      res.status(503).json({
+        error: error.message || "The model failed to respond in time",
+        timeout: validatedTimeout,
+      });
     }
-
-    const stream = response.body;
-
-    let jsonParseStream = new JSONStream.parse([
-      "choices",
-      true,
-      "delta",
-      "content",
-    ]);
-
-    let stripData = es.mapSync((data) => {
-      if (data.trim() === "data: [DONE]" || data.trim() === "DONE") {
-        return undefined;
-      } else if (data.startsWith("data: ")) {
-        return data.slice("data: ".length);
-      } else {
-        return data;
-      }
-    });
-
-    // Pipe the input into the line splitter, then the data stripper, then the JSON parser
-    stream.pipe(es.split()).pipe(stripData).pipe(jsonParseStream);
-
-    jsonParseStream.on("data", (data) => {
-      try {
-        res.write(data || "");
-      } catch (err) {
-        console.error(err);
-      }
-    });
-
-    jsonParseStream.on("end", () => {
-      try {
-        res.status(200).end();
-      } catch (err) {
-        console.error(err);
-      }
-    });
-
-    jsonParseStream.on("error", (err) => {
-      res.status(500).json({ error: "Could not parse JSON" });
-      console.error(err);
-    });
   } catch (err) {
     console.error(err);
     try {
