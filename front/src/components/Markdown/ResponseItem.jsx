@@ -132,6 +132,9 @@ const ResponseItem = React.memo(
     const isLoading = (loading || loadingResend) && isLastItem;
     const hasError = !res?.response && !isLoading;
 
+    // Define render modes with better styling
+    const renderModes = ["Default", "Markdown", "LaTeX", "Plain Text"];
+
     if (hasError) {
       return (
         <div className="p-2" ref={responseRef}>
@@ -220,15 +223,14 @@ const ResponseItem = React.memo(
                     )}
                   </ErrorBoundary>
                   <div className="flex justify-between w-full mt-1 gap-2">
-                    {" "}
-                    {/* Render mode selection at the top of the response */}
+                    {/* Render mode selection with updated styling for 4 modes */}
                     <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
-                        {["Default", "Markdown", "Plain Text"].map((mode) => (
+                        {renderModes.map((mode) => (
                           <button
                             key={mode}
                             onClick={() => !isLoading && setRenderMode(mode)}
-                            className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out
+                            className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px]
                             ${isLoading ? "cursor-not-allowed opacity-50" : ""}
                             ${
                               renderMode === mode
@@ -237,6 +239,15 @@ const ResponseItem = React.memo(
                             }
                           `}
                             disabled={isLoading}
+                            // title={
+                            //   mode === "LaTeX"
+                            //     ? "Show only LaTeX expressions with context"
+                            //     : mode === "Markdown"
+                            //     ? "Show raw markdown"
+                            //     : mode === "Plain Text"
+                            //     ? "Show plain text only"
+                            //     : "Default formatted view"
+                            // }
                           >
                             {mode}
                           </button>

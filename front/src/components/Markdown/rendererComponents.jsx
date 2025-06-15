@@ -29,54 +29,84 @@ export const rendererComponents = {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="text-blue-500 underline"
+      className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline transition-colors"
     >
       {children}
     </a>
   ),
   h1: ({ children, id }) => (
-    <h1 className="text-2xl font-bold mt-4" id={id}>
+    <h1
+      className="text-2xl font-bold mt-6 mb-4 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
       {children}
     </h1>
   ),
   h2: ({ children, id }) => (
-    <h2 className="text-xl font-semibold mt-3" id={id}>
+    <h2
+      className="text-xl font-semibold mt-5 mb-3 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
       {children}
     </h2>
   ),
   h3: ({ children, id }) => (
-    <h3 className="text-lg font-medium mt-2" id={id}>
+    <h3
+      className="text-lg font-medium mt-4 mb-2 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
       {children}
     </h3>
   ),
   h4: ({ children, id }) => (
-    <h4 className="text-md font-medium mt-1" id={id}>
+    <h4
+      className="text-md font-medium mt-3 mb-2 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
       {children}
     </h4>
   ),
   h5: ({ children, id }) => (
-    <h5 className="text-sm font-medium" id={id}>
+    <h5
+      className="text-sm font-medium mt-2 mb-1 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
       {children}
     </h5>
   ),
   h6: ({ children, id }) => (
-    <h6 className="text-xs font-medium text-gray-600" id={id}>
+    <h6
+      className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-2 mb-1"
+      id={id}
+    >
       {children}
     </h6>
   ),
-  strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-  em: ({ children }) => <em className="italic">{children}</em>,
-  ul: ({ children }) => <ul className="list-disc pl-6">{children}</ul>,
-  ol: ({ children }) => <ol className="list-decimal pl-6">{children}</ol>,
-  li: ({ children }) => <li className="mb-1">{children}</li>,
+  strong: ({ children }) => (
+    <strong className="font-bold text-gray-900 dark:text-gray-100">
+      {children}
+    </strong>
+  ),
+  em: ({ children }) => (
+    <em className="italic text-gray-800 dark:text-gray-200">{children}</em>
+  ),
+  ul: ({ children }) => (
+    <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>
+  ),
+  li: ({ children }) => (
+    <li className="text-gray-800 dark:text-gray-200">{children}</li>
+  ),
   blockquote: ({ children }) => (
-    <blockquote className="border-l-4 pl-4 italic text-gray-600">
+    <blockquote className="border-l-4 border-blue-500 pl-4 py-2 my-4 italic text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 rounded-r">
       {children}
     </blockquote>
   ),
   table: ({ children }) => (
     <div className="w-full overflow-x-auto my-4">
-      <table className="w-full border-collapse border border-gray-300 dark:border-gray-700">
+      <table className="w-full border-collapse border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden">
         {children}
       </table>
     </div>
@@ -88,18 +118,28 @@ export const rendererComponents = {
     <tbody className="bg-white dark:bg-gray-900">{children}</tbody>
   ),
   tr: ({ children }) => (
-    <tr className="border-b border-gray-300 dark:border-gray-700">
+    <tr className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
       {children}
     </tr>
   ),
   th: ({ children }) => (
-    <th className="border border-gray-300 dark:border-gray-700 px-4 py-2 text-left font-medium">
+    <th className="border border-gray-300 dark:border-gray-700 px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800">
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2">
+    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2 text-gray-800 dark:text-gray-200">
       {children}
     </td>
   ),
+  hr: () => (
+    <hr className="border-t border-gray-300 dark:border-gray-700 my-6" />
+  ),
+  // Add support for math components if using remark-math
+  math: ({ value }) => (
+    <div className="my-4 text-center">
+      <span className="katex-display">{value}</span>
+    </div>
+  ),
+  inlineMath: ({ value }) => <span className="katex">{value}</span>,
 };
