@@ -31,6 +31,7 @@ import {
   addMemory,
   selectAllMemories,
 } from "../../Redux/reducers/userMemorySlice";
+import handleLLMResponse from "../../utils/handleLLMResponse";
 
 //Variable
 const MAX_HEIGHT = 200;
@@ -169,490 +170,46 @@ function Responses({
 
   // Function to handle resending a previous message
   const handleResendClick = async (index) => {
-    // Set loading state while processing
-    dispatch(setIsResponding(true));
-    setLoadingResend(true);
-
-    // Validate index is within bounds of responses array
-    if (index < 0 || index >= localState.responses.length) {
-      notifyError("Something went wrong");
-      dispatch(setIsResponding(false));
-      setLoadingResend(false);
-      return;
-    }
-
-    // Get the prompt from the specified response
-    const currentPrompt = localState.responses[index]?.prompt;
-    // Validate prompt exists and isn't empty
-    if (!currentPrompt || currentPrompt?.trim() === "") {
-      notifyError("Invalid or empty prompt at the specified index.");
-      dispatch(setIsResponding(false));
-      setLoadingResend(false);
-      return;
-    }
-
-    // Initialize array for any attached images
-    let imageFiles = [];
-    // If the original message had images, copy them
-    if (localState.responses[index]?.images?.length > 0) {
-      imageFiles = localState.responses[index]?.images;
-    }
-
-    // Initialize array for any attached texts
-    let textFiles = [];
-    // If the original message had texts, copy them
-    if (localState.responses[index]?.textFiles?.length > 0) {
-      textFiles = localState.responses[index]?.textFiles;
-    }
-
-    // Keep copy of original conversation for info message positions
-    const originalConversation = [...localState.conversation];
-
-    // Count actual user-assistant pairs in responses (excluding info objects)
-    let actualPairIndex = 0;
-    for (let i = 0; i <= index; i++) {
-      if (!localState.responses[i]?.info) {
-        if (i === index) break;
-        actualPairIndex++;
-      }
-    }
-
-    // Filter out info messages to do proper slicing
-    const filteredConversation = localState.conversation.filter(
-      (message) => message.role !== "info"
-    );
-
-    // Do the slice on filtered conversation using the actual pair index
-    const slicedFiltered = filteredConversation.slice(
-      0,
-      actualPairIndex * 2 + 1
-    );
-
-    // Now reconstruct conversation with info messages back in their original positions
-    let newConversation = [];
-    let filteredIndex = 0;
-
-    for (const originalMessage of originalConversation) {
-      if (originalMessage.role === "info") {
-        // Check if this info message should be included (appears before our cutoff)
-        // Find the position of the last message we kept in the original array
-        const lastKeptMessage = slicedFiltered[slicedFiltered.length - 1];
-        const lastKeptOriginalIndex =
-          originalConversation.indexOf(lastKeptMessage);
-        const currentOriginalIndex =
-          originalConversation.indexOf(originalMessage);
-
-        if (currentOriginalIndex <= lastKeptOriginalIndex) {
-          newConversation.push(originalMessage);
-        }
-      } else {
-        // Non-info message - check if it's in our sliced array
-        if (
-          filteredIndex < slicedFiltered.length &&
-          originalMessage === slicedFiltered[filteredIndex]
-        ) {
-          newConversation.push(originalMessage);
-          filteredIndex++;
-        }
-      }
-    }
-
-    let newResponses = [...localState.responses].slice(0, index);
-
-    // Update local state with trimmed responses
-    updateLocalState({ responses: newResponses });
-    // Add small delay to ensure state updates properly
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    // Prepare new message content based on whether there are images or text files
-    if (imageFiles?.length > 0 || textFiles?.length > 0) {
-      // Start with the prompt text
-      const newPromptContent = [
-        {
-          type: "text",
-          text: currentPrompt,
-        },
-      ];
-
-      // Add images if they exist (keeping the original image structure)
-      if (imageFiles?.length > 0) {
-        newPromptContent.push(...imageFiles);
-      }
-
-      // Add text content if text files exist
-      if (textFiles?.length > 0) {
-        // Process all text files and append their content
-        const textContent = textFiles.map((file) => file.content).join("\n\n");
-
-        // Only add if there's actually content
-        if (textContent.trim()) {
-          newPromptContent.push({
-            type: "text",
-            text: textContent,
-          });
-        }
-      }
-
-      newConversation.push({ role: "user", content: newPromptContent });
-    } else {
-      // If no attachments, just use the text prompt
-      newConversation.push({ role: "user", content: currentPrompt });
-    }
-
-    // Update local state with new response entry
-    if (imageFiles?.length > 0 || textFiles?.length > 0) {
-      setLocalState((prevState) => ({
-        ...prevState,
-        responses: [
-          ...prevState.responses,
-          {
-            prompt: currentPrompt,
-            images: imageFiles,
-            textFiles: textFiles,
-            response: "",
-          },
-        ],
-      }));
-    } else {
-      setLocalState((prevState) => ({
-        ...prevState,
-        responses: [
-          ...prevState.responses,
-          {
-            prompt: currentPrompt,
-            response: "",
-          },
-        ],
-      }));
-    }
-
-    // Create updated conversation array for processing - REMOVE "info" role objects
-    let updatedConversation = [...newConversation].filter(
-      (message) => message.role !== "info"
-    );
-
-    // Check if selected model supports image input
-    const imageSupport = modelList.some(
-      (modelX) =>
-        modelX.name === localState.settings["model-name"] &&
-        modelX.input.includes("image")
-    );
-    // Check if selected model supports video input
-    const videoSupport = modelList.some(
-      (modelX) =>
-        modelX.name === localState.settings["model-name"] &&
-        modelX.input.includes("video")
-    );
-
-    // If model doesn't support images/videos, remove image/video content
-    if (!imageSupport && !videoSupport) {
-      updatedConversation = updatedConversation.map((message) => {
-        if (message.role === "user" && Array.isArray(message.content)) {
-          return {
-            role: "user",
-            content: message.content
-              .filter((item) => item.type === "text")
-              .map((item) => item.text)
-              .join("\n"),
-          };
-        }
-        return message;
-      });
-    }
-
-    // Prepare system prompt with memory if enabled
-    let finalSystemPrompt = localState.settings.systemPrompt;
-
-    if (localState.settings.memory >= 1 && memories.length > 0) {
-      const memoryContext = memories.map((memory) => memory.text).join("\n");
-      const memorySection = `\n\n--- User Memory ---\nThe following information represents the user's preferences, important details, and context from previous conversations. Use this information when relevant to provide a more personalized and contextual response:\n\n${memoryContext}\n--- End User Memory ---`;
-      finalSystemPrompt = finalSystemPrompt + memorySection;
-    }
-
-    // Try to fetch response from LLM
-    try {
-      await fetchLLMResponse(
-        newConversation, // Original conversation with "info" objects (for local state)
-        finalSystemPrompt,
-        localState.settings.model,
-        localState.settings.temperature,
-        localState.settings.top_p,
-        localState.arcana,
-        setLocalState,
-        setShowModalSession,
-        setShowBadRequest,
-        updatedConversation, // Filtered conversation without "info" objects (for API)
-        isArcanaSupported
-      );
-      try {
-        // TODO Update memory when necessary
-        if (localState.settings.memory >= 2) {
-          const response = await updateMemory(newConversation, memories);
-          const cleanedResponse = response.replace(/,(\s*[}$])/g, "$1");
-          const jsonResponse = JSON.parse(cleanedResponse);
-          if (jsonResponse.store) {
-            const memoryText = jsonResponse.memory_sentence.trim();
-            dispatch(addMemory({ text: memoryText }));
-            console.log("New memory:", memoryText);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to update memory: ", error.name, error.message);
-      }
-      dispatch(setIsResponding(false));
-      setLoadingResend(false);
-    } catch (error) {
-      dispatch(setIsResponding(false));
-      setLoadingResend(false);
-      if (error.name === "AbortError") {
-        notifyError("Request aborted.");
-      } else {
-        notifyError(error.message || "An unknown error occurred");
-      }
-    }
+    await handleLLMResponse({
+      operationType: "resend",
+      index,
+      dispatch,
+      localState,
+      updateLocalState,
+      setLocalState,
+      setLoadingResend,
+      modelList,
+      memories,
+      isArcanaSupported,
+      updateMemory,
+      fetchLLMResponse,
+      notifyError,
+      setShowModalSession,
+      setShowBadRequest,
+    });
   };
 
   // Function to handle saving edited messages
-  // Similar structure to handleResendClick but uses edited text
   const handleSave = async (index) => {
-    dispatch(setIsResponding(true));
-    setLoadingResend(true);
-
-    // Validate index is within bounds of responses array
-    if (index < 0 || index >= localState.responses.length) {
-      notifyError("Something went wrong");
-      dispatch(setIsResponding(false));
-      setLoadingResend(false);
-      return;
-    }
-
-    // Validate edited text exists and isn't empty
-    if (!editedText || !editedText?.trim()) {
-      notifyError("Prompt cannot be empty!");
-      dispatch(setIsResponding(false));
-      setLoadingResend(false);
-      return;
-    }
-
-    // Initialize array for any attached images
-    let imageFiles = [];
-    if (localState.responses[index]?.images?.length > 0) {
-      imageFiles = localState.responses[index]?.images;
-    }
-
-    // Initialize array for any attached texts
-    let textFiles = [];
-    // If the original message had texts, copy them
-    if (localState.responses[index]?.textFiles?.length > 0) {
-      textFiles = localState.responses[index]?.textFiles;
-    }
-
-    // Keep copy of original conversation for info message positions
-    const originalConversation = [...localState.conversation];
-
-    // Count actual user-assistant pairs in responses (excluding info objects)
-    let actualPairIndex = 0;
-    for (let i = 0; i <= index; i++) {
-      if (!localState.responses[i]?.info) {
-        if (i === index) break;
-        actualPairIndex++;
-      }
-    }
-
-    // Filter out info messages to do proper slicing
-    const filteredConversation = localState.conversation.filter(
-      (message) => message.role !== "info"
-    );
-
-    // Do the slice on filtered conversation using the actual pair index
-    const slicedFiltered = filteredConversation.slice(
-      0,
-      actualPairIndex * 2 + 1
-    );
-
-    // Now reconstruct conversation with info messages back in their original positions
-    let newConversation = [];
-    let filteredIndex = 0;
-
-    for (const originalMessage of originalConversation) {
-      if (originalMessage.role === "info") {
-        // Check if this info message should be included (appears before our cutoff)
-        // Find the position of the last message we kept in the original array
-        const lastKeptMessage = slicedFiltered[slicedFiltered.length - 1];
-        const lastKeptOriginalIndex =
-          originalConversation.indexOf(lastKeptMessage);
-        const currentOriginalIndex =
-          originalConversation.indexOf(originalMessage);
-
-        if (currentOriginalIndex <= lastKeptOriginalIndex) {
-          newConversation.push(originalMessage);
-        }
-      } else {
-        // Non-info message - check if it's in our sliced array
-        if (
-          filteredIndex < slicedFiltered.length &&
-          originalMessage === slicedFiltered[filteredIndex]
-        ) {
-          newConversation.push(originalMessage);
-          filteredIndex++;
-        }
-      }
-    }
-
-    let newResponses = [...localState.responses].slice(0, index);
-
-    updateLocalState({ responses: newResponses });
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    // Prepare new message content based on whether there are images or text files
-    if (imageFiles?.length > 0 || textFiles?.length > 0) {
-      // Start with the prompt text
-      const newPromptContent = [
-        {
-          type: "text",
-          text: editedText,
-        },
-      ];
-
-      // Add images if they exist (keeping the original image structure)
-      if (imageFiles?.length > 0) {
-        newPromptContent.push(...imageFiles);
-      }
-
-      // Add text content if text files exist
-      if (textFiles?.length > 0) {
-        // Process all text files and append their content
-        const textContent = textFiles.map((file) => file.content).join("\n\n");
-
-        // Only add if there's actually content
-        if (textContent.trim()) {
-          newPromptContent.push({
-            type: "text",
-            text: textContent,
-          });
-        }
-      }
-
-      newConversation.push({ role: "user", content: newPromptContent });
-    } else {
-      // If no attachments, just use the text prompt
-      newConversation.push({ role: "user", content: editedText });
-    }
-
-    // Update local state with new response entry
-    if (imageFiles?.length > 0 || textFiles?.length > 0) {
-      setLocalState((prevState) => ({
-        ...prevState,
-        responses: [
-          ...prevState.responses,
-          {
-            prompt: editedText,
-            images: imageFiles,
-            textFiles: textFiles,
-            response: "",
-          },
-        ],
-      }));
-    } else {
-      setLocalState((prevState) => ({
-        ...prevState,
-        responses: [
-          ...prevState.responses,
-          {
-            prompt: editedText,
-            response: "",
-          },
-        ],
-      }));
-    }
-
-    // Create updated conversation array for processing - REMOVE "info" role objects
-    let updatedConversation = [...newConversation].filter(
-      (message) => message.role !== "info"
-    );
-
-    // Check if selected model supports image input
-    const imageSupport = modelList.some(
-      (modelX) =>
-        modelX.name === localState.settings["model-name"] &&
-        modelX.input.includes("image")
-    );
-    // Check if selected model supports video input
-    const videoSupport = modelList.some(
-      (modelX) =>
-        modelX.name === localState.settings["model-name"] &&
-        modelX.input.includes("video")
-    );
-
-    // If model doesn't support images/videos, remove image/video content
-    if (!imageSupport && !videoSupport) {
-      updatedConversation = updatedConversation.map((message) => {
-        if (message.role === "user" && Array.isArray(message.content)) {
-          return {
-            role: "user",
-            content: message.content
-              .filter((item) => item.type === "text")
-              .map((item) => item.text)
-              .join("\n"),
-          };
-        }
-        return message;
-      });
-    }
-
-    // Prepare system prompt with memory if enabled
-    let finalSystemPrompt = localState.settings.systemPrompt;
-
-    if (localState.settings.memory >= 1 && memories.length > 0) {
-      const memoryContext = memories.map((memory) => memory.text).join("\n");
-      const memorySection = `\n\n--- User Memory ---\nThe following information represents the user's preferences, important details, and context from previous conversations. Use this information when relevant to provide a more personalized and contextual response:\n\n${memoryContext}\n--- End User Memory ---`;
-      finalSystemPrompt = finalSystemPrompt + memorySection;
-    }
-
-    // Try to fetch response from LLM
-    try {
-      await fetchLLMResponse(
-        newConversation, // Original conversation with "info" objects (for local state)
-        finalSystemPrompt,
-        localState.settings.model,
-        localState.settings.temperature,
-        localState.settings.top_p,
-        localState.arcana,
-        setLocalState,
-        setShowModalSession,
-        setShowBadRequest,
-        updatedConversation, // Filtered conversation without "info" objects (for API)
-        isArcanaSupported
-      );
-      try {
-        // TODO Update memory when necessary
-        if (localState.settings.memory >= 2) {
-          const response = await updateMemory(newConversation, memories);
-          const cleanedResponse = response.replace(/,(\s*[}$])/g, "$1");
-          const jsonResponse = JSON.parse(cleanedResponse);
-          if (jsonResponse.store) {
-            const memoryText = jsonResponse.memory_sentence.trim();
-            dispatch(addMemory({ text: memoryText }));
-            console.log("New memory:", memoryText);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to update memory: ", error.name, error.message);
-      }
-      dispatch(setIsResponding(false));
-      setLoadingResend(false);
-    } catch (error) {
-      dispatch(setIsResponding(false));
-      setLoadingResend(false);
-      if (error.name === "AbortError") {
-        notifyError("Request aborted.");
-      } else {
-        notifyError(error.message || "An unknown error occurred");
-      }
-    }
+    await handleLLMResponse({
+      operationType: "edit",
+      index,
+      editedText, // Make sure this variable is available in your component scope
+      dispatch,
+      localState,
+      updateLocalState,
+      setLocalState,
+      setLoadingResend,
+      modelList,
+      memories,
+      isArcanaSupported,
+      updateMemory,
+      fetchLLMResponse,
+      notifyError,
+      setShowModalSession,
+      setShowBadRequest,
+    });
   };
-
   // Function to handle retry of last message
   const handleRetry = (e) => {
     e.preventDefault();
