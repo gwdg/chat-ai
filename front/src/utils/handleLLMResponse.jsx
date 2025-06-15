@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { setIsResponding } from "../Redux/reducers/conversationsSlice";
 import { addMemory } from "../Redux/reducers/userMemorySlice";
 
@@ -29,6 +30,7 @@ const handleLLMResponse = async ({
   updateMemory,
   fetchLLMResponse,
   notifyError,
+  notifySuccess,
   setShowModalSession,
   setShowBadRequest,
 }) => {
@@ -388,9 +390,11 @@ const handleLLMResponse = async ({
           dispatch(addMemory({ text: memoryText }));
           console.log("New memory:", memoryText);
         }
+        notifySuccess("Memory updated successfully.");
       }
     } catch (error) {
       console.error("Failed to update memory: ", error.name, error.message);
+      notifyError("Failed to update memory.");
     }
 
     // Clear loading states

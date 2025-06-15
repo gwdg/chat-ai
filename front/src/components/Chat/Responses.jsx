@@ -184,6 +184,7 @@ function Responses({
       updateMemory,
       fetchLLMResponse,
       notifyError,
+      notifySuccess,
       setShowModalSession,
       setShowBadRequest,
     });
@@ -206,6 +207,7 @@ function Responses({
       updateMemory,
       fetchLLMResponse,
       notifyError,
+      notifySuccess,
       setShowModalSession,
       setShowBadRequest,
     });

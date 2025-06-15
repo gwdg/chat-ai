@@ -109,6 +109,7 @@ function Prompt({
       updateMemory,
       fetchLLMResponse,
       notifyError,
+      notifySuccess,
       setShowModalSession,
       setShowBadRequest,
     });
