@@ -391,8 +391,8 @@ const handleLLMResponse = async ({
           const memoryText = jsonResponse.memory_sentence.trim();
           dispatch(addMemory({ text: memoryText }));
           console.log("New memory:", memoryText);
+          notifySuccess("Memory updated successfully.");
         }
-        notifySuccess("Memory updated successfully.");
       }
     } catch (error) {
       console.error("Failed to update memory: ", error.name, error.message);
