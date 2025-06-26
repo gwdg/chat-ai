@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { setIsResponding } from "../Redux/reducers/conversationsSlice";
-import { addMemory } from "../Redux/reducers/userMemorySlice";
+import { editMemory, addMemory } from "../Redux/reducers/userMemorySlice";
 
 const handleLLMResponse = async ({
   // === OPERATION CONFIG ===
@@ -389,8 +389,14 @@ const handleLLMResponse = async ({
         const jsonResponse = JSON.parse(cleanedResponse);
         if (jsonResponse.store) {
           const memoryText = jsonResponse.memory_sentence.trim();
-          dispatch(addMemory({ text: memoryText }));
-          console.log("New memory:", memoryText);
+          if (jsonResponse.replace) {
+            const line_number = jsonResponse.line_number - 1
+            dispatch(editMemory({ index: line_number, text: memoryText }));
+            console.log("Edited memory:", memoryText);
+          } else {
+            dispatch(addMemory({ text: memoryText }));
+            console.log("New memory:", memoryText);
+          }
           notifySuccess("Memory updated successfully.");
         }
       }
