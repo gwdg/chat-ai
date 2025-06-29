@@ -141,27 +141,40 @@ const extractSpecialContent = (content) => {
     ? content.split("References:")
     : [content, null];
 
-  return { mainContent, referencesContent };
+  // Clean up the mainContent to remove the dash separator
+  let cleanedMainContent = mainContent;
+  if (cleanedMainContent) {
+    // Remove lines that are just dashes (markdown horizontal rule syntax)
+    cleanedMainContent = cleanedMainContent
+      .replace(/\n[-=_]{3,}\s*$/g, "") // More robust: handles dashes, equals, underscores
+      .trim();
+  }
+
+  return {
+    mainContent: cleanedMainContent,
+    referencesContent,
+  };
 };
 
 const MarkdownRenderer = memo(
   ({ children, isDarkMode, isLoading, renderMode = "Default" }) => {
+    // Single useEffect for KaTeX styling with empty dependency array
     useEffect(() => {
       const style = document.createElement("style");
       style.textContent = `
-      .katex-display {
-        display: flex !important;
-        justify-content: center !important;
-        text-align: center !important;
-        margin: 1em 0 !important;
-      }
-    `;
+        .katex-display {
+          display: flex !important;
+          justify-content: center !important;
+          text-align: center !important;
+          margin: 1em 0 !important;
+        }
+      `;
       document.head.appendChild(style);
 
       return () => {
         document.head.removeChild(style);
       };
-    }, []);
+    }, []); // Empty dependency array - runs once on mount
 
     const { displayedText, thinkingContent } = useStreamingProcessor(
       children,
@@ -170,7 +183,6 @@ const MarkdownRenderer = memo(
 
     if (!children) return null;
 
-    // Extract references section for all modes
     const { mainContent, referencesContent } = extractSpecialContent(
       isLoading ? displayedText : children
     );
@@ -227,7 +239,7 @@ const MarkdownRenderer = memo(
           </div>
         ),
         strong: ({ children }) => (
-          <span className="font-mono  px-1">**{children}**</span>
+          <span className="font-mono px-1">**{children}**</span>
         ),
         em: ({ children }) => (
           <span className="font-mono bg-blue-100 dark:bg-blue-900 px-1">

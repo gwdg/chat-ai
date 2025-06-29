@@ -7,8 +7,8 @@ import edit_icon from "../../assets/edit_icon.svg";
 import ErrorBoundary from "./ErrorBoundary";
 import { RotateCw } from "lucide-react";
 
-const MAX_HEIGHT = 200;
-const MIN_HEIGHT = 56;
+const MAX_HEIGHT = 400;
+const MIN_HEIGHT = 350;
 
 const ResponseItem = React.memo(
   ({
