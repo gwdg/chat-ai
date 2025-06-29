@@ -51,6 +51,19 @@ i18n
               dontShowAgain: "Don't show this warning again",
               clearAll: "Clear All Memories ({{count}})",
             },
+            tour: {
+              memory: {
+                off: "Memory Off: Chat-AI won't remember anything from previous conversations. Each chat starts fresh.",
+                recall:
+                  "Memory Recall: Chat-AI can reference previous conversations when it's relevant to help you better.",
+                on: "Memory On: Chat-AI actively uses context from all your conversations to provide personalized assistance.",
+              },
+              back: "Back",
+              close: "Close",
+              last: "Finish",
+              next: "Next",
+              skip: "Skip",
+            },
             newConversation: "+ New Conversation",
             importPersona: "Import Persona",
             persona: {
@@ -341,6 +354,19 @@ i18n
                 "Sie verlieren alle persönlichen Erinnerungen, die der KI helfen, Ihre Präferenzen und Ihren Kontext zu verstehen. Erwägen Sie, sie zuerst zu exportieren, falls erforderlich.",
               dontShowAgain: "Diese Warnung nicht mehr anzeigen",
               clearAll: "Alle Erinnerungen löschen ({{count}})",
+            },
+            tour: {
+              memory: {
+                off: "Gedächtnis Aus: Chat-AI erinnert sich nicht an vorherige Gespräche. Jeder Chat beginnt neu.",
+                recall:
+                  "Gedächtnis Abruf: Chat-AI kann sich auf vorherige Gespräche beziehen, wenn es relevant ist, um Ihnen besser zu helfen.",
+                on: "Gedächtnis An: Chat-AI nutzt aktiv den Kontext all Ihrer Gespräche für personalisierte Unterstützung.",
+              },
+              back: "Zurück",
+              close: "Schließen",
+              last: "Beenden",
+              next: "Weiter",
+              skip: "Überspringen",
             },
             newConversation: "+ Neues Gespräch",
             importPersona: "Persona importieren",
