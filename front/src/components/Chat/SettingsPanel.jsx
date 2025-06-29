@@ -585,40 +585,40 @@ const SettingsPanel = ({
             // key: arcanaKey ? decodeURIComponent(arcanaKey) : null,
           };
 
-          // Update local state
+          // Create custom settings for the new conversation
+          const customSettings = {
+            ["model-name"]: matchedModel.name,
+            model: matchedModel.id,
+            temperature: 0,
+            top_p: 0.05,
+          };
+
+          // Create a new conversation with arcana settings
+          const newConversationAction = dispatch(
+            addConversation(null, customSettings)
+          );
+
+          const newConversationId = newConversationAction.meta.id;
+
+          // Update the newly created conversation with arcana data
+          dispatch(
+            updateConversation({
+              id: newConversationId,
+              updates: {
+                arcana: arcanaObject,
+              },
+            })
+          );
+
+          // Update local state to match the new conversation
           setLocalState((prev) => ({
             ...prev,
             arcana: arcanaObject,
             settings: {
               ...prev.settings,
-              ["model-name"]: matchedModel.name,
-              model: matchedModel.id,
-              temperature: 0,
-              top_p: 0.05,
+              ...customSettings,
             },
           }));
-
-          // Find current conversation
-          const currentConversation = conversations?.find(
-            (conv) => conv.id === currentConversationId
-          );
-
-          // Update Redux store
-          dispatch(
-            updateConversation({
-              id: currentConversationId,
-              updates: {
-                arcana: arcanaObject,
-                settings: {
-                  ...currentConversation?.settings,
-                  ["model-name"]: matchedModel.name,
-                  model: matchedModel.id,
-                  temperature: 0,
-                  top_p: 0.05,
-                },
-              },
-            })
-          );
 
           // Safe scrollTop access (if relevant)
           const chatContainer = document.getElementById("chat-container");
@@ -626,8 +626,8 @@ const SettingsPanel = ({
             chatContainer.scrollTop = chatContainer.scrollHeight;
           }
 
-          // Navigate to conversation
-          navigate(`/chat/${currentConversationId}`, { replace: true });
+          // Navigate to the new conversation
+          navigate(`/chat/${newConversationId}`, { replace: true });
         } catch (error) {
           hasProcessedArcana.current = false; // Reset flag if failed
           notifyError(
