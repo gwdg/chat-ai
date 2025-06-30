@@ -13,10 +13,15 @@ import {
   selectDefaultModel,
   setDefaultModel,
 } from "../Redux/reducers/defaultModelSlice";
+import { selectAllMemories } from "../Redux/reducers/userMemorySlice";
+import { setTimeoutTime } from "../Redux/reducers/timeoutReducer";
+import { useEffect } from "react";
 
 function SettingsModal(props) {
   const dispatch = useDispatch();
   const currentDefaultModel = useSelector(selectDefaultModel);
+  const memories = useSelector(selectAllMemories);
+  const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
 
   const handleLogout = () => {
     window.location.href =
@@ -30,6 +35,22 @@ function SettingsModal(props) {
         id: selectedModel.id,
       })
     );
+  };
+
+  useEffect(() => {
+    // Initialize timeout if it's not set (first load)
+    if (!timeoutTime || timeoutTime === 0) {
+      dispatch(setTimeoutTime(30000)); // Default 30 seconds
+    }
+  }, [timeoutTime, dispatch]);
+
+  // Convert milliseconds to seconds for display, with fallback
+  const timeoutInSeconds = timeoutTime ? Math.round(timeoutTime / 1000) : 30;
+
+  const handleTimeoutChange = (event) => {
+    const newTimeoutSeconds = parseInt(event.target.value) || 30;
+    const newTimeoutMs = newTimeoutSeconds * 1000;
+    dispatch(setTimeoutTime(newTimeoutMs));
   };
 
   return (
@@ -52,24 +73,32 @@ function SettingsModal(props) {
         <div className="p-4 flex items-center justify-between gap-3 border-b dark:border-border_dark">
           <div className="flex flex-col">
             <span className="font-medium text-lg dark:text-white">
-               {(() => {
+              {(() => {
                 const first = props.userData?.firstname ?? "";
                 const last = props.userData?.lastname ?? "";
-                return first === "" && last === ""
-                  ? <Trans i18nKey="description.common.loading" />
-                  : `${first} ${last}`.trim();
+                return first === "" && last === "" ? (
+                  <Trans i18nKey="description.common.loading" />
+                ) : (
+                  `${first} ${last}`.trim()
+                );
               })()}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {props.userData?.organization ?? <Trans i18nKey="description.common.loading" />}
+              {props.userData?.organization ?? (
+                <Trans i18nKey="description.common.loading" />
+              )}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="font-medium text-lg dark:text-white">
-              {props.userData?.username ?? <Trans i18nKey="description.common.loading" />}
+              {props.userData?.username ?? (
+                <Trans i18nKey="description.common.loading" />
+              )}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {props.userData?.email ?? <Trans i18nKey="description.common.loading" />}
+              {props.userData?.email ?? (
+                <Trans i18nKey="description.common.loading" />
+              )}
             </span>
           </div>
           {/* Logout Button */}
@@ -144,13 +173,93 @@ function SettingsModal(props) {
                       className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
                     />
                   )}
-                  {/* {currentDefaultModel?.id === option.id && (
-                    <div className="text-blue-500 text-sm font-medium">
-                      ✓ Selected
-                    </div>
-                  )} */}
                 </div>
               ))}
+            </div>
+          </div>
+          {/* Request Timeout Section */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⏱️</span>
+              <p className="text-base font-medium dark:text-white">
+                <Trans
+                  i18nKey="description.settings_timeout.requestTimeout"
+                  defaultValue="Request Timeout"
+                />
+              </p>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              <Trans
+                i18nKey="description.settings_timeout.requestTimeoutDescription"
+                defaultValue="Set how long to wait for AI responses before timing out."
+              />
+            </p>
+
+            {/* Fixed timeout input */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <Trans
+                    i18nKey="description.settings_timeout.timeoutSeconds"
+                    defaultValue="Timeout (seconds)"
+                  />
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="5"
+                    max="300"
+                    step="5"
+                    value={timeoutInSeconds}
+                    onChange={handleTimeoutChange}
+                    className="w-full pl-3 pr-16 py-2 border dark:border-border_dark rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="30"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400 pointer-events-none">
+                    secs
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <Trans
+                    i18nKey="description.settings_timeout.timeoutRange"
+                    defaultValue="Range: 5-300 seconds"
+                  />
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* User Memory Management Section */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <p className="text-base font-medium dark:text-white">
+                <Trans
+                  i18nKey="description.settings.userMemory"
+                  defaultValue="User Memory"
+                />
+              </p>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              <Trans
+                i18nKey="description.settings.userMemoryDescription"
+                defaultValue="Manage your personal memories that help the AI remember important details about you. You currently have {{count}} memories saved."
+                values={{ count: memories.length }}
+              />
+            </p>
+            <div className="w-full flex justify-center">
+              <button
+                className="max-w-[250px] w-full p-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
+                onClick={() => props.setShowMemoryModal(true)}
+              >
+                <span>🧠</span>
+                <Trans
+                  i18nKey="description.settings.manageMemory"
+                  defaultValue="Manage Memory"
+                />
+                <span className="text-xs bg-blue-500 px-2 py-1 rounded-full">
+                  {memories.length}
+                </span>
+              </button>
             </div>
           </div>
 

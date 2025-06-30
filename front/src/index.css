@@ -38,6 +38,21 @@ html {
   scrollbar-width: none; /* Hides scrollbar in Firefox */
 }
 
+/* Joyride tooltip theme variables */
+:root {
+  --tooltip-bg: #ffffff;
+  --tooltip-text: #333333;
+}
+
+[class*="dark"] {
+  --tooltip-bg: #1f2937;
+  --tooltip-text: #f9fafb;
+}
+
+/* Ensure smooth zoom transition for tours */
+body {
+  transition: zoom 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
 /* Common scrollbar styling */
 *::-webkit-scrollbar {
   /* width: 6px; 

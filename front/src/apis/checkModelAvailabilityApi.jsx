@@ -1,5 +1,9 @@
+import { getDefaultSettings } from "../utils/settingsUtils";
+
 // Tests if a specific model is available and responsive
 async function checkModelAvailability(modelName) {
+  const defaultSettings = getDefaultSettings();
+
   try {
     const response = await fetch("/chat-ai-backend", {
       method: "post",
@@ -18,8 +22,8 @@ async function checkModelAvailability(modelName) {
             content: "hi",
           },
         ],
-        temperature: 0.5,
-        top_p: 0.5,
+        temperature: defaultSettings.temperature,
+        top_p: defaultSettings.top_p,
       }),
     });
 
