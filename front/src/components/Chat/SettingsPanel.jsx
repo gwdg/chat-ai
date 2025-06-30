@@ -108,6 +108,12 @@ const SettingsPanel = ({
       placement: "top",
       disableBeacon: true,
     },
+    {
+      target: ".user-profile-button",
+      content: t("description.tour.memory.settings"),
+      placement: "top",
+      disableBeacon: true,
+    },
   ];
 
   //Refs
@@ -182,7 +188,7 @@ const SettingsPanel = ({
         setTourStepIndex(newIndex);
 
         // Change memory setting based on current step
-        const memoryValues = [0, 1, 2]; // Off, Recall, On
+        const memoryValues = [0, 1, 2, 2]; // Off, Recall, On
         const memoryValue = memoryValues[newIndex];
 
         if (memoryValue !== undefined) {
@@ -196,7 +202,7 @@ const SettingsPanel = ({
         }
       } else if (type === "step:before") {
         // Set memory when step starts (including first step)
-        const memoryValues = [0, 1, 2]; // Off, Recall, On
+        const memoryValues = [0, 1, 2, 2]; // None, Recall, Learn
         const memoryValue = memoryValues[index];
 
         if (memoryValue !== undefined) {
@@ -1105,7 +1111,7 @@ const SettingsPanel = ({
 
                   <div className="w-full">
                     <div className="flex bg-white dark:bg-bg_secondary_dark border dark:border-border_dark rounded-xl shadow-lg dark:shadow-dark overflow-hidden">
-                      {/* Off Option */}
+                      {/* None Option */}
                       <div
                         className={`memory-option-off flex-1 p-2 text-center cursor-pointer transition-all duration-200 select-none ${
                           localState.settings.memory === 0
@@ -1122,7 +1128,7 @@ const SettingsPanel = ({
                           }))
                         }
                       >
-                        <p className="text-[16px] font-medium">Off</p>
+                        <p className="text-[16px] font-medium">None</p>
                       </div>
 
                       {/* Recall Option */}
@@ -1145,7 +1151,7 @@ const SettingsPanel = ({
                         <p className="text-[16px] font-medium">Recall</p>
                       </div>
 
-                      {/* On Option */}
+                      {/* Learn Option */}
                       <div
                         className={`memory-option-on flex-1 p-2 text-center cursor-pointer transition-all duration-200 select-none ${
                           localState.settings.memory === 2
@@ -1162,7 +1168,7 @@ const SettingsPanel = ({
                           }))
                         }
                       >
-                        <p className="text-[16px] font-medium">On</p>
+                        <p className="text-[16px] font-medium">Learn</p>
                       </div>
                     </div>
                   </div>

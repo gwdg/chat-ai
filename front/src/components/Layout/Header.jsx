@@ -242,7 +242,7 @@ function Header({
               className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
               onClick={() => setShowSettingsModal(true)}
             >
-              <div className="w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
+              <div className="user-profile-button w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
                 <span className="text-tertiary font-medium">
                   {getInitials(userData.username)}
                 </span>

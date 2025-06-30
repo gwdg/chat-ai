@@ -84,24 +84,56 @@ async function generateConversationTitle(conversation, settings) {
 }
 
 async function updateMemory(conversation, memories) {
+  
   const defaultSettings = getDefaultSettings();
+  const memoryPrompt = `
+    Determine whether the *new user message* below contains any **new personal information**
+    worth storing for future conversations—that is, information **not already stored** or that **contradicts or updates** existing memory.
 
-  const memoryPrompt =
-    "Determine if the new user message provided below contains any NEW personal information worth storing for future conversations, that is not already stored in current memory.\n" +
-    "Current memory was provided in the system prompt, DO NOT repeat anything from the current memory!" +
-    "Look for personal information in the new user message including new details about name, nickname, pronouns, projects, preferences, interests, and other useful context. " +
-    "If there is no useful information, or if the info was already in the current memory list provided in the system prompt, respond like this:\n" +
-    "{" +
-    '"store": false,' +
-    '"memory_sentence": ""' +
-    "}\n\n" +
-    "Otherwise, only if there is new information in the new user message THAT IS NOT GIVEN IN THE CURRENT MEMORY LIST, respond with JSON as in the following example:\n" +
-    "{" +
-    '"store": true,' +
-    '"memory_sentence": "User likes chocolate cookies"' +
-    "}\n\n" +
-    "It is always safer to respond store=false when you are unsure. Only create a new memory when the info is new and not provided in the system prompt.\nHere is the new user message:\n" +
-    conversation.at(-1).content;
+    You must:
+    - Identify any **new** personal detail not already captured in the memory list.
+    - Detect if the **new message contradicts or updates** something already stored (e.g., changed preferences, updated projects).
+    - Do **not** store paraphrased duplicates of existing memory.
+
+    Look for personal details such as: name, nickname, pronouns, projects, preferences,
+    interests, dietary habits, location, goals, or any other meaningful context.
+    Express findings in third person, referring to "the user".
+
+    Compare the **meaning**, not just the wording.
+
+    Existing memory list:
+    ${memories.map(({ id, text }, i) => `${i + 1}. ${text}`).join('\n')}
+
+    Here is the new user message:  
+    "${conversation.at(-1).content}"
+
+    Respond in one of the following JSON formats with **no extra text**:
+
+    If no new or updated info is found:
+    {
+      "store": false,
+      "memory_sentence": "",
+      "replace": false,
+      "line_number": 0
+    }
+
+    If new personal information is found:
+    {
+      "store": true,
+      "memory_sentence": "<the new personal information>",
+      "replace": false,
+      "line_number": 0
+    }
+
+    If an existing memory is **contradicted** or **needs updating**, provide the updated info and the line number:
+    {
+      "store": true,
+      "memory_sentence": "<the updated information>",
+      "replace": true,
+      "line_number": <line number to replace, starting from 1>
+    }
+    `;
+
 
   const memoryUpdateSchema = {
     $schema: "http://json-schema.org/draft-04/schema#",
@@ -113,8 +145,15 @@ async function updateMemory(conversation, memories) {
       memory_sentence: {
         type: "string",
       },
+      replace: {
+        type: "boolean",
+      },
+      line_number: {
+        type: "integer",
+        minimum: 0,
+      },
     },
-    required: ["store", "memory_sentence"],
+    required: ["store", "memory_sentence", "replace", "line_number"],
   };
 
   try {
@@ -132,11 +171,12 @@ async function updateMemory(conversation, memories) {
           },
           { role: "user", content: memoryPrompt },
         ],
-        temperature: 0.1,
-        top_p: 0.1,
+        temperature: 0,
+        top_p: 1,
         extra_body: { guided_json: memoryUpdateSchema },
       }),
     });
+
     if (!response.ok) throw new Error(response.statusText);
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -152,7 +192,6 @@ async function updateMemory(conversation, memories) {
       }
       memory += decoder.decode(value, { stream: true });
     }
-
     return memory?.trim();
   } catch (error) {
     // Handle AbortError specifically
