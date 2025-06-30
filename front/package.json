@@ -2,7 +2,7 @@
   "name": "chat-ai",
   "displayName": "Chat AI",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.8.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host --no-open",
