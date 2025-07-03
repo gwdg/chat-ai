@@ -13,15 +13,27 @@ import upload from "../../assets/add.svg";
 import mic from "../../assets/icon_mic.svg";
 import stop from "../../assets/stop_listening.svg";
 import pause from "../../assets/pause.svg";
-import { cancelRequest, fetchLLMResponse } from "../../apis/LlmRequestApi";
+import {
+  cancelRequest,
+  fetchLLMResponse,
+  updateMemory,
+} from "../../apis/LlmRequestApi";
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
 import video_icon from "../../assets/video_icon.svg";
 import cross from "../../assets/cross.svg";
 import uploaded from "../../assets/file_uploaded.svg";
 import { processPdfDocument } from "../../apis/PdfProcessApi";
+import {
+  addMemory,
+  editMemory,
+  deleteMemory,
+  selectAllMemories,
+  deleteAllMemories,
+} from "../../Redux/reducers/userMemorySlice";
+import handleLLMResponse from "../../utils/handleLLMResponse";
 
 //Variable
 const languageMap = {
@@ -59,6 +71,8 @@ function Prompt({
   const { t, i18n } = useTranslation();
   const { transcript, listening, resetTranscript } = useSpeechRecognition();
   const dispatch = useDispatch();
+  const memories = useSelector(selectAllMemories);
+  const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
 
   //Refs
   const hiddenFileInput = useRef(null);
@@ -79,142 +93,29 @@ function Prompt({
   };
 
   // Main function to fetch and process LLM response
-  async function getRes(updatedConversation) {
-    dispatch(setIsResponding(true));
-    setLoading(true);
-
-    // Check if selected model supports image input
-    const imageSupport = modelList.some(
-      (modelX) =>
-        modelX.name === localState.settings["model-name"] &&
-        modelX.input.includes("image")
-    );
-    // Check if selected model supports video input
-    const videoSupport = modelList.some(
-      (modelX) =>
-        modelX.name === localState.settings["model-name"] &&
-        modelX.input.includes("video")
-    );
-
-    // Process conversation based on image/video support
-    let processedConversation = updatedConversation;
-    if (!imageSupport && !videoSupport) {
-      // Remove image content if model doesn't support images/videos
-      processedConversation = updatedConversation.map((message) => {
-        if (message.role === "user" && Array.isArray(message.content)) {
-          return {
-            role: "user",
-            content: message.content
-              .filter((item) => item.type === "text")
-              .map((item) => item.text)
-              .join("\n"),
-          };
-        }
-        return message;
-      });
-    }
-
-    // Filter out info messages only for API call
-    const conversationForAPI = processedConversation.filter(
-      (message) => message.role !== "info"
-    );
-
-    if (selectedFiles.length > 0) {
-      const imageFiles = selectedFiles.filter((file) => file.type === "image");
-      const videoFiles = selectedFiles.filter((file) => file.type === "video");
-      const textFiles = selectedFiles.filter(
-        (file) => file.type !== "image" && file.type !== "video"
-      );
-
-      const imageContent = imageFiles.map((imageFile) => ({
-        type: "image_url",
-        image_url: {
-          url: imageFile.text,
-        },
-      }));
-
-      const videoContent = videoFiles.map(() => ({
-        type: "video_url",
-        video_url: {
-          url: "",
-        },
-      }));
-
-      const textContent = textFiles.map((file) => ({
-        name: file.name,
-        fileType: "text",
-        content:
-          file.fileType === "pdf"
-            ? `${file.name}: ${file.processedContent}`
-            : `${file.name}: ${file.content}`,
-        type: "text",
-        size: file.size,
-      }));
-
-      setLocalState((prevState) => ({
-        ...prevState,
-        responses: [
-          ...prevState.responses,
-          {
-            prompt: prevState.prompt,
-            images: imageContent,
-            videos: videoContent,
-            textFiles: textContent,
-            response: "",
-          },
-        ],
-      }));
-    } else {
-      // Add response entry without images
-      setLocalState((prevState) => ({
-        ...prevState,
-        responses: [
-          ...prevState.responses,
-          {
-            prompt: prevState.prompt,
-            response: "",
-          },
-        ],
-      }));
-    }
-
-    // Clear prompt after processing
-    updateLocalState({ prompt: "" });
-
-    try {
-      // Fetch response from LLM service
-      const response = await fetchLLMResponse(
-        processedConversation,
-        localState.settings.systemPrompt,
-        localState.settings.model,
-        localState.settings.temperature,
-        localState.settings.top_p,
-        localState.arcana,
-        setLocalState,
-        setShowModalSession,
-        setShowBadRequest,
-        conversationForAPI,
-        isArcanaSupported
-      );
-      dispatch(setIsResponding(false));
-      setLoading(false);
-      setSelectedFiles([]);
-    } catch (error) {
-      dispatch(setIsResponding(false));
-      setLoading(false);
-      setSelectedFiles([]);
-
-      // Handle different error types
-      if (error.name === "AbortError") {
-        notifyError("Request aborted.");
-      } else if (error.message) {
-        notifyError(error.message);
-      } else {
-        notifyError("An unknown error occurred");
-      }
-    }
-  }
-
+  const getRes = async (updatedConversation) => {
+    await handleLLMResponse({
+      operationType: "new",
+      updatedConversation,
+      dispatch,
+      localState,
+      updateLocalState,
+      setLocalState,
+      setLoading,
+      selectedFiles,
+      setSelectedFiles,
+      modelList,
+      memories,
+      isArcanaSupported,
+      updateMemory,
+      fetchLLMResponse,
+      notifyError,
+      notifySuccess,
+      setShowModalSession,
+      setShowBadRequest,
+      timeoutTime,
+    });
+  };
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
   function formatFileSize(bytes) {
     const units = ["Bytes", "KB", "MB", "GB", "TB"];

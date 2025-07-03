@@ -20,6 +20,51 @@ i18n
       en: {
         translation: {
           description: {
+            settings_timeout: {
+              requestTimeout: "Request Timeout",
+              requestTimeoutDescription:
+                "Set how long to wait for AI responses before timing out.",
+              timeoutSeconds: "Timeout (seconds)",
+              timeoutRange: "Range: 5-300 seconds",
+            },
+            memory: {
+              userMemory: "User Memory",
+              memoryCount_one: "{{count}} memory stored",
+              memoryCount_other: "{{count}} memories stored",
+              addNew: "Add New Memory",
+              add: "Add",
+              savedMemories: "Saved Memories",
+              deleteAll: "Delete All",
+              noMemories: "No memories saved yet.",
+              addFirst: "Add your first memory above!",
+              save: "Save",
+              cancel: "Cancel",
+              created: "Created: {{date}}",
+              edit: "Edit",
+              delete: "Delete",
+              clearAllTitle: "Clear All Memories",
+              clearAllWarning:
+                "Are you sure you want to delete all {{count}} memories? This action cannot be undone and will permanently remove all your saved memories.",
+              warningTitle: "Warning",
+              warningText:
+                "You will lose all personal memories that help the AI understand your preferences and context. Consider exporting them first if needed.",
+              dontShowAgain: "Don't show this warning again",
+              clearAll: "Clear All Memories ({{count}})",
+            },
+            tour: {
+              memory: {
+                off: "Memory - None: Chat AI won't remember anything from previous conversations, like before.",
+                recall:
+                  "Recall: Chat AI can use relevant memories about you from previous conversations, but won't memorize anything from the current conversation.",
+                on: "Learn: Chat AI actively learns stuff about you from the current conversation and also recalls memories it gained previously.",
+                settings: "You can always view, add, edit, and remove memories from the User Profile panel in the top-right corner. Memories are only stored locally in your browser.",
+              },
+              back: "Back",
+              close: "Close",
+              last: "Finish",
+              next: "Next",
+              skip: "Skip",
+            },
             newConversation: "+ New Conversation",
             importPersona: "Import Persona",
             persona: {
@@ -35,6 +80,10 @@ i18n
               createOwn: "Create Your Own Persona",
             },
             settings: {
+              userMemory: "User Memory",
+              userMemoryDescription:
+                "Manage your personal memories that help the AI remember important details about you. You currently have {{count}} memories saved.",
+              manageMemory: "Manage Memory",
               userProfileSettings: "User Profile Settings",
               logout: "Logout",
               defaultModel: "Default Model",
@@ -65,6 +114,7 @@ i18n
               "This feature allows you to customize your workflow by setting the System Prompt, which provides context and guidance for the model's response, and adjusting the Temperature, which influences the model's creativity and randomness. By tweaking these settings, you can tailor the model's output to suit your specific needs and preferences.",
             // Text area placeholder
             placeholder: "Ask me",
+            placeholder_modelList: "Search models...",
             tryAgain: "Please try again...",
 
             // Footer text
@@ -169,6 +219,8 @@ i18n
             //t_pop
             t_pop:
               "top_p is a slider from 0 to 1 which adjusts the total population of probabilities considered for the next token. A top_p of 0.1 would mean only the top 10% of cumulative probabilities is considered. Variating top_p has a similar effect on predictability and creativity as temperature.",
+            memory_help:
+              "Memory enhances conversation continuity by remembering context from previous messages. 'None' disables memory functionality - each conversation is treated independently. 'Recall' adds memory context to the system prompt, allowing the AI to reference earlier parts of your conversation. 'Learn' works similar to Recall, but also updates the memory with relevant parts of the current conversation. This feature provides a more natural conversational experience similar to other AI services. Memories are only stored locally in your browser.",
             // Help arcana note
             help_arcana_title: "Note",
             help_arcana_note:
@@ -273,6 +325,51 @@ i18n
       de: {
         translation: {
           description: {
+            settings_timeout: {
+              requestTimeout: "Wartezeit für Antworten",
+              requestTimeoutDescription:
+                "Bestimmen Sie, wie lange auf KI-Antworten gewartet wird.",
+              timeoutSeconds: "Wartezeit (Sekunden)",
+              timeoutRange: "Bereich: 5-300 Sekunden",
+            },
+            memory: {
+              userMemory: "Benutzerspeicher",
+              memoryCount_one: "{{count}} Erinnerung gespeichert",
+              memoryCount_other: "{{count}} Erinnerungen gespeichert",
+              addNew: "Neue Erinnerung hinzufügen",
+              add: "Hinzufügen",
+              savedMemories: "Gespeicherte Erinnerungen",
+              deleteAll: "Alle löschen",
+              noMemories: "Noch keine Erinnerungen gespeichert.",
+              addFirst: "Fügen Sie Ihre erste Erinnerung oben hinzu!",
+              save: "Speichern",
+              cancel: "Abbrechen",
+              created: "Erstellt: {{date}}",
+              edit: "Bearbeiten",
+              delete: "Löschen",
+              clearAllTitle: "Alle Erinnerungen löschen",
+              clearAllWarning:
+                "Sind Sie sicher, dass Sie alle {{count}} Erinnerungen löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden und entfernt dauerhaft alle Ihre gespeicherten Erinnerungen.",
+              warningTitle: "Warnung",
+              warningText:
+                "Sie verlieren alle persönlichen Erinnerungen, die der KI helfen, Ihre Präferenzen und Ihren Kontext zu verstehen. Erwägen Sie, sie zuerst zu exportieren, falls erforderlich.",
+              dontShowAgain: "Diese Warnung nicht mehr anzeigen",
+              clearAll: "Alle Erinnerungen löschen ({{count}})",
+            },
+            tour: {
+              memory: {
+                off: "Memory - None: Chat AI erinnert sich an nichts aus früheren Gesprächen, wie zuvor.",
+                recall:
+                  "Recall: Chat AI kann relevante Erinnerungen über Sie aus früheren Gesprächen nutzen, erinnert sich aber an nichts aus dem aktuellen Gespräch.",
+                on: "Learn: Chat AI lernt aktiv Dinge über Sie aus dem aktuellen Gespräch und ruft auch Erinnerungen ab, die sie zuvor gesammelt hat.",
+                settings: "Sie können Erinnerungen jederzeit im Benutzerprofil-Panel in der oberen rechten Ecke ansehen, hinzufügen, bearbeiten und entfernen. Erinnerungen werden nur lokal in Ihrem Browser gespeichert.",
+              },
+              back: "Zurück",
+              close: "Schließen",
+              last: "Beenden",
+              next: "Weiter",
+              skip: "Überspringen",
+            },
             newConversation: "+ Neues Gespräch",
             importPersona: "Persona importieren",
             persona: {
@@ -289,6 +386,10 @@ i18n
               createOwn: "Eigene Persona erstellen",
             },
             settings: {
+              userMemory: "Benutzerspeicher",
+              userMemoryDescription:
+                "Verwalten Sie Ihre persönlichen Erinnerungen, die der KI helfen, wichtige Details über Sie zu behalten. Sie haben derzeit {{count}} Erinnerungen gespeichert.",
+              manageMemory: "Speicher verwalten",
               userProfileSettings: "Benutzerprofil-Einstellungen",
               logout: "Abmelden",
               defaultModel: "Standard-Modell",
@@ -320,6 +421,7 @@ i18n
               "Diese Funktion ermöglicht es Ihnen, Ihren Workflow anzupassen, indem Sie den System-Prompt einstellen, der Kontext und Anleitung für die Antwort des Modells bereitstellt, und die Temperatur anpassen, die die Kreativität und Zufälligkeit des Modells beeinflusst. Durch Anpassen dieser Einstellungen können Sie die Ausgabe des Modells an Ihre spezifischen Bedürfnisse und Vorlieben anpassen.",
             // Text area placeholder
             placeholder: "Fragen Sie mich",
+            placeholder_modelList: "Modelle suchen...",
             tryAgain: "Bitte versuchen Sie es noch einmal...",
 
             // Footer text
@@ -372,7 +474,7 @@ i18n
             help_title: "Hinweis",
             help_title1: "Warnung",
             help_note:
-              "Chat-AI bietet Zugriff auf eine Palette von state-of-the-art Large Language Models (LLMs), jedes mit eigenen Fähigkeiten und Leistungsmerkmalen. Dies ermöglicht es Ihnen, den Modelltyp auszuwählen, der am besten Ihren Forschungszielen und Anforderungen entspricht.\
+              "Chat AI bietet Zugriff auf eine Palette von state-of-the-art Large Language Models (LLMs), jedes mit eigenen Fähigkeiten und Leistungsmerkmalen. Dies ermöglicht es Ihnen, den Modelltyp auszuwählen, der am besten Ihren Forschungszielen und Anforderungen entspricht.\
               Größere Modelle bieten typischerweise höhere Antwortqualitäten, aber haben aufgrund ihrer erhöhten Komplexität längere Antwortzeiten. Umgekehrt bieten kleinere Modelle schnellere Antwortzeiten, mögen jedoch einige Genauigkeit und Tiefe opfern. Mit der Liste der verfügbaren Modelle können Sie Abwägungen zwischen Antwortqualität und Geschwindigkeit treffen, um Ihren spezifischen Bedürfnissen gerecht zu werden. Für weitere Einzelheiten",
 
             // Files upload
@@ -426,6 +528,8 @@ i18n
             //t_pop
             t_pop:
               "top_p ist ein Schieberegler von 0 bis 1, der den Gesamtbestand der Wahrscheinlichkeiten anpasst, die für das nächste Token in Betracht gezogen werden. Ein top_p von 0,1 würde bedeuten, dass nur die oberen 10% der kumulativen Wahrscheinlichkeiten berücksichtigt werden. Die Variation von top_p hat einen ähnlichen Effekt auf Vorhersagbarkeit und Kreativität wie die Temperatur.",
+            memory_help:
+              "Memory verbessert die Kontinuität von Gesprächen, indem es den Kontext aus vorherigen Nachrichten speichert. 'None' deaktiviert die Memory-Funktion - jedes Gespräch wird unabhängig behandelt. 'Recall' fügt Memory-Kontext zum System-Prompt hinzu, wodurch die KI auf frühere Teile Ihres Gesprächs verweisen kann. 'Learn' erhaltet auch automatische Memory-Updates. Diese Funktion bietet eine natürlichere Gesprächserfahrung ähnlich anderen KI-Diensten. Erinnerungen werden nur lokal in Ihrem Browser gespeichert.",
 
             // Help arcana note
             help_arcana_title: "Note",

@@ -103,12 +103,13 @@ The `front` service uses the following configurable attributes in `front.json`:
 - `backendPath`: Path to `back` service, used for sending messages and processing PDF files, e.g. `http://localhost:8081/` or `/backend`
 - `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure
 - `userDataPath`: (Optional) Path to get user data. Simply set to `<backendPath>/user` if unsure
+- `defaultSettings`: Default settings for new conversations, including default `model`, `modelName`, `top_p`, and `temperature`. This default model will also be used for title generation and memory updates.
 
 The `back` service listens to requests from `front` and interacts with an OpenAI-compatible API endpoint to produce responses. It uses the following configurable attributes in `back.json`:
 - `port`: Port number to listen on. Default: 8081
-- "apiEndpoint": Endpoint of your API provider. If you have a Chat AI API key, set this to `https://chat-ai.academiccloud.de/v1`
-- "apiKey": Your valid API key
-- "serviceName": (Optional) A custom service name to be sent as a header in API requests to your provider. Will not be visible in the interface
+- `apiEndpoint`: Endpoint of your API provider. If you have a Chat AI API key, set this to `https://chat-ai.academiccloud.de/v1`
+- `apiKey`: Your valid API key
+- `serviceName`: (Optional) A custom service name to be sent as a header in API requests to your provider. Will not be visible in the interface
 
 If you wish to avoid using different ports for the `front` and `back` services, you must set up a reverse proxy or virtual host to route paths such as `/models` and `/backend` to the backend service listening on its own distinguished port. This can be done with popular server software such as Apache or Nginx.
 

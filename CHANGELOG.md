@@ -1,5 +1,16 @@
 # Changelog 
 
+## Version: v0.8.1 (03.07.2025)
+Highlights:
+- New "memory" feature: Chat AI can learn and remember relevant details from all conversations
+- Memory is only stored locally in the browser
+- Can now type in model selection menu to search for specific models
+- Customizable global "timeout" to prevent endless-loop responses
+- Added Latex rendering option besides Markdown and Plaintext
+- Default settings can now be defined in configuration file
+- Fixed rendering bug in last line of text before references
+- Generated arcana links now open a new conversation
+
 ## Version: v0.8.0 (04.06.2025)
 Highlights:
 - Added selectable Personas in the UI, loaded from https://github.com/gwdg/chat-ai-personas

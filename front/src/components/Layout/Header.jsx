@@ -17,6 +17,7 @@ import HelpModal from "../../modals/HelpModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
 import { toggleTheme } from "../../Redux/reducers/themeReducer";
+import { useTranslation } from "react-i18next";
 
 /**
  * Header component that provides navigation, theme switching, and model selection functionality
@@ -36,6 +37,7 @@ function Header({
   setShowSettingsModal,
   userData,
 }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   // Note: Announcement count functionality currently disabled
   // const closeCount = useSelector((state) => state.anncCount);
@@ -44,6 +46,7 @@ function Header({
   const isDarkMode = useSelector((state) => state.theme.isDarkMode);
 
   const [isOpen, setIsOpen] = useState(false); // Controls model selection dropdown
+  const [searchQuery, setSearchQuery] = useState("");
   const [isIOSChrome, setIsIOSChrome] = useState(false); // iOS Chrome detection for styling
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showModalSession, setShowModalSession] = useState(false);
@@ -60,6 +63,46 @@ function Header({
     () => modelList?.find((m) => m.name === modelSettings?.model),
     [modelList, modelSettings?.model]
   );
+
+  // Filter function to search through models
+  const filteredModelList = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return modelList;
+    }
+
+    const query = searchQuery.toLowerCase();
+
+    return modelList.filter((model) => {
+      // Search by model name
+      const nameMatch = model.name.toLowerCase().includes(query);
+
+      // Search by input types (text, image, video, arcana)
+      const inputMatch = model.input.some((inputType) =>
+        inputType.toLowerCase().includes(query)
+      );
+
+      // Search by output types (text, thought)
+      const outputMatch = model.output.some((outputType) =>
+        outputType.toLowerCase().includes(query)
+      );
+
+      // Search by status
+      const statusMatch = model.status.toLowerCase().includes(query);
+
+      // Search by owner
+      const ownerMatch = model.owned_by.toLowerCase().includes(query);
+
+      return (
+        nameMatch || inputMatch || outputMatch || statusMatch || ownerMatch
+      );
+    });
+  }, [modelList, searchQuery]);
+
+  const handleModelSelection = (option) => {
+    handleChangeModel(option);
+    setSearchQuery("");
+    setIsOpen(false);
+  };
 
   // Check if current model supports image input
   const isImageSupported = useMemo(
@@ -199,7 +242,7 @@ function Header({
               className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
               onClick={() => setShowSettingsModal(true)}
             >
-              <div className="w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
+              <div className="user-profile-button w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
                 <span className="text-tertiary font-medium">
                   {getInitials(userData.username)}
                 </span>
@@ -254,15 +297,20 @@ function Header({
             className="flex-1 px-2"
             ref={dropdownRef}
             tabIndex={0}
-            onBlur={() => setIsOpen(false)}
+            onBlur={(e) => {
+              // Only close if the new focus target is not within this dropdown
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                setIsOpen(false);
+              }
+            }}
           >
             <div
               className="flex items-center w-full gap-2 px-3 py-1.5 rounded-lg 
-          bg-gray-50 dark:bg-gray-800
-          hover:bg-gray-100 dark:hover:bg-gray-700 
-          border border-gray-200 dark:border-gray-700
-          text-gray-900 dark:text-gray-100
-          transition-colors cursor-pointer"
+        bg-gray-50 dark:bg-gray-800
+        hover:bg-gray-100 dark:hover:bg-gray-700 
+        border border-gray-200 dark:border-gray-700
+        text-gray-900 dark:text-gray-100
+        transition-colors cursor-pointer"
               onClick={() => setIsOpen(!isOpen)}
             >
               <DemandStatusIcon
@@ -276,7 +324,7 @@ function Header({
                 <img
                   src={image_supported}
                   alt="image_supported"
-                  className="h-[18px] w-[18px] flex-shrink-0 "
+                  className="h-[18px] w-[18px] flex-shrink-0"
                 />
               )}
               {isVideoSupported && (
@@ -290,14 +338,14 @@ function Header({
                 <img
                   src={thought_supported}
                   alt="thought_supported"
-                  className="h-[18px] w-[18px] flex-shrink-0 "
+                  className="h-[18px] w-[18px] flex-shrink-0"
                 />
               )}
               {isArcanaSupported && (
                 <img
                   src={books}
                   alt="books"
-                  className="h-[18px] w-[18px] flex-shrink-0 "
+                  className="h-[18px] w-[18px] flex-shrink-0"
                 />
               )}
             </div>
@@ -309,54 +357,83 @@ function Header({
           shadow-lg dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)] 
           rounded-lg 
           border border-gray-200 dark:border-gray-700
-          max-h-[250px] overflow-y-auto"
+          max-h-[280px] overflow-hidden"
+                onMouseDown={(e) => e.preventDefault()}
               >
-                {modelList.map((option) => (
-                  <div
-                    key={option.id}
-                    className="flex items-center gap-2 px-3 py-2 
-                hover:bg-gray-50 dark:hover:bg-gray-700
-                text-gray-900 dark:text-gray-100 
-                border-b border-gray-100 dark:border-gray-700 
-                last:border-0
-                transition-colors cursor-pointer"
-                    onClick={() => handleChangeModel(option)}
-                  >
-                    <DemandStatusIcon
-                      status={option?.status}
-                      demand={option?.demand}
+                {/* Search Input */}
+                <div className="p-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder={t("description.placeholder_modelList")}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      autoFocus
                     />
-                    <div className="flex-1 text-sm">{option.name}</div>
-                    {option.input.includes("image") && (
-                      <img
-                        src={image_supported}
-                        alt="image_supported"
-                        className="h-[18px] w-[18px] flex-shrink-0 "
-                      />
-                    )}
-                    {option.input.includes("video") && (
-                      <img
-                        src={video_icon}
-                        alt="video_icon"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
-                      />
-                    )}
-                    {option.output.includes("thought") && (
-                      <img
-                        src={thought_supported}
-                        alt="thought_supported"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
-                      />
-                    )}
-                    {option.input.includes("arcana") && (
-                      <img
-                        src={books}
-                        alt="books"
-                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
-                      />
-                    )}
                   </div>
-                ))}
+                </div>
+
+                {/* Model List Container */}
+                <div className="max-h-[200px] overflow-y-auto overflow-x-hidden">
+                  {filteredModelList.length > 0 ? (
+                    filteredModelList.map((option) => (
+                      <div
+                        key={option.id}
+                        className="flex items-center gap-2 px-3 py-2 
+                  hover:bg-gray-50 dark:hover:bg-gray-700
+                  text-gray-900 dark:text-gray-100 
+                  border-b border-gray-100 dark:border-gray-700 
+                  last:border-0
+                  transition-colors cursor-pointer"
+                        onClick={() => handleModelSelection(option)}
+                      >
+                        <DemandStatusIcon
+                          status={option?.status}
+                          demand={option?.demand}
+                        />
+                        <div className="flex-1 text-sm min-w-0 mr-2">
+                          <div className="truncate">{option.name}</div>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {option.input.includes("image") && (
+                            <img
+                              src={image_supported}
+                              alt="image_supported"
+                              className="h-[18px] w-[18px] flex-shrink-0"
+                            />
+                          )}
+                          {option.input.includes("video") && (
+                            <img
+                              src={video_icon}
+                              alt="video_icon"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                            />
+                          )}
+                          {option.output.includes("thought") && (
+                            <img
+                              src={thought_supported}
+                              alt="thought_supported"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
+                            />
+                          )}
+                          {option.input.includes("arcana") && (
+                            <img
+                              src={books}
+                              alt="books"
+                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                      No models found matching &quot;{searchQuery}&quot;
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

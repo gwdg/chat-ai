@@ -1,39 +1,42 @@
+// store/conversationsSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 import { v4 as uuidv4 } from "uuid";
+import { getDefaultSettings } from "../../utils/settingsUtils";
 
-const createDefaultConversation = () => ({
-  id: uuidv4(),
-  title: "Untitled Conversation",
-  conversation: [
-    {
-      role: "system",
-      content: "You are a helpful assistant",
+const createDefaultConversation = (customSettings = {}) => {
+  const defaultSettings = getDefaultSettings();
+
+  const settings = { ...defaultSettings, ...customSettings };
+
+  return {
+    id: uuidv4(),
+    title: "Untitled Conversation",
+    conversation: [
+      {
+        role: "system",
+        content: settings.systemPrompt,
+      },
+    ],
+    responses: [],
+    prompt: "",
+    settings,
+    exportOptions: {
+      exportSettings: false,
+      exportImage: false,
+      exportArcana: false,
     },
-  ],
-  responses: [],
-  prompt: "",
-  settings: {
-    ["model-name"]: "Meta Llama 3.1 8B Instruct",
-    model: "meta-llama-3.1-8b-instruct",
-    temperature: 0.5,
-    top_p: 0.5,
-    systemPrompt: "You are a helpful assistant",
-  },
-  exportOptions: {
-    exportSettings: false,
-    exportImage: false,
-    exportArcana: false,
-  },
-  dontShow: {
-    dontShowAgain: false,
-    dontShowAgainShare: false,
-  },
-  arcana: {
-    id: "",
-  },
-  createdAt: new Date().toISOString(),
-  lastModified: new Date().toISOString(),
-});
+    dontShow: {
+      dontShowAgain: false,
+      dontShowAgainShare: false,
+      dontShowAgainMemory: false,
+    },
+    arcana: {
+      id: "",
+    },
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+  };
+};
 
 const defaultConversation = createDefaultConversation();
 
@@ -53,8 +56,8 @@ const conversationsSlice = createSlice({
         state.conversations.unshift(newConversation);
         state.currentConversationId = newConversation.id;
       },
-      prepare: (providedId = null) => {
-        const newConversation = createDefaultConversation();
+      prepare: (providedId = null, customSettings = {}) => {
+        const newConversation = createDefaultConversation(customSettings);
 
         // If an ID is provided (for syncing), use it instead
         if (providedId) {
@@ -137,8 +140,10 @@ const conversationsSlice = createSlice({
         state.currentConversationId = newConversation.id;
         state.isResponding = false;
       },
-      prepare: (providedId = null) => {
+      prepare: (providedId = null, customSettings = {}) => {
         const newId = providedId || uuidv4();
+        const defaultSettings = getDefaultSettings();
+        const settings = { ...defaultSettings, ...customSettings };
 
         const newConversation = {
           id: newId,
@@ -146,18 +151,12 @@ const conversationsSlice = createSlice({
           conversation: [
             {
               role: "system",
-              content: "You are a helpful assistant",
+              content: settings.systemPrompt,
             },
           ],
           responses: [],
           prompt: "",
-          settings: {
-            ["model-name"]: "Meta Llama 3.1 8B Instruct",
-            model: "meta-llama-3.1-8b-instruct",
-            temperature: 0.5,
-            top_p: 0.5,
-            systemPrompt: "You are a helpful assistant",
-          },
+          settings,
           exportOptions: {
             exportSettings: false,
             exportImage: false,
@@ -166,6 +165,7 @@ const conversationsSlice = createSlice({
           dontShow: {
             dontShowAgain: false,
             dontShowAgainShare: false,
+            dontShowAgainMemory: false,
           },
           arcana: {
             id: "",

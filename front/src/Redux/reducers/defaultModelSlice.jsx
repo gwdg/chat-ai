@@ -1,9 +1,16 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { getDefaultSettings } from "../../utils/settingsUtils";
 
-const initialState = {
-  name: "Meta Llama 3.1 8B Instruct",
-  id: "meta-llama-3.1-8b-instruct",
+// Get default model info from settings utility
+const getDefaultModelInfo = () => {
+  const defaultSettings = getDefaultSettings();
+  return {
+    name: defaultSettings["model-name"],
+    id: defaultSettings.model,
+  };
 };
+
+const initialState = getDefaultModelInfo();
 
 const defaultModelSlice = createSlice({
   name: "defaultModel",
@@ -15,8 +22,9 @@ const defaultModelSlice = createSlice({
       state.id = action.payload.id;
     },
     resetDefaultModel: (state) => {
-      state.name = "Meta Llama 3.1 8B Instruct";
-      state.id = "meta-llama-3.1-8b-instruct";
+      const defaultModel = getDefaultModelInfo();
+      state.name = defaultModel.name;
+      state.id = defaultModel.id;
     },
   },
 });

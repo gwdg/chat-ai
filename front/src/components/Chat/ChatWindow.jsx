@@ -35,8 +35,19 @@ import PdfNotProcessedModal from "../../modals/PdfNotProcessedModal";
 import PreviewModal from "../../modals/PreviewModal";
 import FileAlertModal from "../../modals/FileAlertModal";
 import { toggleOption } from "../../Redux/actions/advancedOptionsAction";
+import ClearMemoryModal from "../../modals/ClearMemoryModal";
+import UserMemoryModal from "../../modals/UserMemoryModal";
+import HelpMemoryModal from "../../modals/HelpMemoryModal";
 
-function ChatWindow({ modelSettings, modelList, onModelChange }) {
+function ChatWindow({
+  modelSettings,
+  modelList,
+  onModelChange,
+  showClearMemoryModal,
+  setShowClearMemoryModal,
+  showMemoryModal,
+  setShowMemoryModal,
+}) {
   // Hooks
   const { notifySuccess, notifyError } = useToast();
   const dispatch = useDispatch();
@@ -62,6 +73,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       temperature: null,
       top_p: null,
       systemPrompt: "",
+      memory: 2,
     },
     exportOptions: {
       exportSettings: false,
@@ -71,10 +83,11 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
     dontShow: {
       dontShowAgain: false,
       dontShowAgainShare: false,
+      dontShowAgainMemory: false,
     },
     arcana: {
       id: "",
-//      key: "",
+      //      key: "",
     },
   });
   const [isActive, setIsActive] = useState(false);
@@ -86,6 +99,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
   const [showMicModal, setShowMicModal] = useState(false);
   const [showCustomHelpModal, setShowCustomHelpModal] = useState(false);
   const [showTopPHelpModal, setShowTopPHelpModal] = useState(false);
+  const [showMemoryHelpModal, setShowMemoryHelpModal] = useState(false);
   const [showSystemHelpModal, setShowSystemHelpModal] = useState(false);
   const [showArcanasHelpModal, setShowArcanasHelpModal] = useState(false);
   const [showCusModal, setShowCusModal] = useState(false);
@@ -377,8 +391,8 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
         localState.settings.top_p
       }${
         localState.exportOptions.exportArcana && isArcanaSupported
-          // ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
-          ? `\nArcana: {\n  id: ${localState.arcana.id}}`
+          ? // ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
+            `\nArcana: {\n  id: ${localState.arcana.id}}`
           : ""
       }`;
       finalTextContent += additionalText;
@@ -794,6 +808,7 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
           setShowArcanasHelpModal={setShowArcanasHelpModal}
           setShowCustomHelpModal={setShowCustomHelpModal}
           setShowTopPHelpModal={setShowTopPHelpModal}
+          setShowMemoryHelpModal={setShowMemoryHelpModal}
           setShowSystemHelpModal={setShowSystemHelpModal}
           notifySuccess={notifySuccess}
           notifyError={notifyError}
@@ -813,6 +828,12 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       <>
         {showTopPHelpModal ? (
           <HelpTopPModal showModal={setShowTopPHelpModal} />
+        ) : null}
+      </>
+
+      <>
+        {showMemoryHelpModal ? (
+          <HelpMemoryModal showModal={setShowMemoryHelpModal} />
         ) : null}
       </>
 
@@ -895,6 +916,21 @@ function ChatWindow({ modelSettings, modelList, onModelChange }) {
       </>
       {previewFile && (
         <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      )}
+      {showClearMemoryModal && (
+        <ClearMemoryModal
+          showModal={setShowClearMemoryModal}
+          setLocalState={setLocalState}
+          dontShowAgainMemory={localState.dontShow.dontShowAgainMemory}
+          localState={localState}
+        />
+      )}
+      {showMemoryModal && (
+        <UserMemoryModal
+          showModal={setShowMemoryModal}
+          setShowClearMemoryModal={setShowClearMemoryModal}
+          localState={localState}
+        />
       )}
       <>
         {fileAlertModal ? (

@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import {
   addConversation,
   setCurrentConversation,
@@ -16,6 +16,7 @@ import cross from "../../assets/cross.svg";
 import edit_icon from "../../assets/edit_icon.svg";
 import back_arrow from "../../assets/back_arrow.svg";
 import { persistor } from "../../Redux/store/store";
+import { getDefaultSettings } from "../../utils/settingsUtils";
 
 function Sidebar({
   onClose,
@@ -26,7 +27,6 @@ function Sidebar({
 }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { t } = useTranslation();
 
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
@@ -49,6 +49,7 @@ function Sidebar({
 
   const handleNewChat = useCallback(() => {
     if (isResponding) return; // Prevent new chat while responding
+    const defaultSettings = getDefaultSettings();
 
     // Temporarily disable interaction
     dispatch({ type: "conversations/setIsResponding", payload: true });
@@ -67,9 +68,10 @@ function Sidebar({
             settings: {
               ["model-name"]: defaultModel.name,
               model: defaultModel.id,
-              temperature: 0.5,
-              top_p: 0.5,
               systemPrompt: "You are a helpful assistant",
+              temperature: defaultSettings.temperature,
+              top_p: defaultSettings.top_p,
+              memory: 2,
             },
           },
         },
@@ -127,7 +129,9 @@ function Sidebar({
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
         >
-          <span><Trans i18nKey="description.newConversation" /></span>
+          <span>
+            <Trans i18nKey="description.newConversation" />
+          </span>
         </button>
       </div>
 
@@ -221,7 +225,9 @@ function Sidebar({
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
         >
-          <span><Trans i18nKey="description.importPersona" /></span>
+          <span>
+            <Trans i18nKey="description.importPersona" />
+          </span>
         </button>
       </div>
     </div>

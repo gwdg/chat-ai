@@ -6,7 +6,7 @@ import cross from "../assets/cross.svg"; // Close icon
 function ClearCacheModal(props) {
   return (
     // Model component with export type selection form
-    <ContainerModal showModal={props.showModal}>
+    <ContainerModal showModal={props.showModal} isMemoryModal={true}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
