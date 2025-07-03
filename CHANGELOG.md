@@ -1,8 +1,9 @@
 # Changelog 
 
-## Version: v0.8.1 (xx.07.2025)
+## Version: v0.8.1 (03.07.2025)
 Highlights:
 - New "memory" feature: Chat AI can learn and remember relevant details from all conversations
+- Memory is only stored locally in the browser
 - Can now type in model selection menu to search for specific models
 - Customizable global "timeout" to prevent endless-loop responses
 - Added Latex rendering option besides Markdown and Plaintext
