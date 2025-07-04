@@ -23,6 +23,7 @@ const Conversation = ({
   modelList,
   selectedFiles,
   localState,
+  isAudioSupported,
   isImageSupported,
   isVideoSupported,
   isArcanaSupported,
@@ -151,6 +152,7 @@ const Conversation = ({
       <Prompt
         modelList={modelList}
         loading={loading}
+        isAudioSupported={isAudioSupported}
         isImageSupported={isImageSupported}
         isVideoSupported={isVideoSupported}
         isArcanaSupported={isArcanaSupported}

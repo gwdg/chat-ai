@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import ContainerModal from "./ContainerModal";
 import cross from "../assets/cross.svg";
 // Import your icons
+import audio_supported from "../assets/audio_supported.svg";
 import image_supported from "../assets/image_supported.svg";
 import video_icon from "../assets/video_icon.svg";
 import thought_supported from "../assets/thought_supported.svg";
@@ -145,6 +146,13 @@ function SettingsModal(props) {
                   <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                     {option.name}
                   </div>
+                  {option.input?.includes("audio") && (
+                    <img
+                      src={audio_supported}
+                      alt="audio_supported"
+                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                    />
+                  )}
                   {option.input?.includes("image") && (
                     <img
                       src={image_supported}
