@@ -25,7 +25,7 @@ i18n
               requestTimeoutDescription:
                 "Set how long to wait for AI responses before timing out.",
               timeoutSeconds: "Timeout (seconds)",
-              timeoutRange: "Range: 5-300 seconds",
+              timeoutRange: "Range: 5-900 seconds",
             },
             memory: {
               userMemory: "User Memory",
@@ -330,7 +330,7 @@ i18n
               requestTimeoutDescription:
                 "Bestimmen Sie, wie lange auf KI-Antworten gewartet wird.",
               timeoutSeconds: "Wartezeit (Sekunden)",
-              timeoutRange: "Bereich: 5-300 Sekunden",
+              timeoutRange: "Bereich: 5-900 Sekunden",
             },
             memory: {
               userMemory: "Benutzerspeicher",
