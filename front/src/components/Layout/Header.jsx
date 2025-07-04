@@ -9,6 +9,7 @@ import hamburger_icon from "../../assets/hamburger_icon.svg";
 import profile_icon from "../../assets/profile_icon.svg";
 import Logo from "../../assets/chatai-logo.svg";
 import help from "../../assets/icon_help.svg";
+import audio_supported from "../../assets/audio_supported.svg";
 import image_supported from "../../assets/image_supported.svg";
 import video_icon from "../../assets/video_icon.svg";
 import thought_supported from "../../assets/thought_supported.svg";
@@ -103,6 +104,12 @@ function Header({
     setSearchQuery("");
     setIsOpen(false);
   };
+
+  // Check if current model supports image input
+  const isAudioSupported = useMemo(
+    () => currentModel?.input.includes("audio") || false,
+    [currentModel]
+  );
 
   // Check if current model supports image input
   const isImageSupported = useMemo(
@@ -320,6 +327,13 @@ function Header({
               <div className="flex-1 text-sm truncate">
                 {modelSettings["model-name"]}
               </div>
+              {isAudioSupported && (
+                <img
+                  src={audio_supported}
+                  alt="audio_supported"
+                  className="h-[18px] w-[18px] flex-shrink-0"
+                />
+              )}
               {isImageSupported && (
                 <img
                   src={image_supported}
@@ -397,6 +411,13 @@ function Header({
                           <div className="truncate">{option.name}</div>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
+                          {option.input.includes("audio") && (
+                            <img
+                              src={audio_supported}
+                              alt="audio_supported"
+                              className="h-[18px] w-[18px] flex-shrink-0"
+                            />
+                          )}
                           {option.input.includes("image") && (
                             <img
                               src={image_supported}

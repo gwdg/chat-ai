@@ -47,6 +47,7 @@ function Prompt({
   modelList,
   loading,
   loadingResend,
+  isAudioSupported,
   isImageSupported,
   isVideoSupported,
   isArcanaSupported,

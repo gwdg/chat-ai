@@ -200,6 +200,12 @@ function ChatWindow({
     [modelList, modelSettings]
   );
 
+  // Memoize whether current model supports audio input
+  const isAudioSupported = useMemo(
+    () => currentModel?.input.includes("audio") || false,
+    [currentModel]
+  );
+
   // Memoize whether current model supports image input
   const isImageSupported = useMemo(
     () => currentModel?.input.includes("image") || false,
@@ -765,6 +771,7 @@ function ChatWindow({
           modelList={modelList}
           selectedFiles={selectedFiles}
           localState={localState}
+          isAudioSupported={isAudioSupported}
           isImageSupported={isImageSupported}
           isVideoSupported={isVideoSupported}
           isThoughtSupported={isThoughtSupported}
@@ -792,6 +799,7 @@ function ChatWindow({
           modelSettings={modelSettings}
           modelList={modelList}
           currentModel={currentModel}
+          isAudioSupported={isAudioSupported}
           isImageSupported={isImageSupported}
           isVideoSupported={isVideoSupported}
           isThoughtSupported={isThoughtSupported}
