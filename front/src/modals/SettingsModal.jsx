@@ -40,7 +40,7 @@ function SettingsModal(props) {
   useEffect(() => {
     // Initialize timeout if it's not set (first load)
     if (!timeoutTime || timeoutTime === 0) {
-      dispatch(setTimeoutTime(30000)); // Default 30 seconds
+      dispatch(setTimeoutTime(300000)); // Default 300 seconds
     }
   }, [timeoutTime, dispatch]);
 
@@ -208,12 +208,12 @@ function SettingsModal(props) {
                   <input
                     type="number"
                     min="5"
-                    max="300"
+                    max="900"
                     step="5"
                     value={timeoutInSeconds}
                     onChange={handleTimeoutChange}
                     className="w-full pl-3 pr-16 py-2 border dark:border-border_dark rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="30"
+                    placeholder="300"
                   />
                   <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400 pointer-events-none">
                     secs
