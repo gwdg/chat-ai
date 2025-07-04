@@ -188,12 +188,14 @@ function Prompt({
 
   // Handle file drop events for images and videos
   const handleDrop = async (event) => {
-    if (!isImageSupported && !isVideoSupported) return;
+    if (!isAudioSupported && isImageSupported && !isVideoSupported) return;
     event.preventDefault();
     try {
       // Filter for supported image types
       const droppedFiles = Array.from(event.dataTransfer.files).filter(
         (file) =>
+          file.type === "audio/mpeg" ||
+          file.type === "audio/wav" ||
           file.type === "image/jpeg" ||
           file.type === "image/png" ||
           file.type === "image/gif" ||
@@ -203,10 +205,10 @@ function Prompt({
 
       // Validate dropped files
       if (droppedFiles.length === 0) {
-        notifyError("Only image or video files are allowed");
+        notifyError("Only media files are allowed");
         return;
       } else {
-        notifySuccess("Image(s) dropped");
+        notifySuccess("Media dropped");
       }
 
       // Convert dropped images to base64 and update state
@@ -215,7 +217,7 @@ function Prompt({
         const base64 = await readFileAsBase64(file);
         fileList.push({
           name: file.name,
-          type: file.type.startsWith("image/") ? "image" : "video",
+          type: file.type.startsWith("image/") ? "image" : file.type.startsWith("audio/") ? "audio" : "video",
           size: file.size,
           text: base64,
         });
@@ -232,8 +234,11 @@ function Prompt({
     adjustHeight();
   };
 
-  const getAcceptedFileTypes = (isImageSupported, isVideoSupported) => {
+  const getAcceptedFileTypes = (isAudioSupported, isImageSupported, isVideoSupported) => {
     const types = [];
+    if (isAudioSupported) {
+      types.push(".wav", ".mp3");
+    }
     if (isImageSupported) {
       types.push(".jpg", ".jpeg", ".png", ".gif", ".webp");
     }
@@ -277,7 +282,10 @@ function Prompt({
       // Process submission with files
       if (selectedFiles.length > 0) {
         const textFiles = selectedFiles.filter(
-          (file) => file.type !== "image" && file.type !== "video"
+          (file) => file.type !== "image" && file.type !== "video" && file.type !== "audio"
+        );
+        const audioFiles = selectedFiles.filter(
+          (file) => file.type === "audio"
         );
         const imageFiles = selectedFiles.filter(
           (file) => file.type === "image"
@@ -301,6 +309,15 @@ function Prompt({
 
         const fullPrompt = `${localState.prompt}\n${allTextFilesText}`;
 
+        // Process audio files
+        const audioContent = audioFiles.map((audioFile) => ({
+          type: "input_audio",
+          input_audio: {
+            data: audioFile.text.split("base64,")[1],
+            format: "wav"
+          },
+        }));
+
         // Process image files
         const imageContent = imageFiles.map((imageFile) => ({
           type: "image_url",
@@ -323,6 +340,7 @@ function Prompt({
             type: "text",
             text: fullPrompt,
           },
+          ...audioContent,
           ...imageContent,
           ...videoContent,
         ];
@@ -571,12 +589,14 @@ function Prompt({
     }
   };
 
-  // Handle image file uploads
-  const handleFilesChangeImage = async (e) => {
+  // Handle media file attachments
+  const handleFilesChangeMedia = async (e) => {
     try {
       // Filter for supported image and video types
       const files = Array.from(e.target.files).filter(
         (file) =>
+          file.type === "audio/mpeg" || // MP3
+          file.type === "audio/wav"  || // WAV
           file.type === "image/jpeg" ||
           file.type === "image/png" ||
           file.type === "image/gif" ||
@@ -588,7 +608,7 @@ function Prompt({
 
       // Validate file types
       if (files.length !== e.target.files.length) {
-        notifyError("All files must be images, MP4 videos, or AVI videos");
+        notifyError("All files must be valid supported media files");
         return;
       }
 
@@ -619,7 +639,7 @@ function Prompt({
         const text = await readFileAsBase64(file);
         fileList.push({
           name: file.name,
-          type: file.type.startsWith("image/") ? "image" : "video",
+          type: file.type.startsWith("image/") ? "image" : file.type.startsWith("audio/") ? "audio" : "video",
           size: file.size,
           text,
         });
@@ -670,7 +690,13 @@ function Prompt({
                     <div className="p-2 w-full">
                       <div className="flex items-center gap-2 w-full">
                         <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded overflow-hidden bg-gray-200 dark:bg-gray-800">
-                          {file.type === "image" ? (
+                          {file.type === "audio" ? (
+                            <img
+                              className="h-5 w-5"
+                              src={file.text}
+                              alt={file.name}
+                            />
+                          ) : file.type === "image" ? (
                             <img
                               className="h-full w-full object-cover"
                               src={file.text}
@@ -895,17 +921,18 @@ function Prompt({
                   />
                 </button>
               </Tooltip>
-              {(isImageSupported || isVideoSupported) && (
+              {(isAudioSupported || isImageSupported || isVideoSupported) && (
                 <>
                   <input
                     type="file"
                     ref={hiddenFileInputImage}
                     multiple
                     accept={getAcceptedFileTypes(
+                      isAudioSupported,
                       isImageSupported,
                       isVideoSupported
                     )}
-                    onChange={handleFilesChangeImage}
+                    onChange={handleFilesChangeMedia}
                     className="hidden"
                   />
                   <Tooltip text={t("description.attachImage")}>
