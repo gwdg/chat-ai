@@ -98,7 +98,6 @@ function ChatWindow({
   const [showModalSession, setShowModalSession] = useState(false);
   const [showBadRequest, setShowBadRequest] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showMicModal, setShowMicModal] = useState(false);
   const [showCustomHelpModal, setShowCustomHelpModal] = useState(false);
   const [showTopPHelpModal, setShowTopPHelpModal] = useState(false);
   const [showMemoryHelpModal, setShowMemoryHelpModal] = useState(false);
@@ -800,7 +799,6 @@ function ChatWindow({
           setShowModalSession={setShowModalSession}
           setShowBadRequest={setShowBadRequest}
           setShowFileModal={setShowFileModal}
-          setShowMicModal={setShowMicModal}
           setShowHistoryModal={setShowHistoryModal}
           toggleAdvOpt={toggleAdvOpt}
           updateLocalState={updateLocalState}
@@ -877,7 +875,7 @@ function ChatWindow({
         ) : null}
       </>
 
-      <>{showMicModal ? <MicModal showModal={setShowMicModal} /> : null}</>
+      {/* <>{showMicModal ? <MicModal showModal={setShowMicModal} /> : null}</> */}
 
       <>
         {showCusModal ? (
