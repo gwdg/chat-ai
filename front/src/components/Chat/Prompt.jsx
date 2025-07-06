@@ -1,8 +1,5 @@
 /* eslint-disable no-unused-vars */
 import { useEffect, useRef, useState } from "react";
-import SpeechRecognition, {
-  useSpeechRecognition,
-} from "react-speech-recognition";
 
 //Assets
 import clear from "../../assets/cross_icon.svg";
@@ -11,7 +8,6 @@ import image_icon from "../../assets/icon_image.svg";
 import send from "../../assets/icon_send.svg";
 import upload from "../../assets/add.svg";
 import mic from "../../assets/icon_mic.svg";
-import stop from "../../assets/stop_listening.svg";
 import pause from "../../assets/pause.svg";
 import {
   cancelRequest,
@@ -26,13 +22,7 @@ import video_icon from "../../assets/video_icon.svg";
 import cross from "../../assets/cross.svg";
 import uploaded from "../../assets/file_uploaded.svg";
 import { processPdfDocument } from "../../apis/PdfProcessApi";
-import {
-  addMemory,
-  editMemory,
-  deleteMemory,
-  selectAllMemories,
-  deleteAllMemories,
-} from "../../Redux/reducers/userMemorySlice";
+import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
 import handleLLMResponse from "../../utils/handleLLMResponse";
 
 //Variable
@@ -54,7 +44,6 @@ function Prompt({
   selectedFiles,
   localState,
   setLocalState,
-  setShowMicModal,
   setLoading,
   setSelectedFiles,
   setShowModalSession,
@@ -70,7 +59,6 @@ function Prompt({
 }) {
   //Hooks
   const { t, i18n } = useTranslation();
-  const { transcript, listening, resetTranscript } = useSpeechRecognition();
   const dispatch = useDispatch();
   const memories = useSelector(selectAllMemories);
   const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
@@ -79,9 +67,16 @@ function Prompt({
   const hiddenFileInput = useRef(null);
   const hiddenFileInputImage = useRef(null);
   const textareaRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const audioFileInputRef = useRef(null);
 
   //Local useStates
   const [processingFiles, setProcessingFiles] = useState(new Set());
+  const [isRecording, setIsRecording] = useState(false);
+  const [pressTimer, setPressTimer] = useState(null);
+  const [isLongPress, setIsLongPress] = useState(false);
 
   // Converts a file to base64 string format using FileReader
   const readFileAsBase64 = (file) => {
@@ -95,6 +90,14 @@ function Prompt({
 
   // Main function to fetch and process LLM response
   const getRes = async (updatedConversation) => {
+    const audioFiles = selectedFiles.filter((file) => file.type === "audio");
+    const imageFiles = selectedFiles.filter((file) => file.type === "image");
+    const videoFiles = selectedFiles.filter((file) => file.type === "video");
+    const textFiles = selectedFiles.filter(
+      (file) =>
+        file.type !== "image" && file.type !== "video" && file.type !== "audio"
+    );
+
     await handleLLMResponse({
       operationType: "new",
       updatedConversation,
@@ -115,6 +118,10 @@ function Prompt({
       setShowModalSession,
       setShowBadRequest,
       timeoutTime,
+      audioFiles,
+      imageFiles,
+      videoFiles,
+      textFiles,
     });
   };
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
@@ -188,39 +195,67 @@ function Prompt({
 
   // Handle file drop events for images and videos
   const handleDrop = async (event) => {
-    if (!isAudioSupported && isImageSupported && !isVideoSupported) return;
+    if (!isImageSupported && !isVideoSupported && !isAudioSupported) return;
     event.preventDefault();
     try {
-      // Filter for supported image types
+      // Filter for supported file types (now includes audio)
       const droppedFiles = Array.from(event.dataTransfer.files).filter(
         (file) =>
-          file.type === "audio/mpeg" ||
-          file.type === "audio/wav" ||
           file.type === "image/jpeg" ||
           file.type === "image/png" ||
           file.type === "image/gif" ||
           file.type === "image/webp" ||
-          file.type === "video/mp4"
+          file.type === "video/mp4" ||
+          file.type === "audio/mpeg" ||
+          file.type === "audio/mp3" ||
+          file.type === "audio/wav" ||
+          file.type === "audio/wave" ||
+          file.type === "audio/x-wav"
       );
 
       // Validate dropped files
       if (droppedFiles.length === 0) {
-        notifyError("Only media files are allowed");
+        notifyError("Only supported media files are allowed");
         return;
       } else {
         notifySuccess("Media dropped");
       }
 
-      // Convert dropped images to base64 and update state
+      // Convert dropped files to base64 and update state
       const fileList = [];
       for (const file of droppedFiles) {
-        const base64 = await readFileAsBase64(file);
-        fileList.push({
+        let base64Data;
+        let format;
+
+        if (file.type.startsWith("audio/")) {
+          // For audio files, convert to raw base64 (same as handleFilesChangeAudio)
+          const arrayBuffer = await file.arrayBuffer();
+          base64Data = btoa(
+            String.fromCharCode(...new Uint8Array(arrayBuffer))
+          );
+          format = file.type.includes("wav") ? "wav" : "mp3";
+        } else {
+          // For images/videos, use data URL
+          base64Data = await readFileAsBase64(file);
+        }
+
+        const fileObj = {
           name: file.name,
-          type: file.type.startsWith("image/") ? "image" : file.type.startsWith("audio/") ? "audio" : "video",
+          type: file.type.startsWith("image/")
+            ? "image"
+            : file.type.startsWith("audio/")
+            ? "audio"
+            : "video",
           size: file.size,
-          text: base64,
-        });
+          text: base64Data,
+        };
+
+        // Add format for audio files
+        if (format) {
+          fileObj.format = format;
+        }
+
+        fileList.push(fileObj);
       }
 
       setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
@@ -228,17 +263,16 @@ function Prompt({
       notifyError("An error occurred while dropping the files: ", error);
     }
   };
+
   // Handle changes in the prompt textarea
   const handleChange = (event) => {
     updateLocalState({ prompt: event.target.value });
     adjustHeight();
   };
 
-  const getAcceptedFileTypes = (isAudioSupported, isImageSupported, isVideoSupported) => {
+  const getAcceptedFileTypes = (isImageSupported, isVideoSupported) => {
     const types = [];
-    if (isAudioSupported) {
-      types.push(".wav", ".mp3");
-    }
+
     if (isImageSupported) {
       types.push(".jpg", ".jpeg", ".png", ".gif", ".webp");
     }
@@ -272,17 +306,16 @@ function Prompt({
       return;
     }
 
-    // Stop speech recognition if active
-    SpeechRecognition.stopListening();
-    resetTranscript();
-
     try {
       let newConversation;
 
       // Process submission with files
       if (selectedFiles.length > 0) {
         const textFiles = selectedFiles.filter(
-          (file) => file.type !== "image" && file.type !== "video" && file.type !== "audio"
+          (file) =>
+            file.type !== "image" &&
+            file.type !== "video" &&
+            file.type !== "audio"
         );
         const audioFiles = selectedFiles.filter(
           (file) => file.type === "audio"
@@ -297,32 +330,34 @@ function Prompt({
         // Process text files, including processed PDFs
         const allTextFilesText = textFiles
           .map((file) => {
-            // If it's a processed PDF, use its processed content
             if (file.fileType === "pdf") {
               return `${file.name}: ${file.processedContent}`;
             }
-            // For other text files, use regular content
             return `${file.name}: ${file.content}`;
           })
           .filter(Boolean)
           .join("\n");
 
-        const fullPrompt = `${localState.prompt}\n${allTextFilesText}`;
+        const fullPrompt = allTextFilesText
+          ? `${localState.prompt}\n${allTextFilesText}`
+          : localState.prompt;
 
-        // Process audio files
-        const audioContent = audioFiles.map((audioFile) => ({
-          type: "input_audio",
-          input_audio: {
-            data: audioFile.text.split("base64,")[1],
-            format: "wav"
-          },
-        }));
+        // Process audio files - CORRECT FORMAT for OpenAI
+        const audioContent = audioFiles.map((audioFile) => {
+          return {
+            type: "input_audio",
+            input_audio: {
+              data: audioFile.text, // This should be raw base64 string
+              format: audioFile.format, // "wav" or "mp3"
+            },
+          };
+        });
 
         // Process image files
         const imageContent = imageFiles.map((imageFile) => ({
           type: "image_url",
           image_url: {
-            url: imageFile.text,
+            url: imageFile.text, // This should be data URL for images
           },
         }));
 
@@ -363,20 +398,12 @@ function Prompt({
         conversation: newConversation,
       }));
 
-      const stillHasUnprocessedPDF = selectedFiles.some(
-        (file) => file.fileType === "pdf" && !file.processed
-      );
-
-      if (stillHasUnprocessedPDF) {
-        setPdfNotProcessedModal(true);
-        return;
-      }
-
       await getRes(newConversation);
     } catch (error) {
       console.error("Error in handleSubmit:", error);
     }
   };
+
   // Handle pasting images from clipboard
   const handlePaste = async (event) => {
     try {
@@ -595,8 +622,6 @@ function Prompt({
       // Filter for supported image and video types
       const files = Array.from(e.target.files).filter(
         (file) =>
-          file.type === "audio/mpeg" || // MP3
-          file.type === "audio/wav"  || // WAV
           file.type === "image/jpeg" ||
           file.type === "image/png" ||
           file.type === "image/gif" ||
@@ -639,9 +664,258 @@ function Prompt({
         const text = await readFileAsBase64(file);
         fileList.push({
           name: file.name,
-          type: file.type.startsWith("image/") ? "image" : file.type.startsWith("audio/") ? "audio" : "video",
+          type: file.type.startsWith("image/") ? "image" : "video",
           size: file.size,
           text,
+        });
+      }
+
+      setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
+      e.target.value = "";
+    } catch (error) {
+      notifyError("An error occurred: ", error);
+    }
+  };
+
+  const handleAudioMouseDown = () => {
+    setIsLongPress(false);
+    const timer = setTimeout(() => {
+      setIsLongPress(true);
+      handleAudioRecording(); // Start recording
+    }, 500); // 500ms for long press
+    setPressTimer(timer);
+  };
+
+  const handleAudioMouseUp = () => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
+    }
+
+    // If it was a short click and not currently recording
+    if (!isLongPress && !isRecording) {
+      // Trigger file selection
+      audioFileInputRef.current?.click();
+    }
+
+    // If it was a long press and currently recording, stop recording
+    if (isLongPress && isRecording) {
+      handleAudioRecording(); // Stop recording
+    }
+
+    setIsLongPress(false);
+  };
+
+  const handleAudioMouseLeave = () => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
+    }
+    setIsLongPress(false);
+  };
+
+  const handleAudioRecording = async () => {
+    if (isRecording) {
+      // Stop recording
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+        setIsRecording(false);
+      }
+    } else {
+      // Start recording
+      try {
+        // Check if we're on localhost or https for microphone access
+        const isSecureContext =
+          window.isSecureContext ||
+          location.protocol === "https:" ||
+          location.hostname === "localhost";
+
+        if (!isSecureContext) {
+          notifyError(
+            "Microphone access requires HTTPS or localhost. Please use https:// or access via localhost"
+          );
+          return;
+        }
+
+        // Request microphone permission
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+
+        streamRef.current = stream;
+        audioChunksRef.current = [];
+
+        // Create MediaRecorder with preferred format for OpenAI compatibility
+        let mimeType = "audio/webm";
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          mimeType = "audio/webm;codecs=opus";
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          mimeType = "audio/mp4";
+        } else if (MediaRecorder.isTypeSupported("audio/wav")) {
+          mimeType = "audio/wav";
+        }
+
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType,
+          audioBitsPerSecond: 64000,
+        });
+
+        mediaRecorderRef.current = mediaRecorder;
+
+        // Handle data available event
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        // Handle stop event
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunksRef.current, {
+            type: mimeType,
+          });
+          await processRecordedAudio(audioBlob, mimeType);
+
+          // Clean up
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+          }
+        };
+
+        // Start recording
+        mediaRecorder.start(1000);
+        setIsRecording(true);
+      } catch (error) {
+        console.error("Error starting recording:", error);
+
+        if (error.name === "NotAllowedError") {
+          notifyError(
+            "Microphone permission denied. Please allow microphone access and try again."
+          );
+        } else if (error.name === "NotFoundError") {
+          notifyError(
+            "No microphone found. Please connect a microphone and try again."
+          );
+        } else if (error.name === "NotSupportedError") {
+          notifyError(
+            "Microphone access not supported. Please use HTTPS or localhost."
+          );
+        } else {
+          notifyError(
+            "Failed to start recording. Please check your microphone and permissions."
+          );
+        }
+      }
+    }
+  };
+
+  // Process recorded audio for OpenAI format
+  const processRecordedAudio = async (audioBlob, mimeType) => {
+    try {
+      // Create filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const fileName = `recording_${timestamp}.wav`;
+
+      // Convert blob to file
+      const audioFile = new File([audioBlob], fileName, { type: "audio/wav" });
+
+      // Check file size (25MB limit for OpenAI)
+      if (audioFile.size > 25 * 1024 * 1024) {
+        notifyError(
+          `Audio file too large: ${fileName}. OpenAI supports max 25MB.`
+        );
+        return;
+      }
+
+      // Convert to ArrayBuffer then to base64 (without data URL prefix)
+      const arrayBuffer = await audioFile.arrayBuffer();
+      const base64Data = btoa(
+        String.fromCharCode(...new Uint8Array(arrayBuffer))
+      );
+
+      // Create file object with proper format for OpenAI
+      const fileObject = {
+        name: fileName,
+        type: "audio",
+        size: audioFile.size,
+        text: base64Data, // Raw base64 without data URL prefix
+        format: "wav", // Store format for OpenAI
+      };
+
+      setSelectedFiles((prevFiles) => [...prevFiles, fileObject]);
+      notifySuccess("Audio recorded successfully");
+    } catch (error) {
+      console.error("Error processing audio file:", error);
+      notifyError("Error processing recorded audio");
+    }
+  };
+
+  const handleFilesChangeAudio = async (e) => {
+    try {
+      // Filter for MP3 and WAV files only
+      const files = Array.from(e.target.files).filter(
+        (file) =>
+          file.type === "audio/mpeg" ||
+          file.type === "audio/mp3" ||
+          file.type === "audio/wav" ||
+          file.type === "audio/wave" ||
+          file.type === "audio/x-wav"
+      );
+
+      // Validate file types
+      if (files.length !== e.target.files.length) {
+        notifyError("Only MP3 and WAV audio files are supported");
+        return;
+      }
+
+      // Process files
+      const validFiles = [];
+      for (const file of files) {
+        // Check file size (25MB limit for OpenAI)
+        if (file.size > 25 * 1024 * 1024) {
+          notifyError(
+            `File too large: ${file.name}. OpenAI supports max 25MB.`
+          );
+        } else {
+          validFiles.push(file);
+        }
+      }
+
+      if (validFiles.length === 0) {
+        return;
+      }
+
+      notifySuccess("Audio file attached");
+
+      // Process valid files - Convert to raw base64
+      const fileList = [];
+      for (const file of validFiles) {
+        // Convert to ArrayBuffer then to base64 (without data URL prefix)
+        const arrayBuffer = await file.arrayBuffer();
+        const base64Data = btoa(
+          String.fromCharCode(...new Uint8Array(arrayBuffer))
+        );
+
+        // Determine format for OpenAI
+        let format = "mp3";
+        if (file.type.includes("wav")) {
+          format = "wav";
+        }
+
+        fileList.push({
+          name: file.name,
+          type: "audio",
+          size: file.size,
+          text: base64Data, // Raw base64 without data URL prefix
+          format: format, // Store format for OpenAI
         });
       }
 
@@ -657,10 +931,6 @@ function Prompt({
     hiddenFileInput.current.value = null;
     hiddenFileInput.current.click();
   };
-
-  useEffect(() => {
-    updateLocalState({ prompt: transcript });
-  }, [transcript]);
 
   return (
     <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto  rounded-2xl shadow-bottom dark:shadow-darkBottom">
@@ -681,116 +951,229 @@ function Prompt({
               </div>
 
               <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 hide-scrollbar">
-                {Array.from(selectedFiles).map((file, index) => (
-                  <div
-                    key={`${file.name}-${index}`}
-                    className="cursor-pointer flex-shrink-0 w-[220px] bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg transition-colors duration-150 overflow-hidden"
-                    onClick={() => setPreviewFile(file)}
-                  >
-                    <div className="p-2 w-full">
-                      <div className="flex items-center gap-2 w-full">
-                        <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded overflow-hidden bg-gray-200 dark:bg-gray-800">
-                          {file.type === "audio" ? (
-                            <img
-                              className="h-5 w-5"
-                              src={file.text}
-                              alt={file.name}
-                            />
-                          ) : file.type === "image" ? (
-                            <img
-                              className="h-full w-full object-cover"
-                              src={file.text}
-                              alt={file.name}
-                            />
-                          ) : file.type === "video" ? (
-                            <img
-                              className="h-5 w-5"
-                              src={video_icon}
-                              alt="video"
-                            />
-                          ) : (
-                            <img
-                              className="h-5 w-5"
-                              src={uploaded}
-                              alt="uploaded"
-                            />
-                          )}
-                        </div>
+                {Array.from(selectedFiles).map((file, index) => {
+                  // Determine file type and styling
+                  const getFileDisplayInfo = (file) => {
+                    if (file.type === "audio") {
+                      return {
+                        bgColor:
+                          "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20",
+                        borderColor: "border-blue-200 dark:border-blue-700/50",
+                        hoverColor:
+                          "hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30",
+                        iconBg: "bg-blue-500 dark:bg-blue-600",
+                        icon: (
+                          <img
+                            className="h-4 w-4 brightness-0 invert"
+                            src={mic}
+                            alt={file.name}
+                          />
+                        ),
+                        badge: file.format?.toUpperCase() || "AUDIO",
+                      };
+                    } else if (file.type === "image") {
+                      return {
+                        bgColor:
+                          "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20",
+                        borderColor:
+                          "border-green-200 dark:border-green-700/50",
+                        hoverColor:
+                          "hover:from-green-100 hover:to-green-200 dark:hover:from-green-800/30 dark:hover:to-green-700/30",
+                        iconBg: "bg-green-500 dark:bg-green-600",
+                        icon: (
+                          <img
+                            className="h-full w-full object-cover rounded"
+                            src={file.text}
+                            alt={file.name}
+                          />
+                        ),
+                        badge: "IMAGE",
+                      };
+                    } else if (file.type === "video") {
+                      return {
+                        bgColor:
+                          "bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20",
+                        borderColor:
+                          "border-purple-200 dark:border-purple-700/50",
+                        hoverColor:
+                          "hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800/30 dark:hover:to-purple-700/30",
+                        iconBg: "bg-purple-500 dark:bg-purple-600",
+                        icon: (
+                          <img
+                            className="h-4 w-4 brightness-0 invert"
+                            src={video_icon}
+                            alt="video"
+                          />
+                        ),
+                        badge: "VIDEO",
+                      };
+                    } else {
+                      // Text/Document files
+                      const getDocumentBadge = (file) => {
+                        if (file.fileType === "pdf") return "PDF";
+                        if (file.fileType === "csv") return "CSV";
+                        if (file.fileType === "markdown") return "MD";
+                        if (file.fileType === "code") return "CODE";
+                        return "DOC";
+                      };
 
-                        <div className="min-w-0 flex-grow pr-8 relative">
-                          <p
-                            className="overflow-hidden whitespace-nowrap text-ellipsis font-medium text-xs"
-                            title={file.name}
+                      return {
+                        bgColor:
+                          "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50",
+                        borderColor: "border-gray-200 dark:border-gray-600/50",
+                        hoverColor:
+                          "hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700/60 dark:hover:to-gray-600/60",
+                        iconBg: "bg-gray-500 dark:bg-gray-600",
+                        icon: (
+                          <img
+                            className="h-4 w-4 brightness-0 invert"
+                            src={uploaded}
+                            alt="uploaded"
+                          />
+                        ),
+                        badge: getDocumentBadge(file),
+                      };
+                    }
+                  };
+
+                  const displayInfo = getFileDisplayInfo(file);
+
+                  return (
+                    <div
+                      key={`${file.name}-${index}`}
+                      className={`cursor-pointer flex-shrink-0 w-[220px] ${displayInfo.bgColor} ${displayInfo.hoverColor} ${displayInfo.borderColor} border rounded-lg transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}
+                      onClick={() => {
+                        // Prepare file for preview
+                        let previewFile = { ...file };
+                        if (file.type === "audio") {
+                          previewFile = {
+                            ...file,
+                            isAudio: true,
+                            data: file.text, // Pass the base64 data
+                          };
+                        }
+                        setPreviewFile(previewFile);
+                      }}
+                    >
+                      <div className="p-3 w-full">
+                        <div className="flex items-start gap-3 w-full">
+                          {/* Icon/Thumbnail */}
+                          <div
+                            className={`h-10 w-10 flex-shrink-0 flex items-center justify-center rounded ${displayInfo.iconBg} overflow-hidden`}
                           >
-                            {file.name}
-                          </p>
-                          <p className="text-gray-500 dark:text-gray-400 text-xs">
-                            {formatFileSize(file.size)}
-                          </p>
+                            {displayInfo.icon}
+                          </div>
 
-                          <button
-                            className="absolute right-0 top-0 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full flex-shrink-0 focus:outline-none"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFile(index);
-                            }}
-                            aria-label="Remove file"
-                          >
-                            <img
-                              src={cross}
-                              alt="remove"
-                              className="h-[14px] w-[14px]"
-                            />
-                          </button>
-                        </div>
-                      </div>
+                          {/* File Info */}
+                          <div className="min-w-0 flex-grow pr-6 relative">
+                            <p
+                              className="font-medium text-sm text-gray-900 dark:text-white leading-tight mb-1"
+                              title={file.name}
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {file.name}
+                            </p>
 
-                      {file.fileType === "pdf" && (
-                        <div className="flex items-center mt-2 w-full">
-                          {file.processed ? (
-                            <span className="text-green-500 text-xs font-medium px-2 py-0.5 bg-green-100 dark:bg-green-900 bg-opacity-30 rounded-full w-full text-center">
-                              Processed
-                            </span>
-                          ) : processingFiles.has(index) ? (
-                            <div className="flex items-center justify-center gap-1 text-gray-500 dark:text-gray-400 text-xs w-full">
-                              <svg
-                                className="animate-spin h-3 w-3"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {formatFileSize(file.size)}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                  file.type === "audio"
+                                    ? "bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200"
+                                    : file.type === "image"
+                                    ? "bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200"
+                                    : file.type === "video"
+                                    ? "bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200"
+                                    : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                                }`}
                               >
-                                <circle
-                                  className="opacity-25"
-                                  cx="12"
-                                  cy="12"
-                                  r="10"
-                                  stroke="currentColor"
-                                  strokeWidth="4"
-                                />
-                                <path
-                                  className="opacity-75"
-                                  fill="currentColor"
-                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                />
-                              </svg>
-                              <span>Processing...</span>
+                                {displayInfo.badge}
+                              </span>
                             </div>
-                          ) : (
+
+                            {/* Remove button */}
                             <button
+                              className="absolute -top-1 -right-2 p-1.5 hover:bg-white/80 dark:hover:bg-black/60 rounded-full flex-shrink-0 focus:outline-none transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handlePdfProcess(file, index);
+                                removeFile(index);
                               }}
-                              className="px-2 py-0.5 bg-blue-600 text-white rounded-full hover:bg-blue-500 text-xs transition-colors w-full"
+                              aria-label="Remove file"
                             >
-                              Process
+                              <img
+                                src={cross}
+                                alt="remove"
+                                className="h-3 w-3 opacity-60 hover:opacity-100 transition-opacity"
+                              />
                             </button>
-                          )}
+                          </div>
                         </div>
-                      )}
+
+                        {/* PDF Processing Status */}
+                        {file.fileType === "pdf" && (
+                          <div className="flex items-center mt-3 w-full">
+                            {file.processed ? (
+                              <span className="text-green-600 dark:text-green-400 text-xs font-medium px-3 py-1 bg-green-100 dark:bg-green-900/30 rounded-full w-full text-center">
+                                ✓ Processed
+                              </span>
+                            ) : processingFiles.has(index) ? (
+                              <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400 text-xs w-full py-1">
+                                <svg
+                                  className="animate-spin h-3 w-3"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  />
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  />
+                                </svg>
+                                <span>Processing...</span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePdfProcess(file, index);
+                                }}
+                                className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-medium transition-colors w-full"
+                              >
+                                Process PDF
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Audio file duration/format info */}
+                        {file.type === "audio" && (
+                          <div className="mt-2 text-center">
+                            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                              Audio File Ready
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -804,7 +1187,7 @@ function Prompt({
           } rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark`}
         >
           {" "}
-          {isImageSupported || isVideoSupported ? (
+          {isImageSupported || isVideoSupported || isAudioSupported ? (
             <div
               className="drag-drop-container"
               onDragOver={(e) => e.preventDefault()}
@@ -872,7 +1255,6 @@ function Prompt({
                   className="h-[30px] w-[30px] cursor-pointer"
                   onClick={() => {
                     updateLocalState({ prompt: "" });
-                    resetTranscript();
                   }}
                   disabled={loading || loadingResend}
                 >
@@ -921,14 +1303,13 @@ function Prompt({
                   />
                 </button>
               </Tooltip>
-              {(isAudioSupported || isImageSupported || isVideoSupported) && (
+              {(isImageSupported || isVideoSupported) && (
                 <>
                   <input
                     type="file"
                     ref={hiddenFileInputImage}
                     multiple
                     accept={getAcceptedFileTypes(
-                      isAudioSupported,
                       isImageSupported,
                       isVideoSupported
                     )}
@@ -950,6 +1331,59 @@ function Prompt({
                   </Tooltip>
                 </>
               )}
+              {isAudioSupported && (
+                <>
+                  <input
+                    type="file"
+                    ref={audioFileInputRef}
+                    accept="audio/mpeg,audio/mp3,audio/wav,audio/wave,audio/x-wav"
+                    multiple
+                    onChange={handleFilesChangeAudio}
+                    style={{ display: "none" }}
+                    id="audio-file-input"
+                  />
+                  <Tooltip
+                    text={
+                      isRecording
+                        ? "Recording... (Release to stop)"
+                        : "Click: Select audio file | Hold: Record audio"
+                    }
+                  >
+                    <button
+                      className={`h-[30px] w-[30px] cursor-pointer transition-all duration-200 ${
+                        isRecording
+                          ? "bg-red-500 rounded-full border-2 border-red-600 animate-pulse"
+                          : isLongPress
+                          ? "bg-blue-500 rounded-full border-2 border-blue-600"
+                          : "bg-transparent"
+                      }`}
+                      type="button"
+                      onMouseDown={handleAudioMouseDown}
+                      onMouseUp={handleAudioMouseUp}
+                      onMouseLeave={handleAudioMouseLeave}
+                      onTouchStart={handleAudioMouseDown}
+                      onTouchEnd={handleAudioMouseUp}
+                      title={
+                        isRecording
+                          ? "Recording... Release to stop"
+                          : "Click: Select file | Hold: Record"
+                      }
+                      disabled={loading || loadingResend}
+                    >
+                      <img
+                        className={`cursor-pointer h-[30px] w-[30px] transition-all duration-200 ${
+                          isRecording || isLongPress
+                            ? "filter brightness-0 invert"
+                            : ""
+                        }`}
+                        src={mic}
+                        alt="microphone"
+                      />
+                    </button>
+                  </Tooltip>
+                </>
+              )}
+
               {loading || loadingResend ? (
                 <Tooltip text={t("description.pause")}>
                   <button className="h-[30px] w-[30px] cursor-pointer">
@@ -958,22 +1392,6 @@ function Prompt({
                       src={pause}
                       alt="pause"
                       onClick={handleCancelRequest}
-                    />
-                  </button>
-                </Tooltip>
-              ) : listening ? (
-                <Tooltip text={t("description.stop")}>
-                  <button
-                    className="h-[30px] w-[30px] cursor-pointer"
-                    type="button"
-                    onClick={() => {
-                      SpeechRecognition.stopListening();
-                    }}
-                  >
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={stop}
-                      alt="stop"
                     />
                   </button>
                 </Tooltip>
@@ -991,39 +1409,7 @@ function Prompt({
                     />
                   </button>
                 </Tooltip>
-              ) : (
-                <Tooltip text={t("description.listen")}>
-                  <button
-                    className="h-[30px] w-[30px] cursor-pointer"
-                    type="button"
-                    onClick={() => {
-                      navigator.permissions
-                        .query({ name: "microphone" })
-                        .then(function (result) {
-                          if (
-                            result.state === "prompt" ||
-                            result.state === "denied"
-                          ) {
-                            setShowMicModal(true);
-                          } else {
-                            let speechRecognitionLanguage =
-                              languageMap[i18n.language];
-                            SpeechRecognition.startListening({
-                              language: speechRecognitionLanguage,
-                              continuous: true,
-                            });
-                          }
-                        });
-                    }}
-                  >
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={mic}
-                      alt="microphone"
-                    />
-                  </button>
-                </Tooltip>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

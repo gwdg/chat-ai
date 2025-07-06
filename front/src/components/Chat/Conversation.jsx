@@ -32,7 +32,6 @@ const Conversation = ({
   setShowModalSession,
   setShowBadRequest,
   setShowFileModal,
-  setShowMicModal,
   setShowHistoryModal,
   toggleAdvOpt,
   updateLocalState,
@@ -158,7 +157,6 @@ const Conversation = ({
         selectedFiles={selectedFiles}
         localState={localState}
         setLocalState={setLocalState}
-        setShowMicModal={setShowMicModal}
         setLoading={setLoading}
         setSelectedFiles={setSelectedFiles}
         setShowModalSession={setShowModalSession}
