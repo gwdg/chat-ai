@@ -598,104 +598,106 @@ function Responses({
           <>
             {!res.info ? (
               <div key={index} className="flex flex-col gap-1">
-                <div
-                  ref={(el) => (containerRefs.current[index] = el)}
-                  className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
-                    editingIndex === index ? "p-0" : "p-3"
-                  } flex flex-col gap-2`}
-                >
-                  {editingIndex === index ? (
-                    <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
-                      <textarea
-                        ref={(el) => (textareaRefs.current[index] = el)}
-                        className="p-2 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
-                        value={editedText}
-                        style={{
-                          minHeight: `${MIN_HEIGHT}px`,
-                          maxHeight: `${MAX_HEIGHT}px`,
-                        }}
-                        onChange={(e) => {
-                          setEditedText(e.target.value);
-                          adjustHeight(index);
-                        }}
-                        onKeyDown={(event) => {
-                          if (
-                            event.key === "Enter" &&
-                            !event.shiftKey &&
-                            editedText?.trim() !== ""
-                          ) {
-                            event.preventDefault();
-                            handleCloseClick(index);
-                            handleSave(index);
-                            setIsEditing(false);
-                          }
-                        }}
-                      />
-                      <div className="flex gap-2 justify-between w-full">
-                        <button
-                          onClick={() => setEditedText("")}
-                          disabled={loading || loadingResend}
-                        >
-                          <img
-                            src={clear}
-                            alt="clear"
-                            className="h-[25px] w-[25px] cursor-pointer"
-                          />
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleCloseClick(index);
-                            handleSave(index);
+                {res.prompt ? (
+                  <div
+                    ref={(el) => (containerRefs.current[index] = el)}
+                    className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
+                      editingIndex === index ? "p-0" : "p-3"
+                    } flex flex-col gap-2`}
+                  >
+                    {editingIndex === index ? (
+                      <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
+                        <textarea
+                          ref={(el) => (textareaRefs.current[index] = el)}
+                          className="p-2 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+                          value={editedText}
+                          style={{
+                            minHeight: `${MIN_HEIGHT}px`,
+                            maxHeight: `${MAX_HEIGHT}px`,
                           }}
-                          disabled={loading || loadingResend}
-                        >
-                          <img
-                            className="cursor-pointer h-[25px] w-[25px]"
-                            src={send}
-                            alt="send"
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2 justify-between items-start group">
-                      <pre
-                        className="font-sans flex-grow min-w-0"
-                        style={{
-                          overflow: "hidden",
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {res.prompt}
-                      </pre>
-                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
-                        <button
-                          onClick={(e) => handleResendClick(index, e)}
-                          disabled={loading || loadingResend}
-                        >
-                          <img
-                            src={icon_resend}
-                            alt="icon_resend"
-                            className="h-[25px] w-[25px] cursor-pointer"
-                          />
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleEditClick(index, res.prompt);
+                          onChange={(e) => {
+                            setEditedText(e.target.value);
+                            adjustHeight(index);
                           }}
-                          disabled={loading || loadingResend}
-                        >
-                          <img
-                            src={edit_icon}
-                            alt="edit_icon"
-                            className="h-[25px] w-[25px] cursor-pointer"
-                          />
-                        </button>
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === "Enter" &&
+                              !event.shiftKey &&
+                              editedText?.trim() !== ""
+                            ) {
+                              event.preventDefault();
+                              handleCloseClick(index);
+                              handleSave(index);
+                              setIsEditing(false);
+                            }
+                          }}
+                        />
+                        <div className="flex gap-2 justify-between w-full">
+                          <button
+                            onClick={() => setEditedText("")}
+                            disabled={loading || loadingResend}
+                          >
+                            <img
+                              src={clear}
+                              alt="clear"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleCloseClick(index);
+                              handleSave(index);
+                            }}
+                            disabled={loading || loadingResend}
+                          >
+                            <img
+                              className="cursor-pointer h-[25px] w-[25px]"
+                              src={send}
+                              alt="send"
+                            />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    ) : res.prompt ? (
+                      <div className="flex gap-2 justify-between items-start group">
+                        <pre
+                          className="font-sans flex-grow min-w-0"
+                          style={{
+                            overflow: "hidden",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {res.prompt}
+                        </pre>
+                        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
+                          <button
+                            onClick={(e) => handleResendClick(index, e)}
+                            disabled={loading || loadingResend}
+                          >
+                            <img
+                              src={icon_resend}
+                              alt="icon_resend"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleEditClick(index, res.prompt);
+                            }}
+                            disabled={loading || loadingResend}
+                          >
+                            <img
+                              src={edit_icon}
+                              alt="edit_icon"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 {(res?.images?.length > 0 ||
                   res?.videos?.length > 0 ||
                   res?.textFiles?.length > 0 ||
