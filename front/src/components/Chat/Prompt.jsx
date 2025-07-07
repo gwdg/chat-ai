@@ -625,8 +625,6 @@ function Prompt({
 
   // Handle media file attachments
   const handleFilesChangeMedia = async (e) => {
-    console.log("🔍 Starting file attachment process...");
-
     try {
       // All supported file types
       const supportedTypes = [
@@ -647,13 +645,8 @@ function Prompt({
         "audio/x-wav",
       ];
 
-      console.log("📁 Files selected:", e.target.files.length);
-
       // Filter for supported file types
       const files = Array.from(e.target.files).filter((file) => {
-        console.log(
-          `📄 Checking file: ${file.name}, type: ${file.type}, size: ${file.size}`
-        );
         return supportedTypes.includes(file.type);
       });
 
@@ -666,13 +659,9 @@ function Prompt({
         return;
       }
 
-      console.log("✅ All files are supported, processing...");
-
       // Process files and check size limits
       const validFiles = [];
       for (const file of files) {
-        console.log(`🔄 Processing: ${file.name}`);
-
         // Different size limits based on file type
         const isAudio = file.type.startsWith("audio/");
         const sizeLimit = isAudio ? 25 * 1024 * 1024 : 50 * 1024 * 1024; // 25MB for audio, 50MB for media
@@ -686,18 +675,14 @@ function Prompt({
             `File too large: ${file.name}. Maximum size is ${limitText}.`
           );
         } else {
-          console.log(`✅ File size OK: ${file.name}`);
           validFiles.push(file);
         }
       }
 
       // If no valid files, return early
       if (validFiles.length === 0) {
-        console.log("❌ No valid files to process");
         return;
       }
-
-      console.log(`📦 Processing ${validFiles.length} valid files...`);
 
       // Notify success
       notifySuccess("File(s) attached");
@@ -705,24 +690,14 @@ function Prompt({
       // Process valid files
       const fileList = [];
       for (const file of validFiles) {
-        console.log(`🔧 Converting file: ${file.name}, type: ${file.type}`);
-
         let processedFile;
 
         if (file.type.startsWith("audio/")) {
-          console.log("🎵 Processing audio file...");
-
           try {
             // Audio processing - Convert to raw base64
-            console.log("📊 Creating ArrayBuffer...");
             const arrayBuffer = await file.arrayBuffer();
-            console.log(
-              `✅ ArrayBuffer created: ${arrayBuffer.byteLength} bytes`
-            );
-
             // Convert to base64 in chunks to avoid memory issues
             const uint8Array = new Uint8Array(arrayBuffer);
-            console.log(`📄 Uint8Array created: ${uint8Array.length} elements`);
 
             // Convert to base64 using FileReader (more reliable)
             const base64Data = await new Promise((resolve, reject) => {
@@ -738,13 +713,8 @@ function Prompt({
               );
             });
 
-            console.log(
-              `✅ Base64 conversion completed: ${base64Data.length} characters`
-            );
-
             // Determine format for OpenAI
             const format = file.type.includes("wav") ? "wav" : "mp3";
-            console.log(`🎼 Audio format detected: ${format}`);
 
             processedFile = {
               name: file.name,
@@ -753,8 +723,6 @@ function Prompt({
               text: base64Data, // Raw base64 without data URL prefix
               format: format, // Store format for OpenAI
             };
-
-            console.log("✅ Audio file processed successfully");
           } catch (audioError) {
             console.error("❌ Error processing audio file:", audioError);
             notifyError(
@@ -763,12 +731,9 @@ function Prompt({
             continue; // Skip this file and continue with others
           }
         } else {
-          console.log("🖼️ Processing media file (image/video)...");
-
           try {
             // Media processing (images/videos) - Use existing readFileAsBase64 function
             const text = await readFileAsBase64(file);
-            console.log(`✅ Media file converted: ${text.substring(0, 50)}...`);
 
             processedFile = {
               name: file.name,
@@ -776,10 +741,7 @@ function Prompt({
               size: file.size,
               text,
             };
-
-            console.log("✅ Media file processed successfully");
           } catch (mediaError) {
-            console.error("❌ Error processing media file:", mediaError);
             notifyError(
               `Error processing media file: ${file.name} - ${mediaError.message}`
             );
@@ -787,41 +749,20 @@ function Prompt({
           }
         }
 
-        console.log(`📋 Final processed file:`, {
-          name: processedFile.name,
-          type: processedFile.type,
-          size: processedFile.size,
-          textLength: processedFile.text?.length || 0,
-          format: processedFile.format || "N/A",
-        });
-
         fileList.push(processedFile);
       }
-
-      console.log(
-        `🎉 All files processed successfully: ${fileList.length} files`
-      );
-      console.log(
-        "📊 Final file list:",
-        fileList.map((f) => ({ name: f.name, type: f.type, size: f.size }))
-      );
 
       // Update state with new files
       setSelectedFiles((prevFiles) => {
         const newFiles = [...prevFiles, ...fileList];
-        console.log(`💾 Updating state with ${newFiles.length} total files`);
         return newFiles;
       });
 
       e.target.value = "";
-      console.log("✅ File attachment process completed successfully");
     } catch (error) {
-      console.error("💥 Fatal error in file attachment:", error);
-      console.error("📍 Error stack:", error.stack);
       notifyError(`An error occurred: ${error.message}`);
     }
   };
-
 
   const handleAudioClick = () => {
     if (loading || loadingResend) return;
@@ -838,7 +779,6 @@ function Prompt({
   const handleAudioRecording = async () => {
     if (isRecording) {
       // Stop recording
-      console.log("🛑 Stopping audio recording...");
       if (
         mediaRecorderRef.current &&
         mediaRecorderRef.current.state !== "inactive"
@@ -848,7 +788,6 @@ function Prompt({
       }
     } else {
       // Start recording
-      console.log("🎙️ Starting audio recording...");
       try {
         // Check if we're on localhost or https for microphone access
         const isSecureContext =
@@ -863,49 +802,49 @@ function Prompt({
           return;
         }
 
-        // Request microphone permission
+        // Request microphone permission with high quality settings
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            sampleRate: 44100, // High quality sample rate
+            sampleRate: 48000, // High quality for better conversion
+            channelCount: 1, // Mono for smaller files
           },
         });
 
         streamRef.current = stream;
         audioChunksRef.current = [];
 
-        // Use MP3-compatible format for better OpenAI compatibility
-        let mimeType = "audio/webm"; // Default fallback
-        let fileExtension = "webm";
+        // Force WAV format for Qwen compatibility
+        let mimeType = "audio/wav";
+        let fileExtension = "wav";
 
-        // Try to use the best supported format
-        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        // Check what the browser supports and prefer WAV-compatible formats
+        if (MediaRecorder.isTypeSupported("audio/wav")) {
+          mimeType = "audio/wav";
+          fileExtension = "wav";
+        } else if (MediaRecorder.isTypeSupported("audio/webm;codecs=pcm")) {
+          mimeType = "audio/webm;codecs=pcm";
+          fileExtension = "webm"; // We'll convert this to WAV
+        } else if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
           mimeType = "audio/webm;codecs=opus";
+          fileExtension = "webm"; // We'll convert this to WAV
+        } else {
+          // Fallback - we'll convert whatever we get
+          mimeType = "audio/webm";
           fileExtension = "webm";
-        } else if (
-          MediaRecorder.isTypeSupported("audio/mp4;codecs=mp4a.40.2")
-        ) {
-          mimeType = "audio/mp4;codecs=mp4a.40.2";
-          fileExtension = "m4a";
-        } else if (MediaRecorder.isTypeSupported("audio/mpeg")) {
-          mimeType = "audio/mpeg";
-          fileExtension = "mp3";
         }
-
-        console.log(`🎵 Using audio format: ${mimeType}`);
 
         const mediaRecorder = new MediaRecorder(stream, {
           mimeType,
-          audioBitsPerSecond: 128000, // Higher quality for better results
+          audioBitsPerSecond: 128000, // Good quality for conversion
         });
 
         mediaRecorderRef.current = mediaRecorder;
 
         // Handle data available event
         mediaRecorder.ondataavailable = (event) => {
-          console.log(`📦 Audio chunk received: ${event.data.size} bytes`);
           if (event.data.size > 0) {
             audioChunksRef.current.push(event.data);
           }
@@ -913,15 +852,12 @@ function Prompt({
 
         // Handle stop event
         mediaRecorder.onstop = async () => {
-          console.log("🔄 Processing recorded audio...");
           const audioBlob = new Blob(audioChunksRef.current, {
             type: mimeType,
           });
 
-          console.log(
-            `📊 Final audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`
-          );
-          await processRecordedAudio(audioBlob, mimeType, fileExtension);
+          // Convert to WAV format for Qwen compatibility
+          await processRecordedAudioForQwen(audioBlob, mimeType);
 
           // Clean up
           if (streamRef.current) {
@@ -931,9 +867,8 @@ function Prompt({
         };
 
         // Start recording
-        mediaRecorder.start(100); // Collect data every 100ms for smoother recording
+        mediaRecorder.start(100); // Collect data every 100ms
         setIsRecording(true);
-        console.log("✅ Recording started successfully");
       } catch (error) {
         console.error("❌ Error starting recording:", error);
 
@@ -960,91 +895,163 @@ function Prompt({
     }
   };
 
-  // Updated process recorded audio function
-  const processRecordedAudio = async (audioBlob, mimeType, fileExtension) => {
+  // Convert recorded audio to WAV format for Qwen 2.5 Omni compatibility
+  const processRecordedAudioForQwen = async (audioBlob, originalMimeType) => {
     try {
-      console.log("🔧 Processing recorded audio...");
-
       // Create filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const fileName = `recording_${timestamp}.${fileExtension}`;
+      const fileName = `recording_${timestamp}.wav`;
 
-      console.log(`📝 Creating file: ${fileName}`);
-
-      // Check file size (25MB limit for OpenAI)
+      // Check file size (25MB limit for Qwen)
       if (audioBlob.size > 25 * 1024 * 1024) {
         console.error(`❌ File too large: ${audioBlob.size} bytes`);
         notifyError(
-          `Audio file too large: ${fileName}. OpenAI supports max 25MB.`
+          `Audio file too large: ${fileName}. Qwen supports max 25MB.`
         );
         return;
       }
 
-      console.log(`✅ File size OK: ${audioBlob.size} bytes`);
+      let wavBlob;
 
-      // Convert to base64 using FileReader (more reliable than manual conversion)
+      // If it's already WAV, use it directly
+      if (originalMimeType.includes("wav")) {
+        wavBlob = audioBlob;
+      } else {
+        // Convert WebM/other formats to WAV
+        wavBlob = await convertToWav(audioBlob);
+      }
+
+      // Convert WAV blob to base64
       const base64Data = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           // Remove the data URL prefix to get raw base64
           const result = reader.result.split(",")[1];
-          console.log(
-            `📄 Base64 conversion completed: ${result.length} characters`
-          );
+
           resolve(result);
         };
         reader.onerror = (error) => {
           console.error("❌ FileReader error:", error);
           reject(error);
         };
-        reader.readAsDataURL(audioBlob);
+        reader.readAsDataURL(wavBlob);
       });
 
-      // Determine the format for OpenAI API
-      let openAIFormat = "mp3"; // Default to mp3 as it's most compatible
-
-      if (mimeType.includes("webm")) {
-        openAIFormat = "webm";
-      } else if (mimeType.includes("mp4") || mimeType.includes("m4a")) {
-        openAIFormat = "m4a";
-      } else if (mimeType.includes("wav")) {
-        openAIFormat = "wav";
-      } else if (mimeType.includes("mpeg")) {
-        openAIFormat = "mp3";
-      }
-
-      console.log(`🎼 OpenAI format: ${openAIFormat}`);
-
-      // Create file object with proper format for your system
+      // Create file object in the format expected by your system
       const fileObject = {
         name: fileName,
         type: "audio",
-        size: audioBlob.size,
+        size: wavBlob.size,
         text: base64Data, // Raw base64 without data URL prefix
-        format: openAIFormat, // Format for OpenAI API
+        format: "wav", // Always WAV for Qwen compatibility
       };
-
-      console.log("📋 Final file object:", {
-        name: fileObject.name,
-        type: fileObject.type,
-        size: fileObject.size,
-        format: fileObject.format,
-        textLength: fileObject.text.length,
-      });
 
       setSelectedFiles((prevFiles) => {
         const newFiles = [...prevFiles, fileObject];
-        console.log(`💾 Added recorded audio. Total files: ${newFiles.length}`);
+
         return newFiles;
       });
 
-      notifySuccess("Audio recorded successfully");
-      console.log("🎉 Audio recording process completed successfully");
+      notifySuccess("Audio recorded and converted to WAV successfully");
     } catch (error) {
-      console.error("💥 Error processing audio file:", error);
-      console.error("📍 Error stack:", error.stack);
       notifyError(`Error processing recorded audio: ${error.message}`);
     }
+  };
+
+  // Convert audio blob to WAV format using Web Audio API
+  const convertToWav = async (audioBlob) => {
+    try {
+      // Create audio context
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)({
+        sampleRate: 16000, // Qwen prefers 16kHz
+      });
+
+      // Convert blob to array buffer
+      const arrayBuffer = await audioBlob.arrayBuffer();
+
+      // Decode audio data
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      // Convert to WAV
+      const wavArrayBuffer = audioBufferToWav(audioBuffer);
+      const wavBlob = new Blob([wavArrayBuffer], { type: "audio/wav" });
+
+      // Close audio context to free resources
+      audioContext.close();
+
+      return wavBlob;
+    } catch (error) {
+      console.error("Error converting to WAV:", error);
+      throw error; // Re-throw the error so it can be caught by the caller
+    }
+  };
+
+  // Convert AudioBuffer to WAV format
+  const audioBufferToWav = (audioBuffer) => {
+    const numChannels = audioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+
+    const result = new ArrayBuffer(44 + audioBuffer.length * numChannels * 2);
+    const view = new DataView(result);
+
+    // WAV header
+    const writeString = (offset, string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    let offset = 0;
+    writeString(offset, "RIFF");
+    offset += 4;
+    view.setUint32(offset, 36 + audioBuffer.length * numChannels * 2, true);
+    offset += 4;
+    writeString(offset, "WAVE");
+    offset += 4;
+    writeString(offset, "fmt ");
+    offset += 4;
+    view.setUint32(offset, 16, true);
+    offset += 4;
+    view.setUint16(offset, format, true);
+    offset += 2;
+    view.setUint16(offset, numChannels, true);
+    offset += 2;
+    view.setUint32(offset, sampleRate, true);
+    offset += 4;
+    view.setUint32(offset, (sampleRate * numChannels * bitDepth) / 8, true);
+    offset += 4;
+    view.setUint16(offset, (numChannels * bitDepth) / 8, true);
+    offset += 2;
+    view.setUint16(offset, bitDepth, true);
+    offset += 2;
+    writeString(offset, "data");
+    offset += 4;
+    view.setUint32(offset, audioBuffer.length * numChannels * 2, true);
+    offset += 4;
+
+    // Convert float audio data to 16-bit PCM
+    const channels = [];
+    for (let channel = 0; channel < numChannels; channel++) {
+      channels.push(audioBuffer.getChannelData(channel));
+    }
+
+    let sampleIndex = 0;
+    for (let i = 0; i < audioBuffer.length; i++) {
+      for (let channel = 0; channel < numChannels; channel++) {
+        const sample = Math.max(-1, Math.min(1, channels[channel][i]));
+        view.setInt16(
+          offset,
+          sample < 0 ? sample * 0x8000 : sample * 0x7fff,
+          true
+        );
+        offset += 2;
+      }
+    }
+
+    return result;
   };
 
   // Trigger file input click
@@ -1052,10 +1059,6 @@ function Prompt({
     hiddenFileInput.current.value = null;
     hiddenFileInput.current.click();
   };
-
-  useEffect(() => {
-    console.log("Selected files changed:", selectedFiles);
-  }, [selectedFiles]);
 
   return (
     <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto  rounded-2xl shadow-bottom dark:shadow-darkBottom">
