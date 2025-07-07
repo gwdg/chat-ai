@@ -11,23 +11,29 @@ const PreviewModal = ({ file, onClose }) => {
   const [duration, setDuration] = useState(0);
   const audioRef = useRef(null);
 
-  // Determine content type
+  // Determine content type - Updated logic for new file format
   const isTextContent =
     typeof file === "object" &&
     file.content &&
     file.fileType !== "image" &&
+    file.type !== "audio" &&
     !file.isAudio;
-  const isAudioContent = typeof file === "object" && file.isAudio;
+
+  const isAudioContent =
+    typeof file === "object" && (file.isAudio || file.type === "audio");
+
   const isImageContent = !isTextContent && !isAudioContent;
 
-  const content =
-    typeof file === "string"
-      ? file
-      : isTextContent
-      ? file.content
-      : isAudioContent
-      ? file.data
-      : file.text;
+  // Updated content extraction logic
+  const content = (() => {
+    if (typeof file === "string") return file;
+    if (isTextContent) return file.content;
+    if (isAudioContent) {
+      // Handle both old and new audio formats
+      return file.data || file.text;
+    }
+    return file.text || file.content;
+  })();
 
   const title =
     typeof file === "string"
@@ -68,7 +74,8 @@ const PreviewModal = ({ file, onClose }) => {
       setCurrentTime(0);
     };
 
-    const handleError = () => {
+    const handleError = (e) => {
+      console.error("Audio loading error:", e);
       setError(true);
       setIsLoading(false);
     };
@@ -197,6 +204,19 @@ const PreviewModal = ({ file, onClose }) => {
     }
   };
 
+  // Create audio source URL with better error handling
+  const audioSrc = (() => {
+    if (!isAudioContent || !content) return null;
+
+    try {
+      const format = file.format || "wav";
+      return `data:audio/${format};base64,${content}`;
+    } catch (error) {
+      console.error("Error creating audio source:", error);
+      return null;
+    }
+  })();
+
   return (
     <ContainerModal showModal={onClose}>
       <div className="dark:border-border_dark rounded-2xl bg-white dark:bg-black p-4 w-[90vw] sm:w-[70vw] max-w-[1000px] max-h-[95vh] overflow-hidden">
@@ -289,14 +309,10 @@ const PreviewModal = ({ file, onClose }) => {
             </div>
           )}
 
-          {isAudioContent && (
+          {isAudioContent && audioSrc && (
             <div className="w-full max-w-md p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl border border-blue-200 dark:border-blue-700/50">
               {/* Audio element */}
-              <audio
-                ref={audioRef}
-                src={`data:audio/${file.format || "wav"};base64,${content}`}
-                preload="metadata"
-              />
+              <audio ref={audioRef} src={audioSrc} preload="metadata" />
 
               {/* Audio info */}
               <div className="text-center mb-6">
@@ -313,7 +329,8 @@ const PreviewModal = ({ file, onClose }) => {
                   {file.name}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {file.format?.toUpperCase()} • {formatFileSize(file.size)}
+                  {(file.format || "AUDIO")?.toUpperCase()} •{" "}
+                  {formatFileSize(file.size)}
                 </p>
               </div>
 
@@ -372,6 +389,12 @@ const PreviewModal = ({ file, onClose }) => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {isAudioContent && !audioSrc && (
+            <div className="text-red-500 dark:text-red-400 text-center p-4">
+              Failed to load audio file.
             </div>
           )}
 

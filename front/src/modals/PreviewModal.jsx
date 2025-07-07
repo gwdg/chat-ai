@@ -221,7 +221,31 @@ const AudioPlayer = ({ file }) => {
     return `${size.toFixed(1)} ${units[unitIndex]}`;
   };
 
-  if (error) {
+  // Create audio source URL from the file data
+  const audioSrc = useMemo(() => {
+    try {
+      // Handle different file formats from your file handler
+      if (file.text && file.format) {
+        // New format from your updated handler
+        return `data:audio/${file.format};base64,${file.text}`;
+      } else if (file.data && file.format) {
+        // Legacy format
+        return `data:audio/${file.format};base64,${file.data}`;
+      } else if (file.text && file.type === "audio") {
+        // Fallback - try to determine format from name
+        const extension = file.name?.split(".").pop()?.toLowerCase();
+        const format = extension === "wav" ? "wav" : "mpeg";
+        return `data:audio/${format};base64,${file.text}`;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error creating audio source:", error);
+      setError(true);
+      return null;
+    }
+  }, [file]);
+
+  if (error || !audioSrc) {
     return (
       <div className="w-full max-w-md p-6 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-700/50 mx-auto">
         <div className="text-center text-red-600 dark:text-red-400">
@@ -234,11 +258,7 @@ const AudioPlayer = ({ file }) => {
   return (
     <div className="w-full max-w-md p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl border border-blue-200 dark:border-blue-700/50 mx-auto">
       {/* Audio element */}
-      <audio
-        ref={audioRef}
-        src={`data:audio/${file.format || "wav"};base64,${file.data}`}
-        preload="metadata"
-      />
+      <audio ref={audioRef} src={audioSrc} preload="metadata" />
 
       {/* Audio info */}
       <div className="text-center mb-6">
@@ -255,7 +275,8 @@ const AudioPlayer = ({ file }) => {
           {file.name}
         </h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          {file.format?.toUpperCase()} • {formatFileSize(file.size)}
+          {(file.format || "audio")?.toUpperCase()} •{" "}
+          {formatFileSize(file.size)}
         </p>
       </div>
 
@@ -339,7 +360,8 @@ const PreviewModal = ({ file, onClose }) => {
 
   // Helper function to get file type
   const getFileType = (file) => {
-    if (file?.isAudio) return "audio";
+    // Check for audio type first
+    if (file?.type === "audio" || file?.isAudio) return "audio";
     if (file?.type) return file.type;
     if (file?.content?.type) return file.content.type;
     if (file?.fileType) return file.fileType;
@@ -389,8 +411,9 @@ const PreviewModal = ({ file, onClose }) => {
         if (!fileName.includes(".")) {
           fileName += `.${file.format || "wav"}`;
         }
-        // Convert base64 to blob
-        const byteCharacters = atob(file.data);
+        // Convert base64 to blob - handle both old and new format
+        const base64Data = file.text || file.data;
+        const byteCharacters = atob(base64Data);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
           byteNumbers[i] = byteCharacters.charCodeAt(i);

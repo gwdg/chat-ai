@@ -270,7 +270,11 @@ function Prompt({
     adjustHeight();
   };
 
-  const getAcceptedFileTypes = (isImageSupported, isVideoSupported) => {
+  const getAcceptedFileTypes = (
+    isImageSupported,
+    isVideoSupported,
+    isAudioSupported
+  ) => {
     const types = [];
 
     if (isImageSupported) {
@@ -279,9 +283,12 @@ function Prompt({
     if (isVideoSupported) {
       types.push(".mp4", ".avi");
     }
+    if (isAudioSupported) {
+      types.push(".mp3", ".wav");
+    }
+
     return types.join(",");
   };
-
   // Handle cancellation of ongoing requests
   const handleCancelRequest = () => {
     cancelRequest(notifyError);
@@ -618,105 +625,220 @@ function Prompt({
 
   // Handle media file attachments
   const handleFilesChangeMedia = async (e) => {
+    console.log("🔍 Starting file attachment process...");
+
     try {
-      // Filter for supported image and video types
-      const files = Array.from(e.target.files).filter(
-        (file) =>
-          file.type === "image/jpeg" ||
-          file.type === "image/png" ||
-          file.type === "image/gif" ||
-          file.type === "image/webp" ||
-          file.type === "video/mp4" ||
-          file.type === "video/avi" ||
-          file.type === "video/msvideo"
-      );
+      // All supported file types
+      const supportedTypes = [
+        // Images
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        // Videos
+        "video/mp4",
+        "video/avi",
+        "video/msvideo",
+        // Audio
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/wav",
+        "audio/wave",
+        "audio/x-wav",
+      ];
+
+      console.log("📁 Files selected:", e.target.files.length);
+
+      // Filter for supported file types
+      const files = Array.from(e.target.files).filter((file) => {
+        console.log(
+          `📄 Checking file: ${file.name}, type: ${file.type}, size: ${file.size}`
+        );
+        return supportedTypes.includes(file.type);
+      });
 
       // Validate file types
       if (files.length !== e.target.files.length) {
-        notifyError("All files must be valid supported media files");
+        console.error("❌ Some files are not supported");
+        notifyError(
+          "Only images, videos, and audio files (MP3/WAV) are supported"
+        );
         return;
       }
 
-      // Process files
+      console.log("✅ All files are supported, processing...");
+
+      // Process files and check size limits
       const validFiles = [];
       for (const file of files) {
-        // Check file size
-        if (file.size > 50 * 1024 * 1024) {
-          // 50MB
-          notifyError(`File too large: ${file.name}`);
+        console.log(`🔄 Processing: ${file.name}`);
+
+        // Different size limits based on file type
+        const isAudio = file.type.startsWith("audio/");
+        const sizeLimit = isAudio ? 25 * 1024 * 1024 : 50 * 1024 * 1024; // 25MB for audio, 50MB for media
+        const limitText = isAudio ? "25MB" : "50MB";
+
+        if (file.size > sizeLimit) {
+          console.error(
+            `❌ File too large: ${file.name} (${file.size} bytes > ${sizeLimit} bytes)`
+          );
+          notifyError(
+            `File too large: ${file.name}. Maximum size is ${limitText}.`
+          );
         } else {
+          console.log(`✅ File size OK: ${file.name}`);
           validFiles.push(file);
         }
       }
 
-      // If there are no valid files left after size check, notify and return
+      // If no valid files, return early
       if (validFiles.length === 0) {
-        // notifyError("No valid files to attach");
+        console.log("❌ No valid files to process");
         return;
       }
 
-      // If there are valid files, notify success
-      notifySuccess("File attached");
+      console.log(`📦 Processing ${validFiles.length} valid files...`);
+
+      // Notify success
+      notifySuccess("File(s) attached");
 
       // Process valid files
       const fileList = [];
       for (const file of validFiles) {
-        const text = await readFileAsBase64(file);
-        fileList.push({
-          name: file.name,
-          type: file.type.startsWith("image/") ? "image" : "video",
-          size: file.size,
-          text,
+        console.log(`🔧 Converting file: ${file.name}, type: ${file.type}`);
+
+        let processedFile;
+
+        if (file.type.startsWith("audio/")) {
+          console.log("🎵 Processing audio file...");
+
+          try {
+            // Audio processing - Convert to raw base64
+            console.log("📊 Creating ArrayBuffer...");
+            const arrayBuffer = await file.arrayBuffer();
+            console.log(
+              `✅ ArrayBuffer created: ${arrayBuffer.byteLength} bytes`
+            );
+
+            // Convert to base64 in chunks to avoid memory issues
+            const uint8Array = new Uint8Array(arrayBuffer);
+            console.log(`📄 Uint8Array created: ${uint8Array.length} elements`);
+
+            // Convert to base64 using FileReader (more reliable)
+            const base64Data = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                // Remove the data URL prefix to get raw base64
+                const result = reader.result.split(",")[1];
+                resolve(result);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(
+                new Blob([arrayBuffer], { type: file.type })
+              );
+            });
+
+            console.log(
+              `✅ Base64 conversion completed: ${base64Data.length} characters`
+            );
+
+            // Determine format for OpenAI
+            const format = file.type.includes("wav") ? "wav" : "mp3";
+            console.log(`🎼 Audio format detected: ${format}`);
+
+            processedFile = {
+              name: file.name,
+              type: "audio",
+              size: file.size,
+              text: base64Data, // Raw base64 without data URL prefix
+              format: format, // Store format for OpenAI
+            };
+
+            console.log("✅ Audio file processed successfully");
+          } catch (audioError) {
+            console.error("❌ Error processing audio file:", audioError);
+            notifyError(
+              `Error processing audio file: ${file.name} - ${audioError.message}`
+            );
+            continue; // Skip this file and continue with others
+          }
+        } else {
+          console.log("🖼️ Processing media file (image/video)...");
+
+          try {
+            // Media processing (images/videos) - Use existing readFileAsBase64 function
+            const text = await readFileAsBase64(file);
+            console.log(`✅ Media file converted: ${text.substring(0, 50)}...`);
+
+            processedFile = {
+              name: file.name,
+              type: file.type.startsWith("image/") ? "image" : "video",
+              size: file.size,
+              text,
+            };
+
+            console.log("✅ Media file processed successfully");
+          } catch (mediaError) {
+            console.error("❌ Error processing media file:", mediaError);
+            notifyError(
+              `Error processing media file: ${file.name} - ${mediaError.message}`
+            );
+            continue;
+          }
+        }
+
+        console.log(`📋 Final processed file:`, {
+          name: processedFile.name,
+          type: processedFile.type,
+          size: processedFile.size,
+          textLength: processedFile.text?.length || 0,
+          format: processedFile.format || "N/A",
         });
+
+        fileList.push(processedFile);
       }
 
-      setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
+      console.log(
+        `🎉 All files processed successfully: ${fileList.length} files`
+      );
+      console.log(
+        "📊 Final file list:",
+        fileList.map((f) => ({ name: f.name, type: f.type, size: f.size }))
+      );
+
+      // Update state with new files
+      setSelectedFiles((prevFiles) => {
+        const newFiles = [...prevFiles, ...fileList];
+        console.log(`💾 Updating state with ${newFiles.length} total files`);
+        return newFiles;
+      });
+
       e.target.value = "";
+      console.log("✅ File attachment process completed successfully");
     } catch (error) {
-      notifyError("An error occurred: ", error);
+      console.error("💥 Fatal error in file attachment:", error);
+      console.error("📍 Error stack:", error.stack);
+      notifyError(`An error occurred: ${error.message}`);
     }
   };
 
-  const handleAudioMouseDown = () => {
-    setIsLongPress(false);
-    const timer = setTimeout(() => {
-      setIsLongPress(true);
-      handleAudioRecording(); // Start recording
-    }, 500); // 500ms for long press
-    setPressTimer(timer);
-  };
 
-  const handleAudioMouseUp = () => {
-    if (pressTimer) {
-      clearTimeout(pressTimer);
-      setPressTimer(null);
+  const handleAudioClick = () => {
+    if (loading || loadingResend) return;
+
+    if (isRecording) {
+      // Stop recording
+      handleAudioRecording();
+    } else {
+      // Start recording
+      handleAudioRecording();
     }
-
-    // If it was a short click and not currently recording
-    if (!isLongPress && !isRecording) {
-      // Trigger file selection
-      audioFileInputRef.current?.click();
-    }
-
-    // If it was a long press and currently recording, stop recording
-    if (isLongPress && isRecording) {
-      handleAudioRecording(); // Stop recording
-    }
-
-    setIsLongPress(false);
-  };
-
-  const handleAudioMouseLeave = () => {
-    if (pressTimer) {
-      clearTimeout(pressTimer);
-      setPressTimer(null);
-    }
-    setIsLongPress(false);
   };
 
   const handleAudioRecording = async () => {
     if (isRecording) {
       // Stop recording
+      console.log("🛑 Stopping audio recording...");
       if (
         mediaRecorderRef.current &&
         mediaRecorderRef.current.state !== "inactive"
@@ -726,6 +848,7 @@ function Prompt({
       }
     } else {
       // Start recording
+      console.log("🎙️ Starting audio recording...");
       try {
         // Check if we're on localhost or https for microphone access
         const isSecureContext =
@@ -746,31 +869,43 @@ function Prompt({
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
+            sampleRate: 44100, // High quality sample rate
           },
         });
 
         streamRef.current = stream;
         audioChunksRef.current = [];
 
-        // Create MediaRecorder with preferred format for OpenAI compatibility
-        let mimeType = "audio/webm";
+        // Use MP3-compatible format for better OpenAI compatibility
+        let mimeType = "audio/webm"; // Default fallback
+        let fileExtension = "webm";
+
+        // Try to use the best supported format
         if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
           mimeType = "audio/webm;codecs=opus";
-        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
-          mimeType = "audio/mp4";
-        } else if (MediaRecorder.isTypeSupported("audio/wav")) {
-          mimeType = "audio/wav";
+          fileExtension = "webm";
+        } else if (
+          MediaRecorder.isTypeSupported("audio/mp4;codecs=mp4a.40.2")
+        ) {
+          mimeType = "audio/mp4;codecs=mp4a.40.2";
+          fileExtension = "m4a";
+        } else if (MediaRecorder.isTypeSupported("audio/mpeg")) {
+          mimeType = "audio/mpeg";
+          fileExtension = "mp3";
         }
+
+        console.log(`🎵 Using audio format: ${mimeType}`);
 
         const mediaRecorder = new MediaRecorder(stream, {
           mimeType,
-          audioBitsPerSecond: 64000,
+          audioBitsPerSecond: 128000, // Higher quality for better results
         });
 
         mediaRecorderRef.current = mediaRecorder;
 
         // Handle data available event
         mediaRecorder.ondataavailable = (event) => {
+          console.log(`📦 Audio chunk received: ${event.data.size} bytes`);
           if (event.data.size > 0) {
             audioChunksRef.current.push(event.data);
           }
@@ -778,10 +913,15 @@ function Prompt({
 
         // Handle stop event
         mediaRecorder.onstop = async () => {
+          console.log("🔄 Processing recorded audio...");
           const audioBlob = new Blob(audioChunksRef.current, {
             type: mimeType,
           });
-          await processRecordedAudio(audioBlob, mimeType);
+
+          console.log(
+            `📊 Final audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`
+          );
+          await processRecordedAudio(audioBlob, mimeType, fileExtension);
 
           // Clean up
           if (streamRef.current) {
@@ -791,10 +931,11 @@ function Prompt({
         };
 
         // Start recording
-        mediaRecorder.start(1000);
+        mediaRecorder.start(100); // Collect data every 100ms for smoother recording
         setIsRecording(true);
+        console.log("✅ Recording started successfully");
       } catch (error) {
-        console.error("Error starting recording:", error);
+        console.error("❌ Error starting recording:", error);
 
         if (error.name === "NotAllowedError") {
           notifyError(
@@ -813,116 +954,96 @@ function Prompt({
             "Failed to start recording. Please check your microphone and permissions."
           );
         }
+
+        setIsRecording(false);
       }
     }
   };
 
-  // Process recorded audio for OpenAI format
-  const processRecordedAudio = async (audioBlob, mimeType) => {
+  // Updated process recorded audio function
+  const processRecordedAudio = async (audioBlob, mimeType, fileExtension) => {
     try {
+      console.log("🔧 Processing recorded audio...");
+
       // Create filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const fileName = `recording_${timestamp}.wav`;
+      const fileName = `recording_${timestamp}.${fileExtension}`;
 
-      // Convert blob to file
-      const audioFile = new File([audioBlob], fileName, { type: "audio/wav" });
+      console.log(`📝 Creating file: ${fileName}`);
 
       // Check file size (25MB limit for OpenAI)
-      if (audioFile.size > 25 * 1024 * 1024) {
+      if (audioBlob.size > 25 * 1024 * 1024) {
+        console.error(`❌ File too large: ${audioBlob.size} bytes`);
         notifyError(
           `Audio file too large: ${fileName}. OpenAI supports max 25MB.`
         );
         return;
       }
 
-      // Convert to ArrayBuffer then to base64 (without data URL prefix)
-      const arrayBuffer = await audioFile.arrayBuffer();
-      const base64Data = btoa(
-        String.fromCharCode(...new Uint8Array(arrayBuffer))
-      );
+      console.log(`✅ File size OK: ${audioBlob.size} bytes`);
 
-      // Create file object with proper format for OpenAI
+      // Convert to base64 using FileReader (more reliable than manual conversion)
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // Remove the data URL prefix to get raw base64
+          const result = reader.result.split(",")[1];
+          console.log(
+            `📄 Base64 conversion completed: ${result.length} characters`
+          );
+          resolve(result);
+        };
+        reader.onerror = (error) => {
+          console.error("❌ FileReader error:", error);
+          reject(error);
+        };
+        reader.readAsDataURL(audioBlob);
+      });
+
+      // Determine the format for OpenAI API
+      let openAIFormat = "mp3"; // Default to mp3 as it's most compatible
+
+      if (mimeType.includes("webm")) {
+        openAIFormat = "webm";
+      } else if (mimeType.includes("mp4") || mimeType.includes("m4a")) {
+        openAIFormat = "m4a";
+      } else if (mimeType.includes("wav")) {
+        openAIFormat = "wav";
+      } else if (mimeType.includes("mpeg")) {
+        openAIFormat = "mp3";
+      }
+
+      console.log(`🎼 OpenAI format: ${openAIFormat}`);
+
+      // Create file object with proper format for your system
       const fileObject = {
         name: fileName,
         type: "audio",
-        size: audioFile.size,
+        size: audioBlob.size,
         text: base64Data, // Raw base64 without data URL prefix
-        format: "wav", // Store format for OpenAI
+        format: openAIFormat, // Format for OpenAI API
       };
 
-      setSelectedFiles((prevFiles) => [...prevFiles, fileObject]);
+      console.log("📋 Final file object:", {
+        name: fileObject.name,
+        type: fileObject.type,
+        size: fileObject.size,
+        format: fileObject.format,
+        textLength: fileObject.text.length,
+      });
+
+      setSelectedFiles((prevFiles) => {
+        const newFiles = [...prevFiles, fileObject];
+        console.log(`💾 Added recorded audio. Total files: ${newFiles.length}`);
+        return newFiles;
+      });
+
       notifySuccess("Audio recorded successfully");
+      console.log("🎉 Audio recording process completed successfully");
     } catch (error) {
-      console.error("Error processing audio file:", error);
-      notifyError("Error processing recorded audio");
-    }
-  };
-
-  const handleFilesChangeAudio = async (e) => {
-    try {
-      // Filter for MP3 and WAV files only
-      const files = Array.from(e.target.files).filter(
-        (file) =>
-          file.type === "audio/mpeg" ||
-          file.type === "audio/mp3" ||
-          file.type === "audio/wav" ||
-          file.type === "audio/wave" ||
-          file.type === "audio/x-wav"
-      );
-
-      // Validate file types
-      if (files.length !== e.target.files.length) {
-        notifyError("Only MP3 and WAV audio files are supported");
-        return;
-      }
-
-      // Process files
-      const validFiles = [];
-      for (const file of files) {
-        // Check file size (25MB limit for OpenAI)
-        if (file.size > 25 * 1024 * 1024) {
-          notifyError(
-            `File too large: ${file.name}. OpenAI supports max 25MB.`
-          );
-        } else {
-          validFiles.push(file);
-        }
-      }
-
-      if (validFiles.length === 0) {
-        return;
-      }
-
-      notifySuccess("Audio file attached");
-
-      // Process valid files - Convert to raw base64
-      const fileList = [];
-      for (const file of validFiles) {
-        // Convert to ArrayBuffer then to base64 (without data URL prefix)
-        const arrayBuffer = await file.arrayBuffer();
-        const base64Data = btoa(
-          String.fromCharCode(...new Uint8Array(arrayBuffer))
-        );
-
-        // Determine format for OpenAI
-        let format = "mp3";
-        if (file.type.includes("wav")) {
-          format = "wav";
-        }
-
-        fileList.push({
-          name: file.name,
-          type: "audio",
-          size: file.size,
-          text: base64Data, // Raw base64 without data URL prefix
-          format: format, // Store format for OpenAI
-        });
-      }
-
-      setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
-      e.target.value = "";
-    } catch (error) {
-      notifyError("An error occurred: ", error);
+      console.error("💥 Error processing audio file:", error);
+      console.error("📍 Error stack:", error.stack);
+      notifyError(`Error processing recorded audio: ${error.message}`);
     }
   };
 
@@ -931,6 +1052,10 @@ function Prompt({
     hiddenFileInput.current.value = null;
     hiddenFileInput.current.click();
   };
+
+  useEffect(() => {
+    console.log("Selected files changed:", selectedFiles);
+  }, [selectedFiles]);
 
   return (
     <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto  rounded-2xl shadow-bottom dark:shadow-darkBottom">
@@ -1043,15 +1168,35 @@ function Prompt({
                       key={`${file.name}-${index}`}
                       className={`cursor-pointer flex-shrink-0 w-[220px] ${displayInfo.bgColor} ${displayInfo.hoverColor} ${displayInfo.borderColor} border rounded-lg transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}
                       onClick={() => {
-                        // Prepare file for preview
-                        let previewFile = { ...file };
+                        // Updated preview preparation logic
+                        let previewFile;
+
                         if (file.type === "audio") {
+                          // For audio files, ensure we pass the correct format for PreviewModal
                           previewFile = {
-                            ...file,
-                            isAudio: true,
-                            data: file.text, // Pass the base64 data
+                            name: file.name,
+                            type: "audio",
+                            text: file.text, // Use 'text' field which contains base64 data
+                            format: file.format,
+                            size: file.size,
+                          };
+                        } else if (file.type === "image") {
+                          // For images, pass as simple string or keep object format
+                          previewFile = file.text || file;
+                        } else if (file.type === "video") {
+                          // For videos, pass the data URL
+                          previewFile = file.text || file;
+                        } else {
+                          // For text/document files, preserve original structure
+                          previewFile = {
+                            content: file.content || file.text,
+                            name: file.name,
+                            fileType: file.fileType,
+                            processed: file.processed,
+                            processedContent: file.processedContent,
                           };
                         }
+
                         setPreviewFile(previewFile);
                       }}
                     >
@@ -1303,7 +1448,7 @@ function Prompt({
                   />
                 </button>
               </Tooltip>
-              {(isImageSupported || isVideoSupported) && (
+              {(isImageSupported || isVideoSupported || isAudioSupported) && (
                 <>
                   <input
                     type="file"
@@ -1311,7 +1456,8 @@ function Prompt({
                     multiple
                     accept={getAcceptedFileTypes(
                       isImageSupported,
-                      isVideoSupported
+                      isVideoSupported,
+                      isAudioSupported
                     )}
                     onChange={handleFilesChangeMedia}
                     className="hidden"
@@ -1333,52 +1479,35 @@ function Prompt({
               )}
               {isAudioSupported && (
                 <>
-                  <input
-                    type="file"
-                    ref={audioFileInputRef}
-                    accept="audio/mpeg,audio/mp3,audio/wav,audio/wave,audio/x-wav"
-                    multiple
-                    onChange={handleFilesChangeAudio}
-                    style={{ display: "none" }}
-                    id="audio-file-input"
-                  />
                   <Tooltip
-                    text={
-                      isRecording
-                        ? "Recording... (Release to stop)"
-                        : "Click: Select audio file | Hold: Record audio"
-                    }
+                    text={isRecording ? "Stop Recording" : "Start Recording"}
                   >
                     <button
-                      className={`h-[30px] w-[30px] cursor-pointer transition-all duration-200 ${
+                      className={`h-[30px] w-[30px] cursor-pointer transition-all duration-200 flex items-center justify-center rounded-full ${
                         isRecording
-                          ? "bg-red-500 rounded-full border-2 border-red-600 animate-pulse"
-                          : isLongPress
-                          ? "bg-blue-500 rounded-full border-2 border-blue-600"
-                          : "bg-transparent"
+                          ? "bg-red-500 border-2 border-red-600 animate-pulse"
+                          : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
                       }`}
                       type="button"
-                      onMouseDown={handleAudioMouseDown}
-                      onMouseUp={handleAudioMouseUp}
-                      onMouseLeave={handleAudioMouseLeave}
-                      onTouchStart={handleAudioMouseDown}
-                      onTouchEnd={handleAudioMouseUp}
+                      onClick={handleAudioClick}
                       title={
                         isRecording
-                          ? "Recording... Release to stop"
-                          : "Click: Select file | Hold: Record"
+                          ? "Click to stop recording"
+                          : "Click to start recording"
                       }
                       disabled={loading || loadingResend}
                     >
-                      <img
-                        className={`cursor-pointer h-[30px] w-[30px] transition-all duration-200 ${
-                          isRecording || isLongPress
-                            ? "filter brightness-0 invert"
-                            : ""
-                        }`}
-                        src={mic}
-                        alt="microphone"
-                      />
+                      {isRecording ? (
+                        // Stop icon when recording
+                        <div className="w-3 h-3 bg-white rounded-sm"></div>
+                      ) : (
+                        // Microphone icon when not recording
+                        <img
+                          className="h-[18px] w-[18px]"
+                          src={mic}
+                          alt="microphone"
+                        />
+                      )}
                     </button>
                   </Tooltip>
                 </>

@@ -696,11 +696,12 @@ function Responses({
                     </div>
                   )}
                 </div>
-
                 {(res?.images?.length > 0 ||
                   res?.videos?.length > 0 ||
-                  res?.textFiles?.length > 0) && (
+                  res?.textFiles?.length > 0 ||
+                  res?.audioFiles?.length > 0) && (
                   <div className="flex gap-2 overflow-x-auto items-center p-3">
+                    {/* Images */}
                     {res.images?.map((imageObj, imgIndex) => {
                       if (
                         imageObj.type === "image_url" &&
@@ -723,6 +724,8 @@ function Responses({
                       }
                       return null;
                     })}
+
+                    {/* Videos */}
                     {res.videos?.map((videoObj, vidIndex) => {
                       if (videoObj.type === "video_url") {
                         return (
@@ -731,25 +734,25 @@ function Responses({
                             src={video_icon}
                             alt="Video content"
                             className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                            onClick={() =>
+                              setPreviewFile(
+                                videoObj.video_url?.url || videoObj.text
+                              )
+                            }
                           />
                         );
                       }
                       return null;
                     })}
+
+                    {/* Text Files */}
                     {res.textFiles?.map((textObj, textIndex) => {
                       if (textObj.fileType === "text") {
-                        // The correct path to access text content
                         const textContent = textObj.content;
-
-                        // Get file type from content or default to "txt"
                         const fileType = textObj.content.fileType || "txt";
-
-                        // Get a preview of the text (first 50 characters)
                         const textPreview =
                           textContent.substring(0, 100) +
                           (textContent.length > 100 ? "..." : "");
-
-                        // Get file name if available
                         const fileName = textContent.split(":")[0] || "File";
 
                         return (
@@ -764,23 +767,14 @@ function Responses({
                               })
                             }
                           >
-                            {/* File name at top */}
                             <div className="px-3 py-2 font-medium text-sm truncate border-b text-black dark:text-white">
                               {fileName}
                             </div>
-
-                            {/* Text preview in middle */}
                             <div className="flex-1 p-3 text-xs overflow-hidden text-tertiary">
                               {textPreview}
                             </div>
-
-                            {/* File type indicator at bottom */}
                             <div className="flex justify-center items-center pb-2">
-                              <span
-                                className="px-3 py-1 text-xs font-medium rounded-full 
-                        bg-blue-100 dark:bg-blue-900 
-                        text-blue-800 dark:text-blue-200 uppercase"
-                              >
+                              <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 uppercase">
                                 {fileType}
                               </span>
                             </div>
@@ -789,22 +783,19 @@ function Responses({
                       }
                       return null;
                     })}
-                  </div>
-                )}
-                {res?.audioFiles?.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto items-center p-3">
-                    {res.audioFiles.map((audioFile, audioIndex) => (
+
+                    {/* Audio Files - Updated for new format */}
+                    {res.audioFiles?.map((audioFile, audioIndex) => (
                       <div
                         key={`audio-${audioIndex}`}
-                        className="flex-shrink-0 w-[200px] h-[120px] rounded-2xl flex flex-col cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30 overflow-hidden shadow-md transition-all border border-blue-200 dark:border-blue-700/50"
+                        className="flex-shrink-0 w-[200px] h-[150px] rounded-2xl flex flex-col cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30 overflow-hidden shadow-md transition-all border border-blue-200 dark:border-blue-700/50"
                         onClick={() =>
                           setPreviewFile({
-                            content: `Audio file: ${audioFile.name}`,
                             name: audioFile.name,
-                            isAudio: true,
+                            type: "audio", // Updated to match new format
+                            text: audioFile.data || audioFile.text, // Handle both old and new format
                             format: audioFile.format,
                             size: audioFile.size,
-                            data: audioFile.data, // Include the base64 data for playback
                           })
                         }
                       >
