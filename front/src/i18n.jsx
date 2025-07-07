@@ -57,7 +57,8 @@ i18n
                 recall:
                   "Recall: Chat AI can use relevant memories about you from previous conversations, but won't memorize anything from the current conversation.",
                 on: "Learn: Chat AI actively learns stuff about you from the current conversation and also recalls memories it gained previously.",
-                settings: "You can always view, add, edit, and remove memories from the User Profile panel in the top-right corner. Memories are only stored locally in your browser.",
+                settings:
+                  "You can always view, add, edit, and remove memories from the User Profile panel in the top-right corner. Memories are only stored locally in your browser.",
               },
               back: "Back",
               close: "Close",
@@ -203,6 +204,8 @@ i18n
             listen: "Listen",
             settings_toggle: "Open Settings",
 
+            startRecording: "Start Recording",
+            stopRecording: "Stop Recording",
             //Bad request
             bad: "Bad request was sent: Please clear conversation, reattempt within the limit, and save your chat history for future reference.",
 
@@ -362,7 +365,8 @@ i18n
                 recall:
                   "Recall: Chat AI kann relevante Erinnerungen über Sie aus früheren Gesprächen nutzen, erinnert sich aber an nichts aus dem aktuellen Gespräch.",
                 on: "Learn: Chat AI lernt aktiv Dinge über Sie aus dem aktuellen Gespräch und ruft auch Erinnerungen ab, die sie zuvor gesammelt hat.",
-                settings: "Sie können Erinnerungen jederzeit im Benutzerprofil-Panel in der oberen rechten Ecke ansehen, hinzufügen, bearbeiten und entfernen. Erinnerungen werden nur lokal in Ihrem Browser gespeichert.",
+                settings:
+                  "Sie können Erinnerungen jederzeit im Benutzerprofil-Panel in der oberen rechten Ecke ansehen, hinzufügen, bearbeiten und entfernen. Erinnerungen werden nur lokal in Ihrem Browser gespeichert.",
               },
               back: "Zurück",
               close: "Schließen",
@@ -505,13 +509,14 @@ i18n
             import: "Importieren",
             clear: "Löschen",
             attachFile: "Datei anhängen",
-            attachImage: "Bild Anhängen",
+            attachImage: "Medien anhängen",
             pause: "Abbrechen",
             send: "Senden",
             stop: "Anhalten",
             listen: "Anhören",
             settings_toggle: "Einstellungen öffnen",
-
+            startRecording: "Aufnahme starten",
+            stopRecording: "Aufnahme beenden",
             //Bad request
             bad: "Fehlerhafte Anfrage wurde gesendet: Bitte löschen Sie die Konversation, versuchen Sie es innerhalb des Limits erneut, und speichern Sie Ihren Chatverlauf für spätere Zwecke.",
 
