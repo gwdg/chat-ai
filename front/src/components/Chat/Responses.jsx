@@ -598,7 +598,7 @@ function Responses({
           <>
             {!res.info ? (
               <div key={index} className="flex flex-col gap-1">
-                {res.prompt ? (
+                {res.prompt?.trim() ? (
                   <div
                     ref={(el) => (containerRefs.current[index] = el)}
                     className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
@@ -658,189 +658,208 @@ function Responses({
                           </button>
                         </div>
                       </div>
-                    ) : res.prompt ? (
+                    ) : (
                       <div className="flex gap-2 justify-between items-start group">
-                        <pre
-                          className="font-sans flex-grow min-w-0"
-                          style={{
-                            overflow: "hidden",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {res.prompt}
-                        </pre>
-                        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
-                          <button
-                            onClick={(e) => handleResendClick(index, e)}
-                            disabled={loading || loadingResend}
-                          >
-                            <img
-                              src={icon_resend}
-                              alt="icon_resend"
-                              className="h-[25px] w-[25px] cursor-pointer"
-                            />
-                          </button>
-                          <button
-                            onClick={() => {
-                              handleEditClick(index, res.prompt);
-                            }}
-                            disabled={loading || loadingResend}
-                          >
-                            <img
-                              src={edit_icon}
-                              alt="edit_icon"
-                              className="h-[25px] w-[25px] cursor-pointer"
-                            />
-                          </button>
-                        </div>
+                        {res.prompt?.trim() ? (
+                          <>
+                            <pre
+                              className="font-sans flex-grow min-w-0"
+                              style={{
+                                overflow: "hidden",
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {res.prompt}
+                            </pre>
+                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
+                              <button
+                                onClick={(e) => handleResendClick(index, e)}
+                                disabled={loading || loadingResend}
+                              >
+                                <img
+                                  src={icon_resend}
+                                  alt="icon_resend"
+                                  className="h-[25px] w-[25px] cursor-pointer"
+                                />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleEditClick(index, res.prompt);
+                                }}
+                                disabled={loading || loadingResend}
+                              >
+                                <img
+                                  src={edit_icon}
+                                  alt="edit_icon"
+                                  className="h-[25px] w-[25px] cursor-pointer"
+                                />
+                              </button>
+                            </div>
+                          </>
+                        ) : null}
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 ) : null}
                 {(res?.images?.length > 0 ||
                   res?.videos?.length > 0 ||
                   res?.textFiles?.length > 0 ||
                   res?.audioFiles?.length > 0) && (
-                  <div className="flex gap-2 overflow-x-auto items-center p-3">
-                    {/* Images */}
-                    {res.images?.map((imageObj, imgIndex) => {
-                      if (
-                        imageObj.type === "image_url" &&
-                        imageObj.image_url.url
-                      ) {
-                        return (
-                          <img
-                            key={`img-${imgIndex}`}
-                            src={imageObj.image_url.url}
-                            alt="Base64 Image"
-                            className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
-                            onClick={() =>
-                              setPreviewFile(imageObj.image_url.url)
-                            }
-                            onError={(e) => {
-                              e.target.src = video_icon;
-                            }}
-                          />
-                        );
-                      }
-                      return null;
-                    })}
+                  <div className="flex gap-2 overflow-x-auto items-center p-3 group">
+                    {" "}
+                    <div className="flex-1 flex gap-2 overflow-x-auto items-center p-3">
+                      {/* Images */}
+                      {res.images?.map((imageObj, imgIndex) => {
+                        if (
+                          imageObj.type === "image_url" &&
+                          imageObj.image_url.url
+                        ) {
+                          return (
+                            <img
+                              key={`img-${imgIndex}`}
+                              src={imageObj.image_url.url}
+                              alt="Base64 Image"
+                              className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                              onClick={() =>
+                                setPreviewFile(imageObj.image_url.url)
+                              }
+                              onError={(e) => {
+                                e.target.src = video_icon;
+                              }}
+                            />
+                          );
+                        }
+                        return null;
+                      })}
+                      {/* Videos */}
+                      {res.videos?.map((videoObj, vidIndex) => {
+                        if (videoObj.type === "video_url") {
+                          return (
+                            <img
+                              key={`vid-${vidIndex}`}
+                              src={video_icon}
+                              alt="Video content"
+                              className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                              onClick={() =>
+                                setPreviewFile(
+                                  videoObj.video_url?.url || videoObj.text
+                                )
+                              }
+                            />
+                          );
+                        }
+                        return null;
+                      })}
+                      {/* Text Files */}
+                      {res.textFiles?.map((textObj, textIndex) => {
+                        if (textObj.fileType === "text") {
+                          const textContent = textObj.content;
+                          const fileType = textObj.content.fileType || "txt";
+                          const textPreview =
+                            textContent.substring(0, 100) +
+                            (textContent.length > 100 ? "..." : "");
+                          const fileName = textContent.split(":")[0] || "File";
 
-                    {/* Videos */}
-                    {res.videos?.map((videoObj, vidIndex) => {
-                      if (videoObj.type === "video_url") {
-                        return (
-                          <img
-                            key={`vid-${vidIndex}`}
-                            src={video_icon}
-                            alt="Video content"
-                            className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
-                            onClick={() =>
-                              setPreviewFile(
-                                videoObj.video_url?.url || videoObj.text
-                              )
-                            }
-                          />
-                        );
-                      }
-                      return null;
-                    })}
-
-                    {/* Text Files */}
-                    {res.textFiles?.map((textObj, textIndex) => {
-                      if (textObj.fileType === "text") {
-                        const textContent = textObj.content;
-                        const fileType = textObj.content.fileType || "txt";
-                        const textPreview =
-                          textContent.substring(0, 100) +
-                          (textContent.length > 100 ? "..." : "");
-                        const fileName = textContent.split(":")[0] || "File";
-
-                        return (
-                          <div
-                            key={`text-${textIndex}`}
-                            className="h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-md transition-all"
-                            onClick={() =>
-                              setPreviewFile({
-                                content: textObj.content,
-                                name: fileName,
-                                isText: true,
-                              })
-                            }
-                          >
-                            <div className="px-3 py-2 font-medium text-sm truncate border-b text-black dark:text-white">
-                              {fileName}
+                          return (
+                            <div
+                              key={`text-${textIndex}`}
+                              className="h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-md transition-all"
+                              onClick={() =>
+                                setPreviewFile({
+                                  content: textObj.content,
+                                  name: fileName,
+                                  isText: true,
+                                })
+                              }
+                            >
+                              <div className="px-3 py-2 font-medium text-sm truncate border-b text-black dark:text-white">
+                                {fileName}
+                              </div>
+                              <div className="flex-1 p-3 text-xs overflow-hidden text-tertiary">
+                                {textPreview}
+                              </div>
+                              <div className="flex justify-center items-center pb-2">
+                                <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 uppercase">
+                                  {fileType}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex-1 p-3 text-xs overflow-hidden text-tertiary">
-                              {textPreview}
+                          );
+                        }
+                        return null;
+                      })}
+                      {/* Audio Files - Updated for new format */}
+                      {res.audioFiles?.map((audioFile, audioIndex) => (
+                        <div
+                          key={`audio-${audioIndex}`}
+                          className="flex-shrink-0 h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30 overflow-hidden shadow-md transition-all border border-blue-200 dark:border-blue-700/50"
+                          onClick={() =>
+                            setPreviewFile({
+                              name: audioFile.name,
+                              type: "audio", // Updated to match new format
+                              text: audioFile.data || audioFile.text, // Handle both old and new format
+                              format: audioFile.format,
+                              size: audioFile.size,
+                            })
+                          }
+                        >
+                          {/* Header with icon */}
+                          <div className="flex items-center justify-center pt-3 pb-2">
+                            <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-2">
+                              <img
+                                className="h-6 w-6 brightness-0 invert"
+                                src={mic}
+                                alt="audio file"
+                              />
                             </div>
-                            <div className="flex justify-center items-center pb-2">
-                              <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 uppercase">
-                                {fileType}
+                          </div>
+
+                          {/* File info */}
+                          <div className="flex-1 px-3 pb-3 flex flex-col justify-between">
+                            <div>
+                              <p
+                                className="text-sm font-medium text-black dark:text-white leading-tight mb-1"
+                                title={audioFile.name}
+                                style={{
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {audioFile.name}
+                              </p>
+                            </div>
+
+                            <div className="flex justify-between items-center mt-auto">
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200">
+                                {audioFile.format?.toUpperCase() || "AUDIO"}
+                              </span>
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {formatFileSize(audioFile.size)}
                               </span>
                             </div>
                           </div>
-                        );
-                      }
-                      return null;
-                    })}
-
-                    {/* Audio Files - Updated for new format */}
-                    {res.audioFiles?.map((audioFile, audioIndex) => (
-                      <div
-                        key={`audio-${audioIndex}`}
-                        className="flex-shrink-0 w-[200px] h-[150px] rounded-2xl flex flex-col cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30 overflow-hidden shadow-md transition-all border border-blue-200 dark:border-blue-700/50"
-                        onClick={() =>
-                          setPreviewFile({
-                            name: audioFile.name,
-                            type: "audio", // Updated to match new format
-                            text: audioFile.data || audioFile.text, // Handle both old and new format
-                            format: audioFile.format,
-                            size: audioFile.size,
-                          })
-                        }
-                      >
-                        {/* Header with icon */}
-                        <div className="flex items-center justify-center pt-3 pb-2">
-                          <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-2">
-                            <img
-                              className="h-6 w-6 brightness-0 invert"
-                              src={mic}
-                              alt="audio file"
-                            />
-                          </div>
                         </div>
-
-                        {/* File info */}
-                        <div className="flex-1 px-3 pb-3 flex flex-col justify-between">
-                          <div>
-                            <p
-                              className="text-sm font-medium text-black dark:text-white leading-tight mb-1"
-                              title={audioFile.name}
-                              style={{
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                                wordBreak: "break-word",
-                              }}
-                            >
-                              {audioFile.name}
-                            </p>
-                          </div>
-
-                          <div className="flex justify-between items-center mt-auto">
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200">
-                              {audioFile.format?.toUpperCase() || "AUDIO"}
-                            </span>
-                            <span className="text-xs text-gray-600 dark:text-gray-400">
-                              {formatFileSize(audioFile.size)}
-                            </span>
-                          </div>
-                        </div>
+                      ))}{" "}
+                    </div>
+                    {res.prompt?.trim() == "" ? (
+                      <div className="flex col items-baseline h-full flex-shrink-0 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                        {" "}
+                        <button
+                          onClick={(e) => handleResendClick(index, e)}
+                          disabled={loading || loadingResend}
+                        >
+                          <img
+                            src={icon_resend}
+                            alt="icon_resend"
+                            className="h-[25px] w-[25px] cursor-pointer"
+                          />
+                        </button>
                       </div>
-                    ))}
+                    ) : null}
                   </div>
                 )}
                 <ResponseItem

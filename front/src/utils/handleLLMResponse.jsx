@@ -202,12 +202,12 @@ const handleLLMResponse = async ({
       } else {
         // resend
         currentPrompt = localState.responses[index]?.prompt;
-        if (!currentPrompt || currentPrompt?.trim() === "") {
-          notifyError("Invalid or empty prompt at the specified index.");
-          dispatch(setIsResponding(false));
-          setLoadingResend(false);
-          return;
-        }
+        // if (!currentPrompt || currentPrompt?.trim() === "") {
+        //   notifyError("Invalid or empty prompt at the specified index.");
+        //   dispatch(setIsResponding(false));
+        //   setLoadingResend(false);
+        //   return;
+        // }
       }
 
       // Get existing files from the response
