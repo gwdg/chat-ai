@@ -301,7 +301,7 @@ function Prompt({
     event.preventDefault();
 
     // Skip empty prompts
-    if (localState.prompt?.trim() === "") return;
+    if (localState.prompt?.trim() === "" && selectedFiles.length == 0) return;
 
     // Check for unprocessed PDF files
     const hasUnprocessedPDF = selectedFiles.some(
@@ -1169,7 +1169,7 @@ function Prompt({
                   return (
                     <div
                       key={`${file.name}-${index}`}
-                      className={`cursor-pointer flex-shrink-0 w-[220px] ${displayInfo.bgColor} ${displayInfo.hoverColor} ${displayInfo.borderColor} border rounded-lg transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}
+                      className={`cursor-pointer flex-shrink-0 w-[200px] ${displayInfo.bgColor} ${displayInfo.hoverColor} ${displayInfo.borderColor} border rounded-lg transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}
                       onClick={() => {
                         // Updated preview preparation logic
                         let previewFile;
@@ -1309,15 +1309,6 @@ function Prompt({
                             )}
                           </div>
                         )}
-
-                        {/* Audio file duration/format info */}
-                        {file.type === "audio" && (
-                          <div className="mt-2 text-center">
-                            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                              Audio File Ready
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
@@ -1355,9 +1346,10 @@ function Prompt({
                 onChange={handleChange}
                 onKeyDown={(event) => {
                   if (
-                    event.key === "Enter" &&
-                    !event.shiftKey &&
-                    localState.prompt?.trim() !== ""
+                    (event.key === "Enter" &&
+                      !event.shiftKey &&
+                      localState.prompt?.trim() !== "") ||
+                    selectedFiles.length > 0
                   ) {
                     event.preventDefault();
                     handleSubmit(event);
@@ -1386,9 +1378,10 @@ function Prompt({
               }}
               onKeyDown={(event) => {
                 if (
-                  event.key === "Enter" &&
-                  !event.shiftKey &&
-                  localState.prompt?.trim() !== ""
+                  (event.key === "Enter" &&
+                    !event.shiftKey &&
+                    localState.prompt?.trim() !== "") ||
+                  selectedFiles.length > 0
                 ) {
                   event.preventDefault();
                   handleSubmit(event);
@@ -1527,7 +1520,7 @@ function Prompt({
                     />
                   </button>
                 </Tooltip>
-              ) : localState.prompt !== "" ? (
+              ) : localState.prompt !== "" || selectedFiles.length > 0 ? (
                 <Tooltip text={t("description.send")}>
                   <button className="h-[30px] w-[30px] cursor-pointer">
                     <img
