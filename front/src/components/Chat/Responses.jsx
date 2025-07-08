@@ -753,9 +753,12 @@ function Responses({
                       })}
                       {/* Text Files */}
                       {res.textFiles?.map((textObj, textIndex) => {
-                        if (textObj.fileType === "text") {
+                        if (
+                          textObj.fileType === "text" ||
+                          textObj.fileType === "pdf"
+                        ) {
                           const textContent = textObj.content;
-                          const fileType = textObj.content.fileType || "txt";
+                          const fileType = textObj.fileType || "txt";
                           const textPreview =
                             textContent.substring(0, 100) +
                             (textContent.length > 100 ? "..." : "");

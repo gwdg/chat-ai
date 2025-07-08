@@ -544,6 +544,7 @@ function Prompt({
           file.name.endsWith(".cfg") ||
           file.name.endsWith(".bat")
       );
+
       // Validate file types
       if (
         textFiles.length +
@@ -605,14 +606,17 @@ function Prompt({
         });
       }
 
-      // Process PDF files
+      // 🔥 UPDATED: Process PDF files - PRESERVE ORIGINAL FILE
       for (const file of pdfFiles) {
         filesWithText.push({
           name: file.name,
           size: file.size,
-          file: file,
+          file: file, // Keep the original File object for processing
+          originalFile: file, // ADDED: Also store as originalFile for preview
           fileType: "pdf",
           processed: false,
+          content: null, // Will be filled when processed
+          processedContent: null, // Will be filled when processed
         });
       }
 
@@ -1092,7 +1096,7 @@ function Prompt({
 
     return result;
   };
-  
+
   // Trigger file input click
   const handleClick = () => {
     hiddenFileInput.current.value = null;
@@ -1236,6 +1240,11 @@ function Prompt({
                             fileType: file.fileType,
                             processed: file.processed,
                             processedContent: file.processedContent,
+                            originalFile: file.originalFile, 
+                            file: file.file, 
+                            data: file.data, // ADDED: Include any base64 data if available
+                            text: file.text, // ADDED: Include any text data if available
+                            type: file.type || "document", // ADDED: Ensure type is set
                           };
                         }
 
