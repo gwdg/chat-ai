@@ -204,8 +204,9 @@ i18n
             listen: "Listen",
             settings_toggle: "Open Settings",
 
-            startRecording: "Start Recording",
-            stopRecording: "Stop Recording",
+            startRecording: "Record (click/hold)",
+            stopRecording: "Stop (click/release)",
+
             //Bad request
             bad: "Bad request was sent: Please clear conversation, reattempt within the limit, and save your chat history for future reference.",
 
@@ -515,8 +516,9 @@ i18n
             stop: "Anhalten",
             listen: "Anhören",
             settings_toggle: "Einstellungen öffnen",
-            startRecording: "Aufnahme starten",
-            stopRecording: "Aufnahme beenden",
+            startRecording: "Aufnehmen (Klicken/Halten)",
+            stopRecording: "Stoppen (Klicken/Loslassen)",
+
             //Bad request
             bad: "Fehlerhafte Anfrage wurde gesendet: Bitte löschen Sie die Konversation, versuchen Sie es innerhalb des Limits erneut, und speichern Sie Ihren Chatverlauf für spätere Zwecke.",
 
