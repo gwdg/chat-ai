@@ -362,9 +362,35 @@ const PreviewModal = ({ file, onClose }) => {
   const getFileType = (file) => {
     // Check for audio type first
     if (file?.type === "audio" || file?.isAudio) return "audio";
-    if (file?.type) return file.type;
+
+    // Check for fileType property (your document structure)
+    if (file?.fileType === "pdf") return "pdf";
+    if (file?.fileType === "csv") return "csv";
+    if (file?.fileType === "markdown") return "markdown";
+    if (file?.fileType === "code") return "code";
+    if (file?.fileType === "text") return "text";
+
+    // Check for direct type property
+    if (file?.type === "image") return "image";
+    if (file?.type === "video") return "video";
+    if (file?.type === "document") return "pdf"; // Assuming documents are PDFs
+
+    // Check content type
     if (file?.content?.type) return file.content.type;
-    if (file?.fileType) return file.fileType;
+
+    // Check file extension from name
+    if (file?.name) {
+      const extension = file.name.toLowerCase().split(".").pop();
+      if (extension === "pdf") return "pdf";
+      if (["jpg", "jpeg", "png", "gif", "webp"].includes(extension))
+        return "image";
+      if (["mp4", "avi", "mov"].includes(extension)) return "video";
+      if (["mp3", "wav", "ogg"].includes(extension)) return "audio";
+      if (["csv"].includes(extension)) return "csv";
+      if (["md", "markdown"].includes(extension)) return "markdown";
+      if (["txt"].includes(extension)) return "text";
+    }
+
     return "unknown";
   };
 
@@ -387,8 +413,47 @@ const PreviewModal = ({ file, onClose }) => {
   const pdfUrl = useMemo(() => {
     try {
       const fileType = getFileType(file);
-      return fileType === "pdf" ? URL.createObjectURL(file.file) : null;
+      if (fileType !== "pdf") return null;
+
+      // Priority 1: Check if we have the original file data for PDF preview
+      if (file.originalFile && file.originalFile instanceof File) {
+        return URL.createObjectURL(file.originalFile);
+      }
+
+      // Priority 2: Check if we have raw file data (from file upload)
+      if (file.file && file.file instanceof File) {
+        return URL.createObjectURL(file.file);
+      }
+
+      // Priority 3: If we have base64 data, convert it to blob
+      if (file.data && typeof file.data === "string") {
+        try {
+          const byteCharacters = atob(file.data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: "application/pdf" });
+          return URL.createObjectURL(blob);
+        } catch (base64Error) {
+          console.error("Error converting base64 to blob:", base64Error);
+          return null;
+        }
+      }
+
+      // Priority 4: Check if we have text field with base64 data
+      if (
+        file.text &&
+        typeof file.text === "string" &&
+        file.text.startsWith("data:application/pdf")
+      ) {
+        return file.text; // This is already a data URL
+      }
+
+      return null;
     } catch (error) {
+      console.error("Error creating PDF URL:", error);
       setLoadError("Failed to load PDF file");
       return null;
     }
@@ -396,7 +461,9 @@ const PreviewModal = ({ file, onClose }) => {
 
   useEffect(() => {
     return () => {
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+      if (pdfUrl && !pdfUrl.startsWith("data:")) {
+        URL.revokeObjectURL(pdfUrl);
+      }
     };
   }, [pdfUrl]);
 
@@ -421,6 +488,21 @@ const PreviewModal = ({ file, onClose }) => {
         const byteArray = new Uint8Array(byteNumbers);
         blob = new Blob([byteArray], { type: `audio/${file.format || "wav"}` });
         downloadUrl = URL.createObjectURL(blob);
+      } else if (fileType === "pdf") {
+        // Handle PDF downloads
+        if (file.processed && file.processedContent) {
+          // Download processed text content
+          if (!fileName.includes(".")) {
+            fileName = fileName.replace(".pdf", "") + "_processed.txt";
+          }
+          blob = new Blob([file.processedContent], { type: "text/plain;charset=utf-8" });
+          downloadUrl = URL.createObjectURL(blob);
+        } else if (pdfUrl) {
+          // Download original PDF
+          downloadUrl = pdfUrl;
+        } else {
+          throw new Error("No PDF content available for download");
+        }
       } else {
         // Handle other file types (text, images, etc.)
         const textContent = getTextContent(file);
@@ -510,17 +592,40 @@ const PreviewModal = ({ file, onClose }) => {
       }
 
       if (fileType === "pdf") {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        // Priority 1: If processed, show the processed content FIRST
         if (file.processed && file.processedContent) {
           return (
-            <div className="bg-white dark:bg-gray-900 p-6 overflow-auto max-h-[80vh] w-full whitespace-pre-wrap text-gray-800 dark:text-gray-200">
-              {file.processedContent}
+            <div className="w-full h-[85vh] flex flex-col">
+              {/* Show processed status */}
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-3 mb-4 mx-4">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Processed PDF Content
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-300">
+                      Text has been extracted and is searchable in conversations.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 p-6 overflow-auto flex-1 mx-4 rounded-lg border dark:border-gray-700">
+                <pre className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 font-sans text-sm leading-relaxed">
+                  {file.processedContent}
+                </pre>
+              </div>
             </div>
           );
         }
 
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-        if (isMobile) {
+        // Priority 2: Show mobile warning for PDF previews (only if not processed)
+        if (isMobile && pdfUrl) {
           return (
             <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg">
               <svg
@@ -546,13 +651,73 @@ const PreviewModal = ({ file, onClose }) => {
           );
         }
 
+        // Priority 3: If we have a valid PDF URL for preview (original PDF) AND not processed
+        if (pdfUrl && !isMobile && !file.processed) {
+          return (
+            <div className="w-full h-[85vh] flex flex-col">
+              {/* Show processing status if not processed */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg p-3 mb-4 mx-4">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                      Original PDF Preview
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-300">
+                      This PDF hasn&quot;t been processed yet. Click
+                      &quot;Process PDF&quot; to extract searchable text
+                      content.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <iframe
+                src={pdfUrl}
+                className="w-full flex-1"
+                style={{ minWidth: "800px" }}
+                title={fileName}
+                onError={() => setLoadError("Failed to display PDF")}
+              />
+            </div>
+          );
+        }
+
+        // Priority 4: If no PDF data available, show helpful message
         return (
-          <iframe
-            src={pdfUrl}
-            className="w-full h-[85vh]"
-            style={{ minWidth: "800px" }}
-            title={fileName}
-          />
+          <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg mx-4">
+            <svg
+              className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <p className="text-gray-600 dark:text-gray-400 mb-2">
+              PDF content not available
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              The original PDF file data is not available for preview
+            </p>
+          </div>
         );
       }
 
