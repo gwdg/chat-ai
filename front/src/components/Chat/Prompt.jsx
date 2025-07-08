@@ -763,14 +763,54 @@ function Prompt({
     }
   };
 
+  // Track mouse down time to distinguish between click and hold
+  const mouseDownTimeRef = useRef(null);
+  const isHoldRecordingRef = useRef(false);
+
   const handleAudioClick = () => {
     if (loading || loadingResend) return;
 
-    if (isRecording) {
-      // Stop recording
-      handleAudioRecording();
-    } else {
-      // Start recording
+    // Only handle click if it wasn't a hold action
+    if (!isHoldRecordingRef.current) {
+      if (isRecording) {
+        // Stop recording
+        handleAudioRecording();
+      } else {
+        // Start recording
+        handleAudioRecording();
+      }
+    }
+
+    // Reset hold recording flag
+    isHoldRecordingRef.current = false;
+  };
+
+  const handleAudioMouseDown = () => {
+    if (loading || loadingResend) return;
+
+    // Record the time when mouse was pressed down
+    mouseDownTimeRef.current = Date.now();
+
+    // Start recording on mouse down (hold) after a short delay
+    setTimeout(() => {
+      // Only start if still holding and not already recording
+      if (mouseDownTimeRef.current && !isRecording) {
+        isHoldRecordingRef.current = true;
+        handleAudioRecording();
+      }
+    }, 200); // 200ms delay to distinguish from click
+  };
+
+  const handleAudioMouseUp = () => {
+    if (loading || loadingResend) return;
+
+    const holdDuration = mouseDownTimeRef.current
+      ? Date.now() - mouseDownTimeRef.current
+      : 0;
+    mouseDownTimeRef.current = null;
+
+    // If it was a hold action (longer than 200ms) and currently recording, stop it
+    if (holdDuration > 200 && isRecording && isHoldRecordingRef.current) {
       handleAudioRecording();
     }
   };
@@ -815,7 +855,7 @@ function Prompt({
         streamRef.current = stream;
         audioChunksRef.current = [];
 
-        // Force WAV format for Qwen compatibility
+        // Force WAV format for better compatibility
         let mimeType = "audio/wav";
         let fileExtension = "wav";
 
@@ -855,8 +895,8 @@ function Prompt({
             type: mimeType,
           });
 
-          // Convert to WAV format for Qwen compatibility
-          await processRecordedAudioForQwen(audioBlob, mimeType);
+          // Convert to WAV format for better compatibility
+          await processRecordedAudio(audioBlob, mimeType);
 
           // Clean up
           if (streamRef.current) {
@@ -894,18 +934,18 @@ function Prompt({
     }
   };
 
-  // Convert recorded audio to WAV format for Qwen 2.5 Omni compatibility
-  const processRecordedAudioForQwen = async (audioBlob, originalMimeType) => {
+  // Convert recorded audio to WAV format for better compatibility
+  const processRecordedAudio = async (audioBlob, originalMimeType) => {
     try {
       // Create filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const fileName = `recording_${timestamp}.wav`;
 
-      // Check file size (25MB limit for Qwen)
+      // Check file size (25MB limit - adjust as needed for your use case)
       if (audioBlob.size > 25 * 1024 * 1024) {
         console.error(`❌ File too large: ${audioBlob.size} bytes`);
         notifyError(
-          `Audio file too large: ${fileName}. Qwen supports max 25MB.`
+          `Audio file too large: ${fileName}. Maximum supported size is 25MB.`
         );
         return;
       }
@@ -942,7 +982,7 @@ function Prompt({
         type: "audio",
         size: wavBlob.size,
         text: base64Data, // Raw base64 without data URL prefix
-        format: "wav", // Always WAV for Qwen compatibility
+        format: "wav", // Always WAV for better compatibility
       };
 
       setSelectedFiles((prevFiles) => {
@@ -963,7 +1003,7 @@ function Prompt({
       // Create audio context
       const audioContext = new (window.AudioContext ||
         window.webkitAudioContext)({
-        sampleRate: 16000, // Qwen prefers 16kHz
+        sampleRate: 16000, // Common sample rate for better compatibility
       });
 
       // Convert blob to array buffer
@@ -1052,7 +1092,7 @@ function Prompt({
 
     return result;
   };
-
+  
   // Trigger file input click
   const handleClick = () => {
     hiddenFileInput.current.value = null;
@@ -1481,6 +1521,11 @@ function Prompt({
                       }`}
                       type="button"
                       onClick={handleAudioClick}
+                      onMouseDown={handleAudioMouseDown}
+                      onMouseUp={handleAudioMouseUp}
+                      onMouseLeave={handleAudioMouseUp} // Stop recording if mouse leaves while holding
+                      onTouchStart={handleAudioMouseDown} // Mobile support
+                      onTouchEnd={handleAudioMouseUp} // Mobile support
                       disabled={loading || loadingResend}
                     >
                       {isRecording ? (
@@ -1498,7 +1543,6 @@ function Prompt({
                   </Tooltip>
                 </>
               )}
-
               {loading || loadingResend ? (
                 <Tooltip text={t("description.pause")}>
                   <button className="h-[30px] w-[30px] cursor-pointer">
