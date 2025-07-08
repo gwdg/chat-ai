@@ -1168,7 +1168,7 @@ function Prompt({
                   return (
                     <div
                       key={`${file.name}-${index}`}
-                      className={`cursor-pointer flex-shrink-0 w-[220px] ${displayInfo.bgColor} ${displayInfo.hoverColor} ${displayInfo.borderColor} border rounded-lg transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}
+                      className={`cursor-pointer flex-shrink-0 w-[200px] h-[80px] ${displayInfo.bgColor} ${displayInfo.hoverColor} ${displayInfo.borderColor} border rounded-lg transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}
                       onClick={() => {
                         // Updated preview preparation logic
                         let previewFile;
@@ -1202,8 +1202,8 @@ function Prompt({
                         setPreviewFile(previewFile);
                       }}
                     >
-                      <div className="p-3 w-full">
-                        <div className="flex items-start gap-3 w-full">
+                      <div className="p-2 w-full h-full flex flex-col relative">
+                        <div className="flex items-center gap-2 flex-1 min-h-0">
                           {/* Icon/Thumbnail */}
                           <div
                             className={`h-10 w-10 flex-shrink-0 flex items-center justify-center rounded ${displayInfo.iconBg} overflow-hidden`}
@@ -1212,27 +1212,20 @@ function Prompt({
                           </div>
 
                           {/* File Info */}
-                          <div className="min-w-0 flex-grow pr-6 relative">
+                          <div className="min-w-0 flex-grow pr-6">
                             <p
-                              className="font-medium text-sm text-gray-900 dark:text-white leading-tight mb-1"
+                              className="font-medium text-sm text-gray-900 dark:text-white leading-tight mb-1 truncate"
                               title={file.name}
-                              style={{
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                                wordBreak: "break-word",
-                              }}
                             >
                               {file.name}
                             </p>
 
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-600 dark:text-gray-400">
                                 {formatFileSize(file.size)}
                               </span>
                               <span
-                                className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
                                   file.type === "audio"
                                     ? "bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200"
                                     : file.type === "image"
@@ -1245,34 +1238,34 @@ function Prompt({
                                 {displayInfo.badge}
                               </span>
                             </div>
-
-                            {/* Remove button */}
-                            <button
-                              className="absolute -top-1 -right-2 p-1.5 hover:bg-white/80 dark:hover:bg-black/60 rounded-full flex-shrink-0 focus:outline-none transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeFile(index);
-                              }}
-                              aria-label="Remove file"
-                            >
-                              <img
-                                src={cross}
-                                alt="remove"
-                                className="h-3 w-3 opacity-60 hover:opacity-100 transition-opacity"
-                              />
-                            </button>
                           </div>
                         </div>
 
+                        {/* Remove button - positioned at card corner */}
+                        <button
+                          className="absolute top-1 right-1 p-1 hover:bg-white/90 dark:hover:bg-black/70 rounded-full flex-shrink-0 focus:outline-none transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(index);
+                          }}
+                          aria-label="Remove file"
+                        >
+                          <img
+                            src={cross}
+                            alt="remove"
+                            className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity"
+                          />
+                        </button>
+
                         {/* PDF Processing Status */}
                         {file.fileType === "pdf" && (
-                          <div className="flex items-center mt-3 w-full">
+                          <div className="flex items-center mt-1 w-full">
                             {file.processed ? (
-                              <span className="text-green-600 dark:text-green-400 text-xs font-medium px-3 py-1 bg-green-100 dark:bg-green-900/30 rounded-full w-full text-center">
+                              <span className="text-green-600 dark:text-green-400 text-xs font-medium px-2 py-0.5 bg-green-100 dark:bg-green-900/30 rounded-full w-full text-center">
                                 ✓ Processed
                               </span>
                             ) : processingFiles.has(index) ? (
-                              <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400 text-xs w-full py-1">
+                              <div className="flex items-center justify-center gap-1 text-gray-600 dark:text-gray-400 text-xs w-full py-0.5">
                                 <svg
                                   className="animate-spin h-3 w-3"
                                   xmlns="http://www.w3.org/2000/svg"
@@ -1301,7 +1294,7 @@ function Prompt({
                                   e.stopPropagation();
                                   handlePdfProcess(file, index);
                                 }}
-                                className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-medium transition-colors w-full"
+                                className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-medium transition-colors w-full"
                               >
                                 Process PDF
                               </button>
