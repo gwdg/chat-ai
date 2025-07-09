@@ -35,6 +35,47 @@ try {
   console.error("Failed to read back.json. Using default values.", error);
 }
 
+// Load JSON files for embeddings
+let embedConfigs = [];
+
+// Function to load embed configurations from the "embed" folder
+async function loadEmbedConfigs() { // Make this async
+  const embedDir = path.join(__dirname, "embed");
+
+  return new Promise((resolve, reject) => { // Wrap in a Promise
+    fs.readdir(embedDir, (err, files) => {
+      if (err) {
+        console.error("Error reading embed directory:", err);
+        reject(err); // Reject the Promise on error
+        return;
+      }
+
+      files.forEach((file) => {
+        if (path.extname(file) === ".json") {
+          const filePath = path.join(embedDir, file);
+          try {
+            const data = fs.readFileSync(filePath, "utf8");
+            const config = JSON.parse(data);
+            embedConfigs.push(config);
+            console.log(`Loaded embed config from: ${filePath}`);
+          } catch (parseError) {
+            console.error(`Error parsing JSON from ${filePath}:`, parseError);
+          }
+        }
+      });
+      resolve(); // Resolve the Promise when done
+    });
+  });
+}
+
+// Call loadEmbedConfigs during app startup
+loadEmbedConfigs();
+
+// Function to get the embed config for a given path
+function getEmbedConfig(embeddedPath) {
+  return embedConfigs.find((config) => config.path === embeddedPath);
+}
+
 // Global request limitations
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
@@ -60,51 +101,6 @@ app.use((err, req, res, next) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
-
-// Function to handle message request
-async function getCompletionLLM(
-  model,
-  messages,
-  temperature = 0.5,
-  top_p = 0.5,
-  inference_id = "no_id",
-  arcana = null
-) {
-  const url = apiEndpoint + "/chat/completions";
-  const headers = {
-    Accept: "application/json",
-    "inference-service": model,
-    "inference-portal": serviceName,
-    "Content-Type": "application/json",
-  };
-
-  // Only add Authorization header if apiKey is present and non-empty
-  if (apiKey) {
-    headers.Authorization = "Bearer " + apiKey;
-  } else {
-    // Only add inference-id header if apiKey is empty or non-existent
-    headers["inference-id"] = inference_id;
-  }
-  const body = JSON.stringify({
-    model: model,
-    messages: messages,
-    //max_tokens: 4096,
-    temperature: temperature,
-    top_p: top_p,
-    stream: true,
-    stream_options: { include_usage: true },
-    ...(arcana !== null &&
-    arcana !== undefined &&
-    arcana.id !== null &&
-    arcana.id !== undefined &&
-    arcana.id !== ""
-      ? { arcana: arcana }
-      : {}),
-  });
-
-  const response = await fetch(url, { method: "POST", headers, body });
-  return response;
-}
 
 // Function to process PDF file
 async function processPdfFile(file, inference_id) {
@@ -172,7 +168,6 @@ app.get("/models", async (req, res) => {
       "inference-portal": "Chat AI",
     };
     const response = await fetch(url, { method: "GET", headers });
-    //console.log(await response.json())
     res.status(200).json(await response.json());
   } catch (error) {
     console.error(`Error: ${error}`);
@@ -196,28 +191,66 @@ app.get("/user", async (req, res) => {
   }
 });
 
-// Get response from LLM
-app.post("/", async (req, res) => {
-  const {
-    messages,
-    model,
-    temperature = 0.5,
-    top_p = 0.5,
-    arcana = null,
-    timeout = 30000,
-  } = req.body;
-  const inference_id = req.headers["inference-id"];
+// Function to handle message request
+async function getCompletionLLM(
+  model,
+  messages,
+  temperature = 0.5,
+  top_p = 0.5,
+  arcana = null,
+  apiKey = null
+) {
+  const url = apiEndpoint + "/chat/completions";
+  const headers = {
+    Accept: "application/json",
+    "inference-service": model,
+    "inference-portal": serviceName,
+    "Content-Type": "application/json",
+  };
+
+  // Only add Authorization header if apiKey is present and non-empty
+  if (apiKey) {
+    headers.Authorization = "Bearer " + apiKey;
+  }
+
+  const body = JSON.stringify({
+    model: model,
+    messages: messages,
+    //max_tokens: 4096,
+    temperature: temperature,
+    top_p: top_p,
+    stream: true,
+    stream_options: { include_usage: true },
+    ...(arcana !== null &&
+    arcana !== undefined &&
+    arcana.id !== null &&
+    arcana.id !== undefined &&
+    arcana.id !== ""
+      ? { arcana: arcana }
+      : {}),
+  });
+
+  const response = await fetch(url, { method: "POST", headers, body });
+  return response;
+}
+
+// ProcessLLMRequest
+async function ProcessLLMRequest(
+  apiKey,
+  model,
+  messages,
+  temperature,
+  top_p,
+  arcana,
+  timeout,
+  res
+) {
 
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
   }
 
   const validatedTimeout = Math.min(Math.max(timeout, 5000), 300000);
-  console.log(
-    `Request timeout set to: ${validatedTimeout}ms (${
-      validatedTimeout / 1000
-    }s)`
-  );
 
   try {
     const es = require("event-stream");
@@ -243,8 +276,8 @@ app.post("/", async (req, res) => {
       messages,
       temperature,
       top_p,
-      inference_id,
-      arcana
+      arcana,
+      apiKey
     );
 
     try {
@@ -349,6 +382,69 @@ app.post("/", async (req, res) => {
       return;
     }
   }
+}
+
+// Send message to LLM
+app.post("/", async (req, res) => {
+  const {
+    model,
+    messages,
+    temperature = 0.5,
+    top_p = 0.5,
+    arcana = null,
+    timeout = 30000,
+  } = req.body;
+  const apiKey = req.headers["inference-id"];
+
+  return await ProcessLLMRequest(apiKey, model, messages, temperature, top_p, arcana, timeout, res)
+  
+});
+
+// Get message to LLM from embedded webpage
+app.post("/embed/api/:embeddedPath*", async (req, res) => {
+  const embeddedPath = req.params['embeddedPath'] + req.params[0]
+  const embedConfig = await getEmbedConfig(embeddedPath);
+  if (!embedConfig) {
+    return res.status(404).json({error: "Embed not found"})
+  }
+  let {
+    model,
+    messages,
+    temperature = 0.5,
+    top_p = 0.5,
+    arcana = null,
+    timeout = 30000
+  } = req.body;
+
+  if (!Array.isArray(messages)) {
+    return res.status(422).json({ error: "Invalid messages provided" });
+  }
+  
+  let systemPrompt = null;
+
+  if (embedConfig) {
+    apiKey = embedConfig.apiKey;
+    systemPrompt = embedConfig.modify.system_prompt;
+    temperature = embedConfig.modify.temperature || temperature;
+    top_p = embedConfig.modify.top_p || top_p;
+    arcana = embedConfig.modify.arcana || arcana;
+    model = embedConfig.modify.model || model;
+    timeout = embedConfig.modify.timeout || timeout;
+  }
+
+  // Inject the system prompt into the messages array
+  if (systemPrompt) {
+    if (messages.length > 0 && messages[0].role === "system") {
+      // System prompt already exists, replace it
+      messages[0].content = systemPrompt;
+    } else {
+      // System prompt doesn't exist, add it to the beginning
+      messages.unshift({ role: "system", content: systemPrompt });
+    }
+  }
+
+  return await ProcessLLMRequest(apiKey, model, messages, temperature, top_p, arcana, timeout, res);
+  
 });
 
 // Start Chat AI Backend App

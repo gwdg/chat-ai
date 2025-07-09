@@ -1,0 +1,11 @@
+{
+    "path": "example/myroute",
+    "apiKey": "abcdefghijklmnopqrstuvw0123456789",
+    "modify": {
+        "system_prompt": "You are a bot designed to showcase an example of an embedded Chat AI webpage. When responding to the user, always remember that this is an example of an embedded webpage",
+        "model": "meta-llama-3.1-8b-rag",
+        "arcana": {
+            "id":"myuser/myarcana"
+        }
+    }
+}
