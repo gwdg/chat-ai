@@ -96,7 +96,6 @@ function ChatWindow({
   const [showModalSession, setShowModalSession] = useState(false);
   const [showBadRequest, setShowBadRequest] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showMicModal, setShowMicModal] = useState(false);
   const [showCustomHelpModal, setShowCustomHelpModal] = useState(false);
   const [showTopPHelpModal, setShowTopPHelpModal] = useState(false);
   const [showMemoryHelpModal, setShowMemoryHelpModal] = useState(false);
@@ -198,6 +197,12 @@ function ChatWindow({
   const currentModel = useMemo(
     () => modelList?.find((m) => m.name === modelSettings["model-name"]),
     [modelList, modelSettings]
+  );
+
+  // Memoize whether current model supports audio input
+  const isAudioSupported = useMemo(
+    () => currentModel?.input.includes("audio") || false,
+    [currentModel]
   );
 
   // Memoize whether current model supports image input
@@ -765,6 +770,7 @@ function ChatWindow({
           modelList={modelList}
           selectedFiles={selectedFiles}
           localState={localState}
+          isAudioSupported={isAudioSupported}
           isImageSupported={isImageSupported}
           isVideoSupported={isVideoSupported}
           isThoughtSupported={isThoughtSupported}
@@ -774,7 +780,6 @@ function ChatWindow({
           setShowModalSession={setShowModalSession}
           setShowBadRequest={setShowBadRequest}
           setShowFileModal={setShowFileModal}
-          setShowMicModal={setShowMicModal}
           setShowHistoryModal={setShowHistoryModal}
           toggleAdvOpt={toggleAdvOpt}
           updateLocalState={updateLocalState}
@@ -792,6 +797,7 @@ function ChatWindow({
           modelSettings={modelSettings}
           modelList={modelList}
           currentModel={currentModel}
+          isAudioSupported={isAudioSupported}
           isImageSupported={isImageSupported}
           isVideoSupported={isVideoSupported}
           isThoughtSupported={isThoughtSupported}
@@ -849,7 +855,7 @@ function ChatWindow({
         ) : null}
       </>
 
-      <>{showMicModal ? <MicModal showModal={setShowMicModal} /> : null}</>
+      {/* <>{showMicModal ? <MicModal showModal={setShowMicModal} /> : null}</> */}
 
       <>
         {showCusModal ? (

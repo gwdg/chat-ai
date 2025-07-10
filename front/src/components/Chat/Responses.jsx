@@ -5,6 +5,7 @@ import { fetchLLMResponse, updateMemory } from "../../apis/LlmRequestApi";
 
 //Assets
 import retry from "../../assets/icon_retry.svg";
+import mic from "../../assets/icon_mic.svg";
 import clear from "../../assets/cross_icon.svg";
 import export_icon from "../../assets/export_icon.svg";
 import import_icon from "../../assets/import_icon.svg";
@@ -169,6 +170,21 @@ function Responses({
     scrollToBottom(true); // force smooth scroll
   }, [scrollToBottom]);
 
+  function formatFileSize(bytes) {
+    const units = ["Bytes", "KB", "MB", "GB", "TB"];
+    let size = bytes;
+    let unitIndex = 0;
+
+    // Keep dividing by 1024 until we reach the appropriate unit
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+
+    // Return formatted string with 2 decimal places and unit
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
+  }
+
   // Function to handle resending a previous message
   const handleResendClick = async (index) => {
     await handleLLMResponse({
@@ -247,10 +263,43 @@ function Responses({
       setSelectedFiles((prevFiles) => [...prevFiles, ...imageFileList]);
     }
 
-    // Handle any textFiles from last response
-    if (lastResponse?.textFiles?.length > 0) {
+    // Handle any audio files from last response
+    if (lastResponse?.audioFiles?.length > 0) {
+      const audioFileList = lastResponse.audioFiles.map((audioFile) => ({
+        name: audioFile.name,
+        type: "audio",
+        size: audioFile.size,
+        text: audioFile.data, // raw base64
+        format: audioFile.format,
+      }));
+      setSelectedFiles((prevFiles) => [...prevFiles, ...audioFileList]);
+    }
+
+    // Handle any video files from last response
+    if (lastResponse?.videos?.length > 0) {
+      const videoFileList = lastResponse.videos.map((videoFile, index) => ({
+        name: `video_${index + 1}`,
+        type: "video",
+        size: 0, // We don't have size info from the response
+        text: videoFile.video_url.url,
+      }));
+      setSelectedFiles((prevFiles) => [...prevFiles, ...videoFileList]);
+    }
+
+    // Only handle text files if they were actually part of the original request
+    // Check if the original conversation message had text files
+    const originalUserMessage = localState.conversation.find(
+      (msg, idx) =>
+        msg.role === "user" &&
+        Array.isArray(msg.content) &&
+        msg.content.some(
+          (item) =>
+            item.type === "text" && item.text.includes(lastResponse.prompt)
+        )
+    );
+
+    if (originalUserMessage && lastResponse?.textFiles?.length > 0) {
       const textFileList = lastResponse.textFiles.map((file) => {
-        // Check if it's a PDF file
         if (file.fileType === "pdf") {
           return {
             ...file,
@@ -259,19 +308,16 @@ function Responses({
         }
         return file;
       });
-
       setSelectedFiles((prevFiles) => [...prevFiles, ...textFileList]);
     }
 
-    // Adjust textarea height after short delay
+    // Rest of the function remains the same...
     setTimeout(() => {
       adjustHeight();
     }, 0);
 
-    // Now handle conversation trimming with proper info object handling
+    // Conversation trimming logic remains the same...
     const originalConversation = [...localState.conversation];
-
-    // Count how many actual pairs we want to KEEP (all except the last one)
     let pairsToKeep = 0;
     for (let i = 0; i < lastResponseIndex; i++) {
       if (!localState.responses[i]?.info) {
@@ -279,20 +325,15 @@ function Responses({
       }
     }
 
-    // Filter out info messages to do proper slicing
     const filteredConversation = localState.conversation.filter(
       (message) => message.role !== "info"
     );
 
-    // Slice to keep only the pairs we want (excluding the last pair)
-    // pairsToKeep * 2 + 1 accounts for: pairs * (user + assistant) + system message
     const slicedFiltered = filteredConversation.slice(0, pairsToKeep * 2 + 1);
 
-    // Now reconstruct conversation with info messages back in their original positions
     let newConversation = [];
     let filteredIndex = 0;
 
-    // If slicedFiltered is empty, just keep system and info messages
     if (slicedFiltered.length === 0) {
       newConversation = originalConversation.filter(
         (message) => message.role === "system" || message.role === "info"
@@ -300,7 +341,6 @@ function Responses({
     } else {
       for (const originalMessage of originalConversation) {
         if (originalMessage.role === "info") {
-          // Check if this info message should be included (appears before our cutoff)
           const lastKeptMessage = slicedFiltered[slicedFiltered.length - 1];
           const lastKeptOriginalIndex =
             originalConversation.indexOf(lastKeptMessage);
@@ -311,7 +351,6 @@ function Responses({
             newConversation.push(originalMessage);
           }
         } else {
-          // Non-info message - check if it's in our sliced array
           if (
             filteredIndex < slicedFiltered.length &&
             originalMessage === slicedFiltered[filteredIndex]
@@ -323,10 +362,8 @@ function Responses({
       }
     }
 
-    // Remove last response and all trailing info objects
     const newResponses = localState.responses.slice(0, lastResponseIndex);
 
-    // Update state
     setLocalState((prevState) => ({
       ...prevState,
       conversation: newConversation,
@@ -561,78 +598,259 @@ function Responses({
           <>
             {!res.info ? (
               <div key={index} className="flex flex-col gap-1">
-                <div
-                  ref={(el) => (containerRefs.current[index] = el)}
-                  className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
-                    editingIndex === index ? "p-0" : "p-3"
-                  } flex flex-col gap-2`}
-                >
-                  {editingIndex === index ? (
-                    <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
-                      <textarea
-                        ref={(el) => (textareaRefs.current[index] = el)}
-                        className="p-2 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
-                        value={editedText}
-                        style={{
-                          minHeight: `${MIN_HEIGHT}px`,
-                          maxHeight: `${MAX_HEIGHT}px`,
-                        }}
-                        onChange={(e) => {
-                          setEditedText(e.target.value);
-                          adjustHeight(index);
-                        }}
-                        onKeyDown={(event) => {
-                          if (
-                            event.key === "Enter" &&
-                            !event.shiftKey &&
-                            editedText?.trim() !== ""
-                          ) {
-                            event.preventDefault();
-                            handleCloseClick(index);
-                            handleSave(index);
-                            setIsEditing(false);
-                          }
-                        }}
-                      />
-                      <div className="flex gap-2 justify-between w-full">
-                        <button
-                          onClick={() => setEditedText("")}
-                          disabled={loading || loadingResend}
-                        >
-                          <img
-                            src={clear}
-                            alt="clear"
-                            className="h-[25px] w-[25px] cursor-pointer"
-                          />
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleCloseClick(index);
-                            handleSave(index);
+                {res.prompt?.trim() ? (
+                  <div
+                    ref={(el) => (containerRefs.current[index] = el)}
+                    className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
+                      editingIndex === index ? "p-0" : "p-3"
+                    } flex flex-col gap-2`}
+                  >
+                    {editingIndex === index ? (
+                      <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
+                        <textarea
+                          ref={(el) => (textareaRefs.current[index] = el)}
+                          className="p-2 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+                          value={editedText}
+                          style={{
+                            minHeight: `${MIN_HEIGHT}px`,
+                            maxHeight: `${MAX_HEIGHT}px`,
                           }}
-                          disabled={loading || loadingResend}
-                        >
-                          <img
-                            className="cursor-pointer h-[25px] w-[25px]"
-                            src={send}
-                            alt="send"
-                          />
-                        </button>
+                          onChange={(e) => {
+                            setEditedText(e.target.value);
+                            adjustHeight(index);
+                          }}
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === "Enter" &&
+                              !event.shiftKey &&
+                              editedText?.trim() !== ""
+                            ) {
+                              event.preventDefault();
+                              handleCloseClick(index);
+                              handleSave(index);
+                              setIsEditing(false);
+                            }
+                          }}
+                        />
+                        <div className="flex gap-2 justify-between w-full">
+                          <button
+                            onClick={() => setEditedText("")}
+                            disabled={loading || loadingResend}
+                          >
+                            <img
+                              src={clear}
+                              alt="clear"
+                              className="h-[25px] w-[25px] cursor-pointer"
+                            />
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleCloseClick(index);
+                              handleSave(index);
+                            }}
+                            disabled={loading || loadingResend}
+                          >
+                            <img
+                              className="cursor-pointer h-[25px] w-[25px]"
+                              src={send}
+                              alt="send"
+                            />
+                          </button>
+                        </div>
                       </div>
+                    ) : (
+                      <div className="flex gap-2 justify-between items-start group">
+                        {res.prompt?.trim() ? (
+                          <>
+                            <pre
+                              className="font-sans flex-grow min-w-0"
+                              style={{
+                                overflow: "hidden",
+                                whiteSpace: "pre-wrap",
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {res.prompt}
+                            </pre>
+                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
+                              <button
+                                onClick={(e) => handleResendClick(index, e)}
+                                disabled={loading || loadingResend}
+                              >
+                                <img
+                                  src={icon_resend}
+                                  alt="icon_resend"
+                                  className="h-[25px] w-[25px] cursor-pointer"
+                                />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleEditClick(index, res.prompt);
+                                }}
+                                disabled={loading || loadingResend}
+                              >
+                                <img
+                                  src={edit_icon}
+                                  alt="edit_icon"
+                                  className="h-[25px] w-[25px] cursor-pointer"
+                                />
+                              </button>
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+                {(res?.images?.length > 0 ||
+                  res?.videos?.length > 0 ||
+                  res?.textFiles?.length > 0 ||
+                  res?.audioFiles?.length > 0) && (
+                  <div className="flex gap-2 overflow-x-auto items-center p-3 group">
+                    {" "}
+                    <div className="flex-1 flex gap-2 overflow-x-auto items-center p-3">
+                      {/* Images */}
+                      {res.images?.map((imageObj, imgIndex) => {
+                        if (
+                          imageObj.type === "image_url" &&
+                          imageObj.image_url.url
+                        ) {
+                          return (
+                            <img
+                              key={`img-${imgIndex}`}
+                              src={imageObj.image_url.url}
+                              alt="Base64 Image"
+                              className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                              onClick={() =>
+                                setPreviewFile(imageObj.image_url.url)
+                              }
+                              onError={(e) => {
+                                e.target.src = video_icon;
+                              }}
+                            />
+                          );
+                        }
+                        return null;
+                      })}
+                      {/* Videos */}
+                      {res.videos?.map((videoObj, vidIndex) => {
+                        if (videoObj.type === "video_url") {
+                          return (
+                            <img
+                              key={`vid-${vidIndex}`}
+                              src={video_icon}
+                              alt="Video content"
+                              className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                              onClick={() =>
+                                setPreviewFile(
+                                  videoObj.video_url?.url || videoObj.text
+                                )
+                              }
+                            />
+                          );
+                        }
+                        return null;
+                      })}
+                      {/* Text Files */}
+                      {res.textFiles?.map((textObj, textIndex) => {
+                        if (
+                          textObj.fileType === "text" ||
+                          textObj.fileType === "pdf"
+                        ) {
+                          const textContent = textObj.content;
+                          const fileType = textObj.fileType || "txt";
+                          const textPreview =
+                            textContent.substring(0, 100) +
+                            (textContent.length > 100 ? "..." : "");
+                          const fileName = textContent.split(":")[0] || "File";
+
+                          return (
+                            <div
+                              key={`text-${textIndex}`}
+                              className="h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-md transition-all"
+                              onClick={() =>
+                                setPreviewFile({
+                                  content: textObj.content,
+                                  name: fileName,
+                                  isText: true,
+                                })
+                              }
+                            >
+                              <div className="px-3 py-2 font-medium text-sm truncate border-b text-black dark:text-white">
+                                {fileName}
+                              </div>
+                              <div className="flex-1 p-3 text-xs overflow-hidden text-tertiary">
+                                {textPreview}
+                              </div>
+                              <div className="flex justify-center items-center pb-2">
+                                <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 uppercase">
+                                  {fileType}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
+                      {/* Audio Files - Updated for new format */}
+                      {res.audioFiles?.map((audioFile, audioIndex) => (
+                        <div
+                          key={`audio-${audioIndex}`}
+                          className="flex-shrink-0 h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30 overflow-hidden shadow-md transition-all border border-blue-200 dark:border-blue-700/50"
+                          onClick={() =>
+                            setPreviewFile({
+                              name: audioFile.name,
+                              type: "audio", // Updated to match new format
+                              text: audioFile.data || audioFile.text, // Handle both old and new format
+                              format: audioFile.format,
+                              size: audioFile.size,
+                            })
+                          }
+                        >
+                          {/* Header with icon */}
+                          <div className="flex items-center justify-center pt-3 pb-2">
+                            <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-2">
+                              <img
+                                className="h-6 w-6 brightness-0 invert"
+                                src={mic}
+                                alt="audio file"
+                              />
+                            </div>
+                          </div>
+
+                          {/* File info */}
+                          <div className="flex-1 px-3 pb-3 flex flex-col justify-between">
+                            <div>
+                              <p
+                                className="text-sm font-medium text-black dark:text-white leading-tight mb-1"
+                                title={audioFile.name}
+                                style={{
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                  wordBreak: "break-word",
+                                }}
+                              >
+                                {audioFile.name}
+                              </p>
+                            </div>
+
+                            <div className="flex justify-between items-center mt-auto">
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200">
+                                {audioFile.format?.toUpperCase() || "AUDIO"}
+                              </span>
+                              <span className="text-xs text-gray-600 dark:text-gray-400">
+                                {formatFileSize(audioFile.size)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}{" "}
                     </div>
-                  ) : (
-                    <div className="flex gap-2 justify-between items-start group">
-                      <pre
-                        className="font-sans flex-grow min-w-0"
-                        style={{
-                          overflow: "hidden",
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {res.prompt}
-                      </pre>
-                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
+                    {res.prompt?.trim() == "" ? (
+                      <div className="flex col items-baseline h-full flex-shrink-0 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                        {" "}
                         <button
                           onClick={(e) => handleResendClick(index, e)}
                           disabled={loading || loadingResend}
@@ -643,118 +861,10 @@ function Responses({
                             className="h-[25px] w-[25px] cursor-pointer"
                           />
                         </button>
-                        <button
-                          onClick={() => {
-                            handleEditClick(index, res.prompt);
-                          }}
-                          disabled={loading || loadingResend}
-                        >
-                          <img
-                            src={edit_icon}
-                            alt="edit_icon"
-                            className="h-[25px] w-[25px] cursor-pointer"
-                          />
-                        </button>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {(res?.images?.length > 0 ||
-                  res?.videos?.length > 0 ||
-                  res?.textFiles?.length > 0) && (
-                  <div className="flex gap-2 overflow-x-auto items-center p-3">
-                    {res.images?.map((imageObj, imgIndex) => {
-                      if (
-                        imageObj.type === "image_url" &&
-                        imageObj.image_url.url
-                      ) {
-                        return (
-                          <img
-                            key={`img-${imgIndex}`}
-                            src={imageObj.image_url.url}
-                            alt="Base64 Image"
-                            className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
-                            onClick={() =>
-                              setPreviewFile(imageObj.image_url.url)
-                            }
-                            onError={(e) => {
-                              e.target.src = video_icon;
-                            }}
-                          />
-                        );
-                      }
-                      return null;
-                    })}
-                    {res.videos?.map((videoObj, vidIndex) => {
-                      if (videoObj.type === "video_url") {
-                        return (
-                          <img
-                            key={`vid-${vidIndex}`}
-                            src={video_icon}
-                            alt="Video content"
-                            className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
-                          />
-                        );
-                      }
-                      return null;
-                    })}
-                    {res.textFiles?.map((textObj, textIndex) => {
-                      if (textObj.fileType === "text") {
-                        // The correct path to access text content
-                        const textContent = textObj.content;
-
-                        // Get file type from content or default to "txt"
-                        const fileType = textObj.content.fileType || "txt";
-
-                        // Get a preview of the text (first 50 characters)
-                        const textPreview =
-                          textContent.substring(0, 100) +
-                          (textContent.length > 100 ? "..." : "");
-
-                        // Get file name if available
-                        const fileName = textContent.split(":")[0] || "File";
-
-                        return (
-                          <div
-                            key={`text-${textIndex}`}
-                            className="h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-md transition-all"
-                            onClick={() =>
-                              setPreviewFile({
-                                content: textObj.content,
-                                name: fileName,
-                                isText: true,
-                              })
-                            }
-                          >
-                            {/* File name at top */}
-                            <div className="px-3 py-2 font-medium text-sm truncate border-b text-black dark:text-white">
-                              {fileName}
-                            </div>
-
-                            {/* Text preview in middle */}
-                            <div className="flex-1 p-3 text-xs overflow-hidden text-tertiary">
-                              {textPreview}
-                            </div>
-
-                            {/* File type indicator at bottom */}
-                            <div className="flex justify-center items-center pb-2">
-                              <span
-                                className="px-3 py-1 text-xs font-medium rounded-full 
-                        bg-blue-100 dark:bg-blue-900 
-                        text-blue-800 dark:text-blue-200 uppercase"
-                              >
-                                {fileType}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
+                    ) : null}
                   </div>
                 )}
-
                 <ResponseItem
                   res={res}
                   index={index}

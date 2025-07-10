@@ -225,12 +225,12 @@ const ResponseItem = React.memo(
                   <div className="flex justify-between w-full mt-1 gap-2">
                     {/* Render mode selection with updated styling for 4 modes */}
                     <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
+                      <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
                         {renderModes.map((mode) => (
                           <button
                             key={mode}
                             onClick={() => !isLoading && setRenderMode(mode)}
-                            className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px]
+                            className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
                             ${isLoading ? "cursor-not-allowed opacity-50" : ""}
                             ${
                               renderMode === mode

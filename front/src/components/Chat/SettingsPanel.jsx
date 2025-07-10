@@ -12,6 +12,7 @@ import ArcanaContainer from "../Arcanas/ArcanaContainer";
 //Assets
 import help from "../../assets/icon_help.svg";
 import image_supported from "../../assets/image_supported.svg";
+import audio_supported from "../../assets/audio_supported.svg";
 import video_icon from "../../assets/video_icon.svg";
 import thought_supported from "../../assets/thought_supported.svg";
 import books from "../../assets/books.svg";
@@ -42,6 +43,7 @@ const SettingsPanel = ({
   modelList,
   currentModel,
   isImageSupported,
+  isAudioSupported,
   isVideoSupported,
   isThoughtSupported,
   isArcanaSupported,
@@ -171,7 +173,6 @@ const SettingsPanel = ({
     (data) => {
       const { action, index, status, type } = data;
 
-      console.log("Joyride callback:", { action, index, status, type });
 
       if (status === "finished" || status === "skipped") {
         setRunTour(false);
@@ -231,7 +232,7 @@ const SettingsPanel = ({
       // Search by model name
       const nameMatch = model.name.toLowerCase().includes(query);
 
-      // Search by input types (text, image, video, arcana)
+      // Search by input types (text, image, audio, video, arcana)
       const inputMatch = model.input.some((inputType) =>
         inputType.toLowerCase().includes(query)
       );
@@ -827,6 +828,13 @@ const SettingsPanel = ({
                         <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
                           {modelSettings["model-name"]}
                         </div>
+                        {isAudioSupported && (
+                          <img
+                            src={audio_supported}
+                            alt="audio_supported"
+                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                          />
+                        )}
                         {isImageSupported && (
                           <img
                             src={image_supported}
@@ -921,6 +929,13 @@ const SettingsPanel = ({
 
                                   {/* Capability Icons */}
                                   <div className="flex items-center gap-0.5 flex-shrink-0">
+                                    {option.input.includes("audio") && (
+                                      <img
+                                        src={audio_supported}
+                                        alt="audio_supported"
+                                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                      />
+                                    )}
                                     {option.input.includes("image") && (
                                       <img
                                         src={image_supported}

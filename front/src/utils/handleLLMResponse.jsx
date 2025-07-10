@@ -33,7 +33,7 @@ const handleLLMResponse = async ({
   notifySuccess,
   setShowModalSession,
   setShowBadRequest,
-  timeoutTime
+  timeoutTime,
 }) => {
   // Set loading state
   dispatch(setIsResponding(true));
@@ -61,10 +61,15 @@ const handleLLMResponse = async ({
           modelX.name === localState.settings["model-name"] &&
           modelX.input.includes("video")
       );
+      const audioSupport = modelList.some(
+        (modelX) =>
+          modelX.name === localState.settings["model-name"] &&
+          modelX.input.includes("audio")
+      );
 
-      // Process conversation based on image/video support
+      // Process conversation based on image/video/audio support
       processedConversation = updatedConversation;
-      if (!imageSupport && !videoSupport) {
+      if (!imageSupport && !videoSupport && !audioSupport) {
         processedConversation = updatedConversation.map((message) => {
           if (message.role === "user" && Array.isArray(message.content)) {
             return {
@@ -88,8 +93,23 @@ const handleLLMResponse = async ({
           (file) => file.type === "video"
         );
         const textFiles = selectedFiles.filter(
-          (file) => file.type !== "image" && file.type !== "video"
+          (file) =>
+            file.type !== "image" &&
+            file.type !== "video" &&
+            file.type !== "audio"
         );
+        const audioFiles = selectedFiles.filter(
+          (file) => file.type === "audio"
+        );
+
+        // Create content arrays for response storage
+        const audioContent = audioFiles.map((audioFile) => ({
+          type: "input_audio",
+          input_audio: {
+            data: audioFile.text, // Raw base64
+            format: audioFile.format, // "wav" or "mp3"
+          },
+        }));
 
         const imageContent = imageFiles.map((imageFile) => ({
           type: "image_url",
@@ -107,13 +127,22 @@ const handleLLMResponse = async ({
 
         const textContent = textFiles.map((file) => ({
           name: file.name,
-          fileType: "text",
+          fileType: file.fileType || "text",
           content:
             file.fileType === "pdf"
               ? `${file.name}: ${file.processedContent}`
               : `${file.name}: ${file.content}`,
           type: "text",
           size: file.size,
+        }));
+
+        // FIXED: Store audio files properly for resend functionality
+        const audioFilesForStorage = audioFiles.map((audioFile) => ({
+          name: audioFile.name,
+          format: audioFile.format,
+          data: audioFile.text, // Raw base64
+          size: audioFile.size,
+          type: "audio",
         }));
 
         // Add response entry with files
@@ -126,6 +155,8 @@ const handleLLMResponse = async ({
               images: imageContent,
               videos: videoContent,
               textFiles: textContent,
+              audio: audioContent, // For API request format
+              audioFiles: audioFilesForStorage, // For resend functionality
               response: "",
             },
           ],
@@ -148,6 +179,8 @@ const handleLLMResponse = async ({
       updateLocalState({ prompt: "" });
       finalConversationForState = processedConversation;
     } else {
+      // === RESEND/EDIT LOGIC ===
+
       // Validate index
       if (index < 0 || index >= localState.responses.length) {
         notifyError("Something went wrong");
@@ -169,22 +202,33 @@ const handleLLMResponse = async ({
       } else {
         // resend
         currentPrompt = localState.responses[index]?.prompt;
-        if (!currentPrompt || currentPrompt?.trim() === "") {
-          notifyError("Invalid or empty prompt at the specified index.");
-          dispatch(setIsResponding(false));
-          setLoadingResend(false);
-          return;
-        }
+        // if (!currentPrompt || currentPrompt?.trim() === "") {
+        //   notifyError("Invalid or empty prompt at the specified index.");
+        //   dispatch(setIsResponding(false));
+        //   setLoadingResend(false);
+        //   return;
+        // }
       }
 
-      // Get existing files
+      // Get existing files from the response
       let imageFiles = [];
       let textFiles = [];
+      let audioFiles = [];
+      let audioFilesForStorage = [];
+
       if (localState.responses[index]?.images?.length > 0) {
         imageFiles = localState.responses[index]?.images;
       }
       if (localState.responses[index]?.textFiles?.length > 0) {
         textFiles = localState.responses[index]?.textFiles;
+      }
+
+      // FIXED: Handle audio files properly for resend
+      if (localState.responses[index]?.audio?.length > 0) {
+        audioFiles = localState.responses[index]?.audio; // For API format
+      }
+      if (localState.responses[index]?.audioFiles?.length > 0) {
+        audioFilesForStorage = localState.responses[index]?.audioFiles; // For resend functionality
       }
 
       // Reconstruct conversation
@@ -245,8 +289,12 @@ const handleLLMResponse = async ({
       // Add small delay to ensure state updates properly
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      // Prepare new message content based on whether there are images or text files
-      if (imageFiles?.length > 0 || textFiles?.length > 0) {
+      // Prepare new message content based on whether there are attachments
+      if (
+        imageFiles?.length > 0 ||
+        textFiles?.length > 0 ||
+        audioFiles?.length > 0
+      ) {
         // Start with the prompt text
         const newPromptContent = [
           {
@@ -255,9 +303,14 @@ const handleLLMResponse = async ({
           },
         ];
 
-        // Add images if they exist (keeping the original image structure)
+        // Add images if they exist
         if (imageFiles?.length > 0) {
           newPromptContent.push(...imageFiles);
+        }
+
+        // Add audio if it exists
+        if (audioFiles?.length > 0) {
+          newPromptContent.push(...audioFiles);
         }
 
         // Add text content if text files exist
@@ -269,10 +322,7 @@ const handleLLMResponse = async ({
 
           // Only add if there's actually content
           if (textContent.trim()) {
-            newPromptContent.push({
-              type: "text",
-              text: textContent,
-            });
+            newPromptContent[0].text += `\n${textContent}`;
           }
         }
 
@@ -283,7 +333,11 @@ const handleLLMResponse = async ({
       }
 
       // Update local state with new response entry
-      if (imageFiles?.length > 0 || textFiles?.length > 0) {
+      if (
+        imageFiles?.length > 0 ||
+        textFiles?.length > 0 ||
+        audioFiles?.length > 0
+      ) {
         setLocalState((prevState) => ({
           ...prevState,
           responses: [
@@ -292,6 +346,8 @@ const handleLLMResponse = async ({
               prompt: currentPrompt,
               images: imageFiles,
               textFiles: textFiles,
+              audio: audioFiles, // For API format
+              audioFiles: audioFilesForStorage, // For resend functionality
               response: "",
             },
           ],
@@ -320,14 +376,19 @@ const handleLLMResponse = async ({
           modelX.name === localState.settings["model-name"] &&
           modelX.input.includes("video")
       );
+      const audioSupport = modelList.some(
+        (modelX) =>
+          modelX.name === localState.settings["model-name"] &&
+          modelX.input.includes("audio")
+      );
 
       // Create updated conversation array for processing - REMOVE "info" role objects
       let updatedConversation = [...newConversation].filter(
         (message) => message.role !== "info"
       );
 
-      // If model doesn't support images/videos, remove image/video content
-      if (!imageSupport && !videoSupport) {
+      // If model doesn't support images/videos/audio, remove multimedia content
+      if (!imageSupport && !videoSupport && !audioSupport) {
         updatedConversation = updatedConversation.map((message) => {
           if (message.role === "user" && Array.isArray(message.content)) {
             return {
@@ -390,12 +451,10 @@ const handleLLMResponse = async ({
         if (jsonResponse.store) {
           const memoryText = jsonResponse.memory_sentence.trim();
           if (jsonResponse.replace) {
-            const line_number = jsonResponse.line_number - 1
+            const line_number = jsonResponse.line_number - 1;
             dispatch(editMemory({ index: line_number, text: memoryText }));
-            console.log("Edited memory:", memoryText);
           } else {
             dispatch(addMemory({ text: memoryText }));
-            console.log("New memory:", memoryText);
           }
           notifySuccess("Memory updated successfully.");
         }

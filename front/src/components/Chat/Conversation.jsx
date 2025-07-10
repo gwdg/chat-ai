@@ -23,6 +23,7 @@ const Conversation = ({
   modelList,
   selectedFiles,
   localState,
+  isAudioSupported,
   isImageSupported,
   isVideoSupported,
   isArcanaSupported,
@@ -31,7 +32,6 @@ const Conversation = ({
   setShowModalSession,
   setShowBadRequest,
   setShowFileModal,
-  setShowMicModal,
   setShowHistoryModal,
   toggleAdvOpt,
   updateLocalState,
@@ -150,13 +150,13 @@ const Conversation = ({
       <Prompt
         modelList={modelList}
         loading={loading}
+        isAudioSupported={isAudioSupported}
         isImageSupported={isImageSupported}
         isVideoSupported={isVideoSupported}
         isArcanaSupported={isArcanaSupported}
         selectedFiles={selectedFiles}
         localState={localState}
         setLocalState={setLocalState}
-        setShowMicModal={setShowMicModal}
         setLoading={setLoading}
         setSelectedFiles={setSelectedFiles}
         setShowModalSession={setShowModalSession}
