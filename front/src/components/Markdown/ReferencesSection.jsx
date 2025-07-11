@@ -370,6 +370,11 @@ const ProgressiveReferenceItem = memo(
               <div className="w-4 h-4" />
             )}
           </div>
+          {!hasContent && (
+            <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+              (title only)
+            </span>
+          )}
         </div>
 
         {/* Expanded content */}
