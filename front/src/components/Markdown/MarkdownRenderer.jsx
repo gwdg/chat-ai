@@ -131,34 +131,120 @@ const useStreamingProcessor = (content, isLoading) => {
   return { displayedText, isThinking, thinkingContent };
 };
 
-// Extract references and thinking content
+// Improved content extraction that handles any LLM format
 const extractSpecialContent = (content) => {
   if (!content) return { mainContent: "", referencesContent: "" };
 
-  // Extract references
-  const hasReferences = content.includes("References:");
-  const [mainContent, referencesContent] = hasReferences
-    ? content.split("References:")
-    : [content, null];
+  try {
+    // Check if content has RREF patterns
+    const hasRREF = /\[RREF\d+\]/i.test(content);
 
-  // Clean up the mainContent to remove the dash separator
-  let cleanedMainContent = mainContent;
-  if (cleanedMainContent) {
-    // Remove lines that are just dashes (markdown horizontal rule syntax)
-    cleanedMainContent = cleanedMainContent
-      .replace(/\n[-=_]{3,}\s*$/g, "") // More robust: handles dashes, equals, underscores
-      .trim();
+    if (!hasRREF) {
+      // No references found
+      return { mainContent: content, referencesContent: "" };
+    }
+
+    // Find where references actually start
+    const lines = content.split("\n");
+    let firstRREFLine = -1;
+    let referenceStartLine = -1;
+
+    // Find the first RREF occurrence
+    for (let i = 0; i < lines.length; i++) {
+      if (/\[RREF\d+\]/i.test(lines[i])) {
+        firstRREFLine = i;
+        break;
+      }
+    }
+
+    if (firstRREFLine === -1) {
+      return { mainContent: content, referencesContent: "" };
+    }
+
+    // Look backwards from first RREF to find a logical separator
+    for (let i = firstRREFLine; i >= 0; i--) {
+      const line = lines[i].trim();
+
+      // Check for explicit reference headers
+      if (
+        /^(references?|sources?|citations?|bibliography)\s*:?\s*$/i.test(line)
+      ) {
+        referenceStartLine = i;
+        break;
+      }
+
+      // Check for horizontal rules (markdown separators)
+      if (/^[-=_*]{3,}$/.test(line)) {
+        referenceStartLine = i + 1;
+        break;
+      }
+
+      // If we've gone back too far, assume references start at first RREF
+      if (i < firstRREFLine - 10) {
+        referenceStartLine = firstRREFLine;
+        break;
+      }
+    }
+
+    // Default fallback - use first RREF line
+    if (referenceStartLine === -1) {
+      referenceStartLine = firstRREFLine;
+    }
+
+    // Split the content
+    const mainLines = lines.slice(0, referenceStartLine);
+    const referenceLines = lines.slice(referenceStartLine);
+
+    // Clean up main content - remove trailing empty lines and separators
+    while (mainLines.length > 0) {
+      const lastLine = mainLines[mainLines.length - 1].trim();
+      if (
+        lastLine === "" ||
+        /^[-=_*]{3,}$/.test(lastLine) ||
+        /^(references?|sources?)\s*:?\s*$/i.test(lastLine)
+      ) {
+        mainLines.pop();
+      } else {
+        break;
+      }
+    }
+
+    const mainContent = mainLines.join("\n").trim();
+    const referencesContent = referenceLines.join("\n").trim();
+
+    // Final validation - ensure no RREF leaked into main content
+    if (mainContent.includes("[RREF")) {
+      console.warn("RREF found in main content, using emergency split");
+      const firstRREFIndex = content.indexOf("[RREF");
+      if (firstRREFIndex > 0) {
+        return {
+          mainContent: content.substring(0, firstRREFIndex).trim(),
+          referencesContent: content.substring(firstRREFIndex).trim(),
+        };
+      }
+    }
+
+    return {
+      mainContent,
+      referencesContent,
+    };
+  } catch (error) {
+    console.error("Error in content extraction:", error);
+    // Safe fallback
+    const firstRREFIndex = content.indexOf("[RREF");
+    if (firstRREFIndex > 0) {
+      return {
+        mainContent: content.substring(0, firstRREFIndex).trim(),
+        referencesContent: content.substring(firstRREFIndex).trim(),
+      };
+    }
+    return { mainContent: content, referencesContent: "" };
   }
-
-  return {
-    mainContent: cleanedMainContent,
-    referencesContent,
-  };
 };
 
 const MarkdownRenderer = memo(
   ({ children, isDarkMode, isLoading, renderMode = "Default" }) => {
-    // Single useEffect for KaTeX styling with empty dependency array
+    // Single useEffect for KaTeX styling
     useEffect(() => {
       const style = document.createElement("style");
       style.textContent = `
@@ -172,9 +258,11 @@ const MarkdownRenderer = memo(
       document.head.appendChild(style);
 
       return () => {
-        document.head.removeChild(style);
+        if (document.head.contains(style)) {
+          document.head.removeChild(style);
+        }
       };
-    }, []); // Empty dependency array - runs once on mount
+    }, []);
 
     const { displayedText, thinkingContent } = useStreamingProcessor(
       children,
@@ -198,11 +286,44 @@ const MarkdownRenderer = memo(
       },
     };
 
-    // LaTeX-only mode - render only LaTeX expressions and show other content as plain text
+    // Safe wrapper for ReactMarkdown with HTML sanitization
+    const SafeMarkdown = ({ children: markdownContent, ...props }) => {
+      try {
+        if (!markdownContent || markdownContent.trim() === "") {
+          return null;
+        }
+
+        // Sanitize content to prevent HTML injection and page refreshes
+        const sanitizedContent = markdownContent
+          // Remove meta tags (especially refresh tags)
+          .replace(/<meta[^>]*>/gi, "")
+          // Remove script tags
+          .replace(/<script[^>]*>.*?<\/script>/gi, "")
+          // Remove other potentially dangerous HTML
+          .replace(/<iframe[^>]*>.*?<\/iframe>/gi, "")
+          .replace(/<object[^>]*>.*?<\/object>/gi, "")
+          .replace(/<embed[^>]*>/gi, "")
+          .replace(/<form[^>]*>.*?<\/form>/gi, "")
+          // Remove javascript: links
+          .replace(/javascript:/gi, "")
+          // Remove on* event handlers
+          .replace(/\son\w+\s*=\s*[^>]*/gi, "");
+
+        return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
+      } catch (error) {
+        console.error("Error rendering markdown:", error);
+        return (
+          <div className="text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+            Error rendering content: {error.message}
+          </div>
+        );
+      }
+    };
+
+    // LaTeX-only mode
     if (renderMode === "LaTeX") {
       const latexOnlyComponents = {
         ...rendererComponents,
-        // Override all components except math to show as plain text
         p: ({ children }) => (
           <p className="mb-3 font-mono text-sm bg-gray-100 dark:bg-gray-800 p-2 rounded">
             {children}
@@ -223,29 +344,6 @@ const MarkdownRenderer = memo(
             ### {children}
           </div>
         ),
-        h4: ({ children }) => (
-          <div className="text-sm font-mono mt-2 mb-1 bg-gray-100 dark:bg-gray-800 p-2 rounded">
-            #### {children}
-          </div>
-        ),
-        h5: ({ children }) => (
-          <div className="text-xs font-mono mt-1 mb-1 bg-gray-100 dark:bg-gray-800 p-2 rounded">
-            ##### {children}
-          </div>
-        ),
-        h6: ({ children }) => (
-          <div className="text-xs font-mono mt-1 mb-1 bg-gray-100 dark:bg-gray-800 p-2 rounded">
-            ###### {children}
-          </div>
-        ),
-        strong: ({ children }) => (
-          <span className="font-mono px-1">**{children}**</span>
-        ),
-        em: ({ children }) => (
-          <span className="font-mono bg-blue-100 dark:bg-blue-900 px-1">
-            *{children}*
-          </span>
-        ),
         code: ({ inline, className, children }) => {
           const content = String(children).replace(/\n$/, "");
           if (inline) {
@@ -264,28 +362,6 @@ const MarkdownRenderer = memo(
             </pre>
           );
         },
-        ul: ({ children }) => (
-          <div className="font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded mb-2">
-            {children}
-          </div>
-        ),
-        ol: ({ children }) => (
-          <div className="font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded mb-2">
-            {children}
-          </div>
-        ),
-        li: ({ children }) => <div className="text-sm">- {children}</div>,
-        blockquote: ({ children }) => (
-          <div className="font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded mb-2 border-l-4 border-gray-400">
-            &gt; {children}
-          </div>
-        ),
-        a: ({ href, children }) => (
-          <span className="font-mono bg-blue-100 dark:bg-blue-900 px-1 rounded text-xs">
-            [{children}]({href})
-          </span>
-        ),
-        // Keep math rendering functional
         math: ({ value }) => (
           <div className="my-4 text-center p-4 bg-green-50 dark:bg-green-900/20 rounded border-2 border-green-200 dark:border-green-700">
             <span className="katex-display">{value}</span>
@@ -304,25 +380,23 @@ const MarkdownRenderer = memo(
             <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
           )}
 
-          {/* Main content */}
           {(isLoading ? displayedText : mainContent)
             .split(/<think>([\s\S]*?)<\/think>/g)
             .map((part, i) => {
               return i % 2 === 0 ? (
-                <ReactMarkdown
+                <SafeMarkdown
                   key={`part-${i}`}
                   remarkPlugins={[remarkGfm, remarkMath]}
                   rehypePlugins={[rehypeRaw, [rehypeKatex, katexOptions]]}
                   components={latexOnlyComponents}
                 >
                   {preprocessLaTeX(part)}
-                </ReactMarkdown>
+                </SafeMarkdown>
               ) : (
                 <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
               );
             })}
 
-          {/* References section */}
           {referencesContent && (
             <ReferencesSection content={referencesContent} />
           )}
@@ -330,12 +404,10 @@ const MarkdownRenderer = memo(
       );
     }
 
-    // Markdown mode - display raw markdown with only code blocks rendered
+    // Markdown mode
     if (renderMode === "Markdown") {
-      // Custom components for Markdown mode - only render code blocks
       const markdownModeComponents = {
         ...rendererComponents,
-        // Override math components to show raw LaTeX
         math: ({ value }) => <code className="text-pink-500">${value}$</code>,
         inlineMath: ({ value }) => (
           <code className="text-pink-500">${value}$</code>
@@ -348,24 +420,22 @@ const MarkdownRenderer = memo(
             <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
           )}
 
-          {/* Main content */}
           {(isLoading ? displayedText : mainContent)
             .split(/<think>([\s\S]*?)<\/think>/g)
             .map((part, i) => {
               return i % 2 === 0 ? (
-                <ReactMarkdown
+                <SafeMarkdown
                   key={`part-${i}`}
-                  remarkPlugins={[remarkGfm]} // No math plugins
+                  remarkPlugins={[remarkGfm]}
                   components={markdownModeComponents}
                 >
                   {part}
-                </ReactMarkdown>
+                </SafeMarkdown>
               ) : (
                 <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
               );
             })}
 
-          {/* References section */}
           {referencesContent && (
             <ReferencesSection content={referencesContent} />
           )}
@@ -385,21 +455,23 @@ const MarkdownRenderer = memo(
           .split(/<think>([\s\S]*?)<\/think>/g)
           .map((part, i) => {
             return i % 2 === 0 ? (
-              <ReactMarkdown
+              <SafeMarkdown
                 key={`part-${i}`}
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeRaw, [rehypeKatex, katexOptions]]}
                 components={rendererComponents}
               >
                 {preprocessLaTeX(part)}
-              </ReactMarkdown>
+              </SafeMarkdown>
             ) : (
               <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
             );
           })}
 
         {/* References section */}
-        {referencesContent && <ReferencesSection content={referencesContent} />}
+        {referencesContent && referencesContent.trim() && (
+          <ReferencesSection content={referencesContent} />
+        )}
       </div>
     );
   }
