@@ -10,22 +10,43 @@ import { rendererComponents } from "./rendererComponents";
 // Import utility from separate file
 import { parseReferences } from "./parseReferences";
 
-// ReferenceItem component
+// ReferenceItem component with error handling
 const ReferenceItem = memo(({ reference }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   // Extract title and content - memoize to avoid recalculation on re-renders
-  const { titleText, contentWithoutTitle } = useMemo(() => {
-    const firstLine = reference.content.split("\n")[0];
-    return {
-      titleText: firstLine.replace(/\[RREF\d+\]\s*/, "").trim(),
-      contentWithoutTitle: reference.content
-        .split("\n")
-        .slice(1)
-        .join("\n")
-        .trim(),
-    };
-  }, [reference.content]);
+  const { titleText, contentWithoutTitle, hasContent } = useMemo(() => {
+    try {
+      if (!reference?.content) {
+        return {
+          titleText: "Invalid Reference",
+          contentWithoutTitle: "",
+          hasContent: false,
+        };
+      }
+
+      const lines = reference.content.split("\n");
+      const firstLine = lines[0] || "";
+      const contentLines = lines.slice(1).join("\n").trim();
+
+      return {
+        titleText:
+          firstLine.replace(/\[RREF\d+\]\s*/, "").trim() ||
+          "Untitled Reference",
+        contentWithoutTitle: contentLines,
+        hasContent: contentLines.length > 0,
+      };
+    } catch (error) {
+      console.error("Error processing reference:", error);
+      setHasError(true);
+      return {
+        titleText: "Error Processing Reference",
+        contentWithoutTitle: "",
+        hasContent: false,
+      };
+    }
+  }, [reference?.content]);
 
   // Create custom link renderer to ensure links are clickable
   const linkRenderer = useMemo(
@@ -46,17 +67,40 @@ const ReferenceItem = memo(({ reference }) => {
     []
   );
 
+  if (hasError) {
+    return (
+      <div className="border-l-4 border-l-red-500/50 px-4 py-3 bg-red-50 dark:bg-red-900/20">
+        <div className="text-sm text-red-600 dark:text-red-400">
+          Error rendering reference {reference?.number + 1 || "unknown"}
+        </div>
+      </div>
+    );
+  }
+
+  const handleToggle = () => {
+    try {
+      setIsOpen(!isOpen);
+    } catch (error) {
+      console.error("Error toggling reference:", error);
+      setHasError(true);
+    }
+  };
+
   return (
     <div className="border-l-4 border-l-blue-500/50 hover:border-l-blue-500 transition-colors">
       <div
-        className="w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center justify-between group cursor-pointer"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        aria-controls={`reference-${reference.number}`}
+        className={`w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center justify-between group ${
+          hasContent ? "cursor-pointer" : "cursor-default"
+        }`}
+        onClick={hasContent ? handleToggle : undefined}
+        aria-expanded={hasContent ? isOpen : undefined}
+        aria-controls={
+          hasContent ? `reference-${reference?.number || 0}` : undefined
+        }
       >
         <div className="flex items-center gap-2 flex-grow overflow-hidden">
           <span className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 whitespace-nowrap">
-            RREF {reference.number + 1}
+            RREF {(reference?.number || 0) + 1}
           </span>
           <div className="text-sm font-bold truncate text-gray-700 dark:text-gray-300">
             <ReactMarkdown
@@ -68,14 +112,27 @@ const ReferenceItem = memo(({ reference }) => {
               {titleText}
             </ReactMarkdown>
           </div>
+          {!hasContent && (
+            <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+              (title only)
+            </span>
+          )}
         </div>
         <div className="shrink-0 ml-2">
-          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          {hasContent ? (
+            isOpen ? (
+              <ChevronDown size={16} />
+            ) : (
+              <ChevronRight size={16} />
+            )
+          ) : (
+            <div className="w-4 h-4" /> // Empty space to maintain layout
+          )}
         </div>
       </div>
-      {isOpen && (
+      {isOpen && hasContent && (
         <div
-          id={`reference-${reference.number}`}
+          id={`reference-${reference?.number || 0}`}
           className="px-4 py-3 bg-gray-50 dark:bg-gray-800/30"
         >
           <ReactMarkdown
@@ -93,21 +150,45 @@ const ReferenceItem = memo(({ reference }) => {
 
 ReferenceItem.displayName = "ReferenceItem";
 
-// ReferencesSection component
+// ReferencesSection component with improved error handling
 const ReferencesSection = memo(({ content }) => {
   const [copySuccess, setCopySuccess] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   // Memoize references parsing to avoid recalculation on re-renders
-  const references = useMemo(() => parseReferences(content), [content]);
+  const references = useMemo(() => {
+    try {
+      const refs = parseReferences(content);
+      return refs;
+    } catch (error) {
+      console.error("Error in references parsing:", error);
+      setHasError(true);
+      return [];
+    }
+  }, [content]);
 
   // Memoize the concatenated references text
-  const allReferencesText = useMemo(
-    () => references.map((ref) => ref.content).join("\n\n"),
-    [references]
-  );
+  const allReferencesText = useMemo(() => {
+    try {
+      return references.map((ref) => ref?.content || "").join("\n\n");
+    } catch (error) {
+      console.error("Error concatenating references:", error);
+      return "";
+    }
+  }, [references]);
 
   // Early return if no references
-  if (references.length === 0) return null;
+  if (hasError) {
+    return (
+      <div className="mt-8 border rounded-xl border-red-200 dark:border-red-700 overflow-hidden">
+        <div className="px-4 py-3 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300">
+          Error processing references
+        </div>
+      </div>
+    );
+  }
+
+  if (!references || references.length === 0) return null;
 
   const copyAllReferences = async () => {
     try {
@@ -161,8 +242,11 @@ const ReferencesSection = memo(({ content }) => {
         </button>
       </div>
       <div>
-        {references.map((ref) => (
-          <ReferenceItem key={ref.number} reference={ref} />
+        {references.map((ref, index) => (
+          <ReferenceItem
+            key={ref?.number !== undefined ? ref.number : index}
+            reference={ref}
+          />
         ))}
       </div>
     </div>
