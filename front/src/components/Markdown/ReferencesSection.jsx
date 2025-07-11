@@ -6,85 +6,148 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 // Import shared markdown components
 import { rendererComponents } from "./rendererComponents";
-
 // Import utility from separate file
 import { parseReferences } from "./parseReferences";
 
-// ReferenceItem component with error handling
-const ReferenceItem = memo(({ reference }) => {
+// ReferenceItem component - handles individual references safely
+const ReferenceItem = memo(({ reference, index }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  // Extract title and content - memoize to avoid recalculation on re-renders
+  // Extract title and content safely with HTML sanitization
   const { titleText, contentWithoutTitle, hasContent } = useMemo(() => {
     try {
       if (!reference?.content) {
         return {
-          titleText: "Invalid Reference",
+          titleText: `Reference ${(reference?.number || index) + 1}`,
           contentWithoutTitle: "",
           hasContent: false,
         };
       }
 
-      const lines = reference.content.split("\n");
+      // Sanitize the entire reference content first
+      const sanitizedContent = reference.content
+        // Remove meta tags (especially refresh tags)
+        .replace(/<meta[^>]*>/gi, "[META TAG REMOVED]")
+        // Remove script tags
+        .replace(/<script[^>]*>.*?<\/script>/gi, "[SCRIPT REMOVED]")
+        // Remove other potentially dangerous HTML
+        .replace(/<iframe[^>]*>.*?<\/iframe>/gi, "[IFRAME REMOVED]")
+        .replace(/<object[^>]*>.*?<\/object>/gi, "[OBJECT REMOVED]")
+        .replace(/<embed[^>]*>/gi, "[EMBED REMOVED]")
+        .replace(/<form[^>]*>.*?<\/form>/gi, "[FORM REMOVED]")
+        // Remove javascript: links
+        .replace(/javascript:/gi, "")
+        // Remove on* event handlers
+        .replace(/\son\w+\s*=\s*[^>]*/gi, "");
+
+      const lines = sanitizedContent.split("\n");
       const firstLine = lines[0] || "";
-      const contentLines = lines.slice(1).join("\n").trim();
+      const remainingLines = lines.slice(1);
+
+      // Clean up the title - remove RREF pattern
+      let cleanTitle = firstLine.replace(/\[RREF\d+\]\s*/i, "").trim();
+      if (!cleanTitle) {
+        cleanTitle = `Reference ${(reference?.number || index) + 1}`;
+      }
+
+      // Check if there's actual content beyond the title
+      const remainingContent = remainingLines.join("\n").trim();
+      const hasActualContent = remainingContent.length > 0;
 
       return {
-        titleText:
-          firstLine.replace(/\[RREF\d+\]\s*/, "").trim() ||
-          "Untitled Reference",
-        contentWithoutTitle: contentLines,
-        hasContent: contentLines.length > 0,
+        titleText: cleanTitle,
+        contentWithoutTitle: remainingContent,
+        hasContent: hasActualContent,
       };
     } catch (error) {
       console.error("Error processing reference:", error);
       setHasError(true);
       return {
-        titleText: "Error Processing Reference",
+        titleText: `Reference ${(reference?.number || index) + 1} (Error)`,
         contentWithoutTitle: "",
         hasContent: false,
       };
     }
-  }, [reference?.content]);
+  }, [reference, index]);
 
-  // Create custom link renderer to ensure links are clickable
+  // Safe link renderer
   const linkRenderer = useMemo(
     () => ({
       ...rendererComponents,
-      a: ({ ...props }) => (
-        <a
-          {...props}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
-          onClick={(e) => e.stopPropagation()} // Prevent button click when clicking on links
-        >
-          {props.children}
-        </a>
-      ),
+      a: ({ href, children, ...props }) => {
+        try {
+          return (
+            <a
+              {...props}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {children}
+            </a>
+          );
+        } catch (error) {
+          console.error("Error rendering link:", error);
+          return <span className="text-blue-600">{children}</span>;
+        }
+      },
     }),
     []
   );
 
-  if (hasError) {
-    return (
-      <div className="border-l-4 border-l-red-500/50 px-4 py-3 bg-red-50 dark:bg-red-900/20">
-        <div className="text-sm text-red-600 dark:text-red-400">
-          Error rendering reference {reference?.number + 1 || "unknown"}
-        </div>
-      </div>
-    );
-  }
-
   const handleToggle = () => {
     try {
-      setIsOpen(!isOpen);
+      if (hasContent) {
+        setIsOpen(!isOpen);
+      }
     } catch (error) {
       console.error("Error toggling reference:", error);
       setHasError(true);
     }
   };
+
+  // Safe markdown rendering function with HTML sanitization
+  const SafeMarkdown = ({ children: markdownContent, ...props }) => {
+    try {
+      if (!markdownContent || typeof markdownContent !== "string") {
+        return <span>Invalid content</span>;
+      }
+
+      // Sanitize content to prevent HTML injection and page refreshes
+      const sanitizedContent = markdownContent
+        // Remove meta tags (especially refresh tags)
+        .replace(/<meta[^>]*>/gi, "")
+        // Remove script tags
+        .replace(/<script[^>]*>.*?<\/script>/gi, "")
+        // Remove other potentially dangerous HTML
+        .replace(/<iframe[^>]*>.*?<\/iframe>/gi, "")
+        .replace(/<object[^>]*>.*?<\/object>/gi, "")
+        .replace(/<embed[^>]*>/gi, "")
+        .replace(/<form[^>]*>.*?<\/form>/gi, "")
+        // Remove javascript: links
+        .replace(/javascript:/gi, "")
+        // Remove on* event handlers
+        .replace(/\son\w+\s*=\s*[^>]*/gi, "");
+
+      return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
+    } catch (error) {
+      console.error("Error rendering markdown in reference:", error);
+      return <span className="text-gray-500">Content rendering error</span>;
+    }
+  };
+
+  if (hasError) {
+    return (
+      <div className="border-l-4 border-l-red-500/50 px-4 py-3 bg-red-50 dark:bg-red-900/20">
+        <div className="text-sm text-red-600 dark:text-red-400">
+          Error rendering reference {(reference?.number || index) + 1}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-l-4 border-l-blue-500/50 hover:border-l-blue-500 transition-colors">
@@ -95,28 +158,23 @@ const ReferenceItem = memo(({ reference }) => {
         onClick={hasContent ? handleToggle : undefined}
         aria-expanded={hasContent ? isOpen : undefined}
         aria-controls={
-          hasContent ? `reference-${reference?.number || 0}` : undefined
+          hasContent ? `reference-${reference?.number || index}` : undefined
         }
       >
         <div className="flex items-center gap-2 flex-grow overflow-hidden">
           <span className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 whitespace-nowrap">
-            RREF {(reference?.number || 0) + 1}
+            RREF {(reference?.number || index) + 1}
           </span>
           <div className="text-sm font-bold truncate text-gray-700 dark:text-gray-300">
-            <ReactMarkdown
+            <SafeMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw]}
               components={linkRenderer}
               className="inline"
             >
               {titleText}
-            </ReactMarkdown>
+            </SafeMarkdown>
           </div>
-          {!hasContent && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
-              (title only)
-            </span>
-          )}
         </div>
         <div className="shrink-0 ml-2">
           {hasContent ? (
@@ -126,22 +184,22 @@ const ReferenceItem = memo(({ reference }) => {
               <ChevronRight size={16} />
             )
           ) : (
-            <div className="w-4 h-4" /> // Empty space to maintain layout
+            <div className="w-4 h-4" />
           )}
         </div>
       </div>
-      {isOpen && hasContent && (
+      {isOpen && hasContent && contentWithoutTitle && (
         <div
-          id={`reference-${reference?.number || 0}`}
+          id={`reference-${reference?.number || index}`}
           className="px-4 py-3 bg-gray-50 dark:bg-gray-800/30"
         >
-          <ReactMarkdown
+          <SafeMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
             components={linkRenderer}
           >
             {contentWithoutTitle}
-          </ReactMarkdown>
+          </SafeMarkdown>
         </div>
       )}
     </div>
@@ -150,24 +208,26 @@ const ReferenceItem = memo(({ reference }) => {
 
 ReferenceItem.displayName = "ReferenceItem";
 
-// ReferencesSection component with improved error handling
+// Main ReferencesSection component
 const ReferencesSection = memo(({ content }) => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  // Memoize references parsing to avoid recalculation on re-renders
+  // Parse references safely
   const references = useMemo(() => {
     try {
+      if (!content) return [];
+
       const refs = parseReferences(content);
       return refs;
     } catch (error) {
-      console.error("Error in references parsing:", error);
+      console.error("Error in ReferencesSection parsing:", error);
       setHasError(true);
       return [];
     }
   }, [content]);
 
-  // Memoize the concatenated references text
+  // Concatenate all references for copying
   const allReferencesText = useMemo(() => {
     try {
       return references.map((ref) => ref?.content || "").join("\n\n");
@@ -177,19 +237,7 @@ const ReferencesSection = memo(({ content }) => {
     }
   }, [references]);
 
-  // Early return if no references
-  if (hasError) {
-    return (
-      <div className="mt-8 border rounded-xl border-red-200 dark:border-red-700 overflow-hidden">
-        <div className="px-4 py-3 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300">
-          Error processing references
-        </div>
-      </div>
-    );
-  }
-
-  if (!references || references.length === 0) return null;
-
+  // Copy all references to clipboard
   const copyAllReferences = async () => {
     try {
       await navigator.clipboard.writeText(allReferencesText);
@@ -200,8 +248,25 @@ const ReferencesSection = memo(({ content }) => {
     }
   };
 
+  // Error state
+  if (hasError) {
+    return (
+      <div className="mt-8 border rounded-xl border-red-200 dark:border-red-700 overflow-hidden">
+        <div className="px-4 py-3 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-300">
+          Error processing references
+        </div>
+      </div>
+    );
+  }
+
+  // No references to show
+  if (!references || references.length === 0) {
+    return null;
+  }
+
   return (
     <div className="mt-8 border rounded-xl border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Header */}
       <div className="px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
@@ -241,11 +306,16 @@ const ReferencesSection = memo(({ content }) => {
           {copySuccess ? "Copied!" : "Copy All"}
         </button>
       </div>
+
+      {/* References List */}
       <div>
         {references.map((ref, index) => (
           <ReferenceItem
-            key={ref?.number !== undefined ? ref.number : index}
+            key={`ref-${
+              ref?.number !== undefined ? ref.number : index
+            }-${index}`}
             reference={ref}
+            index={index}
           />
         ))}
       </div>
