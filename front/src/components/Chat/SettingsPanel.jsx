@@ -171,7 +171,6 @@ const SettingsPanel = ({
     (data) => {
       const { action, index, status, type } = data;
 
-      console.log("Joyride callback:", { action, index, status, type });
 
       if (status === "finished" || status === "skipped") {
         setRunTour(false);

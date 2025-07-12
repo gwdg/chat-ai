@@ -33,7 +33,7 @@ const handleLLMResponse = async ({
   notifySuccess,
   setShowModalSession,
   setShowBadRequest,
-  timeoutTime
+  timeoutTime,
 }) => {
   // Set loading state
   dispatch(setIsResponding(true));
@@ -390,12 +390,10 @@ const handleLLMResponse = async ({
         if (jsonResponse.store) {
           const memoryText = jsonResponse.memory_sentence.trim();
           if (jsonResponse.replace) {
-            const line_number = jsonResponse.line_number - 1
+            const line_number = jsonResponse.line_number - 1;
             dispatch(editMemory({ index: line_number, text: memoryText }));
-            console.log("Edited memory:", memoryText);
           } else {
             dispatch(addMemory({ text: memoryText }));
-            console.log("New memory:", memoryText);
           }
           notifySuccess("Memory updated successfully.");
         }
