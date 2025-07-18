@@ -212,7 +212,7 @@ app.post("/", async (req, res) => {
     return res.status(422).json({ error: "Invalid messages provided" });
   }
 
-  const validatedTimeout = Math.min(Math.max(timeout, 5000), 300000);
+  const validatedTimeout = Math.min(Math.max(timeout, 5000), 900000);
   console.log(
     `Request timeout set to: ${validatedTimeout}ms (${
       validatedTimeout / 1000
