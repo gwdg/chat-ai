@@ -62,6 +62,7 @@ const SettingsPanel = ({
   notifySuccess,
   notifyError,
   setShowModalSession,
+  userData
 }) => {
   const conversations = useSelector(selectConversations);
 
@@ -968,7 +969,7 @@ const SettingsPanel = ({
                 .toLowerCase()
                 .includes("external") && (
                 <div className="text-yellow-600 text-sm mb-3 select-none">
-                  <Trans i18nKey="description.warning_settings" />
+                  <Trans i18nKey={userData?.org == "MPG" ? "description.warning_settings_mpg" : "description.warning_settings"} />
                 </div>
               )}
 

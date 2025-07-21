@@ -415,6 +415,7 @@ function Layout() {
               showClearMemoryModal={showClearMemoryModal}
               showMemoryModal={showMemoryModal}
               setShowMemoryModal={setShowMemoryModal}
+              userData={userData}
             />
           </div>
         </div>

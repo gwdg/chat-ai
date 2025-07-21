@@ -47,6 +47,7 @@ function ChatWindow({
   setShowClearMemoryModal,
   showMemoryModal,
   setShowMemoryModal,
+  userData,
 }) {
   // Hooks
   const { notifySuccess, notifyError } = useToast();
@@ -814,6 +815,7 @@ function ChatWindow({
           notifyError={notifyError}
           setShowModalSession={setShowModalSession}
           setPreviewFile={setPreviewFile}
+          userData={userData}
         />
       </div>
 
