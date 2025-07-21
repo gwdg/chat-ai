@@ -51,39 +51,120 @@ const preprocessLaTeX = (content) => {
   return processedContent;
 };
 
+// SMOOTH streaming processor with progressive reference handling
 const useStreamingProcessor = (content, isLoading) => {
   const [displayedText, setDisplayedText] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [thinkingContent, setThinkingContent] = useState("");
+  const [referencesStarted, setReferencesStarted] = useState(false);
+  const [currentReferenceContent, setCurrentReferenceContent] = useState("");
+  const [referencesSectionVisible, setReferencesSectionVisible] =
+    useState(false);
   const bufferRef = useRef("");
   const processedIndexRef = useRef(0);
   const animationFrameRef = useRef(null);
+  const mainContentRef = useRef("");
+  const referenceStartIndexRef = useRef(-1);
 
   const processStreamingContent = useCallback(() => {
     if (!content || !isLoading) {
       setDisplayedText(content || "");
       setThinkingContent("");
       setIsThinking(false);
+      setReferencesStarted(false);
+      setCurrentReferenceContent("");
+      setReferencesSectionVisible(false);
       bufferRef.current = "";
       processedIndexRef.current = 0;
+      mainContentRef.current = "";
+      referenceStartIndexRef.current = -1;
 
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
-
       return;
     }
 
     const processNextChunk = () => {
-      const chunkSize = 50;
+      const chunkSize = 30;
       let i = 0;
 
       while (i < chunkSize && processedIndexRef.current < content.length) {
         const char = content[processedIndexRef.current];
         bufferRef.current += char;
 
-        if (bufferRef.current.includes("<think>")) {
+        // Check if we're entering references section during streaming
+        if (!referencesStarted) {
+          const hasReferencesHeader =
+            /\n\s*#{1,3}\s*(references?|sources?)\s*\n/i.test(
+              bufferRef.current
+            ) ||
+            /\n\s*(references?|sources?)\s*:?\s*\n/i.test(bufferRef.current);
+          const hasSeparator = /\n\s*[-=]{3,}\s*\n/i.test(bufferRef.current);
+          const hasRREF = /\[RREF\d+\]/i.test(bufferRef.current);
+
+          if (hasReferencesHeader || (hasSeparator && hasRREF) || hasRREF) {
+            console.log("🎯 References section starting - smooth transition");
+            setReferencesStarted(true);
+            setReferencesSectionVisible(true);
+
+            // Find exact split point and clean up main content
+            const lines = bufferRef.current.split("\n");
+            let splitIndex = -1;
+
+            for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+              const line = lines[lineIdx].trim();
+              if (
+                /^#{1,3}\s*(references?|sources?)\s*$/i.test(line) ||
+                /^(references?|sources?)\s*:?\s*$/i.test(line) ||
+                /^[-=]{3,}$/.test(line) ||
+                /^\s*\[RREF\d+\]/i.test(line)
+              ) {
+                // Look back for logical break
+                for (let j = lineIdx - 1; j >= Math.max(0, lineIdx - 3); j--) {
+                  if (
+                    lines[j].trim() === "" ||
+                    /^[-=]{2,}$/.test(lines[j].trim())
+                  ) {
+                    splitIndex = j;
+                    break;
+                  }
+                }
+                if (splitIndex === -1) splitIndex = lineIdx;
+                break;
+              }
+            }
+
+            if (splitIndex !== -1) {
+              const mainLines = lines.slice(0, splitIndex);
+
+              // CRITICAL FIX: Clean up any reference-related content from main content
+              while (mainLines.length > 0) {
+                const lastLine = mainLines[mainLines.length - 1].trim();
+                if (
+                  lastLine === "" ||
+                  /^[-=]{2,}$/.test(lastLine) ||
+                  /^(references?|sources?)\s*:?\s*$/i.test(lastLine) ||
+                  /^#{1,3}\s*(references?|sources?)\s*$/i.test(lastLine) ||
+                  /\[RREF\d+\]/i.test(lastLine) // Remove any RREF content from main
+                ) {
+                  mainLines.pop();
+                } else {
+                  break;
+                }
+              }
+
+              // Set clean main content immediately
+              mainContentRef.current = mainLines.join("\n").trim();
+              setDisplayedText(mainContentRef.current);
+              referenceStartIndexRef.current = splitIndex;
+            }
+          }
+        }
+
+        // Handle thinking blocks (unchanged)
+        if (bufferRef.current.includes("<think>") && !referencesStarted) {
           const [beforeThink] = bufferRef.current.split("<think>");
           setDisplayedText(beforeThink);
           setIsThinking(true);
@@ -93,10 +174,36 @@ const useStreamingProcessor = (content, isLoading) => {
           setThinkingContent(thinkContent);
           setIsThinking(false);
           bufferRef.current = "";
-        } else if (!isThinking) {
-          setDisplayedText(bufferRef.current);
-        } else {
+
+          if (!referencesStarted) {
+            setDisplayedText(mainContentRef.current || bufferRef.current);
+          }
+        } else if (!isThinking && !referencesStarted) {
+          // Update main content normally - but stop before any reference content
+          const currentBuffer = bufferRef.current;
+
+          // Check if we have any reference indicators and exclude them
+          let cleanContent = currentBuffer;
+          const rrefMatch = cleanContent.match(
+            /^([\s\S]*?)(?=\n\s*[-=]{3,}|\n\s*#{1,3}\s*(?:references?|sources?)|\n\s*(?:references?|sources?)\s*:|\[RREF\d+\])/i
+          );
+
+          if (rrefMatch) {
+            cleanContent = rrefMatch[1].trim();
+          }
+
+          setDisplayedText(cleanContent);
+          mainContentRef.current = cleanContent;
+        } else if (isThinking && !referencesStarted) {
           setThinkingContent((prev) => prev + char);
+        } else if (referencesStarted) {
+          // We're in references section - update reference content progressively
+          const lines = bufferRef.current.split("\n");
+          if (referenceStartIndexRef.current !== -1) {
+            const referenceLines = lines.slice(referenceStartIndexRef.current);
+            const currentRefContent = referenceLines.join("\n");
+            setCurrentReferenceContent(currentRefContent);
+          }
         }
 
         processedIndexRef.current++;
@@ -105,6 +212,8 @@ const useStreamingProcessor = (content, isLoading) => {
 
       if (processedIndexRef.current < content.length) {
         animationFrameRef.current = requestAnimationFrame(processNextChunk);
+      } else {
+        console.log("✅ Streaming complete");
       }
     };
 
@@ -112,11 +221,16 @@ const useStreamingProcessor = (content, isLoading) => {
       setDisplayedText("");
       setThinkingContent("");
       setIsThinking(false);
+      setReferencesStarted(false);
+      setCurrentReferenceContent("");
+      setReferencesSectionVisible(false);
       bufferRef.current = "";
+      mainContentRef.current = "";
+      referenceStartIndexRef.current = -1;
     }
 
     animationFrameRef.current = requestAnimationFrame(processNextChunk);
-  }, [content, isLoading, isThinking]);
+  }, [content, isLoading, isThinking, referencesStarted]);
 
   useEffect(() => {
     processStreamingContent();
@@ -128,80 +242,97 @@ const useStreamingProcessor = (content, isLoading) => {
     };
   }, [processStreamingContent]);
 
-  return { displayedText, isThinking, thinkingContent };
+  return {
+    displayedText,
+    isThinking,
+    thinkingContent,
+    referencesStarted,
+    currentReferenceContent,
+    referencesSectionVisible,
+  };
 };
 
-// Improved content extraction that handles any LLM format
-const extractSpecialContent = (content) => {
+// Enhanced content extraction that properly handles streaming states
+const extractContentAndReferences = (content) => {
   if (!content) return { mainContent: "", referencesContent: "" };
 
   try {
-    // Check if content has RREF patterns
-    const hasRREF = /\[RREF\d+\]/i.test(content);
-
-    if (!hasRREF) {
-      // No references found
+    const rrefMatches = content.match(/\[RREF\d+\]/gi);
+    if (!rrefMatches || rrefMatches.length === 0) {
       return { mainContent: content, referencesContent: "" };
     }
 
-    // Find where references actually start
     const lines = content.split("\n");
-    let firstRREFLine = -1;
-    let referenceStartLine = -1;
+    let referenceStartIndex = -1;
 
-    // Find the first RREF occurrence
+    // Find reference section start with more precise detection
     for (let i = 0; i < lines.length; i++) {
-      if (/\[RREF\d+\]/i.test(lines[i])) {
-        firstRREFLine = i;
-        break;
-      }
-    }
-
-    if (firstRREFLine === -1) {
-      return { mainContent: content, referencesContent: "" };
-    }
-
-    // Look backwards from first RREF to find a logical separator
-    for (let i = firstRREFLine; i >= 0; i--) {
       const line = lines[i].trim();
 
-      // Check for explicit reference headers
+      // Look for explicit reference headers
       if (
-        /^(references?|sources?|citations?|bibliography)\s*:?\s*$/i.test(line)
+        /^-{3,}$/.test(line) ||
+        /^={3,}$/.test(line) ||
+        /^(references?|sources?|citations?)\s*:?\s*$/i.test(line) ||
+        /^#{1,3}\s*(references?|sources?|citations?)\s*$/i.test(line)
       ) {
-        referenceStartLine = i;
-        break;
-      }
+        let hasRrefAfter = false;
+        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+          if (/\[RREF\d+\]/i.test(lines[j])) {
+            hasRrefAfter = true;
+            break;
+          }
+        }
 
-      // Check for horizontal rules (markdown separators)
-      if (/^[-=_*]{3,}$/.test(line)) {
-        referenceStartLine = i + 1;
-        break;
-      }
-
-      // If we've gone back too far, assume references start at first RREF
-      if (i < firstRREFLine - 10) {
-        referenceStartLine = firstRREFLine;
-        break;
+        if (hasRrefAfter) {
+          referenceStartIndex = i;
+          break;
+        }
       }
     }
 
-    // Default fallback - use first RREF line
-    if (referenceStartLine === -1) {
-      referenceStartLine = firstRREFLine;
+    // If no explicit header, find first RREF line
+    if (referenceStartIndex === -1) {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (/^\s*\[RREF\d+\]/i.test(line)) {
+          let separationPoint = i;
+
+          // Look back for logical separation
+          for (let j = i - 1; j >= Math.max(0, i - 8); j--) {
+            const prevLine = lines[j].trim();
+            if (
+              prevLine === "" ||
+              /^[-=]{2,}$/.test(prevLine) ||
+              /^(references?|sources?)\s*:?\s*$/i.test(prevLine)
+            ) {
+              separationPoint = j;
+              break;
+            }
+          }
+          referenceStartIndex = separationPoint;
+          break;
+        }
+      }
     }
 
-    // Split the content
-    const mainLines = lines.slice(0, referenceStartLine);
-    const referenceLines = lines.slice(referenceStartLine);
+    if (referenceStartIndex === -1) {
+      return { mainContent: content, referencesContent: "" };
+    }
 
-    // Clean up main content - remove trailing empty lines and separators
+    const mainLines = lines.slice(0, referenceStartIndex);
+    const referenceLines = lines.slice(referenceStartIndex);
+
+    // ENHANCED: Aggressively clean main content of reference artifacts
     while (mainLines.length > 0) {
       const lastLine = mainLines[mainLines.length - 1].trim();
       if (
         lastLine === "" ||
-        /^[-=_*]{3,}$/.test(lastLine) ||
-        /^(references?|sources?)\s*:?\s*$/i.test(lastLine)
+        /^[-=]{3,}$/.test(lastLine) ||
+        /^(references?|sources?)\s*:?\s*$/i.test(lastLine) ||
+        /^#{1,3}\s*(references?|sources?)\s*$/i.test(lastLine) ||
+        /\[RREF\d+\]/i.test(lastLine) || // Remove any RREF content
+        lastLine.toLowerCase().includes("reference") // Remove any line mentioning references
       ) {
         mainLines.pop();
       } else {
@@ -212,32 +343,13 @@ const extractSpecialContent = (content) => {
     const mainContent = mainLines.join("\n").trim();
     const referencesContent = referenceLines.join("\n").trim();
 
-    // Final validation - ensure no RREF leaked into main content
-    if (mainContent.includes("[RREF")) {
-      console.warn("RREF found in main content, using emergency split");
-      const firstRREFIndex = content.indexOf("[RREF");
-      if (firstRREFIndex > 0) {
-        return {
-          mainContent: content.substring(0, firstRREFIndex).trim(),
-          referencesContent: content.substring(firstRREFIndex).trim(),
-        };
-      }
+    if (referencesContent && /\[RREF\d+\]/i.test(referencesContent)) {
+      return { mainContent, referencesContent };
     }
 
-    return {
-      mainContent,
-      referencesContent,
-    };
+    return { mainContent: content, referencesContent: "" };
   } catch (error) {
     console.error("Error in content extraction:", error);
-    // Safe fallback
-    const firstRREFIndex = content.indexOf("[RREF");
-    if (firstRREFIndex > 0) {
-      return {
-        mainContent: content.substring(0, firstRREFIndex).trim(),
-        referencesContent: content.substring(firstRREFIndex).trim(),
-      };
-    }
     return { mainContent: content, referencesContent: "" };
   }
 };
@@ -264,16 +376,35 @@ const MarkdownRenderer = memo(
       };
     }, []);
 
-    const { displayedText, thinkingContent } = useStreamingProcessor(
-      children,
-      isLoading
-    );
+    const {
+      displayedText,
+      thinkingContent,
+      referencesStarted,
+      currentReferenceContent,
+      referencesSectionVisible,
+    } = useStreamingProcessor(children, isLoading);
 
     if (!children) return null;
 
-    const { mainContent, referencesContent } = extractSpecialContent(
+    // Extract content for main display
+    // eslint-disable-next-line no-unused-vars
+    const { mainContent, referencesContent } = extractContentAndReferences(
       isLoading ? displayedText : children
     );
+
+    // Get the reference content to pass to ReferencesSection
+    const referencesToShow = isLoading
+      ? currentReferenceContent // Show progressive content during streaming
+      : extractContentAndReferences(children).referencesContent; // Show full content when complete
+
+    console.log("🎬 Streaming state:", {
+      isLoading,
+      referencesStarted,
+      referencesSectionVisible,
+      currentRefLength: currentReferenceContent.length,
+      finalRefLength: referencesToShow.length,
+      mainContentLength: mainContent.length,
+    });
 
     // Configure KaTeX options
     const katexOptions = {
@@ -286,28 +417,59 @@ const MarkdownRenderer = memo(
       },
     };
 
-    // Safe wrapper for ReactMarkdown with HTML sanitization
+    // Safe wrapper for ReactMarkdown
     const SafeMarkdown = ({ children: markdownContent, ...props }) => {
       try {
         if (!markdownContent || markdownContent.trim() === "") {
           return null;
         }
 
-        // Sanitize content to prevent HTML injection and page refreshes
         const sanitizedContent = markdownContent
-          // Remove meta tags (especially refresh tags)
-          .replace(/<meta[^>]*>/gi, "")
-          // Remove script tags
-          .replace(/<script[^>]*>.*?<\/script>/gi, "")
-          // Remove other potentially dangerous HTML
-          .replace(/<iframe[^>]*>.*?<\/iframe>/gi, "")
-          .replace(/<object[^>]*>.*?<\/object>/gi, "")
-          .replace(/<embed[^>]*>/gi, "")
-          .replace(/<form[^>]*>.*?<\/form>/gi, "")
-          // Remove javascript: links
-          .replace(/javascript:/gi, "")
-          // Remove on* event handlers
-          .replace(/\son\w+\s*=\s*[^>]*/gi, "");
+          .replace(/<meta\s+([^>]*)>/gi, (match, attrs) => {
+            return `\\<meta ${attrs}\\>`;
+          })
+          .replace(
+            /<script\s*([^>]*)>(.*?)<\/script>/gi,
+            (match, attrs, content) => {
+              return `\\<script${attrs ? ` ${attrs}` : ""}\\>${
+                content ? content : ""
+              }\\</script\\>`;
+            }
+          )
+          .replace(
+            /<iframe\s*([^>]*)>(.*?)<\/iframe>/gi,
+            (match, attrs, content) => {
+              return `\\<iframe${attrs ? ` ${attrs}` : ""}\\>${
+                content || ""
+              }\\</iframe\\>`;
+            }
+          )
+          .replace(
+            /<object\s*([^>]*)>(.*?)<\/object>/gi,
+            (match, attrs, content) => {
+              return `\\<object${attrs ? ` ${attrs}` : ""}\\>${
+                content || ""
+              }\\</object\\>`;
+            }
+          )
+          .replace(/<embed\s*([^>]*)>/gi, (match, attrs) => {
+            return `\\<embed${attrs ? ` ${attrs}` : ""}\\>`;
+          })
+          .replace(
+            /<form\s*([^>]*)>(.*?)<\/form>/gi,
+            (match, attrs, content) => {
+              return `\\<form${attrs ? ` ${attrs}` : ""}\\>${
+                content || ""
+              }\\</form\\>`;
+            }
+          )
+          .replace(/<([^>]+)>/gi, (match, tagContent) => {
+            return `\\<${tagContent}\\>`;
+          })
+          .replace(/javascript:/gi, "javascript-protocol:")
+          .replace(/\son(\w+)\s*=\s*([^>\s]*)/gi, (match, event, handler) => {
+            return ` data-on${event}="${handler}"`;
+          });
 
         return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
       } catch (error) {
@@ -319,6 +481,31 @@ const MarkdownRenderer = memo(
         );
       }
     };
+
+    if (renderMode === "Plain Text") {
+      return (
+        <>
+          <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
+            {isLoading && thinkingContent && (
+              <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
+            )}
+
+            <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto">
+              {isLoading ? displayedText : mainContent}
+            </pre>
+          </div>
+
+          {/* Progressive References Section */}
+          {(referencesSectionVisible || referencesToShow) && (
+            <ReferencesSection
+              content={referencesToShow}
+              isLoading={isLoading}
+              isStreaming={referencesStarted && isLoading}
+            />
+          )}
+        </>
+      );
+    }
 
     // LaTeX-only mode
     if (renderMode === "LaTeX") {
@@ -375,32 +562,39 @@ const MarkdownRenderer = memo(
       };
 
       return (
-        <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
-          {isLoading && thinkingContent && (
-            <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
-          )}
+        <>
+          <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
+            {isLoading && thinkingContent && (
+              <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
+            )}
 
-          {(isLoading ? displayedText : mainContent)
-            .split(/<think>([\s\S]*?)<\/think>/g)
-            .map((part, i) => {
-              return i % 2 === 0 ? (
-                <SafeMarkdown
-                  key={`part-${i}`}
-                  remarkPlugins={[remarkGfm, remarkMath]}
-                  rehypePlugins={[rehypeRaw, [rehypeKatex, katexOptions]]}
-                  components={latexOnlyComponents}
-                >
-                  {preprocessLaTeX(part)}
-                </SafeMarkdown>
-              ) : (
-                <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
-              );
-            })}
+            {(isLoading ? displayedText : mainContent)
+              .split(/<think>([\s\S]*?)<\/think>/g)
+              .map((part, i) => {
+                return i % 2 === 0 ? (
+                  <SafeMarkdown
+                    key={`part-${i}`}
+                    remarkPlugins={[remarkGfm, remarkMath]}
+                    rehypePlugins={[rehypeRaw, [rehypeKatex, katexOptions]]}
+                    components={latexOnlyComponents}
+                  >
+                    {preprocessLaTeX(part)}
+                  </SafeMarkdown>
+                ) : (
+                  <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
+                );
+              })}
+          </div>
 
-          {referencesContent && (
-            <ReferencesSection content={referencesContent} />
+          {/* Progressive References Section */}
+          {(referencesSectionVisible || referencesToShow) && (
+            <ReferencesSection
+              content={referencesToShow}
+              isLoading={isLoading}
+              isStreaming={referencesStarted && isLoading}
+            />
           )}
-        </div>
+        </>
       );
     }
 
@@ -415,64 +609,77 @@ const MarkdownRenderer = memo(
       };
 
       return (
+        <>
+          <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
+            {isLoading && thinkingContent && (
+              <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
+            )}
+
+            {(isLoading ? displayedText : mainContent)
+              .split(/<think>([\s\S]*?)<\/think>/g)
+              .map((part, i) => {
+                return i % 2 === 0 ? (
+                  <SafeMarkdown
+                    key={`part-${i}`}
+                    remarkPlugins={[remarkGfm]}
+                    components={markdownModeComponents}
+                  >
+                    {part}
+                  </SafeMarkdown>
+                ) : (
+                  <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
+                );
+              })}
+          </div>
+
+          {/* Progressive References Section */}
+          {(referencesSectionVisible || referencesToShow) && (
+            <ReferencesSection
+              content={referencesToShow}
+              isLoading={isLoading}
+              isStreaming={referencesStarted && isLoading}
+            />
+          )}
+        </>
+      );
+    }
+
+    // Default mode - full rendering with smooth references
+    return (
+      <>
         <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
           {isLoading && thinkingContent && (
             <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
           )}
 
+          {/* Main content - clean separation from references */}
           {(isLoading ? displayedText : mainContent)
             .split(/<think>([\s\S]*?)<\/think>/g)
             .map((part, i) => {
               return i % 2 === 0 ? (
                 <SafeMarkdown
                   key={`part-${i}`}
-                  remarkPlugins={[remarkGfm]}
-                  components={markdownModeComponents}
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeRaw, [rehypeKatex, katexOptions]]}
+                  components={rendererComponents}
                 >
-                  {part}
+                  {preprocessLaTeX(part)}
                 </SafeMarkdown>
               ) : (
                 <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
               );
             })}
-
-          {referencesContent && (
-            <ReferencesSection content={referencesContent} />
-          )}
         </div>
-      );
-    }
 
-    // Default mode - full rendering
-    return (
-      <div className={`markdown-body ${isDarkMode ? "dark" : "light"}`}>
-        {isLoading && thinkingContent && (
-          <ThinkingBlock autoExpand={true}>{thinkingContent}</ThinkingBlock>
+        {/* Progressive References Section - appears immediately when references start */}
+        {(referencesSectionVisible || referencesToShow) && (
+          <ReferencesSection
+            content={referencesToShow}
+            isLoading={isLoading}
+            isStreaming={referencesStarted && isLoading}
+          />
         )}
-
-        {/* Main content */}
-        {(isLoading ? displayedText : mainContent)
-          .split(/<think>([\s\S]*?)<\/think>/g)
-          .map((part, i) => {
-            return i % 2 === 0 ? (
-              <SafeMarkdown
-                key={`part-${i}`}
-                remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeRaw, [rehypeKatex, katexOptions]]}
-                components={rendererComponents}
-              >
-                {preprocessLaTeX(part)}
-              </SafeMarkdown>
-            ) : (
-              <ThinkingBlock key={`think-${i}`}>{part}</ThinkingBlock>
-            );
-          })}
-
-        {/* References section */}
-        {referencesContent && referencesContent.trim() && (
-          <ReferencesSection content={referencesContent} />
-        )}
-      </div>
+      </>
     );
   }
 );
