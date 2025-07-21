@@ -1,4 +1,57 @@
-// parseReferences.js - Fixed version that handles any LLM format
+// parseReferences.js - Robust version that only extracts actual references
+
+// Convert HTML to readable text and ESCAPE it completely
+const convertHtmlToText = (content) => {
+  return (
+    content
+      // ESCAPE ALL HTML tags to prevent React/browser interpretation
+      .replace(/<meta\s+([^>]*)>/gi, (match, attrs) => {
+        return `\\<meta ${attrs}\\>`;
+      })
+      .replace(
+        /<script\s*([^>]*)>(.*?)<\/script>/gi,
+        (match, attrs, content) => {
+          return `\\<script${attrs ? ` ${attrs}` : ""}\\>${
+            content ? content : ""
+          }\\</script\\>`;
+        }
+      )
+      .replace(
+        /<iframe\s*([^>]*)>(.*?)<\/iframe>/gi,
+        (match, attrs, content) => {
+          return `\\<iframe${attrs ? ` ${attrs}` : ""}\\>${
+            content || ""
+          }\\</iframe\\>`;
+        }
+      )
+      .replace(
+        /<object\s*([^>]*)>(.*?)<\/object>/gi,
+        (match, attrs, content) => {
+          return `\\<object${attrs ? ` ${attrs}` : ""}\\>${
+            content || ""
+          }\\</object\\>`;
+        }
+      )
+      .replace(/<embed\s*([^>]*)>/gi, (match, attrs) => {
+        return `\\<embed${attrs ? ` ${attrs}` : ""}\\>`;
+      })
+      .replace(/<form\s*([^>]*)>(.*?)<\/form>/gi, (match, attrs, content) => {
+        return `\\<form${attrs ? ` ${attrs}` : ""}\\>${
+          content || ""
+        }\\</form\\>`;
+      })
+      // Escape any remaining HTML tags
+      .replace(/<([^>]+)>/gi, (match, tagContent) => {
+        return `\\<${tagContent}\\>`;
+      })
+      // Convert javascript: links
+      .replace(/javascript:/gi, "javascript-protocol:")
+      // Convert event handlers to data attributes
+      .replace(/\son(\w+)\s*=\s*([^>\s]*)/gi, (match, event, handler) => {
+        return ` data-on${event}="${handler}"`;
+      })
+  );
+};
 
 export const parseReferences = (content) => {
   if (!content || typeof content !== "string") {
@@ -6,19 +59,21 @@ export const parseReferences = (content) => {
   }
 
   try {
-    // Find all RREF patterns in the content
+    // Find all RREF patterns and their positions
     const rrefPattern = /\[RREF(\d+)\]/gi;
-    const matches = [];
+    const rrefMatches = [];
     let match;
 
     // Reset regex state
     rrefPattern.lastIndex = 0;
 
     while ((match = rrefPattern.exec(content)) !== null) {
-      matches.push({
-        number: parseInt(match[1], 10) - 1,
+      rrefMatches.push({
+        number: parseInt(match[1], 10) - 1, // Convert to 0-based index
+        rrefNumber: parseInt(match[1], 10), // Keep original number for display
         index: match.index,
         fullMatch: match[0],
+        line: -1, // Will be calculated
       });
 
       // Prevent infinite loop
@@ -27,53 +82,79 @@ export const parseReferences = (content) => {
       }
     }
 
-    if (matches.length === 0) {
+    if (rrefMatches.length === 0) {
       return [];
     }
 
+    // Split content into lines and find which line each RREF is on
     const lines = content.split("\n");
+    let currentPos = 0;
+
+    // Calculate line numbers for each RREF
+    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+      const lineEndPos = currentPos + lines[lineIdx].length;
+
+      // Check which RREFs are on this line
+      rrefMatches.forEach((rrefMatch) => {
+        if (
+          rrefMatch.index >= currentPos &&
+          rrefMatch.index <= lineEndPos &&
+          rrefMatch.line === -1
+        ) {
+          rrefMatch.line = lineIdx;
+        }
+      });
+
+      currentPos = lineEndPos + 1; // +1 for newline
+    }
+
+    // Process each RREF to extract its content
     const references = [];
 
-    for (let i = 0; i < matches.length; i++) {
-      const currentMatch = matches[i];
-      const nextMatch = matches[i + 1];
+    for (let i = 0; i < rrefMatches.length; i++) {
+      const currentRref = rrefMatches[i];
+      const nextRref = rrefMatches[i + 1];
 
-      // Find which line contains this RREF
-      let startLineIndex = -1;
-      let currentPos = 0;
+      if (currentRref.line === -1) continue;
 
-      for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-        const lineEndPos = currentPos + lines[lineIdx].length;
-        if (
-          currentMatch.index >= currentPos &&
-          currentMatch.index <= lineEndPos
-        ) {
-          startLineIndex = lineIdx;
-          break;
-        }
-        currentPos = lineEndPos + 1; // +1 for the newline character
+      // Validate that this line actually looks like a reference
+      const currentLine = lines[currentRref.line];
+
+      // Check if this is an actual reference line (starts with or prominently features RREF)
+      const isActualReference =
+        /^\s*\[RREF\d+\]/.test(currentLine) || // Starts with RREF
+        (/\[RREF\d+\]/.test(currentLine) &&
+          currentLine.trim().indexOf("[RREF") < 10); // RREF appears early in line
+
+      if (!isActualReference) {
+        console.log(`Skipping non-reference line: ${currentLine}`);
+        continue;
       }
 
-      if (startLineIndex === -1) continue;
+      // Find the end of this reference
+      let endLine = lines.length - 1;
 
-      // Find where this reference ends
-      let endLineIndex = lines.length - 1;
+      if (nextRref && nextRref.line !== -1) {
+        // Find the next actual reference line
+        for (let j = i + 1; j < rrefMatches.length; j++) {
+          const futureRref = rrefMatches[j];
+          if (futureRref.line !== -1) {
+            const futureLine = lines[futureRref.line];
+            const isFutureActualRef =
+              /^\s*\[RREF\d+\]/.test(futureLine) ||
+              (/\[RREF\d+\]/.test(futureLine) &&
+                futureLine.trim().indexOf("[RREF") < 10);
 
-      if (nextMatch) {
-        // Find the line containing the next RREF
-        currentPos = 0;
-        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-          const lineEndPos = currentPos + lines[lineIdx].length;
-          if (nextMatch.index >= currentPos && nextMatch.index <= lineEndPos) {
-            endLineIndex = lineIdx - 1; // End before the next reference
-            break;
+            if (isFutureActualRef) {
+              endLine = futureRref.line - 1;
+              break;
+            }
           }
-          currentPos = lineEndPos + 1;
         }
       }
 
-      // Extract the reference content
-      const referenceLines = lines.slice(startLineIndex, endLineIndex + 1);
+      // Extract reference content
+      const referenceLines = lines.slice(currentRref.line, endLine + 1);
 
       // Clean up - remove trailing empty lines
       while (
@@ -83,42 +164,23 @@ export const parseReferences = (content) => {
         referenceLines.pop();
       }
 
+      // Join the reference content
       const referenceContent = referenceLines.join("\n").trim();
 
       if (referenceContent) {
-        // Sanitize reference content to prevent HTML injection
-        const sanitizedContent = referenceContent
-          // Remove meta tags (especially refresh tags)
-          .replace(/<meta[^>]*>/gi, "[META TAG REMOVED FOR SECURITY]")
-          // Remove script tags
-          .replace(
-            /<script[^>]*>.*?<\/script>/gi,
-            "[SCRIPT TAG REMOVED FOR SECURITY]"
-          )
-          // Remove other potentially dangerous HTML
-          .replace(
-            /<iframe[^>]*>.*?<\/iframe>/gi,
-            "[IFRAME REMOVED FOR SECURITY]"
-          )
-          .replace(
-            /<object[^>]*>.*?<\/object>/gi,
-            "[OBJECT REMOVED FOR SECURITY]"
-          )
-          .replace(/<embed[^>]*>/gi, "[EMBED REMOVED FOR SECURITY]")
-          .replace(/<form[^>]*>.*?<\/form>/gi, "[FORM REMOVED FOR SECURITY]")
-          // Remove javascript: links
-          .replace(/javascript:/gi, "")
-          // Remove on* event handlers
-          .replace(/\son\w+\s*=\s*[^>]*/gi, "");
+        // Apply safe HTML conversion
+        const processedContent = convertHtmlToText(referenceContent);
 
         references.push({
-          number: currentMatch.number,
-          content: sanitizedContent,
+          number: currentRref.number,
+          rrefNumber: currentRref.rrefNumber,
+          content: processedContent,
         });
       }
     }
 
-    return references;
+    // Sort references by their RREF number to ensure correct order
+    return references.sort((a, b) => a.rrefNumber - b.rrefNumber);
   } catch (error) {
     console.error("Error parsing references:", error);
     return [];
