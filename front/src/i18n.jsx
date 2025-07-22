@@ -57,7 +57,8 @@ i18n
                 recall:
                   "Recall: Chat AI can use relevant memories about you from previous conversations, but won't memorize anything from the current conversation.",
                 on: "Learn: Chat AI actively learns stuff about you from the current conversation and also recalls memories it gained previously.",
-                settings: "You can always view, add, edit, and remove memories from the User Profile panel in the top-right corner. Memories are only stored locally in your browser.",
+                settings:
+                  "You can always view, add, edit, and remove memories from the User Profile panel in the top-right corner. Memories are only stored locally in your browser.",
               },
               back: "Back",
               close: "Close",
@@ -299,10 +300,11 @@ i18n
             delete_confirmText: "Delete",
             delete_cancelText: "Cancel",
 
+            warningTitle: "Warning",
             warning_settings:
-              "You are using an external model. Your messages will be processed outside of GWDG, and the following settings will not be applied.",
+              "You are using an external model. Your messages will be processed outside of GWDG, and the custom settings will not be applied.",
             warning_settings_mpg:
-              "You are using an external model. Your messages will be processed outside of GWDG, and the following settings will not be applied. External models can only be used by scientific employees for scientific work, provided that no personal data is entered.",
+              "You are using an external model. Your messages will be processed outside of GWDG, and the custom settings will not be applied. External models can only be used by scientific employees for scientific work, provided that no personal data is entered.",
             warning_arcana:
               "Keep temperature at 0 and top_p at 0.05 for optimal arcana results",
             offline:
@@ -364,7 +366,8 @@ i18n
                 recall:
                   "Recall: Chat AI kann relevante Erinnerungen über Sie aus früheren Gesprächen nutzen, erinnert sich aber an nichts aus dem aktuellen Gespräch.",
                 on: "Learn: Chat AI lernt aktiv Dinge über Sie aus dem aktuellen Gespräch und ruft auch Erinnerungen ab, die sie zuvor gesammelt hat.",
-                settings: "Sie können Erinnerungen jederzeit im Benutzerprofil-Panel in der oberen rechten Ecke ansehen, hinzufügen, bearbeiten und entfernen. Erinnerungen werden nur lokal in Ihrem Browser gespeichert.",
+                settings:
+                  "Sie können Erinnerungen jederzeit im Benutzerprofil-Panel in der oberen rechten Ecke ansehen, hinzufügen, bearbeiten und entfernen. Erinnerungen werden nur lokal in Ihrem Browser gespeichert.",
               },
               back: "Zurück",
               close: "Schließen",
@@ -614,10 +617,11 @@ i18n
             delete_confirmText: "Löschen",
             delete_cancelText: "Abbrechen",
 
+            warningTitle: "Warnung",
             warning_settings:
-              "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die folgenden Einstellungen werden nicht angewendet.",
+              "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die benutzerdefinierte Einstellungen werden nicht angewendet.",
             warning_settings_mpg:
-              "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die folgenden Einstellungen werden nicht angewendet. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
+              "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die benutzerdefinierte Einstellungen werden nicht angewendet. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
             warning_arcana:
               "Halten Sie Temperatur auf 0 und top_p auf 0.05 für optimale Arcana-Ergebnisse",
             offline:

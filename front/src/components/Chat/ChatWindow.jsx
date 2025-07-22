@@ -38,6 +38,7 @@ import { toggleOption } from "../../Redux/actions/advancedOptionsAction";
 import ClearMemoryModal from "../../modals/ClearMemoryModal";
 import UserMemoryModal from "../../modals/UserMemoryModal";
 import HelpMemoryModal from "../../modals/HelpMemoryModal";
+import WarningButton from "../Others/WarningButton";
 
 function ChatWindow({
   modelSettings,
@@ -115,6 +116,7 @@ function ChatWindow({
   );
   const [previewFile, setPreviewFile] = useState(null);
   const [fileAlertModal, setFileAlertModal] = useState(null);
+  const [showWarningMessage, setShowWarningMessage] = useState(false);
 
   //Refs
   const isIntentionalRefresh = useRef(false);
@@ -759,9 +761,25 @@ function ChatWindow({
     };
   }, [selectedFiles]);
 
+  useEffect(() => {
+    if (currentModel?.name?.toLowerCase().includes("external")) {
+      setShowWarningMessage(true);
+    } else {
+      setShowWarningMessage(false);
+    }
+  }, [currentModel]);
+
   return (
     <>
       <div className="flex mobile:flex-col flex-row h-full sm:justify-between relative">
+        {!showAdvOpt && (
+          <WarningButton
+            currentModel={currentModel}
+            showWarning={showWarningMessage}
+            setShowWarning={setShowWarningMessage}
+            userData={userData}
+          />
+        )}
         <Conversation
           modelList={modelList}
           selectedFiles={selectedFiles}
