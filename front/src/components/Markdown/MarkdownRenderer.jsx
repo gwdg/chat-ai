@@ -105,7 +105,6 @@ const useStreamingProcessor = (content, isLoading) => {
           const hasRREF = /\[RREF\d+\]/i.test(bufferRef.current);
 
           if (hasReferencesHeader || (hasSeparator && hasRREF) || hasRREF) {
-            console.log("🎯 References section starting - smooth transition");
             setReferencesStarted(true);
             setReferencesSectionVisible(true);
 
@@ -212,9 +211,7 @@ const useStreamingProcessor = (content, isLoading) => {
 
       if (processedIndexRef.current < content.length) {
         animationFrameRef.current = requestAnimationFrame(processNextChunk);
-      } else {
-        console.log("✅ Streaming complete");
-      }
+      } 
     };
 
     if (processedIndexRef.current === 0) {
@@ -397,14 +394,7 @@ const MarkdownRenderer = memo(
       ? currentReferenceContent // Show progressive content during streaming
       : extractContentAndReferences(children).referencesContent; // Show full content when complete
 
-    console.log("🎬 Streaming state:", {
-      isLoading,
-      referencesStarted,
-      referencesSectionVisible,
-      currentRefLength: currentReferenceContent.length,
-      finalRefLength: referencesToShow.length,
-      mainContentLength: mainContent.length,
-    });
+   
 
     // Configure KaTeX options
     const katexOptions = {
