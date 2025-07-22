@@ -1,56 +1,99 @@
-// parseReferences.js - Robust version that only extracts actual references
-
-// Convert HTML to readable text and ESCAPE it completely
 const convertHtmlToText = (content) => {
   return (
     content
-      // ESCAPE ALL HTML tags to prevent React/browser interpretation
-      .replace(/<meta\s+([^>]*)>/gi, (match, attrs) => {
-        return `\\<meta ${attrs}\\>`;
-      })
+      // Remove various templating systems
+      .replace(/\{\{[^}]*\}\}/g, "") // Hugo: {{< >}}, {{ }}
+      .replace(/\{%[^%]*%\}/g, "") // Jekyll: {% %}
+      .replace(/\[\[([^\]]*)\]\]/g, "$1") // WikiLinks: [[text]]
+      .replace(/<!--.*?-->/gs, "") // HTML comments
+
+      // Fix common URL issues
       .replace(
-        /<script\s*([^>]*)>(.*?)<\/script>/gi,
-        (match, attrs, content) => {
-          return `\\<script${attrs ? ` ${attrs}` : ""}\\>${
-            content ? content : ""
-          }\\</script\\>`;
-        }
+        /https?:\/([^\/])/g,
+        (match, rest) => match.slice(0, -rest.length) + "/" + rest
       )
-      .replace(
-        /<iframe\s*([^>]*)>(.*?)<\/iframe>/gi,
-        (match, attrs, content) => {
-          return `\\<iframe${attrs ? ` ${attrs}` : ""}\\>${
-            content || ""
-          }\\</iframe\\>`;
-        }
-      )
-      .replace(
-        /<object\s*([^>]*)>(.*?)<\/object>/gi,
-        (match, attrs, content) => {
-          return `\\<object${attrs ? ` ${attrs}` : ""}\\>${
-            content || ""
-          }\\</object\\>`;
-        }
-      )
-      .replace(/<embed\s*([^>]*)>/gi, (match, attrs) => {
-        return `\\<embed${attrs ? ` ${attrs}` : ""}\\>`;
-      })
-      .replace(/<form\s*([^>]*)>(.*?)<\/form>/gi, (match, attrs, content) => {
-        return `\\<form${attrs ? ` ${attrs}` : ""}\\>${
-          content || ""
-        }\\</form\\>`;
-      })
-      // Escape any remaining HTML tags
-      .replace(/<([^>]+)>/gi, (match, tagContent) => {
-        return `\\<${tagContent}\\>`;
-      })
-      // Convert javascript: links
-      .replace(/javascript:/gi, "javascript-protocol:")
-      // Convert event handlers to data attributes
-      .replace(/\son(\w+)\s*=\s*([^>\s]*)/gi, (match, event, handler) => {
-        return ` data-on${event}="${handler}"`;
-      })
+
+      // Remove dangerous content
+      .replace(/<script[^>]*>.*?<\/script>/gi, "[SCRIPT]")
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gi, "[IFRAME]")
+      .replace(/javascript:/gi, "js-protocol:")
+
+      // Clean up whitespace
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
   );
+};
+
+const extractTitleFromReferenceLine = (line, rrefNumber, url) => {
+  // Remove RREF marker first
+  let title = line.replace(/\[RREF\d+\]\s*/i, "");
+
+  // Handle various link formats
+  title = title
+    // Markdown links: [title](url)
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    // HTML links: <a href="url">title</a>
+    .replace(/<a[^>]*>([^<]+)<\/a>/gi, "$1")
+    // Plain URLs at start/end
+    .replace(/^(https?:\/\/[^\s]+)\s*/, "")
+    .replace(/\s*(https?:\/\/[^\s]+)$/, "")
+    // Remove similarity scores: (0.123), [0.123], etc.
+    .replace(/[\(\[\{]\s*\d+\.\d+\s*[\)\]\}].*$/, "")
+    .trim();
+
+  // If we still don't have a good title, generate from URL or number
+  if (!title || title.length < 3 || /^https?:\/\//.test(title)) {
+    if (url) {
+      // Extract meaningful name from URL
+      try {
+        const urlObj = new URL(url.startsWith("http") ? url : "https://" + url);
+        const pathParts = urlObj.pathname.split("/").filter((p) => p);
+        const lastPart =
+          pathParts[pathParts.length - 1] ||
+          pathParts[pathParts.length - 2] ||
+          urlObj.hostname;
+
+        title = lastPart
+          .replace(/\.(md|html?|php|jsp|asp)$/i, "") // Remove file extensions
+          .replace(/[-_]/g, " ") // Replace separators with spaces
+          .replace(/\b\w/g, (l) => l.toUpperCase()) // Title case
+          .trim();
+
+        if (title.length < 3) {
+          title = urlObj.hostname.replace(/^www\./, "");
+        }
+      } catch (e) {
+        title = `Reference ${rrefNumber}`;
+      }
+    } else {
+      title = `Reference ${rrefNumber}`;
+    }
+  }
+
+  return title;
+};
+
+const findReferenceSections = (content) => {
+  // Look for various reference section markers
+  const sectionMarkers = [
+    /\n\s*[-=]{3,}\s*\n\s*references?\s*:?\s*\n/gi,
+    /\n\s*references?\s*:?\s*\n\s*[-=]{3,}\s*\n/gi,
+    /\n\s*#{1,6}\s*references?\s*\n/gi,
+    /\n\s*references?\s*:?\s*\n/gi,
+    /\n\s*sources?\s*(?:&|and)?\s*references?\s*:?\s*\n/gi,
+  ];
+
+  let sections = [content]; // Start with full content
+
+  for (const marker of sectionMarkers) {
+    const newSections = [];
+    for (const section of sections) {
+      newSections.push(...section.split(marker));
+    }
+    sections = newSections;
+  }
+
+  return sections;
 };
 
 export const parseReferences = (content) => {
@@ -59,130 +102,135 @@ export const parseReferences = (content) => {
   }
 
   try {
-    // Find all RREF patterns and their positions
-    const rrefPattern = /\[RREF(\d+)\]/gi;
-    const rrefMatches = [];
-    let match;
+    // Step 1: Find reference sections
+    const sections = findReferenceSections(content);
 
-    // Reset regex state
-    rrefPattern.lastIndex = 0;
+    // Step 2: Find all RREF patterns across all sections
+    const allRrefMatches = [];
 
-    while ((match = rrefPattern.exec(content)) !== null) {
-      rrefMatches.push({
-        number: parseInt(match[1], 10) - 1, // Convert to 0-based index
-        rrefNumber: parseInt(match[1], 10), // Keep original number for display
-        index: match.index,
-        fullMatch: match[0],
-        line: -1, // Will be calculated
-      });
+    sections.forEach((section, sectionIndex) => {
+      const rrefPattern = /\[RREF(\d+)\]/gi;
+      let match;
 
-      // Prevent infinite loop
-      if (match.index === rrefPattern.lastIndex) {
-        rrefPattern.lastIndex++;
+      while ((match = rrefPattern.exec(section)) !== null) {
+        allRrefMatches.push({
+          rrefNumber: parseInt(match[1], 10),
+          index: match.index,
+          sectionIndex,
+          section,
+          fullMatch: match[0],
+        });
+
+        // Prevent infinite loop
+        if (match.index === rrefPattern.lastIndex) {
+          rrefPattern.lastIndex++;
+        }
       }
-    }
+    });
 
-    if (rrefMatches.length === 0) {
+    if (allRrefMatches.length === 0) {
       return [];
     }
 
-    // Split content into lines and find which line each RREF is on
-    const lines = content.split("\n");
-    let currentPos = 0;
+    // Step 3: Group by RREF number and find the best content for each
+    const rrefGroups = {};
 
-    // Calculate line numbers for each RREF
-    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-      const lineEndPos = currentPos + lines[lineIdx].length;
+    allRrefMatches.forEach((match) => {
+      if (!rrefGroups[match.rrefNumber]) {
+        rrefGroups[match.rrefNumber] = [];
+      }
+      rrefGroups[match.rrefNumber].push(match);
+    });
 
-      // Check which RREFs are on this line
-      rrefMatches.forEach((rrefMatch) => {
-        if (
-          rrefMatch.index >= currentPos &&
-          rrefMatch.index <= lineEndPos &&
-          rrefMatch.line === -1
-        ) {
-          rrefMatch.line = lineIdx;
+    // Step 4: Process each RREF number
+    const references = [];
+    const seenUrls = new Set();
+
+    Object.keys(rrefGroups)
+      .sort((a, b) => parseInt(a) - parseInt(b))
+      .forEach((rrefNumber) => {
+        const matches = rrefGroups[rrefNumber];
+
+        // Find the match with the most content (likely the detailed one)
+        let bestMatch = matches[0];
+        let bestContentLength = 0;
+
+        matches.forEach((match) => {
+          // Find content from this RREF to next RREF or end of section
+          const section = match.section;
+          const nextRrefInSection = section
+            .substring(match.index + match.fullMatch.length)
+            .search(/\[RREF\d+\]/);
+          const endIndex =
+            nextRrefInSection === -1
+              ? section.length
+              : match.index + match.fullMatch.length + nextRrefInSection;
+          const blockContent = section.substring(match.index, endIndex).trim();
+
+          if (blockContent.length > bestContentLength) {
+            bestMatch = match;
+            bestContentLength = blockContent.length;
+          }
+        });
+
+        // Extract content for the best match
+        if (bestContentLength > 20) {
+          // Must have substantial content
+          const section = bestMatch.section;
+          const nextRrefInSection = section
+            .substring(bestMatch.index + bestMatch.fullMatch.length)
+            .search(/\[RREF\d+\]/);
+          const endIndex =
+            nextRrefInSection === -1
+              ? section.length
+              : bestMatch.index +
+                bestMatch.fullMatch.length +
+                nextRrefInSection;
+          const blockContent = section
+            .substring(bestMatch.index, endIndex)
+            .trim();
+
+          const lines = blockContent.split("\n");
+          const firstLine = lines[0] || "";
+
+          // Extract URL
+          const urlMatch = blockContent.match(/(https?:\/\/[^\s\)\]\>]+)/);
+          const url = urlMatch ? urlMatch[1] : null;
+
+          // Skip if we've seen this URL before (deduplication)
+          if (url && seenUrls.has(url)) {
+            return;
+          }
+
+          if (url) seenUrls.add(url);
+
+          // Extract title
+          const title = extractTitleFromReferenceLine(
+            firstLine,
+            parseInt(rrefNumber),
+            url
+          );
+
+          // Clean the full content
+          const cleanContent = convertHtmlToText(blockContent);
+
+          references.push({
+            number: parseInt(rrefNumber) - 1, // 0-based for internal use
+            rrefNumber: parseInt(rrefNumber), // 1-based for display
+            content: `${title}\n\n${cleanContent}`,
+            url: url,
+          });
         }
       });
 
-      currentPos = lineEndPos + 1; // +1 for newline
-    }
+    // Step 5: Final sort and validation
+    const finalReferences = references
+      .sort((a, b) => a.rrefNumber - b.rrefNumber)
+      .filter((ref) => ref.content && ref.content.length > 30); // Ensure substantial content
 
-    // Process each RREF to extract its content
-    const references = [];
-
-    for (let i = 0; i < rrefMatches.length; i++) {
-      const currentRref = rrefMatches[i];
-      const nextRref = rrefMatches[i + 1];
-
-      if (currentRref.line === -1) continue;
-
-      // Validate that this line actually looks like a reference
-      const currentLine = lines[currentRref.line];
-
-      // Check if this is an actual reference line (starts with or prominently features RREF)
-      const isActualReference =
-        /^\s*\[RREF\d+\]/.test(currentLine) || // Starts with RREF
-        (/\[RREF\d+\]/.test(currentLine) &&
-          currentLine.trim().indexOf("[RREF") < 10); // RREF appears early in line
-
-      if (!isActualReference) {
-        console.log(`Skipping non-reference line: ${currentLine}`);
-        continue;
-      }
-
-      // Find the end of this reference
-      let endLine = lines.length - 1;
-
-      if (nextRref && nextRref.line !== -1) {
-        // Find the next actual reference line
-        for (let j = i + 1; j < rrefMatches.length; j++) {
-          const futureRref = rrefMatches[j];
-          if (futureRref.line !== -1) {
-            const futureLine = lines[futureRref.line];
-            const isFutureActualRef =
-              /^\s*\[RREF\d+\]/.test(futureLine) ||
-              (/\[RREF\d+\]/.test(futureLine) &&
-                futureLine.trim().indexOf("[RREF") < 10);
-
-            if (isFutureActualRef) {
-              endLine = futureRref.line - 1;
-              break;
-            }
-          }
-        }
-      }
-
-      // Extract reference content
-      const referenceLines = lines.slice(currentRref.line, endLine + 1);
-
-      // Clean up - remove trailing empty lines
-      while (
-        referenceLines.length > 0 &&
-        referenceLines[referenceLines.length - 1].trim() === ""
-      ) {
-        referenceLines.pop();
-      }
-
-      // Join the reference content
-      const referenceContent = referenceLines.join("\n").trim();
-
-      if (referenceContent) {
-        // Apply safe HTML conversion
-        const processedContent = convertHtmlToText(referenceContent);
-
-        references.push({
-          number: currentRref.number,
-          rrefNumber: currentRref.rrefNumber,
-          content: processedContent,
-        });
-      }
-    }
-
-    // Sort references by their RREF number to ensure correct order
-    return references.sort((a, b) => a.rrefNumber - b.rrefNumber);
+    return finalReferences;
   } catch (error) {
-    console.error("Error parsing references:", error);
+    console.error("❌ Error parsing references:", error);
     return [];
   }
 };
