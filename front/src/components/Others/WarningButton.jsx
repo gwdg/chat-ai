@@ -1,6 +1,6 @@
 import { Trans } from "react-i18next";
 
-const WarningButton = ({ currentModel, showWarning, setShowWarning }) => {
+const WarningButton = ({ currentModel, showWarning, setShowWarning, userData}) => {
   // Add safety check for currentModel
   if (
     !currentModel ||
@@ -39,7 +39,7 @@ const WarningButton = ({ currentModel, showWarning, setShowWarning }) => {
                         rounded-lg shadow-xl min-w-80 max-w-96"
         >
           <div className="text-yellow-600 dark:text-yellow-400 text-sm leading-relaxed">
-            <Trans i18nKey="description.warning_settings" />
+            <Trans i18nKey={userData?.org == "MPG" ? "description.warning_settings_mpg" : "description.warning_settings"} />
           </div>
           <button
             onClick={() => setShowWarning(false)}

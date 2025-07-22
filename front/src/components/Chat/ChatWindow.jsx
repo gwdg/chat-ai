@@ -777,6 +777,7 @@ function ChatWindow({
             currentModel={currentModel}
             showWarning={showWarningMessage}
             setShowWarning={setShowWarningMessage}
+            userData={userData}
           />
         )}
         <Conversation

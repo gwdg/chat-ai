@@ -302,9 +302,9 @@ i18n
 
             warningTitle: "Warning",
             warning_settings:
-              "You are using an external model. Your messages will be processed outside of GWDG, and the following settings will not be applied.",
+              "You are using an external model. Your messages will be processed outside of GWDG, and the custom settings will not be applied.",
             warning_settings_mpg:
-              "You are using an external model. Your messages will be processed outside of GWDG, and the following settings will not be applied. External models can only be used by scientific employees for scientific work, provided that no personal data is entered.",
+              "You are using an external model. Your messages will be processed outside of GWDG, and the custom settings will not be applied. External models can only be used by scientific employees for scientific work, provided that no personal data is entered.",
             warning_arcana:
               "Keep temperature at 0 and top_p at 0.05 for optimal arcana results",
             offline:
@@ -619,9 +619,9 @@ i18n
 
             warningTitle: "Warnung",
             warning_settings:
-              "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die folgenden Einstellungen werden nicht angewendet.",
+              "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die benutzerdefinierte Einstellungen werden nicht angewendet.",
             warning_settings_mpg:
-              "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die folgenden Einstellungen werden nicht angewendet. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
+              "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die benutzerdefinierte Einstellungen werden nicht angewendet. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
             warning_arcana:
               "Halten Sie Temperatur auf 0 und top_p auf 0.05 für optimale Arcana-Ergebnisse",
             offline:
