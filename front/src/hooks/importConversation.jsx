@@ -43,6 +43,7 @@ export const importConversation = async (
         });
         continue;
       }
+
       if (
         currentMessage.role === "user" &&
         messages[i + 1]?.role === "assistant"
@@ -82,7 +83,20 @@ export const importConversation = async (
 
           newArray.push(responseObj);
         }
+
+        // IMPORTANT FIX: Skip the assistant message in the next iteration
+        // since we've already processed it as part of this user-assistant pair
+        i++; // Skip the assistant message
+      } else if (currentMessage.role === "user") {
+        // Handle user message without assistant response (incomplete conversation)
+        const responseObj = {
+          prompt: currentMessage.content,
+          response: "", // Empty response for incomplete pairs
+        };
+        newArray.push(responseObj);
       }
+      // Skip standalone assistant messages or system messages in the loop
+      // (system message is handled separately below)
     }
 
     // Find system message
@@ -136,7 +150,7 @@ export const importConversation = async (
 
     // Navigate and notify
     navigate(`/chat/${newId}`, { replace: true });
-    notifySuccess("Chat imported successfully");
+    notifySuccess(`Chat imported successfully`);
   } catch (error) {
     console.error("Import error:", error);
     notifyError(error.message || "An unexpected error occurred");
