@@ -56,13 +56,13 @@ function RenameConversationModal({
     <ContainerModal showModal={showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         <div className="flex justify-between items-center px-4 pt-4">
-          <p className="text-xl text-tertiary">
+          <p className="text-sm text-tertiary">
             <Trans i18nKey="description.rename_conversation"></Trans>
           </p>
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer"
+            className="h-[24px] w-[24px] cursor-pointer"
             onClick={onClose}
           />
         </div>

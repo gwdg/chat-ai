@@ -69,13 +69,13 @@ function UserMemoryModal(props) {
         {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <div className="flex flex-col">
-            <p className="text-xl text-tertiary font-medium">
+            <p className="text-sm text-tertiary font-medium">
               <Trans
                 i18nKey="description.memory.userMemory"
                 defaultValue="User Memory"
               />
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               <Trans
                 i18nKey="description.memory.memoryCount"
                 defaultValue="{{count}} memories stored"
@@ -86,7 +86,7 @@ function UserMemoryModal(props) {
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="h-[24px] w-[24px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
             onClick={() => props.showModal(false)}
           />
         </div>
@@ -94,7 +94,7 @@ function UserMemoryModal(props) {
         {/* Add New Memory Section */}
         <div className="p-4 border-b dark:border-border_dark">
           <div className="flex flex-col gap-3">
-            <p className="text-base font-medium dark:text-white">
+            <p className="text-sm font-medium dark:text-white">
               <Trans
                 i18nKey="description.memory.addNew"
                 defaultValue="Add New Memory"
@@ -107,14 +107,14 @@ function UserMemoryModal(props) {
                   value={newMemoryText}
                   onChange={(e) => setNewMemoryText(e.target.value)}
                   placeholder="Enter new memory..."
-                  className="w-full px-3 py-2 h-full border dark:border-border_dark rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 h-full border dark:border-border_dark rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   onKeyDown={(e) => e.key === "Enter" && handleAddMemory()}
                 />
               </div>
               <button
                 onClick={handleAddMemory}
                 disabled={!newMemoryText.trim()}
-                className="h-fit px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg transition-colors disabled:cursor-not-allowed"
+                className="h-fit px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg transition-colors disabled:cursor-not-allowed text-sm"
               >
                 <Trans i18nKey="description.memory.add" defaultValue="Add" />
               </button>
@@ -125,7 +125,7 @@ function UserMemoryModal(props) {
         {/* Memory List Section */}
         <div className="p-4 flex flex-col gap-4">
           <div className="flex justify-between items-center">
-            <p className="text-base font-medium dark:text-white">
+            <p className="text-sm font-medium dark:text-white">
               <Trans
                 i18nKey="description.memory.savedMemories"
                 defaultValue="Saved Memories"
@@ -134,7 +134,7 @@ function UserMemoryModal(props) {
             {memories.length > 0 && (
               <button
                 onClick={handleDeleteAll}
-                className="px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
               >
                 <Trans
                   i18nKey="description.memory.deleteAll"
@@ -148,13 +148,13 @@ function UserMemoryModal(props) {
           <div className="max-h-96 overflow-y-auto">
             {memories.length === 0 ? (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <p>
+                <p className="text-sm">
                   <Trans
                     i18nKey="description.memory.noMemories"
                     defaultValue="No memories saved yet."
                   />
                 </p>
-                <p className="text-sm mt-1">
+                <p className="text-xs mt-1">
                   <Trans
                     i18nKey="description.memory.addFirst"
                     defaultValue="Add your first memory above!"
@@ -169,7 +169,7 @@ function UserMemoryModal(props) {
                     className="border dark:border-border_dark rounded-lg p-3 bg-gray-50 dark:bg-gray-800/50"
                   >
                     <div className="flex items-start gap-3">
-                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-1 flex-shrink-0">
+                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400 mt-1 flex-shrink-0">
                         {index + 1}
                       </span>
 
@@ -179,7 +179,7 @@ function UserMemoryModal(props) {
                           <textarea
                             value={editText}
                             onChange={(e) => setEditText(e.target.value)}
-                            className="w-full px-3 py-2 border dark:border-border_dark rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border dark:border-border_dark rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
@@ -190,7 +190,7 @@ function UserMemoryModal(props) {
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleEditMemory(index)}
-                              className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                              className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                             >
                               <Trans
                                 i18nKey="description.memory.save"
@@ -199,7 +199,7 @@ function UserMemoryModal(props) {
                             </button>
                             <button
                               onClick={cancelEditing}
-                              className="px-3 py-1 text-sm bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                              className="px-3 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
                             >
                               <Trans
                                 i18nKey="description.memory.cancel"
@@ -211,7 +211,7 @@ function UserMemoryModal(props) {
                       ) : (
                         // View Mode
                         <div className="flex-1 flex flex-col gap-2">
-                          <p className="text-gray-900 dark:text-white break-words">
+                          <p className="text-gray-900 dark:text-white break-words text-sm">
                             {memory.text}
                           </p>
                           <div className="flex items-center justify-between">

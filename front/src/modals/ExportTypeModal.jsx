@@ -74,13 +74,13 @@ function ExportTypeModal(props) {
     <ContainerModal showModal={props.showModal}>
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         <div className="flex justify-between items-center px-4 pt-4">
-          <p className="text-xl text-tertiary">
+          <p className="text-sm text-tertiary">
             <Trans i18nKey="description.export_title"></Trans>:
           </p>
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer"
+            className="h-[24px] w-[24px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
             onClick={() => props.showModal(false)}
           />
         </div>
@@ -97,7 +97,7 @@ function ExportTypeModal(props) {
             >
               <img src={option.icon} alt={option.id} className="h-8 w-8" />
               <label
-                className={`text-lg ${
+                className={`text-sm ${
                   value === option.id
                     ? "text-tertiary"
                     : "text-black dark:text-white"
@@ -110,7 +110,7 @@ function ExportTypeModal(props) {
           {props.arcana.id && props.exportSettings ? (
             <>
               <div className="">
-                <p className="text-red-600">
+                <p className="text-red-600 text-xs">
                   <Trans i18nKey="description.arcana_warn"></Trans>
                 </p>
               </div>
@@ -127,7 +127,7 @@ function ExportTypeModal(props) {
                 />
                 <label
                   htmlFor="exportArcana"
-                  className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                  className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
                 >
                   <Trans i18nKey="description.exportArcana"></Trans>
                 </label>
@@ -146,7 +146,7 @@ function ExportTypeModal(props) {
             />
             <label
               htmlFor="exportSettings"
-              className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+              className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
             >
               <Trans i18nKey="description.exportSettings"></Trans>
             </label>
@@ -165,7 +165,7 @@ function ExportTypeModal(props) {
             />
             <label
               htmlFor="exportImage"
-              className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+              className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
             >
               <Trans i18nKey="description.exportImages"></Trans>
             </label>
@@ -173,7 +173,7 @@ function ExportTypeModal(props) {
 
           <div className="flex justify-end w-full">
             <button
-              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+              className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none text-sm"
               onClick={exportFile}
               type="button"
             >
