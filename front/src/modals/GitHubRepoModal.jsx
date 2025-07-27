@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Trans } from "react-i18next";
 import ContainerModal from "./ContainerModal";
 import cross from "../assets/cross.svg";
+import back_arrow from "../assets/back_arrow.svg";
 
 function GitHubRepoModal(props) {
   const [currentPath, setCurrentPath] = useState("");
@@ -75,10 +76,14 @@ function GitHubRepoModal(props) {
           const cleanedText = text.replace(/,(\s*[}$])/g, "$1");
           const parsedData = JSON.parse(cleanedText);
 
-          return { ...item, title: parsedData.title || null, subtitle: parsedData.subtitle || null};
+          return {
+            ...item,
+            title: parsedData.title || null,
+            subtitle: parsedData.subtitle || null,
+          };
         } catch (error) {
           console.error("Error fetching or parsing JSON for title:", error);
-          return { ...item, title: null, subtitle: null};
+          return { ...item, title: null, subtitle: null };
         }
       });
 
@@ -197,12 +202,12 @@ function GitHubRepoModal(props) {
         {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">⚙️</span>
+            <span className="text-lg">⚙️</span>
             <div>
-              <p className="text-xl text-tertiary font-medium">
+              <p className="text-sm text-tertiary font-medium">
                 <Trans i18nKey="description.persona.selectPersona" />
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 <Trans i18nKey="description.persona.browsePersonas" />
               </p>
             </div>
@@ -210,7 +215,7 @@ function GitHubRepoModal(props) {
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="h-[24px] w-[24px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
             onClick={() => props.showModal(false)}
           />
         </div>
@@ -222,14 +227,14 @@ function GitHubRepoModal(props) {
               {pathHistory.length > 0 && (
                 <button
                   onClick={handleBackClick}
-                  className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-700 dark:text-white"
+                  className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-700 dark:text-white"
                 >
-                  <span>←</span>
+                  <img src={back_arrow} alt="close" className="h-3 w-3" />
                   <Trans i18nKey="description.persona.back" />
                 </button>
               )}
 
-              <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                 <span className="font-medium">
                   <Trans i18nKey="description.persona.personas" />
                 </span>
@@ -254,15 +259,15 @@ function GitHubRepoModal(props) {
 
           {error && (
             <div className="p-4 text-center">
-              <div className="text-red-500 mb-2 dark:text-red-400">
+              <div className="text-red-500 mb-2 dark:text-red-400 text-sm">
                 <Trans i18nKey="description.persona.errorLoading" />
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-3">
                 {error}
               </div>
               <button
                 onClick={() => fetchContents(currentPath)}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors"
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors text-xs"
               >
                 <Trans i18nKey="description.persona.retry" />
               </button>
@@ -270,7 +275,7 @@ function GitHubRepoModal(props) {
           )}
 
           {!loading && !error && contents.length === 0 && (
-            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
               <Trans i18nKey="description.persona.noPersonas" />
             </div>
           )}
@@ -286,20 +291,25 @@ function GitHubRepoModal(props) {
                   <div className="flex items-center gap-3 flex-1">
                     {getFileIcon(item.name, item.type)}
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      <div className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm">
                         {item.type === "file"
                           ? item.title || item.name.replace(".json", "")
                           : item.name}
                       </div>
                       {item.type === "file" && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {item.subtitle ? item.subtitle: (
-                              <><Trans i18nKey="description.persona.configuration" /> • {formatFileSize(item.size)}</>
-                            )}
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {item.subtitle ? (
+                            item.subtitle
+                          ) : (
+                            <>
+                              <Trans i18nKey="description.persona.configuration" />{" "}
+                              • {formatFileSize(item.size)}
+                            </>
+                          )}
                         </div>
                       )}
                       {item.type === "dir" && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           <Trans i18nKey="description.persona.folder" />
                         </div>
                       )}
@@ -318,7 +328,7 @@ function GitHubRepoModal(props) {
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t dark:border-border_dark text-sm text-gray-600 dark:text-gray-400">
+        <div className="px-4 py-3 border-t dark:border-border_dark text-xs text-gray-600 dark:text-gray-400">
           <div className="flex justify-center">
             <button
               onClick={() =>
@@ -327,7 +337,7 @@ function GitHubRepoModal(props) {
                   "_blank"
                 )
               }
-              className="px-4 py-2 bg-tertiary hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
+              className="px-4 py-2 bg-tertiary hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
             >
               <Trans i18nKey="description.persona.createOwn" />
             </button>

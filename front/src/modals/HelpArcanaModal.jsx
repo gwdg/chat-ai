@@ -10,7 +10,7 @@ function HelpArcanaModal(props) {
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
-          <p className="text-xl text-tertiary">
+          <p className="text-sm text-tertiary">
             {/* Translation for help title */}
             <Trans i18nKey="description.help_title"></Trans>:
           </p>
@@ -18,13 +18,13 @@ function HelpArcanaModal(props) {
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer"
+            className="h-[24px] w-[24px] cursor-pointer"
             onClick={() => props.showModal(false)} // Click handler to close model
           />
         </div>
         {/* Help content */}
         <div className="p-4 pt-0">
-          <p className="dark:text-white text-black text-justify">
+          <p className="dark:text-white text-black text-justify text-sm">
             {/* Translation for help note */}
             <Trans i18nKey="description.arcana_note"></Trans>
           </p>

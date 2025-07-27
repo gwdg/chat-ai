@@ -10,7 +10,7 @@ function DeleteArcanaModal(props) {
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
-          <p className="text-xl text-tertiary">
+          <p className="text-sm text-tertiary">
             {/* Translation for help title */}
             <Trans i18nKey="description.help_title1"></Trans>:
           </p>
@@ -18,19 +18,19 @@ function DeleteArcanaModal(props) {
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer"
+            className="h-[24px] w-[24px] cursor-pointer"
             onClick={() => props.showModal(false)} // Click handler to close model
           />
         </div>
         <div className="flex flex-col gap-2 p-4">
           <div className="pt-0 pb-2">
-            <p className="dark:text-white text-black text-justify">
+            <p className="dark:text-white text-black text-justify text-sm">
               {/* Translation for mic permission message */}
               <Trans i18nKey="description.delete_arcana"></Trans>
             </p>
           </div>{" "}
           {/* Buttons */}
-          <div className="flex flex-col md:flex-row gap-2 justify-between w-full">
+          <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm">
             {" "}
             {/* Close button */}
             <button

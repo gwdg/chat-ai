@@ -44,7 +44,7 @@ function ClearMemoryModal(props) {
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="h-[24px] w-[24px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
             onClick={() => props.showModal(false)}
           />
         </div>
@@ -106,7 +106,7 @@ function ClearMemoryModal(props) {
           </div>
 
           {/* Buttons */}
-          <div className="flex flex-col md:flex-row gap-2 justify-between w-full">
+          <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm">
             {/* Cancel button */}
             <button
               className="text-gray-700 dark:text-white p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none transition-colors"

@@ -284,7 +284,7 @@ const PreviewModal = ({ file, onClose }) => {
             <img
               src={cross}
               alt="close"
-              className="h-[30px] w-[30px] cursor-pointer hover:opacity-80 transition-opacity"
+              className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity"
               onClick={onClose}
             />
           </div>

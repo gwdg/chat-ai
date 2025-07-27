@@ -11,7 +11,7 @@ function MicModal(props) {
       <div className="border dark:border-border_dark rounded-2xl bg-white dark:bg-black md:min-w-[350px] h-fit md:max-w-[350px]">
         {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
-          <p className="text-xl text-tertiary">
+          <p className="text-sm text-tertiary">
             {/* Translation for mic permission message */}
             <Trans i18nKey="description.mic2"></Trans>
           </p>
@@ -19,13 +19,13 @@ function MicModal(props) {
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer"
+            className="h-[24px] w-[24px] cursor-pointer"
             onClick={() => props.showModal(false)} // Click handler to close model
           />
         </div>
         {/* Mic permission message */}
         <div className="p-4 pt-0">
-          <p className="dark:text-white text-black text-justify">
+          <p className="dark:text-white text-black text-justify text-sm">
             {/* Translation for mic permission message */}
             <Trans i18nKey="description.mic1"></Trans>
           </p>

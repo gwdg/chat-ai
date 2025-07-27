@@ -30,20 +30,20 @@ function ShareSettingsModal(props) {
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
-          <p className="text-xl text-tertiary">
+          <p className="text-sm text-tertiary">
             <Trans i18nKey="description.help_title"></Trans>:
           </p>
           {/* Close button */}
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer"
+            className="h-[24px] w-[24px] cursor-pointer"
             onClick={() => props.showModal(false)}
           />
         </div>
         <div className="flex flex-col gap-2 p-4">
           <div className="pt-0 pb-2">
-            <p className="dark:text-white text-black text-justify">
+            <p className="dark:text-white text-black text-justify text-sm">
               <Trans i18nKey="description.exportSettings1"></Trans>
             </p>
           </div>

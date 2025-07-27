@@ -56,24 +56,24 @@ function SettingsModal(props) {
 
   return (
     <ContainerModal showModal={props.showModal} isSettingsModel={true}>
-      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
+      <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Modal Header */}
-        <div className="flex justify-between items-center px-4 pt-4">
-          <p className="text-xl text-tertiary">
+        <div className="flex justify-between items-center px-4 pt-4 flex-shrink-0">
+          <p className="text-sm text-tertiary">
             <Trans i18nKey="description.settings.userProfileSettings" />
           </p>
           <img
             src={cross}
             alt="cross"
-            className="h-[30px] w-[30px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="h-[24px] w-[24px] cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
             onClick={() => props.showModal(false)}
           />
         </div>
 
         {/* User Profile Section */}
-        <div className="p-4 flex items-center justify-between gap-3 border-b dark:border-border_dark">
+        <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b dark:border-border_dark flex-shrink-0">
           <div className="flex flex-col">
-            <span className="font-medium text-lg dark:text-white">
+            <span className="font-medium text-sm dark:text-white">
               {(() => {
                 const first = props.userData?.firstname ?? "";
                 const last = props.userData?.lastname ?? "";
@@ -84,19 +84,19 @@ function SettingsModal(props) {
                 );
               })()}
             </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {props.userData?.organization ?? (
                 <Trans i18nKey="description.common.loading" />
               )}
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="font-medium text-lg dark:text-white">
+            <span className="font-medium text-sm dark:text-white">
               {props.userData?.username ?? (
                 <Trans i18nKey="description.common.loading" />
               )}
             </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {props.userData?.email ?? (
                 <Trans i18nKey="description.common.loading" />
               )}
@@ -105,34 +105,34 @@ function SettingsModal(props) {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="max-w-[250px] w-full p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
+            className="w-full sm:max-w-[200px] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
           >
-            <p>
+            <p className="text-sm">
               <Trans i18nKey="description.settings.logout" />
             </p>
           </button>
         </div>
 
-        {/* Settings Content */}
-        <div className="p-4 flex flex-col gap-6">
+        {/* Scrollable Settings Content */}
+        <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1 min-h-0">
           {/* Default Model Selection Section */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <p className="text-base font-medium dark:text-white">
+              <p className="text-sm font-medium dark:text-white">
                 <Trans i18nKey="description.settings.defaultModel" />
               </p>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
               <Trans
                 i18nKey="description.settings.defaultModelDescription"
                 values={{ currentModel: currentDefaultModel?.name }}
               />
             </p>
-            <div className="border dark:border-border_dark rounded-2xl overflow-hidden max-h-60 overflow-y-auto">
+            <div className="border dark:border-border_dark rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
               {props.modelList?.map((option, index) => (
                 <div
                   key={index}
-                  className={`flex items-center gap-2 text-tertiary text-xl w-full px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                  className={`flex items-center gap-2 text-tertiary text-sm w-full px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
                     currentDefaultModel?.id === option.id
                       ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500"
                       : ""
@@ -150,63 +150,64 @@ function SettingsModal(props) {
                     <img
                       src={audio_supported}
                       alt="audio_supported"
-                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                      className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                     />
                   )}
                   {option.input?.includes("image") && (
                     <img
                       src={image_supported}
                       alt="image_supported"
-                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                      className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                     />
                   )}
                   {option.input?.includes("video") && (
                     <img
                       src={video_icon}
                       alt="video_icon"
-                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                      className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                     />
                   )}
                   {option.output?.includes("thought") && (
                     <img
                       src={thought_supported}
                       alt="thought_supported"
-                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                      className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                     />
                   )}
                   {option.input?.includes("arcana") && (
                     <img
                       src={books}
                       alt="books"
-                      className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                      className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                     />
                   )}
                 </div>
               ))}
             </div>
           </div>
+
           {/* Request Timeout Section */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-lg">⏱️</span>
-              <p className="text-base font-medium dark:text-white">
+              <span className="text-sm">⏱️</span>
+              <p className="text-sm font-medium dark:text-white">
                 <Trans
                   i18nKey="description.settings_timeout.requestTimeout"
                   defaultValue="Request Timeout"
                 />
               </p>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
               <Trans
                 i18nKey="description.settings_timeout.requestTimeoutDescription"
                 defaultValue="Set how long to wait for AI responses before timing out."
               />
             </p>
 
-            {/* Fixed timeout input */}
+            {/* Timeout input */}
             <div className="flex items-center gap-3">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <Trans
                     i18nKey="description.settings_timeout.timeoutSeconds"
                     defaultValue="Timeout (seconds)"
@@ -220,14 +221,14 @@ function SettingsModal(props) {
                     step="5"
                     value={timeoutInSeconds}
                     onChange={handleTimeoutChange}
-                    className="w-full pl-3 pr-16 py-2 border dark:border-border_dark rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-full pl-3 pr-16 py-2 border dark:border-border_dark rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-sm"
                     placeholder="300"
                   />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400 pointer-events-none">
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400 pointer-events-none">
                     secs
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
                   <Trans
                     i18nKey="description.settings_timeout.timeoutRange"
                     defaultValue="Range: 5-300 seconds"
@@ -240,14 +241,14 @@ function SettingsModal(props) {
           {/* User Memory Management Section */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <p className="text-base font-medium dark:text-white">
+              <p className="text-sm font-medium dark:text-white">
                 <Trans
                   i18nKey="description.settings.userMemory"
                   defaultValue="User Memory"
                 />
               </p>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
               <Trans
                 i18nKey="description.settings.userMemoryDescription"
                 defaultValue="Manage your personal memories that help the AI remember important details about you. You currently have {{count}} memories saved."
@@ -256,14 +257,16 @@ function SettingsModal(props) {
             </p>
             <div className="w-full flex justify-center">
               <button
-                className="max-w-[250px] w-full p-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
+                className="w-full sm:max-w-[200px] p-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
                 onClick={() => props.setShowMemoryModal(true)}
               >
-                <span>🧠</span>
-                <Trans
-                  i18nKey="description.settings.manageMemory"
-                  defaultValue="Manage Memory"
-                />
+                <span className="text-sm">🧠</span>
+                <span className="text-sm">
+                  <Trans
+                    i18nKey="description.settings.manageMemory"
+                    defaultValue="Manage Memory"
+                  />
+                </span>
                 <span className="text-xs bg-blue-500 px-2 py-1 rounded-full">
                   {memories.length}
                 </span>
@@ -274,16 +277,16 @@ function SettingsModal(props) {
           {/* Clear Chats Section */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <p className="text-base font-medium dark:text-white">
+              <p className="text-sm font-medium dark:text-white">
                 <Trans i18nKey="description.settings.clearAllChats" />
               </p>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
               <Trans i18nKey="description.settings.clearAllChatsDescription" />
             </p>
             <div className="w-full flex justify-center">
               <button
-                className="max-w-[250px] w-full p-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
+                className="w-full sm:max-w-[200px] p-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl flex items-center justify-center gap-2 transition-colors text-sm"
                 onClick={() => props.setShowCacheModal(true)}
               >
                 <Trans i18nKey="description.file2" />

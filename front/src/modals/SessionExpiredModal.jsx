@@ -8,7 +8,7 @@ function SessionExpiredModal(props) {
       <div className="select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full">
         {/* Modal Header */}
         <div className="flex justify-between items-center px-4 pt-4">
-          <p className="text-xl text-tertiary">
+          <p className="text-sm text-tertiary">
             <Trans i18nKey="description.help_title"></Trans>:
           </p>
           {/* Remove the close button completely or make it hidden */}
@@ -16,7 +16,7 @@ function SessionExpiredModal(props) {
         </div>
         <div className="flex flex-col gap-2 p-4">
           <div className="pt-0 pb-2">
-            <p className="dark:text-white text-black text-justify">
+            <p className="dark:text-white text-black text-justify text-sm">
               <Trans i18nKey="description.session1"></Trans>
             </p>
           </div>
