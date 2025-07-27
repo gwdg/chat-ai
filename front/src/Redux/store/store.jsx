@@ -21,6 +21,7 @@ const persistConfig = {
     "version",
     "userMemory",
     "timeout",
+    "count",
   ],
 };
 
@@ -148,7 +149,7 @@ const rootReducerWithReset = (state, action) => {
     const {
       newConversationId,
       theme,
-      advOption,
+      advOptions,
       defaultModel,
       preserveMemories,
     } = action.payload || {};
@@ -174,7 +175,7 @@ const rootReducerWithReset = (state, action) => {
       },
       // Preserve specified states
       theme: theme || state?.theme || { isDarkMode: false },
-      advOption: advOption || state.advOption,
+      advOption: advOptions || state.advOption,
       defaultModel: currentDefaultModel,
       // Conditionally preserve memories
       userMemory: preserveMemories
@@ -242,6 +243,7 @@ const stateSyncConfig = {
     "SET_ADV",
     "RESET_ALL",
     "MIGRATE",
+    "SET_COUNT",
   ],
   // Use localStorage for better compatibility
   broadcastChannelOption: {
