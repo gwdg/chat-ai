@@ -1240,8 +1240,8 @@ function Prompt({
                             fileType: file.fileType,
                             processed: file.processed,
                             processedContent: file.processedContent,
-                            originalFile: file.originalFile, 
-                            file: file.file, 
+                            originalFile: file.originalFile,
+                            file: file.file,
                             data: file.data, // ADDED: Include any base64 data if available
                             text: file.text, // ADDED: Include any text data if available
                             type: file.type || "document", // ADDED: Ensure type is set
@@ -1452,11 +1452,11 @@ function Prompt({
               {!showAdvOpt ? (
                 <Tooltip text={t("description.settings_toggle")}>
                   <button
-                    className="flex h-[30px] w-[30px] cursor-pointer"
+                    className="flex h-[25px] w-[25px] cursor-pointer"
                     onClick={toggleAdvOpt}
                   >
                     <img
-                      className="cursor-pointer h-[30px] w-[30px]"
+                      className="cursor-pointer h-[25px] w-[25px]"
                       src={settings_icon}
                       alt="settings"
                     />
@@ -1473,12 +1473,12 @@ function Prompt({
               />
               <Tooltip text={t("description.attachFile")}>
                 <button
-                  className="h-[30px] w-[30px] cursor-pointer"
+                  className="h-[25px] w-[25px] cursor-pointer"
                   onClick={handleClick}
                   disabled={loading || loadingResend}
                 >
                   <img
-                    className="cursor-pointer h-[30px] w-[30px]"
+                    className="cursor-pointer h-[25px] w-[25px]"
                     src={upload}
                     alt="upload"
                   />
@@ -1500,12 +1500,12 @@ function Prompt({
                   />
                   <Tooltip text={t("description.attachImage")}>
                     <button
-                      className="h-[30px] w-[30px] cursor-pointer"
+                      className="h-[25px] w-[25px] cursor-pointer"
                       onClick={() => hiddenFileInputImage.current?.click()}
                       disabled={loading || loadingResend}
                     >
                       <img
-                        className="cursor-pointer h-[30px] w-[30px]"
+                        className="cursor-pointer h-[25px] w-[25px]"
                         src={image_icon}
                         alt="attach file"
                       />
