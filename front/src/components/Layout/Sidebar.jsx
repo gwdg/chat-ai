@@ -81,7 +81,10 @@ function Sidebar({
       persistor.flush().then(() => {
         // Navigate to the new conversation
         navigate(`/chat/${newId}`);
-        onClose?.();
+        // Only close sidebar on mobile (below custom breakpoint 1081px)
+        if (window.innerWidth < 1081) {
+          onClose?.();
+        }
 
         // Re-enable interaction after navigation
         setTimeout(() => {
@@ -100,90 +103,113 @@ function Sidebar({
 
       dispatch(setCurrentConversation(id));
       navigate(`/chat/${id}`);
-      onClose?.();
+
+      // Only close sidebar on mobile (below custom breakpoint 1081px)
+      if (window.innerWidth < 1081) {
+        onClose?.();
+      }
     },
     [dispatch, navigate, onClose, isResponding, currentConversationId]
   );
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-bg_secondary_dark border-r dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark select-none">
+    <div
+      className="flex flex-col bg-white dark:bg-bg_secondary_dark rounded-2xl shadow-lg dark:shadow-dark select-none h-full"
+      style={{
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
       {/* Mobile Header */}
-      <div className="custom:hidden flex items-center justify-between p-4 border-b dark:border-border_dark">
-        <p className="text-lg font-medium text-black dark:text-white">
+      <div className="custom:hidden flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 h-14 flex-shrink-0">
+        <p className="text-base font-medium text-black dark:text-white">
           Conversations
         </p>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors touch-manipulation w-8 h-8 flex items-center justify-center"
+          style={{ WebkitTapHighlightColor: "transparent" }}
         >
-          <img src={back_arrow} alt="close" className="h-5 w-5" />
+          <img src={back_arrow} alt="close" className="h-4 w-4" />
         </button>
       </div>
 
       {/* New Chat Button */}
-      <div className="flex-shrink-0 p-2 border-b dark:border-border_dark">
+      <div className="flex-shrink-0 p-3 border-b border-gray-200 dark:border-gray-800">
         <button
           onClick={handleNewChat}
           disabled={isResponding}
-          className={`w-full bg-bg_light dark:bg-bg_dark hover:bg-light_hover dark:hover:bg-dark_hover active:bg-tertiary_pressed text-black dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
+          className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-medium transition-colors touch-manipulation ${
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
+          style={{
+            WebkitTapHighlightColor: "transparent",
+            minHeight: "44px",
+          }}
         >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
           <span>
             <Trans i18nKey="description.newConversation" />
           </span>
         </button>
       </div>
 
-      {/* Conversations List */}
-      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-2">
-          <div className="space-y-2">
+      {/* Conversations List - This should take available space */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div
+          className="h-full p-3 overflow-y-auto overscroll-behavior-contain"
+          style={{
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          <div className="space-y-1">
             {conversationIds.map((id) => {
               const conv = conversations?.find((c) => c.id === id);
               if (!conv) return null;
 
-              // Determine if this is the current conversation
               const isCurrentConversation = id === currentConversationId;
 
               return (
                 <div
                   key={id}
                   onClick={() => handleSelectConversation(id)}
-                  className={`group p-3 rounded-lg transition-all relative ${
+                  className={`group px-3 py-2 rounded-xl relative touch-manipulation transition-colors ${
                     isResponding ? "cursor-not-allowed" : "cursor-pointer"
                   } ${
                     isCurrentConversation
-                      ? "bg-bg_light/80 dark:bg-bg_dark/80 text-black dark:text-white"
-                      : "text-black dark:text-white hover:bg-bg_light/50 dark:hover:bg-white/5"
+                      ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white border border-gray-200 dark:border-gray-700"
+                      : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
                   data-current={isCurrentConversation ? "true" : "false"}
+                  style={{
+                    WebkitTapHighlightColor: "transparent",
+                    minHeight: "48px",
+                  }}
                 >
                   <div className="flex items-center justify-between relative">
-                    {/* Title with gradient overflow */}
+                    {/* Title with proper truncation */}
                     <div
-                      className="flex-1 overflow-hidden relative custom:group-hover:mr-2 transition-all duration-200"
+                      className="flex-1 overflow-hidden pr-2 min-w-0"
                       title={conv.title}
                     >
-                      <div
-                        ref={(el) => {
-                          if (el) {
-                            const hasOverflow = el.scrollWidth > el.clientWidth;
-                            el.dataset.hasOverflow = hasOverflow.toString();
-                          }
-                        }}
-                        className={`relative whitespace-nowrap ${
-                          isCurrentConversation
-                            ? 'truncate group-hover:truncate-none group-hover:[&[data-has-overflow="true"]]:before:absolute group-hover:[&[data-has-overflow="true"]]:before:right-0 group-hover:[&[data-has-overflow="true"]]:before:content-[\'\'] group-hover:[&[data-has-overflow="true"]]:before:w-full group-hover:[&[data-has-overflow="true"]]:before:h-full group-hover:[&[data-has-overflow="true"]]:before:bg-gradient-to-r group-hover:[&[data-has-overflow="true"]]:before:from-transparent group-hover:[&[data-has-overflow="true"]]:before:to-bg_light/90 dark:group-hover:[&[data-has-overflow="true"]]:before:to-bg_dark/90'
-                            : "truncate group-hover:truncate-none"
-                        } transition-all duration-200`}
-                      >
+                      <div className="truncate text-sm font-medium">
                         {conv.title || "Untitled Conversation"}
                       </div>
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex-shrink-0 flex items-center gap-2 custom:opacity-0 custom:group-hover:opacity-100 opacity-100 transition-all duration-200 w-0 custom:group-hover:w-auto">
+                    <div className="flex-shrink-0 flex items-center gap-1 lg:opacity-0 lg:group-hover:opacity-100 opacity-100">
                       <button
                         onClick={(e) => {
                           if (isResponding) return;
@@ -191,9 +217,18 @@ function Sidebar({
                           onRenameConversation(id);
                         }}
                         disabled={isResponding}
-                        className={isResponding ? "cursor-not-allowed" : ""}
+                        className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation w-7 h-7 flex items-center justify-center ${
+                          isResponding ? "cursor-not-allowed" : ""
+                        }`}
+                        style={{
+                          WebkitTapHighlightColor: "transparent",
+                        }}
                       >
-                        <img src={edit_icon} alt="edit" className="w-5 h-5" />
+                        <img
+                          src={edit_icon}
+                          alt="edit"
+                          className="w-3.5 h-3.5"
+                        />
                       </button>
                       <button
                         onClick={(e) => {
@@ -202,9 +237,14 @@ function Sidebar({
                           onDeleteConversation(id);
                         }}
                         disabled={isResponding}
-                        className={isResponding ? "cursor-not-allowed" : ""}
+                        className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation w-7 h-7 flex items-center justify-center ${
+                          isResponding ? "cursor-not-allowed" : ""
+                        }`}
+                        style={{
+                          WebkitTapHighlightColor: "transparent",
+                        }}
                       >
-                        <img src={cross} alt="delete" className="w-5 h-5" />
+                        <img src={cross} alt="delete" className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -214,16 +254,21 @@ function Sidebar({
           </div>
         </div>
       </div>
-      {/* Persona button */}
-      <div className="flex-shrink-0 p-2 border-b dark:border-border_dark">
+
+      {/* Import Persona button - Fixed at bottom */}
+      <div className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
         <button
           onClick={() => {
             setShowRepoModal(true);
           }}
           disabled={isResponding}
-          className={`w-full bg-bg_light dark:bg-bg_dark hover:bg-light_hover dark:hover:bg-dark_hover active:bg-tertiary_pressed text-black dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${
+          className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-medium transition-colors touch-manipulation ${
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
+          style={{
+            WebkitTapHighlightColor: "transparent",
+            minHeight: "44px",
+          }}
         >
           <span>
             <Trans i18nKey="description.importPersona" />

@@ -7,7 +7,7 @@
 // External dependencies
 import { Link } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
-import packageJson from '../../../package.json';
+import packageJson from "../../../package.json";
 
 // Asset imports
 import arrow_down from "../../assets/footer_arrow.svg";
@@ -55,7 +55,7 @@ function Footer(props) {
               }
               target="_blank"
             >
-              <p className="text-xl text-center h-full text-secondary md:border-r-secondary md:border-r">
+              <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
                 <Trans i18nKey="description.text2"></Trans>
               </p>
             </Link>
@@ -67,7 +67,7 @@ function Footer(props) {
               }
               target="_blank"
             >
-              <p className="text-xl text-center h-full text-secondary md:border-r-secondary md:border-r">
+              <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
                 <Trans i18nKey="description.text1"></Trans>
               </p>
             </Link>
@@ -77,14 +77,14 @@ function Footer(props) {
               to={"https://docs.hpc.gwdg.de/services/chat-ai/faq/index.html"}
               target="_blank"
             >
-              <p className="text-xl text-center h-full text-secondary md:border-r-secondary md:border-r">
+              <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
                 <Trans i18nKey="description.text8"></Trans>
               </p>
             </Link>
 
             {/* Contact and Feedback Link */}
             <Link to={"https://gwdg.de/about-us/contact/"} target="_blank">
-              <p className="text-xl text-center h-full text-secondary md:border-r-secondary md:border-r">
+              <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
                 <Trans i18nKey="description.text4"></Trans>
               </p>
             </Link>
@@ -96,7 +96,7 @@ function Footer(props) {
               }
               target="_blank"
             >
-              <p className="text-xl text-center h-full text-secondary">
+              <p className="text-base text-center h-full text-secondary">
                 <Trans i18nKey="description.text7"></Trans>
               </p>
             </Link>
@@ -128,7 +128,9 @@ function Footer(props) {
                 rel="noopener noreferrer"
                 className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center"
               >
-                {packageJson.displayName}{' v'}{packageJson.version}
+                {packageJson.displayName}
+                {" v"}
+                {packageJson.version}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"

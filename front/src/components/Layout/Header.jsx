@@ -20,16 +20,6 @@ import DemandStatusIcon from "../Others/DemandStatusIcon";
 import { toggleTheme } from "../../Redux/reducers/themeReducer";
 import { useTranslation } from "react-i18next";
 
-/**
- * Header component that provides navigation, theme switching, and model selection functionality
- * @param {Object} props - Component props
- * @param {Function} props.onMenuClick - Handler for mobile menu toggle
- * @param {Object} props.modelSettings - Current model configuration
- * @param {Array} props.modelList - Available AI models
- * @param {Function} props.onModelChange - Handler for model selection changes
- * @param {Function} props.setShowSettingsModal - Toggle for settings modal
- * @param {Object} props.userData - Current user information
- */
 function Header({
   onMenuClick,
   modelSettings,
@@ -185,272 +175,295 @@ function Header({
 
   return (
     <>
-      {/*showAnnouncement && closeCount < 3 && (
-        <AnnouncementBar onClose={handleAnnouncementClose} />
-      )*/}
-      {/* Desktop Header */}
-      <nav
-        className="top-0 min-h-[60px] px-2 sm:px-4 items-center justify-between left-0 mobile:hidden flex z-[995] w-full bg-white dark:bg-black shadow-lg"
-        style={{
-          paddingBottom: "env(safe-area-inset-bottom)",
-          paddingTop: "env(safe-area-inset-top)",
-        }}
-      >
-        <div className="flex items-center gap-2 sm:gap-4">
-          {/* Hamburger Menu */}
+      {/* Desktop Header - Show above custom breakpoint (1081px) */}
+      <nav className="custom:flex hidden top-0 h-14 px-4 items-center justify-between left-0 z-[995] w-full bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center gap-3">
+          {/* Hamburger Menu - Only show below desktop (1281px) */}
           <button
             onClick={onMenuClick}
-            className="custom:hidden hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="desktop:hidden hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors p-2 touch-manipulation"
+            style={{ WebkitTapHighlightColor: "transparent" }}
           >
-            <img
-              className="h-[32px] w-[32px] sm:h-[40px] sm:w-[40px]"
-              src={hamburger_icon}
-              alt="Menu"
-            />
+            <img className="h-5 w-5" src={hamburger_icon} alt="Menu" />
           </button>
 
+          {/* Theme toggle */}
           <button
-            className="border-r border-primary pr-2 sm:pr-4 h-[40px] w-[40px] sm:h-[48px] sm:w-[48px] transition-all"
+            className="h-9 w-9 transition-all hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center justify-center touch-manipulation"
             onClick={toggleDarkMode}
+            style={{ WebkitTapHighlightColor: "transparent" }}
           >
             {isDarkMode ? (
-              <img className="h-full w-full p-1" src={Light} alt="Light Mode" />
+              <img className="h-5 w-5" src={Light} alt="Light Mode" />
             ) : (
-              <img
-                className="h-full w-full p-1 -rotate-45"
-                src={Dark}
-                alt="Dark Mode"
-              />
+              <img className="h-5 w-5 -rotate-45" src={Dark} alt="Dark Mode" />
             )}
           </button>
 
-          <div className="flex items-center">
+          {/* Logo */}
+          <div className="flex items-center border-l border-gray-200 dark:border-gray-700 pl-3">
             <img
-              className="h-[30px] w-[100px] sm:h-[40px] sm:w-[125px] object-contain"
+              className="h-8 w-auto object-contain"
               src={Logo}
               alt="Chat AI Logo"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
-          <div className="hidden sm:block">
+        <div className="flex items-center gap-3">
+          {/* Partner logos */}
+          <div className="hidden middle:flex desktop:flex items-center gap-3">
             <Link to={"https://kisski.gwdg.de/"} target="_blank">
-              <div className="bg-kisski-logo-small sm:bg-kisski-logo-large h-[45px] w-[145px] bg-repeat-round transition-all"></div>
+              <div className="bg-kisski-logo-large h-8 w-28 bg-repeat-round transition-all hover:opacity-80 rounded"></div>
             </Link>
-          </div>
-          <div className="hidden sm:block border-l border-primary px-2 sm:px-4">
             <Link to={"https://gwdg.de/"} target="_blank">
-              <div className="bg-logo-small sm:bg-logo-large h-[45px] w-[145px] bg-repeat-round transition-all"></div>
+              <div className="bg-logo-large h-8 w-28 bg-repeat-round transition-all hover:opacity-80 rounded"></div>
             </Link>
           </div>
+
+          {/* User profile */}
           {userData?.username ? (
             <div
-              className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
+              className="cursor-pointer border-l border-gray-200 dark:border-gray-700 pl-3 hover:opacity-80 transition-opacity touch-manipulation"
               onClick={() => setShowSettingsModal(true)}
+              style={{ WebkitTapHighlightColor: "transparent" }}
             >
-              <div className="user-profile-button w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
-                <span className="text-tertiary font-medium">
+              <div className="user-profile-button w-9 h-9 rounded-lg border-2 border-tertiary flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+                <span className="text-tertiary font-medium text-sm">
                   {getInitials(userData.username)}
                 </span>
               </div>
             </div>
           ) : (
-            <img
-              className="h-[32px] w-[32px]"
-              src={profile_icon}
-              alt="Profile"
+            <button
+              className="h-9 w-9 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-lg p-2 touch-manipulation border-l border-gray-200 dark:border-gray-700 ml-3"
               onClick={() => setShowSettingsModal(true)}
-            />
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              <img className="h-full w-full" src={profile_icon} alt="Profile" />
+            </button>
           )}
         </div>
       </nav>
 
-      {/* Mobile Header */}
-      <nav
-        className={`top-0 left-0 hidden ${
-          isIOSChrome ? "fixed" : ""
-        } mobile:flex z-[995] w-full h-[60px] bg-white dark:bg-black shadow-lg`}
-        style={{
-          paddingBottom: "env(safe-area-inset-bottom)",
-          paddingTop: "env(safe-area-inset-top)",
-        }}
-      >
-        <div className="w-full px-2 flex items-center justify-between gap-2 border-t border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark relative">
+      {/* Mobile Header - Show below custom breakpoint (1081px) */}
+      <nav className="custom:hidden flex top-0 left-0 z-[995] w-full h-14 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800">
+        <div className="w-full px-4 flex items-center gap-3">
           {/* Left Section */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={onMenuClick}
-              className=" hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation w-8 h-8 min-[400px]:w-9 min-[400px]:h-9 min-[500px]:w-10 min-[500px]:h-10 flex items-center justify-center"
+              style={{ WebkitTapHighlightColor: "transparent" }}
             >
               <img
-                className="h-[32px] w-[32px] "
+                className="h-4 w-4 min-[400px]:h-4 min-[400px]:w-4 min-[500px]:h-5 min-[500px]:w-5 flex-shrink-0"
                 src={hamburger_icon}
                 alt="Menu"
               />
             </button>
 
-            <div>
+            {/* Mobile logo */}
+            <div className="flex-shrink-0">
               <img
-                className="h-[35px] w-[100px] object-contain"
+                className="h-6 min-[400px]:h-7 min-[500px]:h-8 w-auto object-contain"
                 src={Logo}
                 alt="Chat AI Logo"
               />
             </div>
           </div>
 
-          {/* Full Width Model Selection */}
+          {/* Center - Model Selection */}
           <div
-            className="flex-1 px-2"
+            className="flex-shrink flex-grow min-w-0 px-2 relative"
+            style={{ maxWidth: "calc(100vw - 200px)" }}
             ref={dropdownRef}
             tabIndex={0}
             onBlur={(e) => {
-              // Only close if the new focus target is not within this dropdown
               if (!e.currentTarget.contains(e.relatedTarget)) {
                 setIsOpen(false);
               }
             }}
           >
+            {/* Model selector */}
             <div
-              className="flex items-center w-full gap-2 px-3 py-1.5 rounded-lg 
-        bg-gray-50 dark:bg-gray-800
-        hover:bg-gray-100 dark:hover:bg-gray-700 
-        border border-gray-200 dark:border-gray-700
-        text-gray-900 dark:text-gray-100
-        transition-colors cursor-pointer"
+              className="flex items-center w-full gap-2 px-3 py-2 rounded-lg 
+            bg-gray-50 dark:bg-gray-800
+            hover:bg-gray-100 dark:hover:bg-gray-700 
+            border border-gray-200 dark:border-gray-700
+            text-gray-900 dark:text-gray-100
+            transition-colors cursor-pointer touch-manipulation"
               onClick={() => setIsOpen(!isOpen)}
+              style={{
+                WebkitTapHighlightColor: "transparent",
+                minHeight: "40px",
+              }}
             >
               <DemandStatusIcon
                 status={currentModel?.status}
                 demand={currentModel?.demand}
               />
-              <div className="flex-1 text-sm truncate">
+              <div className="flex-1 text-sm truncate font-medium">
                 {modelSettings["model-name"]}
               </div>
-              {isAudioSupported && (
-                <img
-                  src={audio_supported}
-                  alt="audio_supported"
-                  className="h-[18px] w-[18px] flex-shrink-0"
-                />
-              )}
-              {isImageSupported && (
-                <img
-                  src={image_supported}
-                  alt="image_supported"
-                  className="h-[18px] w-[18px] flex-shrink-0"
-                />
-              )}
-              {isVideoSupported && (
-                <img
-                  src={video_icon}
-                  alt="video_icon"
-                  className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-2"
-                />
-              )}
-              {isThoughtSupported && (
-                <img
-                  src={thought_supported}
-                  alt="thought_supported"
-                  className="h-[18px] w-[18px] flex-shrink-0"
-                />
-              )}
-              {isArcanaSupported && (
-                <img
-                  src={books}
-                  alt="books"
-                  className="h-[18px] w-[18px] flex-shrink-0"
-                />
-              )}
+              {/* Icons */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {isAudioSupported && (
+                  <img
+                    src={audio_supported}
+                    alt="audio_supported"
+                    className="h-4 w-4 flex-shrink-0"
+                  />
+                )}
+                {isImageSupported && (
+                  <img
+                    src={image_supported}
+                    alt="image_supported"
+                    className="h-4 w-4 flex-shrink-0"
+                  />
+                )}
+                {isVideoSupported && (
+                  <img
+                    src={video_icon}
+                    alt="video_icon"
+                    className="h-4 w-4 cursor-pointer flex-shrink-0"
+                  />
+                )}
+                {isThoughtSupported && (
+                  <img
+                    src={thought_supported}
+                    alt="thought_supported"
+                    className="h-4 w-4 flex-shrink-0"
+                  />
+                )}
+                {isArcanaSupported && (
+                  <img
+                    src={books}
+                    alt="books"
+                    className="h-4 w-4 flex-shrink-0"
+                  />
+                )}
+                {/* Dropdown arrow */}
+                <svg
+                  className="h-4 w-4 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
             </div>
 
             {isOpen && (
               <div
-                className="absolute z-[999] w-[calc(100%-1rem)] left-2 right-2 top-[calc(100%-0.5rem)] 
-          bg-white dark:bg-gray-800 
-          shadow-lg dark:shadow-[0_4px_12px_rgba(0,0,0,0.5)] 
-          rounded-lg 
-          border border-gray-200 dark:border-gray-700
-          max-h-[280px] overflow-hidden"
+                className="fixed z-[999] left-0 right-0 top-14
+              bg-white dark:bg-gray-800 
+              shadow-xl dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)] 
+              rounded-none border-t border-gray-200 dark:border-gray-700
+              max-h-80 overflow-hidden"
                 onMouseDown={(e) => e.preventDefault()}
+                style={{
+                  WebkitOverflowScrolling: "touch",
+                  overscrollBehavior: "contain",
+                }}
               >
                 {/* Search Input */}
-                <div className="p-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder={t("description.placeholder_modelList")}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      autoFocus
-                    />
-                  </div>
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
+                  <input
+                    type="text"
+                    placeholder={t("description.placeholder_modelList")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-3 text-base rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    autoFocus
+                    style={{
+                      WebkitTapHighlightColor: "transparent",
+                      fontSize: "16px",
+                    }}
+                  />
                 </div>
 
                 {/* Model List Container */}
-                <div className="max-h-[200px] overflow-y-auto overflow-x-hidden">
+                <div
+                  className="max-h-64 overflow-y-auto overflow-x-hidden"
+                  style={{
+                    WebkitOverflowScrolling: "touch",
+                    overscrollBehavior: "contain",
+                  }}
+                >
                   {filteredModelList.length > 0 ? (
                     filteredModelList.map((option) => (
                       <div
                         key={option.id}
-                        className="flex items-center gap-2 px-3 py-2 
-                  hover:bg-gray-50 dark:hover:bg-gray-700
-                  text-gray-900 dark:text-gray-100 
-                  border-b border-gray-100 dark:border-gray-700 
-                  last:border-0
-                  transition-colors cursor-pointer"
+                        className="flex items-center gap-3 px-4 py-4
+                      hover:bg-gray-50 dark:hover:bg-gray-700
+                      text-gray-900 dark:text-gray-100 
+                      border-b border-gray-100 dark:border-gray-700 
+                      last:border-0
+                      transition-colors cursor-pointer touch-manipulation"
                         onClick={() => handleModelSelection(option)}
+                        style={{
+                          WebkitTapHighlightColor: "transparent",
+                          minHeight: "56px",
+                        }}
                       >
                         <DemandStatusIcon
                           status={option?.status}
                           demand={option?.demand}
                         />
                         <div className="flex-1 text-sm min-w-0 mr-2">
-                          <div className="truncate">{option.name}</div>
+                          <div className="truncate font-medium">
+                            {option.name}
+                          </div>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           {option.input.includes("audio") && (
                             <img
                               src={audio_supported}
                               alt="audio_supported"
-                              className="h-[18px] w-[18px] flex-shrink-0"
+                              className="h-4 w-4 flex-shrink-0"
                             />
                           )}
                           {option.input.includes("image") && (
                             <img
                               src={image_supported}
                               alt="image_supported"
-                              className="h-[18px] w-[18px] flex-shrink-0"
+                              className="h-4 w-4 flex-shrink-0"
                             />
                           )}
                           {option.input.includes("video") && (
                             <img
                               src={video_icon}
                               alt="video_icon"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                              className="h-4 w-4 cursor-pointer flex-shrink-0"
                             />
                           )}
                           {option.output.includes("thought") && (
                             <img
                               src={thought_supported}
                               alt="thought_supported"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0"
+                              className="h-4 w-4 cursor-pointer flex-shrink-0"
                             />
                           )}
                           {option.input.includes("arcana") && (
                             <img
                               src={books}
                               alt="books"
-                              className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-2"
+                              className="h-4 w-4 cursor-pointer flex-shrink-0"
                             />
                           )}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                    <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400 text-base">
                       No models found matching &quot;{searchQuery}&quot;
                     </div>
                   )}
@@ -460,54 +473,65 @@ function Header({
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center gap-2">
-            <img
-              src={help}
-              alt="help"
-              className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity"
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Help icon */}
+            <button
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation w-10 h-10 flex items-center justify-center"
               onClick={(event) => {
                 event.stopPropagation();
                 setShowHelpModal(true);
               }}
-            />
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              <img src={help} alt="help" className="h-5 w-5 flex-shrink-0" />
+            </button>
 
+            {/* Theme toggle */}
             <button
-              className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors p-2 touch-manipulation w-10 h-10 flex items-center justify-center"
               onClick={toggleDarkMode}
+              style={{ WebkitTapHighlightColor: "transparent" }}
             >
               {isDarkMode ? (
                 <img
-                  className="h-[32px] w-[32px]"
+                  className="h-5 w-5 flex-shrink-0"
                   src={Light}
                   alt="Light Mode"
                 />
               ) : (
                 <img
-                  className="h-[32px] w-[32px] -rotate-45"
+                  className="h-5 w-5 -rotate-45 flex-shrink-0"
                   src={Dark}
                   alt="Dark Mode"
                 />
               )}
             </button>
 
+            {/* User profile */}
             {userData?.username ? (
               <div
-                className="cursor-pointer border-l border-primary pl-2 sm:pl-4"
+                className="cursor-pointer touch-manipulation w-10 h-10 flex items-center justify-center"
                 onClick={() => setShowSettingsModal(true)}
+                style={{ WebkitTapHighlightColor: "transparent" }}
               >
-                <div className="w-[32px] h-[32px] rounded-full border-[3px] border-tertiary flex items-center justify-center">
-                  <span className="text-tertiary font-medium">
+                <div className="w-9 h-9 rounded-lg border-2 border-tertiary flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+                  <span className="text-tertiary font-medium text-sm">
                     {getInitials(userData.username)}
                   </span>
                 </div>
               </div>
             ) : (
-              <img
-                className="h-[32px] w-[32px]"
-                src={profile_icon}
-                alt="Profile"
+              <button
+                className="cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-manipulation w-10 h-10 flex items-center justify-center"
                 onClick={() => setShowSettingsModal(true)}
-              />
+                style={{ WebkitTapHighlightColor: "transparent" }}
+              >
+                <img
+                  className="h-5 w-5 flex-shrink-0"
+                  src={profile_icon}
+                  alt="Profile"
+                />
+              </button>
             )}
           </div>
         </div>
