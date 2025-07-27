@@ -379,12 +379,12 @@ function Layout() {
         <div className="flex flex-col flex-1 w-full overflow-hidden">
           <div
             ref={mainDiv}
-            className={`flex-1 overflow-y-auto bg-bg_light dark:bg-bg_dark lg:rounded-2xl 
+            className={`flex-1 overflow-y-auto bg-bg_light dark:bg-bg_dark desktop:rounded-2xl 
           overscroll-behavior-contain
           ${
             showFooter
-              ? "h-[calc(100vh-54px-58px)] lg:h-[calc(100vh-112px)]"
-              : "h-[calc(100vh-54px-32px)] lg:h-[calc(100vh-132px)]"
+              ? "h-[calc(100vh-54px-58px)] desktop:h-[calc(100vh-112px)]"
+              : "h-[calc(100vh-54px-32px)] desktop:h-[calc(100vh-132px)]"
           }`}
             style={{
               WebkitOverflowScrolling: "touch",
@@ -408,7 +408,7 @@ function Layout() {
       </div>
 
       {/* Footer section */}
-      <div className="w-full bg-bg_light dark:bg-bg_dark lg:px-3 flex-shrink-0 select-none">
+      <div className="w-full bg-bg_light dark:bg-bg_dark flex-shrink-0 select-none">
         {!showFooter && (
           <div className="flex justify-center items-center h-8 py-2 touch-manipulation">
             <div
@@ -426,7 +426,7 @@ function Layout() {
         )}
 
         {showFooter && (
-          <div className="lg:rounded-2xl lg:mb-3 bg-white dark:bg-black shadow-lg dark:shadow-dark overflow-hidden">
+          <div className="desktop:rounded-2xl desktop:mb-3 bg-white dark:bg-black shadow-lg dark:shadow-dark overflow-hidden">
             <Footer
               showFooter={showFooter}
               setShowFooter={setShowFooter}

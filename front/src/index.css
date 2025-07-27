@@ -145,24 +145,25 @@ body {
   background: inherit !important;
 }
 
-/* style.css */
+/* style.css - Updated with smaller text sizes */
 .react-markdown-output h1 {
-  font-size: 30px;
+  font-size: 24px; /* Reduced from 30px */
   font-weight: bold;
 }
 
 .react-markdown-output h2 {
-  font-size: 26px;
+  font-size: 20px; /* Reduced from 26px */
   font-weight: bold;
 }
 
 .react-markdown-output h3 {
-  font-size: 22px;
+  font-size: 18px; /* Reduced from 22px */
   font-weight: bold;
 }
 
 .react-markdown-output p {
   margin: 0.5em 0;
+  font-size: 14px; /* Added smaller font size */
 }
 
 .react-markdown-output ol {
@@ -170,6 +171,7 @@ body {
   padding: 0;
   margin: 0;
   padding-left: 20px; /* Add 20px of padding to the left */
+  font-size: 14px; /* Added smaller font size */
 }
 
 .react-markdown-output ul {
@@ -177,17 +179,19 @@ body {
   padding: 0;
   margin: 0;
   padding-left: 20px; /* Add 20px of padding to the left */
+  font-size: 14px; /* Added smaller font size */
 }
 
 .react-markdown-output li {
   margin-bottom: 10px;
+  font-size: 14px; /* Added smaller font size */
 }
 
 .react-markdown-output.light pre {
   code {
     background-color: #fff;
     color: black !important;
-    font-size: 16px !important;
+    font-size: 14px !important; /* Reduced from 16px */
     width: 100%;
     /* white-space: pre-wrap; */
     display: inline-block;
@@ -204,7 +208,7 @@ body {
   code {
     background-color: #000;
     color: #fff !important;
-    font-size: 16px !important;
+    font-size: 14px !important; /* Reduced from 16px */
     width: 100%;
     display: inline-block;
     overflow-x: auto;

@@ -174,7 +174,6 @@ const SettingsPanel = ({
     (data) => {
       const { action, index, status, type } = data;
 
-
       if (status === "finished" || status === "skipped") {
         setRunTour(false);
         setTourStepIndex(0); // Reset step index
@@ -770,7 +769,7 @@ const SettingsPanel = ({
         className={`relative transition-all duration-300 ease-in-out
     ${
       showAdvOpt
-        ? "opacity-100 w-[40%] mobile:w-full flex p-2 transform translate-y-0"
+        ? "opacity-100 desktop:w-[40%] w-full flex transform translate-y-0"
         : "opacity-0 max-h-0 transform -translate-y-4 overflow-hidden"
     }`}
       >
@@ -781,7 +780,7 @@ const SettingsPanel = ({
           <div
             className={`${
               showAdvOpt
-                ? "flex static mobile:absolute bottom-0 left-0"
+                ? "flex desktop:static absolute bottom-0 left-0"
                 : "hidden"
             } mobile:w-full w-[calc(100%-12px)] border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
           >
@@ -792,16 +791,16 @@ const SettingsPanel = ({
                   : "translate-y-full opacity-0"
               } flex flex-col gap-4 p-3 sm:p-4 h-fit w-full`}
             >
-              <div className="flex flex-col mobile:hidden gap-4">
+              <div className="custom:flex flex-col hidden gap-4">
                 <div className="flex flex-wrap items-center gap-4 select-none">
                   <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
-                    <p className="flex-shrink-0 text-[18px] whitespace-nowrap">
+                    <p className="flex-shrink-0 text-sm whitespace-nowrap">
                       <Trans i18nKey="description.choose" />
                     </p>
                     <img
                       src={help}
                       alt="help"
-                      className="h-[20px] w-[20px] cursor-pointer"
+                      className="h-[16px] w-[16px] cursor-pointer"
                       onClick={() => setShowHelpModal(true)}
                     />
                   </div>
@@ -818,7 +817,7 @@ const SettingsPanel = ({
                     }}
                   >
                     <div
-                      className="text-tertiary flex items-center mt-1 cursor-pointer text-[18px] w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                      className="text-tertiary flex items-center mt-1 cursor-pointer text-sm w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
                       onClick={toggleOpen}
                     >
                       <div className="flex items-center gap-2 w-full">
@@ -826,48 +825,48 @@ const SettingsPanel = ({
                           status={currentModel?.status}
                           demand={currentModel?.demand}
                         />
-                        <div className="text-xl overflow-hidden text-ellipsis whitespace-nowrap flex-1">
+                        <div className="text-sm overflow-hidden text-ellipsis whitespace-nowrap flex-1">
                           {modelSettings["model-name"]}
                         </div>
                         {isAudioSupported && (
                           <img
                             src={audio_supported}
                             alt="audio_supported"
-                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                            className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                           />
                         )}
                         {isImageSupported && (
                           <img
                             src={image_supported}
                             alt="image_supported"
-                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                            className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                           />
                         )}
                         {isVideoSupported && (
                           <img
                             src={video_icon}
                             alt="video_icon"
-                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                            className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                           />
                         )}
                         {isThoughtSupported && (
                           <img
                             src={thought_supported}
                             alt="thought_supported"
-                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                            className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                           />
                         )}
                         {isArcanaSupported && (
                           <img
                             src={books}
                             alt="books"
-                            className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 mx-0.5"
+                            className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                           />
                         )}
                         <img
                           src={dropdown}
                           alt="drop-down"
-                          className="h-[30px] w-[30px] cursor-pointer flex-shrink-0"
+                          className="h-[24px] w-[24px] cursor-pointer flex-shrink-0"
                         />
                       </div>
                     </div>
@@ -890,7 +889,7 @@ const SettingsPanel = ({
                               value={searchQuery}
                               autoFocus={true}
                               onChange={(e) => setSearchQuery(e.target.value)}
-                              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
+                              className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
                               onMouseDown={(e) => e.stopPropagation()}
                             />
                           </div>
@@ -923,7 +922,7 @@ const SettingsPanel = ({
 
                                   {/* Model Name - with proper text handling */}
                                   <div className="flex-1 min-w-0 mr-2">
-                                    <div className="text-xl text-tertiary truncate">
+                                    <div className="text-sm text-tertiary truncate">
                                       {option.name}
                                     </div>
                                   </div>
@@ -934,35 +933,35 @@ const SettingsPanel = ({
                                       <img
                                         src={audio_supported}
                                         alt="audio_supported"
-                                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                        className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                       />
                                     )}
                                     {option.input.includes("image") && (
                                       <img
                                         src={image_supported}
                                         alt="image_supported"
-                                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                        className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                       />
                                     )}
                                     {option.input.includes("video") && (
                                       <img
                                         src={video_icon}
                                         alt="video_icon"
-                                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                        className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                       />
                                     )}
                                     {option.output.includes("thought") && (
                                       <img
                                         src={thought_supported}
                                         alt="thought_supported"
-                                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                        className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                       />
                                     )}
                                     {option.input.includes("arcana") && (
                                       <img
                                         src={books}
                                         alt="books"
-                                        className="h-[20px] w-[20px] cursor-pointer flex-shrink-0 ml-0.5"
+                                        className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                       />
                                     )}
                                   </div>
@@ -970,7 +969,7 @@ const SettingsPanel = ({
                               ))}
                             </div>
                           ) : (
-                            <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                            <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400 text-xs">
                               No models found matching &quot;{searchQuery}&quot;
                             </div>
                           )}
@@ -992,11 +991,11 @@ const SettingsPanel = ({
               {isArcanaSupported ? (
                 <div className="flex gap-4 w-full items-center">
                   <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                    <p className="text-[18px]">Arcana</p>
+                    <p className="text-sm">Arcana</p>
                     <img
                       src={help}
                       alt="help"
-                      className="h-[20px] w-[20px] cursor-pointer"
+                      className="h-[16px] w-[16px] cursor-pointer"
                       onClick={() => setShowArcanasHelpModal(true)}
                     />
                   </div>
@@ -1009,118 +1008,254 @@ const SettingsPanel = ({
 
               <div className="flex flex-col gap-4 items-center">
                 {localState.arcana.id && isArcanaSupported && (
-                  <div className="text-yellow-600 text-sm w-full select-none">
+                  <div className="text-yellow-600 text-xs w-full select-none">
                     <Trans i18nKey="description.warning_arcana" />
                   </div>
                 )}
 
-                <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
+                {/* Clean Temperature Slider */}
+                <div className="flex flex-col md:flex-row md:gap-4 gap-3 w-full md:items-center">
                   <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
-                    <p className="text-[18px]">temp</p>
+                    <p className="text-sm font-medium">temp</p>
                     <img
                       src={help}
                       alt="help"
-                      className="h-[20px] w-[20px] cursor-pointer"
+                      className="h-[16px] w-[16px] cursor-pointer"
                       onClick={() => setShowCustomHelpModal(true)}
                     />
                   </div>
                   <div className="w-full">
                     <div className="relative w-full">
-                      <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                      {/* Slider labels */}
+                      <div className="select-none flex justify-between text-[10px] text-tertiary mb-2">
                         <span>Logical</span>
                         <span>Creative</span>
                       </div>
-                      <div className="tick-marks-container cursor-pointer">
-                        {[...Array(21)].map((_, i) => (
-                          <div key={i} className="tick-mark"></div>
-                        ))}
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="2"
-                        step="0.1"
-                        value={localState.settings.temperature}
-                        className="slider-input"
-                        onChange={(event) =>
-                          handleChangeTemp(event.target.value)
-                        }
-                        onMouseEnter={() => setHovering(true)}
-                        onMouseLeave={() => setHovering(false)}
-                      />
-                      {isHovering && (
-                        <output
-                          className="slider-tooltip"
+
+                      {/* Clean slider track */}
+                      <div className="relative">
+                        {/* Background track - thin line */}
+                        <div className="w-full h-1 bg-gray-300 dark:bg-gray-600 rounded-full">
+                          {/* Progress fill - thin colored line */}
+                          <div
+                            className="h-full bg-tertiary rounded-full transition-all duration-200"
+                            style={{
+                              width: `${
+                                (localState.settings.temperature / 2) * 100
+                              }%`,
+                            }}
+                          />
+                        </div>
+
+                        {/* Tick marks - smaller and cleaner */}
+                        <div className="absolute top-1/2 transform -translate-y-1/2 w-full flex justify-between px-0.5 pointer-events-none">
+                          {[...Array(21)].map((_, i) => (
+                            <div
+                              key={i}
+                              className={`bg-gray-400 dark:bg-gray-500 ${
+                                i % 5 === 0 ? "w-0.5 h-3" : "w-px h-2"
+                              }`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Slider input - for clicking on track */}
+                        <input
+                          type="range"
+                          min="0"
+                          max="2"
+                          step="0.1"
+                          value={localState.settings.temperature}
+                          className="absolute top-1/2 transform -translate-y-1/2 w-full h-6 opacity-0 cursor-pointer"
+                          onChange={(event) =>
+                            handleChangeTemp(event.target.value)
+                          }
+                        />
+
+                        {/* Draggable thumb indicator with hover detection */}
+                        <div
+                          className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-6 h-6 cursor-grab active:cursor-grabbing flex items-center justify-center"
                           style={{
-                            left: `calc(${
+                            left: `${
                               (localState.settings.temperature / 2) * 100
-                            }% - 15px)`,
+                            }%`,
+                          }}
+                          onMouseEnter={() => setHovering(true)}
+                          onMouseLeave={() => setHovering(false)}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            const slider =
+                              e.currentTarget.parentElement.querySelector(
+                                'input[type="range"]'
+                              );
+                            if (slider) {
+                              const rect = slider.getBoundingClientRect();
+                              const handleMouseMove = (moveEvent) => {
+                                const x = moveEvent.clientX - rect.left;
+                                const percentage = Math.max(
+                                  0,
+                                  Math.min(1, x / rect.width)
+                                );
+                                const newValue = percentage * 2; // 0 to 2 range
+                                const steppedValue =
+                                  Math.round(newValue * 10) / 10; // Round to nearest 0.1
+                                handleChangeTemp(steppedValue.toString());
+                              };
+
+                              const handleMouseUp = () => {
+                                document.removeEventListener(
+                                  "mousemove",
+                                  handleMouseMove
+                                );
+                                document.removeEventListener(
+                                  "mouseup",
+                                  handleMouseUp
+                                );
+                              };
+
+                              document.addEventListener(
+                                "mousemove",
+                                handleMouseMove
+                              );
+                              document.addEventListener(
+                                "mouseup",
+                                handleMouseUp
+                              );
+                            }
                           }}
                         >
-                          {Number(localState.settings.temperature).toFixed(1)}
-                        </output>
-                      )}
+                          <div className="w-4 h-4 bg-white dark:bg-gray-200 border-2 border-tertiary rounded-full shadow-md transition-all duration-200 hover:scale-110" />
+                        </div>
+
+                        {/* Hover tooltip */}
+                        {isHovering && (
+                          <div
+                            className="absolute -top-10 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none z-10"
+                            style={{
+                              left: `${
+                                (localState.settings.temperature / 2) * 100
+                              }%`,
+                            }}
+                          >
+                            {Number(localState.settings.temperature).toFixed(1)}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row md:gap-4 gap-5 w-full md:items-center">
+                {/* Clean Top_p Slider */}
+                <div className="flex flex-col md:flex-row md:gap-4 gap-3 w-full md:items-center">
                   <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
-                    <p className="text-[18px]">top_p</p>
+                    <p className="text-sm font-medium">top_p</p>
                     <img
                       src={help}
                       alt="help"
-                      className="h-[20px] w-[20px] cursor-pointer"
+                      className="h-[16px] w-[16px] cursor-pointer"
                       onClick={() => setShowTopPHelpModal(true)}
                     />
                   </div>
                   <div className="w-full">
                     <div className="relative w-full">
-                      <div className="select-none flex justify-between text-xs text-tertiary mb-2 absolute top-[-20px] w-full">
+                      {/* Slider labels */}
+                      <div className="select-none flex justify-between text-[10px] text-tertiary mb-2">
                         <span>Focused</span>
                         <span>Diverse</span>
                       </div>
-                      <div className="tick-marks-container cursor-pointer">
-                        {[...Array(20)].map((_, i) => (
-                          <div key={i} className="tick-mark"></div>
-                        ))}
-                      </div>
-                      <input
-                        type="range"
-                        min="0.05"
-                        max="1"
-                        step="0.05"
-                        value={localState.settings.top_p}
-                        className="slider-input"
-                        onChange={(event) =>
-                          handleChangeTopP(event.target.value)
-                        }
-                        onMouseEnter={() => setHoveringTopP(true)}
-                        onMouseLeave={() => setHoveringTopP(false)}
-                      />
-                      {isHoveringTopP && (
-                        <output
-                          className="slider-tooltip"
+
+                      {/* Clean slider track */}
+                      <div className="relative">
+                        {/* Background track - thin line */}
+                        <div className="w-full h-1 bg-gray-300 dark:bg-gray-600 rounded-full">
+                          {/* Progress fill - thin colored line */}
+                          <div
+                            className="h-full bg-tertiary rounded-full transition-all duration-200"
+                            style={{
+                              width: `${
+                                ((localState.settings.top_p - 0.05) / 0.95) *
+                                100
+                              }%`,
+                            }}
+                          />
+                        </div>
+
+                        {/* Tick marks - smaller and cleaner */}
+                        <div className="absolute top-1/2 transform -translate-y-1/2 w-full flex justify-between px-0.5">
+                          {[...Array(20)].map((_, i) => (
+                            <div
+                              key={i}
+                              className={`bg-gray-400 dark:bg-gray-500 ${
+                                i % 5 === 0 ? "w-0.5 h-3" : "w-px h-2"
+                              }`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Slider input */}
+                        <input
+                          type="range"
+                          min="0.05"
+                          max="1"
+                          step="0.05"
+                          value={localState.settings.top_p}
+                          className="absolute top-1/2 transform -translate-y-1/2 w-full h-6 opacity-0 cursor-pointer"
+                          onChange={(event) =>
+                            handleChangeTopP(event.target.value)
+                          }
+                        />
+
+                        {/* Clean thumb indicator with hover detection */}
+                        <div
+                          className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white dark:bg-gray-200 border-2 border-tertiary rounded-full shadow-md transition-all duration-200 hover:scale-110 cursor-pointer pointer-events-none"
                           style={{
-                            left: `calc(${
+                            left: `${
                               ((localState.settings.top_p - 0.05) / 0.95) * 100
-                            }% - 15px)`,
+                            }%`,
                           }}
-                        >
-                          {Number(localState.settings.top_p).toFixed(2)}
-                        </output>
-                      )}
+                          onMouseEnter={() => setHoveringTopP(true)}
+                          onMouseLeave={() => setHoveringTopP(false)}
+                        />
+
+                        {/* Invisible larger hover area for the thumb */}
+                        <div
+                          className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-8 h-8 cursor-pointer"
+                          style={{
+                            left: `${
+                              ((localState.settings.top_p - 0.05) / 0.95) * 100
+                            }%`,
+                          }}
+                          onMouseEnter={() => setHoveringTopP(true)}
+                          onMouseLeave={() => setHoveringTopP(false)}
+                        />
+
+                        {/* Hover tooltip */}
+                        {isHoveringTopP && (
+                          <div
+                            className="absolute -top-10 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none"
+                            style={{
+                              left: `${
+                                ((localState.settings.top_p - 0.05) / 0.95) *
+                                100
+                              }%`,
+                            }}
+                          >
+                            {Number(localState.settings.top_p).toFixed(2)}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
+
                 {/* Memory */}
                 <div className="w-full flex gap-4">
                   <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                    <p className="text-[18px]">Memory</p>
+                    <p className="text-sm">Memory</p>
                     <img
                       src={help}
                       alt="help"
-                      className="h-[20px] w-[20px] cursor-pointer"
+                      className="h-[16px] w-[16px] cursor-pointer"
                       onClick={() => setShowMemoryHelpModal(true)}
                     />
                   </div>
@@ -1144,7 +1279,7 @@ const SettingsPanel = ({
                           }))
                         }
                       >
-                        <p className="text-[16px] font-medium">None</p>
+                        <p className="text-xs font-medium">None</p>
                       </div>
 
                       {/* Recall Option */}
@@ -1164,7 +1299,7 @@ const SettingsPanel = ({
                           }))
                         }
                       >
-                        <p className="text-[16px] font-medium">Recall</p>
+                        <p className="text-xs font-medium">Recall</p>
                       </div>
 
                       {/* Learn Option */}
@@ -1184,25 +1319,25 @@ const SettingsPanel = ({
                           }))
                         }
                       >
-                        <p className="text-[16px] font-medium">Learn</p>
+                        <p className="text-xs font-medium">Learn</p>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="w-full flex flex-col gap-4">
                   <div className="flex-shrink-0 flex items-center gap-2 select-none">
-                    <p className="text-[18px]">System prompt</p>
+                    <p className="text-sm">System prompt</p>
                     <img
                       src={help}
                       alt="help"
-                      className="h-[20px] w-[20px] cursor-pointer"
+                      className="h-[16px] w-[16px] cursor-pointer"
                       onClick={() => setShowSystemHelpModal(true)}
                     />
                   </div>
                   <div className="w-full relative">
                     <div className="relative z-10">
                       <textarea
-                        className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[150px]`}
+                        className={`dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[120px] text-sm`}
                         type="text"
                         name="systemPrompt"
                         placeholder={t("description.custom4")}
@@ -1213,7 +1348,7 @@ const SettingsPanel = ({
                     </div>
                     {(systemPromptError ||
                       !localState.settings.systemPrompt) && (
-                      <p className="text-yellow-600 text-12-500">
+                      <p className="text-yellow-600 text-xs">
                         <Trans i18nKey="description.custom6" />
                       </p>
                     )}
@@ -1225,10 +1360,10 @@ const SettingsPanel = ({
                     className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
                     onClick={toggleAdvOpt}
                   >
-                    <p className="hidden desktop:block text-[18px] h-full text-tertiary cursor-pointer">
+                    <p className="hidden desktop:block text-sm h-full text-tertiary cursor-pointer">
                       <Trans i18nKey="description.text9" />
                     </p>
-                    <p className="block desktop:hidden text-[18px] h-full text-tertiary cursor-pointer">
+                    <p className="block desktop:hidden text-sm h-full text-tertiary cursor-pointer">
                       <Trans i18nKey="description.text10" />
                     </p>
                   </div>
@@ -1238,18 +1373,18 @@ const SettingsPanel = ({
                     type="reset"
                     onClick={() => handleShareSettingsModal()}
                   >
-                    <div className="hidden desktop:block">
+                    <div className="hidden desktop:block text-sm">
                       <Trans i18nKey="description.custom9" />
                     </div>
                     <img
                       src={share_icon}
                       alt="share_icon"
-                      className="hidden desktop:block h-[20px] w-[20px] cursor-pointer"
+                      className="hidden desktop:block h-[16px] w-[16px] cursor-pointer"
                     />
                     <img
                       src={share_icon}
                       alt="share_icon"
-                      className="block desktop:hidden h-[30px] w-[30px] cursor-pointer"
+                      className="block desktop:hidden h-[20px] w-[20px] cursor-pointer"
                     />
                   </button>
 
@@ -1258,10 +1393,10 @@ const SettingsPanel = ({
                     type="reset"
                     onClick={resetDefault}
                   >
-                    <div className="hidden desktop:block">
+                    <div className="hidden desktop:block text-sm">
                       <Trans i18nKey="description.custom7" />
                     </div>
-                    <div className="block desktop:hidden">
+                    <div className="block desktop:hidden text-sm">
                       <Trans i18nKey="description.custom10" />
                     </div>
                   </button>

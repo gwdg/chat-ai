@@ -592,7 +592,7 @@ function Responses({
     <>
       <div
         ref={containerRef}
-        className="p-2 flex flex-col gap-2 overflow-y-auto flex-1 relative"
+        className="p-1.5 flex flex-col gap-1.5 overflow-y-auto flex-1 relative"
       >
         {localState.responses?.map((res, index) => (
           <>
@@ -601,15 +601,15 @@ function Responses({
                 {res.prompt?.trim() ? (
                   <div
                     ref={(el) => (containerRefs.current[index] = el)}
-                    className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
-                      editingIndex === index ? "p-0" : "p-3"
-                    } flex flex-col gap-2`}
+                    className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
+                      editingIndex === index ? "p-0" : "p-2.5"
+                    } flex flex-col gap-1.5`}
                   >
                     {editingIndex === index ? (
-                      <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-2xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-3 flex flex-col gap-2">
+                      <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-2.5 flex flex-col gap-1.5">
                         <textarea
                           ref={(el) => (textareaRefs.current[index] = el)}
-                          className="p-2 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+                          className="p-1.5 outline-none text-sm rounded-xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
                           value={editedText}
                           style={{
                             minHeight: `${MIN_HEIGHT}px`,
@@ -632,7 +632,7 @@ function Responses({
                             }
                           }}
                         />
-                        <div className="flex gap-2 justify-between w-full">
+                        <div className="flex gap-1.5 justify-between w-full">
                           <button
                             onClick={() => setEditedText("")}
                             disabled={loading || loadingResend}
@@ -640,7 +640,7 @@ function Responses({
                             <img
                               src={clear}
                               alt="clear"
-                              className="h-[25px] w-[25px] cursor-pointer"
+                              className="h-[22px] w-[22px] cursor-pointer"
                             />
                           </button>
                           <button
@@ -651,7 +651,7 @@ function Responses({
                             disabled={loading || loadingResend}
                           >
                             <img
-                              className="cursor-pointer h-[25px] w-[25px]"
+                              className="cursor-pointer h-[22px] w-[22px]"
                               src={send}
                               alt="send"
                             />
@@ -659,11 +659,11 @@ function Responses({
                         </div>
                       </div>
                     ) : (
-                      <div className="flex gap-2 justify-between items-start group">
+                      <div className="flex gap-1.5 justify-between items-start group">
                         {res.prompt?.trim() ? (
                           <>
                             <pre
-                              className="font-sans flex-grow min-w-0"
+                              className="font-sans flex-grow min-w-0 text-sm"
                               style={{
                                 overflow: "hidden",
                                 whiteSpace: "pre-wrap",
@@ -672,7 +672,7 @@ function Responses({
                             >
                               {res.prompt}
                             </pre>
-                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2 items-center">
+                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-1.5 items-center">
                               <button
                                 onClick={(e) => handleResendClick(index, e)}
                                 disabled={loading || loadingResend}
@@ -680,7 +680,7 @@ function Responses({
                                 <img
                                   src={icon_resend}
                                   alt="icon_resend"
-                                  className="h-[25px] w-[25px] cursor-pointer"
+                                  className="h-[22px] w-[22px] cursor-pointer"
                                 />
                               </button>
                               <button
@@ -692,7 +692,7 @@ function Responses({
                                 <img
                                   src={edit_icon}
                                   alt="edit_icon"
-                                  className="h-[25px] w-[25px] cursor-pointer"
+                                  className="h-[22px] w-[22px] cursor-pointer"
                                 />
                               </button>
                             </div>
@@ -706,9 +706,8 @@ function Responses({
                   res?.videos?.length > 0 ||
                   res?.textFiles?.length > 0 ||
                   res?.audioFiles?.length > 0) && (
-                  <div className="flex gap-2 overflow-x-auto items-center p-3 group">
-                    {" "}
-                    <div className="flex-1 flex gap-2 overflow-x-auto items-center p-3">
+                  <div className="flex gap-1.5 overflow-x-auto items-center p-2.5 group">
+                    <div className="flex-1 flex gap-1.5 overflow-x-auto items-center p-2.5">
                       {/* Images */}
                       {res.images?.map((imageObj, imgIndex) => {
                         if (
@@ -720,7 +719,7 @@ function Responses({
                               key={`img-${imgIndex}`}
                               src={imageObj.image_url.url}
                               alt="Base64 Image"
-                              className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                              className="h-[130px] w-[130px] rounded-xl object-cover cursor-pointer"
                               onClick={() =>
                                 setPreviewFile(imageObj.image_url.url)
                               }
@@ -740,7 +739,7 @@ function Responses({
                               key={`vid-${vidIndex}`}
                               src={video_icon}
                               alt="Video content"
-                              className="h-[150px] w-[150px] rounded-2xl object-cover cursor-pointer"
+                              className="h-[130px] w-[130px] rounded-xl object-cover cursor-pointer"
                               onClick={() =>
                                 setPreviewFile(
                                   videoObj.video_url?.url || videoObj.text
@@ -767,7 +766,7 @@ function Responses({
                           return (
                             <div
                               key={`text-${textIndex}`}
-                              className="h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-md transition-all"
+                              className="h-[130px] w-[130px] rounded-xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-sm transition-all"
                               onClick={() =>
                                 setPreviewFile({
                                   content: textObj.content,
@@ -776,14 +775,14 @@ function Responses({
                                 })
                               }
                             >
-                              <div className="px-3 py-2 font-medium text-sm truncate border-b text-black dark:text-white">
+                              <div className="px-2.5 py-1.5 font-medium text-xs truncate border-b text-black dark:text-white">
                                 {fileName}
                               </div>
-                              <div className="flex-1 p-3 text-xs overflow-hidden text-tertiary">
+                              <div className="flex-1 p-2.5 text-xs overflow-hidden text-tertiary">
                                 {textPreview}
                               </div>
-                              <div className="flex justify-center items-center pb-2">
-                                <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 uppercase">
+                              <div className="flex justify-center items-center pb-1.5">
+                                <span className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 uppercase">
                                   {fileType}
                                 </span>
                               </div>
@@ -792,26 +791,26 @@ function Responses({
                         }
                         return null;
                       })}
-                      {/* Audio Files - Updated for new format */}
+                      {/* Audio Files */}
                       {res.audioFiles?.map((audioFile, audioIndex) => (
                         <div
                           key={`audio-${audioIndex}`}
-                          className="flex-shrink-0 h-[150px] w-[150px] rounded-2xl flex flex-col cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30 overflow-hidden shadow-md transition-all border border-blue-200 dark:border-blue-700/50"
+                          className="flex-shrink-0 h-[130px] w-[130px] rounded-xl flex flex-col cursor-pointer bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30 overflow-hidden shadow-sm transition-all border border-blue-200 dark:border-blue-700/50"
                           onClick={() =>
                             setPreviewFile({
                               name: audioFile.name,
-                              type: "audio", // Updated to match new format
-                              text: audioFile.data || audioFile.text, // Handle both old and new format
+                              type: "audio",
+                              text: audioFile.data || audioFile.text,
                               format: audioFile.format,
                               size: audioFile.size,
                             })
                           }
                         >
                           {/* Header with icon */}
-                          <div className="flex items-center justify-center pt-3 pb-2">
-                            <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-2">
+                          <div className="flex items-center justify-center pt-2.5 pb-1.5">
+                            <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-1.5">
                               <img
-                                className="h-6 w-6 brightness-0 invert"
+                                className="h-5 w-5 brightness-0 invert"
                                 src={mic}
                                 alt="audio file"
                               />
@@ -819,10 +818,10 @@ function Responses({
                           </div>
 
                           {/* File info */}
-                          <div className="flex-1 px-3 pb-3 flex flex-col justify-between">
+                          <div className="flex-1 px-2.5 pb-2.5 flex flex-col justify-between">
                             <div>
                               <p
-                                className="text-sm font-medium text-black dark:text-white leading-tight mb-1"
+                                className="text-xs font-medium text-black dark:text-white leading-tight mb-0.5"
                                 title={audioFile.name}
                                 style={{
                                   display: "-webkit-box",
@@ -837,7 +836,7 @@ function Responses({
                             </div>
 
                             <div className="flex justify-between items-center mt-auto">
-                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200">
+                              <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200">
                                 {audioFile.format?.toUpperCase() || "AUDIO"}
                               </span>
                               <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -846,11 +845,10 @@ function Responses({
                             </div>
                           </div>
                         </div>
-                      ))}{" "}
+                      ))}
                     </div>
                     {res.prompt?.trim() == "" ? (
                       <div className="flex col items-baseline h-full flex-shrink-0 opacity-0 hover:opacity-100 transition-opacity duration-300">
-                        {" "}
                         <button
                           onClick={(e) => handleResendClick(index, e)}
                           disabled={loading || loadingResend}
@@ -858,7 +856,7 @@ function Responses({
                           <img
                             src={icon_resend}
                             alt="icon_resend"
-                            className="h-[25px] w-[25px] cursor-pointer"
+                            className="h-[22px] w-[22px] cursor-pointer"
                           />
                         </button>
                       </div>
@@ -888,7 +886,7 @@ function Responses({
             ) : (
               <div key={index} className="flex flex-col gap-1">
                 {res.info && (
-                  <div className="text-md font-bold text-tertiary p-2 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                  <div className="text-xs font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
                     {res.info}
                   </div>
                 )}
@@ -899,15 +897,15 @@ function Responses({
       </div>
 
       {localState.responses.length > 0 ? (
-        <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
+        <div className="w-full bottom-0 sticky select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-xl">
           <Tooltip text={t("description.clear")}>
             <button
-              className="h-[30px] w-[30px] cursor-pointer"
+              className="h-[26px] w-[26px] cursor-pointer"
               disabled={loading || loadingResend}
               onClick={handleClearHistory}
             >
               <img
-                className="cursor-pointer h-[25px] w-[25px]"
+                className="cursor-pointer h-[22px] w-[22px]"
                 src={clear}
                 alt="clear"
               />
@@ -917,20 +915,20 @@ function Responses({
             <button
               onClick={handleScrollButtonClick}
               aria-label="Scroll to bottom"
-              className="text-tertiary max-w-[150px] w-full p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl flex items-center justify-center gap-2 transition-colors"
+              className="text-tertiary max-w-[130px] w-full p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
             >
-              <p> Scroll to bottom</p>
+              <p className="text-xs">Scroll to bottom</p>
             </button>
           )}
-          <div className="flex items-baseline gap-6">
+          <div className="flex items-baseline gap-4">
             <Tooltip text={t("description.export")}>
               <button
-                className="text-tertiary flex gap-2 items-center"
+                className="text-tertiary flex gap-1.5 items-center"
                 onClick={() => setShowFileModal(true)}
                 disabled={loading || loadingResend}
               >
                 <img
-                  className="cursor-pointer h-[30px] w-[30px]"
+                  className="cursor-pointer h-[26px] w-[26px]"
                   src={export_icon}
                   alt="export"
                 />
@@ -947,12 +945,12 @@ function Responses({
               />
               <Tooltip text={t("description.import")}>
                 <button
-                  className="h-[30px] w-[30px] cursor-pointer"
+                  className="h-[26px] w-[26px] cursor-pointer"
                   onClick={handleClickJSON}
                   disabled={loading || loadingResend}
                 >
                   <img
-                    className="h-[30px] w-[30px]"
+                    className="h-[26px] w-[26px]"
                     src={import_icon}
                     alt="import"
                   />
@@ -961,12 +959,12 @@ function Responses({
             </div>
             <Tooltip text={t("description.undo")}>
               <button
-                className="h-[30px] w-[30px] cursor-pointer"
+                className="h-[26px] w-[26px] cursor-pointer"
                 onClick={handleRetry}
                 disabled={loading || loadingResend}
               >
                 <img
-                  className="cursor-pointer h-[30px] w-[30px]"
+                  className="cursor-pointer h-[26px] w-[26px]"
                   src={retry}
                   alt="retry"
                 />
@@ -975,7 +973,7 @@ function Responses({
           </div>
         </div>
       ) : (
-        <div className="w-full bottom-0 sticky select-none h-fit px-4 py-2 flex justify-end items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
+        <div className="w-full bottom-0 sticky select-none h-fit px-3 py-1.5 flex justify-end items-center bg-white dark:bg-bg_secondary_dark rounded-b-xl">
           <input
             type="file"
             ref={hiddenFileInputJSON}
@@ -985,12 +983,12 @@ function Responses({
           />
           <Tooltip text={t("description.import")}>
             <button
-              className="h-[30px] w-[30px] cursor-pointer"
+              className="h-[26px] w-[26px] cursor-pointer"
               onClick={handleClickJSON}
               disabled={loading || loadingResend}
             >
               <img
-                className="cursor-pointer h-[30px] w-[30px]"
+                className="cursor-pointer h-[26px] w-[26px]"
                 src={import_icon}
                 alt="import"
               />

@@ -1104,13 +1104,13 @@ function Prompt({
   };
 
   return (
-    <div className="mobile:w-full flex flex-shrink-0 flex-col w-[calc(100%-12px)] bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto  rounded-2xl shadow-bottom dark:shadow-darkBottom">
+    <div className="w-full flex flex-shrink-0 flex-col bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto  rounded-2xl shadow-bottom dark:shadow-darkBottom">
       {selectedFiles.length > 0 ? (
         <div className="w-full">
           {selectedFiles.length > 0 && (
             <div className="select-none p-2">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-base font-medium text-tertiary">
+                <p className="text-sm font-medium text-tertiary">
                   <Trans i18nKey="description.file1" />
                 </p>
                 <p
@@ -1263,7 +1263,7 @@ function Prompt({
                           {/* File Info */}
                           <div className="min-w-0 flex-grow pr-6">
                             <p
-                              className="font-medium text-sm text-gray-900 dark:text-white leading-tight mb-1 truncate"
+                              className="font-medium text-xs text-gray-900 dark:text-white leading-tight mb-1 truncate"
                               title={file.name}
                             >
                               {file.name}
@@ -1376,7 +1376,7 @@ function Prompt({
               <textarea
                 autoFocus
                 ref={textareaRef}
-                className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
+                className="p-5 outline-none text-base rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
                 value={localState.prompt}
                 name="prompt"
                 placeholder={t("description.placeholder")}
@@ -1405,7 +1405,7 @@ function Prompt({
             <textarea
               autoFocus
               ref={textareaRef}
-              className="p-5 outline-none text-xl rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
+              className="p-5 outline-none text-base rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
               value={localState.prompt}
               name="prompt"
               placeholder={t("description.placeholder")}

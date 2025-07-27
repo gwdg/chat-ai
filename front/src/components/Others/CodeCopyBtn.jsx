@@ -38,12 +38,12 @@ export default function CodeCopyBtn({ children, hovered }) {
       } flex justify-end items-center absolute top-2 right-2 transition-opacity duration-300`}
     >
       {copied ? (
-        <img src={check} alt="copy" className="h-[20px] w-[20px]" />
+        <img src={check} alt="copy" className="h-[15px] w-[15px]" />
       ) : (
         <img
           src={copy}
           alt="copy"
-          className="h-[20px] w-[20px] cursor-pointer"
+          className="h-[15px] w-[15px] cursor-pointer"
           onClick={() => {
             const textToCopy = extractTextFromReactNode(children);
             navigator.clipboard.writeText(textToCopy);
