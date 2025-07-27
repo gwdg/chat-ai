@@ -66,7 +66,7 @@ i18n
               next: "Next",
               skip: "Skip",
             },
-            newConversation: "+ New Conversation",
+            newConversation: "New Conversation",
             importPersona: "Import Persona",
             persona: {
               selectPersona: "Select Persona",
@@ -378,7 +378,7 @@ i18n
               next: "Weiter",
               skip: "Überspringen",
             },
-            newConversation: "+ Neues Gespräch",
+            newConversation: "Neues Gespräch",
             importPersona: "Persona importieren",
             persona: {
               selectPersona: "Persona auswählen",

@@ -86,14 +86,14 @@ const Conversation = ({
 
   return (
     <div
-      className={`flex flex-col items-center mobile:w-full ${
-        !showAdvOpt ? "w-[80%] py-2 mx-auto my-0" : "w-[60%] p-2"
-      } h-full gap-3 sm:justify-between relative bg-bg_light dark:bg-bg_dark`}
+      className={`flex flex-col items-center w-full ${
+        !showAdvOpt ? "lg:w-[80%] py-1.5 mx-auto my-0" : "lg:w-[60%] p-1.5"
+      } h-full gap-2.5 sm:justify-between relative bg-bg_light dark:bg-bg_dark`}
     >
-      <div className="desktop:max-h-full flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-12px)] mobile:w-full border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-10px)] lg:w-full border dark:border-border_dark rounded-2xl shadow-lg dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
         {showModal && countClose < 3 && (
-          <div className="w-[calc(100%-16px)] sticky select-none m-2 h-fit bg-white dark:bg-black p-2 rounded-2xl flex justify-between items-center border dark:border-border_dark shadow-lg dark:shadow-dark">
-            <p className="dark:text-white text-black">
+          <div className="w-[calc(100%-12px)] sticky select-none m-1.5 h-fit bg-white dark:bg-black p-1.5 rounded-2xl flex justify-between items-center border dark:border-border_dark shadow-lg dark:shadow-dark">
+            <p className="dark:text-white text-black text-sm">
               <Trans i18nKey="description.note1" />
               <Link
                 to="https://en.wikipedia.org/wiki/Hallucination_(artificial_intelligence)"
@@ -128,7 +128,7 @@ const Conversation = ({
             <img
               src={cross}
               alt="cross"
-              className="h-[30px] w-[30px] cursor-pointer"
+              className="h-[27px] w-[27px] cursor-pointer"
               onClick={handleClose}
             />
           </div>

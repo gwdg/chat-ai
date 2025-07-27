@@ -843,39 +843,26 @@ function ChatWindow({
         />
       </div>
 
-      <>{showHelpModal ? <HelpModal showModal={setShowHelpModal} /> : null}</>
+      {/* Modal components */}
+      {showHelpModal && <HelpModal showModal={setShowHelpModal} />}
 
-      <>
-        {showCustomHelpModal ? (
-          <HelpCustomInstructionsModal showModal={setShowCustomHelpModal} />
-        ) : null}
-      </>
+      {showCustomHelpModal && (
+        <HelpCustomInstructionsModal showModal={setShowCustomHelpModal} />
+      )}
 
-      <>
-        {showTopPHelpModal ? (
-          <HelpTopPModal showModal={setShowTopPHelpModal} />
-        ) : null}
-      </>
+      {showTopPHelpModal && <HelpTopPModal showModal={setShowTopPHelpModal} />}
 
-      <>
-        {showMemoryHelpModal ? (
-          <HelpMemoryModal showModal={setShowMemoryHelpModal} />
-        ) : null}
-      </>
+      {showMemoryHelpModal && (
+        <HelpMemoryModal showModal={setShowMemoryHelpModal} />
+      )}
 
-      <>
-        {showSystemHelpModal ? (
-          <HelpSystemModal showModal={setShowSystemHelpModal} />
-        ) : null}
-      </>
+      {showSystemHelpModal && (
+        <HelpSystemModal showModal={setShowSystemHelpModal} />
+      )}
 
-      <>
-        {showArcanasHelpModal ? (
-          <HelpArcanaModal showModal={setShowArcanasHelpModal} />
-        ) : null}
-      </>
-
-      {/* <>{showMicModal ? <MicModal showModal={setShowMicModal} /> : null}</> */}
+      {showArcanasHelpModal && (
+        <HelpArcanaModal showModal={setShowArcanasHelpModal} />
+      )}
 
       <>
         {showCusModal ? (
@@ -899,28 +886,20 @@ function ChatWindow({
         ) : null}
       </>
 
-      <>
-        {showModalSession ? (
-          <SessionExpiredModal showModal={setShowModalSession} />
-        ) : null}
-      </>
+      {showModalSession && (
+        <SessionExpiredModal showModal={setShowModalSession} />
+      )}
 
-      <>
-        {showBadRequest ? (
-          <BadRequestModal showModal={setShowBadRequest} />
-        ) : null}
-      </>
+      {showBadRequest && <BadRequestModal showModal={setShowBadRequest} />}
 
-      <>
-        {showHistoryModal ? (
-          <ClearHistoryModal
-            showModal={setShowHistoryModal}
-            clearHistory={clearHistory}
-            dontShowAgain={localState.dontShow.dontShowAgain}
-            setLocalState={setLocalState}
-          />
-        ) : null}
-      </>
+      {showHistoryModal && (
+        <ClearHistoryModal
+          showModal={setShowHistoryModal}
+          clearHistory={clearHistory}
+          dontShowAgain={localState.dontShow.dontShowAgain}
+          setLocalState={setLocalState}
+        />
+      )}
 
       <>
         {shareSettingsModal ? (
@@ -943,6 +922,7 @@ function ChatWindow({
       {previewFile && (
         <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       )}
+
       {showClearMemoryModal && (
         <ClearMemoryModal
           showModal={setShowClearMemoryModal}
@@ -951,6 +931,7 @@ function ChatWindow({
           localState={localState}
         />
       )}
+
       {showMemoryModal && (
         <UserMemoryModal
           showModal={setShowMemoryModal}
@@ -958,14 +939,13 @@ function ChatWindow({
           localState={localState}
         />
       )}
-      <>
-        {fileAlertModal ? (
-          <FileAlertModal
-            showModal={setFileAlertModal}
-            intentionalRefresh={isIntentionalRefresh}
-          />
-        ) : null}
-      </>
+
+      {fileAlertModal && (
+        <FileAlertModal
+          showModal={setFileAlertModal}
+          intentionalRefresh={isIntentionalRefresh}
+        />
+      )}
     </>
   );
 }

@@ -9,7 +9,6 @@ import { useSelector } from "react-redux";
 import Home from "../Pages/Home";
 import NotFoundPage from "../Pages/NotFoundPage";
 import LandingPage from "../Pages/LandingPage";
-import ZoomWrapper from "../components/Layout/ZoomWrapper";
 
 // Separate route components
 const RootRoute = ({ currentConversationId }) => (
@@ -78,49 +77,43 @@ const PublicRoute = () => {
   const hasModelArcana = searchParams.get("model");
 
   return (
-    <ZoomWrapper>
-      <div
-        className={`h-full ${isDarkMode ? "darkScrollbar" : "lightScrollbar"}`}
-      >
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <RootRoute currentConversationId={currentConversationId} />
-            }
-          />
-          <Route path="/landing" element={<LandingPage />} />
-          <Route
-            path="/chat"
-            element={
-              <ChatRoute
-                currentConversationId={currentConversationId}
-                hasSettings={hasSettings}
-                hasImport={hasImport}
-                hasArcana={hasArcana}
-                hasArcanaKey={hasArcanaKey}
-                hasModelArcana={hasModelArcana}
-              />
-            }
-          />
-          <Route
-            path="/chat/:conversationId"
-            element={
-              <ConversationRoute
-                currentConversationId={currentConversationId}
-                conversations={conversations}
-              />
-            }
-          />
-          <Route
-            path="*"
-            element={
-              <RootRoute currentConversationId={currentConversationId} />
-            }
-          />
-        </Routes>
-      </div>
-    </ZoomWrapper>
+    <div
+      className={`h-full ${isDarkMode ? "darkScrollbar" : "lightScrollbar"}`}
+    >
+      <Routes>
+        <Route
+          path="/"
+          element={<RootRoute currentConversationId={currentConversationId} />}
+        />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route
+          path="/chat"
+          element={
+            <ChatRoute
+              currentConversationId={currentConversationId}
+              hasSettings={hasSettings}
+              hasImport={hasImport}
+              hasArcana={hasArcana}
+              hasArcanaKey={hasArcanaKey}
+              hasModelArcana={hasModelArcana}
+            />
+          }
+        />
+        <Route
+          path="/chat/:conversationId"
+          element={
+            <ConversationRoute
+              currentConversationId={currentConversationId}
+              conversations={conversations}
+            />
+          }
+        />
+        <Route
+          path="*"
+          element={<RootRoute currentConversationId={currentConversationId} />}
+        />
+      </Routes>
+    </div>
   );
 };
 

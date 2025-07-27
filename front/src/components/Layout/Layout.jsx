@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from "uuid";
 
 import Header from "./Header";
 import Footer from "./Footer";
-import Sidebar from "./Sidebar";
 import ChatWindow from "../Chat/ChatWindow";
 import footer_arrow from "../../assets/footer_arrow.svg";
 import ClearCacheModal from "../../modals/ClearCacheModal";
@@ -365,7 +364,7 @@ function Layout() {
   }, [scrollToTop, scrollToBottom]);
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-white dark:bg-black">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-black">
       <Header
         onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
         modelSettings={modelSettings}
@@ -374,38 +373,25 @@ function Layout() {
         setShowSettingsModal={setShowSettingsModal}
         userData={userData}
       />
+
       <div className="flex flex-1 overflow-hidden relative bg-bg_light dark:bg-bg_dark">
-        {/* Mobile overlay backdrop */}
-        {isSidebarOpen && (
-          <div
-            className="custom:hidden fixed inset-0 bg-black bg-opacity-50 z-20"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-
-        {/* Collapsible sidebar with conversation list */}
-        <div
-          className={`
-          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          custom:translate-x-0 transition-transform duration-200 ease-in-out
-          fixed custom:relative w-72 custom:h-full h-screen z-30 custom:z-auto shrink-0 custom:p-2 bg-bg_light dark:bg-bg_dark`}
-        >
-          <Sidebar
-            onClose={() => setIsSidebarOpen(false)}
-            onDeleteConversation={handleDeleteConversation}
-            onRenameConversation={handleRenameConversation}
-            conversationIds={conversationIds}
-            setShowRepoModal={setShowRepoModal}
-          />
-        </div>
-
         {/* Main chat content area */}
         <div className="flex flex-col flex-1 w-full overflow-hidden">
           <div
             ref={mainDiv}
-            className={`flex-1 overflow-y-auto bg-bg_light dark:bg-bg_dark ${
-              showFooter ? "h-[calc(89vh-120px)]" : "h-[calc(100vh-142px)]"
-            }`}
+            className={`flex-1 overflow-y-auto bg-bg_light dark:bg-bg_dark lg:rounded-2xl 
+          overscroll-behavior-contain
+          ${
+            showFooter
+              ? "h-[calc(100vh-54px-58px)] lg:h-[calc(100vh-112px)]"
+              : "h-[calc(100vh-54px-32px)] lg:h-[calc(100vh-132px)]"
+          }`}
+            style={{
+              WebkitOverflowScrolling: "touch",
+              height: showFooter
+                ? "calc(100dvh - 54px - 58px)"
+                : "calc(100dvh - 54px - 32px)",
+            }}
           >
             <ChatWindow
               modelSettings={modelSettings}
@@ -421,29 +407,36 @@ function Layout() {
         </div>
       </div>
 
-      {/* Footer section with toggle */}
-      <div className="w-full bg-bg_light dark:bg-bg_dark">
+      {/* Footer section */}
+      <div className="w-full bg-bg_light dark:bg-bg_dark lg:px-3 flex-shrink-0 select-none">
         {!showFooter && (
-          <div className="flex justify-center items-center h-[22px] py-2">
-            <img
+          <div className="flex justify-center items-center h-8 py-2 touch-manipulation">
+            <div
               onClick={toggleFooter}
-              className="cursor-pointer h-[15px] w-[55px] rotate-180"
-              src={footer_arrow}
-              alt="Show footer"
-            />
+              className="cursor-pointer p-2 rounded-lg transition-colors touch-manipulation"
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              <img
+                className="h-4 w-12 rotate-180"
+                src={footer_arrow}
+                alt="Show footer"
+              />
+            </div>
           </div>
         )}
 
         {showFooter && (
-          <Footer
-            showFooter={showFooter}
-            setShowFooter={setShowFooter}
-            scrollToTop={scrollToTop}
-          />
+          <div className="lg:rounded-2xl lg:mb-3 bg-white dark:bg-black shadow-lg dark:shadow-dark overflow-hidden">
+            <Footer
+              showFooter={showFooter}
+              setShowFooter={setShowFooter}
+              scrollToTop={scrollToTop}
+            />
+          </div>
         )}
       </div>
 
-      {/* Modal components - render only when needed */}
+      {/* Modal components */}
       {showCacheModal && (
         <ClearCacheModal
           showModal={setShowCacheModal}
@@ -500,8 +493,8 @@ function Layout() {
           repoOwner="gwdg"
           repoName="chat-ai-personas"
           branch="main"
-          onPersonaImport={handleImportPersona} // New prop for handling persona import
-          onError={handleImportError} // New prop for handling errors
+          onPersonaImport={handleImportPersona}
+          onError={handleImportError}
         />
       )}
     </div>
