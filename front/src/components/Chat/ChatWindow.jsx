@@ -792,7 +792,7 @@ function ChatWindow({
               className={`
               ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
               custom:translate-x-0 transition-transform duration-200 ease-out
-              fixed custom:relative w-[85vw] max-w-sm custom:w-72 xl:w-80 
+              fixed custom:relative desktop:w-[vw] max-w-sm w-72
               h-[calc(100vh-54px)] custom:h-full top-[54px] custom:top-0
               z-30 custom:z-auto flex-shrink-0 p-1.5
             `}
@@ -808,7 +808,7 @@ function ChatWindow({
           </>
         )}
 
-        <div className="flex flex-col custom:flex-row desktop:flex-row flex-1 h-full w-full">
+        <div className="flex flex-col desktop:flex-row flex-1 h-full w-full">
           <Conversation
             modelList={modelList}
             selectedFiles={selectedFiles}

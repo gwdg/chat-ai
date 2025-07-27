@@ -138,7 +138,7 @@ function Sidebar({
         <button
           onClick={handleNewChat}
           disabled={isResponding}
-          className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-medium transition-colors touch-manipulation ${
+          className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-medium transition-colors touch-manipulation ${
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
           style={{
@@ -203,13 +203,13 @@ function Sidebar({
                       className="flex-1 overflow-hidden pr-2 min-w-0"
                       title={conv.title}
                     >
-                      <div className="truncate text-sm font-medium">
+                      <div className="truncate text-xs font-medium">
                         {conv.title || "Untitled Conversation"}
                       </div>
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex-shrink-0 flex items-center gap-1 lg:opacity-0 lg:group-hover:opacity-100 opacity-100">
+                    <div className="flex-shrink-0 flex items-center gap-1 desktop:opacity-0 desktop:group-hover:opacity-100 opacity-100">
                       <button
                         onClick={(e) => {
                           if (isResponding) return;
@@ -262,7 +262,7 @@ function Sidebar({
             setShowRepoModal(true);
           }}
           disabled={isResponding}
-          className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-medium transition-colors touch-manipulation ${
+          className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-medium transition-colors touch-manipulation ${
             isResponding ? "cursor-not-allowed opacity-50" : ""
           }`}
           style={{

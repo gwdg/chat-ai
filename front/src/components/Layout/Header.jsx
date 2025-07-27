@@ -38,7 +38,6 @@ function Header({
 
   const [isOpen, setIsOpen] = useState(false); // Controls model selection dropdown
   const [searchQuery, setSearchQuery] = useState("");
-  const [isIOSChrome, setIsIOSChrome] = useState(false); // iOS Chrome detection for styling
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showModalSession, setShowModalSession] = useState(false);
   // Announcement state currently disabled
@@ -154,11 +153,6 @@ function Header({
   const toggleDarkMode = () => {
     dispatch(toggleTheme());
   };
-
-  // iOS Chrome detection for proper mobile styling
-  useEffect(() => {
-    setIsIOSChrome(!!navigator.userAgent.match("CriOS"));
-  }, []);
 
   // Announcement functionality currently disabled
   // useEffect(() => {

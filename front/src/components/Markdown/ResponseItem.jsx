@@ -137,7 +137,7 @@ const ResponseItem = React.memo(
 
     if (hasError) {
       return (
-        <div className="p-2" ref={responseRef}>
+        <div ref={responseRef}>
           <div className="text-black dark:text-white overflow-hidden border dark:border-border_dark rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
             <div className="flex flex-col items-start py-2">
               <button
@@ -155,7 +155,7 @@ const ResponseItem = React.memo(
     }
 
     return (
-      <div className="p-2" ref={responseRef}>
+      <div ref={responseRef}>
         <div className="text-black dark:text-white overflow-hidden border dark:border-border_dark rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
           {!res?.response && isLoading ? (
             <Typing />
@@ -264,14 +264,14 @@ const ResponseItem = React.memo(
                         <img
                           src={edit_icon}
                           alt="edit"
-                          className="h-[22px] w-[22px]"
+                          className="h-20px] w-[20px]"
                         />
                       </button>
                       <button onClick={handleCopy} title="Copy to clipboard">
                         <img
                           src={copied && indexChecked === index ? check : copy}
                           alt="copy"
-                          className="h-[20px] w-[20px]"
+                          className="h-[18px] w-[18px]"
                         />
                       </button>
                     </div>
