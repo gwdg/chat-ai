@@ -3,11 +3,8 @@ const convertHtmlToText = (content) => {
     content
       // CRITICAL: Escape meta refresh tags to prevent page refresh
       .replace(
-        /<meta\s+([^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*)>/gi,
-        (match, attrs) => {
-          // Convert to safe text representation
-          return `[META REFRESH TAG REMOVED FOR SAFETY]`;
-        }
+        /<meta\s+[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi,
+        "[META REFRESH TAG REMOVED FOR SAFETY]"
       )
       // Also handle other meta tags safely
       .replace(/<meta\s+([^>]*)>/gi, (match, attrs) => {
@@ -237,9 +234,10 @@ export const parseReferences = (content) => {
           const cleanContent = convertHtmlToText(blockContent);
 
           references.push({
-            number: parseInt(rrefNumber) - 1, // 0-based for internal use
-            rrefNumber: parseInt(rrefNumber), // 1-based for display
-            content: `${title}\n\n${cleanContent}`,
+            number: parseInt(rrefNumber) - 1,
+            rrefNumber: parseInt(rrefNumber),
+            content: cleanContent, // Keep content separate
+            title: title, // Add title as separate field
             url: url,
           });
         }
