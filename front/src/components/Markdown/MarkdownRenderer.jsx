@@ -65,6 +65,7 @@ const useStreamingProcessor = (content, isLoading) => {
   const animationFrameRef = useRef(null);
   const mainContentRef = useRef("");
   const referenceStartIndexRef = useRef(-1);
+  const referenceBufferRef = useRef(""); // Add this to track reference content separately
 
   const processStreamingContent = useCallback(() => {
     if (!content || !isLoading) {
@@ -78,6 +79,7 @@ const useStreamingProcessor = (content, isLoading) => {
       processedIndexRef.current = 0;
       mainContentRef.current = "";
       referenceStartIndexRef.current = -1;
+      referenceBufferRef.current = "";
 
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -92,61 +94,53 @@ const useStreamingProcessor = (content, isLoading) => {
 
       while (i < chunkSize && processedIndexRef.current < content.length) {
         const char = content[processedIndexRef.current];
-        bufferRef.current += char;
 
-        // Check if we're entering references section during streaming
         if (!referencesStarted) {
-          const hasReferencesHeader =
-            /\n\s*#{1,3}\s*(references?|sources?)\s*\n/i.test(
-              bufferRef.current
-            ) ||
-            /\n\s*(references?|sources?)\s*:?\s*\n/i.test(bufferRef.current);
-          const hasSeparator = /\n\s*[-=]{3,}\s*\n/i.test(bufferRef.current);
+          bufferRef.current += char;
+
+          // Check for RREF markers
           const hasRREF = /\[RREF\d+\]/i.test(bufferRef.current);
 
-          if (hasReferencesHeader || (hasSeparator && hasRREF) || hasRREF) {
+          if (hasRREF) {
             setReferencesStarted(true);
             setReferencesSectionVisible(true);
 
-            // Find exact split point and clean up main content
+            // Find the split point
             const lines = bufferRef.current.split("\n");
             let splitIndex = -1;
 
             for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
               const line = lines[lineIdx].trim();
-              if (
-                /^#{1,3}\s*(references?|sources?)\s*$/i.test(line) ||
-                /^(references?|sources?)\s*:?\s*$/i.test(line) ||
-                /^[-=]{3,}$/.test(line) ||
-                /^\s*\[RREF\d+\]/i.test(line)
-              ) {
-                // Look back for logical break
+
+              if (/^\s*\[RREF\d+\]/i.test(line)) {
+                splitIndex = lineIdx;
+
+                // Look back for reference header
                 for (let j = lineIdx - 1; j >= Math.max(0, lineIdx - 3); j--) {
-                  if (
-                    lines[j].trim() === "" ||
-                    /^[-=]{2,}$/.test(lines[j].trim())
-                  ) {
+                  const prevLine = lines[j].trim();
+                  if (/^(references?|sources?)\s*:?\s*$/i.test(prevLine)) {
+                    splitIndex = j;
+                    break;
+                  } else if (j === lineIdx - 1 && /^[-=]{3,}$/.test(prevLine)) {
                     splitIndex = j;
                     break;
                   }
                 }
-                if (splitIndex === -1) splitIndex = lineIdx;
                 break;
               }
             }
 
             if (splitIndex !== -1) {
               const mainLines = lines.slice(0, splitIndex);
+              const refLines = lines.slice(splitIndex);
 
-              // CRITICAL FIX: Clean up any reference-related content from main content
+              // Clean up main content
               while (mainLines.length > 0) {
                 const lastLine = mainLines[mainLines.length - 1].trim();
                 if (
                   lastLine === "" ||
-                  /^[-=]{2,}$/.test(lastLine) ||
-                  /^(references?|sources?)\s*:?\s*$/i.test(lastLine) ||
-                  /^#{1,3}\s*(references?|sources?)\s*$/i.test(lastLine) ||
-                  /\[RREF\d+\]/i.test(lastLine) // Remove any RREF content from main
+                  /^[-=]{3,}$/.test(lastLine) ||
+                  /^(references?|sources?)\s*:?\s*$/i.test(lastLine)
                 ) {
                   mainLines.pop();
                 } else {
@@ -154,55 +148,43 @@ const useStreamingProcessor = (content, isLoading) => {
                 }
               }
 
-              // Set clean main content immediately
               mainContentRef.current = mainLines.join("\n").trim();
               setDisplayedText(mainContentRef.current);
+
+              // Initialize reference buffer with what we have so far
+              referenceBufferRef.current = refLines.join("\n");
+              setCurrentReferenceContent(referenceBufferRef.current);
               referenceStartIndexRef.current = splitIndex;
             }
+          } else if (!isThinking) {
+            // Normal content streaming
+            setDisplayedText(bufferRef.current);
+            mainContentRef.current = bufferRef.current;
           }
+        } else {
+          // We're in references section - append to reference buffer
+          referenceBufferRef.current += char;
+
+          // Update reference content immediately for progressive rendering
+          setCurrentReferenceContent(referenceBufferRef.current);
         }
 
-        // Handle thinking blocks (unchanged)
-        if (bufferRef.current.includes("<think>") && !referencesStarted) {
+        // Handle thinking blocks (keep existing logic)
+        if (!referencesStarted && bufferRef.current.includes("<think>")) {
           const [beforeThink] = bufferRef.current.split("<think>");
           setDisplayedText(beforeThink);
           setIsThinking(true);
           bufferRef.current = "";
-        } else if (bufferRef.current.includes("</think>")) {
+        } else if (
+          !referencesStarted &&
+          bufferRef.current.includes("</think>")
+        ) {
           const [thinkContent] = bufferRef.current.split("</think>");
           setThinkingContent(thinkContent);
           setIsThinking(false);
           bufferRef.current = "";
-
-          if (!referencesStarted) {
-            setDisplayedText(mainContentRef.current || bufferRef.current);
-          }
-        } else if (!isThinking && !referencesStarted) {
-          // Update main content normally - but stop before any reference content
-          const currentBuffer = bufferRef.current;
-
-          // Check if we have any reference indicators and exclude them
-          let cleanContent = currentBuffer;
-          const rrefMatch = cleanContent.match(
-            /^([\s\S]*?)(?=\n\s*[-=]{3,}|\n\s*#{1,3}\s*(?:references?|sources?)|\n\s*(?:references?|sources?)\s*:|\[RREF\d+\])/i
-          );
-
-          if (rrefMatch) {
-            cleanContent = rrefMatch[1].trim();
-          }
-
-          setDisplayedText(cleanContent);
-          mainContentRef.current = cleanContent;
         } else if (isThinking && !referencesStarted) {
           setThinkingContent((prev) => prev + char);
-        } else if (referencesStarted) {
-          // We're in references section - update reference content progressively
-          const lines = bufferRef.current.split("\n");
-          if (referenceStartIndexRef.current !== -1) {
-            const referenceLines = lines.slice(referenceStartIndexRef.current);
-            const currentRefContent = referenceLines.join("\n");
-            setCurrentReferenceContent(currentRefContent);
-          }
         }
 
         processedIndexRef.current++;
@@ -211,7 +193,7 @@ const useStreamingProcessor = (content, isLoading) => {
 
       if (processedIndexRef.current < content.length) {
         animationFrameRef.current = requestAnimationFrame(processNextChunk);
-      } 
+      }
     };
 
     if (processedIndexRef.current === 0) {
@@ -223,11 +205,12 @@ const useStreamingProcessor = (content, isLoading) => {
       setReferencesSectionVisible(false);
       bufferRef.current = "";
       mainContentRef.current = "";
+      referenceBufferRef.current = "";
       referenceStartIndexRef.current = -1;
     }
 
     animationFrameRef.current = requestAnimationFrame(processNextChunk);
-  }, [content, isLoading, isThinking, referencesStarted]);
+  }, [content, isLoading]);
 
   useEffect(() => {
     processStreamingContent();
@@ -254,82 +237,56 @@ const extractContentAndReferences = (content) => {
   if (!content) return { mainContent: "", referencesContent: "" };
 
   try {
+    // First check if there are any RREF markers at all
     const rrefMatches = content.match(/\[RREF\d+\]/gi);
     if (!rrefMatches || rrefMatches.length === 0) {
+      // No references at all - return full content as main
       return { mainContent: content, referencesContent: "" };
     }
 
     const lines = content.split("\n");
     let referenceStartIndex = -1;
 
-    // Find reference section start with more precise detection
+    // Find where actual references start (where RREF appears)
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
 
-      // Look for explicit reference headers
-      if (
-        /^-{3,}$/.test(line) ||
-        /^={3,}$/.test(line) ||
-        /^(references?|sources?|citations?)\s*:?\s*$/i.test(line) ||
-        /^#{1,3}\s*(references?|sources?|citations?)\s*$/i.test(line)
-      ) {
-        let hasRrefAfter = false;
-        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
-          if (/\[RREF\d+\]/i.test(lines[j])) {
-            hasRrefAfter = true;
+      // Look for actual RREF markers
+      if (/^\s*\[RREF\d+\]/i.test(line)) {
+        referenceStartIndex = i;
+
+        // Look backward for a logical separator (but only a few lines)
+        for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+          const prevLine = lines[j].trim();
+          if (
+            prevLine === "" ||
+            /^[-=]{3,}$/.test(prevLine) ||
+            /^(references?|sources?)\s*:?\s*$/i.test(prevLine)
+          ) {
+            referenceStartIndex = j;
             break;
           }
         }
-
-        if (hasRrefAfter) {
-          referenceStartIndex = i;
-          break;
-        }
-      }
-    }
-
-    // If no explicit header, find first RREF line
-    if (referenceStartIndex === -1) {
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (/^\s*\[RREF\d+\]/i.test(line)) {
-          let separationPoint = i;
-
-          // Look back for logical separation
-          for (let j = i - 1; j >= Math.max(0, i - 8); j--) {
-            const prevLine = lines[j].trim();
-            if (
-              prevLine === "" ||
-              /^[-=]{2,}$/.test(prevLine) ||
-              /^(references?|sources?)\s*:?\s*$/i.test(prevLine)
-            ) {
-              separationPoint = j;
-              break;
-            }
-          }
-          referenceStartIndex = separationPoint;
-          break;
-        }
+        break;
       }
     }
 
     if (referenceStartIndex === -1) {
+      // RREF exists but couldn't find proper split point
       return { mainContent: content, referencesContent: "" };
     }
 
     const mainLines = lines.slice(0, referenceStartIndex);
     const referenceLines = lines.slice(referenceStartIndex);
 
-    // ENHANCED: Aggressively clean main content of reference artifacts
+    // Clean up main content
     while (mainLines.length > 0) {
       const lastLine = mainLines[mainLines.length - 1].trim();
       if (
         lastLine === "" ||
         /^[-=]{3,}$/.test(lastLine) ||
         /^(references?|sources?)\s*:?\s*$/i.test(lastLine) ||
-        /^#{1,3}\s*(references?|sources?)\s*$/i.test(lastLine) ||
-        /\[RREF\d+\]/i.test(lastLine) || // Remove any RREF content
-        lastLine.toLowerCase().includes("reference") // Remove any line mentioning references
+        /\[RREF\d+\]/i.test(lastLine)
       ) {
         mainLines.pop();
       } else {
@@ -340,11 +297,7 @@ const extractContentAndReferences = (content) => {
     const mainContent = mainLines.join("\n").trim();
     const referencesContent = referenceLines.join("\n").trim();
 
-    if (referencesContent && /\[RREF\d+\]/i.test(referencesContent)) {
-      return { mainContent, referencesContent };
-    }
-
-    return { mainContent: content, referencesContent: "" };
+    return { mainContent, referencesContent };
   } catch (error) {
     console.error("Error in content extraction:", error);
     return { mainContent: content, referencesContent: "" };
@@ -394,8 +347,6 @@ const MarkdownRenderer = memo(
       ? currentReferenceContent // Show progressive content during streaming
       : extractContentAndReferences(children).referencesContent; // Show full content when complete
 
-   
-
     // Configure KaTeX options
     const katexOptions = {
       output: "htmlAndMathml",
@@ -410,14 +361,22 @@ const MarkdownRenderer = memo(
     // Safe wrapper for ReactMarkdown
     const SafeMarkdown = ({ children: markdownContent, ...props }) => {
       try {
-        if (!markdownContent || markdownContent.trim() === "") {
+        if (!markdownContent || typeof markdownContent !== "string") {
           return null;
         }
 
-        const sanitizedContent = markdownContent
+        // First, neutralize any meta refresh tags completely
+        let sanitizedContent = markdownContent
+          // Remove meta refresh tags entirely
+          .replace(
+            /<meta\s+[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi,
+            "[META REFRESH REMOVED]"
+          )
+          // Escape other potentially dangerous meta tags
           .replace(/<meta\s+([^>]*)>/gi, (match, attrs) => {
             return `\\<meta ${attrs}\\>`;
           })
+          // Continue with other sanitization...
           .replace(
             /<script\s*([^>]*)>(.*?)<\/script>/gi,
             (match, attrs, content) => {
@@ -453,13 +412,13 @@ const MarkdownRenderer = memo(
               }\\</form\\>`;
             }
           )
-          .replace(/<([^>]+)>/gi, (match, tagContent) => {
-            return `\\<${tagContent}\\>`;
-          })
           .replace(/javascript:/gi, "javascript-protocol:")
-          .replace(/\son(\w+)\s*=\s*([^>\s]*)/gi, (match, event, handler) => {
-            return ` data-on${event}="${handler}"`;
-          });
+          .replace(
+            /\son(\w+)\s*=\s*["']([^"']+)["']/gi,
+            (match, event, handler) => {
+              return ` data-on${event}="${handler}"`;
+            }
+          );
 
         return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
       } catch (error) {

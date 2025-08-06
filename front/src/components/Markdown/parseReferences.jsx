@@ -1,26 +1,48 @@
 const convertHtmlToText = (content) => {
   return (
     content
-      // Remove various templating systems
-      .replace(/\{\{[^}]*\}\}/g, "") // Hugo: {{< >}}, {{ }}
-      .replace(/\{%[^%]*%\}/g, "") // Jekyll: {% %}
-      .replace(/\[\[([^\]]*)\]\]/g, "$1") // WikiLinks: [[text]]
-      .replace(/<!--.*?-->/gs, "") // HTML comments
-
-      // Fix common URL issues
+      // CRITICAL: Escape meta refresh tags to prevent page refresh
       .replace(
-        /https?:\/([^\/])/g,
-        (match, rest) => match.slice(0, -rest.length) + "/" + rest
+        /<meta\s+([^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*)>/gi,
+        (match, attrs) => {
+          // Convert to safe text representation
+          return `[META REFRESH TAG REMOVED FOR SAFETY]`;
+        }
       )
-
-      // Remove dangerous content
-      .replace(/<script[^>]*>.*?<\/script>/gi, "[SCRIPT]")
-      .replace(/<iframe[^>]*>.*?<\/iframe>/gi, "[IFRAME]")
-      .replace(/javascript:/gi, "js-protocol:")
-
-      // Clean up whitespace
-      .replace(/\n{3,}/g, "\n\n")
-      .trim()
+      // Also handle other meta tags safely
+      .replace(/<meta\s+([^>]*)>/gi, (match, attrs) => {
+        return `&lt;meta ${attrs}&gt;`;
+      })
+      .replace(
+        /<script\s*([^>]*)>(.*?)<\/script>/gi,
+        (match, attrs, content) => {
+          return `[SCRIPT${attrs ? ` ${attrs}` : ""}]${
+            content ? `: ${content}` : ""
+          }[/SCRIPT]`;
+        }
+      )
+      .replace(
+        /<iframe\s*([^>]*)>(.*?)<\/iframe>/gi,
+        (match, attrs, content) => {
+          return `[IFRAME${attrs ? ` ${attrs}` : ""}]${content || ""}[/IFRAME]`;
+        }
+      )
+      .replace(
+        /<object\s*([^>]*)>(.*?)<\/object>/gi,
+        (match, attrs, content) => {
+          return `[OBJECT${attrs ? ` ${attrs}` : ""}]${content || ""}[/OBJECT]`;
+        }
+      )
+      .replace(/<embed\s*([^>]*)>/gi, (match, attrs) => {
+        return `[EMBED${attrs ? ` ${attrs}` : ""}]`;
+      })
+      .replace(/<form\s*([^>]*)>(.*?)<\/form>/gi, (match, attrs, content) => {
+        return `[FORM${attrs ? ` ${attrs}` : ""}]${content || ""}[/FORM]`;
+      })
+      .replace(/javascript:/gi, "javascript-protocol:")
+      .replace(/\son(\w+)\s*=\s*([^>\s]*)/gi, (match, event, handler) => {
+        return ` data-on${event}="${handler}"`;
+      })
   );
 };
 
