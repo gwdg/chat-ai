@@ -187,6 +187,7 @@ app.get("/user", async (req, res) => {
       email: "user@example.com",
       firstname: "Sample",
       lastname: "User",
+      org: "GWD",
       organization: "GWDG",
       username: "sample-user",
     });

@@ -42,6 +42,7 @@ const Conversation = ({
   setPdfNotProcessedModal,
   showAdvOpt,
   setPreviewFile,
+  currentModel,
 }) => {
   // Hooks
   const dispatch = useDispatch();

@@ -407,6 +407,7 @@ function Layout() {
               onRenameConversation={handleRenameConversation}
               conversationIds={conversationIds}
               setShowRepoModal={setShowRepoModal}
+              userData={userData}
             />
           </div>
         </div>

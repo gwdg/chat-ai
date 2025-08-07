@@ -39,6 +39,7 @@ import ClearMemoryModal from "../../modals/ClearMemoryModal";
 import UserMemoryModal from "../../modals/UserMemoryModal";
 import HelpMemoryModal from "../../modals/HelpMemoryModal";
 import Sidebar from "../Layout/Sidebar";
+import WarningButton from "../Others/WarningButton";
 
 function ChatWindow({
   modelSettings,
@@ -54,6 +55,7 @@ function ChatWindow({
   onRenameConversation,
   conversationIds,
   setShowRepoModal,
+  userData,
 }) {
   // Hooks
   const { notifySuccess, notifyError } = useToast();
@@ -120,6 +122,7 @@ function ChatWindow({
   );
   const [previewFile, setPreviewFile] = useState(null);
   const [fileAlertModal, setFileAlertModal] = useState(null);
+  const [showWarningMessage, setShowWarningMessage] = useState(false);
 
   //Refs
   const isIntentionalRefresh = useRef(false);
@@ -770,6 +773,14 @@ function ChatWindow({
     };
   }, [selectedFiles]);
 
+  useEffect(() => {
+    if (currentModel?.name?.toLowerCase().includes("external")) {
+      setShowWarningMessage(true);
+    } else {
+      setShowWarningMessage(false);
+    }
+  }, [currentModel]);
+
   return (
     <>
       {/* Main chat container */}
@@ -809,6 +820,14 @@ function ChatWindow({
         )}
 
         <div className="flex flex-col desktop:flex-row flex-1 h-full w-full">
+          {!showAdvOpt && (
+            <WarningButton
+              currentModel={currentModel}
+              showWarning={showWarningMessage}
+              setShowWarning={setShowWarningMessage}
+              userData={userData}
+            />
+          )}
           <Conversation
             modelList={modelList}
             selectedFiles={selectedFiles}
@@ -863,6 +882,7 @@ function ChatWindow({
             notifyError={notifyError}
             setShowModalSession={setShowModalSession}
             setPreviewFile={setPreviewFile}
+            userData={userData}
           />
         </div>
       </div>

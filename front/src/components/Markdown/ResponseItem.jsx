@@ -10,6 +10,105 @@ import { RotateCw } from "lucide-react";
 const MAX_HEIGHT = 400;
 const MIN_HEIGHT = 350;
 
+// Helper function to extract main content (without references) for copying
+const extractMainContentForCopy = (content) => {
+  if (!content) return "";
+
+  try {
+    // Remove thinking blocks
+    let textToCopy = content.replace(/<think>[\s\S]*?<\/think>/g, "");
+
+    // Remove user style blocks
+    textToCopy = textToCopy.replace(/<userStyle>[\s\S]*?<\/userStyle>/g, "");
+
+    // Strategy 1: Look for explicit reference sections and remove everything after
+    const explicitPatterns = [
+      /\n\s*-{3,}\s*\n\s*References?:\s*\n/i,
+      /\n\s*={3,}\s*\n\s*References?:\s*\n/i,
+      /\n\s*References?:\s*\n\s*-{3,}/i,
+      /\n\s*#{1,3}\s*References?\s*\n/i,
+    ];
+
+    for (const pattern of explicitPatterns) {
+      const match = textToCopy.match(pattern);
+      if (match) {
+        textToCopy = textToCopy.substring(0, match.index);
+        break;
+      }
+    }
+
+    // Strategy 2: Find first actual reference line (not just text containing RREF)
+    const lines = textToCopy.split("\n");
+    let cutoffIndex = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Check if this line is an actual reference (starts with RREF or has RREF at beginning)
+      if (
+        /^\s*\[RREF\d+\]/.test(line) ||
+        (/\[RREF\d+\]/.test(line) && line.trim().indexOf("[RREF") < 10)
+      ) {
+        cutoffIndex = i;
+        break;
+      }
+    }
+
+    if (cutoffIndex !== -1) {
+      // Look backwards from cutoff to find logical separation
+      for (let i = cutoffIndex - 1; i >= Math.max(0, cutoffIndex - 10); i--) {
+        const line = lines[i].trim();
+        if (
+          /^[-=_*]{3,}$/.test(line) ||
+          /^(references?|sources?)\s*:?\s*$/i.test(line) ||
+          (line === "" && i > 0 && lines[i - 1].trim() === "")
+        ) {
+          cutoffIndex = i;
+          break;
+        }
+      }
+
+      textToCopy = lines.slice(0, cutoffIndex).join("\n");
+    }
+
+    // Remove any remaining RREF patterns that might have leaked through
+    textToCopy = textToCopy.replace(/\[RREF\d+\]/gi, "");
+
+    // Clean up multiple consecutive newlines
+    textToCopy = textToCopy.replace(/\n{3,}/g, "\n\n");
+
+    // Remove horizontal rules at the end
+    textToCopy = textToCopy.replace(/^-+$/gm, "");
+
+    // Remove trailing empty lines and separators
+    const finalLines = textToCopy.split("\n");
+    while (finalLines.length > 0) {
+      const lastLine = finalLines[finalLines.length - 1].trim();
+      if (
+        lastLine === "" ||
+        /^[-=_*]{3,}$/.test(lastLine) ||
+        /^(references?|sources?)\s*:?\s*$/i.test(lastLine)
+      ) {
+        finalLines.pop();
+      } else {
+        break;
+      }
+    }
+
+    return finalLines.join("\n").trim();
+  } catch (error) {
+    console.error("Error extracting main content:", error);
+    // Fallback - just remove obvious reference patterns
+    return content
+      .replace(/<think>[\s\S]*?<\/think>/g, "")
+      .replace(/<userStyle>[\s\S]*?<\/userStyle>/g, "")
+      .replace(/\[RREF\d+\][\s\S]*/i, "")
+      .replace(/^-+$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+};
+
 const ResponseItem = React.memo(
   ({
     res,
@@ -108,17 +207,10 @@ const ResponseItem = React.memo(
       }
     }, [copied, indexChecked, index, setCopied, setIndexChecked]);
 
+    // Enhanced copy function that properly excludes references
     const handleCopy = useCallback(async () => {
       try {
-        let textToCopy = res.response;
-        textToCopy = textToCopy.replace(/<think>[\s\S]*?<\/think>/g, "");
-        textToCopy = textToCopy.split("References:")[0];
-        textToCopy = textToCopy.replace(
-          /<userStyle>[\s\S]*?<\/userStyle>/g,
-          ""
-        );
-        textToCopy = textToCopy.replace(/^-+$/gm, "");
-        textToCopy = textToCopy.replace(/\n{3,}/g, "\n\n").trim();
+        const textToCopy = extractMainContentForCopy(res.response);
 
         await navigator.clipboard.writeText(textToCopy);
         setCopied(true);
@@ -208,19 +300,13 @@ const ResponseItem = React.memo(
                       </div>
                     }
                   >
-                    {renderMode === "Plain Text" ? (
-                      <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto">
-                        {res.response}
-                      </pre>
-                    ) : (
-                      <MarkdownRenderer
-                        isDarkMode={isDarkModeGlobal}
-                        isLoading={isLoading}
-                        renderMode={renderMode}
-                      >
-                        {res.response}
-                      </MarkdownRenderer>
-                    )}
+                    <MarkdownRenderer
+                      isDarkMode={isDarkModeGlobal}
+                      isLoading={isLoading}
+                      renderMode={renderMode}
+                    >
+                      {res.response}
+                    </MarkdownRenderer>
                   </ErrorBoundary>
                   <div className="flex justify-between w-full mt-1 gap-2">
                     {/* Render mode selection with updated styling for 4 modes */}
@@ -239,15 +325,6 @@ const ResponseItem = React.memo(
                             }
                           `}
                             disabled={isLoading}
-                            // title={
-                            //   mode === "LaTeX"
-                            //     ? "Show only LaTeX expressions with context"
-                            //     : mode === "Markdown"
-                            //     ? "Show raw markdown"
-                            //     : mode === "Plain Text"
-                            //     ? "Show plain text only"
-                            //     : "Default formatted view"
-                            // }
                           >
                             {mode}
                           </button>
@@ -267,7 +344,10 @@ const ResponseItem = React.memo(
                           className="h-20px] w-[20px]"
                         />
                       </button>
-                      <button onClick={handleCopy} title="Copy to clipboard">
+                      <button
+                        onClick={handleCopy}
+                        title="Copy response (without references)"
+                      >
                         <img
                           src={copied && indexChecked === index ? check : copy}
                           alt="copy"
