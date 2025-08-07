@@ -2,7 +2,7 @@
 # Visit https://bit.ly/cffinit to generate yours today!
 
 cff-version: 1.2.0
-title: Chat AI
+title: SAIA
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -30,47 +30,35 @@ authors:
     affiliation: GWDG
     orcid: 'https://orcid.org/0000-0002-6915-1179'
 identifiers:
-  - type: other
-    value: 'arXiv:2407.00110'
-    description: The arXiv deposit of the encompassing paper.
+  - type: doi
+    value: 10.21203/rs.3.rs-6648693/v1
+  - type: url
+    value: 'https://www.researchsquare.com/article/rs-6648693/v1'
 repository-code: 'https://github.com/gwdg/chat-ai'
 url: 'https://chat-ai.academiccloud.de'
 abstract: >-
-  The increasing adoption of large language models (LLMs)
-  has created a pressing need for an efficient, secure and
-  private serving infrastructure, which allows researchers
-  to run open-source or custom fine-tuned LLMs and ensures
-  users that their data remains private and is not stored
-  without their consent. While high-performance computing
-  (HPC) systems equipped with state-of-the-art GPUs are
-  well-suited for training LLMs, their batch scheduling
-  paradigm is not designed to support real-time serving of
-  AI applications. Cloud systems, on the other hand, are
-  well suited for web services but commonly lack access to
-  the computational power of clusters, especially expensive
-  and scarce high-end GPUs, which are required for optimal
-  inference speed. We propose an architecture with an
-  implementation consisting of a web service that runs on a
-  cloud VM with secure access to a scalable backend running
-  a multitude of AI models on HPC systems. By offering a web
-  service using our HPC infrastructure to host LLMs, we
-  leverage the trusted environment of local universities and
-  research centers to offer a private and secure alternative
-  to commercial LLM services. Our solution natively
-  integrates with Slurm, enabling seamless deployment on HPC
-  clusters and is able to run side by side with regular
-  Slurm workloads, while utilizing gaps in the schedule
-  created by Slurm. In order to ensure the security of the
-  HPC system, we use the SSH ForceCommand directive to
-  construct a robust circuit breaker, which prevents
-  successful attacks on the web-facing server from affecting
-  the cluster. We have successfully deployed our system as a
-  production service, and made the source code available at
-  https://github.com/gwdg/chat-ai.
+  Recent developments indicate a shift toward web services
+  that employ ever larger AI models, e.g., Large Language
+  Models (LLMs), requiring powerful hardware for inference.
+  High-Performance Computing (HPC) systems are commonly
+  equipped with such hardware for the purpose of large scale
+  computation tasks. However, HPC infrastructure is
+  inherently unsuitable for hosting real-time web services
+  due to network, security and scheduling constraints. While
+  various efforts exist to integrate external scheduling
+  solutions, these often require compromises in terms of
+  security or usability for existing HPC users. In this
+  paper, we present SAIA, a Slurm-native platform consisting
+  of a scheduler and a proxy. The scheduler interacts with
+  Slurm to ensure the availability and scalability of
+  services, while the proxy provides external access, which
+  is secured via confined SSH commands. We have demonstrated
+  SAIA’s applicability by deploying a large-scale LLM web
+  service that has served over 50,000 users.
 keywords:
   - AI
   - HPC
   - Slurm
 license: GPL-3.0
-version: v0.6
-date-released: '2024-02-07'
+version: v0.8.1
+date-released: '2024-02-22'

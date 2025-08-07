@@ -207,14 +207,72 @@ const ProgressiveReferenceItem = memo(
     const SafeMarkdown = ({ children: markdownContent, ...props }) => {
       try {
         if (!markdownContent || typeof markdownContent !== "string") {
-          return <span>Invalid content</span>;
+          return null;
         }
 
-        const processedContent = convertHtmlToText(markdownContent);
-        return <ReactMarkdown {...props}>{processedContent}</ReactMarkdown>;
+        // First, neutralize any meta refresh tags completely
+        let sanitizedContent = markdownContent
+          // Remove meta refresh tags entirely
+          .replace(
+            /<meta\s+[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi,
+            "[META REFRESH REMOVED]"
+          )
+          // Escape other potentially dangerous meta tags
+          .replace(/<meta\s+([^>]*)>/gi, (match, attrs) => {
+            return `\\<meta ${attrs}\\>`;
+          })
+          // Continue with other sanitization...
+          .replace(
+            /<script\s*([^>]*)>(.*?)<\/script>/gi,
+            (match, attrs, content) => {
+              return `\\<script${attrs ? ` ${attrs}` : ""}\\>${
+                content ? content : ""
+              }\\</script\\>`;
+            }
+          )
+          .replace(
+            /<iframe\s*([^>]*)>(.*?)<\/iframe>/gi,
+            (match, attrs, content) => {
+              return `\\<iframe${attrs ? ` ${attrs}` : ""}\\>${
+                content || ""
+              }\\</iframe\\>`;
+            }
+          )
+          .replace(
+            /<object\s*([^>]*)>(.*?)<\/object>/gi,
+            (match, attrs, content) => {
+              return `\\<object${attrs ? ` ${attrs}` : ""}\\>${
+                content || ""
+              }\\</object\\>`;
+            }
+          )
+          .replace(/<embed\s*([^>]*)>/gi, (match, attrs) => {
+            return `\\<embed${attrs ? ` ${attrs}` : ""}\\>`;
+          })
+          .replace(
+            /<form\s*([^>]*)>(.*?)<\/form>/gi,
+            (match, attrs, content) => {
+              return `\\<form${attrs ? ` ${attrs}` : ""}\\>${
+                content || ""
+              }\\</form\\>`;
+            }
+          )
+          .replace(/javascript:/gi, "javascript-protocol:")
+          .replace(
+            /\son(\w+)\s*=\s*["']([^"']+)["']/gi,
+            (match, event, handler) => {
+              return ` data-on${event}="${handler}"`;
+            }
+          );
+
+        return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
       } catch (error) {
-        console.error("Error rendering markdown in reference:", error);
-        return <span className="text-gray-500">Content rendering error</span>;
+        console.error("Error rendering markdown:", error);
+        return (
+          <div className="text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+            Error rendering content: {error.message}
+          </div>
+        );
       }
     };
 
