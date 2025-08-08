@@ -68,7 +68,8 @@ async function getCompletionLLM(
   temperature = 0.5,
   top_p = 0.5,
   inference_id = "no_id",
-  arcana = null
+  arcana = null,
+  gwdg_tools = null,
 ) {
   const url = apiEndpoint + "/chat/completions";
   const headers = {
@@ -83,7 +84,12 @@ async function getCompletionLLM(
     headers.Authorization = "Bearer " + apiKey;
   } else {
     // Only add inference-id header if apiKey is empty or non-existent
+    headers.Authorization = "Bearer " + inference_id;
     headers["inference-id"] = inference_id;
+  }
+
+  if (gwdg_tools) {
+    headers["inference-service"] = "saia-openai-gateway"
   }
   const body = JSON.stringify({
     model: model,
@@ -206,6 +212,7 @@ app.post("/", async (req, res) => {
     top_p = 0.5,
     arcana = null,
     timeout = 30000,
+    gwdg_tools = null,
   } = req.body;
   const inference_id = req.headers["inference-id"];
 
@@ -245,7 +252,8 @@ app.post("/", async (req, res) => {
       temperature,
       top_p,
       inference_id,
-      arcana
+      arcana,
+      gwdg_tools
     );
 
     try {

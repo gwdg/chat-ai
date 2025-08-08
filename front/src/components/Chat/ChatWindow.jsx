@@ -13,6 +13,7 @@ import CustomInstructionsModal from "../../modals/CustomInstructionsModal";
 import ExportTypeModal from "../../modals/ExportTypeModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
 import BadRequestModal from "../../modals/BadRequestModal";
+import HelpToolsModal from "../../modals/HelpToolsModal";
 import HelpCustomInstructionsModal from "../../modals/HelpCustomInstructionsModal";
 import HelpArcanaModal from "../../modals/HelpArcanaModal";
 import HelpSystemModal from "../../modals/HelpSystemModal";
@@ -105,6 +106,7 @@ function ChatWindow({
   const [showModalSession, setShowModalSession] = useState(false);
   const [showBadRequest, setShowBadRequest] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showToolsHelpModal, setShowToolsHelpModal] = useState(false);
   const [showCustomHelpModal, setShowCustomHelpModal] = useState(false);
   const [showTopPHelpModal, setShowTopPHelpModal] = useState(false);
   const [showMemoryHelpModal, setShowMemoryHelpModal] = useState(false);
@@ -873,6 +875,7 @@ function ChatWindow({
             setShareSettingsModal={setShareSettingsModal}
             handleShareSettings={handleShareSettings}
             setShowHelpModal={setShowHelpModal}
+            setShowToolsHelpModal={setShowToolsHelpModal}
             setShowArcanasHelpModal={setShowArcanasHelpModal}
             setShowCustomHelpModal={setShowCustomHelpModal}
             setShowTopPHelpModal={setShowTopPHelpModal}
@@ -889,6 +892,10 @@ function ChatWindow({
 
       {/* Modal components */}
       {showHelpModal && <HelpModal showModal={setShowHelpModal} />}
+
+      {showToolsHelpModal && (
+        <HelpToolsModal showModal={setShowToolsHelpModal} />
+      )}
 
       {showCustomHelpModal && (
         <HelpCustomInstructionsModal showModal={setShowCustomHelpModal} />

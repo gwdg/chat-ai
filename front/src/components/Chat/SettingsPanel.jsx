@@ -56,6 +56,7 @@ const SettingsPanel = ({
   setShareSettingsModal,
   handleShareSettings,
   setShowHelpModal,
+  setShowToolsHelpModal,
   setShowArcanasHelpModal,
   setShowCustomHelpModal,
   setShowTopPHelpModal,
@@ -988,7 +989,61 @@ const SettingsPanel = ({
                 </div>
               )}
 
-              {isArcanaSupported ? (
+              <div className="flex flex-col gap-4 items-center">
+
+                {/* Use GWDG Tools – checkbox */}
+                <div className="flex flex-col md:flex-row md:gap-4 gap-3 w-full md:items-center mt-4">
+                  {/* Label + optional help‑icon (mirrors the top_p label) */}
+                  <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
+                    <label
+                      htmlFor="use-gwdg-tools"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Use GWDG Tools
+                    </label>
+
+                    {/* If you ever want a tooltip/help‑icon you can reuse the same pattern */}
+                    <img
+                      src={help}
+                      alt="help"
+                      className="h-[16px] w-[16px] cursor-pointer"
+                      onClick={() => setShowToolsHelpModal(true)}
+                    />
+                  </div>
+
+                  {/* The actual checkbox – takes the remaining width */}
+                  <div className="w-full flex items-center">
+                    <input
+                      id="use-gwdg-tools"
+                      type="checkbox"
+                      checked={localState.settings.useGWDGTools}
+                      onChange={(e) =>
+                        setLocalState((prev) => ({
+                          ...prev,
+                          settings: {
+                            ...prev.settings,
+                            useGWDGTools: e.target.checked,
+                          },
+                        }))
+                      }
+                      className="h-4 w-4 text-tertiary bg-gray-200 border-gray-300 rounded focus:ring-tertiary focus:ring-2"
+                    />
+                    {/* Description that appears only when the box is unchecked */}
+                    {!localState.settings.useGWDGTools && (
+                      <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
+                        Additional features are disabled.
+                      </span>
+                    )}
+                    {/* Description that appears only when the box is checked */}
+                    {localState.settings.useGWDGTools && (
+                      <span className="ml-2 text-sm text-green-600 dark:text-green-300">
+                        Additional features are now enabled.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {(localState.settings.useGWDGTools || isArcanaSupported) ? (
                 <div className="flex gap-4 w-full items-center">
                   <div className="flex-shrink-0 flex items-center gap-2 select-none">
                     <p className="text-sm">Arcana</p>
@@ -1006,8 +1061,7 @@ const SettingsPanel = ({
                 </div>
               ) : null}
 
-              <div className="flex flex-col gap-4 items-center">
-                {localState.arcana.id && isArcanaSupported && (
+                {localState.arcana.id && (localState.settings.useGWDGTools || isArcanaSupported) && (
                   <div className="text-yellow-600 text-xs w-full select-none">
                     <Trans i18nKey="description.warning_arcana" />
                   </div>

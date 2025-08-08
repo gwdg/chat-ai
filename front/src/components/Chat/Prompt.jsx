@@ -11,8 +11,6 @@ import mic from "../../assets/icon_mic.svg";
 import pause from "../../assets/pause.svg";
 import {
   cancelRequest,
-  fetchLLMResponse,
-  updateMemory,
 } from "../../apis/LlmRequestApi";
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
@@ -111,8 +109,6 @@ function Prompt({
       modelList,
       memories,
       isArcanaSupported,
-      updateMemory,
-      fetchLLMResponse,
       notifyError,
       notifySuccess,
       setShowModalSession,

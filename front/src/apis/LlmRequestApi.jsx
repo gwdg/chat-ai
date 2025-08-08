@@ -206,6 +206,7 @@ async function updateMemory(conversation, memories) {
 async function fetchLLMResponse(
   conversation,
   customInstructions,
+  localState,
   modelName,
   temperature,
   topP,
@@ -221,11 +222,11 @@ async function fetchLLMResponse(
     // Models that require different message formatting
     const instructModels = ["mixtral-8x7b-instruct"];
     const isInstruct = instructModels.includes(modelName);
+    let headers = {
+      "Content-Type": "application/json"
+    };
 
-    const response = await fetch(import.meta.env.VITE_BACKEND_ENDPOINT, {
-      method: "post",
-      headers: { "Content-type": "application/json" },
-      body: JSON.stringify({
+    let body = JSON.stringify({
         model: modelName,
         messages: isInstruct
           ? [
@@ -242,9 +243,15 @@ async function fetchLLMResponse(
             ],
         temperature: temperature,
         top_p: topP,
-        arcana: isArcanaSupported ? arcana : "",
+        arcana: (isArcanaSupported || localState?.settings?.useGWDGTools) ? arcana : "",
+        gwdg_tools: localState?.settings?.useGWDGTools,
         timeout: timeoutTime,
-      }),
+    });
+
+    const response = await fetch(import.meta.env.VITE_BACKEND_ENDPOINT, {
+      method: "post",
+      headers: headers,
+      body: body,
       signal: signal,
     });
 

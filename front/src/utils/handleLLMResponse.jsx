@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { setIsResponding } from "../Redux/reducers/conversationsSlice";
 import { editMemory, addMemory } from "../Redux/reducers/userMemorySlice";
+import { fetchLLMResponse, updateMemory } from "../apis/LlmRequestApi";
 
 const handleLLMResponse = async ({
   // === OPERATION CONFIG ===
@@ -27,8 +28,6 @@ const handleLLMResponse = async ({
   isArcanaSupported,
 
   // === EXTERNAL FUNCTIONS ===
-  updateMemory,
-  fetchLLMResponse,
   notifyError,
   notifySuccess,
   setShowModalSession,
@@ -427,6 +426,7 @@ const handleLLMResponse = async ({
     const response = await fetchLLMResponse(
       finalConversationForState, // Original conversation with "info" objects (for local state)
       finalSystemPrompt,
+      localState,
       localState.settings.model,
       localState.settings.temperature,
       localState.settings.top_p,
