@@ -89,7 +89,6 @@ const SettingsPanel = ({
   const defaultModel = useSelector(selectDefaultModel);
   const [searchQuery, setSearchQuery] = useState("");
   const [runTour, setRunTour] = useState(false);
-  const [originalZoom, setOriginalZoom] = useState("");
   const [tourStepIndex, setTourStepIndex] = useState(0); // Add this
 
   const tourSteps = [
@@ -158,11 +157,6 @@ const SettingsPanel = ({
       return;
     }
 
-    // Store current zoom and transition to 100%
-    const currentZoom = document.body.style.zoom || "90%";
-    setOriginalZoom(currentZoom);
-    document.body.style.zoom = "100%";
-
     // Start tour after zoom transition
     setTimeout(() => {
       setRunTour(true);
@@ -180,9 +174,6 @@ const SettingsPanel = ({
 
         // Update version to 3 after tour completion
         dispatch({ type: "SET_VERSION", payload: 3 });
-
-        // Restore original zoom
-        document.body.style.zoom = originalZoom;
       } else if (type === "step:after") {
         // Update step index and memory setting when navigating
         const newIndex = index + (action === "prev" ? -1 : 1);
@@ -217,7 +208,7 @@ const SettingsPanel = ({
         }
       }
     },
-    [originalZoom, dispatch, setLocalState]
+    [dispatch, setLocalState]
   );
 
   // Filter function to search through models
