@@ -168,7 +168,7 @@ function Header({
   // };
 
   return (
-    <>
+    <div className="select-none ">
       {/* Desktop Header - Show above custom breakpoint (1081px) */}
       <nav className="custom:flex hidden top-0 h-14 px-4 items-center justify-between left-0 z-[995] w-full bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-3">
@@ -535,7 +535,7 @@ function Header({
       {showModalSession && (
         <SessionExpiredModal showModal={setShowModalSession} />
       )}
-    </>
+    </div>
   );
 }
 

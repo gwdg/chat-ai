@@ -82,6 +82,10 @@ function Responses({
   const [editedResponse, setEditedResponse] = useState("");
   const [previewFile, setPreviewFile] = useState(null);
 
+  // New state for scroll management
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+
   //Refs
   const containerRefs = useRef([]);
   const textareaRefs = useRef([]);
@@ -89,6 +93,8 @@ function Responses({
   const containerRef = useRef(null);
   const scrollTimeout = useRef(null);
   const lastResponseLength = useRef(0);
+  const lastScrollTop = useRef(0);
+  const autoScrollTimeout = useRef(null);
 
   //Functions
   const handleResponseEdit = (index, response) => {
@@ -96,6 +102,7 @@ function Responses({
     setEditedResponse(response);
     setEditingResponseIndex(index);
   };
+
   const handleResponseSave = (index) => {
     // Find assistant response index in conversation array
     const assistantIndex = localState.conversation.findIndex(
@@ -128,46 +135,99 @@ function Responses({
     setEditingResponseIndex(-1);
     setEditedResponse("");
   };
-  const scrollToBottom = useCallback((forceSmooth = false) => {
-    if (!containerRef.current) return;
 
-    const container = containerRef.current;
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+  // Enhanced scroll to bottom function
+  const scrollToBottom = useCallback(
+    (forceSmooth = false, isUserInitiated = false) => {
+      if (!containerRef.current) return;
 
-    // If distance is small or we're forcing smooth scroll, use smooth behavior
-    const behavior =
-      forceSmooth || distanceFromBottom < 500 ? "smooth" : "auto";
+      const container = containerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
-    container.scrollTo({
-      top: scrollHeight,
-      behavior,
-    });
-  }, []);
+      // If user initiated, always scroll and update state
+      if (isUserInitiated) {
+        setUserScrolledUp(false);
+        setIsAutoScrolling(true);
 
-  // Debounced scroll handler
+        container.scrollTo({
+          top: scrollHeight,
+          behavior: "smooth",
+        });
+
+        // Clear auto-scrolling flag after animation
+        if (autoScrollTimeout.current) {
+          clearTimeout(autoScrollTimeout.current);
+        }
+        autoScrollTimeout.current = setTimeout(() => {
+          setIsAutoScrolling(false);
+        }, 1000);
+        return;
+      }
+
+      // For auto-scroll, only proceed if user hasn't scrolled up
+      if (!userScrolledUp) {
+        const behavior =
+          forceSmooth || distanceFromBottom < 500 ? "smooth" : "auto";
+
+        setIsAutoScrolling(true);
+        container.scrollTo({
+          top: scrollHeight,
+          behavior,
+        });
+
+        // Clear auto-scrolling flag
+        if (autoScrollTimeout.current) {
+          clearTimeout(autoScrollTimeout.current);
+        }
+        autoScrollTimeout.current = setTimeout(
+          () => {
+            setIsAutoScrolling(false);
+          },
+          behavior === "smooth" ? 1000 : 100
+        );
+      }
+    },
+    [userScrolledUp]
+  );
+
+  // Enhanced scroll handler that detects user intent
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
 
     if (scrollTimeout.current) {
-      window.clearTimeout(scrollTimeout.current);
+      clearTimeout(scrollTimeout.current);
     }
 
-    scrollTimeout.current = window.setTimeout(() => {
+    scrollTimeout.current = setTimeout(() => {
       const container = containerRef.current;
       const { scrollTop, scrollHeight, clientHeight } = container;
 
-      // Only show button if content is actually overflowing AND we're not at bottom
-      const hasOverflow = scrollHeight > clientHeight;
+      // More sensitive scroll direction detection (only when not auto-scrolling)
+      if (!isAutoScrolling) {
+        const scrolledUp = scrollTop < lastScrollTop.current - 5; // Add threshold
+        const isAtBottom = scrollHeight - (scrollTop + clientHeight) < 20; // Increase threshold
+
+        // Update user scroll state with better logic
+        if (scrolledUp) {
+          setUserScrolledUp(true);
+        } else if (isAtBottom) {
+          setUserScrolledUp(false);
+        }
+      }
+
+      // Better scroll button visibility logic (always update regardless of auto-scrolling)
+      const hasOverflow = scrollHeight > clientHeight + 10;
       const scrolledFromBottom = scrollHeight - (scrollTop + clientHeight);
+      setShowScrollButton(hasOverflow && scrolledFromBottom > 150); // Show when above 150px threshold
 
-      setShowScrollButton(hasOverflow && scrolledFromBottom > 100);
-    }, 100);
-  }, []);
+      lastScrollTop.current = scrollTop;
+    }, 16); // Reduce to ~60fps for smoother detection
+  }, []); // Remove isAutoScrolling dependency
 
-  // Click handler for scroll button - always use smooth scrolling
+  // Click handler for scroll button
   const handleScrollButtonClick = useCallback(() => {
-    scrollToBottom(true); // force smooth scroll
+    scrollToBottom(true, true); // force smooth scroll, user initiated
   }, [scrollToBottom]);
 
   function formatFileSize(bytes) {
@@ -231,6 +291,7 @@ function Responses({
       timeoutTime,
     });
   };
+
   // Function to handle retry of last message
   const handleRetry = (e) => {
     e.preventDefault();
@@ -523,50 +584,64 @@ function Responses({
     return () => clearTimeout(timer);
   }, [copied]);
 
+  // Enhanced effect for auto-scrolling with user intent detection
   useEffect(() => {
     if (!containerRef.current || !localState.responses) return;
 
     const currentLength = localState.responses.length;
     const lastResponse = localState.responses[currentLength - 1];
 
-    // If we have a new response or the last response is updating
-    if (
-      currentLength > lastResponseLength.current ||
-      (lastResponse?.response && (loading || loadingResend))
-    ) {
-      // Check if user is already near bottom
-      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-      const isNearBottom = scrollHeight - (scrollTop + clientHeight) < 300;
+    // Only auto-scroll if user hasn't manually scrolled up
+    if (!userScrolledUp) {
+      // For new responses
+      if (currentLength > lastResponseLength.current) {
+        scrollToBottom(true); // smooth scroll for new responses
+      }
+      // For updating responses, check if user is near bottom
+      else if (lastResponse?.response && (loading || loadingResend)) {
+        const container = containerRef.current;
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
-      // Scroll smoothly if user is near bottom or if it's a new response
-      if (isNearBottom || currentLength > lastResponseLength.current) {
-        scrollToBottom(true); // force smooth scroll
+        // Only auto-scroll if very close to bottom
+        if (distanceFromBottom < 50) {
+          scrollToBottom(false); // instant scroll for updates
+        }
       }
     }
 
     lastResponseLength.current = currentLength;
-  }, [localState.responses, loading, scrollToBottom, loadingResend]);
+  }, [
+    localState.responses,
+    loading,
+    scrollToBottom,
+    loadingResend,
+    userScrolledUp,
+  ]);
 
   useEffect(() => {
     handleScroll();
   }, [localState.responses, handleScroll]);
 
-  // Cleanup
+  // Cleanup and event listeners
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
       // Initial check
       handleScroll();
 
-      container.addEventListener("scroll", handleScroll);
-      // Also check on resize as container dimensions might change
-      window.addEventListener("resize", handleScroll);
+      // Use passive listeners for better scroll performance
+      container.addEventListener("scroll", handleScroll, { passive: true });
+      window.addEventListener("resize", handleScroll, { passive: true });
 
       return () => {
         container.removeEventListener("scroll", handleScroll);
         window.removeEventListener("resize", handleScroll);
         if (scrollTimeout.current) {
-          window.clearTimeout(scrollTimeout.current);
+          clearTimeout(scrollTimeout.current);
+        }
+        if (autoScrollTimeout.current) {
+          clearTimeout(autoScrollTimeout.current);
         }
       };
     }
@@ -587,6 +662,40 @@ function Responses({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Add this new effect after your existing useEffects
+  useEffect(() => {
+    // Reset scroll state when conversation changes significantly
+    if (localState.responses.length === 0) {
+      setUserScrolledUp(false);
+      setShowScrollButton(false);
+    }
+  }, [localState.responses.length]);
+
+  useEffect(() => {
+    if (localState.responses.length > 0 && containerRef.current) {
+      const container = containerRef.current;
+      const hasOverflow = container.scrollHeight > container.clientHeight;
+      if (hasOverflow) {
+        setShowScrollButton(true);
+      }
+    }
+  }, [localState.responses.length]);
+
+  // Add this new useEffect after your existing ones
+  useEffect(() => {
+    // Ensure scroll button shows when user scrolls up during loading
+    if ((loading || loadingResend) && userScrolledUp && containerRef.current) {
+      const container = containerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const hasOverflow = scrollHeight > clientHeight + 10;
+      const scrolledFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+      if (hasOverflow && scrolledFromBottom > 150) {
+        setShowScrollButton(true);
+      }
+    }
+  }, [loading, loadingResend, userScrolledUp]);
 
   return (
     <>
