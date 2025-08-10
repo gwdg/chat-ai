@@ -4,18 +4,17 @@ import {
   updateConversation,
 } from "../Redux/reducers/conversationsSlice";
 import { getDefaultSettings } from "../utils/settingsUtils";
+import { useToast } from "./useToast";
 
 export const importConversation = async (
   data,
   dispatch,
-  currentConversationId,
-  defaultModel,
-  notifyError,
-  notifySuccess,
   navigate
 ) => {
   try {
     const defaultSettings = getDefaultSettings();
+    const defaultModel = {name: "Hi", id: "TODO"}
+    const { notifySuccess, notifyError } = useToast();
 
     // Create new conversation
     const action = dispatch(addConversation());
@@ -126,7 +125,7 @@ export const importConversation = async (
 
     // Prepare conversation update
     const updates = {
-      conversation: messages,
+      messages: messages,
       responses: newArray,
       title,
       settings,
@@ -154,7 +153,7 @@ export const importConversation = async (
   } catch (error) {
     console.error("Import error:", error);
     notifyError(error.message || "An unexpected error occurred");
-    navigate(`/chat/${currentConversationId}`, { replace: true });
+    // navigate(`/chat/${currentConversationId}`, { replace: true });
     window.location.reload();
   }
 };

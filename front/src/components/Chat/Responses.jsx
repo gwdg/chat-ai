@@ -21,7 +21,7 @@ import {
   updateConversation,
   selectCurrentConversationId,
 } from "../../Redux/reducers/conversationsSlice";
-import PreviewImageModal from "../../modals/PreviewImageModal";
+import PreviewImageModal from "../../modals/Chat/PreviewImageModal";
 import { useParams } from "react-router-dom";
 import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
@@ -31,33 +31,25 @@ import {
   addMemory,
   selectAllMemories,
 } from "../../Redux/reducers/userMemorySlice";
-import handleLLMResponse from "../../utils/handleLLMResponse";
+import sendMessage from "../../utils/sendMessage";
+import { useModal } from "../../modals/ModalContext";
 
 //Variable
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
 function Responses({
-  modelList,
+  modelsData,
   localState,
   setLocalState,
   loading,
-  setShowModalSession,
-  setShowBadRequest,
   setSelectedFiles,
-  setShowHistoryModal,
-  setShowFileModal,
-  updateLocalState,
   adjustHeight,
-  notifySuccess,
-  notifyError,
-  clearHistory,
-  updateSettings,
   loadingResend,
   setLoadingResend,
-  isArcanaSupported,
 }) {
   // Hooks
+  const { openModal } = useModal();
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -95,9 +87,24 @@ function Responses({
     setEditedResponse(response);
     setEditingResponseIndex(index);
   };
+
+  // Clear conversation history
+  const clearHistory = () => {
+    setLocalState((prevState) => ({
+      ...prevState,
+      responses: [], // Clear all responses
+      messages:
+        prevState.messages.length > 0
+          ? [prevState.messages[0]] // Keep only system message if it exists
+          : prevState.messages,
+    }));
+
+    notifySuccess("History cleared");
+  };
+
   const handleResponseSave = (index) => {
     // Find assistant response index in conversation array
-    const assistantIndex = localState.conversation.findIndex(
+    const assistantIndex = localState.messages.findIndex(
       (msg) =>
         msg.role === "assistant" &&
         msg.content === localState.responses[index].response
@@ -111,7 +118,7 @@ function Responses({
       return res;
     });
 
-    const newConversation = localState.conversation.map((msg, i) => {
+    const newMessages = localState.messages.map((msg, i) => {
       if (i === assistantIndex) {
         return { ...msg, content: editedResponse };
       }
@@ -121,7 +128,7 @@ function Responses({
     setLocalState({
       ...localState,
       responses: newResponses,
-      conversation: newConversation,
+      messages: newMessages,
     });
 
     setEditingResponseIndex(-1);
@@ -186,45 +193,34 @@ function Responses({
 
   // Function to handle resending a previous message
   const handleResendClick = async (index) => {
-    await handleLLMResponse({
+    await sendMessage({
+      localState,
+      setLocalState,
+      openModal,
       operationType: "resend",
       index,
       dispatch,
-      localState,
-      updateLocalState,
-      setLocalState,
       setLoadingResend,
-      modelList,
+      modelsData,
       memories,
-      isArcanaSupported,
-      notifyError,
-      notifySuccess,
-      setShowModalSession,
-      setShowBadRequest,
       timeoutTime,
     });
   };
 
   // Function to handle saving edited messages
   const handleSave = async (index) => {
-    await handleLLMResponse({
+    await sendMessage({
+      localState,
+      setLocalState,
+      openModal,
       operationType: "edit",
       index,
       editedText, // Make sure this variable is available in your component scope
       dispatch,
-      localState,
-      updateLocalState,
-      setLocalState,
       setLoadingResend,
-      modelList,
+      modelsData,
       memories,
-      isArcanaSupported,
       updateMemory,
-      fetchLLMResponse,
-      notifyError,
-      notifySuccess,
-      setShowModalSession,
-      setShowBadRequest,
       timeoutTime,
     });
   };
@@ -285,7 +281,7 @@ function Responses({
 
     // Only handle text files if they were actually part of the original request
     // Check if the original conversation message had text files
-    const originalUserMessage = localState.conversation.find(
+    const originalUserMessage = localState.messages.find(
       (msg, idx) =>
         msg.role === "user" &&
         Array.isArray(msg.content) &&
@@ -314,7 +310,7 @@ function Responses({
     }, 0);
 
     // Conversation trimming logic remains the same...
-    const originalConversation = [...localState.conversation];
+    const originalConversation = [...localState.messages];
     let pairsToKeep = 0;
     for (let i = 0; i < lastResponseIndex; i++) {
       if (!localState.responses[i]?.info) {
@@ -322,17 +318,17 @@ function Responses({
       }
     }
 
-    const filteredConversation = localState.conversation.filter(
+    const filteredConversation = localState.messages.filter(
       (message) => message.role !== "info"
     );
 
     const slicedFiltered = filteredConversation.slice(0, pairsToKeep * 2 + 1);
 
-    let newConversation = [];
+    let newMessages = [];
     let filteredIndex = 0;
 
     if (slicedFiltered.length === 0) {
-      newConversation = originalConversation.filter(
+      newMessages = originalConversation.filter(
         (message) => message.role === "system" || message.role === "info"
       );
     } else {
@@ -345,14 +341,14 @@ function Responses({
             originalConversation.indexOf(originalMessage);
 
           if (currentOriginalIndex <= lastKeptOriginalIndex) {
-            newConversation.push(originalMessage);
+            newMessages.push(originalMessage);
           }
         } else {
           if (
             filteredIndex < slicedFiltered.length &&
             originalMessage === slicedFiltered[filteredIndex]
           ) {
-            newConversation.push(originalMessage);
+            newMessages.push(originalMessage);
             filteredIndex++;
           }
         }
@@ -363,7 +359,7 @@ function Responses({
 
     setLocalState((prevState) => ({
       ...prevState,
-      conversation: newConversation,
+      messages: newMessages,
       responses: newResponses,
     }));
   };
@@ -438,8 +434,6 @@ function Responses({
             dispatch,
             currentConversationId,
             defaultModel,
-            notifyError,
-            notifySuccess,
             navigate
           );
         } catch (jsonError) {
@@ -459,7 +453,7 @@ function Responses({
     if (localState.dontShow.dontShowAgain) {
       clearHistory();
     } else {
-      setShowHistoryModal(true);
+      openModal("clearHistory", {clearHistory})
     }
   };
 
@@ -921,7 +915,7 @@ function Responses({
             <Tooltip text={t("description.export")}>
               <button
                 className="text-tertiary flex gap-1.5 items-center"
-                onClick={() => setShowFileModal(true)}
+                onClick={() => {openModal("exportConversation", {localState, setLocalState})}}
                 disabled={loading || loadingResend}
               >
                 <img

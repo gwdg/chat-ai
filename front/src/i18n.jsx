@@ -318,8 +318,8 @@ i18n
             input_button: "Rename",
             error_title: "Title is required",
 
-            pdf_not_processed_title: "Warning: PDF not processed",
-            pdf_not_processed:
+            unprocessed_files_title: "Warning: PDF not processed",
+            unprocessed_files:
               "Please process or remove the attached PDF to continue.",
             announcement:
               "Chat AI will be temporarily unavailable on Wednesday, 18.12.2024, from 10:00 to 12:00 due to maintenance. We apologize for the inconvenience.",
@@ -637,8 +637,8 @@ i18n
             input_button: "Umbenennen",
             error_title: "Titel ist erforderlich",
 
-            pdf_not_processed_title: "Warnung: PDF nicht verarbeitet",
-            pdf_not_processed:
+            unprocessed_files_title: "Warnung: PDF nicht verarbeitet",
+            unprocessed_files:
               "Bitte verarbeiten oder entfernen Sie das beigefügte PDF, um fortzufahren.",
 
             announcement:

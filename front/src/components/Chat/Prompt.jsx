@@ -11,7 +11,7 @@ import mic from "../../assets/icon_mic.svg";
 import pause from "../../assets/pause.svg";
 import {
   cancelRequest,
-} from "../../apis/LlmRequestApi";
+} from "../../apis/chatCompletions";
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -19,9 +19,11 @@ import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
 import video_icon from "../../assets/video_icon.svg";
 import cross from "../../assets/cross.svg";
 import uploaded from "../../assets/file_uploaded.svg";
-import { processPdfDocument } from "../../apis/PdfProcessApi";
+import { processFile } from "../../apis/processFile";
 import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
-import handleLLMResponse from "../../utils/handleLLMResponse";
+import sendMessage from "../../utils/sendMessage";
+import { useModal } from "../../modals/ModalContext";
+import { useToast } from "../../hooks/useToast";
 
 //Variable
 const languageMap = {
@@ -32,34 +34,26 @@ const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
 function Prompt({
-  modelList,
+  modelsData,
+  currentModel,
   loading,
   loadingResend,
-  isAudioSupported,
-  isImageSupported,
-  isVideoSupported,
-  isArcanaSupported,
   selectedFiles,
   localState,
   setLocalState,
   setLoading,
   setSelectedFiles,
-  setShowModalSession,
-  setShowBadRequest,
   toggleAdvOpt,
-  updateLocalState,
-  notifySuccess,
-  notifyError,
   adjustHeight,
-  setPdfNotProcessedModal,
-  setPreviewFile,
   showAdvOpt,
 }) {
   //Hooks
+  const { openModal } = useModal();
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const memories = useSelector(selectAllMemories);
   const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
+  const { notifySuccess, notifyError } = useToast();
 
   //Refs
   const hiddenFileInput = useRef(null);
@@ -76,6 +70,14 @@ function Prompt({
   const [pressTimer, setPressTimer] = useState(null);
   const [isLongPress, setIsLongPress] = useState(false);
 
+  // Update partial local state while preserving other values
+  const updateLocalState = (updates) => {
+    setLocalState((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+  };
+
   // Converts a file to base64 string format using FileReader
   const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -85,6 +87,10 @@ function Prompt({
       reader.readAsDataURL(file);
     });
   };
+
+  const isAudioSupported = (currentModel?.input?.includes("audio") || false)
+  const isVideoSupported = (currentModel?.input?.includes("video") || false)
+  const isImageSupported = (currentModel?.input?.includes("image") || false)
 
   // Main function to fetch and process LLM response
   const getRes = async (updatedConversation) => {
@@ -96,28 +102,27 @@ function Prompt({
         file.type !== "image" && file.type !== "video" && file.type !== "audio"
     );
 
-    await handleLLMResponse({
+    console.log(updatedConversation)
+
+    await sendMessage({
       operationType: "new",
+      openModal,
       updatedConversation,
       dispatch,
       localState,
-      updateLocalState,
       setLocalState,
       setLoading,
       selectedFiles,
       setSelectedFiles,
-      modelList,
+      modelsData,
       memories,
-      isArcanaSupported,
-      notifyError,
-      notifySuccess,
-      setShowModalSession,
-      setShowBadRequest,
       timeoutTime,
       audioFiles,
       imageFiles,
       videoFiles,
       textFiles,
+      notifyError,
+      notifySuccess
     });
   };
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
@@ -142,7 +147,7 @@ function Prompt({
       setProcessingFiles((prev) => new Set(prev).add(index));
 
       // Pass the original File object
-      const result = await processPdfDocument(file.file);
+      const result = await processFile(file.file);
 
       if (result.success && result.content) {
         setSelectedFiles((prevFiles) => {
@@ -304,12 +309,12 @@ function Prompt({
     );
 
     if (hasUnprocessedPDF) {
-      setPdfNotProcessedModal(true);
+      openModal("unprocessedFiles");
       return;
     }
 
     try {
-      let newConversation;
+      let newMessages;
 
       // Process submission with files
       if (selectedFiles.length > 0) {
@@ -382,14 +387,14 @@ function Prompt({
           ...videoContent,
         ];
 
-        newConversation = [
-          ...localState.conversation,
+        newMessages = [
+          ...localState.messages,
           { role: "user", content: newPromptContent },
         ];
       } else {
         // Simple text-only submission
-        newConversation = [
-          ...localState.conversation,
+        newMessages = [
+          ...localState.messages,
           { role: "user", content: localState.prompt },
         ];
       }
@@ -397,10 +402,10 @@ function Prompt({
       // Update conversation state
       setLocalState((prevState) => ({
         ...prevState,
-        conversation: newConversation,
+        messages: newMessages,
       }));
 
-      await getRes(newConversation);
+      await getRes(newMessages);
     } catch (error) {
       console.error("Error in handleSubmit:", error);
     }
@@ -1244,7 +1249,7 @@ function Prompt({
                           };
                         }
 
-                        setPreviewFile(previewFile);
+                        openModal("preview", {file: previewFile} );
                       }}
                     >
                       <div className="p-2 w-full h-full flex flex-col relative">
