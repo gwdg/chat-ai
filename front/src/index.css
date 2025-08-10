@@ -245,12 +245,14 @@ body {
 .light-toast {
   background: #ffffff;
   color: #000000;
+  font-size: 14px;
 }
 
 /* For dark theme */
 .dark-toast {
   background: #2b2b2b;
   color: #ffffff;
+  font-size: 14px;
 }
 
 @media (hover: none) {

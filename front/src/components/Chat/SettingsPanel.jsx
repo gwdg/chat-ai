@@ -64,7 +64,7 @@ const SettingsPanel = ({
   notifySuccess,
   notifyError,
   setShowModalSession,
-  userData
+  userData,
 }) => {
   const conversations = useSelector(selectConversations);
 
@@ -774,7 +774,7 @@ const SettingsPanel = ({
     }`}
       >
         <div
-          className={`relative w-full flex-col items-center mobile:p-0 text-tertiary flex gap-4 mobile:max-h-[40px]`}
+          className={`relative w-full flex-col items-center p-1 mobile:p-0 text-tertiary flex gap-4 mobile:max-h-[40px]`}
         >
           {/* Settings Panel */}
           <div
@@ -782,7 +782,7 @@ const SettingsPanel = ({
               showAdvOpt
                 ? "flex desktop:static absolute bottom-0 left-0"
                 : "hidden"
-            } mobile:w-full w-[calc(100%-12px)] border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
+            } w-full border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
           >
             <div
               className={`transform transition-all duration-300 ${
@@ -984,7 +984,13 @@ const SettingsPanel = ({
                 .toLowerCase()
                 .includes("external") && (
                 <div className="text-yellow-600 text-sm mb-3 select-none">
-                  <Trans i18nKey={userData?.org == "MPG" ? "description.warning_settings_mpg" : "description.warning_settings"} />
+                  <Trans
+                    i18nKey={
+                      userData?.org == "MPG"
+                        ? "description.warning_settings_mpg"
+                        : "description.warning_settings"
+                    }
+                  />
                 </div>
               )}
 
