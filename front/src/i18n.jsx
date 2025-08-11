@@ -79,6 +79,9 @@ i18n
               configuration: "Persona configuration",
               folder: "Folder",
               createOwn: "Create Your Own Persona",
+              importFromClipboard: "Import Persona from Clipboard",
+              importFromClipboardErrorInvalidJson: "Failed to import persona from clipboard. No valid JSON found.",
+              importFromClipboardErrorInvalidPersona: "Failed to import persona from clipboard. Invalid persona data."
             },
             settings: {
               userMemory: "User Memory",
@@ -393,6 +396,9 @@ i18n
               configuration: "Persona-Konfiguration",
               folder: "Ordner",
               createOwn: "Eigene Persona erstellen",
+              importFromClipboard: "Persona aus Zwischenablage importieren",
+              importFromClipboardErrorInvalidJson: "Fehler beim Importieren der Persona aus der Zwischenablage. Ungültiges JSON.",
+              importFromClipboardErrorInvalidPersona: "Fehler beim Importieren der Persona aus der Zwischenablage. Ungültige Persona-Daten."
             },
             settings: {
               userMemory: "Benutzerspeicher",

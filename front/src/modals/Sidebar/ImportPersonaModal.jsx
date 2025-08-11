@@ -2,17 +2,16 @@ import React, { useState, useEffect } from "react";
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
 import icon_arrow_left from "../../assets/icons/arrow_left.svg";
-import { importConversation } from "../../hooks/importConversation";
-import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useImportConversation } from "../../hooks/useImportConversation";
+import i18n from '../../i18n';
 
+
+import { useToast } from "../../hooks/useToast";
 export default function ImportPersonaModal({
   isOpen,
   onClose,
   onFileSelect,
   onError,
-  notifyError,
-  notifySuccess,
   repoOwner = "gwdg",
   repoName = "chat-ai-personas",
   branch = "main"
@@ -22,22 +21,14 @@ export default function ImportPersonaModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pathHistory, setPathHistory] = useState([]);
-
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
+  const { notifySuccess, notifyError } = useToast();
+  
+  const importConversation = useImportConversation();
 
   const handleImportPersona = async (parsedData) => {
     return importConversation(
-      parsedData,
-      dispatch,
-      notifyError,
-      notifySuccess,
-      navigate
+      parsedData
     );
-  };
-  
-  const handleImportError = (error) => {
-    notifyError(error);
   };
 
   const fetchContents = async (path = "") => {
@@ -127,6 +118,9 @@ export default function ImportPersonaModal({
         const cleaned = rawText.replace(/,(\s*[}$])/g, "$1");
         const parsed = JSON.parse(cleaned);
 
+        await importConversation(parsed);
+
+        /*
         if (handleImportPersona) {
           onClose();
           await handleImportPersona(parsed, item.name.replace(".json", ""));
@@ -135,9 +129,10 @@ export default function ImportPersonaModal({
         } else {
           window.open(item.html_url, "_blank");
         }
+          */
       } catch (err) {
         console.error("Import error:", err);
-        if (onError) onError(err.message || "Failed to import persona");
+        if (onError) onError("Failed to import persona");
       } finally {
         setLoading(false);
       }
@@ -167,6 +162,41 @@ export default function ImportPersonaModal({
   };
 
   const breadcrumbs = currentPath ? currentPath.split("/") : [];
+
+  // ADD below other handlers
+  const handleInsertFromClipboard = async () => {
+    try {
+      if (!navigator?.clipboard?.readText) {
+        throw new Error("Clipboard API not available in this context.");
+      }
+      setLoading(true);
+      const raw = await navigator.clipboard.readText();
+      if (!raw?.trim()) throw new Error("Clipboard is empty.");
+
+      const cleaned = raw.replace(/,(\s*[}$])/g, "$1");
+      let parsed;
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        throw new Error(i18n.t("description.persona.importFromClipboardErrorInvalidJson"));
+      }
+      try {
+        await importConversation(parsed);
+      } catch (err) {
+        console.error("Import error:", err);
+        throw new Error(i18n.t("description.persona.importFromClipboardErrorInvalidPersona"));
+      }
+      
+      onClose(); // match file import flow
+      //notifySuccess?.("Persona imported from clipboard.");
+    } catch (err) {
+      console.error("Clipboard import error:", err);
+      const msg = err?.message || "Failed to import persona from clipboard.";
+      onError ? onError(msg) : notifyError(i18n.t("description.persona.importFromClipboardErrorInvalidJson"));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <BaseModal
@@ -288,7 +318,14 @@ export default function ImportPersonaModal({
 
       {/* Footer */}
       <div className="px-4 py-3 border-t dark:border-border_dark text-xs text-gray-600 dark:text-gray-400">
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={handleInsertFromClipboard}
+            disabled={loading}
+            className="px-4 py-2 bg-tertiary hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
+          >
+            <Trans i18nKey="description.persona.importFromClipboard" />
+          </button>
           <button
             onClick={() =>
               window.open(`https://github.com/${repoOwner}/${repoName}`, "_blank")
