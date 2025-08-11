@@ -27,7 +27,7 @@ import { getModelsData } from "../../../apis/getModelsData";
 import { selectDefaultModel } from "../../../Redux/reducers/defaultModelSlice";
 
 // Hooks
-import { importConversation } from "../../../hooks/importConversation";
+import { useImportConversation } from "../../../hooks/useImportConversation";
 import { getDefaultSettings } from "../../../utils/settingsUtils";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
@@ -54,6 +54,7 @@ const SettingsPanel = ({
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const importConversation = useImportConversation();
   const currentConversationId = useSelector(
     (state) => state.conversations.currentConversationId
   );
@@ -405,15 +406,7 @@ const SettingsPanel = ({
         );
       }
       const parsedData = await response.json();
-      return importConversation(
-        parsedData,
-        dispatch,
-        currentConversationId,
-        defaultModel,
-        notifyError,
-        notifySuccess,
-        navigate
-      );
+      return await importConversation(parsedData);
     };
 
     if (conversations.length > 0) {

@@ -23,7 +23,7 @@ import PreviewImageModal from "../../modals/Chat/PreviewImageModal";
 import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
-import { importConversation } from "../../hooks/importConversation";
+import { useImportConversation } from "../../hooks/useImportConversation";
 import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
 import sendMessage from "../../utils/sendMessage";
 import { useModal } from "../../modals/ModalContext";
@@ -47,6 +47,7 @@ function Responses({
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const importConversation = useImportConversation();
 
   // Redux state
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
@@ -422,13 +423,7 @@ function Responses({
           const parsedData = JSON.parse(data);
 
           // Import
-          importConversation(
-            parsedData,
-            dispatch,
-            currentConversationId,
-            defaultModel,
-            navigate
-          );
+          await importConversation(parsedData);
         } catch (jsonError) {
           console.error("JSON Parse Error:", jsonError);
           notifyError("Invalid JSON file format: " + jsonError.message);
