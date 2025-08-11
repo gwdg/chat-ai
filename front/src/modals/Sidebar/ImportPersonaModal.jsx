@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
-import back_arrow from "../../assets/back_arrow.svg";
+import icon_arrow_left from "../../assets/icons/arrow_left.svg";
 import { importConversation } from "../../hooks/importConversation";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -199,7 +199,7 @@ export default function ImportPersonaModal({
                 onClick={handleBackClick}
                 className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-700 dark:text-white"
               >
-                <img src={back_arrow} alt="" className="h-3 w-3" />
+                <img src={icon_arrow_left} alt="" className="h-3 w-3" />
                 <Trans i18nKey="description.persona.back" />
               </button>
             )}

@@ -4,11 +4,11 @@ import { useSelector, useDispatch } from "react-redux";
 import { useModal } from "../ModalContext"; 
 import BaseModal from "../BaseModal";
 
-import audio_supported from "../../assets/audio_supported.svg";
-import image_supported from "../../assets/image_supported.svg";
-import video_icon from "../../assets/video_icon.svg";
-import thought_supported from "../../assets/thought_supported.svg";
-import books from "../../assets/books.svg";
+import icon_support_audio from "../../assets/icons/support_audio.svg";
+import icon_support_vision from "../../assets/icons/support_vision.svg";
+import icon_support_video from "../../assets/icons/support_video.svg";
+import icon_support_reasoning from "../../assets/icons/support_reasoning.svg";
+import icon_support_arcana from "../../assets/icons/support_arcana.svg";
 import DemandStatusIcon from "../../components/Others/DemandStatusIcon";
 
 import {
@@ -133,19 +133,19 @@ export default function UserSettingsModal({
                   {option.name}
                 </div>
                 {option.input?.includes("audio") && (
-                  <img src={audio_supported} alt="audio" className="h-[16px] w-[16px]" />
+                  <img src={icon_support_audio} alt="audio" className="h-[16px] w-[16px]" />
                 )}
                 {option.input?.includes("image") && (
-                  <img src={image_supported} alt="image" className="h-[16px] w-[16px]" />
+                  <img src={icon_support_vision} alt="image" className="h-[16px] w-[16px]" />
                 )}
                 {option.input?.includes("video") && (
-                  <img src={video_icon} alt="video" className="h-[16px] w-[16px]" />
+                  <img src={icon_support_video} alt="video" className="h-[16px] w-[16px]" />
                 )}
                 {option.output?.includes("thought") && (
-                  <img src={thought_supported} alt="thought" className="h-[16px] w-[16px]" />
+                  <img src={icon_support_reasoning} alt="thought" className="h-[16px] w-[16px]" />
                 )}
                 {option.input?.includes("arcana") && (
-                  <img src={books} alt="books" className="h-[16px] w-[16px]" />
+                  <img src={icon_support_arcana} alt="books" className="h-[16px] w-[16px]" />
                 )}
               </div>
             ))}

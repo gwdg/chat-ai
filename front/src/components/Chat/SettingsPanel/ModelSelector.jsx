@@ -4,13 +4,13 @@ import { Trans, useTranslation } from "react-i18next";
 import { useModal } from "../../../modals/ModalContext"; 
 import { useSelector, useDispatch } from "react-redux";
 
-import help from "../../../assets/icon_help.svg";
-import image_supported from "../../../assets/image_supported.svg";
-import audio_supported from "../../../assets/audio_supported.svg";
-import video_icon from "../../../assets/video_icon.svg";
-import thought_supported from "../../../assets/thought_supported.svg";
-import books from "../../../assets/books.svg";
-import dropdown from "../../../assets/icon_dropdown.svg";
+import icon_help from "../../../assets/icons/help.svg";
+import icon_support_vision from "../../../assets/icons/support_vision.svg";
+import icon_support_audio from "../../../assets/icons/support_audio.svg";
+import icon_support_video from "../../../assets/icons/support_video.svg";
+import icon_support_reasoning from "../../../assets/icons/support_reasoning.svg";
+import icon_support_arcana from "../../../assets/icons/support_arcana.svg";
+import icon_dropdown from "../../../assets/icons/dropdown.svg";
 import DemandStatusIcon from "../../Others/DemandStatusIcon";
 
 import { updateConversation, selectCurrentConversation, selectCurrentConversationId } from "../../../Redux/reducers/conversationsSlice";
@@ -115,7 +115,7 @@ export default function ModelSelector ({ modelsData, localState, setLocalState})
                     <Trans i18nKey="description.choose" />
                 </p>
                 <img
-                    src={help}
+                    src={icon_help}
                     alt="help"
                     className="h-[16px] w-[16px] cursor-pointer"
                     onClick={() => openModal("helpModels")}
@@ -150,28 +150,28 @@ export default function ModelSelector ({ modelsData, localState, setLocalState})
                     </div>
                     {(currentModel?.input?.includes("audio") || false) && (
                         <img
-                        src={audio_supported}
+                        src={icon_support_audio}
                         alt="audio_supported"
                         className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                         />
                     )}
                     {(currentModel?.input?.includes("image") || false) && (
                         <img
-                        src={image_supported}
+                        src={icon_support_vision}
                         alt="image_supported"
                         className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                         />
                     )}
                     {(currentModel?.input?.includes("video") || false) && (
                         <img
-                        src={video_icon}
+                        src={icon_support_video}
                         alt="video_icon"
                         className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                         />
                     )}
                     {(currentModel?.output?.includes("thought") || false) && (
                         <img
-                        src={thought_supported}
+                        src={icon_support_reasoning}
                         alt="thought_supported"
                         className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                         />
@@ -179,13 +179,13 @@ export default function ModelSelector ({ modelsData, localState, setLocalState})
                     
                     {(currentModel?.input?.includes("arcana") || false) && (
                         <img
-                        src={books}
+                        src={icon_support_arcana}
                         alt="books"
                         className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 mx-0.5"
                         />
                     )}
                     <img
-                        src={dropdown}
+                        src={icon_dropdown}
                         alt="drop-down"
                         className="h-[24px] w-[24px] cursor-pointer flex-shrink-0"
                     />
@@ -255,35 +255,35 @@ export default function ModelSelector ({ modelsData, localState, setLocalState})
                                 <div className="flex items-center gap-0.5 flex-shrink-0">
                                 {option.input.includes("audio") && (
                                     <img
-                                    src={audio_supported}
+                                    src={icon_support_audio}
                                     alt="audio_supported"
                                     className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                     />
                                 )}
                                 {option.input.includes("image") && (
                                     <img
-                                    src={image_supported}
+                                    src={icon_support_vision}
                                     alt="image_supported"
                                     className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                     />
                                 )}
                                 {option.input.includes("video") && (
                                     <img
-                                    src={video_icon}
+                                    src={icon_support_video}
                                     alt="video_icon"
                                     className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                     />
                                 )}
                                 {option.output.includes("thought") && (
                                     <img
-                                    src={thought_supported}
+                                    src={icon_support_reasoning}
                                     alt="thought_supported"
                                     className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                     />
                                 )}
                                 {option.input.includes("arcana") && (
                                     <img
-                                    src={books}
+                                    src={icon_support_arcana}
                                     alt="books"
                                     className="h-[16px] w-[16px] cursor-pointer flex-shrink-0 ml-0.5"
                                     />

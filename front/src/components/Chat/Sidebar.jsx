@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Trans } from "react-i18next";
 import {
   addConversation,
-  deleteConversation,
   setCurrentConversation,
   selectConversations,
   selectCurrentConversationId,
@@ -14,9 +13,9 @@ import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 import { useCallback, useEffect } from "react";
 
 // Asset imports
-import cross from "../../assets/cross.svg";
-import edit_icon from "../../assets/edit_icon.svg";
-import back_arrow from "../../assets/back_arrow.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
+import icon_edit from "../../assets/icons/edit.svg";
+import icon_arrow_left from "../../assets/icons/arrow_left.svg";
 import { persistor } from "../../Redux/store/store";
 import { getDefaultSettings } from "../../utils/settingsUtils";
 import { useModal } from "../../modals/ModalContext";
@@ -136,7 +135,7 @@ function Sidebar({
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors touch-manipulation w-8 h-8 flex items-center justify-center"
           style={{ WebkitTapHighlightColor: "transparent" }}
         >
-          <img src={back_arrow} alt="close" className="h-4 w-4" />
+          <img src={icon_arrow_left} alt="close" className="h-4 w-4" />
         </button>
       </div>
 
@@ -232,7 +231,7 @@ function Sidebar({
                         }}
                       >
                         <img
-                          src={edit_icon}
+                          src={icon_edit}
                           alt="edit"
                           className="w-3.5 h-3.5"
                         />
@@ -251,7 +250,7 @@ function Sidebar({
                           WebkitTapHighlightColor: "transparent",
                         }}
                       >
-                        <img src={cross} alt="delete" className="w-3.5 h-3.5" />
+                        <img src={icon_cross_sm} alt="delete" className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

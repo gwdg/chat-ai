@@ -1,5 +1,5 @@
 import { useModal } from "../../modals/ModalContext";
-import profile_icon from "../../assets/profile_icon.svg";
+import icon_profile from "../../assets/icons/profile.svg";
 
 export default function UserContainer({ localState, setLocalState, modelsData, userData }) {
   const { openModal } = useModal();
@@ -36,7 +36,7 @@ export default function UserContainer({ localState, setLocalState, modelsData, u
         onClick={() => openModal("userSettings", {localState, userData, modelsData})}
         style={{ WebkitTapHighlightColor: "transparent" }}
       >
-        <img className="h-full w-full" src={profile_icon} alt="Profile" />
+        <img className="h-full w-full" src={icon_profile} alt="Profile" />
       </button>
     );
 }

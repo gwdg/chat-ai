@@ -1,5 +1,5 @@
 import { useState } from "react";
-import help from "../../../assets/icon_help.svg";
+import icon_help from "../../../assets/icons/help.svg";
 import { useModal } from "../../../modals/ModalContext";
 
 // Component for Arcana authentication inputs
@@ -26,7 +26,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
       <div className="flex-shrink-0 flex items-center gap-2 select-none">
         <p className="text-sm">Arcana</p>
         <img
-          src={help}
+          src={icon_help}
           alt="help"
           className="h-[16px] w-[16px] cursor-pointer"
           onClick={() => openModal("helpArcana")}

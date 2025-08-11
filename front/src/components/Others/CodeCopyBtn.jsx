@@ -1,7 +1,7 @@
 // Importing necessary assets and hooks from React
 import { useState, useEffect } from "react";
-import copy from "../../assets/icon_copy.svg";
-import check from "../../assets/check.svg";
+import icon_copy from "../../assets/icons/copy.svg";
+import icon_check from "../../assets/icons/check.svg";
 
 // CodeCopyBtn component definition
 export default function CodeCopyBtn({ children, hovered }) {
@@ -38,10 +38,10 @@ export default function CodeCopyBtn({ children, hovered }) {
       } flex justify-end items-center absolute top-2 right-2 transition-opacity duration-300`}
     >
       {copied ? (
-        <img src={check} alt="copy" className="h-[15px] w-[15px]" />
+        <img src={icon_check} alt="copy" className="h-[15px] w-[15px]" />
       ) : (
         <img
-          src={copy}
+          src={icon_copy}
           alt="copy"
           className="h-[15px] w-[15px] cursor-pointer"
           onClick={() => {

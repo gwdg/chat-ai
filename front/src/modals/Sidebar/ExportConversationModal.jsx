@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
-import json_icon from "../../assets/json_icon.svg";
-import pdf_icon from "../../assets/pdf_icon.svg";
-import txt_icon from "../../assets/txt_icon.svg";
+import icon_file_json from "../../assets/icons/file_json.svg";
+import icon_file_pdf from "../../assets/icons/file_pdf.svg";
+import icon_file_text from "../../assets/icons/file_text.svg";
 import { selectCurrentConversation } from "../../Redux/reducers/conversationsSlice";
 
 export default function ExportConversationModal({
@@ -444,9 +444,9 @@ export default function ExportConversationModal({
   };
 
   const exportOptions = [
-    { id: "json", icon: json_icon, label: "description.fileFormat1" },
-    { id: "pdf", icon: pdf_icon, label: "description.fileFormat2" },
-    { id: "text", icon: txt_icon, label: "description.fileFormat3" },
+    { id: "json", icon: icon_file_json, label: "description.fileFormat1" },
+    { id: "pdf", icon: icon_file_pdf, label: "description.fileFormat2" },
+    { id: "text", icon: icon_file_text, label: "description.fileFormat3" },
   ];
 
   const handleCheckboxChange = (event) => {

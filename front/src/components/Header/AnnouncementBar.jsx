@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Trans } from "react-i18next";
-import cross from "../../assets/cross.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 
 export default function AnnouncementBar() {
     // TODO load announcement text from package and only display if exists
@@ -32,7 +32,7 @@ export default function AnnouncementBar() {
           aria-label="Close announcement"
         >
           <img
-            src={cross}
+            src={icon_cross_sm}
             alt="cross"
             className="h-[20px] w-[20px] sm:h-[24px] sm:w-[24px] md:h-[30px] md:w-[30px] cursor-pointer"
           />

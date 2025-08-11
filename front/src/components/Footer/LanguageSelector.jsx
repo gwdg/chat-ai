@@ -1,15 +1,15 @@
 import { Trans, useTranslation } from "react-i18next";
 
-import english_flag from "../../assets/english_flag.svg";
-import german_flag from "../../assets/german_flag.svg";
+import flag_english from "../../assets/flags/english.svg";
+import flag_german from "../../assets/flags/german.svg";
 
 export default function LanguageSelector() {
     // Initialize internationalization hooks
     const { i18n } = useTranslation();
     // Language configuration object mapping language codes to their flag icons
     const lngs = {
-        en: english_flag,
-        de: german_flag,
+        en: flag_english,
+        de: flag_german,
     };
 
     return (

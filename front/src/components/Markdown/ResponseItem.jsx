@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
-import copy from "../../assets/icon_copy.svg";
-import check from "../../assets/check.svg";
+import icon_copy from "../../assets/icons/copy.svg";
+import icon_check from "../../assets/icons/check.svg";
 import Typing from "../Others/Typing";
-import edit_icon from "../../assets/edit_icon.svg";
+import icon_edit from "../../assets/icons/edit.svg";
 import ErrorBoundary from "./ErrorBoundary";
 import { RotateCw } from "lucide-react";
 
@@ -339,7 +339,7 @@ const ResponseItem = React.memo(
                         disabled={isLoading}
                       >
                         <img
-                          src={edit_icon}
+                          src={icon_edit}
                           alt="edit"
                           className="h-20px] w-[20px]"
                         />
@@ -349,7 +349,7 @@ const ResponseItem = React.memo(
                         title="Copy response (without references)"
                       >
                         <img
-                          src={copied && indexChecked === index ? check : copy}
+                          src={copied && indexChecked === index ? icon_check : icon_copy}
                           alt="copy"
                           className="h-[18px] w-[18px]"
                         />

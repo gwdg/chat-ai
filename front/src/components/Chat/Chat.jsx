@@ -5,8 +5,6 @@ import { useDispatch, useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
 
 // Modals and components imports
-import SessionExpiredModal from "../../modals/Alert/ErrorSessionExpiredModal";
-import ClearHistoryModal from "../../modals/Alert/ClearHistoryModal";
 import Conversation from "./Conversation";
 import SettingsPanel from "./SettingsPanel/SettingsPanel";
 

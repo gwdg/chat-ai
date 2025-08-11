@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { Trans } from "react-i18next";
-import help from "../../../assets/icon_help.svg";
 import { useModal } from "../../../modals/ModalContext"; 
-import share_icon from "../../../assets/share_icon.svg";
+import icon_share_white from "../../../assets/icons/share_white.svg";
 
 export default function ShareSettingsButton({ localState, setLocalState}) {
     const { openModal } = useModal();
@@ -104,12 +102,12 @@ export default function ShareSettingsButton({ localState, setLocalState}) {
         <Trans i18nKey="description.custom9" />
         </div>
         <img
-        src={share_icon}
+        src={icon_share_white}
         alt="share_icon"
         className="hidden desktop:block h-[16px] w-[16px] cursor-pointer"
         />
         <img
-        src={share_icon}
+        src={icon_share_white}
         alt="share_icon"
         className="block desktop:hidden h-[20px] w-[20px] cursor-pointer"
         />

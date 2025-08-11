@@ -2,8 +2,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { toggleTheme } from "../../Redux/reducers/themeReducer";
 // Asset imports for icons and images
-import Light from "../../assets/light.svg";
-import Dark from "../../assets/dark.svg";
+import icon_theme_light from "../../assets/icons/theme_light.svg";
+import icon_theme_dark from "../../assets/icons/theme_dark.svg";
 
 export default function ThemeToggle () {
     const dispatch = useDispatch();
@@ -31,13 +31,13 @@ export default function ThemeToggle () {
             {isDarkMode ? (
             <img
                 className="h-5 w-5 flex-shrink-0"
-                src={Light}
+                src={icon_theme_light}
                 alt="Light Mode"
             />
             ) : (
             <img
                 className="h-5 w-5 -rotate-45 flex-shrink-0"
-                src={Dark}
+                src={icon_theme_dark}
                 alt="Dark Mode"
             />
             )}

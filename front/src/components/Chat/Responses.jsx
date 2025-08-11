@@ -3,22 +3,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Tooltip from "../Others/Tooltip";
 
 //Assets
-import retry from "../../assets/icon_retry.svg";
-import mic from "../../assets/icon_mic.svg";
-import clear from "../../assets/cross_icon.svg";
-import export_icon from "../../assets/export_icon.svg";
-import import_icon from "../../assets/import_icon.svg";
-import video_icon from "../../assets/video_icon.svg";
-import send from "../../assets/icon_send.svg";
-import edit_icon from "../../assets/edit_icon.svg";
-import icon_resend from "../../assets/icon_resend.svg";
+import icon_retry from "../../assets/icons/retry.svg";
+import icon_mic from "../../assets/icons/mic.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
+import icon_export from "../../assets/icons/export.svg";
+import icon_import from "../../assets/icons/import.svg";
+import icon_support_video from "../../assets/icons/support_video.svg";
+import icon_send from "../../assets/icons/send.svg";
+import icon_edit from "../../assets/icons/edit.svg";
+import icon_undo from "../../assets/icons/undo.svg";
 import ResponseItem from "../Markdown/ResponseItem";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
-  setIsResponding,
-  updateConversation,
   selectCurrentConversationId,
 } from "../../Redux/reducers/conversationsSlice";
 import PreviewImageModal from "../../modals/Chat/PreviewImageModal";
@@ -27,10 +25,7 @@ import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
 import { importConversation } from "../../hooks/importConversation";
-import {
-  addMemory,
-  selectAllMemories,
-} from "../../Redux/reducers/userMemorySlice";
+import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
 import sendMessage from "../../utils/sendMessage";
 import { useModal } from "../../modals/ModalContext";
 
@@ -56,7 +51,6 @@ function Responses({
 
   // Redux state
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
-  const { conversationId } = useParams();
   const currentConversationId = useSelector(selectCurrentConversationId);
   const defaultModel = useSelector(selectDefaultModel);
   const memories = useSelector(selectAllMemories);
@@ -629,7 +623,7 @@ function Responses({
                             disabled={loading || loadingResend}
                           >
                             <img
-                              src={clear}
+                              src={icon_cross_sm}
                               alt="clear"
                               className="h-[22px] w-[22px] cursor-pointer"
                             />
@@ -643,7 +637,7 @@ function Responses({
                           >
                             <img
                               className="cursor-pointer h-[22px] w-[22px]"
-                              src={send}
+                              src={icon_send}
                               alt="send"
                             />
                           </button>
@@ -669,7 +663,7 @@ function Responses({
                                 disabled={loading || loadingResend}
                               >
                                 <img
-                                  src={icon_resend}
+                                  src={icon_undo}
                                   alt="icon_resend"
                                   className="h-[22px] w-[22px] cursor-pointer"
                                 />
@@ -681,7 +675,7 @@ function Responses({
                                 disabled={loading || loadingResend}
                               >
                                 <img
-                                  src={edit_icon}
+                                  src={icon_edit}
                                   alt="edit_icon"
                                   className="h-[22px] w-[22px] cursor-pointer"
                                 />
@@ -715,7 +709,7 @@ function Responses({
                                 setPreviewFile(imageObj.image_url.url)
                               }
                               onError={(e) => {
-                                e.target.src = video_icon;
+                                e.target.src = icon_support_video;
                               }}
                             />
                           );
@@ -728,7 +722,7 @@ function Responses({
                           return (
                             <img
                               key={`vid-${vidIndex}`}
-                              src={video_icon}
+                              src={icon_support_video}
                               alt="Video content"
                               className="h-[130px] w-[130px] rounded-xl object-cover cursor-pointer"
                               onClick={() =>
@@ -802,7 +796,7 @@ function Responses({
                             <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-1.5">
                               <img
                                 className="h-5 w-5 brightness-0 invert"
-                                src={mic}
+                                src={icon_mic}
                                 alt="audio file"
                               />
                             </div>
@@ -845,7 +839,7 @@ function Responses({
                           disabled={loading || loadingResend}
                         >
                           <img
-                            src={icon_resend}
+                            src={icon_undo}
                             alt="icon_resend"
                             className="h-[22px] w-[22px] cursor-pointer"
                           />
@@ -897,7 +891,7 @@ function Responses({
             >
               <img
                 className="cursor-pointer h-[22px] w-[22px]"
-                src={clear}
+                src={icon_cross_sm}
                 alt="clear"
               />
             </button>
@@ -920,7 +914,7 @@ function Responses({
               >
                 <img
                   className="cursor-pointer h-[26px] w-[26px]"
-                  src={export_icon}
+                  src={icon_export}
                   alt="export"
                 />
               </button>
@@ -942,7 +936,7 @@ function Responses({
                 >
                   <img
                     className="h-[26px] w-[26px]"
-                    src={import_icon}
+                    src={icon_import}
                     alt="import"
                   />
                 </button>
@@ -956,7 +950,7 @@ function Responses({
               >
                 <img
                   className="cursor-pointer h-[26px] w-[26px]"
-                  src={retry}
+                  src={icon_retry}
                   alt="retry"
                 />
               </button>
@@ -980,7 +974,7 @@ function Responses({
             >
               <img
                 className="cursor-pointer h-[26px] w-[26px]"
-                src={import_icon}
+                src={icon_import}
                 alt="import"
               />
             </button>

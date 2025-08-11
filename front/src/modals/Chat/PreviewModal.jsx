@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
-import cross from "../../assets/cross.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 
 // --------------------
 // Utility + helper components
@@ -439,7 +439,7 @@ export default function PreviewModal({ isOpen, onClose, file }) {
           </button>
           {/* Close Button */}
           <button onClick={onClose} aria-label="Close">
-            <img src={cross} alt="Close" className="h-[24px] w-[24px]" />
+            <img src={icon_cross_sm} alt="Close" className="h-[24px] w-[24px]" />
           </button>
         </div>
       </div>

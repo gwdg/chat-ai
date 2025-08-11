@@ -1,4 +1,4 @@
-import arrow_down from "../../assets/footer_arrow.svg";
+import arrow_down_purple from "../../assets/icons/arrow_down_purple.svg";
 
 export default function HideFooterButton({scrollToTop, toggleFooter}) {
     return (
@@ -9,7 +9,7 @@ export default function HideFooterButton({scrollToTop, toggleFooter}) {
           toggleFooter();
         }}
         className="cursor-pointer h-[15px] w-[55px]"
-        src={arrow_down}
+        src={arrow_down_purple}
         alt="Toggle footer"
       />
     </div>

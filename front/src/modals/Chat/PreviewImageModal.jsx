@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import ContainerModal from "./ContainerModal";
-import cross from "../../assets/cross.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 
 const PreviewImageModal = ({ file, onClose }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -282,7 +282,7 @@ const PreviewImageModal = ({ file, onClose }) => {
               Save
             </button>
             <img
-              src={cross}
+              src={icon_cross_sm}
               alt="close"
               className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity"
               onClick={onClose}

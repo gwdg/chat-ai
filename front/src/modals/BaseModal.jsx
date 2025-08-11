@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { Trans } from "react-i18next";
-import cross from "../assets/cross.svg";
+import cross_sm from "../assets/icons/cross_sm.svg";
 
 /**
  * BaseModal Component
@@ -70,7 +70,7 @@ export default function BaseModal({
                     aria-label="Close dialog"
                   >
                     <img
-                      src={cross}
+                      src={cross_sm}
                       alt="Close"
                       className="h-[24px] w-[24px]"
                     />

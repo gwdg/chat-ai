@@ -1,5 +1,5 @@
 import { useState } from "react";
-import help from "../../../assets/icon_help.svg";
+import icon_help from "../../../assets/icons/help.svg";
 import { useModal } from "../../../modals/ModalContext";
 
 export default function GWDGToggle({ localState, setLocalState}) {
@@ -10,7 +10,7 @@ export default function GWDGToggle({ localState, setLocalState}) {
             <p className="text-sm">Use GWDG Tools</p>
             {/* If you ever want a tooltip/help‑icon you can reuse the same pattern */}
             <img
-            src={help}
+            src={icon_help}
             alt="help"
             className="h-[16px] w-[16px] cursor-pointer"
             onClick={() => openModal("helpTools")}

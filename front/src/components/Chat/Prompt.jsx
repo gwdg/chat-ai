@@ -2,13 +2,17 @@
 import { useEffect, useRef, useState } from "react";
 
 //Assets
-import clear from "../../assets/cross_icon.svg";
-import settings_icon from "../../assets/Settings_Icon.svg";
-import image_icon from "../../assets/icon_image.svg";
-import send from "../../assets/icon_send.svg";
-import upload from "../../assets/add.svg";
-import mic from "../../assets/icon_mic.svg";
-import pause from "../../assets/pause.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
+import icon_cross from "../../assets/icons/cross.svg";
+import icon_settings from "../../assets/icons/settings.svg";
+import icon_support_vision from "../../assets/icons/support_vision.svg";
+import icon_support_video from "../../assets/icons/support_video.svg";
+import icon_send from "../../assets/icons/send.svg";
+import icon_attach from "../../assets/icons/attach.svg";
+import icon_mic from "../../assets/icons/mic.svg";
+import icon_stop from "../../assets/icons/stop.svg";
+import icon_file_uploaded from "../../assets/icons/file_uploaded.svg";
+
 import {
   cancelRequest,
 } from "../../apis/chatCompletions";
@@ -16,9 +20,7 @@ import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
-import video_icon from "../../assets/video_icon.svg";
-import cross from "../../assets/cross.svg";
-import uploaded from "../../assets/file_uploaded.svg";
+
 import { processFile } from "../../apis/processFile";
 import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
 import sendMessage from "../../utils/sendMessage";
@@ -1137,7 +1139,7 @@ function Prompt({
                         icon: (
                           <img
                             className="h-4 w-4 brightness-0 invert"
-                            src={mic}
+                            src={icon_mic}
                             alt={file.name}
                           />
                         ),
@@ -1173,7 +1175,7 @@ function Prompt({
                         icon: (
                           <img
                             className="h-4 w-4 brightness-0 invert"
-                            src={video_icon}
+                            src={icon_support_video}
                             alt="video"
                           />
                         ),
@@ -1199,7 +1201,7 @@ function Prompt({
                         icon: (
                           <img
                             className="h-4 w-4 brightness-0 invert"
-                            src={uploaded}
+                            src={icon_file_uploaded}
                             alt="uploaded"
                           />
                         ),
@@ -1301,7 +1303,7 @@ function Prompt({
                           aria-label="Remove file"
                         >
                           <img
-                            src={cross}
+                            src={icon_cross}
                             alt="remove"
                             className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity"
                           />
@@ -1442,7 +1444,7 @@ function Prompt({
                 >
                   <img
                     className="cursor-pointer h-[25px] w-[25px]"
-                    src={clear}
+                    src={icon_cross_sm}
                     alt="clear"
                   />
                 </button>
@@ -1458,7 +1460,7 @@ function Prompt({
                   >
                     <img
                       className="cursor-pointer h-[25px] w-[25px]"
-                      src={settings_icon}
+                      src={icon_settings}
                       alt="settings"
                     />
                   </button>
@@ -1480,7 +1482,7 @@ function Prompt({
                 >
                   <img
                     className="cursor-pointer h-[25px] w-[25px]"
-                    src={upload}
+                    src={icon_attach}
                     alt="upload"
                   />
                 </button>
@@ -1507,7 +1509,7 @@ function Prompt({
                     >
                       <img
                         className="cursor-pointer h-[25px] w-[25px]"
-                        src={image_icon}
+                        src={icon_support_vision}
                         alt="attach file"
                       />
                     </button>
@@ -1545,7 +1547,7 @@ function Prompt({
                         // Microphone icon when not recording
                         <img
                           className="h-[18px] w-[18px]"
-                          src={mic}
+                          src={icon_mic}
                           alt="microphone"
                         />
                       )}
@@ -1558,7 +1560,7 @@ function Prompt({
                   <button className="h-[30px] w-[30px] cursor-pointer">
                     <img
                       className="cursor-pointer h-[30px] w-[30px]"
-                      src={pause}
+                      src={icon_stop}
                       alt="pause"
                       onClick={handleCancelRequest}
                     />
@@ -1569,7 +1571,7 @@ function Prompt({
                   <button className="h-[30px] w-[30px] cursor-pointer">
                     <img
                       className="cursor-pointer h-[30px] w-[30px]"
-                      src={send}
+                      src={icon_send}
                       alt="send"
                       onClick={(event) => {
                         handleSubmit(event);

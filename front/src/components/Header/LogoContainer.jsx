@@ -1,4 +1,4 @@
-import Logo from "../../assets/chatai-logo.svg";
+import Logo from "../../assets/logos/chat_ai.svg";
 import { Link } from "react-router-dom";
 
 export default function LogoContainer({ isMobile = false }) {

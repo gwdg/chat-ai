@@ -8,7 +8,7 @@ import { setCountGlobal } from "../../Redux/actions/alertAction";
 import { useDispatch, useSelector } from "react-redux";
 
 //Assets
-import cross from "../../assets/cross.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 
 //Components
 import Prompt from "./Prompt";
@@ -111,7 +111,7 @@ const Conversation = ({
               .
             </p>
             <img
-              src={cross}
+              src={icon_cross_sm}
               alt="cross"
               className="h-[20px] w-[20px] cursor-pointer"
               onClick={handleClose}

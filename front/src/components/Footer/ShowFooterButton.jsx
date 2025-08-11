@@ -1,4 +1,4 @@
-import footer_arrow from "../../assets/footer_arrow.svg";
+import arrow_down_purple from "../../assets/icons/arrow_down_purple.svg";
 
 export default function ShowFooterButton({toggleFooter}) {
     return (
@@ -10,7 +10,7 @@ export default function ShowFooterButton({toggleFooter}) {
       >
         <img
           className="h-4 w-12 rotate-180"
-          src={footer_arrow}
+          src={arrow_down_purple}
           alt="Show footer"
         />
       </div>

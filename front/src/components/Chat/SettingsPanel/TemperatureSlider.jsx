@@ -1,5 +1,5 @@
 import { useState } from "react";
-import help from "../../../assets/icon_help.svg";
+import icon_help from "../../../assets/icons/help.svg";
 import { useModal } from "../../../modals/ModalContext"; 
 
 export default function TemperatureSlider({ localState, setLocalState}) {
@@ -23,7 +23,7 @@ export default function TemperatureSlider({ localState, setLocalState}) {
         <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
             <p className="text-sm font-medium">temp</p>
             <img
-            src={help}
+            src={icon_help}
             alt="help"
             className="h-[16px] w-[16px] cursor-pointer"
             onClick={() => openModal("helpTemperature")}
