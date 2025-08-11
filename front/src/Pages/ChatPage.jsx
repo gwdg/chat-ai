@@ -31,6 +31,8 @@ function ChatPage() {
       top_p: null,
       systemPrompt: "",
       memory: 2,
+      use_gwdg_tools: true,
+      arcana: {id: ""},
     },
     exportOptions: {
       exportSettings: false,
@@ -41,9 +43,6 @@ function ChatPage() {
       dontShowAgain: false,
       dontShowAgainShare: false,
       dontShowAgainMemory: false,
-    },
-    arcana: {
-      id: "",
     },
   });
 

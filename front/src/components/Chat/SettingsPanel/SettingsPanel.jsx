@@ -701,7 +701,7 @@ const SettingsPanel = ({
               />
             
               {/* Arcana warning*/}
-              {localState.arcana.id && (localState.settings.useGWDGTools || (currentModel?.input?.includes("arcana") || false)) && (
+              {localState.settings.arcana?.id && (localState.settings.useGWDGTools || (currentModel?.input?.includes("arcana") || false)) && (
                 <div className="text-yellow-600 text-xs w-full select-none">
                   <Trans i18nKey="description.warning_arcana" />
                 </div>

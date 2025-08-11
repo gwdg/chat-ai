@@ -15,7 +15,7 @@ import DemandStatusIcon from "../../Others/DemandStatusIcon";
 
 import { updateConversation, selectCurrentConversation, selectCurrentConversationId } from "../../../Redux/reducers/conversationsSlice";
 
-export default function ModelSelector ({ modelsData, localState, setLocalState}) {
+export default function ModelSelector ({ modelsData, localState }) {
 
     const [searchQuery, setSearchQuery] = useState("");
     const { openModal } = useModal();

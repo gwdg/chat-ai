@@ -87,9 +87,10 @@ i18n
               manageMemory: "Manage Memory",
               userProfileSettings: "User Profile Settings",
               logout: "Logout",
-              defaultModel: "Default Model",
+              defaultModelTitle: "Default Model",
+              defaultModel: "Current: {{currentModel}}",
               defaultModelDescription:
-                "Select the default model for new conversations. Current: {{currentModel}}",
+                "Select the default model for new conversations.",
               clearAllChats: "Clear All Chats",
               clearAllChatsDescription:
                 "This will permanently delete all your chat history and cannot be undone.",
