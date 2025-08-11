@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import ContainerModal from "./ContainerModal";
 import cross from "../assets/cross.svg";
 
-const PreviewModal = ({ file, onClose }) => {
+const PreviewImageModal = ({ file, onClose }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [scale, setScale] = useState(1);
@@ -11,10 +11,10 @@ const PreviewModal = ({ file, onClose }) => {
   const [duration, setDuration] = useState(0);
   const audioRef = useRef(null);
 
-  // Determine content type - Updated logic for new file format
+  // Enhanced content type detection
   const isTextContent =
     typeof file === "object" &&
-    file.content &&
+    (file.content || file.isText || file.isProcessedDocument) &&
     file.fileType !== "image" &&
     file.type !== "audio" &&
     !file.isAudio;
@@ -24,26 +24,36 @@ const PreviewModal = ({ file, onClose }) => {
 
   const isImageContent = !isTextContent && !isAudioContent;
 
-  // Updated content extraction logic
+  // Enhanced content extraction logic
   const content = (() => {
     if (typeof file === "string") return file;
-    if (isTextContent) return file.content;
+    if (isTextContent) {
+      // For processed documents, use the processed content
+      if (file.isProcessedDocument && file.processedContent) {
+        return file.processedContent;
+      }
+      return file.content;
+    }
     if (isAudioContent) {
-      // Handle both old and new audio formats
       return file.data || file.text;
     }
     return file.text || file.content;
   })();
 
-  const title =
-    typeof file === "string"
-      ? "Preview"
-      : file.name ||
-        (isTextContent
-          ? "Text Preview"
-          : isAudioContent
-          ? "Audio Preview"
-          : "Image Preview");
+  // Enhanced title generation
+  const title = (() => {
+    if (typeof file === "string") return "Preview";
+    if (file.name) return file.name;
+    if (isTextContent) {
+      if (file.isProcessedDocument) {
+        const fileType = file.fileType?.toUpperCase() || "DOCUMENT";
+        return `Processed ${fileType}`;
+      }
+      return "Text Preview";
+    }
+    if (isAudioContent) return "Audio Preview";
+    return "Image Preview";
+  })();
 
   // Reset when content changes
   useEffect(() => {
@@ -147,7 +157,7 @@ const PreviewModal = ({ file, onClose }) => {
     return `${size.toFixed(1)} ${units[unitIndex]}`;
   };
 
-  // Function to handle file download
+  // Enhanced download function
   const handleDownload = () => {
     try {
       let fileName = title;
@@ -155,10 +165,24 @@ const PreviewModal = ({ file, onClose }) => {
       let blob;
 
       if (isTextContent) {
-        if (file.name && file.name.toLowerCase().endsWith(".pdf")) {
-          fileName = fileName.replace(/\.pdf$/i, ".md");
-        } else if (!fileName.includes(".")) {
-          fileName += ".txt";
+        // Handle processed documents
+        if (file.isProcessedDocument) {
+          const fileType = file.fileType?.toLowerCase();
+          if (fileType === "pdf") {
+            fileName = fileName.replace(/\.pdf$/i, "") + "_processed.md";
+          } else if (fileType === "excel") {
+            fileName =
+              fileName.replace(/\.(xlsx?|xls)$/i, "") + "_processed.md";
+          } else if (fileType === "docx") {
+            fileName = fileName.replace(/\.docx$/i, "") + "_processed.md";
+          } else {
+            fileName += "_processed.md";
+          }
+        } else {
+          // Regular text files
+          if (!fileName.includes(".")) {
+            fileName += ".txt";
+          }
         }
         blob = new Blob([content], { type: "text/plain;charset=utf-8" });
         downloadUrl = URL.createObjectURL(blob);
@@ -221,9 +245,18 @@ const PreviewModal = ({ file, onClose }) => {
     <ContainerModal showModal={onClose}>
       <div className="dark:border-border_dark rounded-2xl bg-white dark:bg-black p-4 w-[90vw] sm:w-[70vw] max-w-[1000px] max-h-[95vh] overflow-hidden">
         <div className="flex justify-between items-center mb-4 px-2">
-          <p className="text-lg font-medium text-tertiary truncate max-w-[60%] dark:text-gray-200">
-            {title}
-          </p>
+          <div className="flex items-center gap-2 max-w-[60%]">
+            <p className="text-lg font-medium text-tertiary truncate dark:text-gray-200">
+              {title}
+            </p>
+            {/* Show processed indicator for processed documents */}
+            {file.isProcessedDocument && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                ✓ Processed
+              </span>
+            )}
+          </div>
+
           <div className="flex items-center gap-4">
             {isImageContent && (
               <>
@@ -303,18 +336,50 @@ const PreviewModal = ({ file, onClose }) => {
             </div>
           )}
 
+          {/* Enhanced text content display */}
           {isTextContent && (
-            <div className="w-full overflow-auto p-4 bg-gray-50 dark:bg-gray-900 rounded-lg text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-              {content}
+            <div className="w-full overflow-auto">
+              {/* Header for processed documents */}
+              {file.isProcessedDocument && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-green-600 dark:text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                        Processed {file.fileType?.toUpperCase()} Content
+                      </p>
+                      <p className="text-xs text-green-600 dark:text-green-300">
+                        This content has been extracted and processed from the
+                        original document.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono text-sm">
+                {content}
+              </div>
             </div>
           )}
 
+          {/* Audio content */}
           {isAudioContent && audioSrc && (
             <div className="w-full max-w-md p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl border border-blue-200 dark:border-blue-700/50">
-              {/* Audio element */}
               <audio ref={audioRef} src={audioSrc} preload="metadata" />
 
-              {/* Audio info */}
               <div className="text-center mb-6">
                 <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <svg
@@ -334,9 +399,7 @@ const PreviewModal = ({ file, onClose }) => {
                 </p>
               </div>
 
-              {/* Audio controls */}
               <div className="space-y-4">
-                {/* Play/Pause button */}
                 <div className="flex justify-center">
                   <button
                     onClick={togglePlayPause}
@@ -363,7 +426,6 @@ const PreviewModal = ({ file, onClose }) => {
                   </button>
                 </div>
 
-                {/* Progress bar */}
                 <div className="space-y-2">
                   <div
                     className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 cursor-pointer"
@@ -398,6 +460,7 @@ const PreviewModal = ({ file, onClose }) => {
             </div>
           )}
 
+          {/* Image content */}
           {isImageContent && (
             <div className="relative" style={{ transform: `scale(${scale})` }}>
               <img
@@ -418,4 +481,4 @@ const PreviewModal = ({ file, onClose }) => {
   );
 };
 
-export default PreviewModal;
+export default PreviewImageModal;

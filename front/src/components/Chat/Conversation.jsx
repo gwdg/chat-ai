@@ -39,7 +39,7 @@ const Conversation = ({
   clearHistory,
   notifySuccess,
   notifyError,
-  setPdfNotProcessedModal,
+  setDocNotProcessedModal,
   showAdvOpt,
   setPreviewFile,
   currentModel,
@@ -175,7 +175,7 @@ const Conversation = ({
         notifySuccess={notifySuccess}
         notifyError={notifyError}
         adjustHeight={adjustHeight}
-        setPdfNotProcessedModal={setPdfNotProcessedModal}
+        setDocNotProcessedModal={setDocNotProcessedModal}
         loadingResend={loadingResend}
         setPreviewFile={setPreviewFile}
         showAdvOpt={showAdvOpt}

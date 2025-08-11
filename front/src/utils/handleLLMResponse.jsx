@@ -129,7 +129,9 @@ const handleLLMResponse = async ({
           name: file.name,
           fileType: file.fileType || "text",
           content:
-            file.fileType === "pdf"
+            file.fileType === "pdf" ||
+            file.fileType === "docx" ||
+            file.fileType === "excel"
               ? `${file.name}: ${file.processedContent}`
               : `${file.name}: ${file.content}`,
           type: "text",

@@ -815,7 +815,10 @@ function Responses({
                   res?.videos?.length > 0 ||
                   res?.textFiles?.length > 0 ||
                   res?.audioFiles?.length > 0) && (
-                  <div className="flex gap-1.5 overflow-x-auto items-center p-2.5 group">
+                  <div
+                    className="flex gap-1.5 overflow-x-auto items-center p-2.5 group"
+                    key={`media-${index}`}
+                  >
                     <div className="flex-1 flex gap-1.5 overflow-x-auto items-center p-2.5">
                       {/* Images */}
                       {res.images?.map((imageObj, imgIndex) => {
@@ -840,6 +843,7 @@ function Responses({
                         }
                         return null;
                       })}
+
                       {/* Videos */}
                       {res.videos?.map((videoObj, vidIndex) => {
                         if (videoObj.type === "video_url") {
@@ -859,47 +863,80 @@ function Responses({
                         }
                         return null;
                       })}
-                      {/* Text Files */}
-                      {res.textFiles?.map((textObj, textIndex) => {
-                        if (
-                          textObj.fileType === "text" ||
-                          textObj.fileType === "pdf"
-                        ) {
-                          const textContent = textObj.content;
-                          const fileType = textObj.fileType || "txt";
-                          const textPreview =
-                            textContent.substring(0, 100) +
-                            (textContent.length > 100 ? "..." : "");
-                          const fileName = textContent.split(":")[0] || "File";
 
-                          return (
-                            <div
-                              key={`text-${textIndex}`}
-                              className="h-[130px] w-[130px] rounded-xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-sm transition-all"
-                              onClick={() =>
+                      {/* Text Files - Updated to show processed content for documents */}
+                      {res.textFiles?.map((textObj, textIndex) => {
+                        // Determine if this is a processed document
+                        const isProcessedDocument = [
+                          "pdf",
+                          "excel",
+                          "docx",
+                        ].includes(textObj.fileType);
+                        const displayContent = textObj.content;
+                        const fileName =
+                          textObj.content.split(":")[0] || "File";
+                        const fileType = textObj.fileType || "txt";
+
+                        // For processed documents, show processed content
+                        const textPreview = isProcessedDocument
+                          ? displayContent.substring(0, 120) +
+                            (displayContent.length > 120 ? "..." : "")
+                          : displayContent.substring(0, 100) +
+                            (displayContent.length > 100 ? "..." : "");
+
+                        return (
+                          <div
+                            key={`text-${textIndex}`}
+                            className="h-[130px] w-[130px] rounded-xl flex flex-col cursor-pointer bg-bg_light/80 dark:bg-bg_dark/80 hover:bg-bg_light/50 dark:hover:bg-white/5 overflow-hidden shadow-sm transition-all"
+                            onClick={() => {
+                              if (isProcessedDocument) {
+                                // For processed documents, pass the processed data
                                 setPreviewFile({
                                   content: textObj.content,
                                   name: fileName,
+                                  fileType: textObj.fileType,
+                                  processed: true,
+                                  processedContent: textObj.content,
                                   isText: true,
-                                })
+                                  isProcessedDocument: true,
+                                });
+                              } else {
+                                // For regular text files
+                                setPreviewFile({
+                                  content: textObj.content,
+                                  name: fileName,
+                                  fileType: textObj.fileType,
+                                  isText: true,
+                                });
                               }
-                            >
-                              <div className="px-2.5 py-1.5 font-medium text-xs truncate border-b text-black dark:text-white">
-                                {fileName}
-                              </div>
-                              <div className="flex-1 p-2.5 text-xs overflow-hidden text-tertiary">
-                                {textPreview}
-                              </div>
-                              <div className="flex justify-center items-center pb-1.5">
-                                <span className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 uppercase">
-                                  {fileType}
+                            }}
+                          >
+                            <div className="px-2.5 py-1.5 font-medium text-xs truncate border-b text-black dark:text-white flex items-center gap-1">
+                              {fileName}
+                              {isProcessedDocument && (
+                                <span className="inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                  ✓
                                 </span>
-                              </div>
+                              )}
                             </div>
-                          );
-                        }
-                        return null;
+                            <div className="flex-1 p-2.5 text-xs overflow-hidden text-tertiary">
+                              {textPreview}
+                            </div>
+                            <div className="flex justify-center items-center pb-1.5">
+                              <span
+                                className={`px-2.5 py-0.5 text-xs font-medium rounded-full uppercase ${
+                                  isProcessedDocument
+                                    ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                    : "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                                }`}
+                              >
+                                {fileType}
+                              </span>
+                            </div>
+                          </div>
+                        );
                       })}
+
                       {/* Audio Files */}
                       {res.audioFiles?.map((audioFile, audioIndex) => (
                         <div
@@ -912,6 +949,7 @@ function Responses({
                               text: audioFile.data || audioFile.text,
                               format: audioFile.format,
                               size: audioFile.size,
+                              isAudio: true,
                             })
                           }
                         >

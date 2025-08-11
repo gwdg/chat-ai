@@ -1,13 +1,16 @@
-// PDF processing function
-export const processPdfDocument = async (pdfFile) => {
+// Generic document processing function
+export const processDocument = async (documentFile) => {
   try {
     const formData = new FormData();
-    formData.append("document", pdfFile);
+    formData.append("document", documentFile);
 
-    const response = await fetch(import.meta.env.VITE_BACKEND_ENDPOINT + '/process-pdf', {
-      method: "POST",
-      body: formData,
-    });
+    const response = await fetch(
+      import.meta.env.VITE_BACKEND_ENDPOINT + "/process-pdf",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -21,11 +24,16 @@ export const processPdfDocument = async (pdfFile) => {
       error: null,
     };
   } catch (error) {
-    console.error("Error processing PDF:", error);
+    console.error("Error processing document:", error);
     return {
       success: false,
       content: null,
-      error: error.message || "Failed to process PDF",
+      error: error.message || "Failed to process document",
     };
   }
 };
+
+// Keep these for backward compatibility if needed
+export const processPdfDocument = processDocument;
+export const processExcelDocument = processDocument;
+export const processDocxDocument = processDocument;

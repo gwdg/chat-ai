@@ -109,7 +109,7 @@ function ChatWindow({
   const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [shareSettingsModal, setShareSettingsModal] = useState(false);
-  const [pdfNotProcessedModal, setPdfNotProcessedModal] = useState(false);
+  const [pdfNotProcessedModal, setDocNotProcessedModal] = useState(false);
   const [showAdvOpt, setShowAdvOpt] = useState(
     useSelector((state) => state.advOptions.isOpen)
   );

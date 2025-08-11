@@ -21,7 +21,7 @@ import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
 import video_icon from "../../assets/video_icon.svg";
 import cross from "../../assets/cross.svg";
 import uploaded from "../../assets/file_uploaded.svg";
-import { processPdfDocument } from "../../apis/PdfProcessApi";
+import { processDocument } from "../../apis/PdfProcessApi";
 import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
 import handleLLMResponse from "../../utils/handleLLMResponse";
 
@@ -53,7 +53,7 @@ function Prompt({
   notifySuccess,
   notifyError,
   adjustHeight,
-  setPdfNotProcessedModal,
+  setDocNotProcessedModal,
   setPreviewFile,
   showAdvOpt,
 }) {
@@ -141,12 +141,12 @@ function Prompt({
   }
 
   // processing function
-  const handlePdfProcess = async (file, index) => {
+  const handleDocumentProcess = async (file, index) => {
     try {
       setProcessingFiles((prev) => new Set(prev).add(index));
 
-      // Pass the original File object
-      const result = await processPdfDocument(file.file);
+      // Use the generic processing function for all document types
+      const result = await processDocument(file.file);
 
       if (result.success && result.content) {
         setSelectedFiles((prevFiles) => {
@@ -159,13 +159,21 @@ function Prompt({
           return newFiles;
         });
 
-        notifySuccess("PDF processed successfully");
+        const fileTypeLabel = file.fileType.toUpperCase();
+        notifySuccess(`${fileTypeLabel} processed successfully`);
       } else {
         throw new Error(
-          result.error || "No content received from PDF processing"
+          result.error ||
+            `No content received from ${file.fileType.toUpperCase()} processing`
         );
       }
     } catch (error) {
+      console.error("Processing error details:", {
+        error: error.message,
+        fileName: file.name,
+        fileType: file.fileType,
+        fileSize: file.size,
+      });
       setSelectedFiles((prevFiles) => {
         const newFiles = [...prevFiles];
         newFiles[index] = {
@@ -174,8 +182,10 @@ function Prompt({
         };
         return newFiles;
       });
-      console.error("PDF processing error:", error);
-      notifyError(`Failed to process PDF: ${error.message}`);
+      console.error(`${file.fileType.toUpperCase()} processing error:`, error);
+      notifyError(
+        `Failed to process ${file.fileType.toUpperCase()}: ${error.message}`
+      );
     } finally {
       setProcessingFiles((prev) => {
         const newSet = new Set(prev);
@@ -302,13 +312,16 @@ function Prompt({
 
     if (localState.prompt?.trim() === "" && selectedFiles.length === 0) return;
 
-    // Check for unprocessed PDF files
-    const hasUnprocessedPDF = selectedFiles.some(
-      (file) => file.fileType === "pdf" && !file.processed
+    const hasUnprocessedDocument = selectedFiles.some(
+      (file) =>
+        (file.fileType === "pdf" ||
+          file.fileType === "excel" ||
+          file.fileType === "docx") &&
+        !file.processed
     );
 
-    if (hasUnprocessedPDF) {
-      setPdfNotProcessedModal(true);
+    if (hasUnprocessedDocument) {
+      setDocNotProcessedModal(true);
       return;
     }
 
@@ -336,7 +349,11 @@ function Prompt({
         // Process text files, including processed PDFs
         const allTextFilesText = textFiles
           .map((file) => {
-            if (file.fileType === "pdf") {
+            if (
+              file.fileType === "pdf" ||
+              file.fileType === "excel" ||
+              file.fileType === "docx"
+            ) {
               return `${file.name}: ${file.processedContent}`;
             }
             return `${file.name}: ${file.content}`;
@@ -478,6 +495,22 @@ function Prompt({
   const handleFilesChange = async (e) => {
     try {
       // Filter for text, CSV, PDF and Markdown files
+      const excelFiles = Array.from(e.target.files).filter(
+        (file) =>
+          file.type ===
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || // .xlsx
+          file.type === "application/vnd.ms-excel" || // .xls
+          file.name.toLowerCase().endsWith(".xlsx") ||
+          file.name.toLowerCase().endsWith(".xls")
+      );
+
+      const docxFiles = Array.from(e.target.files).filter(
+        (file) =>
+          file.type ===
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || // .docx
+          file.name.toLowerCase().endsWith(".docx")
+      );
+
       const textFiles = Array.from(e.target.files).filter(
         (file) => file.type === "text/plain"
       );
@@ -526,8 +559,6 @@ function Prompt({
           file.name.endsWith(".scss") ||
           file.name.endsWith(".sass") ||
           file.name.endsWith(".less") ||
-          file.name.endsWith(".md") ||
-          file.name.endsWith(".markdown") ||
           file.name.endsWith(".sh") ||
           file.name.endsWith(".ps1") ||
           file.name.endsWith(".pl") ||
@@ -545,22 +576,50 @@ function Prompt({
           file.name.endsWith(".bat")
       );
 
-      // Validate file types
-      if (
+      const totalProcessedFiles =
         textFiles.length +
-          csvFiles.length +
-          pdfFiles.length +
-          mdFiles.length +
-          codeFiles.length !==
-        e.target.files.length
-      ) {
+        csvFiles.length +
+        pdfFiles.length +
+        mdFiles.length +
+        codeFiles.length +
+        excelFiles.length +
+        docxFiles.length;
+
+      if (totalProcessedFiles !== e.target.files.length) {
         notifyError(
-          "All files must be text, CSV, PDF, Markdown, or code files"
+          "All files must be text, CSV, PDF, Excel, DOCX, Markdown, or code files"
         );
         return;
       }
 
       const filesWithText = [];
+
+      for (const file of excelFiles) {
+        filesWithText.push({
+          name: file.name,
+          size: file.size,
+          file: file,
+          originalFile: file,
+          fileType: "excel",
+          processed: false,
+          content: null,
+          processedContent: null,
+        });
+      }
+
+      // Add processing for DOCX files
+      for (const file of docxFiles) {
+        filesWithText.push({
+          name: file.name,
+          size: file.size,
+          file: file,
+          originalFile: file,
+          fileType: "docx",
+          processed: false,
+          content: null,
+          processedContent: null,
+        });
+      }
 
       // Process code files
       for (const file of codeFiles) {
@@ -1185,6 +1244,8 @@ function Prompt({
                         if (file.fileType === "csv") return "CSV";
                         if (file.fileType === "markdown") return "MD";
                         if (file.fileType === "code") return "CODE";
+                        if (file.fileType === "excel") return "EXCEL";
+                        if (file.fileType === "docx") return "DOCX";
                         return "DOC";
                       };
 
@@ -1228,7 +1289,7 @@ function Prompt({
                           };
                         } else if (file.type === "image") {
                           // For images, pass as simple string or keep object format
-                          previewFile = file.text || file;
+                          previewFile = file;
                         } else if (file.type === "video") {
                           // For videos, pass the data URL
                           previewFile = file.text || file;
@@ -1307,7 +1368,9 @@ function Prompt({
                         </button>
 
                         {/* PDF Processing Status */}
-                        {file.fileType === "pdf" && (
+                        {(file.fileType === "pdf" ||
+                          file.fileType === "excel" ||
+                          file.fileType === "docx") && (
                           <div className="flex items-center mt-1 w-full">
                             {file.processed ? (
                               <span className="text-green-600 dark:text-green-400 text-xs font-medium px-2 py-0.5 bg-green-100 dark:bg-green-900/30 rounded-full w-full text-center">
@@ -1341,11 +1404,11 @@ function Prompt({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handlePdfProcess(file, index);
+                                  handleDocumentProcess(file, index); // Use the new generic function
                                 }}
                                 className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-medium transition-colors w-full"
                               >
-                                Process PDF
+                                Process {file.fileType.toUpperCase()}
                               </button>
                             )}
                           </div>
@@ -1467,7 +1530,7 @@ function Prompt({
                 type="file"
                 ref={hiddenFileInput}
                 multiple
-                accept=".txt, .csv, .pdf, .md, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json, .tex, .xml, .yaml, .yml, .ini, .toml, .properties, .css, .scss, .sass, .less, .sh, .ps1, .pl, .lua, .r, .m, .mat, .asm, .sql, .ipynb, .rmd, .dockerfile, .proto, .cfg, .bat"
+                accept=".txt, .csv, .pdf, .md, .xlsx, .xls, .docx, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json, .tex, .xml, .yaml, .yml, .ini, .toml, .properties, .css, .scss, .sass, .less, .sh, .ps1, .pl, .lua, .r, .m, .mat, .asm, .sql, .ipynb, .rmd, .dockerfile, .proto, .cfg, .bat"
                 onChange={handleFilesChange}
                 className="hidden"
               />

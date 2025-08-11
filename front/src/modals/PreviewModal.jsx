@@ -52,6 +52,9 @@ const CODE_EXTENSIONS = [
   ".proto",
   ".cfg",
   ".bat",
+  ".xlsx",
+  ".xls",
+  ".docx",
 ];
 
 const isCodeFile = (filename) => {
@@ -349,6 +352,7 @@ const AudioPlayer = ({ file }) => {
 
 const PreviewModal = ({ file, onClose }) => {
   const [loadError, setLoadError] = useState(null);
+  const [activeTab, setActiveTab] = useState("original"); // "original" or "processed"
 
   // Helper function to safely extract text content
   const getTextContent = (file) => {
@@ -369,6 +373,8 @@ const PreviewModal = ({ file, onClose }) => {
     if (file?.fileType === "markdown") return "markdown";
     if (file?.fileType === "code") return "code";
     if (file?.fileType === "text") return "text";
+    if (file?.fileType === "excel") return "excel";
+    if (file?.fileType === "docx") return "docx";
 
     // Check for direct type property
     if (file?.type === "image") return "image";
@@ -389,6 +395,8 @@ const PreviewModal = ({ file, onClose }) => {
       if (["csv"].includes(extension)) return "csv";
       if (["md", "markdown"].includes(extension)) return "markdown";
       if (["txt"].includes(extension)) return "text";
+      if (["xlsx", "xls"].includes(extension)) return "excel";
+      if (["docx"].includes(extension)) return "docx";
     }
 
     return "unknown";
@@ -410,12 +418,13 @@ const PreviewModal = ({ file, onClose }) => {
     return "Preview";
   }, [file]);
 
-  const pdfUrl = useMemo(() => {
+  // Create URLs for document preview (PDF, Excel, DOCX)
+  const documentUrl = useMemo(() => {
     try {
       const fileType = getFileType(file);
-      if (fileType !== "pdf") return null;
+      if (!["pdf", "excel", "docx"].includes(fileType)) return null;
 
-      // Priority 1: Check if we have the original file data for PDF preview
+      // Priority 1: Check if we have the original file data
       if (file.originalFile && file.originalFile instanceof File) {
         return URL.createObjectURL(file.originalFile);
       }
@@ -425,8 +434,14 @@ const PreviewModal = ({ file, onClose }) => {
         return URL.createObjectURL(file.file);
       }
 
-      // Priority 3: If we have base64 data, convert it to blob
-      if (file.data && typeof file.data === "string") {
+      // For Excel and DOCX, don't try to create preview URLs from base64
+      // as they can't be reliably previewed in browsers
+      if (fileType === "excel" || fileType === "docx") {
+        return null;
+      }
+
+      // Priority 3: Only for PDF - convert base64 to blob for preview
+      if (fileType === "pdf" && file.data && typeof file.data === "string") {
         try {
           const byteCharacters = atob(file.data);
           const byteNumbers = new Array(byteCharacters.length);
@@ -442,30 +457,31 @@ const PreviewModal = ({ file, onClose }) => {
         }
       }
 
-      // Priority 4: Check if we have text field with base64 data
+      // Priority 4: Only for PDF - check data URL
       if (
+        fileType === "pdf" &&
         file.text &&
         typeof file.text === "string" &&
         file.text.startsWith("data:application/pdf")
       ) {
-        return file.text; // This is already a data URL
+        return file.text;
       }
 
       return null;
     } catch (error) {
-      console.error("Error creating PDF URL:", error);
-      setLoadError("Failed to load PDF file");
+      console.error("Error creating document URL:", error);
+      setLoadError(`Failed to load ${getFileType(file)} file`);
       return null;
     }
   }, [file]);
 
   useEffect(() => {
     return () => {
-      if (pdfUrl && !pdfUrl.startsWith("data:")) {
-        URL.revokeObjectURL(pdfUrl);
+      if (documentUrl && !documentUrl.startsWith("data:")) {
+        URL.revokeObjectURL(documentUrl);
       }
     };
-  }, [pdfUrl]);
+  }, [documentUrl]);
 
   const handleDownload = () => {
     try {
@@ -488,20 +504,31 @@ const PreviewModal = ({ file, onClose }) => {
         const byteArray = new Uint8Array(byteNumbers);
         blob = new Blob([byteArray], { type: `audio/${file.format || "wav"}` });
         downloadUrl = URL.createObjectURL(blob);
-      } else if (fileType === "pdf") {
-        // Handle PDF downloads
-        if (file.processed && file.processedContent) {
+      } else if (["pdf", "excel", "docx"].includes(fileType)) {
+        // Handle document downloads
+        if (
+          activeTab === "processed" &&
+          file.processed &&
+          file.processedContent
+        ) {
           // Download processed text content
+          const extension = fileType.toUpperCase();
           if (!fileName.includes(".")) {
-            fileName = fileName.replace(".pdf", "") + "_processed.txt";
+            fileName = fileName.replace(`.${fileType}`, "") + `_processed.txt`;
+          } else {
+            fileName = fileName.replace(`.${fileType}`, `_processed.txt`);
           }
-          blob = new Blob([file.processedContent], { type: "text/plain;charset=utf-8" });
+          blob = new Blob([file.processedContent], {
+            type: "text/plain;charset=utf-8",
+          });
           downloadUrl = URL.createObjectURL(blob);
-        } else if (pdfUrl) {
-          // Download original PDF
-          downloadUrl = pdfUrl;
+        } else if (documentUrl) {
+          // Download original document
+          downloadUrl = documentUrl;
         } else {
-          throw new Error("No PDF content available for download");
+          throw new Error(
+            `No ${fileType.toUpperCase()} content available for download`
+          );
         }
       } else {
         // Handle other file types (text, images, etc.)
@@ -534,6 +561,212 @@ const PreviewModal = ({ file, onClose }) => {
     }
   };
 
+  const renderDocumentPreview = (fileType) => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (activeTab === "processed") {
+      // Show processed content
+      if (file.processed && file.processedContent) {
+        return (
+          <div className="w-full h-[85vh] flex flex-col">
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-3 mb-4 mx-4">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-5 h-5 text-green-600 dark:text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    Processed {fileType.toUpperCase()} Content
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-300">
+                    Text has been extracted and is searchable in conversations.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 p-6 overflow-auto flex-1 mx-4 rounded-lg border dark:border-gray-700">
+              <pre className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 font-sans text-sm leading-relaxed">
+                {file.processedContent}
+              </pre>
+            </div>
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg mx-4">
+            <svg
+              className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <p className="text-gray-600 dark:text-gray-400 mb-2">
+              No processed content available
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              Process the {fileType.toUpperCase()} file first to view extracted
+              content
+            </p>
+          </div>
+        );
+      }
+    }
+
+    // Original document preview - handle different file types
+    if (fileType === "excel" || fileType === "docx") {
+      return (
+        <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg mx-4">
+          <svg
+            className="w-12 h-12 text-blue-500 dark:text-blue-400 mb-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <p className="text-gray-600 dark:text-gray-400 mb-2 font-medium">
+            {fileType.toUpperCase()} Preview Not Available
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
+            {fileType.toUpperCase()} files cannot be previewed directly in the
+            browser.
+            {!file.processed &&
+              " Process the file to view extracted content, or download to open in a compatible application."}
+          </p>
+          <div className="flex flex-col gap-2">
+            <div className="text-xs text-gray-400 dark:text-gray-500">
+              File: {file.name}
+            </div>
+            {!file.processed && (
+              <div className="text-xs text-blue-600 dark:text-blue-400">
+                💡 Switch to "Processed" tab after processing to view content
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // PDF preview logic (original code)
+    if (fileType === "pdf") {
+      if (isMobile && documentUrl) {
+        return (
+          <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <svg
+              className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <p className="text-gray-600 dark:text-gray-400 mb-2">
+              PDF preview is not available on mobile devices
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              Please use a desktop browser to preview PDF files
+            </p>
+          </div>
+        );
+      }
+
+      if (documentUrl && !isMobile) {
+        return (
+          <div className="w-full h-[85vh] flex flex-col">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg p-3 mb-4 mx-4">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Original PDF Preview
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-300">
+                    {!file.processed &&
+                      "This PDF hasn't been processed yet. Switch to processed tab after processing to see extracted content."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <iframe
+              src={documentUrl}
+              className="w-full flex-1"
+              style={{ minWidth: "800px" }}
+              title={fileName}
+              onError={() => setLoadError("Failed to display PDF")}
+            />
+          </div>
+        );
+      }
+    }
+
+    // Fallback for any document type without available preview
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg mx-4">
+        <svg
+          className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+        <p className="text-gray-600 dark:text-gray-400 mb-2">
+          {fileType.toUpperCase()} content not available
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-500">
+          The original {fileType.toUpperCase()} file data is not available for
+          preview
+        </p>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     try {
       if (loadError) {
@@ -564,10 +797,21 @@ const PreviewModal = ({ file, onClose }) => {
       }
 
       if (fileType === "image") {
+        // Handle both string and object formats
+        let imageSrc;
+
+        if (typeof file === "string") {
+          imageSrc = file;
+        } else if (file && file.text) {
+          imageSrc = file.text;
+        } else {
+          imageSrc = getTextContent(file);
+        }
+
         return (
           <div className="flex justify-center">
             <img
-              src={textContent}
+              src={imageSrc}
               alt={fileName}
               className="max-h-[85vh] max-w-full object-contain"
               onError={() => setLoadError("Failed to load image")}
@@ -591,134 +835,8 @@ const PreviewModal = ({ file, onClose }) => {
         );
       }
 
-      if (fileType === "pdf") {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-        // Priority 1: If processed, show the processed content FIRST
-        if (file.processed && file.processedContent) {
-          return (
-            <div className="w-full h-[85vh] flex flex-col">
-              {/* Show processed status */}
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-3 mb-4 mx-4">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                      Processed PDF Content
-                    </p>
-                    <p className="text-xs text-green-600 dark:text-green-300">
-                      Text has been extracted and is searchable in conversations.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-900 p-6 overflow-auto flex-1 mx-4 rounded-lg border dark:border-gray-700">
-                <pre className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 font-sans text-sm leading-relaxed">
-                  {file.processedContent}
-                </pre>
-              </div>
-            </div>
-          );
-        }
-
-        // Priority 2: Show mobile warning for PDF previews (only if not processed)
-        if (isMobile && pdfUrl) {
-          return (
-            <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <svg
-                className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <p className="text-gray-600 dark:text-gray-400 mb-2">
-                PDF preview is not available on mobile devices
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">
-                Please use a desktop browser to preview PDF files
-              </p>
-            </div>
-          );
-        }
-
-        // Priority 3: If we have a valid PDF URL for preview (original PDF) AND not processed
-        if (pdfUrl && !isMobile && !file.processed) {
-          return (
-            <div className="w-full h-[85vh] flex flex-col">
-              {/* Show processing status if not processed */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg p-3 mb-4 mx-4">
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                      Original PDF Preview
-                    </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-300">
-                      This PDF hasn&quot;t been processed yet. Click
-                      &quot;Process PDF&quot; to extract searchable text
-                      content.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <iframe
-                src={pdfUrl}
-                className="w-full flex-1"
-                style={{ minWidth: "800px" }}
-                title={fileName}
-                onError={() => setLoadError("Failed to display PDF")}
-              />
-            </div>
-          );
-        }
-
-        // Priority 4: If no PDF data available, show helpful message
-        return (
-          <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg mx-4">
-            <svg
-              className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <p className="text-gray-600 dark:text-gray-400 mb-2">
-              PDF content not available
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
-              The original PDF file data is not available for preview
-            </p>
-          </div>
-        );
+      if (["pdf", "excel", "docx"].includes(fileType)) {
+        return renderDocumentPreview(fileType);
       }
 
       if (fileType === "csv") {
@@ -771,6 +889,9 @@ const PreviewModal = ({ file, onClose }) => {
     }
   };
 
+  // Determine if we should show tabs for documents that can be processed
+  const showTabs = ["pdf", "excel", "docx"].includes(getFileType(file));
+
   return (
     <ContainerModal showModal={onClose}>
       <div className="rounded-2xl bg-white dark:bg-black p-4 w-[90vw] max-w-[1000px] max-h-[95vh] overflow-hidden flex flex-col border dark:border-gray-700">
@@ -798,6 +919,38 @@ const PreviewModal = ({ file, onClose }) => {
             />
           </div>
         </div>
+
+        {/* Tabs for documents that support processing */}
+        {showTabs && (
+          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 mx-2">
+            <button
+              onClick={() => setActiveTab("original")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "original"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}
+            >
+              Original
+            </button>
+            <button
+              onClick={() => setActiveTab("processed")}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "processed"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}
+            >
+              Processed
+              {file.processed && (
+                <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                  ✓
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
         <div className="relative flex-1 min-h-0">{renderContent()}</div>
       </div>
     </ContainerModal>
