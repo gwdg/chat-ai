@@ -20,7 +20,6 @@ import {
   selectCurrentConversationId,
 } from "../../Redux/reducers/conversationsSlice";
 import PreviewImageModal from "../../modals/Chat/PreviewImageModal";
-import { useParams } from "react-router-dom";
 import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
@@ -186,7 +185,7 @@ function Responses({
   }
 
   // Function to handle resending a previous message
-  const handleResendClick = async (index) => {
+  const handleRetryClick = async (index) => {
     await sendMessage({
       localState,
       setLocalState,
@@ -219,7 +218,7 @@ function Responses({
     });
   };
   // Function to handle retry of last message
-  const handleRetry = (e) => {
+  const handleUndo = (e) => {
     e.preventDefault();
 
     // Find the last actual user-assistant pair (skip info objects)
@@ -659,12 +658,12 @@ function Responses({
                             </pre>
                             <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-1.5 items-center">
                               <button
-                                onClick={(e) => handleResendClick(index, e)}
+                                onClick={(e) => handleRetryClick(index, e)}
                                 disabled={loading || loadingResend}
                               >
                                 <img
-                                  src={icon_undo}
-                                  alt="icon_resend"
+                                  src={icon_retry}
+                                  alt="icon_retry"
                                   className="h-[22px] w-[22px] cursor-pointer"
                                 />
                               </button>
@@ -835,7 +834,7 @@ function Responses({
                     {res.prompt?.trim() == "" ? (
                       <div className="flex col items-baseline h-full flex-shrink-0 opacity-0 hover:opacity-100 transition-opacity duration-300">
                         <button
-                          onClick={(e) => handleResendClick(index, e)}
+                          onClick={(e) => handleRetryClick(index, e)}
                           disabled={loading || loadingResend}
                         >
                           <img
@@ -865,7 +864,7 @@ function Responses({
                   handleResponseSave={handleResponseSave}
                   editedResponse={editedResponse}
                   setEditingResponseIndex={setEditingResponseIndex}
-                  handleResendClick={handleResendClick}
+                  handleResendClick={handleRetryClick}
                 />
               </div>
             ) : (
@@ -945,13 +944,13 @@ function Responses({
             <Tooltip text={t("description.undo")}>
               <button
                 className="h-[26px] w-[26px] cursor-pointer"
-                onClick={handleRetry}
+                onClick={handleUndo}
                 disabled={loading || loadingResend}
               >
                 <img
                   className="cursor-pointer h-[26px] w-[26px]"
-                  src={icon_retry}
-                  alt="retry"
+                  src={icon_undo}
+                  alt="undo"
                 />
               </button>
             </Tooltip>
