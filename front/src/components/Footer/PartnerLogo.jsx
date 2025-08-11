@@ -13,7 +13,7 @@ export default function PartnerLogo() {
         {/* GWDG Logo - Mobile */}
         <div className="border-l-2 border-primary pl-2">
         <Link to={"https://gwdg.de/"} target="_blank">
-            <div className="md:bg-logo-large bg-logo-small md:h-[45px] md:w-[145px] h-[60px] w-[60px] bg-repeat-round"></div>
+            <div className="md:bg-gwdg-logo-large bg-gwdg-logo-small md:h-[45px] md:w-[145px] h-[60px] w-[60px] bg-repeat-round"></div>
         </Link>
         </div>
     </div>

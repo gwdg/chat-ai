@@ -27,11 +27,6 @@ import sendMessage from "../../utils/sendMessage";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 
-//Variable
-const languageMap = {
-  en: "en-US",
-  de: "de-DE",
-};
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 

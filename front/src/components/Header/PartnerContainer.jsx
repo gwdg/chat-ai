@@ -7,7 +7,7 @@ export default function PartnerContainer({ isMobile = false }) {
             <div className="bg-kisski-logo-large h-8 w-28 bg-repeat-round transition-all hover:opacity-80 rounded"></div>
         </Link>
         <Link to={"https://gwdg.de/"} target="_blank">
-            <div className="bg-logo-large h-8 w-28 bg-repeat-round transition-all hover:opacity-80 rounded"></div>
+            <div className="bg-gwdg-logo-large h-8 w-28 bg-repeat-round transition-all hover:opacity-80 rounded"></div>
         </Link>
     </div>
   ) : (<div></div>);
