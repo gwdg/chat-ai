@@ -1,8 +1,11 @@
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
-import { deleteConversation, selectConversations, selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
+import { addConversation, deleteConversation, selectConversations, selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
+import { persistor } from "../../Redux/store/store";
+
 
 export default function DeleteConversationModal({
   isOpen,
