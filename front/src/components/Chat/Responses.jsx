@@ -1,71 +1,56 @@
 /* eslint-disable no-unused-vars */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Tooltip from "../Others/Tooltip";
-import { fetchLLMResponse, updateMemory } from "../../apis/LlmRequestApi";
 
 //Assets
-import retry from "../../assets/icon_retry.svg";
-import mic from "../../assets/icon_mic.svg";
-import clear from "../../assets/cross_icon.svg";
-import export_icon from "../../assets/export_icon.svg";
-import import_icon from "../../assets/import_icon.svg";
-import video_icon from "../../assets/video_icon.svg";
-import send from "../../assets/icon_send.svg";
-import edit_icon from "../../assets/edit_icon.svg";
-import icon_resend from "../../assets/icon_resend.svg";
+import icon_retry from "../../assets/icons/retry.svg";
+import icon_mic from "../../assets/icons/mic.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
+import icon_export from "../../assets/icons/export.svg";
+import icon_import from "../../assets/icons/import.svg";
+import icon_support_video from "../../assets/icons/support_video.svg";
+import icon_send from "../../assets/icons/send.svg";
+import icon_edit from "../../assets/icons/edit.svg";
+import icon_undo from "../../assets/icons/undo.svg";
 import ResponseItem from "../Markdown/ResponseItem";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import {
-  setIsResponding,
-  updateConversation,
   selectCurrentConversationId,
 } from "../../Redux/reducers/conversationsSlice";
-import PreviewImageModal from "../../modals/PreviewImageModal";
-import { useParams } from "react-router-dom";
+import PreviewImageModal from "../../modals/Chat/PreviewImageModal";
 import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
-import { importConversation } from "../../hooks/importConversation";
-import {
-  addMemory,
-  selectAllMemories,
-} from "../../Redux/reducers/userMemorySlice";
-import handleLLMResponse from "../../utils/handleLLMResponse";
+import { useImportConversation } from "../../hooks/useImportConversation";
+import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
+import sendMessage from "../../utils/sendMessage";
+import { useModal } from "../../modals/ModalContext";
 
 //Variable
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
 function Responses({
-  modelList,
+  modelsData,
   localState,
   setLocalState,
   loading,
-  setShowModalSession,
-  setShowBadRequest,
   setSelectedFiles,
-  setShowHistoryModal,
-  setShowFileModal,
-  updateLocalState,
   adjustHeight,
-  notifySuccess,
-  notifyError,
-  clearHistory,
-  updateSettings,
   loadingResend,
   setLoadingResend,
-  isArcanaSupported,
 }) {
   // Hooks
+  const { openModal } = useModal();
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const importConversation = useImportConversation();
 
   // Redux state
   const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
-  const { conversationId } = useParams();
   const currentConversationId = useSelector(selectCurrentConversationId);
   const defaultModel = useSelector(selectDefaultModel);
   const memories = useSelector(selectAllMemories);
@@ -103,9 +88,23 @@ function Responses({
     setEditingResponseIndex(index);
   };
 
+  // Clear conversation history
+  const clearHistory = () => {
+    setLocalState((prevState) => ({
+      ...prevState,
+      responses: [], // Clear all responses
+      messages:
+        prevState.messages.length > 0
+          ? [prevState.messages[0]] // Keep only system message if it exists
+          : prevState.messages,
+    }));
+
+    notifySuccess("History cleared");
+  };
+
   const handleResponseSave = (index) => {
     // Find assistant response index in conversation array
-    const assistantIndex = localState.conversation.findIndex(
+    const assistantIndex = localState.messages.findIndex(
       (msg) =>
         msg.role === "assistant" &&
         msg.content === localState.responses[index].response
@@ -119,7 +118,7 @@ function Responses({
       return res;
     });
 
-    const newConversation = localState.conversation.map((msg, i) => {
+    const newMessages = localState.messages.map((msg, i) => {
       if (i === assistantIndex) {
         return { ...msg, content: editedResponse };
       }
@@ -129,7 +128,7 @@ function Responses({
     setLocalState({
       ...localState,
       responses: newResponses,
-      conversation: newConversation,
+      messages: newMessages,
     });
 
     setEditingResponseIndex(-1);
@@ -246,54 +245,41 @@ function Responses({
   }
 
   // Function to handle resending a previous message
-  const handleResendClick = async (index) => {
-    await handleLLMResponse({
+  const handleRetryClick = async (index) => {
+    await sendMessage({
+      localState,
+      setLocalState,
+      openModal,
       operationType: "resend",
       index,
       dispatch,
-      localState,
-      updateLocalState,
-      setLocalState,
       setLoadingResend,
-      modelList,
+      modelsData,
       memories,
-      isArcanaSupported,
-      updateMemory,
-      fetchLLMResponse,
-      notifyError,
-      notifySuccess,
-      setShowModalSession,
-      setShowBadRequest,
       timeoutTime,
     });
   };
 
   // Function to handle saving edited messages
   const handleSave = async (index) => {
-    await handleLLMResponse({
+    await sendMessage({
+      localState,
+      setLocalState,
+      openModal,
       operationType: "edit",
       index,
       editedText, // Make sure this variable is available in your component scope
       dispatch,
-      localState,
-      updateLocalState,
-      setLocalState,
       setLoadingResend,
-      modelList,
+      modelsData,
       memories,
-      isArcanaSupported,
       updateMemory,
-      fetchLLMResponse,
-      notifyError,
-      notifySuccess,
-      setShowModalSession,
-      setShowBadRequest,
       timeoutTime,
     });
   };
 
   // Function to handle retry of last message
-  const handleRetry = (e) => {
+  const handleUndo = (e) => {
     e.preventDefault();
 
     // Find the last actual user-assistant pair (skip info objects)
@@ -349,7 +335,7 @@ function Responses({
 
     // Only handle text files if they were actually part of the original request
     // Check if the original conversation message had text files
-    const originalUserMessage = localState.conversation.find(
+    const originalUserMessage = localState.messages.find(
       (msg, idx) =>
         msg.role === "user" &&
         Array.isArray(msg.content) &&
@@ -378,7 +364,7 @@ function Responses({
     }, 0);
 
     // Conversation trimming logic remains the same...
-    const originalConversation = [...localState.conversation];
+    const originalConversation = [...localState.messages];
     let pairsToKeep = 0;
     for (let i = 0; i < lastResponseIndex; i++) {
       if (!localState.responses[i]?.info) {
@@ -386,17 +372,17 @@ function Responses({
       }
     }
 
-    const filteredConversation = localState.conversation.filter(
+    const filteredConversation = localState.messages.filter(
       (message) => message.role !== "info"
     );
 
     const slicedFiltered = filteredConversation.slice(0, pairsToKeep * 2 + 1);
 
-    let newConversation = [];
+    let newMessages = [];
     let filteredIndex = 0;
 
     if (slicedFiltered.length === 0) {
-      newConversation = originalConversation.filter(
+      newMessages = originalConversation.filter(
         (message) => message.role === "system" || message.role === "info"
       );
     } else {
@@ -409,14 +395,14 @@ function Responses({
             originalConversation.indexOf(originalMessage);
 
           if (currentOriginalIndex <= lastKeptOriginalIndex) {
-            newConversation.push(originalMessage);
+            newMessages.push(originalMessage);
           }
         } else {
           if (
             filteredIndex < slicedFiltered.length &&
             originalMessage === slicedFiltered[filteredIndex]
           ) {
-            newConversation.push(originalMessage);
+            newMessages.push(originalMessage);
             filteredIndex++;
           }
         }
@@ -427,7 +413,7 @@ function Responses({
 
     setLocalState((prevState) => ({
       ...prevState,
-      conversation: newConversation,
+      messages: newMessages,
       responses: newResponses,
     }));
   };
@@ -497,15 +483,7 @@ function Responses({
           const parsedData = JSON.parse(data);
 
           // Import
-          importConversation(
-            parsedData,
-            dispatch,
-            currentConversationId,
-            defaultModel,
-            notifyError,
-            notifySuccess,
-            navigate
-          );
+          await importConversation(parsedData);
         } catch (jsonError) {
           console.error("JSON Parse Error:", jsonError);
           notifyError("Invalid JSON file format: " + jsonError.message);
@@ -523,7 +501,7 @@ function Responses({
     if (localState.dontShow.dontShowAgain) {
       clearHistory();
     } else {
-      setShowHistoryModal(true);
+      openModal("clearHistory", {clearHistory})
     }
   };
 
@@ -747,7 +725,7 @@ function Responses({
                             disabled={loading || loadingResend}
                           >
                             <img
-                              src={clear}
+                              src={icon_cross_sm}
                               alt="clear"
                               className="h-[22px] w-[22px] cursor-pointer"
                             />
@@ -761,7 +739,7 @@ function Responses({
                           >
                             <img
                               className="cursor-pointer h-[22px] w-[22px]"
-                              src={send}
+                              src={icon_send}
                               alt="send"
                             />
                           </button>
@@ -783,12 +761,12 @@ function Responses({
                             </pre>
                             <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-1.5 items-center">
                               <button
-                                onClick={(e) => handleResendClick(index, e)}
+                                onClick={(e) => handleRetryClick(index, e)}
                                 disabled={loading || loadingResend}
                               >
                                 <img
-                                  src={icon_resend}
-                                  alt="icon_resend"
+                                  src={icon_retry}
+                                  alt="icon_retry"
                                   className="h-[22px] w-[22px] cursor-pointer"
                                 />
                               </button>
@@ -799,7 +777,7 @@ function Responses({
                                 disabled={loading || loadingResend}
                               >
                                 <img
-                                  src={edit_icon}
+                                  src={icon_edit}
                                   alt="edit_icon"
                                   className="h-[22px] w-[22px] cursor-pointer"
                                 />
@@ -836,7 +814,7 @@ function Responses({
                                 setPreviewFile(imageObj.image_url.url)
                               }
                               onError={(e) => {
-                                e.target.src = video_icon;
+                                e.target.src = icon_support_video;
                               }}
                             />
                           );
@@ -850,7 +828,7 @@ function Responses({
                           return (
                             <img
                               key={`vid-${vidIndex}`}
-                              src={video_icon}
+                              src={icon_support_video}
                               alt="Video content"
                               className="h-[130px] w-[130px] rounded-xl object-cover cursor-pointer"
                               onClick={() =>
@@ -958,7 +936,7 @@ function Responses({
                             <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-1.5">
                               <img
                                 className="h-5 w-5 brightness-0 invert"
-                                src={mic}
+                                src={icon_mic}
                                 alt="audio file"
                               />
                             </div>
@@ -997,11 +975,11 @@ function Responses({
                     {res.prompt?.trim() == "" ? (
                       <div className="flex col items-baseline h-full flex-shrink-0 opacity-0 hover:opacity-100 transition-opacity duration-300">
                         <button
-                          onClick={(e) => handleResendClick(index, e)}
+                          onClick={(e) => handleRetryClick(index, e)}
                           disabled={loading || loadingResend}
                         >
                           <img
-                            src={icon_resend}
+                            src={icon_undo}
                             alt="icon_resend"
                             className="h-[22px] w-[22px] cursor-pointer"
                           />
@@ -1027,7 +1005,7 @@ function Responses({
                   handleResponseSave={handleResponseSave}
                   editedResponse={editedResponse}
                   setEditingResponseIndex={setEditingResponseIndex}
-                  handleResendClick={handleResendClick}
+                  handleResendClick={handleRetryClick}
                 />
               </div>
             ) : (
@@ -1053,7 +1031,7 @@ function Responses({
             >
               <img
                 className="cursor-pointer h-[22px] w-[22px]"
-                src={clear}
+                src={icon_cross_sm}
                 alt="clear"
               />
             </button>
@@ -1071,12 +1049,12 @@ function Responses({
             <Tooltip text={t("description.export")}>
               <button
                 className="text-tertiary flex gap-1.5 items-center"
-                onClick={() => setShowFileModal(true)}
+                onClick={() => {openModal("exportConversation", {localState, setLocalState})}}
                 disabled={loading || loadingResend}
               >
                 <img
                   className="cursor-pointer h-[26px] w-[26px]"
-                  src={export_icon}
+                  src={icon_export}
                   alt="export"
                 />
               </button>
@@ -1098,7 +1076,7 @@ function Responses({
                 >
                   <img
                     className="h-[26px] w-[26px]"
-                    src={import_icon}
+                    src={icon_import}
                     alt="import"
                   />
                 </button>
@@ -1107,13 +1085,13 @@ function Responses({
             <Tooltip text={t("description.undo")}>
               <button
                 className="h-[26px] w-[26px] cursor-pointer"
-                onClick={handleRetry}
+                onClick={handleUndo}
                 disabled={loading || loadingResend}
               >
                 <img
                   className="cursor-pointer h-[26px] w-[26px]"
-                  src={retry}
-                  alt="retry"
+                  src={icon_undo}
+                  alt="undo"
                 />
               </button>
             </Tooltip>
@@ -1136,7 +1114,7 @@ function Responses({
             >
               <img
                 className="cursor-pointer h-[26px] w-[26px]"
-                src={import_icon}
+                src={icon_import}
                 alt="import"
               />
             </button>

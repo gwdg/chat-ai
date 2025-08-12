@@ -6,7 +6,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { useSelector } from "react-redux";
-import Home from "../Pages/Home";
+import ChatPage from "../Pages/ChatPage.jsx";
 import NotFoundPage from "../Pages/NotFoundPage";
 import LandingPage from "../Pages/LandingPage";
 
@@ -28,7 +28,7 @@ const ChatRoute = ({
     hasImport ||
     (hasArcana && hasModelArcana) // removed hasArcanaKey requirement
   ) {
-    return <Home />;
+    return <ChatPage />;
   }
   return <Navigate to={`/chat/${currentConversationId}`} replace />;
 };
@@ -55,8 +55,8 @@ const ConversationRoute = ({ currentConversationId, conversations }) => {
     return <NotFoundPage />;
   }
 
-  // Otherwise, render Home
-  return <Home />;
+  // Otherwise, render Chat
+  return <ChatPage />;
 };
 
 const PublicRoute = () => {

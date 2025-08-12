@@ -1,6 +1,7 @@
 import { Trans } from "react-i18next";
+import { useState } from "react";
 
-const WarningButton = ({ currentModel, showWarning, setShowWarning, userData}) => {
+const WarningButton = ({ currentModel, userData}) => {
   // Add safety check for currentModel
   if (
     !currentModel ||
@@ -10,6 +11,7 @@ const WarningButton = ({ currentModel, showWarning, setShowWarning, userData}) =
     return null;
   }
 
+  const [showWarning, setShowWarning] = useState(true);
   return (
     <div className="absolute top-0 right-0 z-50">
       <button

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import PublicRoute from "./Route/PublicRoute";
 import { BrowserRouter } from "react-router-dom";
 import { ToastProvider } from "./components/Others/ToastProvider";
+import { ModalProvider } from "./modals/ModalContext";
 
 function App() {
   const isDarkMode = useSelector((state) => state.theme.isDarkMode);
@@ -21,7 +22,9 @@ function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
-        <PublicRoute />{" "}
+        <ModalProvider>
+          <PublicRoute />{" "}
+        </ModalProvider>
       </ToastProvider>
     </BrowserRouter>
   );

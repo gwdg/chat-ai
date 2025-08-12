@@ -41,15 +41,14 @@ const createNewConversation = (conversationId, defaultModel) => {
     ...defaultSettings,
     // Override with provided default model if available
     ...(defaultModel && {
-      ["model-name"]: defaultModel.name,
-      model: defaultModel.id,
+      model: defaultModel,
     }),
   };
 
   return {
     id: conversationId || uuidv4(),
     title: "Untitled Conversation",
-    conversation: [
+    messages: [
       {
         role: "system",
         content: settings.systemPrompt,

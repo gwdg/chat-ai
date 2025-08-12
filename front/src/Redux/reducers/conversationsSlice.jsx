@@ -11,7 +11,7 @@ const createDefaultConversation = (customSettings = {}) => {
   return {
     id: uuidv4(),
     title: "Untitled Conversation",
-    conversation: [
+    messages: [
       {
         role: "system",
         content: settings.systemPrompt,
@@ -29,9 +29,6 @@ const createDefaultConversation = (customSettings = {}) => {
       dontShowAgain: false,
       dontShowAgainShare: false,
       dontShowAgainMemory: false,
-    },
-    arcana: {
-      id: "",
     },
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString(),
@@ -77,20 +74,20 @@ const conversationsSlice = createSlice({
         // Skip auto-adding system message if we're updating both conversation and settings
         // (which indicates an import operation)
         const isImportOperation =
-          updates.conversation && updates.settings?.systemPrompt;
+          updates.messages && updates.settings?.systemPrompt;
 
-        if (updates.conversation && !isImportOperation) {
+        if (updates.messages && !isImportOperation) {
           // Only auto-add system message for regular updates, not imports
-          const hasSystemMessage = updates.conversation.some(
+          const hasSystemMessage = updates.messages.some(
             (msg) => msg.role === "system"
           );
           if (!hasSystemMessage) {
-            updates.conversation = [
+            updates.messages = [
               {
                 role: "system",
                 content: conversation.settings.systemPrompt,
               },
-              ...updates.conversation,
+              ...updates.messages,
             ];
           }
         }
@@ -148,7 +145,7 @@ const conversationsSlice = createSlice({
         const newConversation = {
           id: newId,
           title: "Untitled Conversation",
-          conversation: [
+          messages: [
             {
               role: "system",
               content: settings.systemPrompt,

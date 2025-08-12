@@ -13,6 +13,7 @@ import CustomInstructionsModal from "../../modals/CustomInstructionsModal";
 import ExportTypeModal from "../../modals/ExportTypeModal";
 import SessionExpiredModal from "../../modals/SessionExpiredModal";
 import BadRequestModal from "../../modals/BadRequestModal";
+import HelpToolsModal from "../../modals/HelpToolsModal";
 import HelpCustomInstructionsModal from "../../modals/HelpCustomInstructionsModal";
 import HelpArcanaModal from "../../modals/HelpArcanaModal";
 import HelpSystemModal from "../../modals/HelpSystemModal";
@@ -39,6 +40,7 @@ import ClearMemoryModal from "../../modals/ClearMemoryModal";
 import UserMemoryModal from "../../modals/UserMemoryModal";
 import HelpMemoryModal from "../../modals/HelpMemoryModal";
 import WarningButton from "../Others/WarningButton";
+import Sidebar from "../Layout/Sidebar";
 
 function ChatWindow({
   modelSettings,
@@ -98,6 +100,7 @@ function ChatWindow({
   const [showModalSession, setShowModalSession] = useState(false);
   const [showBadRequest, setShowBadRequest] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showToolsHelpModal, setShowToolsHelpModal] = useState(false);
   const [showCustomHelpModal, setShowCustomHelpModal] = useState(false);
   const [showTopPHelpModal, setShowTopPHelpModal] = useState(false);
   const [showMemoryHelpModal, setShowMemoryHelpModal] = useState(false);
@@ -776,75 +779,117 @@ function ChatWindow({
 
   return (
     <>
-      <div className="flex mobile:flex-col flex-row h-full sm:justify-between relative">
-        {!showAdvOpt && (
-          <WarningButton
+      {/* Main chat container */}
+      <div className="flex h-full w-full relative">
+        {isSidebarOpen && (
+          <>
+            {/* Mobile overlay backdrop */}
+            <div
+              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 backdrop-blur-sm"
+              onClick={() => setIsSidebarOpen(false)}
+              style={{
+                WebkitTouchCallout: "none",
+                WebkitUserSelect: "none",
+                touchAction: "none",
+              }}
+            />
+
+            {/* Sidebar container with proper mobile sizing */}
+            <div
+              className={`
+              ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+              custom:translate-x-0 transition-transform duration-200 ease-out
+              fixed custom:relative desktop:w-[vw] max-w-sm w-72
+              h-[calc(100vh-54px)] custom:h-full top-[54px] custom:top-0
+              z-30 custom:z-auto flex-shrink-0 p-1.5
+            `}
+            >
+              <Sidebar
+                onClose={() => setIsSidebarOpen(false)}
+                onDeleteConversation={onDeleteConversation}
+                onRenameConversation={onRenameConversation}
+                conversationIds={conversationIds}
+                setShowRepoModal={setShowRepoModal}
+              />
+            </div>
+          </>
+        )}
+
+        <div className="flex flex-col desktop:flex-row flex-1 h-full w-full">
+          {!showAdvOpt && (
+            <WarningButton
+              currentModel={currentModel}
+              showWarning={showWarningMessage}
+              setShowWarning={setShowWarningMessage}
+              userData={userData}
+            />
+          )}
+          <Conversation
+            modelList={modelList}
+            selectedFiles={selectedFiles}
+            localState={localState}
+            isAudioSupported={isAudioSupported}
+            isImageSupported={isImageSupported}
+            isVideoSupported={isVideoSupported}
+            isThoughtSupported={isThoughtSupported}
+            isArcanaSupported={isArcanaSupported}
+            setSelectedFiles={setSelectedFiles}
+            setLocalState={setLocalState}
+            setShowModalSession={setShowModalSession}
+            setShowBadRequest={setShowBadRequest}
+            setShowFileModal={setShowFileModal}
+            setShowHistoryModal={setShowHistoryModal}
+            toggleAdvOpt={toggleAdvOpt}
+            updateLocalState={updateLocalState}
+            updateSettings={updateSettings}
+            clearHistory={clearHistory}
+            notifySuccess={notifySuccess}
+            notifyError={notifyError}
+            setPdfNotProcessedModal={setPdfNotProcessedModal}
+            showAdvOpt={showAdvOpt}
+            setPreviewFile={setPreviewFile}
+          />
+          <SettingsPanel
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+            modelSettings={modelSettings}
+            modelList={modelList}
             currentModel={currentModel}
-            showWarning={showWarningMessage}
-            setShowWarning={setShowWarningMessage}
+            isAudioSupported={isAudioSupported}
+            isImageSupported={isImageSupported}
+            isVideoSupported={isVideoSupported}
+            isThoughtSupported={isThoughtSupported}
+            isArcanaSupported={isArcanaSupported}
+            onModelChange={onModelChange}
+            showAdvOpt={showAdvOpt}
+            toggleAdvOpt={toggleAdvOpt}
+            localState={localState}
+            setLocalState={setLocalState}
+            updateSettings={updateSettings}
+            setShareSettingsModal={setShareSettingsModal}
+            handleShareSettings={handleShareSettings}
+            setShowHelpModal={setShowHelpModal}
+            setShowToolsHelpModal={setShowToolsHelpModal}
+            setShowArcanasHelpModal={setShowArcanasHelpModal}
+            setShowCustomHelpModal={setShowCustomHelpModal}
+            setShowTopPHelpModal={setShowTopPHelpModal}
+            setShowMemoryHelpModal={setShowMemoryHelpModal}
+            setShowSystemHelpModal={setShowSystemHelpModal}
+            notifySuccess={notifySuccess}
+            notifyError={notifyError}
+            setShowModalSession={setShowModalSession}
+            setPreviewFile={setPreviewFile}
             userData={userData}
           />
-        )}
-        <Conversation
-          modelList={modelList}
-          selectedFiles={selectedFiles}
-          localState={localState}
-          isAudioSupported={isAudioSupported}
-          isImageSupported={isImageSupported}
-          isVideoSupported={isVideoSupported}
-          isThoughtSupported={isThoughtSupported}
-          isArcanaSupported={isArcanaSupported}
-          setSelectedFiles={setSelectedFiles}
-          setLocalState={setLocalState}
-          setShowModalSession={setShowModalSession}
-          setShowBadRequest={setShowBadRequest}
-          setShowFileModal={setShowFileModal}
-          setShowHistoryModal={setShowHistoryModal}
-          toggleAdvOpt={toggleAdvOpt}
-          updateLocalState={updateLocalState}
-          updateSettings={updateSettings}
-          clearHistory={clearHistory}
-          notifySuccess={notifySuccess}
-          notifyError={notifyError}
-          setPdfNotProcessedModal={setPdfNotProcessedModal}
-          showAdvOpt={showAdvOpt}
-          setPreviewFile={setPreviewFile}
-        />
-        <SettingsPanel
-          selectedFiles={selectedFiles}
-          setSelectedFiles={setSelectedFiles}
-          modelSettings={modelSettings}
-          modelList={modelList}
-          currentModel={currentModel}
-          isAudioSupported={isAudioSupported}
-          isImageSupported={isImageSupported}
-          isVideoSupported={isVideoSupported}
-          isThoughtSupported={isThoughtSupported}
-          isArcanaSupported={isArcanaSupported}
-          onModelChange={onModelChange}
-          showAdvOpt={showAdvOpt}
-          toggleAdvOpt={toggleAdvOpt}
-          localState={localState}
-          setLocalState={setLocalState}
-          updateSettings={updateSettings}
-          setShareSettingsModal={setShareSettingsModal}
-          handleShareSettings={handleShareSettings}
-          setShowHelpModal={setShowHelpModal}
-          setShowArcanasHelpModal={setShowArcanasHelpModal}
-          setShowCustomHelpModal={setShowCustomHelpModal}
-          setShowTopPHelpModal={setShowTopPHelpModal}
-          setShowMemoryHelpModal={setShowMemoryHelpModal}
-          setShowSystemHelpModal={setShowSystemHelpModal}
-          notifySuccess={notifySuccess}
-          notifyError={notifyError}
-          setShowModalSession={setShowModalSession}
-          setPreviewFile={setPreviewFile}
-          userData={userData}
-        />
+        </div>
       </div>
 
       {/* Modal components */}
       {showHelpModal && <HelpModal showModal={setShowHelpModal} />}
+
+      {showToolsHelpModal && (
+        <HelpToolsModal showModal={setShowToolsHelpModal} />
+      )}
 
       {showCustomHelpModal && (
         <HelpCustomInstructionsModal showModal={setShowCustomHelpModal} />
@@ -864,27 +909,21 @@ function ChatWindow({
         <HelpArcanaModal showModal={setShowArcanasHelpModal} />
       )}
 
-      <>
-        {showCusModal ? (
-          <CustomInstructionsModal showModal={setShowCusModal} />
-        ) : null}
-      </>
+      {showCusModal && <CustomInstructionsModal showModal={setShowCusModal} />}
 
-      <>
-        {showFileModal ? (
-          <ExportTypeModal
-            arcana={localState.arcana}
-            showModal={setShowFileModal}
-            exportFile={exportFile}
-            conversation={localState.conversation}
-            exportSettings={localState.exportOptions.exportSettings}
-            exportImage={localState.exportOptions.exportImage}
-            exportArcana={localState.exportOptions.exportArcana}
-            setLocalState={setLocalState}
-            isArcanaSupported={isArcanaSupported}
-          />
-        ) : null}
-      </>
+      {showFileModal && (
+        <ExportTypeModal
+          arcana={localState.arcana}
+          showModal={setShowFileModal}
+          exportFile={exportFile}
+          conversation={localState.conversation}
+          exportSettings={localState.exportOptions.exportSettings}
+          exportImage={localState.exportOptions.exportImage}
+          exportArcana={localState.exportOptions.exportArcana}
+          setLocalState={setLocalState}
+          isArcanaSupported={isArcanaSupported}
+        />
+      )}
 
       {showModalSession && (
         <SessionExpiredModal showModal={setShowModalSession} />
@@ -901,24 +940,22 @@ function ChatWindow({
         />
       )}
 
-      <>
-        {shareSettingsModal ? (
-          <ShareSettingsModal
-            arcana={localState.arcana}
-            exportArcana={localState.exportOptions.exportArcana}
-            showModal={setShareSettingsModal}
-            handleShareSettings={handleShareSettings}
-            dontShowAgainShare={localState.dontShow.dontShowAgainShare}
-            setLocalState={setLocalState}
-            isArcanaSupported={isArcanaSupported}
-          />
-        ) : null}
-      </>
-      <>
-        {pdfNotProcessedModal ? (
-          <PdfNotProcessedModal showModal={setPdfNotProcessedModal} />
-        ) : null}
-      </>
+      {shareSettingsModal && (
+        <ShareSettingsModal
+          arcana={localState.arcana}
+          exportArcana={localState.exportOptions.exportArcana}
+          showModal={setShareSettingsModal}
+          handleShareSettings={handleShareSettings}
+          dontShowAgainShare={localState.dontShow.dontShowAgainShare}
+          setLocalState={setLocalState}
+          isArcanaSupported={isArcanaSupported}
+        />
+      )}
+
+      {pdfNotProcessedModal && (
+        <PdfNotProcessedModal showModal={setPdfNotProcessedModal} />
+      )}
+
       {previewFile && (
         <PreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
       )}

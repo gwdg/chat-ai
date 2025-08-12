@@ -10,12 +10,16 @@ export const getDefaultSettings = () => {
   }
 
   const result = {
-    ["model-name"]: envSettings.modelName,
     model: envSettings.model,
     temperature: envSettings.temperature,
     top_p: envSettings.top_p,
-    systemPrompt: "You are a helpful assistant",
+    system_prompt: "You are a helpful assistant",
     memory: 2,
+    enable_tools: envSettings.enable_tools,
+    tools: [],
+    arcana: {
+      id: "",
+    },
   };
 
   return result;

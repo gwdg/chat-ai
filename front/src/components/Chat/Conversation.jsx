@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 //Libraries
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -9,7 +8,7 @@ import { setCountGlobal } from "../../Redux/actions/alertAction";
 import { useDispatch, useSelector } from "react-redux";
 
 //Assets
-import cross from "../../assets/cross.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 
 //Components
 import Prompt from "./Prompt";
@@ -20,28 +19,13 @@ const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
 const Conversation = ({
-  modelList,
-  selectedFiles,
   localState,
-  isAudioSupported,
-  isImageSupported,
-  isVideoSupported,
-  isArcanaSupported,
-  setSelectedFiles,
   setLocalState,
-  setShowModalSession,
-  setShowBadRequest,
-  setShowFileModal,
-  setShowHistoryModal,
+  modelsData,
+  selectedFiles,
+  setSelectedFiles,
   toggleAdvOpt,
-  updateLocalState,
-  updateSettings,
-  clearHistory,
-  notifySuccess,
-  notifyError,
-  setDocNotProcessedModal,
   showAdvOpt,
-  setPreviewFile,
   currentModel,
 }) => {
   // Hooks
@@ -92,6 +76,7 @@ const Conversation = ({
     >
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-8px)] desktop:w-full border dark:border-border_dark rounded-xl shadow-md dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
         {showModal && countClose < 3 && (
+          // TODO store hallucination box separately
           <div className="w-[calc(100%-8px)] sticky select-none m-1 h-fit bg-white dark:bg-black p-2 rounded-xl flex justify-between items-center border dark:border-border_dark shadow-md dark:shadow-dark">
             <p className="dark:text-white text-black text-xs">
               <Trans i18nKey="description.note1" />
@@ -126,7 +111,7 @@ const Conversation = ({
               .
             </p>
             <img
-              src={cross}
+              src={icon_cross_sm}
               alt="cross"
               className="h-[20px] w-[20px] cursor-pointer"
               onClick={handleClose}
@@ -135,49 +120,30 @@ const Conversation = ({
         )}
 
         <Responses
-          modelList={modelList}
+          modelsData={modelsData}
           localState={localState}
           setLocalState={setLocalState}
           loading={loading}
-          setShowModalSession={setShowModalSession}
-          setShowBadRequest={setShowBadRequest}
           setSelectedFiles={setSelectedFiles}
-          setShowHistoryModal={setShowHistoryModal}
-          setShowFileModal={setShowFileModal}
-          updateLocalState={updateLocalState}
           adjustHeight={adjustHeight}
-          notifySuccess={notifySuccess}
-          notifyError={notifyError}
-          clearHistory={clearHistory}
-          updateSettings={updateSettings}
           loadingResend={loadingResend}
           setLoadingResend={setLoadingResend}
-          isArcanaSupported={isArcanaSupported}
+          currentModel={currentModel}
         />
       </div>
 
       <Prompt
-        modelList={modelList}
-        loading={loading}
-        isAudioSupported={isAudioSupported}
-        isImageSupported={isImageSupported}
-        isVideoSupported={isVideoSupported}
-        isArcanaSupported={isArcanaSupported}
-        selectedFiles={selectedFiles}
         localState={localState}
         setLocalState={setLocalState}
+        modelsData={modelsData}
+        loading={loading}
+        currentModel={currentModel}
+        selectedFiles={selectedFiles}
         setLoading={setLoading}
         setSelectedFiles={setSelectedFiles}
-        setShowModalSession={setShowModalSession}
-        setShowBadRequest={setShowBadRequest}
         toggleAdvOpt={toggleAdvOpt}
-        updateLocalState={updateLocalState}
-        notifySuccess={notifySuccess}
-        notifyError={notifyError}
         adjustHeight={adjustHeight}
-        setDocNotProcessedModal={setDocNotProcessedModal}
         loadingResend={loadingResend}
-        setPreviewFile={setPreviewFile}
         showAdvOpt={showAdvOpt}
       />
     </div>

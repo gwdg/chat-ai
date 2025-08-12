@@ -2,66 +2,57 @@
 import { useEffect, useRef, useState } from "react";
 
 //Assets
-import clear from "../../assets/cross_icon.svg";
-import settings_icon from "../../assets/Settings_Icon.svg";
-import image_icon from "../../assets/icon_image.svg";
-import send from "../../assets/icon_send.svg";
-import upload from "../../assets/add.svg";
-import mic from "../../assets/icon_mic.svg";
-import pause from "../../assets/pause.svg";
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
+import icon_cross from "../../assets/icons/cross.svg";
+import icon_settings from "../../assets/icons/settings.svg";
+import icon_support_vision from "../../assets/icons/support_vision.svg";
+import icon_support_video from "../../assets/icons/support_video.svg";
+import icon_send from "../../assets/icons/send.svg";
+import icon_attach from "../../assets/icons/attach.svg";
+import icon_mic from "../../assets/icons/mic.svg";
+import icon_stop from "../../assets/icons/stop.svg";
+import icon_file_uploaded from "../../assets/icons/file_uploaded.svg";
+
 import {
   cancelRequest,
-  fetchLLMResponse,
-  updateMemory,
-} from "../../apis/LlmRequestApi";
+} from "../../apis/chatCompletions";
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
-import video_icon from "../../assets/video_icon.svg";
-import cross from "../../assets/cross.svg";
-import uploaded from "../../assets/file_uploaded.svg";
-import { processDocument } from "../../apis/PdfProcessApi";
-import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
-import handleLLMResponse from "../../utils/handleLLMResponse";
 
-//Variable
-const languageMap = {
-  en: "en-US",
-  de: "de-DE",
-};
+import { processFile } from "../../apis/processFile";
+import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
+import sendMessage from "../../utils/sendMessage";
+import { useModal } from "../../modals/ModalContext";
+import { useToast } from "../../hooks/useToast";
+
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
 function Prompt({
-  modelList,
+  modelsData,
+  currentModel,
   loading,
   loadingResend,
-  isAudioSupported,
-  isImageSupported,
-  isVideoSupported,
-  isArcanaSupported,
   selectedFiles,
   localState,
   setLocalState,
   setLoading,
   setSelectedFiles,
-  setShowModalSession,
-  setShowBadRequest,
   toggleAdvOpt,
-  updateLocalState,
-  notifySuccess,
-  notifyError,
   adjustHeight,
-  setDocNotProcessedModal,
+  setPdfNotProcessedModal,
   setPreviewFile,
   showAdvOpt,
 }) {
   //Hooks
+  const { openModal } = useModal();
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const memories = useSelector(selectAllMemories);
   const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
+  const { notifySuccess, notifyError } = useToast();
 
   //Refs
   const hiddenFileInput = useRef(null);
@@ -78,6 +69,14 @@ function Prompt({
   const [pressTimer, setPressTimer] = useState(null);
   const [isLongPress, setIsLongPress] = useState(false);
 
+  // Update partial local state while preserving other values
+  const updateLocalState = (updates) => {
+    setLocalState((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+  };
+
   // Converts a file to base64 string format using FileReader
   const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -87,6 +86,10 @@ function Prompt({
       reader.readAsDataURL(file);
     });
   };
+
+  const isAudioSupported = (currentModel?.input?.includes("audio") || false)
+  const isVideoSupported = (currentModel?.input?.includes("video") || false)
+  const isImageSupported = (currentModel?.input?.includes("image") || false)
 
   // Main function to fetch and process LLM response
   const getRes = async (updatedConversation) => {
@@ -98,30 +101,27 @@ function Prompt({
         file.type !== "image" && file.type !== "video" && file.type !== "audio"
     );
 
-    await handleLLMResponse({
+    console.log(updatedConversation)
+
+    await sendMessage({
       operationType: "new",
+      openModal,
       updatedConversation,
       dispatch,
       localState,
-      updateLocalState,
       setLocalState,
       setLoading,
       selectedFiles,
       setSelectedFiles,
-      modelList,
+      modelsData,
       memories,
-      isArcanaSupported,
-      updateMemory,
-      fetchLLMResponse,
-      notifyError,
-      notifySuccess,
-      setShowModalSession,
-      setShowBadRequest,
       timeoutTime,
       audioFiles,
       imageFiles,
       videoFiles,
       textFiles,
+      notifyError,
+      notifySuccess
     });
   };
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
@@ -145,8 +145,8 @@ function Prompt({
     try {
       setProcessingFiles((prev) => new Set(prev).add(index));
 
-      // Use the generic processing function for all document types
-      const result = await processDocument(file.file);
+      // Pass the original File object
+      const result = await processFile(file.file);
 
       if (result.success && result.content) {
         setSelectedFiles((prevFiles) => {
@@ -311,6 +311,7 @@ function Prompt({
     event.preventDefault();
 
     if (localState.prompt?.trim() === "" && selectedFiles.length === 0) return;
+    if (localState.prompt?.trim() === "" && selectedFiles.length === 0) return;
 
     const hasUnprocessedDocument = selectedFiles.some(
       (file) =>
@@ -321,12 +322,12 @@ function Prompt({
     );
 
     if (hasUnprocessedDocument) {
-      setDocNotProcessedModal(true);
+      openModal("unprocessedFiles");
       return;
     }
 
     try {
-      let newConversation;
+      let newMessages;
 
       // Process submission with files
       if (selectedFiles.length > 0) {
@@ -403,14 +404,14 @@ function Prompt({
           ...videoContent,
         ];
 
-        newConversation = [
-          ...localState.conversation,
+        newMessages = [
+          ...localState.messages,
           { role: "user", content: newPromptContent },
         ];
       } else {
         // Simple text-only submission
-        newConversation = [
-          ...localState.conversation,
+        newMessages = [
+          ...localState.messages,
           { role: "user", content: localState.prompt },
         ];
       }
@@ -418,10 +419,10 @@ function Prompt({
       // Update conversation state
       setLocalState((prevState) => ({
         ...prevState,
-        conversation: newConversation,
+        messages: newMessages,
       }));
 
-      await getRes(newConversation);
+      await getRes(newMessages);
     } catch (error) {
       console.error("Error in handleSubmit:", error);
     }
@@ -1156,6 +1157,247 @@ function Prompt({
     return result;
   };
 
+  // const handleAudioMouseDown = () => {
+  //   setIsLongPress(false);
+  //   const timer = setTimeout(() => {
+  //     setIsLongPress(true);
+  //     handleAudioRecording(); // Start recording
+  //   }, 500); // 500ms for long press
+  //   setPressTimer(timer);
+  // };
+
+  // const handleAudioMouseUp = () => {
+  //   if (pressTimer) {
+  //     clearTimeout(pressTimer);
+  //     setPressTimer(null);
+  //   }
+
+  //   // If it was a short click and not currently recording
+  //   if (!isLongPress && !isRecording) {
+  //     // Trigger file selection
+  //     audioFileInputRef.current?.click();
+  //   }
+
+  //   // If it was a long press and currently recording, stop recording
+  //   if (isLongPress && isRecording) {
+  //     handleAudioRecording(); // Stop recording
+  //   }
+
+  //   setIsLongPress(false);
+  // };
+
+  // const handleAudioRecording = async () => {
+  //   if (isRecording) {
+  //     // Stop recording
+  //     if (
+  //       mediaRecorderRef.current &&
+  //       mediaRecorderRef.current.state !== "inactive"
+  //     ) {
+  //       mediaRecorderRef.current.stop();
+  //       setIsRecording(false);
+  //     }
+  //   } else {
+  //     // Start recording
+  //     try {
+  //       // Check if we're on localhost or https for microphone access
+  //       const isSecureContext =
+  //         window.isSecureContext ||
+  //         location.protocol === "https:" ||
+  //         location.hostname === "localhost";
+
+  //       if (!isSecureContext) {
+  //         notifyError(
+  //           "Microphone access requires HTTPS or localhost. Please use https:// or access via localhost"
+  //         );
+  //         return;
+  //       }
+
+  //       // Request microphone permission
+  //       const stream = await navigator.mediaDevices.getUserMedia({
+  //         audio: {
+  //           echoCancellation: true,
+  //           noiseSuppression: true,
+  //           autoGainControl: true,
+  //         },
+  //       });
+
+  //       streamRef.current = stream;
+  //       audioChunksRef.current = [];
+
+  //       // Create MediaRecorder with preferred format for OpenAI compatibility
+  //       let mimeType = "audio/webm";
+  //       if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+  //         mimeType = "audio/webm;codecs=opus";
+  //       } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+  //         mimeType = "audio/mp4";
+  //       } else if (MediaRecorder.isTypeSupported("audio/wav")) {
+  //         mimeType = "audio/wav";
+  //       }
+
+  //       const mediaRecorder = new MediaRecorder(stream, {
+  //         mimeType,
+  //         audioBitsPerSecond: 64000,
+  //       });
+
+  //       mediaRecorderRef.current = mediaRecorder;
+
+  //       // Handle data available event
+  //       mediaRecorder.ondataavailable = (event) => {
+  //         if (event.data.size > 0) {
+  //           audioChunksRef.current.push(event.data);
+  //         }
+  //       };
+
+  //       // Handle stop event
+  //       mediaRecorder.onstop = async () => {
+  //         const audioBlob = new Blob(audioChunksRef.current, {
+  //           type: mimeType,
+  //         });
+  //         await processRecordedAudio(audioBlob, mimeType);
+
+  //         // Clean up
+  //         if (streamRef.current) {
+  //           streamRef.current.getTracks().forEach((track) => track.stop());
+  //           streamRef.current = null;
+  //         }
+  //       };
+
+  //       // Start recording
+  //       mediaRecorder.start(1000);
+  //       setIsRecording(true);
+  //     } catch (error) {
+  //       console.error("Error starting recording:", error);
+
+  //       if (error.name === "NotAllowedError") {
+  //         notifyError(
+  //           "Microphone permission denied. Please allow microphone access and try again."
+  //         );
+  //       } else if (error.name === "NotFoundError") {
+  //         notifyError(
+  //           "No microphone found. Please connect a microphone and try again."
+  //         );
+  //       } else if (error.name === "NotSupportedError") {
+  //         notifyError(
+  //           "Microphone access not supported. Please use HTTPS or localhost."
+  //         );
+  //       } else {
+  //         notifyError(
+  //           "Failed to start recording. Please check your microphone and permissions."
+  //         );
+  //       }
+  //     }
+  //   }
+  // };
+
+  // // Process recorded audio for OpenAI format
+  // const processRecordedAudio = async (audioBlob, mimeType) => {
+  //   try {
+  //     // Create filename with timestamp
+  //     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  //     const fileName = `recording_${timestamp}.wav`;
+
+  //     // Convert blob to file
+  //     const audioFile = new File([audioBlob], fileName, { type: "audio/wav" });
+
+  //     // Check file size (25MB limit for OpenAI)
+  //     if (audioFile.size > 25 * 1024 * 1024) {
+  //       notifyError(
+  //         `Audio file too large: ${fileName}. OpenAI supports max 25MB.`
+  //       );
+  //       return;
+  //     }
+
+  //     // Convert to ArrayBuffer then to base64 (without data URL prefix)
+  //     const arrayBuffer = await audioFile.arrayBuffer();
+  //     const base64Data = btoa(
+  //       String.fromCharCode(...new Uint8Array(arrayBuffer))
+  //     );
+
+  //     // Create file object with proper format for OpenAI
+  //     const fileObject = {
+  //       name: fileName,
+  //       type: "audio",
+  //       size: audioFile.size,
+  //       text: base64Data, // Raw base64 without data URL prefix
+  //       format: "wav", // Store format for OpenAI
+  //     };
+
+  //     setSelectedFiles((prevFiles) => [...prevFiles, fileObject]);
+  //     notifySuccess("Audio recorded successfully");
+  //   } catch (error) {
+  //     console.error("Error processing audio file:", error);
+  //     notifyError("Error processing recorded audio");
+  //   }
+  // };
+
+  // const handleFilesChangeAudio = async (e) => {
+  //   try {
+  //     // Filter for MP3 and WAV files only
+  //     const files = Array.from(e.target.files).filter(
+  //       (file) =>
+  //         file.type === "audio/mpeg" ||
+  //         file.type === "audio/mp3" ||
+  //         file.type === "audio/wav" ||
+  //         file.type === "audio/wave" ||
+  //         file.type === "audio/x-wav"
+  //     );
+
+  //     // Validate file types
+  //     if (files.length !== e.target.files.length) {
+  //       notifyError("Only MP3 and WAV audio files are supported");
+  //       return;
+  //     }
+
+  //     // Process files
+  //     const validFiles = [];
+  //     for (const file of files) {
+  //       // Check file size (25MB limit for OpenAI)
+  //       if (file.size > 25 * 1024 * 1024) {
+  //         notifyError(
+  //           `File too large: ${file.name}. OpenAI supports max 25MB.`
+  //         );
+  //       } else {
+  //         validFiles.push(file);
+  //       }
+  //     }
+
+  //     if (validFiles.length === 0) {
+  //       return;
+  //     }
+
+  //     notifySuccess("Audio file attached");
+
+  //     // Process valid files - Convert to raw base64
+  //     const fileList = [];
+  //     for (const file of validFiles) {
+  //       // Convert to ArrayBuffer then to base64 (without data URL prefix)
+  //       const arrayBuffer = await file.arrayBuffer();
+  //       const base64Data = btoa(
+  //         String.fromCharCode(...new Uint8Array(arrayBuffer))
+  //       );
+
+  //       // Determine format for OpenAI
+  //       let format = "mp3";
+  //       if (file.type.includes("wav")) {
+  //         format = "wav";
+  //       }
+
+  //       fileList.push({
+  //         name: file.name,
+  //         type: "audio",
+  //         size: file.size,
+  //         text: base64Data, // Raw base64 without data URL prefix
+  //         format: format, // Store format for OpenAI
+  //       });
+  //     }
+
+  //     setSelectedFiles((prevFiles) => [...prevFiles, ...fileList]);
+  //     e.target.value = "";
+  //   } catch (error) {
+  //     notifyError("An error occurred: ", error);
+  //   }
+  // };
+
   // Trigger file input click
   const handleClick = () => {
     hiddenFileInput.current.value = null;
@@ -1195,7 +1437,7 @@ function Prompt({
                         icon: (
                           <img
                             className="h-4 w-4 brightness-0 invert"
-                            src={mic}
+                            src={icon_mic}
                             alt={file.name}
                           />
                         ),
@@ -1231,7 +1473,7 @@ function Prompt({
                         icon: (
                           <img
                             className="h-4 w-4 brightness-0 invert"
-                            src={video_icon}
+                            src={icon_support_video}
                             alt="video"
                           />
                         ),
@@ -1259,7 +1501,7 @@ function Prompt({
                         icon: (
                           <img
                             className="h-4 w-4 brightness-0 invert"
-                            src={uploaded}
+                            src={icon_file_uploaded}
                             alt="uploaded"
                           />
                         ),
@@ -1309,7 +1551,7 @@ function Prompt({
                           };
                         }
 
-                        setPreviewFile(previewFile);
+                        openModal("preview", {file: previewFile} );
                       }}
                     >
                       <div className="p-2 w-full h-full flex flex-col relative">
@@ -1361,7 +1603,7 @@ function Prompt({
                           aria-label="Remove file"
                         >
                           <img
-                            src={cross}
+                            src={icon_cross}
                             alt="remove"
                             className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity"
                           />
@@ -1504,7 +1746,7 @@ function Prompt({
                 >
                   <img
                     className="cursor-pointer h-[25px] w-[25px]"
-                    src={clear}
+                    src={icon_cross_sm}
                     alt="clear"
                   />
                 </button>
@@ -1520,7 +1762,7 @@ function Prompt({
                   >
                     <img
                       className="cursor-pointer h-[25px] w-[25px]"
-                      src={settings_icon}
+                      src={icon_settings}
                       alt="settings"
                     />
                   </button>
@@ -1542,7 +1784,7 @@ function Prompt({
                 >
                   <img
                     className="cursor-pointer h-[25px] w-[25px]"
-                    src={upload}
+                    src={icon_attach}
                     alt="upload"
                   />
                 </button>
@@ -1569,7 +1811,7 @@ function Prompt({
                     >
                       <img
                         className="cursor-pointer h-[25px] w-[25px]"
-                        src={image_icon}
+                        src={icon_support_vision}
                         alt="attach file"
                       />
                     </button>
@@ -1607,7 +1849,7 @@ function Prompt({
                         // Microphone icon when not recording
                         <img
                           className="h-[18px] w-[18px]"
-                          src={mic}
+                          src={icon_mic}
                           alt="microphone"
                         />
                       )}
@@ -1620,7 +1862,7 @@ function Prompt({
                   <button className="h-[30px] w-[30px] cursor-pointer">
                     <img
                       className="cursor-pointer h-[30px] w-[30px]"
-                      src={pause}
+                      src={icon_stop}
                       alt="pause"
                       onClick={handleCancelRequest}
                     />
@@ -1631,7 +1873,7 @@ function Prompt({
                   <button className="h-[30px] w-[30px] cursor-pointer">
                     <img
                       className="cursor-pointer h-[30px] w-[30px]"
-                      src={send}
+                      src={icon_send}
                       alt="send"
                       onClick={(event) => {
                         handleSubmit(event);

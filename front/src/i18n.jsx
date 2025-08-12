@@ -58,6 +58,7 @@ i18n
                   "Recall: Chat AI can use relevant memories about you from previous conversations, but won't memorize anything from the current conversation.",
                 on: "Learn: Chat AI actively learns stuff about you from the current conversation and also recalls memories it gained previously.",
                 settings:
+                 
                   "You can always view, add, edit, and remove memories from the User Profile panel in the top-right corner. Memories are only stored locally in your browser.",
               },
               back: "Back",
@@ -79,6 +80,9 @@ i18n
               configuration: "Persona configuration",
               folder: "Folder",
               createOwn: "Create Your Own Persona",
+              importFromClipboard: "Import Persona from Clipboard",
+              importFromClipboardErrorInvalidJson: "Failed to import persona from clipboard. No valid JSON found.",
+              importFromClipboardErrorInvalidPersona: "Failed to import persona from clipboard. Invalid persona data."
             },
             settings: {
               userMemory: "User Memory",
@@ -87,9 +91,10 @@ i18n
               manageMemory: "Manage Memory",
               userProfileSettings: "User Profile Settings",
               logout: "Logout",
-              defaultModel: "Default Model",
+              defaultModelTitle: "Default Model",
+              defaultModel: "Current: {{currentModel}}",
               defaultModelDescription:
-                "Select the default model for new conversations. Current: {{currentModel}}",
+                "Select the default model for new conversations.",
               clearAllChats: "Clear All Chats",
               clearAllChatsDescription:
                 "This will permanently delete all your chat history and cannot be undone.",
@@ -207,6 +212,8 @@ i18n
             startRecording: "Record (click/hold)",
             stopRecording: "Stop (click/release)",
 
+            startRecording: "Record (click/hold)",
+            stopRecording: "Stop (click/release)",
             //Bad request
             bad: "Bad request was sent: Please clear conversation, reattempt within the limit, and save your chat history for future reference.",
 
@@ -318,9 +325,9 @@ i18n
             input_button: "Rename",
             error_title: "Title is required",
 
-            pdf_not_processed_title: "Warning: PDF not processed",
-            pdf_not_processed:
-              "Please process or remove the attached document to continue.",
+            unprocessed_files_title: "Warning: PDF not processed",
+            unprocessed_files:
+              "Please process or remove the attached PDF to continue.",
             announcement:
               "Chat AI will be temporarily unavailable on Wednesday, 18.12.2024, from 10:00 to 12:00 due to maintenance. We apologize for the inconvenience.",
 
@@ -392,6 +399,9 @@ i18n
               configuration: "Persona-Konfiguration",
               folder: "Ordner",
               createOwn: "Eigene Persona erstellen",
+              importFromClipboard: "Persona aus Zwischenablage importieren",
+              importFromClipboardErrorInvalidJson: "Fehler beim Importieren der Persona aus der Zwischenablage. Ungültiges JSON.",
+              importFromClipboardErrorInvalidPersona: "Fehler beim Importieren der Persona aus der Zwischenablage. Ungültige Persona-Daten."
             },
             settings: {
               userMemory: "Benutzerspeicher",
@@ -637,9 +647,9 @@ i18n
             input_button: "Umbenennen",
             error_title: "Titel ist erforderlich",
 
-            pdf_not_processed_title: "Warnung: PDF nicht verarbeitet",
-            pdf_not_processed:
-              "Bitte verarbeiten oder entfernen Sie das beigefügte Dokument, um fortzufahren.",
+            unprocessed_files_title: "Warnung: PDF nicht verarbeitet",
+            unprocessed_files:
+              "Bitte verarbeiten oder entfernen Sie das beigefügte PDF, um fortzufahren.",
 
             announcement:
               "Chat AI wird am Mittwoch, 18.12.2024, von 10:00 bis 12:00 Uhr aufgrund von Wartungsarbeiten vorübergehend nicht verfügbar sein. Wir entschuldigen uns für die Unannehmlichkeiten.",
