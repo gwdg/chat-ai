@@ -12,7 +12,7 @@ import TemperatureSlider from "./TemperatureSlider";
 import TopPSlider from "./TopPSlider";
 import MemorySelector from "./MemorySelector";
 import GWDGToggle from "./GWDGToggle";
-import ModelSelector from "./ModelSelector";
+import ModelSelector from "../../Header/ModelSelector";
 import SystemPromptContainer from "./SystemPromptContainer";
 import ShareSettingsButton from "./ShareSettingsButton";
 
@@ -23,7 +23,7 @@ import {
   updateConversation,
 } from "../../../Redux/reducers/conversationsSlice";
 import { processFile } from "../../../apis/processFile";
-import { selectDefaultModel } from "../../../Redux/reducers/defaultModelSlice";
+import { selectDefaultModel } from "../../../Redux/reducers/userSettingsReducer";
 
 // Hooks
 import { useImportConversation } from "../../../hooks/useImportConversation";
@@ -58,10 +58,7 @@ const SettingsPanel = ({
   const currentConversationId = useSelector(
     (state) => state.current_conversation
   );
-  const currentVersion = useSelector((state) => state.version);
-  const settings = localState.current_conversation
-    ? localState.conversations[localState.current_conversation].settings
-    : {"model": {"id": "meta-llama-3.1-8b-instruct"}};
+  const settings = localState.settings;
   const { notifySuccess, notifyError } = useToast();
 
   //Local useStates
@@ -74,10 +71,6 @@ const SettingsPanel = ({
   const [tourStepIndex, setTourStepIndex] = useState(0); // Add this
   const showSettings = useSelector(selectShowSettings);
 
-  const currentModel = localState.current_conversation
-    ? localState.conversations[localState.current_conversation].settings.model
-    : "meta-llama-3.1-8b";  // TODO
-  // console.log("currentModel", currentModel)
   const tourSteps = [
     {
       target: ".memory-option-off",
@@ -430,135 +423,135 @@ const SettingsPanel = ({
     notifySuccess,
   ]);
 
-  // Handle Arcana parameters from URL
-  useEffect(() => {
-    const handleArcanaParams = async (modelsList) => {
-      const arcanaID = searchParams.get("arcana");
-      // const arcanaKey = searchParams.get("arcana_key");
-      const modelParam = searchParams.get("model");
+  // // Handle Arcana parameters from URL
+  // useEffect(() => {
+  //   const handleArcanaParams = async (modelsList) => {
+  //     const arcanaID = searchParams.get("arcana");
+  //     // const arcanaKey = searchParams.get("arcana_key");
+  //     const modelParam = searchParams.get("model");
 
-      // Check if we have an arcana ID and model param (key is now optional)
-      if (
-        arcanaID &&
-        modelParam &&
-        modelsList?.length > 0 &&
-        location.pathname === "/chat" &&
-        !hasProcessedArcana.current
-      ) {
-        try {
-          hasProcessedArcana.current = true;
+  //     // Check if we have an arcana ID and model param (key is now optional)
+  //     if (
+  //       arcanaID &&
+  //       modelParam &&
+  //       modelsList?.length > 0 &&
+  //       location.pathname === "/chat" &&
+  //       !hasProcessedArcana.current
+  //     ) {
+  //       try {
+  //         hasProcessedArcana.current = true;
 
-          const formattedModelParam = modelParam
-            .toLowerCase()
-            .replace(/\s+/g, "-");
+  //         const formattedModelParam = modelParam
+  //           .toLowerCase()
+  //           .replace(/\s+/g, "-");
 
-          const matchedModel = modelsList.find(
-            (m) => m.id === formattedModelParam && m.input.includes("arcana")
-          );
+  //         const matchedModel = modelsList.find(
+  //           (m) => m.id === formattedModelParam && m.input.includes("arcana")
+  //         );
 
-          if (!matchedModel) {
-            throw new Error("Model not found or does not support Arcana.");
-          }
+  //         if (!matchedModel) {
+  //           throw new Error("Model not found or does not support Arcana.");
+  //         }
 
-          // Create arcana object with optional key
-          const arcanaObject = {
-            id: decodeURIComponent(arcanaID),
-            // Only include key if it exists, otherwise use null or empty string
-            // depending on what your backend expects for missing key
-            // key: arcanaKey ? decodeURIComponent(arcanaKey) : null,
-          };
+  //         // Create arcana object with optional key
+  //         const arcanaObject = {
+  //           id: decodeURIComponent(arcanaID),
+  //           // Only include key if it exists, otherwise use null or empty string
+  //           // depending on what your backend expects for missing key
+  //           // key: arcanaKey ? decodeURIComponent(arcanaKey) : null,
+  //         };
 
-          // Create custom settings for the new conversation
-          const customSettings = {
-            // ["model-name"]: matchedModel.name,
-            model: matchedModel,
-            temperature: 0,
-            top_p: 0.05,
-          };
+  //         // Create custom settings for the new conversation
+  //         const customSettings = {
+  //           // ["model-name"]: matchedModel.name,
+  //           model: matchedModel,
+  //           temperature: 0,
+  //           top_p: 0.05,
+  //         };
 
-          // Create a new conversation with arcana settings
-          const newConversationAction = dispatch(
-            addConversation(null, customSettings)
-          );
+  //         // Create a new conversation with arcana settings
+  //         const newConversationAction = dispatch(
+  //           addConversation(null, customSettings)
+  //         );
 
-          const newConversationId = newConversationAction.meta.id;
+  //         const newConversationId = newConversationAction.meta.id;
 
-          // Update the newly created conversation with arcana data
-          dispatch(
-            updateConversation({
-              id: newConversationId,
-              updates: {
-                arcana: arcanaObject,
-              },
-            })
-          );
+  //         // Update the newly created conversation with arcana data
+  //         dispatch(
+  //           updateConversation({
+  //             id: newConversationId,
+  //             updates: {
+  //               arcana: arcanaObject,
+  //             },
+  //           })
+  //         );
 
-          // Update local state to match the new conversation
-          setLocalState((prev) => ({
-            ...prev,
-            arcana: arcanaObject,
-            settings: {
-              ...prev.settings,
-              ...customSettings,
-            },
-          }));
+  //         // Update local state to match the new conversation
+  //         setLocalState((prev) => ({
+  //           ...prev,
+  //           arcana: arcanaObject,
+  //           settings: {
+  //             ...prev.settings,
+  //             ...customSettings,
+  //           },
+  //         }));
 
-          // Safe scrollTop access (if relevant)
-          const chatContainer = document.getElementById("chat-container");
-          if (chatContainer) {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-          }
+  //         // Safe scrollTop access (if relevant)
+  //         const chatContainer = document.getElementById("chat-container");
+  //         if (chatContainer) {
+  //           chatContainer.scrollTop = chatContainer.scrollHeight;
+  //         }
 
-          // Navigate to the new conversation
-          navigate(`/chat/${newConversationId}`, { replace: true });
-        } catch (error) {
-          hasProcessedArcana.current = false; // Reset flag if failed
-          notifyError(
-            "Invalid model or arcana parameters. Redirecting to default chat."
-          );
-          navigate(`/chat/${currentConversationId}`, { replace: true });
-        }
-      }
-    };
+  //         // Navigate to the new conversation
+  //         navigate(`/chat/${newConversationId}`, { replace: true });
+  //       } catch (error) {
+  //         hasProcessedArcana.current = false; // Reset flag if failed
+  //         notifyError(
+  //           "Invalid model or arcana parameters. Redirecting to default chat."
+  //         );
+  //         navigate(`/chat/${currentConversationId}`, { replace: true });
+  //       }
+  //     }
+  //   };
 
-    // const fetchModelsAndProcess = async () => {
-    //   if (hasFetchedModels.current) return;
+  //   // const fetchModelsAndProcess = async () => {
+  //   //   if (hasFetchedModels.current) return;
 
-    //   try {
-    //     hasFetchedModels.current = true;
-    //     const modelsData = await getModelsData();
-    //     if (modelsData === 401) {
-    //       openModal('errorSessionExpired');
-    //     }
-    //     if (!modelsData || modelsData.length === 0) {
-    //       throw new Error("Failed to fetch models.");
-    //     }
-    //     handleArcanaParams(modelsData);
-    //   } catch (error) {
-    //     notifyError("Failed to fetch models. Please try again.");
-    //     await sleep(10000);
-    //     hasFetchedModels.current = false;
-    //   }
-    // };
+  //   //   try {
+  //   //     hasFetchedModels.current = true;
+  //   //     const modelsData = await getModelsData();
+  //   //     if (modelsData === 401) {
+  //   //       openModal('errorSessionExpired');
+  //   //     }
+  //   //     if (!modelsData || modelsData.length === 0) {
+  //   //       throw new Error("Failed to fetch models.");
+  //   //     }
+  //   //     handleArcanaParams(modelsData);
+  //   //   } catch (error) {
+  //   //     notifyError("Failed to fetch models. Please try again.");
+  //   //     await sleep(10000);
+  //   //     hasFetchedModels.current = false;
+  //   //   }
+  //   // };
 
-    // if (
-    //   conversations.length > 0 &&
-    //   !hasFetchedModels.current &&
-    //   !hasProcessedArcana.current
-    // ) {
-    //   fetchModelsAndProcess();
-    // }
-  }, [
-    searchParams,
-    location.pathname,
-    conversations,
-    currentConversationId,
-    dispatch,
-    navigate,
-    notifyError,
-    setLocalState,
-    setShowModalSession,
-  ]);
+  //   // if (
+  //   //   conversations.length > 0 &&
+  //   //   !hasFetchedModels.current &&
+  //   //   !hasProcessedArcana.current
+  //   // ) {
+  //   //   fetchModelsAndProcess();
+  //   // }
+  // }, [
+  //   searchParams,
+  //   location.pathname,
+  //   conversations,
+  //   currentConversationId,
+  //   dispatch,
+  //   navigate,
+  //   notifyError,
+  //   setLocalState,
+  //   setShowModalSession,
+  // ]);
 
   // useEffect(() => {
   //   // Auto-start tour if version is 2 and settings panel is open
@@ -669,18 +662,16 @@ const SettingsPanel = ({
                   : "translate-y-full opacity-0"
               } flex flex-col gap-4 p-3 sm:p-4 h-fit w-full`}
             >
-              {/* Model Selection Menu */}
+              {/* Model Selection Menu
               <ModelSelector
                 modelsData={modelsData}
                 localState={localState}
                 setLocalState={setLocalState}
                 onModelChange={onModelChange}
-              />
+              /> */}
               
               {/* Warning for external models */}
-              { (localState.current_conversation
-                  ? localState.conversations[localState.current_conversation].settings.model.name
-                  : "meta-llama-3.1-8b").toLowerCase().includes("external") && (
+              { localState.settings?.model?.name.toLowerCase().includes("external") && (
                 <div className="text-yellow-600 text-sm mb-3 select-none">
                   <Trans i18nKey={
                     userData?.org == "MPG" 
@@ -702,13 +693,6 @@ const SettingsPanel = ({
                 localState={localState}
                 setLocalState={setLocalState}
               />
-            
-              {/* Arcana warning*/}
-              {settings.arcana?.id && (settings?.useGWDGTools || (currentModel?.input?.includes("arcana") || false)) && (
-                <div className="text-yellow-600 text-xs w-full select-none">
-                  <Trans i18nKey="description.warning_arcana" />
-                </div>
-              )}
 
               {/* temperature Slider */}
               <TemperatureSlider

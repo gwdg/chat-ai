@@ -46,7 +46,7 @@ const createNewConversation = (conversationId) => {
   return {
     id: conversationId || uuidv4(),
     title: "Untitled Conversation",
-    messages: defaultSettings.messages,
+    messages: defaultSettings?.messages || [],
     settings,
     created_at: new Date().toISOString(),
     last_modified: new Date().toISOString(),

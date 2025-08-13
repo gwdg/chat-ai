@@ -15,7 +15,7 @@ export const getDefaultSettings = () => {
     top_p: envSettings.top_p,
     system_prompt: "You are a helpful assistant",
     memory: 2,
-    enable_tools: envSettings.enable_tools,
+    enable_tools: envSettings?.enable_tools || false,
     tools: [],
     arcana: {
       id: "",

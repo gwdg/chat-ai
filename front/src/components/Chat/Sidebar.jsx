@@ -9,7 +9,7 @@ import {
   selectLockConversation,
 } from "../../Redux/reducers/conversationsSlice";
 import { setCurrentConversation } from "../../Redux/reducers/currentConversationSlice";
-import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
+import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 import { useCallback, useEffect } from "react";
 
 // Asset imports
@@ -28,8 +28,8 @@ function Sidebar({onClose}) {
   const [conversationIds, setConversationIds] = useState([]);
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
-  const isResponding = useSelector(selectLockConversation);
-  const defaultModel = useSelector(selectDefaultModel);
+  const lockConversation = useSelector(selectLockConversation);
+  const defaultSettings = useSelector(getDefaultSettings);
 
   // Keep conversation IDs synchronized with the conversations list
   useEffect(() => {
@@ -51,11 +51,11 @@ function Sidebar({onClose}) {
   }, [currentConversationId, conversations, dispatch]);
 
   const handleNewChat = useCallback(() => {
-    if (isResponding) return; // Prevent new chat while responding
+    if (lockConversation) return; // Prevent new chat while responding
     const defaultSettings = getDefaultSettings();
 
     // Temporarily disable interaction
-    dispatch({ type: "conversations/setIsResponding", payload: true });
+    dispatch({ type: "conversations/setLockConversation", payload: true });
 
     // Add the conversation with the current default model
     const action = dispatch(addConversation());
@@ -68,14 +68,7 @@ function Sidebar({onClose}) {
         payload: {
           id: newId,
           updates: {
-            settings: {
-              ["model-name"]: defaultModel.name,
-              model: defaultModel.id,
-              systemPrompt: "You are a helpful assistant",
-              temperature: defaultSettings.temperature,
-              top_p: defaultSettings.top_p,
-              memory: 2,
-            },
+            settings: defaultSettings,
           },
         },
       });
@@ -98,11 +91,11 @@ function Sidebar({onClose}) {
       // If no ID was created (unlikely), still re-enable interaction
       dispatch({ type: "conversations/setLockConversation", payload: false });
     }
-  }, [dispatch, navigate, onClose, isResponding, defaultModel]);
+  }, [dispatch, navigate, onClose, lockConversation, defaultSettings]);
 
   const handleSelectConversation = useCallback(
     (id) => {
-      if (isResponding || id === currentConversationId) return;
+      if (lockConversation || id === currentConversationId) return;
 
       dispatch(setCurrentConversation(id));
       navigate(`/chat/${id}`);
@@ -112,7 +105,7 @@ function Sidebar({onClose}) {
         onClose?.();
       }
     },
-    [dispatch, navigate, onClose, isResponding, currentConversationId]
+    [dispatch, navigate, onClose, lockConversation, currentConversationId]
   );
 
   return (
@@ -140,9 +133,9 @@ function Sidebar({onClose}) {
       <div className="flex-shrink-0 p-3 border-b border-gray-200 dark:border-gray-800">
         <button
           onClick={handleNewChat}
-          disabled={isResponding}
+          disabled={lockConversation}
           className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-medium transition-colors touch-manipulation ${
-            isResponding ? "cursor-not-allowed opacity-50" : ""
+            lockConversation ? "cursor-not-allowed opacity-50" : ""
           }`}
           style={{
             WebkitTapHighlightColor: "transparent",
@@ -188,7 +181,7 @@ function Sidebar({onClose}) {
                   key={id}
                   onClick={() => handleSelectConversation(id)}
                   className={`group px-3 py-2 rounded-xl relative touch-manipulation transition-colors ${
-                    isResponding ? "cursor-not-allowed" : "cursor-pointer"
+                    lockConversation ? "cursor-not-allowed" : "cursor-pointer"
                   } ${
                     isCurrentConversation
                       ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white border border-gray-200 dark:border-gray-700"
@@ -215,13 +208,13 @@ function Sidebar({onClose}) {
                     <div className="flex-shrink-0 flex items-center gap-1 desktop:opacity-0 desktop:group-hover:opacity-100 opacity-100">
                       <button
                         onClick={(e) => {
-                          if (isResponding) return;
+                          if (lockConversation) return;
                           e.stopPropagation();
                           openModal("renameConversation", {id})
                         }}
-                        disabled={isResponding}
+                        disabled={lockConversation}
                         className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation w-7 h-7 flex items-center justify-center ${
-                          isResponding ? "cursor-not-allowed" : ""
+                          lockConversation ? "cursor-not-allowed" : ""
                         }`}
                         style={{
                           WebkitTapHighlightColor: "transparent",
@@ -235,13 +228,13 @@ function Sidebar({onClose}) {
                       </button>
                       <button
                         onClick={(e) => {
-                          if (isResponding) return;
+                          if (lockConversation) return;
                           e.stopPropagation();
                           openModal("deleteConversation", {id})
                         }}
-                        disabled={isResponding}
+                        disabled={lockConversation}
                         className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation w-7 h-7 flex items-center justify-center ${
-                          isResponding ? "cursor-not-allowed" : ""
+                          lockConversation ? "cursor-not-allowed" : ""
                         }`}
                         style={{
                           WebkitTapHighlightColor: "transparent",
@@ -264,9 +257,9 @@ function Sidebar({onClose}) {
           onClick={() => {
             openModal("importPersona");
           }}
-          disabled={isResponding}
+          disabled={lockConversation}
           className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-medium transition-colors touch-manipulation ${
-            isResponding ? "cursor-not-allowed opacity-50" : ""
+            lockConversation ? "cursor-not-allowed opacity-50" : ""
           }`}
           style={{
             WebkitTapHighlightColor: "transparent",

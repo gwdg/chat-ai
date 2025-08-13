@@ -8,8 +8,6 @@ import "react-toastify/dist/ReactToastify.css";
 import SettingsPanel from "./SettingsPanel/SettingsPanel";
 
 //Hooks and Redux
-import { selectCurrentConversation, updateConversation } from "../../Redux/reducers/conversationsSlice";
-import { setCurrentConversation } from "../../Redux/reducers/currentConversationSlice";
 import Sidebar from "./Sidebar";
 import { selectDarkMode, selectShowSettings, selectShowSidebar, toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 import WarningButton from "../Others/WarningButton";
@@ -28,103 +26,18 @@ function Chat({
 }) {
   // Hooks
   const dispatch = useDispatch();
-  const { conversationId } = useParams();
   const { openModal } = useModal();
 
   // Redux selectors
-  const isDarkMode = useSelector(selectDarkMode);
+
   const showSettings = useSelector(selectShowSettings);
   const showSidebar = useSelector(selectShowSidebar);
-  const currentConversation = useSelector(selectCurrentConversation);
 
-  const [isActive, setIsActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   // const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
   
   //Refs
   const isIntentionalRefresh = useRef(false);
-
-  // ==== EFFECTS SECTION ====
-
-  // Responsive sidebar handling
-    useEffect(() => {
-      const handleResize = () => {
-        toggleSidebar(window.innerWidth > 1080);
-      };
-  
-      handleResize();
-      window.addEventListener("resize", handleResize);
-      return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-  // Effect 1: Initializes local state when conversation ID or current conversation changes
-  useEffect(() => {
-    // Only proceed if both conversationId and currentConversation exist
-    if (conversationId && currentConversation) {
-      // Update the current conversation in Redux store
-      dispatch(setCurrentConversation(conversationId));
-
-      // Initialize local state with all conversation data
-      setLocalState({
-        title: currentConversation.title, // Current title
-        prompt: currentConversation.prompt, // Current prompt text
-        responses: currentConversation.responses, // Array of AI responses
-        messages: currentConversation.messages, // Full conversation history
-        settings: { ...currentConversation.settings }, // Chat settings (temperature, etc.)
-      });
-    }
-  }, [conversationId, currentConversation, dispatch]);
-
-  // Effect 2: Debounced auto-save of conversation changes
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      setIsActive(!document.hidden);
-    };
-
-    // Initial state
-    setIsActive(!document.hidden);
-
-    // Listen for visibility changes
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
-
-  // Only dispatch updateConversation if this tab has focus
-  useEffect(() => {
-    // Only update if this tab is active
-    if (!isActive) return;
-
-    const timer = setTimeout(() => {
-      if (currentConversation) {
-        dispatch(
-          updateConversation({
-            id: conversationId,
-            updates: {
-              ...localState,
-              lastModified: new Date().toISOString(),
-            },
-          })
-        );
-      }
-    }, 60000);
-
-    return () => clearTimeout(timer);
-  }, [localState, currentConversation, conversationId, dispatch, isActive]);
-
-  // Effect 3: Handle dark mode toggling
-  useEffect(() => {
-    const root = window.document.documentElement;
-
-    // Toggle dark mode class on root element
-    if (isDarkMode) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  }, [isDarkMode]);
 
   const currentModel = "meta-llama-3.1-8b-instruct" // TODO localState.csettings["model"]
 

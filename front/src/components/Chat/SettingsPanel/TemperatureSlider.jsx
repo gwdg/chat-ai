@@ -5,9 +5,7 @@ import { useModal } from "../../../modals/ModalContext";
 export default function TemperatureSlider({ localState, setLocalState}) {
     const { openModal } = useModal();
     const [isHovering, setHovering] = useState(false);
-    const settings = localState.current_conversation
-    ? localState.conversations[localState.current_conversation].settings
-    : {"model": {"id": "meta-llama-3.1-8b-instruct"}};
+    const settings = localState.settings;
     // Handle temperature setting change
     const handleChangeTemp = (newValue) => {
         // Convert to float and update settings

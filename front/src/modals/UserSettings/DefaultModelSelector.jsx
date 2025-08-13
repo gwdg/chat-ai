@@ -7,7 +7,7 @@ import icon_support_video from "../../assets/icons/support_video.svg";
 import icon_support_reasoning from "../../assets/icons/support_reasoning.svg";
 import icon_support_arcana from "../../assets/icons/support_arcana.svg";
 import DemandStatusIcon from "../../components/Others/DemandStatusIcon";
-import { selectDefaultModel, setDefaultModel } from "../../Redux/reducers/defaultModelSlice";
+import { selectDefaultModel, setDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 
 export default function DefaultModelSelector({ modelsData }) {
     const dispatch = useDispatch();

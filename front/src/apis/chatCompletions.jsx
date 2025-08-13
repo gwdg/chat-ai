@@ -40,7 +40,7 @@ async function chatCompletions (
       stream: true,
       stream_options: {include_usage: true },
       timeout: timeout,
-      extra_body: {arcana: (isArcanaSupported || localState?.settings?.useGWDGTools) ? arcana : ""}
+      extra_body: {arcana: (isArcanaSupported || localState?.settings?.enable_tools) ? arcana : ""}
     }).asResponse();
     console.log(response);
     console.log(response.statusText);

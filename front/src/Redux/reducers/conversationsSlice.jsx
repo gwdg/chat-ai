@@ -59,25 +59,24 @@ const conversationsSlice = createSlice({
       if (conversation) {
         // Skip auto-adding system message if we're updating both conversation and settings
         // (which indicates an import operation)
-        const isImportOperation =
-          updates.messages && updates.settings?.systemPrompt;
+        // const isImportOperation =
+        //   updates.messages && updates.settings?.system_prompt;
 
-        if (updates.messages && !isImportOperation) {
-          // Only auto-add system message for regular updates, not imports
-          const hasSystemMessage = updates.messages.some(
-            (msg) => msg.role === "system"
-          );
-          if (!hasSystemMessage) {
-            updates.messages = [
-              {
-                role: "system",
-                content: "TODO You are a helpful assistant",
-              },
-              ...updates.messages,
-            ];
-          }
-        }
-
+        // if (updates.messages && !isImportOperation) {
+        //   // Only auto-add system message for regular updates, not imports
+        //   const hasSystemMessage = updates.messages.some(
+        //     (msg) => msg.role === "system"
+        //   );
+        //   if (!hasSystemMessage) {
+        //     updates.messages = [
+        //       {
+        //         role: "system",
+        //         content: "TODO You are a helpful assistant",
+        //       },
+        //       ...updates.messages, // TODO remove non-system messages
+        //     ];
+        //   }
+        // }
         Object.assign(conversation, updates);
         conversation.lastModified = new Date().toISOString();
       }
@@ -142,15 +141,15 @@ const conversationsSlice = createSlice({
         };
       },
     },
-    setIsResponding: (state, action) => {
-      state.isResponding = action.payload;
+    setLockConversation: (state, action) => {
+      // TODO reducer for lock conversation
+      // state.lock_conversation = action.payload;
     },
   },
 });
 
 export const selectConversations = (state) => state.conversations;
-export const selectCurrentConversationId = (state) =>
-  state.current_conversation;
+export const selectCurrentConversationId = (state) => state.current_conversation;
 export const selectCurrentConversation = (state) =>
   state.current_conversation
     ? state.conversations.find(
@@ -164,7 +163,7 @@ export const {
   deleteConversation,
   updateConversation,
   resetStore,
-  setIsResponding: setLockConversation,
+  setLockConversation,
 } = conversationsSlice.actions;
 
 export default conversationsSlice.reducer;

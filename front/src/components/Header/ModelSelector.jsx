@@ -1,19 +1,19 @@
 
 import { useCallback, useState, useMemo, useEffect, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { useModal } from "../../../modals/ModalContext"; 
+import { useModal } from "../../modals/ModalContext"; 
 import { useSelector, useDispatch } from "react-redux";
 
-import icon_help from "../../../assets/icons/help.svg";
-import icon_support_vision from "../../../assets/icons/support_vision.svg";
-import icon_support_audio from "../../../assets/icons/support_audio.svg";
-import icon_support_video from "../../../assets/icons/support_video.svg";
-import icon_support_reasoning from "../../../assets/icons/support_reasoning.svg";
-import icon_support_arcana from "../../../assets/icons/support_arcana.svg";
-import icon_dropdown from "../../../assets/icons/dropdown.svg";
-import DemandStatusIcon from "../../Others/DemandStatusIcon";
+import icon_help from "../../assets/icons/help.svg";
+import icon_support_vision from "../../assets/icons/support_vision.svg";
+import icon_support_audio from "../../assets/icons/support_audio.svg";
+import icon_support_video from "../../assets/icons/support_video.svg";
+import icon_support_reasoning from "../../assets/icons/support_reasoning.svg";
+import icon_support_arcana from "../../assets/icons/support_arcana.svg";
+import icon_dropdown from "../../assets/icons/dropdown.svg";
+import DemandStatusIcon from "../Others/DemandStatusIcon";
 
-import { updateConversation, selectCurrentConversation, selectCurrentConversationId } from "../../../Redux/reducers/conversationsSlice";
+import { updateConversation, selectCurrentConversation, selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
 
 export default function ModelSelector ({ modelsData, localState }) {
 
@@ -23,24 +23,23 @@ export default function ModelSelector ({ modelsData, localState }) {
     const [direction, setDirection] = useState("down");
     const dropdownRef = useRef(null);
     const dispatch = useDispatch();
-    const [modelSettings, setModelSettings] = useState({
-        model: {id: "", name: ""},
-    });
+    // const [modelSettings, setModelSettings] = useState({
+    //     model: {id: "", name: ""},
+    // });
 
     // Toggle dropdown open/close state
-    const toggleOpen = () => setIsOpen(!isOpen);
+    const toggleOpen = () => {setIsOpen(!isOpen);}
 
     // Conversation state management
     const currentConversationId = useSelector(selectCurrentConversationId);
     const currentConversation = useSelector(selectCurrentConversation);
+    const currentModel = currentConversation?.settings?.model
 
     // Handle model selection changes
     const handleModelChange = useCallback(
-    (model) => {
+        (model) => {
         if (!model || !currentConversationId) return;
-        setModelSettings({
-            model: model,
-        });
+        console.log("Changing model")
         if (model?.status === "offline") {
             openModal("serviceOffline")
         }
@@ -57,13 +56,10 @@ export default function ModelSelector ({ modelsData, localState }) {
                 },
             })
         );
-        toggleOpen();
     }, [dispatch, currentConversationId, currentConversation]
     );
 
-    const currentModel = localState.current_conversation
-      ? localState.conversations[localState.current_conversation].settings.model
-      : "meta-llama-3.1-8b-instruct" // TODO
+    
     // Filter function to search through models
     const filteredModelList = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -112,18 +108,6 @@ export default function ModelSelector ({ modelsData, localState }) {
     
     return (
             <div className="flex flex-wrap items-center gap-4 select-none">
-                <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
-                <p className="flex-shrink-0 text-sm whitespace-nowrap">
-                    <Trans i18nKey="description.choose" />
-                </p>
-                <img
-                    src={icon_help}
-                    alt="help"
-                    className="h-[16px] w-[16px] cursor-pointer"
-                    onClick={() => openModal("helpModels")}
-                />
-                </div>
-
                 <div
                 className="relative flex-1 min-w-[200px]"
                 ref={dropdownRef}
@@ -136,7 +120,8 @@ export default function ModelSelector ({ modelsData, localState }) {
                 }}
                 >
                 <div
-                    className="text-tertiary flex items-center mt-1 cursor-pointer text-sm w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                    // className="text-tertiary flex items-center mt-1 cursor-pointer text-sm w-full py-[10px] px-3 appearance-none focus:outline-none rounded-2xl border-opacity-10 border dark:border-border_dark bg-white dark:bg-black shadow-lg dark:shadow-dark"
+                    className="text-tertiary flex items-center mt-1 cursor-pointer text-sm w-full py-[8px] px-3 appearance-none focus:outline-none rounded-2xl border:none  bg-white dark:bg-black"
                     onClick={toggleOpen}
                 >
                     <div className="flex items-center gap-2 w-full">
@@ -144,11 +129,8 @@ export default function ModelSelector ({ modelsData, localState }) {
                         status={currentModel?.status}
                         demand={currentModel?.demand}
                     />
-                    <div className="text-sm overflow-hidden text-ellipsis whitespace-nowrap flex-1">
-                        {localState.current_conversation
-                        ? localState.conversations[localState.current_conversation].settings.model
-                        : "meta-llama-3.1-8b-instruct" // TODO
-                        }
+                    <div className="text-sm overflow-hidden text-ellipsis whitespace-nowrap">
+                        {currentModel?.name || currentModel || "Select Model"}
                     </div>
                     {(currentModel?.input?.includes("audio") || false) && (
                         <img
@@ -191,7 +173,14 @@ export default function ModelSelector ({ modelsData, localState }) {
                         alt="drop-down"
                         className="h-[24px] w-[24px] cursor-pointer flex-shrink-0"
                     />
+                    <img
+                        src={icon_help}
+                        alt="help"
+                        className="h-[20px] w-[20px] cursor-pointer"
+                        onClick={() => openModal("helpModels")}
+                    />
                     </div>
+                    
                 </div>
 
                 {isOpen && (
@@ -235,6 +224,7 @@ export default function ModelSelector ({ modelsData, localState }) {
                                 }`}
                                 onClick={() => {
                                 handleModelChange(option);
+                                toggleOpen();
                                 setSearchQuery("");
                                 }}
                             >
@@ -300,8 +290,16 @@ export default function ModelSelector ({ modelsData, localState }) {
                         </div>
                         )}
                     </div>
+                    
                     </div>
                 )}
+                
+                </div>
+                <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
+                {/* <p className="flex-shrink-0 text-sm whitespace-nowrap">
+                    <Trans i18nKey="description.choose" />
+                </p> */}
+                
                 </div>
             </div>
     )
