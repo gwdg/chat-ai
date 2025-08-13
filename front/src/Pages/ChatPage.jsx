@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 
 import Header from "../components/Header/Header";
 import Footer from "../components/Footer/Footer";
@@ -8,10 +8,11 @@ import { getModelsData } from "../apis/getModelsData";
 import { getUserData } from "../apis/getUserData";
 import { useModal } from "../modals/ModalContext";
 import { useSelector, useDispatch } from "react-redux";
-import { selectCurrentConversation, updateConversation } from "../Redux/reducers/conversationsSlice";
+import { selectCurrentConversation, selectCurrentConversationId, updateConversation } from "../Redux/reducers/conversationsSlice";
 import { setCurrentConversation } from "../Redux/reducers/currentConversationSlice";
 import { selectDarkMode } from "../Redux/reducers/interfaceSettingsSlice";
 import { toggleSidebar } from "../Redux/reducers/interfaceSettingsSlice";
+import { getDefaultSettings } from "../utils/settingsUtils";
 
 // Main layout component that manages the overall structure and state of the chat application
 function ChatPage() {
@@ -24,6 +25,7 @@ function ChatPage() {
   const mainDiv = useRef(null);
   const { notifyError } = useToast();
   const dispatch = useDispatch();
+  const defaultSettings = useMemo(() => getDefaultSettings(), []);
 
   // Initialize chat state
   const [localState, setLocalState] = useState({
@@ -31,15 +33,7 @@ function ChatPage() {
     prompt: "",
     responses: [],
     messages: [],
-    settings: {
-      model: {id: "", name: ""},
-      temperature: 0.5,
-      top_p: 0.5,
-      system_prompt: "You are a helpful assistant.",
-      memory: 2,
-      enable_tools: true,
-      arcana: {id: ""},
-    }
+    settings: defaultSettings,
   });
 
   // Model configuration state
@@ -101,8 +95,7 @@ function ChatPage() {
       setTimeout(newState ? scrollToTop : scrollToBottom, 0);
       return newState;
     });
-  }, [scrollToTop, scrollToBottom]);
-  const timeoutId = useRef();
+  }, [scrollToTop, scrollToBottom]);  
 
   // Handle resize events
   useEffect(() => {
@@ -127,24 +120,16 @@ function ChatPage() {
       }
   }, [isDarkMode]);
 
-  const currentConversationId = useSelector((state) => state.current_conversation);
+  const currentConversationId = useSelector(selectCurrentConversationId);
   const currentConversation = useSelector(selectCurrentConversation);
-  // Effect 1: Initializes local state when conversation ID or current conversation changes
+  // Effect 1: Initializes local state when conversation ID changes
   useEffect(() => {
     // Only proceed if both conversationId and currentConversation exist
     if (currentConversationId && currentConversation) {
-      // Update the current conversation in Redux store
-      dispatch(setCurrentConversation(currentConversationId));
       // Initialize local state with all conversation data
-      setLocalState({
-        title: currentConversation.title, // Current title
-        prompt: currentConversation.prompt, // Current prompt text
-        responses: currentConversation.responses, // Array of AI responses
-        messages: currentConversation.messages, // Full conversation history
-        settings: { ...currentConversation.settings }, // Chat settings (temperature, etc.)
-      });
+      setLocalState(currentConversation);
     }
-  }, [currentConversationId, currentConversation, dispatch]);
+  }, [currentConversationId]);
 
   // Listen for tab visibility changes
   const [isActive, setIsActive] = useState(false);
@@ -162,32 +147,27 @@ function ChatPage() {
   }, []);
 
   // Effect 2: Debounced auto-save of conversation changes
+  const timeoutIds = useRef({}); 
   const delay = 1000;
   useEffect(() => {
     // Only auto-save when tab is active
     if (!isActive) return;
-    // Ignore non-changes TODO figure out why this happens
-    const changes = Object.entries(localState.settings).reduce((acc, [key, value]) => {
-      if (value !== currentConversation.settings[key]) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
-    // console.log("Found change in ... ", changes);
-    if (Object.keys(changes).length === 0) return; // No changes to save
-
-    // Clear any scheduled save
-    clearTimeout(timeoutId.current);
+    // Clear any scheduled save for this conversation only
+    if (timeoutIds.current[currentConversationId]) {
+      clearTimeout(timeoutIds.current[currentConversationId]);
+    }
     // Schedule a save after `delay` ms
-    timeoutId.current = setTimeout(() => {
+    timeoutIds.current[currentConversationId] = setTimeout(() => {
       dispatch(
         updateConversation({
           id: currentConversationId,
           updates: { ...localState }
         })
       );
+      // Remove the timeout ID after it runs
+      delete timeoutIds.current[currentConversationId];
     }, delay);
-  }, [localState, dispatch]);  
+  }, [localState, isActive, delay, dispatch]);  
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-white dark:bg-black">

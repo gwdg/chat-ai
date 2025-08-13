@@ -21,6 +21,5 @@ export const getDefaultSettings = () => {
       id: "",
     },
   };
-
   return result;
 };

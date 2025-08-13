@@ -58,7 +58,13 @@ export default function UserSettingsModal({
           </p>
           <div className="w-full flex justify-center">
             <button
-              className="w-full sm:max-w-[200px] p-2 bg-red-600 hover:bg-red-700 text-white rounded-xl flex items-center justify-center gap-2 transition-colors text-sm"
+              className="w-full sm:max-w-[200px] px-5 py-3 
+                        bg-red-600 hover:bg-red-700 
+                        text-white font-medium rounded-lg 
+                        flex items-center justify-center gap-2
+                        shadow-md hover:shadow-lg 
+                        active:scale-95
+                        transition-all duration-200 text-sm"
               onClick={() => openModal("clearCache")}
             >
               <Trans i18nKey="description.file2" />

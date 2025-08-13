@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import ContainerModal from "./ContainerModal";
+//import ContainerModal from "./ContainerModal";
 import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 
 const PreviewImageModal = ({ file, onClose }) => {
@@ -242,7 +242,8 @@ const PreviewImageModal = ({ file, onClose }) => {
   })();
 
   return (
-    <ContainerModal showModal={onClose}>
+    // TODO convert to use basemodel
+    //<ContainerModal showModal={onClose}>
       <div className="dark:border-border_dark rounded-2xl bg-white dark:bg-black p-4 w-[90vw] sm:w-[70vw] max-w-[1000px] max-h-[95vh] overflow-hidden">
         <div className="flex justify-between items-center mb-4 px-2">
           <div className="flex items-center gap-2 max-w-[60%]">
@@ -477,7 +478,7 @@ const PreviewImageModal = ({ file, onClose }) => {
           )}
         </div>
       </div>
-    </ContainerModal>
+    //</ContainerModal>
   );
 };
 

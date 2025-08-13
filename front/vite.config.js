@@ -34,7 +34,7 @@ try {
     } else if (key == "userDataPath") {
       process.env["VITE_USERDATA_ENDPOINT"] = value;
       console.log("User data path:", value);
-    } else if (key == "defaultSettings") {
+    } else if (key == "default") {
       process.env["VITE_DEFAULT_SETTINGS"] = JSON.stringify(value);
       console.log("Default settings:", JSON.stringify(value));
     }

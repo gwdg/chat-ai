@@ -62,20 +62,19 @@ const sendMessage = async ({
       // Check model support first
       const imageSupport = modelsData.some(
         (modelX) =>
-          modelX.name === localState.settings["model-name"] &&
+          modelX.name === localState.settings.model.name &&
           modelX.input.includes("image")
       );
       const videoSupport = modelsData.some(
         (modelX) =>
-          modelX.name === localState.settings["model-name"] &&
+          modelX.name === localState.setting.model.name &&
           modelX.input.includes("video")
       );
       const audioSupport = modelsData.some(
         (modelX) =>
-          modelX.name === localState.settings["model-name"] &&
+          modelX.name === localState.settings.model.name &&
           modelX.input.includes("audio")
       );
-      console.log("I am here");
       console.log(processedConversation);
       // Process conversation based on image/video/audio support
       if (!imageSupport && !videoSupport && !audioSupport) {
@@ -379,17 +378,17 @@ const sendMessage = async ({
       // Process conversation for model support
       const imageSupport = modelsData.some(
         (modelX) =>
-          modelX.name === localState.settings["model-name"] &&
+          modelX.name === localState.settings.model.name &&
           modelX.input.includes("image")
       );
       const videoSupport = modelsData.some(
         (modelX) =>
-          modelX.name === localState.settings["model-name"] &&
+          modelX.name === localState.settings.model.name &&
           modelX.input.includes("video")
       );
       const audioSupport = modelsData.some(
         (modelX) =>
-          modelX.name === localState.settings["model-name"] &&
+          modelX.name === localState.settings.model.name &&
           modelX.input.includes("audio")
       );
 
@@ -426,7 +425,7 @@ const sendMessage = async ({
     );
 
     // Prepare system prompt with memory if enabled
-    let finalSystemPrompt = localState.settings.systemPrompt;
+    let finalSystemPrompt = localState.settings.system_prompt;
 
     if (localState.settings.memory >= 1 && memories.length > 0) {
       const memoryContext = memories.map((memory) => memory.text).join("\n");

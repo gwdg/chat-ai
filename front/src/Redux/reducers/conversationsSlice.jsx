@@ -5,16 +5,14 @@ import { getDefaultSettings } from "../../utils/settingsUtils";
 
 const createDefaultConversation = (customSettings = {}) => {
   const defaultSettings = getDefaultSettings();
-
   const settings = { ...defaultSettings, ...customSettings };
-
   return {
     id: uuidv4(),
     title: "Untitled Conversation",
     messages: [
       {
         role: "system",
-        content: settings.systemPrompt,
+        content: settings.system_prompt,
       },
     ],
     responses: [],
@@ -99,21 +97,7 @@ const conversationsSlice = createSlice({
         const defaultSettings = getDefaultSettings();
         const settings = { ...defaultSettings, ...customSettings };
 
-        const newConversation = {
-          id: newId,
-          title: "Untitled Conversation",
-          messages: [
-            {
-              role: "system",
-              content: "TODO You are a helpful assistant",
-            },
-          ],
-          responses: [],
-          prompt: "",
-          settings,
-          createdAt: new Date().toISOString(),
-          lastModified: new Date().toISOString(),
-        };
+        const newConversation = createDefaultConversation(settings);
 
         return {
           payload: newConversation,

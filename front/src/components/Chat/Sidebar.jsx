@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Trans } from "react-i18next";
@@ -29,7 +29,7 @@ function Sidebar({onClose}) {
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
   const lockConversation = useSelector(selectLockConversation);
-  const defaultSettings = useSelector(getDefaultSettings);
+  const defaultSettings = useRef(getDefaultSettings);
 
   // Keep conversation IDs synchronized with the conversations list
   useEffect(() => {
