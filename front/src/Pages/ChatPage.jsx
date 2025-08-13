@@ -33,18 +33,18 @@ function ChatPage() {
       memory: 2,
       use_gwdg_tools: true,
       arcana: {id: ""},
-    },
-    exportOptions: {
-      exportSettings: false,
-      exportImage: false,
-      exportArcana: false,
-    },
-    dontShow: {
-      dontShowAgain: false,
-      dontShowAgainShare: false,
-      dontShowAgainMemory: false,
-    },
+    }
   });
+  // const [localState, setLocalState] = useState({
+  //   interface_settings: {
+  //     show_settings: true,
+  //   },
+  //   conversations: [],
+  //   current_conversation: null,
+  //   lock_conversation: false,
+  //   user_settings: {},
+  // });
+
 
   // Model configuration state
   const [modelsData, setModelsData] = useState([]);

@@ -5,6 +5,9 @@ import { useModal } from "../../../modals/ModalContext";
 export default function TemperatureSlider({ localState, setLocalState}) {
     const { openModal } = useModal();
     const [isHovering, setHovering] = useState(false);
+    const settings = localState.current_conversation
+    ? localState.conversations[localState.current_conversation].settings
+    : {"model": {"id": "meta-llama-3.1-8b-instruct"}};
     // Handle temperature setting change
     const handleChangeTemp = (newValue) => {
         // Convert to float and update settings
@@ -46,7 +49,7 @@ export default function TemperatureSlider({ localState, setLocalState}) {
                 className="h-full bg-tertiary rounded-full transition-all duration-200"
                 style={{
                     width: `${
-                    (localState.settings.temperature / 2) * 100
+                    (settings?.temperature / 2) * 100
                     }%`,
                 }}
                 />
@@ -70,7 +73,7 @@ export default function TemperatureSlider({ localState, setLocalState}) {
                 min="0"
                 max="2"
                 step="0.1"
-                value={localState.settings.temperature}
+                value={settings?.temperature}
                 className="absolute top-1/2 transform -translate-y-1/2 w-full h-6 opacity-0 cursor-pointer"
                 onChange={(event) =>
                 handleChangeTemp(event.target.value)
@@ -82,7 +85,7 @@ export default function TemperatureSlider({ localState, setLocalState}) {
                 className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-6 h-6 cursor-grab active:cursor-grabbing flex items-center justify-center"
                 style={{
                 left: `${
-                    (localState.settings.temperature / 2) * 100
+                    (settings?.temperature / 2) * 100
                 }%`,
                 }}
                 onMouseEnter={() => setHovering(true)}
@@ -138,11 +141,11 @@ export default function TemperatureSlider({ localState, setLocalState}) {
                 className="absolute -top-10 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none z-10"
                 style={{
                     left: `${
-                    (localState.settings.temperature / 2) * 100
+                    (settings?.temperature / 2) * 100
                     }%`,
                 }}
                 >
-                {Number(localState.settings.temperature).toFixed(1)}
+                {Number(settings?.temperature).toFixed(1)}
                 </div>
             )}
             </div>

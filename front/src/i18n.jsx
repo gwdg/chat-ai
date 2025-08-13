@@ -208,10 +208,6 @@ i18n
             stop: "Stop",
             listen: "Listen",
             settings_toggle: "Open Settings",
-
-            startRecording: "Record (click/hold)",
-            stopRecording: "Stop (click/release)",
-
             startRecording: "Record (click/hold)",
             stopRecording: "Stop (click/release)",
             //Bad request

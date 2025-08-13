@@ -4,6 +4,9 @@ import { useModal } from "../../../modals/ModalContext";
 
 export default function GWDGToggle({ localState, setLocalState}) {
     const { openModal } = useModal();
+    const settings = localState.current_conversation
+    ? localState.conversations[localState.current_conversation].settings
+    : {"model": {"id": "meta-llama-3.1-8b-instruct"}};
     return (
         <div className="flex flex-col md:flex-row md:gap-4 gap-3 w-full md:items-center mt-4">
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
@@ -20,7 +23,7 @@ export default function GWDGToggle({ localState, setLocalState}) {
             <input
                 id="use-gwdg-tools"
                 type="checkbox"
-                checked={localState.settings.useGWDGTools}
+                checked={settings?.useGWDGTools}
                 onChange={(e) =>
                 setLocalState((prev) => ({
                     ...prev,
@@ -33,13 +36,13 @@ export default function GWDGToggle({ localState, setLocalState}) {
                 className="h-4 w-4 text-tertiary bg-gray-200 border-gray-300 rounded focus:ring-tertiary focus:ring-2"
             />
             {/* Description that appears only when the box is unchecked */}
-            {!localState.settings.useGWDGTools && (
+            {!settings?.useGWDGTools && (
                 <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
                 Additional features are disabled.
                 </span>
             )}
             {/* Description that appears only when the box is checked */}
-            {localState.settings.useGWDGTools && (
+            {settings?.useGWDGTools && (
                 <span className="ml-2 text-sm text-green-600 dark:text-green-300">
                 Additional features are now enabled.
                 </span>

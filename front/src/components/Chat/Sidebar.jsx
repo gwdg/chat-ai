@@ -4,11 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { Trans } from "react-i18next";
 import {
   addConversation,
-  setCurrentConversation,
   selectConversations,
   selectCurrentConversationId,
-  selectIsResponding,
+  selectLockConversation,
 } from "../../Redux/reducers/conversationsSlice";
+import { setCurrentConversation } from "../../Redux/reducers/currentConversationSlice";
 import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 import { useCallback, useEffect } from "react";
 
@@ -20,10 +20,7 @@ import { persistor } from "../../Redux/store/store";
 import { getDefaultSettings } from "../../utils/settingsUtils";
 import { useModal } from "../../modals/ModalContext";
 
-function Sidebar({
-  onClose,
-  setShowRepoModal,
-}) {
+function Sidebar({onClose}) {
   const { openModal } = useModal();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -31,7 +28,7 @@ function Sidebar({
   const [conversationIds, setConversationIds] = useState([]);
   const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
-  const isResponding = useSelector(selectIsResponding);
+  const isResponding = useSelector(selectLockConversation);
   const defaultModel = useSelector(selectDefaultModel);
 
   // Keep conversation IDs synchronized with the conversations list
@@ -94,12 +91,12 @@ function Sidebar({
 
         // Re-enable interaction after navigation
         setTimeout(() => {
-          dispatch({ type: "conversations/setIsResponding", payload: false });
+          dispatch({ type: "conversations/setLockConversation", payload: false });
         }, 300);
       });
     } else {
       // If no ID was created (unlikely), still re-enable interaction
-      dispatch({ type: "conversations/setIsResponding", payload: false });
+      dispatch({ type: "conversations/setLockConversation", payload: false });
     }
   }, [dispatch, navigate, onClose, isResponding, defaultModel]);
 
@@ -130,13 +127,13 @@ function Sidebar({
         <p className="text-base font-medium text-black dark:text-white">
           Conversations
         </p>
-        <button
+        {/* <button
           onClick={onClose}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors touch-manipulation w-8 h-8 flex items-center justify-center"
           style={{ WebkitTapHighlightColor: "transparent" }}
         >
           <img src={icon_arrow_left} alt="close" className="h-4 w-4" />
-        </button>
+        </button> */}
       </div>
 
       {/* New Chat Button */}

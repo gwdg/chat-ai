@@ -5,18 +5,18 @@ import { useDispatch, useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
 
 // Modals and components imports
-import Conversation from "./Conversation";
 import SettingsPanel from "./SettingsPanel/SettingsPanel";
 
 //Hooks and Redux
-import {
-  setCurrentConversation,
-  updateConversation,
-} from "../../Redux/reducers/conversationsSlice";
-import { toggleOption } from "../../Redux/actions/advancedOptionsAction";
+import { selectCurrentConversation, updateConversation } from "../../Redux/reducers/conversationsSlice";
+import { setCurrentConversation } from "../../Redux/reducers/currentConversationSlice";
 import Sidebar from "./Sidebar";
+import { selectDarkMode, selectShowSettings, selectShowSidebar, toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 import WarningButton from "../Others/WarningButton";
 import { useModal } from "../../modals/ModalContext";
+import HallucinationWarning from "./HallucinationWarning";
+import Responses from "./Responses";
+import Prompt from "./Prompt";
 
 function Chat({
   localState,
@@ -32,20 +32,15 @@ function Chat({
   const { openModal } = useModal();
 
   // Redux selectors
-  const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
-  const currentConversation = useSelector((state) =>
-    state.conversations?.conversations?.find(
-      (conv) => conv.id === conversationId
-    )
-  );
+  const isDarkMode = useSelector(selectDarkMode);
+  const showSettings = useSelector(selectShowSettings);
+  const showSidebar = useSelector(selectShowSidebar);
+  const currentConversation = useSelector(selectCurrentConversation);
 
   const [isActive, setIsActive] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
-  const [showAdvOpt, setShowAdvOpt] = useState(
-    useSelector((state) => state.advOptions.isOpen)
-  );
+  // const [isDarkMode, setIsDarkMode] = useState(isDarkModeGlobal);
+  
   //Refs
   const isIntentionalRefresh = useRef(false);
 
@@ -54,7 +49,7 @@ function Chat({
   // Responsive sidebar handling
     useEffect(() => {
       const handleResize = () => {
-        setShowSidebar(window.innerWidth > 1080);
+        toggleSidebar(window.innerWidth > 1080);
       };
   
       handleResize();
@@ -76,9 +71,6 @@ function Chat({
         responses: currentConversation.responses, // Array of AI responses
         messages: currentConversation.messages, // Full conversation history
         settings: { ...currentConversation.settings }, // Chat settings (temperature, etc.)
-        exportOptions: { ...currentConversation.exportOptions }, // Export preferences
-        dontShow: { ...currentConversation.dontShow }, // UI visibility settings
-        arcana: { ...currentConversation.arcana }, // Arcana-specific settings
       });
     }
   }, [conversationId, currentConversation, dispatch]);
@@ -117,7 +109,7 @@ function Chat({
           })
         );
       }
-    }, 300);
+    }, 60000);
 
     return () => clearTimeout(timer);
   }, [localState, currentConversation, conversationId, dispatch, isActive]);
@@ -134,13 +126,7 @@ function Chat({
     }
   }, [isDarkMode]);
 
-  const currentModel = localState.settings["model"]
-
-  // Toggle advanced options visibility
-  const toggleAdvOpt = () => {
-    setShowAdvOpt(!showAdvOpt);
-    dispatch(toggleOption());
-  };
+  const currentModel = "meta-llama-3.1-8b-instruct" // TODO localState.csettings["model"]
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -197,7 +183,7 @@ function Chat({
             {/* Mobile overlay backdrop */}
             <div
               className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 backdrop-blur-sm"
-              onClick={() => setShowSidebar(false)}
+              onClick={() => dispatch(toggleSidebar())}
               style={{
                 WebkitTouchCallout: "none",
                 WebkitUserSelect: "none",
@@ -216,40 +202,58 @@ function Chat({
             `}
             >
               <Sidebar
-                onClose={() => setShowSidebar(false)}
+                onClose={() => dispatch(toggleSidebar())}
               />
             </div>
           </>
         )}
 
         <div className="flex flex-col desktop:flex-row flex-1 h-full w-full">
-          {!showAdvOpt && (
+          {!showSettings && (
             <WarningButton
               currentModel={currentModel}
               userData={userData}
             />
           )}
-          <Conversation
+        {/* Main Conversation Window */}
+        <div
+          className={`flex flex-col items-center w-full ${
+            !showSettings ? "desktop:w-[80%] py-1 mx-auto my-0" : "desktop:w-[60%] p-1"
+          } h-full gap-2 sm:justify-between relative bg-bg_light dark:bg-bg_dark`}
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-8px)] desktop:w-full border dark:border-border_dark rounded-xl shadow-md dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
+            {/* Show Hallucination Warning */}
+            <HallucinationWarning />
+            {/* Show responses */}
+            <Responses
+              modelsData={modelsData}
+              localState={localState}
+              setLocalState={setLocalState}
+              setSelectedFiles={setSelectedFiles}
+              currentModel={currentModel}
+            />
+          </div>
+          {/* Show Prompt */}
+          <Prompt
             localState={localState}
             setLocalState={setLocalState}
             modelsData={modelsData}
             currentModel={currentModel}
             selectedFiles={selectedFiles}
             setSelectedFiles={setSelectedFiles}
-            showAdvOpt={showAdvOpt}
-            toggleAdvOpt={toggleAdvOpt}
-          />
-          <SettingsPanel
-            localState={localState}
-            setLocalState={setLocalState}
-            modelsData={modelsData}
-            userData={userData}
-            selectedFiles={selectedFiles}
-            setSelectedFiles={setSelectedFiles}
-            showAdvOpt={showAdvOpt}
-            toggleAdvOpt={toggleAdvOpt}
           />
         </div>
+        {showSettings && (
+        <SettingsPanel
+          localState={localState}
+          setLocalState={setLocalState}
+          modelsData={modelsData}
+          userData={userData}
+          selectedFiles={selectedFiles}
+          setSelectedFiles={setSelectedFiles}
+        />
+        )}
+      </div>
       </div>
       </div>
       </div>

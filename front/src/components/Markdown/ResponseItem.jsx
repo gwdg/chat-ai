@@ -113,7 +113,6 @@ const ResponseItem = React.memo(
   ({
     res,
     index,
-    isDarkModeGlobal,
     copied,
     setCopied,
     indexChecked,
@@ -301,7 +300,6 @@ const ResponseItem = React.memo(
                     }
                   >
                     <MarkdownRenderer
-                      isDarkMode={isDarkModeGlobal}
                       isLoading={isLoading}
                       renderMode={renderMode}
                     >

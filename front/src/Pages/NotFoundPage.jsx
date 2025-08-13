@@ -9,10 +9,10 @@ const NotFoundPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const currentConversationId = useSelector(
-    (state) => state.conversations.currentConversationId
+    (state) => state.current_conversation
   );
   const conversations = useSelector(
-    (state) => state.conversations.conversations
+    (state) => state.conversations
   );
 
   const handleGoToChat = async () => {

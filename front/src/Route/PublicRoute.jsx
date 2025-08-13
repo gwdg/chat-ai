@@ -15,6 +15,7 @@ const RootRoute = ({ currentConversationId }) => (
   <Navigate to={`/chat/${currentConversationId}`} replace />
 );
 
+// for import??
 const ChatRoute = ({
   currentConversationId,
   hasSettings,
@@ -33,9 +34,9 @@ const ChatRoute = ({
   return <Navigate to={`/chat/${currentConversationId}`} replace />;
 };
 
-const ConversationRoute = ({ currentConversationId, conversations }) => {
+const ConversationRoute = ({ currentConversationId }) => {
   const { conversationId } = useParams();
-
+  const conversations = useSelector((state) => state.conversations);
   const isValidUUIDv4 = (id) => {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       id
@@ -60,13 +61,9 @@ const ConversationRoute = ({ currentConversationId, conversations }) => {
 };
 
 const PublicRoute = () => {
-  const isDarkMode = useSelector((state) => state.theme.isDarkMode);
-  const currentConversationId = useSelector(
-    (state) => state.conversations.currentConversationId
-  );
-  const conversations = useSelector(
-    (state) => state.conversations.conversations
-  );
+  const isDarkMode = useSelector((state) => state.interface_settings.dark_mode);
+  const conversations = useSelector((state) => state.conversations);
+  const currentConversationId = useSelector((state) => state.current_conversation) || conversations[0].id;
   const [searchParams] = useSearchParams();
 
   // Extract URL parameters
@@ -104,7 +101,6 @@ const PublicRoute = () => {
           element={
             <ConversationRoute
               currentConversationId={currentConversationId}
-              conversations={conversations}
             />
           }
         />

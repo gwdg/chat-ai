@@ -20,16 +20,6 @@ const createDefaultConversation = (customSettings = {}) => {
     responses: [],
     prompt: "",
     settings,
-    exportOptions: {
-      exportSettings: false,
-      exportImage: false,
-      exportArcana: false,
-    },
-    dontShow: {
-      dontShowAgain: false,
-      dontShowAgainShare: false,
-      dontShowAgainMemory: false,
-    },
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString(),
   };
@@ -37,11 +27,7 @@ const createDefaultConversation = (customSettings = {}) => {
 
 const defaultConversation = createDefaultConversation();
 
-const initialState = {
-  conversations: [defaultConversation],
-  currentConversationId: defaultConversation.id,
-  isResponding: false,
-};
+const initialState = [defaultConversation];
 
 const conversationsSlice = createSlice({
   name: "conversations",
@@ -50,8 +36,8 @@ const conversationsSlice = createSlice({
     addConversation: {
       reducer: (state, action) => {
         const newConversation = action.payload;
-        state.conversations.unshift(newConversation);
-        state.currentConversationId = newConversation.id;
+        state.unshift(newConversation);
+        // state.currentConversationId = newConversation.id;
       },
       prepare: (providedId = null, customSettings = {}) => {
         const newConversation = createDefaultConversation(customSettings);
@@ -69,7 +55,7 @@ const conversationsSlice = createSlice({
     },
     updateConversation: (state, action) => {
       const { id, updates } = action.payload;
-      const conversation = state.conversations?.find((conv) => conv.id === id);
+      const conversation = state?.find((conv) => conv.id === id);
       if (conversation) {
         // Skip auto-adding system message if we're updating both conversation and settings
         // (which indicates an import operation)
@@ -85,7 +71,7 @@ const conversationsSlice = createSlice({
             updates.messages = [
               {
                 role: "system",
-                content: conversation.settings.systemPrompt,
+                content: "TODO You are a helpful assistant",
               },
               ...updates.messages,
             ];
@@ -98,7 +84,7 @@ const conversationsSlice = createSlice({
     },
     deleteConversation: (state, action) => {
       const idToDelete = action.payload;
-      const currentIndex = state.conversations.findIndex(
+      const currentIndex = state.findIndex(
         (conv) => conv.id === idToDelete
       );
 
@@ -106,36 +92,28 @@ const conversationsSlice = createSlice({
       if (currentIndex === -1) return;
 
       // Remove the conversation
-      state.conversations = state.conversations.filter(
+      state = state.filter(
         (conv) => conv.id !== idToDelete
       );
 
-      // Handle different cases for currentConversationId
-      if (state.conversations.length === 0) {
-        // If last conversation was deleted, set to null to indicate we need a new one
-        state.currentConversationId = null;
-      } else if (state.currentConversationId === idToDelete) {
-        // If deleted conversation was current, move to the previous conversation
-        // (or the next one if deleting the first conversation)
-        const newIndex = currentIndex === 0 ? 0 : currentIndex - 1;
-        state.currentConversationId = state.conversations[newIndex].id;
-      }
+      // // Handle different cases for currentConversationId
+      // if (state.length === 0) {
+      //   // If last conversation was deleted, set to null to indicate we need a new one
+      //   //state.currentConversationId = null;
+      // } else if (state.currentConversationId === idToDelete) {
+      //   // If deleted conversation was current, move to the previous conversation
+      //   // (or the next one if deleting the first conversation)
+      //   const newIndex = currentIndex === 0 ? 0 : currentIndex - 1;
+      //   state.currentConversationId = state.conversations[newIndex].id;
+      // }
       // If deleted conversation wasn't current, currentConversationId stays the same
-    },
-    setCurrentConversation: (state, action) => {
-      const conversationId = action.payload;
-      if (state.conversations.some((conv) => conv.id === conversationId)) {
-        state.currentConversationId = conversationId;
-      } else if (state.conversations.length > 0) {
-        state.currentConversationId = state.conversations[0].id;
-      }
     },
     resetStore: {
       reducer: (state, action) => {
         const newConversation = action.payload;
-        state.conversations = [newConversation];
-        state.currentConversationId = newConversation.id;
-        state.isResponding = false;
+        state = [newConversation];
+        // state.current_conversation = newConversation.id;
+        // state.lock_conversation = false;
       },
       prepare: (providedId = null, customSettings = {}) => {
         const newId = providedId || uuidv4();
@@ -148,26 +126,12 @@ const conversationsSlice = createSlice({
           messages: [
             {
               role: "system",
-              content: settings.systemPrompt,
+              content: "TODO You are a helpful assistant",
             },
           ],
           responses: [],
           prompt: "",
           settings,
-          exportOptions: {
-            exportSettings: false,
-            exportImage: false,
-            exportArcana: false,
-          },
-          dontShow: {
-            dontShowAgain: false,
-            dontShowAgainShare: false,
-            dontShowAgainMemory: false,
-          },
-          arcana: {
-            id: "",
-            key: "",
-          },
           createdAt: new Date().toISOString(),
           lastModified: new Date().toISOString(),
         };
@@ -184,24 +148,23 @@ const conversationsSlice = createSlice({
   },
 });
 
-export const selectConversations = (state) => state.conversations.conversations;
+export const selectConversations = (state) => state.conversations;
 export const selectCurrentConversationId = (state) =>
-  state.conversations.currentConversationId;
+  state.current_conversation;
 export const selectCurrentConversation = (state) =>
-  state.conversations.currentConversationId
-    ? state.conversations.conversations.find(
-        (conv) => conv.id === state.conversations.currentConversationId
+  state.current_conversation
+    ? state.conversations.find(
+        (conv) => conv.id === state.current_conversation
       )
     : null;
-export const selectIsResponding = (state) => state.conversations.isResponding;
+export const selectLockConversation = (state) => state.lock_conversation;
 
 export const {
   addConversation,
   deleteConversation,
-  setCurrentConversation,
   updateConversation,
   resetStore,
-  setIsResponding,
+  setIsResponding: setLockConversation,
 } = conversationsSlice.actions;
 
 export default conversationsSlice.reducer;

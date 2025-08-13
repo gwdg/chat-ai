@@ -4,7 +4,7 @@ import BaseModal from "../BaseModal";
 import {
   deleteAllMemories,
   selectAllMemories,
-} from "../../Redux/reducers/userMemorySlice";
+} from "../../Redux/reducers/userSettingsReducer";
 
 export default function ClearMemoryModal({
   isOpen,

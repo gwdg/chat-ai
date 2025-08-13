@@ -1,4 +1,4 @@
-import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
+import { selectAllMemories } from "../../Redux/reducers/userSettingsReducer";
 import { useSelector, useDispatch } from "react-redux";
 import { useModal } from "../ModalContext"; 
 import { Trans, useTranslation } from "react-i18next";

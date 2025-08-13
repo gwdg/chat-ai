@@ -12,7 +12,7 @@ const getAppContext = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const currentConversationId = useSelector(
-    (state) => state.conversations.currentConversationId
+    (state) => state.current_conversation
   );
 
   return {

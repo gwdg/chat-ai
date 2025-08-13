@@ -5,6 +5,9 @@ import { useModal } from "../../../modals/ModalContext";
 // Component for Arcana authentication inputs
 const ArcanaContainer = ({ localState, setLocalState }) => {
   const { openModal } = useModal();
+  const settings = localState.current_conversation
+    ? localState.conversations[localState.current_conversation].settings
+    : {"model": {"id": "meta-llama-3.1-8b-instruct"}};
   // Generic handler for both id and key changes
   const handleArcanaChange = (field) => (e) => {
     setLocalState((prev) => ({
@@ -20,8 +23,8 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
   //   () => modelList?.find((m) => m.name === modelSettings["model-name"]),
   //   [modelList, modelSettings]
   // );
-  const currentModel = localState.settings.model
-  return  (localState.settings.useGWDGTools || (currentModel?.input?.includes("arcana") || false)) ? (
+  const currentModel = settings.model
+  return  (settings?.useGWDGTools || (currentModel?.input?.includes("arcana") || false)) ? (
     <div className="flex gap-4 w-full items-center">
       <div className="flex-shrink-0 flex items-center gap-2 select-none">
         <p className="text-sm">Arcana</p>
@@ -35,7 +38,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
       <div className="w-full flex gap-1">
         <input
           type="text"
-          value={localState.arcana.id}
+          value={settings?.arcana.id}
           onChange={handleArcanaChange("id")}
           placeholder="id"
           className="dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-2xl shadow-lg dark:shadow-dark w-full max-h-[47px]"

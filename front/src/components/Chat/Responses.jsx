@@ -16,15 +16,11 @@ import ResponseItem from "../Markdown/ResponseItem";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
-import {
-  selectCurrentConversationId,
-} from "../../Redux/reducers/conversationsSlice";
 import PreviewImageModal from "../../modals/Chat/PreviewImageModal";
-import { selectDefaultModel } from "../../Redux/reducers/defaultModelSlice";
 
 // Hooks
 import { useImportConversation } from "../../hooks/useImportConversation";
-import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
+import { selectAllMemories } from "../../Redux/reducers/userSettingsReducer";
 import sendMessage from "../../utils/sendMessage";
 import { useModal } from "../../modals/ModalContext";
 
@@ -36,11 +32,7 @@ function Responses({
   modelsData,
   localState,
   setLocalState,
-  loading,
   setSelectedFiles,
-  adjustHeight,
-  loadingResend,
-  setLoadingResend,
 }) {
   // Hooks
   const { openModal } = useModal();
@@ -50,11 +42,8 @@ function Responses({
   const importConversation = useImportConversation();
 
   // Redux state
-  const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
-  const currentConversationId = useSelector(selectCurrentConversationId);
-  const defaultModel = useSelector(selectDefaultModel);
   const memories = useSelector(selectAllMemories);
-  const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
+  const timeoutTime = useSelector((state) => state.user_settings.timeout);
 
   // Local useState
   const [editingIndex, setEditingIndex] = useState(null);
@@ -66,6 +55,8 @@ function Responses({
   const [editingResponseIndex, setEditingResponseIndex] = useState(-1);
   const [editedResponse, setEditedResponse] = useState("");
   const [previewFile, setPreviewFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingResend, setLoadingResend] = useState(false);
 
   // New state for scroll management
   const [userScrolledUp, setUserScrolledUp] = useState(false);
@@ -86,6 +77,21 @@ function Responses({
     setEditingIndex(-1);
     setEditedResponse(response);
     setEditingResponseIndex(index);
+  };
+
+  //Refs
+  const textareaRef = useRef(null);
+
+  //Functions
+  const adjustHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = `${MIN_HEIGHT}px`;
+
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
+
+      textareaRef.current.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
+    }
   };
 
   // Clear conversation history
@@ -200,6 +206,7 @@ function Responses({
 
     scrollTimeout.current = setTimeout(() => {
       const container = containerRef.current;
+      if (!container) {return;}
       const { scrollTop, scrollHeight, clientHeight } = container;
 
       // More sensitive scroll direction detection (only when not auto-scrolling)
@@ -644,21 +651,21 @@ function Responses({
   // Add this new effect after your existing useEffects
   useEffect(() => {
     // Reset scroll state when conversation changes significantly
-    if (localState.responses.length === 0) {
+    if (localState?.responses?.length === 0) {
       setUserScrolledUp(false);
       setShowScrollButton(false);
     }
-  }, [localState.responses.length]);
+  }, [localState?.responses?.length]);
 
   useEffect(() => {
-    if (localState.responses.length > 0 && containerRef.current) {
+    if (localState?.responses?.length > 0 && containerRef.current) {
       const container = containerRef.current;
       const hasOverflow = container.scrollHeight > container.clientHeight;
       if (hasOverflow) {
         setShowScrollButton(true);
       }
     }
-  }, [localState.responses.length]);
+  }, [localState?.responses?.length]);
 
   // Add this new useEffect after your existing ones
   useEffect(() => {
@@ -991,7 +998,6 @@ function Responses({
                 <ResponseItem
                   res={res}
                   index={index}
-                  isDarkModeGlobal={isDarkModeGlobal}
                   copied={copied}
                   setCopied={setCopied}
                   indexChecked={indexChecked}
@@ -1021,7 +1027,7 @@ function Responses({
         ))}
       </div>
 
-      {localState.responses.length > 0 ? (
+      {localState?.responses?.length > 0 ? (
         <div className="w-full bottom-0 sticky select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-xl">
           <Tooltip text={t("description.clear")}>
             <button

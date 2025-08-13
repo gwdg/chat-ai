@@ -13,65 +13,45 @@ import { getDefaultSettings } from "../../utils/settingsUtils";
 const persistConfig = {
   key: "root",
   storage,
+  // whitelist: [
+  //   "theme",
+  //   "conversations",
+  //   "advOptions",
+  //   "defaultModel",
+  //   "version",
+  //   "userMemory",
+  //   "timeout",
+  //   "count",
+  // ],
   whitelist: [
-    "theme",
+    "interface_settings",
     "conversations",
-    "advOptions",
-    "defaultModel",
+    "current_conversation",
+    "user_settings",
     "version",
-    "userMemory",
-    "timeout",
-    "count",
   ],
 };
 
-// Helper function to get default model from settings
-const getDefaultModelFromSettings = () => {
-  const defaultSettings = getDefaultSettings();
-  return {
-    name: defaultSettings["model-name"],
-    id: defaultSettings.model,
-  };
-};
-
 // Helper function to create a new conversation with proper defaults
-const createNewConversation = (conversationId, defaultModel) => {
+const createNewConversation = (conversationId) => {
   const defaultSettings = getDefaultSettings();
   const settings = {
     ...defaultSettings,
     // Override with provided default model if available
-    ...(defaultModel && {
-      model: defaultModel,
-    }),
+    // ...(defaultModel && {
+    //   model: defaultModel,
+    // }),
   };
 
   return {
     id: conversationId || uuidv4(),
     title: "Untitled Conversation",
-    messages: [
-      {
-        role: "system",
-        content: settings.systemPrompt,
-      },
-    ],
-    responses: [],
-    prompt: "",
+    messages: defaultSettings.messages,
     settings,
-    exportOptions: {
-      exportSettings: false,
-      exportImage: false,
-      exportArcana: false,
-    },
-    dontShow: {
-      dontShowAgain: false,
-      dontShowAgainShare: false,
-      dontShowAgainMemory: false,
-    },
-    arcana: {
-      id: "",
-    },
-    createdAt: new Date().toISOString(),
-    lastModified: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    last_modified: new Date().toISOString(),
+    // responses: [],
+    // prompt: "",
   };
 };
 
@@ -112,7 +92,24 @@ const migrations = {
 
     return state;
   },
-  // Future migrations here (e.g., 2: (state) => {...})
+  2: (state) => {
+    // Migrate from version 1 to 2
+    state.version = 3;
+
+    // Nothing to do here
+
+    return state;
+  },
+  3: (state) => {
+    // Migrate from version 1 to 2
+    state.version = 4;
+
+    // Plenty to do here
+    state.conversations = state.conversations.conversations
+    
+    return state;
+  },
+  // Future migrations here (e.g., 3: (state) => {...})
 };
 
 // Function to apply migrations
@@ -136,7 +133,6 @@ const applyMigrations = (state) => {
       break;
     }
   }
-
   return { ...state, version: state.version };
 };
 
@@ -147,45 +143,34 @@ const rootReducerWithReset = (state, action) => {
     // Extract the newConversationId and preserved states
     const {
       newConversationId,
-      theme,
-      advOptions,
-      defaultModel,
-      preserveMemories,
     } = action.payload || {};
 
-    // Use the provided default model, or get from current state, or use fallback from settings
-    const currentDefaultModel =
-      defaultModel || state?.defaultModel || getDefaultModelFromSettings();
-
     // Create a new conversation with proper defaults
-    const newConversation = createNewConversation(
-      newConversationId,
-      currentDefaultModel
-    );
+    const newConversation = createNewConversation(newConversationId);
+    
 
     // Reset the entire state but preserve the specified states
     newState = {
       ...rootReducer(undefined, { type: "@@INIT" }),
-      version: 2,
-      conversations: {
-        conversations: [newConversation],
-        currentConversationId: newConversation.id,
-        isResponding: false,
+      version: 4,
+      conversations: [newConversation],
+      current_conversation: newConversation.id,
+      lock_conversation: false,
+      interface_settings: {
+        dark_mode: false,
+        show_settings: true,
+        show_sidebar: true,
+        warn_clear_history: true,
+        warn_clear_memory: true,
+        warn_clear_settings: true,
+        count_hallucination: 0,
+        count_announcement: 0,
       },
-      // Preserve specified states
-      theme: theme || state?.theme || { isDarkMode: false },
-      advOption: advOptions || state.advOption,
-      defaultModel: currentDefaultModel,
       // Conditionally preserve memories
-      userMemory: preserveMemories
-        ? state?.userMemory || {
-            memories: [],
-            nextId: 1,
-          }
-        : {
-            memories: [],
-            nextId: 1,
-          },
+      user_settings: {
+        memories: [],
+        timeout: 300,
+      }
     };
   } else if (action.type === "MIGRATE") {
     // Apply migrations to the new state
@@ -193,6 +178,8 @@ const rootReducerWithReset = (state, action) => {
   } else {
     newState = rootReducer(state, action);
   }
+  // console.log("New state is")
+  // console.log(newState);
   return newState;
 };
 
@@ -200,7 +187,7 @@ const rootReducerWithReset = (state, action) => {
 const preventSyncMiddleware = (store) => (next) => (action) => {
   // Don't sync navigation-related actions - each tab should handle its own navigation
   if (
-    action.type === "conversations/setCurrentConversation" &&
+    action.type === "setCurrentConversation" &&
     action.meta?.skipSync
   ) {
     // This is a local navigation action, don't sync it

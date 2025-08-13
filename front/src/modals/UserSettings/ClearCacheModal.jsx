@@ -16,51 +16,37 @@ export default function ClearCacheModal({ isOpen, onClose }) {
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useToast();
 
-  // Helper function to create conversation payload
-  const createConversationPayload = (
-    conversationId,
-    currentDefaultModel = null
-  ) => {
-    const defaultSettings = getDefaultSettings();
-    const settings = {
-      ...defaultSettings,
-      // Override with current default model if available
-      ...(currentDefaultModel && {
-        //["model-name"]: currentDefaultModel.name,
-        model: currentDefaultModel,//.id,
-      }),
-    };
+  // // Helper function to create conversation payload
+  // const createConversationPayload = (
+  //   conversationId,
+  //   currentDefaultModel = null
+  // ) => {
+  //   const defaultSettings = getDefaultSettings();
+  //   const settings = {
+  //     ...defaultSettings,
+  //     // Override with current default model if available
+  //     ...(currentDefaultModel && {
+  //       //["model-name"]: currentDefaultModel.name,
+  //       model: currentDefaultModel,//.id,
+  //     }),
+  //   };
 
-    return {
-      id: conversationId,
-      title: "Untitled Conversation",
-      messages: [
-        {
-          role: "system",
-          content: settings.systemPrompt,
-        },
-      ],
-      responses: [],
-      prompt: "",
-      settings,
-      exportOptions: {
-        exportSettings: false,
-        exportImage: false,
-        exportArcana: false,
-      },
-      dontShow: {
-        dontShowAgain: false,
-        dontShowAgainShare: false,
-        dontShowAgainMemory: false,
-      },
-      arcana: {
-        id: "",
-        // key: "",
-      },
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
-    };
-  };
+  //   return {
+  //     id: conversationId,
+  //     title: "Untitled Conversation",
+  //     messages: [
+  //       {
+  //         role: "system",
+  //         content: settings.systemPrompt,
+  //       },
+  //     ],
+  //     responses: [],
+  //     prompt: "",
+  //     settings,
+  //     createdAt: new Date().toISOString(),
+  //     lastModified: new Date().toISOString(),
+  //   };
+  // };
 
   const clearCache = useCallback(async () => {
     try {
@@ -69,37 +55,26 @@ export default function ClearCacheModal({ isOpen, onClose }) {
       const newConversationId = uuidv4();
 
       // Save the current state BEFORE purging (this is crucial)
-      const currentState = store.getState();
-      const currentTheme = currentState.theme;
-      const currentAdvOption = currentState.advOption;
-      const currentDefaultModel = currentState.defaultModel; // Get BEFORE purge
-
+      // const currentState = store.getState();
       await persistor.purge();
 
       // Dispatch RESET_ALL with all preserved states
       dispatch({
         type: "RESET_ALL",
-        payload: {
-          newConversationId,
-          theme: currentTheme,
-          advOption: currentAdvOption,
-          defaultModel: currentDefaultModel, // Pass the saved default model
-        },
         meta: {
           sync: true,
         },
       });
 
-      // Create the new conversation with proper settings
-      const conversationPayload = createConversationPayload(
-        newConversationId,
-        currentDefaultModel
-      );
+      // // Create the new conversation with proper settings
+      // const conversationPayload = createConversationPayload(
+      //   newConversationId,
+      //   currentDefaultModel
+      // );
 
       dispatch({
         type: "conversations/resetStore",
-        payload: conversationPayload,
-        meta: { id: newConversationId, sync: true },
+        meta: { sync: true },
       });
 
       notifySuccess("Chats cleared successfully");
@@ -109,9 +84,6 @@ export default function ClearCacheModal({ isOpen, onClose }) {
         window.history.replaceState(null, "", `/chat/${newConversationId}`);
         navigate(`/chat/${newConversationId}`, { replace: true });
       }
-
-      setShowCacheModal(false);
-      // setShowUserSettingsModal(false);
     } catch (error) {
       notifyError("Failed to clear chats: " + error.message);
     }

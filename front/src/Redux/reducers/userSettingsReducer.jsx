@@ -3,11 +3,11 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   memories: [],
-  nextId: 1,
+  timeout: 300,
 };
 
-const userMemorySlice = createSlice({
-  name: "userMemory",
+const userSettingsSlice = createSlice({
+  name: "user_settings",
   initialState,
   reducers: {
     // Add new memory
@@ -43,18 +43,37 @@ const userMemorySlice = createSlice({
 
     // Delete all memories
     deleteAllMemories: (state) => {
-      state.memories = [];
-      state.nextId = 1;
+      state.user_settings.memories = [];
+    },
+
+    // Timeout
+    setTimeoutTime: (state, action) => {
+      // Validate timeout range (5 seconds to 15 minutes)
+      const timeout = Math.min(Math.max(action.payload, 5000), 900000);
+      state.timeout = timeout;
+    },
+    resetTimeoutTime: (state) => {
+      state.timeout = 300000; // Reset to default 5 minutes
+    },
+    setTimeoutInSeconds: (state, action) => {
+      // Helper to set timeout in seconds instead of milliseconds
+      const timeoutInMs = Math.min(
+        Math.max(action.payload * 1000, 5000),
+        900000
+      );
+      state.timeout = timeoutInMs;
     },
   },
 });
 
-export const { addMemory, editMemory, deleteMemory, deleteAllMemories } =
-  userMemorySlice.actions;
+export const {
+  addMemory, editMemory, deleteMemory, deleteAllMemories,
+  setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds
+ } = userSettingsSlice.actions;
 
 // Selectors
-export const selectAllMemories = (state) => state.userMemory.memories;
+export const selectAllMemories = (state) => state.user_settings.memories;
 export const selectMemoryByIndex = (state, index) =>
-  state.userMemory.memories[index];
+  state.user_settings.memories[index];
 
-export default userMemorySlice.reducer;
+export default userSettingsSlice.reducer;

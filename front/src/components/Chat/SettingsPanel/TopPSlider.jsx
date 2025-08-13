@@ -5,6 +5,9 @@ import { useModal } from "../../../modals/ModalContext";
 export default function TopPSlider({ localState, setLocalState}) {
     const [isHoveringTopP, setHoveringTopP] = useState(false);
     const { openModal } = useModal();
+    const settings = localState.current_conversation
+    ? localState.conversations[localState.current_conversation].settings
+    : {"model": {"id": "meta-llama-3.1-8b-instruct"}};
     // Handle top_p setting change
     const handleChangeTopP = (newValue) => {
         // Convert to float and update settings

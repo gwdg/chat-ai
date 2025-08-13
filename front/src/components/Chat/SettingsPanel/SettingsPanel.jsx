@@ -23,12 +23,16 @@ import {
   updateConversation,
 } from "../../../Redux/reducers/conversationsSlice";
 import { processFile } from "../../../apis/processFile";
-import { getModelsData } from "../../../apis/getModelsData";
 import { selectDefaultModel } from "../../../Redux/reducers/defaultModelSlice";
 
 // Hooks
 import { useImportConversation } from "../../../hooks/useImportConversation";
 import { getDefaultSettings } from "../../../utils/settingsUtils";
+import { useToast } from "../../../hooks/useToast";
+import {
+  selectShowSettings,
+  selectShowSidebar,
+  toggleSettings } from "../../../Redux/reducers/interfaceSettingsSlice";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -37,12 +41,8 @@ const SettingsPanel = ({
   setSelectedFiles,
   modelsData,
   onModelChange,
-  showAdvOpt,
-  toggleAdvOpt,
   localState,
   setLocalState,
-  notifySuccess,
-  notifyError,
   setShowModalSession,
   userData,
 }) => {
@@ -56,9 +56,13 @@ const SettingsPanel = ({
   const navigate = useNavigate();
   const importConversation = useImportConversation();
   const currentConversationId = useSelector(
-    (state) => state.conversations.currentConversationId
+    (state) => state.current_conversation
   );
   const currentVersion = useSelector((state) => state.version);
+  const settings = localState.current_conversation
+    ? localState.conversations[localState.current_conversation].settings
+    : {"model": {"id": "meta-llama-3.1-8b-instruct"}};
+  const { notifySuccess, notifyError } = useToast();
 
   //Local useStates
   const [isOpen, setIsOpen] = useState(false);
@@ -68,8 +72,11 @@ const SettingsPanel = ({
   const defaultModel = useSelector(selectDefaultModel);
   const [runTour, setRunTour] = useState(false);
   const [tourStepIndex, setTourStepIndex] = useState(0); // Add this
+  const showSettings = useSelector(selectShowSettings);
 
-  const currentModel = localState.settings["model"]
+  const currentModel = localState.current_conversation
+    ? localState.conversations[localState.current_conversation].settings.model
+    : "meta-llama-3.1-8b";  // TODO
   // console.log("currentModel", currentModel)
   const tourSteps = [
     {
@@ -129,18 +136,18 @@ const SettingsPanel = ({
     return `${size.toFixed(2)} ${units[unitIndex]}`;
   }
 
-  // 3. SIMPLIFIED startTour FUNCTION (no loading states)
-  const startTour = useCallback(() => {
-    if (!showAdvOpt) {
-      // If settings panel isn't open, don't start tour yet
-      return;
-    }
+  // // 3. SIMPLIFIED startTour FUNCTION (no loading states)
+  // const startTour = useCallback(() => {
+  //   if (!showAdvOpt) {
+  //     // If settings panel isn't open, don't start tour yet
+  //     return;
+  //   }
 
-    // Start tour after zoom transition
-    setTimeout(() => {
-      setRunTour(true);
-    }, 450);
-  }, [showAdvOpt]);
+  //   // Start tour after zoom transition
+  //   setTimeout(() => {
+  //     setRunTour(true);
+  //   }, 450);
+  // }, [showAdvOpt]);
 
   // 4. UPDATED handleJoyrideCallback WITH VERSION UPDATE
   const handleJoyrideCallback = useCallback(
@@ -366,7 +373,7 @@ const SettingsPanel = ({
   }, [
     searchParams,
     location.pathname,
-    conversations.length,
+    conversations,
     currentConversationId,
     dispatch,
     navigate,
@@ -415,7 +422,7 @@ const SettingsPanel = ({
   }, [
     searchParams,
     location.pathname,
-    conversations.length,
+    conversations,
     currentConversationId,
     dispatch,
     navigate,
@@ -553,15 +560,15 @@ const SettingsPanel = ({
     setShowModalSession,
   ]);
 
-  useEffect(() => {
-    // Auto-start tour if version is 2 and settings panel is open
-    if (currentVersion === 2 && showAdvOpt && !runTour) {
-      // Small delay to ensure panel is fully rendered
-      setTimeout(() => {
-        startTour();
-      }, 800); // Give time for panel animation to complete
-    }
-  }, [currentVersion, showAdvOpt, runTour, startTour]);
+  // useEffect(() => {
+  //   // Auto-start tour if version is 2 and settings panel is open
+  //   if (currentVersion === 2 && showAdvOpt && !runTour) {
+  //     // Small delay to ensure panel is fully rendered
+  //     setTimeout(() => {
+  //       startTour();
+  //     }, 800); // Give time for panel animation to complete
+  //   }
+  // }, [currentVersion, showAdvOpt, runTour, startTour]);
 
   return (
     <>
@@ -638,7 +645,7 @@ const SettingsPanel = ({
       <div
         className={`relative transition-all duration-300 ease-in-out
           ${
-            showAdvOpt
+            showSettings
               ? "opacity-100 desktop:w-[40%] w-full flex transform translate-y-0"
               : "opacity-0 max-h-0 transform -translate-y-4 overflow-hidden"
           }`}
@@ -650,14 +657,14 @@ const SettingsPanel = ({
           {/* Settings Panel */}
           <div
             className={`${
-              showAdvOpt
+              showSettings
                 ? "flex desktop:static absolute bottom-0 left-0"
                 : "hidden"
             } w-full border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
           >
             <div
               className={`transform transition-all duration-300 ${
-                showAdvOpt
+                showSettings
                   ? "translate-y-0 opacity-100"
                   : "translate-y-full opacity-0"
               } flex flex-col gap-4 p-3 sm:p-4 h-fit w-full`}
@@ -671,11 +678,9 @@ const SettingsPanel = ({
               />
               
               {/* Warning for external models */}
-              {(typeof localState.settings.model === 'string'
-                  ? localState.settings.model
-                  : localState.settings.model?.name
-                )?.toLowerCase()
-                .includes("external") && (
+              { (localState.current_conversation
+                  ? localState.conversations[localState.current_conversation].settings.model.name
+                  : "meta-llama-3.1-8b").toLowerCase().includes("external") && (
                 <div className="text-yellow-600 text-sm mb-3 select-none">
                   <Trans i18nKey={
                     userData?.org == "MPG" 
@@ -699,7 +704,7 @@ const SettingsPanel = ({
               />
             
               {/* Arcana warning*/}
-              {localState.settings.arcana?.id && (localState.settings.useGWDGTools || (currentModel?.input?.includes("arcana") || false)) && (
+              {settings.arcana?.id && (settings?.useGWDGTools || (currentModel?.input?.includes("arcana") || false)) && (
                 <div className="text-yellow-600 text-xs w-full select-none">
                   <Trans i18nKey="description.warning_arcana" />
                 </div>
@@ -733,7 +738,7 @@ const SettingsPanel = ({
                 {/* Hide Options Button */}
                 <div
                   className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
-                  onClick={toggleAdvOpt}
+                  onClick={() => dispatch(toggleSettings())}
                 >
                   <p className="hidden desktop:block text-sm h-full text-tertiary cursor-pointer">
                     <Trans i18nKey="description.text9" />

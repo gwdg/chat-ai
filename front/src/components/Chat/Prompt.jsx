@@ -19,10 +19,11 @@ import {
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { setIsResponding } from "../../Redux/reducers/conversationsSlice";
+import { setLockConversation } from "../../Redux/reducers/conversationsSlice";
 
 import { processFile } from "../../apis/processFile";
-import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
+import { selectAllMemories } from "../../Redux/reducers/userSettingsReducer";
+import { selectShowSettings, toggleSettings } from "../../Redux/reducers/interfaceSettingsSlice";
 import sendMessage from "../../utils/sendMessage";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
@@ -33,25 +34,18 @@ const MIN_HEIGHT = 56;
 function Prompt({
   modelsData,
   currentModel,
-  loading,
-  loadingResend,
   selectedFiles,
   localState,
   setLocalState,
-  setLoading,
   setSelectedFiles,
-  toggleAdvOpt,
-  adjustHeight,
-  setPdfNotProcessedModal,
-  setPreviewFile,
-  showAdvOpt,
 }) {
   //Hooks
   const { openModal } = useModal();
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const memories = useSelector(selectAllMemories);
-  const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
+  const timeoutTime = useSelector((state) => state.user_settings.timeout);
+  const showSettings = useSelector(selectShowSettings);
   const { notifySuccess, notifyError } = useToast();
 
   //Refs
@@ -63,11 +57,25 @@ function Prompt({
   const streamRef = useRef(null);
   const audioFileInputRef = useRef(null);
 
+  //Functions
+  const adjustHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = `${MIN_HEIGHT}px`;
+
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
+
+      textareaRef.current.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
+    }
+  };
+
   //Local useStates
   const [processingFiles, setProcessingFiles] = useState(new Set());
   const [isRecording, setIsRecording] = useState(false);
   const [pressTimer, setPressTimer] = useState(null);
   const [isLongPress, setIsLongPress] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingResend, setLoadingResend] = useState(false);
 
   // Update partial local state while preserving other values
   const updateLocalState = (updates) => {
@@ -302,7 +310,7 @@ function Prompt({
   // Handle cancellation of ongoing requests
   const handleCancelRequest = () => {
     cancelRequest(notifyError);
-    dispatch(setIsResponding(false));
+    dispatch(setLockConversation(false));
     setLoading(false);
   };
 
@@ -1754,11 +1762,11 @@ function Prompt({
             ) : null}
 
             <div className="flex gap-4 w-full justify-end items-center">
-              {!showAdvOpt ? (
+              {!showSettings ? (
                 <Tooltip text={t("description.settings_toggle")}>
                   <button
                     className="flex h-[25px] w-[25px] cursor-pointer"
-                    onClick={toggleAdvOpt}
+                    onClick={() => dispatch(toggleSettings())}
                   >
                     <img
                       className="cursor-pointer h-[25px] w-[25px]"

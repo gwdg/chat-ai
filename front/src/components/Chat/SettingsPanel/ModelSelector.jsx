@@ -61,7 +61,9 @@ export default function ModelSelector ({ modelsData, localState }) {
     }, [dispatch, currentConversationId, currentConversation]
     );
 
-    const currentModel = localState.settings["model"]
+    const currentModel = localState.current_conversation
+      ? localState.conversations[localState.current_conversation].settings.model
+      : "meta-llama-3.1-8b-instruct" // TODO
     // Filter function to search through models
     const filteredModelList = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -143,10 +145,10 @@ export default function ModelSelector ({ modelsData, localState }) {
                         demand={currentModel?.demand}
                     />
                     <div className="text-sm overflow-hidden text-ellipsis whitespace-nowrap flex-1">
-                        {typeof localState.settings.model === 'string'
-                        ? localState.settings.model 
-                        : (localState.settings.model?.name ??
-                        localState.settings.model?.id)}
+                        {localState.current_conversation
+                        ? localState.conversations[localState.current_conversation].settings.model
+                        : "meta-llama-3.1-8b-instruct" // TODO
+                        }
                     </div>
                     {(currentModel?.input?.includes("audio") || false) && (
                         <img

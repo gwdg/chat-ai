@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
-import { setIsResponding } from "../Redux/reducers/conversationsSlice";
-import { editMemory, addMemory } from "../Redux/reducers/userMemorySlice";
+import { setLockConversation } from "../Redux/reducers/conversationsSlice";
+import { editMemory, addMemory } from "../Redux/reducers/userSettingsReducer";
 import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
 import generateTitle from "../apis/generateTitle";
@@ -43,7 +43,7 @@ const sendMessage = async ({
   };
   
   // Set loading state
-  dispatch(setIsResponding(true));
+  dispatch(setLockConversation(true));
   if (operationType === "new") {
     setLoading(true);
   } else {
@@ -195,7 +195,7 @@ const sendMessage = async ({
       // Validate index
       if (index < 0 || index >= localState.responses.length) {
         notifyError("Something went wrong");
-        dispatch(setIsResponding(false));
+        dispatch(setLockConversation(false));
         setLoadingResend(false);
         return;
       }
@@ -205,7 +205,7 @@ const sendMessage = async ({
       if (operationType === "edit") {
         if (!editedText || !editedText?.trim()) {
           notifyError("Prompt cannot be empty!");
-          dispatch(setIsResponding(false));
+          dispatch(setLockConversation(false));
           setLoadingResend(false);
           return;
         }
@@ -530,7 +530,7 @@ const sendMessage = async ({
     }
 
     // Clear loading states
-    dispatch(setIsResponding(false));
+    dispatch(setLockConversation(false));
     if (operationType === "new") {
       setLoading(false);
       setSelectedFiles([]);
@@ -539,7 +539,7 @@ const sendMessage = async ({
     }
   } catch (error) {
     // Handle errors
-    dispatch(setIsResponding(false));
+    dispatch(setLockConversation(false));
     if (operationType === "new") {
       setLoading(false);
       setSelectedFiles([]);

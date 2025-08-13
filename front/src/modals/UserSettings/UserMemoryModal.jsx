@@ -10,7 +10,7 @@ import {
   deleteMemory,
   selectAllMemories,
   deleteAllMemories,
-} from "../../Redux/reducers/userMemorySlice";
+} from "../../Redux/reducers/userSettingsReducer";
 
 export default function UserMemoryModal({
   isOpen,
