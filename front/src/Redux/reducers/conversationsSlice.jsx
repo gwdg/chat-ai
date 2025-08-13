@@ -82,30 +82,10 @@ const conversationsSlice = createSlice({
       }
     },
     deleteConversation: (state, action) => {
-      const idToDelete = action.payload;
-      const currentIndex = state.findIndex(
-        (conv) => conv.id === idToDelete
-      );
-
-      // If conversation not found, do nothing
-      if (currentIndex === -1) return;
-
       // Remove the conversation
-      state = state.filter(
-        (conv) => conv.id !== idToDelete
+      return state.filter(
+        (conv) => conv.id !== action.payload
       );
-
-      // // Handle different cases for currentConversationId
-      // if (state.length === 0) {
-      //   // If last conversation was deleted, set to null to indicate we need a new one
-      //   //state.currentConversationId = null;
-      // } else if (state.currentConversationId === idToDelete) {
-      //   // If deleted conversation was current, move to the previous conversation
-      //   // (or the next one if deleting the first conversation)
-      //   const newIndex = currentIndex === 0 ? 0 : currentIndex - 1;
-      //   state.currentConversationId = state.conversations[newIndex].id;
-      // }
-      // If deleted conversation wasn't current, currentConversationId stays the same
     },
     resetStore: {
       reducer: (state, action) => {
