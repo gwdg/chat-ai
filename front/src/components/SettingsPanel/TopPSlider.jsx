@@ -1,6 +1,6 @@
 import { useState } from "react";
-import icon_help from "../../../assets/icons/help.svg";
-import { useModal } from "../../../modals/ModalContext";
+import icon_help from "../../assets/icons/help.svg";
+import { useModal } from "../../modals/ModalContext";
 
 export default function TopPSlider({ localState, setLocalState}) {
     const [isHoveringTopP, setHoveringTopP] = useState(false);

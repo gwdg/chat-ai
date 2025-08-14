@@ -1,6 +1,6 @@
 import { Trans } from "react-i18next";
-import { useModal } from "../../../modals/ModalContext"; 
-import icon_share_white from "../../../assets/icons/share_white.svg";
+import { useModal } from "../../modals/ModalContext"; 
+import icon_share_white from "../../assets/icons/share_white.svg";
 
 export default function ShareSettingsButton({ localState, setLocalState}) {
     const { openModal } = useModal();

@@ -75,7 +75,6 @@ function Sidebar({onClose}) {
     const newId = action.meta?.id;
 
     if (newId) {
-      console.log("Added new conversation: ", newId);
       // Update the conversation with the current default model
       // dispatch({
       //   type: "conversations/updateConversation",

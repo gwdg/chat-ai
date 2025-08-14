@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import MarkdownRenderer from "./MarkdownRenderer";
+import MarkdownRenderer from "./MessageAssistant/MarkdownRenderer";
+import Typing from "../Others/Typing";
 import icon_copy from "../../assets/icons/copy.svg";
 import icon_check from "../../assets/icons/check.svg";
-import Typing from "../Others/Typing";
 import icon_edit from "../../assets/icons/edit.svg";
-import ErrorBoundary from "./ErrorBoundary";
+import ErrorBoundary from "./MessageAssistant/ErrorBoundary";
 import { RotateCw } from "lucide-react";
 
 const MAX_HEIGHT = 400;
@@ -109,9 +109,9 @@ const extractMainContentForCopy = (content) => {
   }
 };
 
-const ResponseItem = React.memo(
+export default React.memo(
   ({
-    res,
+    msg,
     index,
     copied,
     setCopied,
@@ -119,7 +119,7 @@ const ResponseItem = React.memo(
     setIndexChecked,
     loading,
     loadingResend,
-    responses,
+    localState,
     editingResponseIndex,
     setEditedResponse,
     handleResponseEdit,
@@ -152,7 +152,7 @@ const ResponseItem = React.memo(
           if (e.key === "Escape") {
             setEditingResponseIndex(-1);
           } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-            handleResponseSave(index);
+            // handleResponseSave(index);
           }
         }
       };
@@ -162,7 +162,7 @@ const ResponseItem = React.memo(
     }, [
       editingResponseIndex,
       index,
-      handleResponseSave,
+      // handleResponseSave,
       setEditingResponseIndex,
     ]);
 
@@ -209,7 +209,7 @@ const ResponseItem = React.memo(
     // Enhanced copy function that properly excludes references
     const handleCopy = useCallback(async () => {
       try {
-        const textToCopy = extractMainContentForCopy(res.response);
+        const textToCopy = extractMainContentForCopy(msg.response);
 
         await navigator.clipboard.writeText(textToCopy);
         setCopied(true);
@@ -217,11 +217,11 @@ const ResponseItem = React.memo(
       } catch (err) {
         console.error("Copy failed:", err);
       }
-    }, [res?.response, index, setCopied, setIndexChecked]);
+    }, [msg?.response, index, setCopied, setIndexChecked]);
 
-    const isLastItem = index === responses.length - 1;
+    const isLastItem = index === localState.messages.length - 1;
     const isLoading = (loading || loadingResend) && isLastItem;
-    const hasError = !res?.response && !isLoading;
+    const hasError = !msg?.response && !isLoading;
 
     // Define render modes with better styling
     const renderModes = ["Default", "Markdown", "LaTeX", "Plain Text"];
@@ -248,7 +248,7 @@ const ResponseItem = React.memo(
     return (
       <div ref={responseRef}>
         <div className="text-black dark:text-white overflow-hidden border dark:border-border_dark rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
-          {!res?.response && isLoading ? (
+          {!msg?.response && isLoading ? (
             <Typing />
           ) : (
             <>
@@ -273,7 +273,7 @@ const ResponseItem = React.memo(
                       Cancel
                     </button>
                     <button
-                      onClick={() => handleResponseSave(index)}
+                      onClick={() => {}}//() => handleResponseSave(index)}
                       className="bg-tertiary text-white rounded-2xl px-4 py-2"
                     >
                       Save
@@ -303,7 +303,7 @@ const ResponseItem = React.memo(
                       isLoading={isLoading}
                       renderMode={renderMode}
                     >
-                      {res.response}
+                      {msg.response}
                     </MarkdownRenderer>
                   </ErrorBoundary>
                   <div className="flex justify-between w-full mt-1 gap-2">
@@ -331,7 +331,7 @@ const ResponseItem = React.memo(
                     </div>
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => handleResponseEdit(index, res.response)}
+                        onClick={() => handleResponseEdit(index, msg.response)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                         title="Edit"
                         disabled={isLoading}
@@ -364,6 +364,4 @@ const ResponseItem = React.memo(
   }
 );
 
-ResponseItem.displayName = "ResponseItem";
-
-export default ResponseItem;
+// MessageContainer.displayName = "MessageContainer";

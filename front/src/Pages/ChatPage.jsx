@@ -8,11 +8,11 @@ import { useSelector, useDispatch } from "react-redux";
 import { selectCurrentConversation, selectCurrentConversationId, updateConversation } from "../Redux/reducers/conversationsSlice";
 import { setCurrentConversation } from "../Redux/reducers/currentConversationSlice";
 import { selectShowSettings, selectShowSidebar } from "../Redux/reducers/interfaceSettingsSlice";
-import Sidebar from "../components/Chat/Sidebar";
-import HallucinationWarning from "../components/Chat/HallucinationWarning";
-import Responses from "../components/Chat/Responses";
-import Prompt from "../components/Chat/Prompt";
-import SettingsPanel from "../components/Chat/SettingsPanel/SettingsPanel";
+import Sidebar from "../components/Sidebar/Sidebar";
+import HallucinationWarning from "../components/Others/HallucinationWarning";
+import Conversation from "../components/Conversation/Conversation";
+import Prompt from "../components/Prompt/Prompt";
+import SettingsPanel from "../components/SettingsPanel/SettingsPanel";
 import { selectDarkMode } from "../Redux/reducers/interfaceSettingsSlice";
 import { toggleSidebar } from "../Redux/reducers/interfaceSettingsSlice";
 import { getDefaultConversation, getDefaultSettings } from "../utils/conversationUtils";
@@ -195,11 +195,10 @@ function ChatPage() {
                     {/* Show Hallucination Warning */}
                     <HallucinationWarning />
                     {/* Show responses */}
-                    <Responses
-                      modelsData={modelsData}
+                    <Conversation
                       localState={localState}
                       setLocalState={setLocalState}
-                      setSelectedFiles={setSelectedFiles}
+                      modelsData={modelsData}
                     />
                   </div>
                   {/* Show Prompt */}

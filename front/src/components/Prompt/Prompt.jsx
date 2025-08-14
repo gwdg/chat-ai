@@ -114,8 +114,6 @@ function Prompt({
         file.type !== "image" && file.type !== "video" && file.type !== "audio"
     );
 
-    console.log("In get res")
-
     await sendMessage({
       localState,
       setLocalState,
@@ -1744,7 +1742,6 @@ function Prompt({
             />
           )}
           <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
-            {console.log("Prompt is", prompt)}
             {prompt?.trim() !== "" ? (
               <Tooltip text={t("description.clear")}>
                 <button

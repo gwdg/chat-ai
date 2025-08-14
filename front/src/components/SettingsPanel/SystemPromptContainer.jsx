@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Trans } from "react-i18next";
-import icon_help from "../../../assets/icons/help.svg";
-import { useModal } from "../../../modals/ModalContext";
+import icon_help from "../../assets/icons/help.svg";
+import { useModal } from "../../modals/ModalContext";
 
 export default function SystemPromptContainer({ localState, setLocalState}) {
     const { openModal } = useModal();

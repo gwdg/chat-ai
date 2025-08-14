@@ -1,7 +1,7 @@
 import { memo, useCallback, useState, useMemo } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import CodeCopyBtn from "../Others/CodeCopyBtn";
+import CodeCopyBtn from "../../Others/CodeCopyBtn";
 
 const highlightCache = new Map();
 

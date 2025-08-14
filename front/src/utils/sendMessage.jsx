@@ -431,18 +431,100 @@ const sendMessage = async ({
       // TODO add limit in settingsPanel
     }
 
-    // Fetch LLM response
-    const response = await chatCompletions(
-      finalConversationForState,
-      timeoutTime
-    );
+    // Save sent message in history and prepare new prompt
+
+    const tempMessages = [
+        ...localState.messages,
+        { role: "assistant", content: "" },
+        { role: "user", content: "" },
+      ];
+
+    setLocalState((prev) => ({
+      ...prev,
+      // Add two last messages:
+      messages: [
+        ...prev.messages,
+        { role: "assistant", content: "" },
+        { role: "user", content: "" },
+      ],
+    }));
+
+    async function getChatChunk() {
+      let currentResponse = "";
+      for await (const chunk of chatCompletions(finalConversationForState, timeoutTime)) {
+        currentResponse += chunk;
+        // UI update happens here in the caller
+        setLocalState(prev => {
+          const messages = [...prev.messages];
+          messages[messages.length - 2] = {
+            role: "assistant",
+            content: currentResponse
+          };
+          return { ...prev, messages };
+        });
+      }
+      return currentResponse;
+    }
+
+    const response = await getChatChunk();
 
     // Handle errors
     if (response === 401) {
+      // TODO clean up localState
       openModal("errorSessionExpired")
     } else if (response === 413) {
+      // TODO clean up localState
       openModal("errorBadRequest")
     }
+
+    tempMessages[tempMessages.length - 2] = { role: "assistant", content: response };
+
+    // Generate title if conversation is new
+    if (tempMessages.length <= 4) {
+      const title = await generateTitle(tempMessages) || localState.title || "Untitled Conversation";
+      setLocalState((prevState) => ({
+        ...prevState,
+        title,
+      }));
+    }
+
+    // Update memory if necessary
+    try {
+      if (memories.length >= 2) {
+        const memoryResponse = await generateMemory(
+          finalConversationForState,
+          memories
+        );
+        const cleanedResponse = memoryResponse.replace(/,(\s*[}$])/g, "$1");
+        const jsonResponse = JSON.parse(cleanedResponse);
+        if (jsonResponse.store) {
+          const memoryText = jsonResponse.memory_sentence.trim();
+          if (jsonResponse.replace) {
+            const line_number = jsonResponse.line_number - 1;
+            dispatch(editMemory({ index: line_number, text: memoryText }));
+          } else {
+            dispatch(addMemory({ text: memoryText }));
+          }
+          notifySuccess("Memory updated successfully.");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to update memory: ", error.name, error.message);
+      notifyError("Failed to update memory.");
+    }
+
+    // // Edit last assistant message with response:
+    // NOT NEEDED ANYMORE THANKS TO getChatChunk
+    // setLocalState((prev) => {
+    //   const messages = [...prev.messages];
+    //   messages[messages.length - 2] = { role: "assistant", content: response }
+    //   return { ...prev, messages };
+    // });
+
+    // Generate title when message stored in local
+    // generateTitle(
+    //   localState.messages,
+    // )
 
     // Original conversation with "info" objects (for local state)
     // const messages = finalConversationForState;
@@ -473,55 +555,6 @@ const sendMessage = async ({
     //   }
     //   return message;
     // });
-
-    // Save conversation to state
-    setLocalState((prevState) => ({
-      ...prevState,
-      // Add two last messages:
-      messages: [
-        ...prevState.messages,
-        { role: "assistant", content: response },
-        { role: "user", content: "" },
-      ],
-    }));
-
-    // Generate title if conversation is new
-    // if (messages.length <= 2) {
-    //   const title = await generateTitle(messages, {
-    //     temperature: 0.2,
-    //     top_p: 0.2,
-    //   });
-
-    //   setLocalState((prevState) => ({
-    //     ...prevState,
-    //     title,
-    //   }));
-    // }
-
-    // Update memory if necessary
-    // try {
-    //   if (localState.settings.memory >= 2) {
-    //     const memoryResponse = await generateMemory(
-    //       finalConversationForState,
-    //       memories
-    //     );
-    //     const cleanedResponse = memoryResponse.replace(/,(\s*[}$])/g, "$1");
-    //     const jsonResponse = JSON.parse(cleanedResponse);
-    //     if (jsonResponse.store) {
-    //       const memoryText = jsonResponse.memory_sentence.trim();
-    //       if (jsonResponse.replace) {
-    //         const line_number = jsonResponse.line_number - 1;
-    //         dispatch(editMemory({ index: line_number, text: memoryText }));
-    //       } else {
-    //         dispatch(addMemory({ text: memoryText }));
-    //       }
-    //       notifySuccess("Memory updated successfully.");
-    //     }
-    //   }
-    // } catch (error) {
-    //   console.error("Failed to update memory: ", error.name, error.message);
-    //   notifyError("Failed to update memory.");
-    // }
 
     // Clear loading states
     dispatch(setLockConversation(false));

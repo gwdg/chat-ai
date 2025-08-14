@@ -12,7 +12,6 @@ import TemperatureSlider from "./TemperatureSlider";
 import TopPSlider from "./TopPSlider";
 import MemorySelector from "./MemorySelector";
 import GWDGToggle from "./GWDGToggle";
-import ModelSelector from "../../Header/ModelSelector";
 import SystemPromptContainer from "./SystemPromptContainer";
 import ShareSettingsButton from "./ShareSettingsButton";
 
@@ -21,18 +20,18 @@ import {
   addConversation,
   selectConversations,
   updateConversation,
-} from "../../../Redux/reducers/conversationsSlice";
-import { processFile } from "../../../apis/processFile";
-import { selectDefaultModel } from "../../../Redux/reducers/userSettingsReducer";
+} from "../../Redux/reducers/conversationsSlice";
+import { processFile } from "../../apis/processFile";
+import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 
 // Hooks
-import { useImportConversation } from "../../../hooks/useImportConversation";
-import { getDefaultSettings } from "../../../utils/conversationUtils";
-import { useToast } from "../../../hooks/useToast";
+import { useImportConversation } from "../../hooks/useImportConversation";
+import { getDefaultSettings } from "../../utils/conversationUtils";
+import { useToast } from "../../hooks/useToast";
 import {
   selectShowSettings,
   selectShowSidebar,
-  toggleSettings } from "../../../Redux/reducers/interfaceSettingsSlice";
+  toggleSettings } from "../../Redux/reducers/interfaceSettingsSlice";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
