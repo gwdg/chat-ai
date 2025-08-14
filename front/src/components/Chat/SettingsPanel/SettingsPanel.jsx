@@ -662,15 +662,9 @@ const SettingsPanel = ({
                   : "translate-y-full opacity-0"
               } flex flex-col gap-4 p-3 sm:p-4 h-fit w-full`}
             >
-              {/* Model Selection Menu
-              <ModelSelector
-                modelsData={modelsData}
-                localState={localState}
-                setLocalState={setLocalState}
-                onModelChange={onModelChange}
-              /> */}
               
               {/* Warning for external models */}
+              { console.log(localState.settings?.model?.name.toLowerCase()) }
               { localState.settings?.model?.name.toLowerCase().includes("external") && (
                 <div className="text-yellow-600 text-sm mb-3 select-none">
                   <Trans i18nKey={

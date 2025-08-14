@@ -15,7 +15,7 @@ import DemandStatusIcon from "../Others/DemandStatusIcon";
 
 import { updateConversation, selectCurrentConversation, selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
 
-export default function ModelSelector ({ modelsData, localState }) {
+export default function ModelSelector ({ localState, setLocalState, modelsData }) {
 
     const [searchQuery, setSearchQuery] = useState("");
     const { openModal } = useModal();
@@ -23,9 +23,6 @@ export default function ModelSelector ({ modelsData, localState }) {
     const [direction, setDirection] = useState("down");
     const dropdownRef = useRef(null);
     const dispatch = useDispatch();
-    // const [modelSettings, setModelSettings] = useState({
-    //     model: {id: "", name: ""},
-    // });
 
     // Toggle dropdown open/close state
     const toggleOpen = () => {setIsOpen(!isOpen);}
@@ -33,29 +30,25 @@ export default function ModelSelector ({ modelsData, localState }) {
     // Conversation state management
     const currentConversationId = useSelector(selectCurrentConversationId);
     const currentConversation = useSelector(selectCurrentConversation);
-    const currentModel = currentConversation?.settings?.model
+    const currentModel = localState?.settings?.model
 
     // Handle model selection changes
     const handleModelChange = useCallback(
         (model) => {
         if (!model || !currentConversationId) return;
-        console.log("Changing model")
+        console.log("Changing model to ", model)
         if (model?.status === "offline") {
             openModal("serviceOffline")
         }
-
-        // Update conversation settings when model changes
-        dispatch(
-            updateConversation({
-                id: currentConversationId,
-                updates: {
+        setLocalState(
+            (prev) => ({
+                ...prev,
                 settings: {
-                    ...currentConversation.settings,
+                    ...prev.settings,
                     model: model,
                 },
-                },
             })
-        );
+        )
     }, [dispatch, currentConversationId, currentConversation]
     );
 
@@ -67,18 +60,6 @@ export default function ModelSelector ({ modelsData, localState }) {
     }
 
     const query = searchQuery.toLowerCase();
-
-    // useEffect(() => {
-    //     if (dropdownRef.current) {
-    //         // Get dropdown position relative to viewport
-    //         const rect = dropdownRef.current.getBoundingClientRect();
-    //         // Calculate available space above and below
-    //         const spaceBelow = window.innerHeight - rect.bottom;
-    //         const spaceAbove = rect.top;
-    //         // Set direction based on which has more space
-    //         setDirection(spaceBelow > spaceAbove ? "down" : "up");
-    //     }
-    // }, [isOpen]); // Only recalculate when dropdown opens/closes
 
     return modelsData.filter((model) => {
         // Search by model name
