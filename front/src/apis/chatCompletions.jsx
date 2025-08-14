@@ -5,21 +5,21 @@ let controller = new AbortController();
 let signal = controller.signal;
 
 async function chatCompletions (
-  customInstructions,
-  localState,
-  setLocalState,
-  updatedConversation,
-  isArcanaSupported,
+  rawConversation,
   timeout = 30000
 ) {
   try {
-    const model = typeof localState.settings.model === 'string'
-                ? localState.settings.model
-                : localState.settings.model?.id;
-    const temperature = localState.settings.temperature;
-    const top_p = localState.settings.top_p;
-    const arcana = localState.arcana;
-
+    // Clean conversation for API call
+    const conversation = {
+      ...rawConversation,
+      messages: rawConversation.messages.filter(
+        (message) => message.role !== "info"
+      ),
+    };
+    const model = typeof conversation.settings.model === 'string'
+                ? conversation.settings.model
+                : conversation.settings.model?.id;
+    console.log("Model is ", model)
     let headers = {
       "Content-Type": "application/json"
     };
@@ -31,16 +31,13 @@ async function chatCompletions (
     const openai = new OpenAI({baseURL : baseURL, apiKey: null, dangerouslyAllowBrowser: true});
     const response = await openai.chat.completions.create({
       model: model,
-      messages: [
-              { role: "system", content: customInstructions },
-              ...updatedConversation.slice(1),
-            ],
-      temperature: temperature,
-      top_p: top_p,
+      messages: conversation.messages,
+      temperature: conversation.settings.temperature,
+      top_p: conversation.settings.top_p,
       stream: true,
       stream_options: {include_usage: true },
       timeout: timeout,
-      extra_body: {arcana: (isArcanaSupported || localState?.settings?.enable_tools) ? arcana : ""}
+      extra_body: {arcana: (conversation.settings.arcana && conversation.settings?.enable_tools) ? conversation.settings.arcana : ""}
     }).asResponse();
     console.log(response);
     console.log(response.statusText);
@@ -89,17 +86,17 @@ async function chatCompletions (
 
         const decodedChunk = decoder.decode(value, { stream: true });
         currentResponse += decodedChunk;
-
-        setLocalState((prevState) => ({
-          ...prevState,
-          responses: [
-            ...prevState.responses.slice(0, -1),
-            {
-              ...prevState.responses[prevState.responses.length - 1],
-              response: currentResponse,
-            },
-          ],
-        }));
+        console.log(currentResponse);
+        // setLocalState((prevState) => ({
+        //   ...prevState,
+        //   responses: [
+        //     ...prevState.responses.slice(0, -1),
+        //     {
+        //       ...prevState.responses[prevState.responses.length - 1],
+        //       response: currentResponse,
+        //     },
+        //   ],
+        // }));
       }
       return currentResponse;
     } catch (error) {
@@ -125,7 +122,6 @@ async function chatCompletions (
     if (error.name === "AbortError") {
       return null; // or handle as appropriate for your app
     }
-
     console.error("An error occurred", error);
     throw error;
   }

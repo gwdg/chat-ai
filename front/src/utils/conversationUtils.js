@@ -30,11 +30,13 @@ export const getDefaultConversation = (customSettings = {}) => {
   return {
     id: uuidv4(),
     title: "Untitled Conversation",
-    messages: [
-      {
+    messages: [ {
         role: "system",
         content: "You are a helpful dog.",
-      },
+      }, {
+        role: "user",
+        content: ""
+      }
     ],
     settings: settings,
     createdAt: new Date().toISOString(),

@@ -76,13 +76,18 @@ function Prompt({
   const [isLongPress, setIsLongPress] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingResend, setLoadingResend] = useState(false);
+  // Prompt is actually the last message sent by the user
+  const prompt = localState.messages[localState.messages.length - 1].content;
+  // Will this always be up to date even if localState changes?
+  // if not, maybe we should define
 
   // Update partial local state while preserving other values
-  const updateLocalState = (updates) => {
-    setLocalState((prev) => ({
-      ...prev,
-      ...updates,
-    }));
+  const setPrompt = (prompt) => {
+    setLocalState((prev) => {
+      const messages = [...prev.messages]; // shallow copy
+      messages[messages.length - 1] = { role: "user", content: prompt };
+      return { ...prev, messages };
+    });
   };
 
   // Converts a file to base64 string format using FileReader
@@ -100,7 +105,7 @@ function Prompt({
   const isImageSupported = (currentModel?.input?.includes("image") || false)
 
   // Main function to fetch and process LLM response
-  const getRes = async (updatedConversation) => {
+  const getRes = async () => {
     const audioFiles = selectedFiles.filter((file) => file.type === "audio");
     const imageFiles = selectedFiles.filter((file) => file.type === "image");
     const videoFiles = selectedFiles.filter((file) => file.type === "video");
@@ -109,19 +114,18 @@ function Prompt({
         file.type !== "image" && file.type !== "video" && file.type !== "audio"
     );
 
-    console.log(updatedConversation)
+    console.log("In get res")
 
     await sendMessage({
-      operationType: "new",
-      openModal,
-      updatedConversation,
-      dispatch,
       localState,
       setLocalState,
+      modelsData,
+      operationType: "new",
+      openModal,
+      dispatch,
       setLoading,
       selectedFiles,
       setSelectedFiles,
-      modelsData,
       memories,
       timeoutTime,
       audioFiles,
@@ -284,7 +288,7 @@ function Prompt({
 
   // Handle changes in the prompt textarea
   const handleChange = (event) => {
-    updateLocalState({ prompt: event.target.value });
+    setPrompt(event.target.value);
     adjustHeight();
   };
 
@@ -317,9 +321,7 @@ function Prompt({
   // Handle form submission with prompt and files
   const handleSubmit = async (event) => {
     event.preventDefault();
-
-    if (localState.prompt?.trim() === "" && selectedFiles.length === 0) return;
-    if (localState.prompt?.trim() === "" && selectedFiles.length === 0) return;
+    if (prompt?.trim() === "" && selectedFiles.length === 0) return;
 
     const hasUnprocessedDocument = selectedFiles.some(
       (file) =>
@@ -338,99 +340,99 @@ function Prompt({
       let newMessages;
 
       // Process submission with files
-      if (selectedFiles.length > 0) {
-        const textFiles = selectedFiles.filter(
-          (file) =>
-            file.type !== "image" &&
-            file.type !== "video" &&
-            file.type !== "audio"
-        );
-        const audioFiles = selectedFiles.filter(
-          (file) => file.type === "audio"
-        );
-        const imageFiles = selectedFiles.filter(
-          (file) => file.type === "image"
-        );
-        const videoFiles = selectedFiles.filter(
-          (file) => file.type === "video"
-        );
+      // if (selectedFiles.length > 0) {
+      //   const textFiles = selectedFiles.filter(
+      //     (file) =>
+      //       file.type !== "image" &&
+      //       file.type !== "video" &&
+      //       file.type !== "audio"
+      //   );
+      //   const audioFiles = selectedFiles.filter(
+      //     (file) => file.type === "audio"
+      //   );
+      //   const imageFiles = selectedFiles.filter(
+      //     (file) => file.type === "image"
+      //   );
+      //   const videoFiles = selectedFiles.filter(
+      //     (file) => file.type === "video"
+      //   );
 
-        // Process text files, including processed PDFs
-        const allTextFilesText = textFiles
-          .map((file) => {
-            if (
-              file.fileType === "pdf" ||
-              file.fileType === "excel" ||
-              file.fileType === "docx"
-            ) {
-              return `${file.name}: ${file.processedContent}`;
-            }
-            return `${file.name}: ${file.content}`;
-          })
-          .filter(Boolean)
-          .join("\n");
+      //   // Process text files, including processed PDFs
+      //   const allTextFilesText = textFiles
+      //     .map((file) => {
+      //       if (
+      //         file.fileType === "pdf" ||
+      //         file.fileType === "excel" ||
+      //         file.fileType === "docx"
+      //       ) {
+      //         return `${file.name}: ${file.processedContent}`;
+      //       }
+      //       return `${file.name}: ${file.content}`;
+      //     })
+      //     .filter(Boolean)
+      //     .join("\n");
 
-        const fullPrompt = allTextFilesText
-          ? `${localState.prompt}\n${allTextFilesText}`
-          : localState.prompt;
+      //   const fullPrompt = allTextFilesText
+      //     ? `${localState.prompt}\n${allTextFilesText}`
+      //     : localState.prompt;
 
-        // Process audio files - CORRECT FORMAT for OpenAI
-        const audioContent = audioFiles.map((audioFile) => {
-          return {
-            type: "input_audio",
-            input_audio: {
-              data: audioFile.text, // This should be raw base64 string
-              format: audioFile.format, // "wav" or "mp3"
-            },
-          };
-        });
+      //   // Process audio files - CORRECT FORMAT for OpenAI
+      //   const audioContent = audioFiles.map((audioFile) => {
+      //     return {
+      //       type: "input_audio",
+      //       input_audio: {
+      //         data: audioFile.text, // This should be raw base64 string
+      //         format: audioFile.format, // "wav" or "mp3"
+      //       },
+      //     };
+      //   });
 
-        // Process image files
-        const imageContent = imageFiles.map((imageFile) => ({
-          type: "image_url",
-          image_url: {
-            url: imageFile.text, // This should be data URL for images
-          },
-        }));
+      //   // Process image files
+      //   const imageContent = imageFiles.map((imageFile) => ({
+      //     type: "image_url",
+      //     image_url: {
+      //       url: imageFile.text, // This should be data URL for images
+      //     },
+      //   }));
 
-        // Process video files
-        const videoContent = videoFiles.map((videoFile) => ({
-          type: "video_url",
-          video_url: {
-            url: videoFile.text,
-          },
-        }));
+      //   // Process video files
+      //   const videoContent = videoFiles.map((videoFile) => ({
+      //     type: "video_url",
+      //     video_url: {
+      //       url: videoFile.text,
+      //     },
+      //   }));
 
-        // Create combined prompt content
-        const newPromptContent = [
-          {
-            type: "text",
-            text: fullPrompt,
-          },
-          ...audioContent,
-          ...imageContent,
-          ...videoContent,
-        ];
+      //   // Create combined prompt content
+      //   const newPromptContent = [
+      //     {
+      //       type: "text",
+      //       text: fullPrompt,
+      //     },
+      //     ...audioContent,
+      //     ...imageContent,
+      //     ...videoContent,
+      //   ];
 
-        newMessages = [
-          ...localState.messages,
-          { role: "user", content: newPromptContent },
-        ];
-      } else {
-        // Simple text-only submission
-        newMessages = [
-          ...localState.messages,
-          { role: "user", content: localState.prompt },
-        ];
-      }
+      //   newMessages = [
+      //     ...localState.messages,
+      //     { role: "user", content: newPromptContent },
+      //   ];
+      // } else {
+      //   // Simple text-only submission
+      //   newMessages = [
+      //     ...localState.messages,
+      //     { role: "user", content: localState.prompt },
+      //   ];
+      // }
 
       // Update conversation state
-      setLocalState((prevState) => ({
-        ...prevState,
-        messages: newMessages,
-      }));
+      // setLocalState((prevState) => ({
+      //   ...prevState,
+      //   messages: newMessages,
+      // }));
 
-      await getRes(newMessages);
+      await getRes();
     } catch (error) {
       console.error("Error in handleSubmit:", error);
     }
@@ -1690,7 +1692,7 @@ function Prompt({
                 autoFocus
                 ref={textareaRef}
                 className="p-5 outline-none text-base rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
-                value={localState.prompt}
+                value={prompt}
                 name="prompt"
                 placeholder={t("description.placeholder")}
                 style={{
@@ -1702,8 +1704,7 @@ function Prompt({
                   if (
                     event.key === "Enter" &&
                     !event.shiftKey &&
-                    (localState.prompt?.trim() !== "" ||
-                      selectedFiles.length > 0)
+                    (prompt?.trim() !== "" || selectedFiles.length > 0)
                   ) {
                     event.preventDefault();
                     handleSubmit(event);
@@ -1719,7 +1720,7 @@ function Prompt({
               autoFocus
               ref={textareaRef}
               className="p-5 outline-none text-base rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
-              value={localState.prompt}
+              value={prompt}
               name="prompt"
               placeholder={t("description.placeholder")}
               style={{
@@ -1734,7 +1735,7 @@ function Prompt({
                 if (
                   event.key === "Enter" &&
                   !event.shiftKey &&
-                  (localState.prompt?.trim() !== "" || selectedFiles.length > 0)
+                  (prompt?.trim() !== "" || selectedFiles.length > 0)
                 ) {
                   event.preventDefault();
                   handleSubmit(event);
@@ -1743,12 +1744,13 @@ function Prompt({
             />
           )}
           <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
-            {localState.prompt?.trim() !== "" ? (
+            {console.log("Prompt is", prompt)}
+            {prompt?.trim() !== "" ? (
               <Tooltip text={t("description.clear")}>
                 <button
                   className="h-[30px] w-[30px] cursor-pointer"
                   onClick={() => {
-                    updateLocalState({ prompt: "" });
+                    setPrompt("");
                   }}
                   disabled={loading || loadingResend}
                 >
@@ -1876,7 +1878,7 @@ function Prompt({
                     />
                   </button>
                 </Tooltip>
-              ) : localState.prompt !== "" || selectedFiles.length > 0 ? (
+              ) : prompt !== "" || selectedFiles.length > 0 ? (
                 <Tooltip text={t("description.send")}>
                   <button className="h-[30px] w-[30px] cursor-pointer">
                     <img
