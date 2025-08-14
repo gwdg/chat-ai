@@ -1,12 +1,13 @@
 import { Trans } from "react-i18next";
 import { useState } from "react";
 
-const WarningButton = ({ currentModel, userData}) => {
-  // Add safety check for currentModel
+const WarningButton = ({ localState, userData}) => {
+  // Add safety check for model
   if (
-    !currentModel ||
-    !currentModel.name ||
-    !currentModel.name.toLowerCase().includes("external")
+    !localState.settings ||
+    !localState.settings.model ||
+    !localState.settings.model.name ||
+    !localState.settings.model.name.toLowerCase().includes("external")
   ) {
     return null;
   }
