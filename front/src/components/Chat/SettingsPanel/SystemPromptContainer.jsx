@@ -9,7 +9,7 @@ export default function SystemPromptContainer({ localState, setLocalState}) {
 
     // Validate the system prompt is not empty
     const validateSystemPrompt = () => {
-        if (!localState.settings.system_prompt?.trim()) {
+        if (!localState.messages[0].content?.trim()) {
         //setSystemPromptError(t("description.custom6"));
         // TODO handle t
         setSystemPromptError("System prompt is empty. Model may not respond.")
@@ -21,19 +21,19 @@ export default function SystemPromptContainer({ localState, setLocalState}) {
     // Handle changes to the system instructions/prompt
     const handleInstructionsChange = (event) => {
         const { value } = event.target;
-
         // Clear any existing error when user starts typing
         if (systemPromptError) {
             setSystemPromptError("");
         }
-
         // Update system prompt in local state
         setLocalState((prevState) => ({
             ...prevState,
-            settings: {
-            ...prevState.settings,
-            system_prompt: value,
-            },
+            messages: [{
+                role: "system",
+                content: value,
+                },
+                ...localState.messages.slice(1),
+            ]
         }));
     };
 
@@ -57,13 +57,13 @@ export default function SystemPromptContainer({ localState, setLocalState}) {
                 //placeholder={t("description.custom4")}
                 // TODO use translation for placeholder
                 placeholder={"Enter the system prompt here"}
-                value={localState.settings.system_prompt}
+                value={localState.messages[0].content}
                 onChange={handleInstructionsChange}
                 onBlur={() => validateSystemPrompt()}
             />
             </div>
             {(systemPromptError ||
-            !localState.settings.system_prompt) && (
+            !localState.messages[0].content) && (
             <p className="text-yellow-600 text-xs">
                 <Trans i18nKey="description.custom6" />
             </p>

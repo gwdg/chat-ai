@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+
 import { 
     updateConversation,
     selectCurrentConversationId,
@@ -18,8 +19,8 @@ export function useSyncConversation({
     useEffect(() => {
         // Only proceed if both conversationId and currentConversation exist
         if (currentConversationId && currentConversation) {
-        // Initialize local state with all conversation data
-        setLocalState(currentConversation);
+            // Initialize local state with all conversation data
+            setLocalState(currentConversation);
         }
     }, [currentConversationId]);
 

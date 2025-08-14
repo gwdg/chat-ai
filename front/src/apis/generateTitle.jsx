@@ -1,4 +1,4 @@
-import { getDefaultSettings } from "../utils/settingsUtils";
+import { getDefaultSettings } from "../utils/conversationUtils";
 
 export default async function generateTitle(conversation, settings) {
   const defaultSettings = getDefaultSettings();

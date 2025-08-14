@@ -15,7 +15,8 @@ import Prompt from "../components/Chat/Prompt";
 import SettingsPanel from "../components/Chat/SettingsPanel/SettingsPanel";
 import { selectDarkMode } from "../Redux/reducers/interfaceSettingsSlice";
 import { toggleSidebar } from "../Redux/reducers/interfaceSettingsSlice";
-import { getDefaultSettings } from "../utils/settingsUtils";
+import { getDefaultConversation, getDefaultSettings } from "../utils/conversationUtils";
+import WarningButton from "../components/Others/WarningButton";
 
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
@@ -40,13 +41,7 @@ function ChatPage() {
   const userData = useUpdateUserData();
 
   // Initialize localState as empty conversation
-  const [localState, setLocalState] = useState({
-    title: "",
-    prompt: "",
-    responses: [],
-    messages: [],
-    settings: defaultSettings,
-  });
+  const [localState, setLocalState] = useState(() => getDefaultConversation());
   // Sync local state with redux and current conversation
   useSyncConversation ({
     localState,

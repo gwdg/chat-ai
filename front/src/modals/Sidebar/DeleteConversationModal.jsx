@@ -17,45 +17,30 @@ export default function DeleteConversationModal({
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Updated confirmDelete function
-    const handleDelete = () => {
-      const currentIndex = conversations.findIndex((conv) => conv.id === id);
-      if (currentIndex !== -1) {
-        if (id === currentConversationId) {
-          const isFirstConversation = currentIndex === 0;
-          const nextConversationIndex = isFirstConversation
-            ? 1
-            : currentIndex - 1;
-  
-          if (conversations.length === 1) {
-            // Create new conversation with a known ID before deleting the last one
-            const newConversationId = uuidv4();
-  
-            // First create the new conversation to ensure it exists
-            dispatch(addConversation(newConversationId));
-  
-            // Then navigate to it
-            navigate(`/chat/${newConversationId}`);
-  
-            // Force persistence to ensure other tabs pick up the change
-            persistor.flush().then(() => {
-              // Then delete the old conversation
-              setTimeout(() => {
-                dispatch(deleteConversation(id));
-              }, 100);
-            });
-          } else {
-            // Navigate to adjacent conversation before deleting
-            const nextConversationId = conversations[nextConversationIndex].id;
-            navigate(`/chat/${nextConversationId}`);
-            dispatch(deleteConversation(id));
-          }
-        } else {
-          dispatch(deleteConversation(id));
-        }
+  const handleDelete = () => {
+    const currentIndex = conversations.findIndex((conv) => conv.id === id);
+    // If conversation not found, do nothing
+    if (currentIndex === -1) return;
+    // If deleting current conversation
+    if (id === currentConversationId) {
+      let nextConversationId;
+      if (conversations.length === 1) {
+        // If this is the only conversation, create a new one
+        const action = dispatch(addConversation());
+        nextConversationId = action.payload.id;
+      } else {
+        // Find adjacent conversation
+        const nextIndex = currentIndex === 0 ? 1 : currentIndex - 1;
+        nextConversationId = conversations[nextIndex].id;
       }
-      onClose();
+      persistor.flush().then(() => { 
+        // Force persistence before navigating to alternate
+        navigate(`/chat/${nextConversationId}`);
+      });
     }
+    dispatch(deleteConversation(id));
+    onClose();
+  }
 
   return (
     <BaseModal

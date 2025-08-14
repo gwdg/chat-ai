@@ -27,7 +27,7 @@ import { selectDefaultModel } from "../../../Redux/reducers/userSettingsReducer"
 
 // Hooks
 import { useImportConversation } from "../../../hooks/useImportConversation";
-import { getDefaultSettings } from "../../../utils/settingsUtils";
+import { getDefaultSettings } from "../../../utils/conversationUtils";
 import { useToast } from "../../../hooks/useToast";
 import {
   selectShowSettings,
@@ -209,9 +209,9 @@ const SettingsPanel = ({
       messages: updatedMessages,
       settings: {
         ...prevState.settings,
-        systemPrompt: "You are a helpful assistant",
         temperature: defaultSettings.temperature,
         top_p: defaultSettings.top_p,
+        enable_tools: defaultSettings?.enable_tools,
         memory: 2,
       },
     }));
@@ -283,7 +283,6 @@ const SettingsPanel = ({
   // Helper function to process URL settings
   const processUrlSettings = (urlSettings) => {
     const defaultSettings = getDefaultSettings();
-
     return {
       ...defaultSettings,
       ...urlSettings,
@@ -664,8 +663,7 @@ const SettingsPanel = ({
             >
               
               {/* Warning for external models */}
-              { console.log(localState.settings?.model?.name.toLowerCase()) }
-              { localState.settings?.model?.name.toLowerCase().includes("external") && (
+              { localState.settings?.model?.name?.toLowerCase().includes("external") && (
                 <div className="text-yellow-600 text-sm mb-3 select-none">
                   <Trans i18nKey={
                     userData?.org == "MPG" 

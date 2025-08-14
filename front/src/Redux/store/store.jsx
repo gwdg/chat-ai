@@ -8,7 +8,8 @@ import {
   initMessageListener,
 } from "redux-state-sync";
 import { v4 as uuidv4 } from "uuid";
-import { getDefaultSettings } from "../../utils/settingsUtils";
+import { getDefaultConversation, getDefaultSettings } from "../../utils/conversationUtils";
+import { useNavigate } from "react-router-dom";
 
 const persistConfig = {
   key: "root",
@@ -30,29 +31,6 @@ const persistConfig = {
     "user_settings",
     "version",
   ],
-};
-
-// Helper function to create a new conversation with proper defaults
-const createNewConversation = (conversationId) => {
-  const defaultSettings = getDefaultSettings();
-  const settings = {
-    ...defaultSettings,
-    // Override with provided default model if available
-    // ...(defaultModel && {
-    //   model: defaultModel,
-    // }),
-  };
-
-  return {
-    id: conversationId || uuidv4(),
-    title: "Untitled Conversation",
-    messages: defaultSettings?.messages || [],
-    settings,
-    created_at: new Date().toISOString(),
-    last_modified: new Date().toISOString(),
-    // responses: [],
-    // prompt: "",
-  };
 };
 
 // Migration functions for different versions
@@ -136,42 +114,37 @@ const applyMigrations = (state) => {
   return { ...state, version: state.version };
 };
 
+const getDefaultState = () => {
+  const newConversation = getDefaultConversation();
+  return {
+    version: 4,
+    conversations: [newConversation],
+    current_conversation: newConversation.id,
+    // lock_conversation: false,
+    interface_settings: {
+      dark_mode: false,
+      show_settings: true,
+      show_sidebar: true,
+      warn_clear_history: true,
+      warn_clear_memory: true,
+      warn_clear_settings: true,
+      count_hallucination: 0,
+      count_announcement: 0,
+    },
+    // Conditionally preserve memories
+    user_settings: {
+      memories: [],
+      timeout: 300,
+    },
+  };
+};
+
 // Create a custom reducer that handles the RESET_ALL action
 const rootReducerWithReset = (state, action) => {
   let newState;
   if (action.type === "RESET_ALL") {
-    // Extract the newConversationId and preserved states
-    const {
-      newConversationId,
-    } = action.payload || {};
-
-    // Create a new conversation with proper defaults
-    const newConversation = createNewConversation(newConversationId);
-    
-
-    // Reset the entire state but preserve the specified states
-    newState = {
-      ...rootReducer(undefined, { type: "@@INIT" }),
-      version: 4,
-      conversations: [newConversation],
-      current_conversation: newConversation.id,
-      lock_conversation: false,
-      interface_settings: {
-        dark_mode: false,
-        show_settings: true,
-        show_sidebar: true,
-        warn_clear_history: true,
-        warn_clear_memory: true,
-        warn_clear_settings: true,
-        count_hallucination: 0,
-        count_announcement: 0,
-      },
-      // Conditionally preserve memories
-      user_settings: {
-        memories: [],
-        timeout: 300,
-      }
-    };
+    // Reset the entire state
+    newState = getDefaultState();
   } else if (action.type === "MIGRATE") {
     // Apply migrations to the new state
     newState = applyMigrations(rootReducer(state, action));
@@ -212,7 +185,7 @@ const stateSyncConfig = {
     "conversations/addConversation",
     "conversations/updateConversation",
     "conversations/deleteConversation",
-    "conversations/resetStore",
+    // "conversations/resetStore",
     "conversations/setIsResponding",
     "defaultModel/setDefaultModel",
     "defaultModel/resetDefaultModel",

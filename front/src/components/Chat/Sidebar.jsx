@@ -17,7 +17,7 @@ import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 import icon_edit from "../../assets/icons/edit.svg";
 import icon_arrow_left from "../../assets/icons/arrow_left.svg";
 import { persistor } from "../../Redux/store/store";
-import { getDefaultSettings } from "../../utils/settingsUtils";
+import { getDefaultSettings } from "../../utils/conversationUtils";
 import { useModal } from "../../modals/ModalContext";
 
 function Sidebar({onClose}) {
@@ -50,8 +50,21 @@ function Sidebar({onClose}) {
     }
   }, [currentConversationId, conversations, dispatch]);
 
+  const handleSelectConversation = useCallback(
+    (id) => {
+      if (lockConversation || id === currentConversationId) return;
+      dispatch(setCurrentConversation(id));
+      navigate(`/chat/${id}`);
+      // Only close sidebar on mobile (below custom breakpoint 1081px)
+      if (window.innerWidth < 1081) {
+        onClose?.();
+      }
+    },
+    [dispatch, navigate, onClose, lockConversation, currentConversationId]
+  );
+
   const handleNewChat = useCallback(() => {
-    if (lockConversation) return; // Prevent new chat while responding
+    // if (lockConversation) return; // Prevent new chat while responding
     const defaultSettings = getDefaultSettings();
 
     // Temporarily disable interaction
@@ -62,51 +75,38 @@ function Sidebar({onClose}) {
     const newId = action.meta?.id;
 
     if (newId) {
+      console.log("Added new conversation: ", newId);
       // Update the conversation with the current default model
-      dispatch({
-        type: "conversations/updateConversation",
-        payload: {
-          id: newId,
-          updates: {
-            settings: defaultSettings,
-          },
-        },
-      });
+      // dispatch({
+      //   type: "conversations/updateConversation",
+      //   payload: {
+      //     id: newId,
+      //     updates: {
+      //       settings: defaultSettings,
+      //     },
+      //   },
+      // });
 
       // Force persistence to localStorage BEFORE navigation
       persistor.flush().then(() => {
         // Navigate to the new conversation
-        navigate(`/chat/${newId}`);
+        // navigate(`/chat/${newId}`);
+        handleSelectConversation(newId);
         // Only close sidebar on mobile (below custom breakpoint 1081px)
-        if (window.innerWidth < 1081) {
-          onClose?.();
-        }
+        // if (window.innerWidth < 1081) {
+        //   onClose?.();
+        // }
 
-        // Re-enable interaction after navigation
-        setTimeout(() => {
-          dispatch({ type: "conversations/setLockConversation", payload: false });
-        }, 300);
+        // // Re-enable interaction after navigation
+        // setTimeout(() => {
+        //   dispatch({ type: "conversations/setLockConversation", payload: false });
+        // }, 300);
       });
     } else {
       // If no ID was created (unlikely), still re-enable interaction
       dispatch({ type: "conversations/setLockConversation", payload: false });
     }
   }, [dispatch, navigate, onClose, lockConversation, defaultSettings]);
-
-  const handleSelectConversation = useCallback(
-    (id) => {
-      if (lockConversation || id === currentConversationId) return;
-
-      dispatch(setCurrentConversation(id));
-      navigate(`/chat/${id}`);
-
-      // Only close sidebar on mobile (below custom breakpoint 1081px)
-      if (window.innerWidth < 1081) {
-        onClose?.();
-      }
-    },
-    [dispatch, navigate, onClose, lockConversation, currentConversationId]
-  );
 
   return (
     <div

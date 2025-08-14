@@ -1,30 +1,11 @@
 // store/conversationsSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 import { v4 as uuidv4 } from "uuid";
-import { getDefaultSettings } from "../../utils/settingsUtils";
+import { getDefaultConversation } from "../../utils/conversationUtils";
+import { setCurrentConversation } from "./currentConversationSlice";
+import { useSelector } from "react-redux";
 
-const createDefaultConversation = (customSettings = {}) => {
-  const defaultSettings = getDefaultSettings();
-  const settings = { ...defaultSettings, ...customSettings };
-  return {
-    id: uuidv4(),
-    title: "Untitled Conversation",
-    messages: [
-      {
-        role: "system",
-        content: settings.system_prompt,
-      },
-    ],
-    responses: [],
-    prompt: "",
-    settings,
-    createdAt: new Date().toISOString(),
-    lastModified: new Date().toISOString(),
-  };
-};
-
-const defaultConversation = createDefaultConversation();
-
+const defaultConversation = getDefaultConversation();
 const initialState = [defaultConversation];
 
 const conversationsSlice = createSlice({
@@ -32,23 +13,16 @@ const conversationsSlice = createSlice({
   initialState,
   reducers: {
     addConversation: {
-      reducer: (state, action) => {
-        const newConversation = action.payload;
-        state.unshift(newConversation);
-        // state.currentConversationId = newConversation.id;
-      },
-      prepare: (providedId = null, customSettings = {}) => {
-        const newConversation = createDefaultConversation(customSettings);
-
-        // If an ID is provided (for syncing), use it instead
-        if (providedId) {
-          newConversation.id = providedId;
-        }
-
+      prepare: (customSettings = {}) => {
+        const newConversation = getDefaultConversation(customSettings);
         return {
           payload: newConversation,
           meta: { id: newConversation.id },
         };
+      },
+      reducer: (state, action) => {
+        const newConversation = action.payload;
+        state.unshift(newConversation);
       },
     },
     updateConversation: (state, action) => {
@@ -85,26 +59,25 @@ const conversationsSlice = createSlice({
         (conv) => conv.id !== action.payload
       );
     },
-    resetStore: {
-      reducer: (state, action) => {
-        const newConversation = action.payload;
-        state = [newConversation];
-        // state.current_conversation = newConversation.id;
-        // state.lock_conversation = false;
-      },
-      prepare: (providedId = null, customSettings = {}) => {
-        const newId = providedId || uuidv4();
-        const defaultSettings = getDefaultSettings();
-        const settings = { ...defaultSettings, ...customSettings };
-
-        const newConversation = createDefaultConversation(settings);
-
-        return {
-          payload: newConversation,
-          meta: { id: newId, sync: true },
-        };
-      },
-    },
+    // resetStore: {
+    //   reducer: (state, action) => {
+    //     const newConversation = action.payload;
+    //     state = [newConversation];
+    //     // state.current_conversation = newConversation.id;
+    //     // state.lock_conversation = false;
+    //   },
+    //   prepare: (customSettings = {}) => {
+    //     // const newId = providedId || uuidv4();
+    //     const defaultSettings = getDefaultSettings();
+    //     const settings = { ...defaultSettings, ...customSettings };
+    //     const newConversation = getDefaultConversation(settings);
+    //     // setCurrentConversation(newConversation.id)
+    //     return {
+    //       payload: newConversation,
+    //       meta: { id: newConversation.id, sync: true },
+    //     };
+    //   },
+    // },
     setLockConversation: (state, action) => {
       // TODO reducer for lock conversation
       // state.lock_conversation = action.payload;
@@ -114,6 +87,17 @@ const conversationsSlice = createSlice({
 
 export const selectConversations = (state) => state.conversations;
 export const selectCurrentConversationId = (state) => state.current_conversation;
+// If current_conversation not in conversations, set to next conversation:
+// export const selectCurrentConversationId = (state) => {
+//   if (!state.conversations.find((conv) => conv.id === state.current_conversation)) {
+//     const nextConversation = state.conversations[0];
+//     if (nextConversation) {
+//       state.current_conversation = nextConversation.id;
+//     }
+//   }
+//   return state.current_conversation;
+// };
+
 export const selectCurrentConversation = (state) =>
   state.current_conversation
     ? state.conversations.find(
