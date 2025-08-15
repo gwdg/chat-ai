@@ -37,7 +37,7 @@ export default function BaseModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-50" />
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/30 dark:bg-black/50" />
         </Transition.Child>
 
         {/* Centered Modal */}
@@ -54,7 +54,7 @@ export default function BaseModal({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className={`select-none border dark:border-border_dark rounded-2xl bg-white dark:bg-black w-full ${maxWidth} shadow-lg`}
+                className={`select-none rounded-2xl bg-white dark:bg-black w-full ${maxWidth} shadow-lg`}
               >
                 
                 {/* Header */}

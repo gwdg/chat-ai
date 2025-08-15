@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo, Fragment } from "react";
+import { Transition } from "@headlessui/react";
 
 import Header from "../components/Header/Header";
 import Footer from "../components/Footer/Footer";
@@ -149,34 +150,55 @@ function ChatPage() {
           >
             <div className="flex h-full w-full relative">
               {/* Sidebar */}
-              {showSidebar && (
-                <>
-                  {/* Mobile overlay backdrop */}
-                  <div
-                    className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 backdrop-blur-sm"
-                    onClick={() => dispatch(toggleSidebar())}
-                    style={{
-                      WebkitTouchCallout: "none",
-                      WebkitUserSelect: "none",
-                      touchAction: "none",
-                    }}
-                  />
-                  {/* Sidebar container with proper mobile sizing */}
-                  <div
-                    className={`
-                    ${showSidebar ? "translate-x-0" : "-translate-x-full"}
-                    custom:translate-x-0 transition-transform duration-200 ease-out
-                    fixed custom:relative desktop:w-[vw] max-w-sm w-72
+              {/* ---- Desktop Sidebar (hideable) ---- */}
+              <Transition
+                as={Fragment}
+                show={showSidebar}
+                enter="transition-all duration-300 ease-out"
+                enterFrom="w-0 opacity-0"
+                enterTo="w-72 opacity-100"
+                leave="transition-all duration-300 ease-in"
+                leaveFrom="w-72 opacity-100"
+                leaveTo="w-0 opacity-0"
+              >
+                <div className="hidden lg:flex flex-shrink-0 dark:border-gray-700 overflow-hidden
                     h-[calc(100vh-54px)] custom:h-full top-[54px] custom:top-0
-                    z-30 custom:z-auto flex-shrink-0 p-1.5
-                  `}
-                  >
-                    <Sidebar
-                      onClose={() => dispatch(toggleSidebar())}
-                    />
+                    z-30 custom:z-auto p-1.5">
+                  <Sidebar onClose={() => dispatch(toggleSidebar())} />
+                </div>
+              </Transition>
+               {/* ---- Mobile Sidebar Overlay & Panel ---- */}
+              <Transition show={showSidebar && window.innerWidth < 1024} as={Fragment}>
+                {/* Overlay */}
+                <Transition.Child
+                  as={Fragment}
+                  enter="transition-opacity duration-200"
+                  enterFrom="opacity-0"
+                  enterTo="opacity-100"
+                  leave="transition-opacity duration-200"
+                  leaveFrom="opacity-100"
+                  leaveTo="opacity-0"
+                >
+                  <div
+                    className="lg:hidden fixed inset-0 bg-white/30 dark:bg-black/20 backdrop-blur-sm z-20"
+                    onClick={() => dispatch(toggleSidebar())}
+                  />
+                </Transition.Child>
+                {/* Sidebar panel */}
+                <Transition.Child
+                  as={Fragment}
+                  enter="transition-transform duration-300 ease-out"
+                  enterFrom="-translate-x-full"
+                  enterTo="translate-x-0"
+                  leave="transition-transform duration-300 ease-in"
+                  leaveFrom="translate-x-0"
+                  leaveTo="-translate-x-full"
+                >
+                  <div className="lg:hidden fixed top-0 left-0 w-72 h-full z-30 p-1.5 bg-white/50 dark:bg-gray-800/30 backdrop-blur-md border-r border-gray-200/50 dark:border-gray-700/50">
+                    <Sidebar onClose={() => dispatch(toggleSidebar())} />
                   </div>
-                </>
-              )}
+                </Transition.Child>
+              </Transition>
               <div className="flex flex-col desktop:flex-row flex-1 h-full w-full">
                 {/* External model warning when settings is hidden */}
                 {!showSettings && (
@@ -191,7 +213,7 @@ function ChatPage() {
                     !showSettings ? "desktop:w-[80%] py-1 mx-auto my-0" : "desktop:w-[60%] p-1"
                   } h-full gap-2 sm:justify-between relative bg-bg_light dark:bg-bg_dark`}
                 >
-                  <div className="flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-8px)] desktop:w-full border dark:border-border_dark rounded-xl shadow-md dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
+                  <div className="flex-1 min-h-0 overflow-y-auto flex flex-col relative w-[calc(100%-8px)] desktop:w-full border border-gray-200 dark:border-gray-800 rounded-xl shadow-md dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
                     {/* Show Hallucination Warning */}
                     <HallucinationWarning />
                     {/* Show responses */}
@@ -211,7 +233,6 @@ function ChatPage() {
                   />
                 </div>
                 {/* Settings Panel */}
-                {showSettings && (
                 <SettingsPanel
                   localState={localState}
                   setLocalState={setLocalState}
@@ -220,7 +241,6 @@ function ChatPage() {
                   selectedFiles={selectedFiles}
                   setSelectedFiles={setSelectedFiles}
                 />
-                )}
               </div>
             </div>
           </div>

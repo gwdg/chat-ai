@@ -168,11 +168,11 @@ export default function ModelSelector ({ localState, setLocalState, modelsData }
                     <div
                     className={`absolute w-full ${
                         direction === "up" ? "bottom-full" : "top-full"
-                    } mt-1 rounded-2xl border-opacity-10 border dark:border-border_dark z-[99] max-h-[280px] bg-white dark:bg-black shadow-lg`}
+                    } mt-1 rounded-2xl  z-[99] max-h-[280px] bg-white dark:bg-black shadow-lg`}
                     onMouseDown={(e) => e.preventDefault()}
                     >
                     {/* Search Input */}
-                    <div className="p-3 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-black rounded-t-2xl">
+                    <div className="p-3 sticky top-0 bg-white dark:bg-black rounded-t-2xl">
                         <div className="relative">
                         <input
                             type="text"
@@ -185,7 +185,7 @@ export default function ModelSelector ({ localState, setLocalState, modelsData }
                             value={searchQuery}
                             autoFocus={true}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
+                            className="w-full px-3 py-2 text-xs rounded-lg  bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
                             onMouseDown={(e) => e.stopPropagation()}
                         />
                         </div>

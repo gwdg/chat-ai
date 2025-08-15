@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore } from "redux-persist";
+import createIndexedDBStorage from 'redux-persist-indexeddb-storage';
 import storage from "redux-persist/lib/storage";
 import rootReducer from "../reducers/index";
 import {

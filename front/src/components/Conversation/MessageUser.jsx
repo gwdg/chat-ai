@@ -130,7 +130,7 @@ export default React.memo(({
         {msg.content?.trim() ? (
             <div
             ref={(el) => (containerRefs.current[index] = el)}
-            className={`text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
+            className={`text-black dark:text-white overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
                 editingIndex === index ? "p-0" : "p-2.5"
             } flex flex-col gap-1.5`}
             >

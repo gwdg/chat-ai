@@ -4,7 +4,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import Joyride from "react-joyride";
+import Joyride from "react-joyride-react-19";
 
 //Components
 import ArcanaContainer from "./ArcanaContainer";
@@ -644,14 +644,13 @@ const SettingsPanel = ({
         <div
           className={`relative w-full flex-col items-center p-1 mobile:p-0 text-tertiary flex gap-4 mobile:max-h-[40px]`}
         >
-          
           {/* Settings Panel */}
           <div
             className={`${
               showSettings
                 ? "flex desktop:static absolute bottom-0 left-0"
                 : "hidden"
-            } w-full border dark:border-border_dark rounded-2xl bg-white dark:bg-bg_secondary_dark`}
+            } w-full rounded-2xl bg-white dark:bg-bg_secondary_dark`}
           >
             <div
               className={`transform transition-all duration-300 ${

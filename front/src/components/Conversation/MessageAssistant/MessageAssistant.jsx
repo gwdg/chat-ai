@@ -132,7 +132,7 @@ export default React.memo(({
 
     return (
         // Typing
-        <div className="text-black dark:text-white overflow-hidden border dark:border-border_dark rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
+        <div className="text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
             {/* TODO check loading for typing */}
             <div key={index} className="flex flex-col gap-1">
                 {msg.content?.trim() ? (
