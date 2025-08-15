@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Trans } from "react-i18next";
-import BaseModal from "../BaseModal";
+import BaseModal from "../../modals/BaseModal";
 import icon_arrow_left from "../../assets/icons/arrow_left.svg";
 import { useImportConversation } from "../../hooks/useImportConversation";
 import i18n from '../../i18n';

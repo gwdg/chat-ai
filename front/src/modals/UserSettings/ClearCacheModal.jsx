@@ -6,10 +6,12 @@ import { useToast } from "../../hooks/useToast";
 import { useCallback, useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 // Hooks
-import { getDefaultSettings } from "../../utils/conversationUtils";
+import { getDefaultConversation, getDefaultSettings } from "../../utils/conversationUtils";
+import { createConversation, resetDB } from "../../db";
 
 import BaseModal from "../BaseModal";
 import { selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
+import { setCurrentConversation } from "../../Redux/reducers/currentConversationSlice";
 
 export default function ClearCacheModal({ isOpen, onClose }) {
   const dispatch = useDispatch();
@@ -36,12 +38,16 @@ export default function ClearCacheModal({ isOpen, onClose }) {
       // Dispatch RESET_ALL
       // Prepare to navigate
       setIsCleared(true); 
-      dispatch({
+      await resetDB();
+      await dispatch({
         type: "RESET_ALL",
         meta: {
           sync: true,
         },
       });
+      const newConversationId = await createConversation(getDefaultConversation());
+      console.log("New conversation", newConversationId)
+      navigate(`/chat/${newConversationId}`, { replace: true });
     } catch (error) {
       notifyError("Failed to clear chats: " + error.message);
     }

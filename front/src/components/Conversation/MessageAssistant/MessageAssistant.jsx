@@ -135,12 +135,12 @@ export default React.memo(({
         <div className="text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
             {/* TODO check loading for typing */}
             <div key={index} className="flex flex-col gap-1">
-                {msg.content?.trim() ? (
+                {msg.content[0]?.data?.trim() ? (
                 <MarkdownRenderer
                     isLoading={false}
                     renderMode={false}
                 >
-                    {msg.content}
+                    {msg.content[0]?.data}
                 </MarkdownRenderer>
             ) : <Typing />}
             {/* Render mode selection with updated styling for 4 modes */}

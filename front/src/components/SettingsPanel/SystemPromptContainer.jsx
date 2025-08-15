@@ -9,7 +9,7 @@ export default function SystemPromptContainer({ localState, setLocalState}) {
 
     // Validate the system prompt is not empty
     const validateSystemPrompt = () => {
-        if (!localState.messages[0].content?.trim()) {
+        if (!localState.messages[0].content[0].data?.trim()) {
         //setSystemPromptError(t("description.custom6"));
         // TODO handle t
         setSystemPromptError("System prompt is empty. Model may not respond.")
@@ -30,8 +30,11 @@ export default function SystemPromptContainer({ localState, setLocalState}) {
             ...prevState,
             messages: [{
                 role: "system",
-                content: value,
-                },
+                content: [{
+                    type: "text",
+                    data: value
+                    }
+                ]},
                 ...localState.messages.slice(1),
             ]
         }));
@@ -55,13 +58,13 @@ export default function SystemPromptContainer({ localState, setLocalState}) {
             type="text"
             name="systemPrompt"
             placeholder="Enter the system prompt here"
-            value={localState.messages[0].content}
+            value={localState.messages[0].content[0].data}
             onChange={handleInstructionsChange}
             onBlur={() => validateSystemPrompt()}
             />
             </div>
             {(systemPromptError ||
-            !localState.messages[0].content) && (
+            !localState.messages[0].content[0].data) && (
             <p className="text-yellow-600 text-xs">
                 <Trans i18nKey="description.custom6" />
             </p>

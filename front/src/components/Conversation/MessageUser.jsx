@@ -127,7 +127,7 @@ export default React.memo(({
 
     return (
         <div key={index} className="flex flex-col gap-1">
-        {msg.content?.trim() ? (
+        {msg.content[0]?.data?.trim() ? (
             <div
             ref={(el) => (containerRefs.current[index] = el)}
             className={`text-black dark:text-white overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
@@ -202,7 +202,8 @@ export default React.memo(({
                         wordBreak: "break-word",
                         }}
                     >
-                        {msg.content}
+                        {console.log(msg)}
+                        {msg.content[0].data}
                     </pre>
                     <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-1.5 items-center">
                         <button
@@ -217,7 +218,7 @@ export default React.memo(({
                         </button>
                         <button
                         onClick={() => {
-                            handleEditClick(index, msg.content);
+                            handleEditClick(index, msg.content[0].data);
                         }}
                         disabled={loading || loadingResend}
                         >

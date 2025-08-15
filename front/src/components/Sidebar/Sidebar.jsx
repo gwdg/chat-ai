@@ -3,13 +3,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Trans } from "react-i18next";
 import {
-  addConversation,
   selectConversations,
   selectCurrentConversationId,
   selectLockConversation,
 } from "../../Redux/reducers/conversationsSlice";
-import { setCurrentConversation } from "../../Redux/reducers/currentConversationSlice";
-import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 import { useCallback, useEffect } from "react";
 
 // Asset imports
@@ -17,85 +14,43 @@ import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 import icon_edit from "../../assets/icons/edit.svg";
 import icon_arrow_left from "../../assets/icons/arrow_left.svg";
 import { persistor } from "../../Redux/store/store";
-import { getDefaultSettings } from "../../utils/conversationUtils";
+import { getDefaultConversation, getDefaultSettings } from "../../utils/conversationUtils";
 import { useModal } from "../../modals/ModalContext";
+import { createConversation, useConversationList } from "../../db";
 
-function Sidebar({onClose}) {
+function Sidebar({
+    localState,
+    setLocalState,
+    onClose
+  }) {
   const { openModal } = useModal();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const [conversationIds, setConversationIds] = useState([]);
-  const conversations = useSelector(selectConversations);
+  const conversations = useConversationList();
   const currentConversationId = useSelector(selectCurrentConversationId);
   const lockConversation = useSelector(selectLockConversation);
   const defaultSettings = useRef(getDefaultSettings);
 
-  // Keep conversation IDs synchronized with the conversations list
-  useEffect(() => {
-    setConversationIds(conversations.map((conv) => conv.id));
-  }, [conversations]);
-
-  // Ensure the current conversation ID is synced with the URL
-  useEffect(() => {
-    const urlPath = window.location.pathname;
-    const pathMatch = urlPath.match(/\/chat\/([^/]+)/);
-
-    if (pathMatch && pathMatch[1] && pathMatch[1] !== currentConversationId) {
-      // If URL contains a conversation ID that doesn't match current selection
-      const urlConversationId = pathMatch[1];
-      if (conversations.some((conv) => conv.id === urlConversationId)) {
-        dispatch(setCurrentConversation(urlConversationId));
-      }
-    }
-  }, [currentConversationId, conversations, dispatch]);
-
-  const handleSelectConversation = useCallback(
-    (id) => {
+  const handleSelectConversation = (id) => {
       if (lockConversation || id === currentConversationId) return;
-      dispatch(setCurrentConversation(id));
       navigate(`/chat/${id}`);
       // Only close sidebar on mobile (below custom breakpoint 1081px)
       if (window.innerWidth < 1081) {
         onClose?.();
       }
-    },
-    [dispatch, navigate, onClose, lockConversation, currentConversationId]
-  );
+    }
 
-  const handleNewChat = useCallback(() => {
-    // if (lockConversation) return; // Prevent new chat while responding
-    const defaultSettings = getDefaultSettings();
-
+  const handleNewChat = useCallback(async () => {
     // Temporarily disable interaction
     dispatch({ type: "conversations/setLockConversation", payload: true });
-
-    // Add the conversation with the current default model
-    const action = dispatch(addConversation());
-    const newId = action.meta?.id;
-
+    // Add default conversation
+    const newId = await createConversation(getDefaultConversation());
     if (newId) {
-      // Update the conversation with the current default model
-      // dispatch({
-      //   type: "conversations/updateConversation",
-      //   payload: {
-      //     id: newId,
-      //     updates: {
-      //       settings: defaultSettings,
-      //     },
-      //   },
-      // });
-
       // Force persistence to localStorage BEFORE navigation
       persistor.flush().then(() => {
-        // Navigate to the new conversation
-        // navigate(`/chat/${newId}`);
+        // Select new conversation
         handleSelectConversation(newId);
-        // Only close sidebar on mobile (below custom breakpoint 1081px)
-        // if (window.innerWidth < 1081) {
-        //   onClose?.();
-        // }
-
         // // Re-enable interaction after navigation
         // setTimeout(() => {
         //   dispatch({ type: "conversations/setLockConversation", payload: false });
@@ -103,7 +58,7 @@ function Sidebar({onClose}) {
       });
     } else {
       // If no ID was created (unlikely), still re-enable interaction
-      dispatch({ type: "conversations/setLockConversation", payload: false });
+      // dispatch({ type: "conversations/setLockConversation", payload: false });
     }
   }, [dispatch, navigate, onClose, lockConversation, defaultSettings]);
 
@@ -170,11 +125,8 @@ function Sidebar({onClose}) {
         >
           <div className="space-y-1">
             {conversations.map((conv) => {
-              const id = conv.id
+              const id = conv.id;
               if (!conv) return null;
-
-              const isCurrentConversation = id === currentConversationId;
-
               return (
                 <div
                   key={id}
@@ -182,11 +134,11 @@ function Sidebar({onClose}) {
                   className={`group px-3 py-2 rounded-xl relative touch-manipulation transition-colors ${
                     lockConversation ? "cursor-not-allowed" : "cursor-pointer"
                   } ${
-                    isCurrentConversation
+                    id === currentConversationId
                       ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white border border-gray-200 dark:border-gray-700"
                       : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
-                  data-current={isCurrentConversation ? "true" : "false"}
+                  data-current={id === currentConversationId ? "true" : "false"}
                   style={{
                     WebkitTapHighlightColor: "transparent",
                     minHeight: "48px",
@@ -209,7 +161,7 @@ function Sidebar({onClose}) {
                         onClick={(e) => {
                           if (lockConversation) return;
                           e.stopPropagation();
-                          openModal("renameConversation", {id})
+                          openModal("renameConversation", {id, localState, setLocalState})
                         }}
                         disabled={lockConversation}
                         className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation w-7 h-7 flex items-center justify-center ${
@@ -229,7 +181,7 @@ function Sidebar({onClose}) {
                         onClick={(e) => {
                           if (lockConversation) return;
                           e.stopPropagation();
-                          openModal("deleteConversation", {id})
+                          openModal("deleteConversation", {id, conversations})
                         }}
                         disabled={lockConversation}
                         className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation w-7 h-7 flex items-center justify-center ${

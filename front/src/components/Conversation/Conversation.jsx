@@ -299,7 +299,7 @@ export default function Conversation({
   }, [localState?.messages?.length]);
 
   useEffect(() => {
-    if (localState?.responses?.length > 0 && containerRef.current) {
+    if (localState?.messages?.length > 2 && containerRef.current) {
       const container = containerRef.current;
       const hasOverflow = container.scrollHeight > container.clientHeight;
       if (hasOverflow) {
@@ -356,7 +356,7 @@ export default function Conversation({
               <div key={index} className="flex flex-col gap-1">
                 {msg.content && (
                   <div className="text-xs font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                    {msg.content}
+                    {msg.content?.data}
                   </div>
                 )}
               </div>

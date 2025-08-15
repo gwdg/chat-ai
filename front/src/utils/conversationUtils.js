@@ -32,10 +32,20 @@ export const getDefaultConversation = (customSettings = {}) => {
     title: "Untitled Conversation",
     messages: [ {
         role: "system",
-        content: "You are a helpful dog.",
+        content: [
+          {
+            type: "text",
+            data: "You are a helpful dog."
+          }
+        ],
       }, {
         role: "user",
-        content: ""
+        content: [
+          {
+            type: "text",
+            data: ""
+          }
+        ]
       }
     ],
     settings: settings,

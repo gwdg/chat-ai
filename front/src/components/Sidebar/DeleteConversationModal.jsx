@@ -1,18 +1,20 @@
 import { Trans } from "react-i18next";
-import BaseModal from "../BaseModal";
-import { addConversation, deleteConversation, selectConversations, selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
+import BaseModal from "../../modals/BaseModal";
+import { selectConversations, selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { persistor } from "../../Redux/store/store";
+import { createConversation, deleteConversation } from "../../db";
+import { getDefaultConversation } from "../../utils/conversationUtils";
 
 
 export default function DeleteConversationModal({
+  id,
+  conversations,
   isOpen,
   onClose,
-  id,
 }) {
-  const conversations = useSelector(selectConversations);
   const currentConversationId = useSelector(selectCurrentConversationId);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -26,8 +28,9 @@ export default function DeleteConversationModal({
       let nextConversationId;
       if (conversations.length === 1) {
         // If this is the only conversation, create a new one
-        const action = dispatch(addConversation());
-        nextConversationId = action.payload.id;
+        createConversation(getDefaultConversation());
+        // const action = dispatch(addConversation());
+        // nextConversationId = action.payload.id;
       } else {
         // Find adjacent conversation
         const nextIndex = currentIndex === 0 ? 1 : currentIndex - 1;
@@ -38,7 +41,7 @@ export default function DeleteConversationModal({
         navigate(`/chat/${nextConversationId}`);
       });
     }
-    dispatch(deleteConversation(id));
+    deleteConversation(id);
     onClose();
   }
 

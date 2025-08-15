@@ -5,6 +5,7 @@ import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/user
 import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
 import generateTitle from "../apis/generateTitle";
+import { updateConversationMeta } from "../db";
 
 const sendMessage = async ({
   localState,
@@ -40,11 +41,10 @@ const sendMessage = async ({
   //   setLoadingResend(true);
   // }
 
-  let processedConversation = localState;
-
   try {
     const isArcanaSupported = (localState.settings.model?.input?.includes("arcana") || false)    
     let finalConversationForState; // For local state updates
+    // Deepcopy of localState
       // === NEW MESSAGE LOGIC (from getRes) ===
 
       // Check model support first
@@ -400,74 +400,85 @@ const sendMessage = async ({
     //   processedConversation = updatedConversation;
     //   finalConversationForState = newConversation;
     // }
+    let conversationForAPI = {
+        ...localState,
+        messages: localState.messages.map((message) => {
+          // Handle simple text messages
+          if (Array.isArray(message.content)) {
+            // Only handle texts for now
+            return {
+              role: message.role,
+              content: message.content
+              .filter((item) => item.type === "text")
+              .map((item) => item.data)
+              .join("\n"),
+            };
+            // TODO handle images and files here
+          }
+          return message;
+        })
+    };
 
     // === COMMON PROCESSING FOR ALL OPERATIONS ===
-    finalConversationForState = processedConversation;
-    
+    console.log("Sending message with state", conversationForAPI.messages);
     // Prepare system prompt
-    let finalSystemPrompt = localState.messages[0].role == "system"
-      ? localState.messages[0].content
+    let systemPromptAPI = localState.messages[0].role == "system"
+      ? localState.messages[0].content.data
       : "";
     if (memories.length > 0) {
       const memoryContext = memories.map((memory) => memory.text).join("\n");
       const memorySection = `\n\n--- User Memory ---\nThe following information represents the user's preferences, important details, and context from previous conversations. Use this information when relevant to provide a more personalized and contextual response:\n\n${memoryContext}\n--- End User Memory ---`;
-      finalSystemPrompt = finalSystemPrompt + memorySection;
+      systemPromptAPI = systemPromptAPI + memorySection;
     }
 
-    // Set system prompt in finalConversationForState
-    if (finalSystemPrompt) {
-      finalConversationForState = {
-        ...finalConversationForState,
+    // Set system prompt in conversationForAPI
+    if (systemPromptAPI) {
+      conversationForAPI = {
+        ...conversationForAPI,
         messages: [{
           role: "system",
-          content: finalSystemPrompt,
+          content: systemPromptAPI, // content is string here
         },
-        ...finalConversationForState.messages,
+        ...conversationForAPI.messages,
       ]}
     }
 
-    if (finalConversationForState.settings.arcana?.id !== "") {
-      finalConversationForState.settings.arcana["limit"] = 3
-      // TODO add limit in settingsPanel
+    if (conversationForAPI.settings.arcana?.id !== "") {
+      conversationForAPI.settings.arcana["limit"] = 3
+      // TODO add arcana limit in settingsPanel
     }
 
-    // Save sent message in history and prepare new prompt
-
-    const tempMessages = [
-        ...localState.messages,
-        { role: "assistant", content: "" },
-        { role: "user", content: "" },
-      ];
-
+    // Pushing message into conversation history
     setLocalState((prev) => ({
       ...prev,
-      // Add two last messages:
+      // Add two new placeholder messages
       messages: [
         ...prev.messages,
-        { role: "assistant", content: "" },
-        { role: "user", content: "" },
+        { role: "assistant", content: [{ type: "text", data: "" }] },
+        { role: "user", content: [{ type: "text", data: "" }] },
       ],
     }));
 
+    // Stream assistant response into localState
     async function getChatChunk() {
       let currentResponse = "";
-      for await (const chunk of chatCompletions(finalConversationForState, timeoutTime)) {
+      for await (const chunk of chatCompletions(conversationForAPI, timeoutTime)) {
         currentResponse += chunk;
         // UI update happens here in the caller
         setLocalState(prev => {
           const messages = [...prev.messages];
           messages[messages.length - 2] = {
             role: "assistant",
-            content: currentResponse
+            content: [
+              { type: "text", data: currentResponse }
+            ]
           };
           return { ...prev, messages };
         });
       }
       return currentResponse;
     }
-
     const response = await getChatChunk();
-
     // Handle errors
     if (response === 401) {
       // TODO clean up localState
@@ -477,11 +488,15 @@ const sendMessage = async ({
       openModal("errorBadRequest")
     }
 
-    tempMessages[tempMessages.length - 2] = { role: "assistant", content: response };
-
     // Generate title if conversation is new
-    if (tempMessages.length <= 4) {
-      const title = await generateTitle(tempMessages) || localState.title || "Untitled Conversation";
+    conversationForAPI.messages = [
+      ...conversationForAPI.messages,
+      { role: "assistant", content: response },
+      { role: "user", content: "" }
+    ];
+    if (conversationForAPI.messages.length <= 4) {
+      const title = await generateTitle(conversationForAPI.messages);
+      console.log("Generated title is ", title)
       setLocalState((prevState) => ({
         ...prevState,
         title,
@@ -492,7 +507,7 @@ const sendMessage = async ({
     try {
       if (memories.length >= 2) {
         const memoryResponse = await generateMemory(
-          finalConversationForState,
+          conversationForAPI.messages,
           memories
         );
         const cleanedResponse = memoryResponse.replace(/,(\s*[}$])/g, "$1");

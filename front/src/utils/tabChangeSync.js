@@ -50,7 +50,7 @@ export function setupTabChangeSync(store) {
       const currentConversation = currentState.conversations.find(
         (conv) => conv.id === currentConversationId
       );
-      const currentPrompt = currentConversation?.messages[-1].content || "";
+      const currentPrompt = currentConversation?.messages[-1].content.data || "";
 
       // Get persisted data from localStorage
       const persistedData = localStorage.getItem("persist:root");

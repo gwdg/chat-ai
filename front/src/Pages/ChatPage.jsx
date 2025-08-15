@@ -6,8 +6,6 @@ import Footer from "../components/Footer/Footer";
 import { useToast } from "../hooks/useToast";
 import { useModal } from "../modals/ModalContext";
 import { useSelector, useDispatch } from "react-redux";
-import { selectCurrentConversation, selectCurrentConversationId, updateConversation } from "../Redux/reducers/conversationsSlice";
-import { setCurrentConversation } from "../Redux/reducers/currentConversationSlice";
 import { selectShowSettings, selectShowSidebar } from "../Redux/reducers/interfaceSettingsSlice";
 import Sidebar from "../components/Sidebar/Sidebar";
 import HallucinationWarning from "../components/Others/HallucinationWarning";
@@ -19,12 +17,15 @@ import { toggleSidebar } from "../Redux/reducers/interfaceSettingsSlice";
 import { getDefaultConversation, getDefaultSettings } from "../utils/conversationUtils";
 import WarningButton from "../components/Others/WarningButton";
 
+
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useSyncConversation } from "../hooks/useSyncConversation";
 
 // Main layout component that manages the overall structure and state of the chat application
-function ChatPage() {
+function ChatPage({
+  conversationId
+}) {
   // UI state management
   const [showFooter, setShowFooter] = useState(false);
   const showSettings = useSelector(selectShowSettings);
@@ -46,7 +47,8 @@ function ChatPage() {
   // Sync local state with redux and current conversation
   useSyncConversation ({
     localState,
-    setLocalState
+    setLocalState,
+    conversationId
   });
 
   // Handle Refresh
@@ -164,7 +166,11 @@ function ChatPage() {
                 <div className="hidden lg:flex flex-shrink-0 dark:border-gray-700 overflow-hidden
                     h-[calc(100vh-54px)] custom:h-full top-[54px] custom:top-0
                     z-30 custom:z-auto p-1.5">
-                  <Sidebar onClose={() => dispatch(toggleSidebar())} />
+                  <Sidebar
+                    localState={localState}
+                    setLocalState={setLocalState}
+                    onClose={() => dispatch(toggleSidebar())
+                  } />
                 </div>
               </Transition>
                {/* ---- Mobile Sidebar Overlay & Panel ---- */}

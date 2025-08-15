@@ -17,9 +17,7 @@ import ShareSettingsButton from "./ShareSettingsButton";
 
 //Redux
 import {
-  addConversation,
   selectConversations,
-  updateConversation,
 } from "../../Redux/reducers/conversationsSlice";
 import { processFile } from "../../apis/processFile";
 import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
@@ -196,7 +194,12 @@ const SettingsPanel = ({
     // Update system prompt in conversation history
     let updatedMessages = localState.messages.map((item) => {
       if (item.role === "system") {
-        return { ...item, content: "You are a helpful assistant" };
+        return { ...item, content: [
+          {
+            type: "text",
+            data: "You are a helpful assistant"
+          }
+        ] };
       } else {
         return item;
       }
@@ -358,7 +361,7 @@ const SettingsPanel = ({
     };
 
     // Only process if conversations are loaded
-    if (conversations.length > 0) {
+    if (conversations?.length > 0) {
       handleSettings();
     }
   }, [
@@ -407,7 +410,7 @@ const SettingsPanel = ({
       return await importConversation(parsedData);
     };
 
-    if (conversations.length > 0) {
+    if (conversations?.length > 0) {
       handleImportUrl();
     }
   }, [

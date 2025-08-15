@@ -1,126 +1,32 @@
 /* eslint-disable no-unused-vars */
 import { configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore } from "redux-persist";
-import createIndexedDBStorage from 'redux-persist-indexeddb-storage';
 import storage from "redux-persist/lib/storage";
 import rootReducer from "../reducers/index";
 import {
   createStateSyncMiddleware,
   initMessageListener,
 } from "redux-state-sync";
-import { v4 as uuidv4 } from "uuid";
-import { getDefaultConversation, getDefaultSettings } from "../../utils/conversationUtils";
-import { useNavigate } from "react-router-dom";
+import { applyMigrations } from "./migrations";
 
 const persistConfig = {
   key: "root",
   storage,
-  // whitelist: [
-  //   "theme",
-  //   "conversations",
-  //   "advOptions",
-  //   "defaultModel",
-  //   "version",
-  //   "userMemory",
-  //   "timeout",
-  //   "count",
-  // ],
   whitelist: [
     "interface_settings",
-    "conversations",
+    // "conversations",
     "current_conversation",
     "user_settings",
     "version",
   ],
 };
 
-// Migration functions for different versions
-const migrations = {
-  1: (state) => {
-    // Migrate from version 1 to 2
-    state.version = 2;
-
-    // Get default settings for migration
-    const defaultSettings = getDefaultSettings();
-
-    // Migrate all conversations
-    state.conversations = {
-      ...state.conversations,
-      conversations: state.conversations.conversations.map((conv) => {
-        const newSettings = { ...conv.settings };
-
-        // Convert old version to new
-        if (newSettings.model_api !== undefined) {
-          newSettings["model-name"] = newSettings.model;
-          newSettings.model = newSettings.model_api;
-          delete newSettings.model_api;
-        }
-
-        // Ensure all settings have proper defaults
-        const migratedSettings = {
-          ...defaultSettings,
-          ...newSettings,
-        };
-
-        return {
-          ...conv,
-          settings: migratedSettings,
-        };
-      }),
-    };
-
-    return state;
-  },
-  2: (state) => {
-    // Migrate from version 1 to 2
-    state.version = 3;
-
-    // Nothing to do here
-
-    return state;
-  },
-  3: (state) => {
-    // Migrate from version 1 to 2
-    state.version = 4;
-
-    // Plenty to do here
-    state.conversations = state.conversations.conversations
-    
-    return state;
-  },
-  // Future migrations here (e.g., 3: (state) => {...})
-};
-
-// Function to apply migrations
-const applyMigrations = (state) => {
-  const latestVersion = Object.keys(migrations).length + 1;
-  console.log("Loaded Chat AI state version:", state.version);
-  state.version = state.version || 1;
-
-  // If the version is outdated, apply migrations
-  while (state.version < latestVersion) {
-    if (migrations[state.version]) {
-      try {
-        console.log("Migrating from", state.version, " to ", state.version + 1);
-        state = migrations[state.version](state);
-      } catch (error) {
-        console.error(`Migration from version ${state.version} failed:`, error);
-        break; // Stop migration on error
-      }
-    } else {
-      console.log("No migrations left");
-      break;
-    }
-  }
-  return { ...state, version: state.version };
-};
-
 const getDefaultState = () => {
-  const newConversation = getDefaultConversation();
+  // const newConversation = getDefaultConversation();
   return {
     version: 4,
-    conversations: [newConversation],
-    current_conversation: newConversation.id,
+    // conversations: [newConversation],
+    current_conversation: null,
     // lock_conversation: false,
     interface_settings: {
       dark_mode: false,
@@ -152,8 +58,6 @@ const rootReducerWithReset = (state, action) => {
   } else {
     newState = rootReducer(state, action);
   }
-  // console.log("New state is")
-  // console.log(newState);
   return newState;
 };
 
@@ -183,11 +87,11 @@ const persistedRootReducer = persistReducer(
 const stateSyncConfig = {
   // Whitelist the actions that should sync across tabs
   whitelist: [
-    "conversations/addConversation",
-    "conversations/updateConversation",
-    "conversations/deleteConversation",
+    // "conversations/addConversation",
+    // "conversations/updateConversation",
+    // "conversations/deleteConversation",
     // "conversations/resetStore",
-    "conversations/setIsResponding",
+    // "conversations/setIsResponding",
     "defaultModel/setDefaultModel",
     "defaultModel/resetDefaultModel",
     "theme/toggleTheme",

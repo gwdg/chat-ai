@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { Trans, useTranslation } from "react-i18next";
-import { updateConversation } from "../../Redux/reducers/conversationsSlice";
-import BaseModal from "../BaseModal";
+import BaseModal from "../../modals/BaseModal";
+import { updateConversationMeta } from "../../db";
 
 export default function RenameConversationModal({
-  isOpen,
-  onClose,
   id,
+  isOpen,
+  onClose
 }) {
   const [title, setTitle] = useState("");
   const [error, setError] = useState("");
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch();
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -24,16 +24,11 @@ export default function RenameConversationModal({
       setError(t("description.error_title"));
       return;
     }
-
-    dispatch(
-      updateConversation({
-        id: id,
-        updates: {
-          title: title.trim(),
-          lastModified: new Date().toISOString(),
-        },
-      })
-    );
+    updateConversationMeta(id, {
+      title: title.trim(),
+      lastModified: new Date().toISOString(),
+    });
+    // Optional for speed - change conversations locally
     onClose();
   };
 

@@ -13,7 +13,7 @@ import icon_support_arcana from "../../assets/icons/support_arcana.svg";
 import icon_dropdown from "../../assets/icons/dropdown.svg";
 import DemandStatusIcon from "../Others/DemandStatusIcon";
 
-import { updateConversation, selectCurrentConversation, selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
+import { selectCurrentConversation, selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
 
 export default function ModelSelector ({ localState, setLocalState, modelsData }) {
 

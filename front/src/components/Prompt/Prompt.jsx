@@ -76,16 +76,22 @@ function Prompt({
   const [isLongPress, setIsLongPress] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingResend, setLoadingResend] = useState(false);
-  // Prompt is actually the last message sent by the user
-  const prompt = localState.messages[localState.messages.length - 1].content;
-  // Will this always be up to date even if localState changes?
-  // if not, maybe we should define
+  // Prompt is actually the last message's first content
+  const prompt = localState.messages[localState.messages.length - 1].content[0].data;
 
   // Update partial local state while preserving other values
   const setPrompt = (prompt) => {
     setLocalState((prev) => {
       const messages = [...prev.messages]; // shallow copy
-      messages[messages.length - 1] = { role: "user", content: prompt };
+      messages[messages.length - 1] = {
+        role: "user",
+        content: [ { // Replace first content item
+            type: "text",
+            data: prompt
+          }, // Keep other content items
+          ...prev.messages[messages.length - 1].content.slice(1)
+        ]
+      };
       return { ...prev, messages };
     });
   };
