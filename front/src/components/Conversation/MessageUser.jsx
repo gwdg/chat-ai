@@ -202,7 +202,6 @@ export default React.memo(({
                         wordBreak: "break-word",
                         }}
                     >
-                        {console.log(msg)}
                         {msg.content[0].data}
                     </pre>
                     <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-1.5 items-center">

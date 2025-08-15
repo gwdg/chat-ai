@@ -25,7 +25,7 @@ export function useSyncConversation({
         navigate(`/chat/${currentConversationId}`);
     }
 
-    // Effect 0: Check if we need to reset
+    // Effect 0: Reset means we need to find any valid conversation
     useEffect(() => {
         if (conversationId === 'reset') {
             // Find another conversation if coming from NotFound
