@@ -2,8 +2,7 @@
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
-import { addConversation, updateConversation } from "../Redux/reducers/conversationsSlice";
-import { getDefaultSettings } from "../utils/settingsUtils";
+import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
 
 /**

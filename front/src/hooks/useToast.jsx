@@ -3,8 +3,8 @@ import { useSelector } from "react-redux";
 import { useCallback, useRef } from "react";
 
 export const useToast = () => {
-  const isDarkModeGlobal = useSelector((state) => state.theme.isDarkMode);
-  const toastClass = isDarkModeGlobal ? "dark-toast" : "light-toast";
+  const isDarkMode = useSelector((state) => state.interface_settings.dark_mode);
+  const toastClass = isDarkMode ? "dark-toast" : "light-toast";
   const toastIdRef = useRef(null);
 
   const notifySuccess = useCallback(
@@ -36,7 +36,7 @@ export const useToast = () => {
         },
       });
     },
-    [isDarkModeGlobal]
+    [isDarkMode]
   );
 
   const notifyError = useCallback(
@@ -68,7 +68,7 @@ export const useToast = () => {
         },
       });
     },
-    [isDarkModeGlobal]
+    [isDarkMode]
   );
 
   return { notifySuccess, notifyError };

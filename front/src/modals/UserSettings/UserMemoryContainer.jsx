@@ -1,4 +1,4 @@
-import { selectAllMemories } from "../../Redux/reducers/userMemorySlice";
+import { selectAllMemories } from "../../Redux/reducers/userSettingsReducer";
 import { useSelector, useDispatch } from "react-redux";
 import { useModal } from "../ModalContext"; 
 import { Trans, useTranslation } from "react-i18next";
@@ -23,16 +23,29 @@ export default function UserMemoryContainer ({localState}) {
             </p>
             <div className="w-full flex justify-center">
                 <button
-                className="w-full sm:max-w-[200px] p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
-                onClick={() => openModal("userMemory", { localState })}
+                    className="w-full sm:max-w-[240px] px-5 py-3
+                            bg-blue-700 hover:bg-blue-800
+                            text-white font-medium rounded-lg
+                            flex items-center justify-center gap-2
+                            shadow-md hover:shadow-lg
+                            active:scale-95 transition-all duration-200 text-sm"
+                    onClick={() => openModal("userMemory", { localState })}
                 >
-                <span className="text-sm">🧠</span>
-                <span className="text-sm">
-                    <Trans i18nKey="description.settings.manageMemory" defaultValue="Manage Memory" />
-                </span>
-                <span className="text-xs bg-blue-500 px-2 py-1 rounded-full">
+                    {/* Icon */}
+                    <span className="text-base leading-none">🧠</span>
+
+                    {/* Label */}
+                    <span>
+                    <Trans
+                        i18nKey="description.settings.manageMemory"
+                        defaultValue="Manage Memory"
+                    />
+                    </span>
+
+                    {/* Counter badge */}
+                    <span className="text-xs bg-blue-500 px-2 py-0.5 rounded-full font-semibold shadow-inner">
                     {memories.length}
-                </span>
+                    </span>
                 </button>
             </div>
         </div>

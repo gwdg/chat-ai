@@ -1,4 +1,4 @@
-import { getDefaultSettings } from "../utils/settingsUtils";
+import { getDefaultSettings } from "../utils/conversationUtils";
 
 // Tests if a specific model is available and responsive
 async function checkService(model) {

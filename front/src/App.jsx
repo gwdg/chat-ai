@@ -7,7 +7,7 @@ import { ToastProvider } from "./components/Others/ToastProvider";
 import { ModalProvider } from "./modals/ModalContext";
 
 function App() {
-  const isDarkMode = useSelector((state) => state.theme.isDarkMode);
+  const isDarkMode = useSelector((state) => state.interface_settings.dark_mode);
 
   // Add or remove the 'dark' class to the body based on the dark mode state
   useEffect(() => {

@@ -11,18 +11,19 @@ export const useTabTitle = () => {
   const currentConversationId = useSelector(selectCurrentConversationId);
 
   useEffect(() => {
-    const currentConversation = conversations?.find(
-      (conv) => conv.id === currentConversationId
-    );
+      const currentConversation = conversations?.find(
+        (conv) => conv.id === currentConversationId
+      );
 
-    if (currentConversation) {
-      const title = currentConversation.title || "Untitled Conversation";
-      document.title =
-        title === "Untitled Conversation" ? "Chat AI" : title + " - Chat AI";
-    } else {
-      document.title = "Chat AI";
-    }
-  }, [currentConversationId, conversations]);
+      if (currentConversation) {
+        const title = currentConversation.title || "Untitled Conversation";
+        document.title =
+          title === "Untitled Conversation" ? "Chat AI" : title + " - Chat AI";
+      } else {
+        document.title = "Chat AI";
+      }
+    }, [currentConversationId, conversations]
+  );
 };
 
 // Component version

@@ -7,186 +7,51 @@ import {
   createStateSyncMiddleware,
   initMessageListener,
 } from "redux-state-sync";
-import { v4 as uuidv4 } from "uuid";
-import { getDefaultSettings } from "../../utils/settingsUtils";
+import { applyMigrations } from "./migrations";
 
 const persistConfig = {
   key: "root",
   storage,
   whitelist: [
-    "theme",
-    "conversations",
-    "advOptions",
-    "defaultModel",
+    "interface_settings",
+    // "conversations",
+    "current_conversation",
+    "user_settings",
     "version",
-    "userMemory",
-    "timeout",
-    "count",
   ],
 };
 
-// Helper function to get default model from settings
-const getDefaultModelFromSettings = () => {
-  const defaultSettings = getDefaultSettings();
+const getDefaultState = () => {
+  // const newConversation = getDefaultConversation();
   return {
-    name: defaultSettings["model-name"],
-    id: defaultSettings.model,
-  };
-};
-
-// Helper function to create a new conversation with proper defaults
-const createNewConversation = (conversationId, defaultModel) => {
-  const defaultSettings = getDefaultSettings();
-  const settings = {
-    ...defaultSettings,
-    // Override with provided default model if available
-    ...(defaultModel && {
-      model: defaultModel,
-    }),
-  };
-
-  return {
-    id: conversationId || uuidv4(),
-    title: "Untitled Conversation",
-    messages: [
-      {
-        role: "system",
-        content: settings.systemPrompt,
-      },
-    ],
-    responses: [],
-    prompt: "",
-    settings,
-    exportOptions: {
-      exportSettings: false,
-      exportImage: false,
-      exportArcana: false,
+    version: 4,
+    // conversations: [newConversation],
+    current_conversation: null,
+    // lock_conversation: false,
+    interface_settings: {
+      dark_mode: false,
+      show_settings: true,
+      show_sidebar: true,
+      warn_clear_history: true,
+      warn_clear_memory: true,
+      warn_clear_settings: true,
+      count_hallucination: 0,
+      count_announcement: 0,
     },
-    dontShow: {
-      dontShowAgain: false,
-      dontShowAgainShare: false,
-      dontShowAgainMemory: false,
+    // Conditionally preserve memories
+    user_settings: {
+      memories: [],
+      timeout: 300,
     },
-    arcana: {
-      id: "",
-    },
-    createdAt: new Date().toISOString(),
-    lastModified: new Date().toISOString(),
   };
-};
-
-// Migration functions for different versions
-const migrations = {
-  1: (state) => {
-    // Migrate from version 1 to 2
-    state.version = 2;
-
-    // Get default settings for migration
-    const defaultSettings = getDefaultSettings();
-
-    // Migrate all conversations
-    state.conversations = {
-      ...state.conversations,
-      conversations: state.conversations.conversations.map((conv) => {
-        const newSettings = { ...conv.settings };
-
-        // Convert old version to new
-        if (newSettings.model_api !== undefined) {
-          newSettings["model-name"] = newSettings.model;
-          newSettings.model = newSettings.model_api;
-          delete newSettings.model_api;
-        }
-
-        // Ensure all settings have proper defaults
-        const migratedSettings = {
-          ...defaultSettings,
-          ...newSettings,
-        };
-
-        return {
-          ...conv,
-          settings: migratedSettings,
-        };
-      }),
-    };
-
-    return state;
-  },
-  // Future migrations here (e.g., 2: (state) => {...})
-};
-
-// Function to apply migrations
-const applyMigrations = (state) => {
-  const latestVersion = Object.keys(migrations).length + 1;
-  console.log("Loaded Chat AI state version:", state.version);
-  state.version = state.version || 1;
-
-  // If the version is outdated, apply migrations
-  while (state.version < latestVersion) {
-    if (migrations[state.version]) {
-      try {
-        console.log("Migrating from", state.version, " to ", state.version + 1);
-        state = migrations[state.version](state);
-      } catch (error) {
-        console.error(`Migration from version ${state.version} failed:`, error);
-        break; // Stop migration on error
-      }
-    } else {
-      console.log("No migrations left");
-      break;
-    }
-  }
-
-  return { ...state, version: state.version };
 };
 
 // Create a custom reducer that handles the RESET_ALL action
 const rootReducerWithReset = (state, action) => {
   let newState;
   if (action.type === "RESET_ALL") {
-    // Extract the newConversationId and preserved states
-    const {
-      newConversationId,
-      theme,
-      advOptions,
-      defaultModel,
-      preserveMemories,
-    } = action.payload || {};
-
-    // Use the provided default model, or get from current state, or use fallback from settings
-    const currentDefaultModel =
-      defaultModel || state?.defaultModel || getDefaultModelFromSettings();
-
-    // Create a new conversation with proper defaults
-    const newConversation = createNewConversation(
-      newConversationId,
-      currentDefaultModel
-    );
-
-    // Reset the entire state but preserve the specified states
-    newState = {
-      ...rootReducer(undefined, { type: "@@INIT" }),
-      version: 2,
-      conversations: {
-        conversations: [newConversation],
-        currentConversationId: newConversation.id,
-        isResponding: false,
-      },
-      // Preserve specified states
-      theme: theme || state?.theme || { isDarkMode: false },
-      advOption: advOptions || state.advOption,
-      defaultModel: currentDefaultModel,
-      // Conditionally preserve memories
-      userMemory: preserveMemories
-        ? state?.userMemory || {
-            memories: [],
-            nextId: 1,
-          }
-        : {
-            memories: [],
-            nextId: 1,
-          },
-    };
+    // Reset the entire state
+    newState = getDefaultState();
   } else if (action.type === "MIGRATE") {
     // Apply migrations to the new state
     newState = applyMigrations(rootReducer(state, action));
@@ -200,7 +65,7 @@ const rootReducerWithReset = (state, action) => {
 const preventSyncMiddleware = (store) => (next) => (action) => {
   // Don't sync navigation-related actions - each tab should handle its own navigation
   if (
-    action.type === "conversations/setCurrentConversation" &&
+    action.type === "setCurrentConversation" &&
     action.meta?.skipSync
   ) {
     // This is a local navigation action, don't sync it
@@ -222,11 +87,11 @@ const persistedRootReducer = persistReducer(
 const stateSyncConfig = {
   // Whitelist the actions that should sync across tabs
   whitelist: [
-    "conversations/addConversation",
-    "conversations/updateConversation",
-    "conversations/deleteConversation",
-    "conversations/resetStore",
-    "conversations/setIsResponding",
+    // "conversations/addConversation",
+    // "conversations/updateConversation",
+    // "conversations/deleteConversation",
+    // "conversations/resetStore",
+    // "conversations/setIsResponding",
     "defaultModel/setDefaultModel",
     "defaultModel/resetDefaultModel",
     "theme/toggleTheme",

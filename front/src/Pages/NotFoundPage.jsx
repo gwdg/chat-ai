@@ -1,42 +1,49 @@
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { Trans } from "react-i18next";
-import { resetStore } from "../Redux/reducers/conversationsSlice";
+// import { resetStore } from "../Redux/reducers/conversationsSlice";
 import { v4 as uuidv4 } from "uuid";
 import { persistor } from "../Redux/store/store";
+import { setCurrentConversation } from "../Redux/reducers/currentConversationSlice";
 
 const NotFoundPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const currentConversationId = useSelector(
-    (state) => state.conversations.currentConversationId
+    (state) => state.current_conversation
   );
   const conversations = useSelector(
-    (state) => state.conversations.conversations
+    (state) => state.conversations
   );
 
   const handleGoToChat = async () => {
     // If current conversation exists, go to it
-    if (conversations.some((conv) => conv.id === currentConversationId)) {
-      navigate(`/chat/${currentConversationId}`, { replace: true });
-      return;
-    }
+    // if (conversations.some((conv) => conv.id === currentConversationId)) {
+    //   navigate(`/chat/${currentConversationId}`, { replace: true });
+    //   return;
+    // }
 
     // If current conversation doesn't exist but others do, go to first one
-    if (conversations.length > 0) {
-      navigate(`/chat/${conversations[0].id}`, { replace: true });
-      return;
-    }
+    // if (conversations.length > 0) {
+    //   navigate(`/chat/${conversations[0].id}`, { replace: true });
+    //   return;
+    // }
+
+    
 
     // If no conversations at all, create a new one
-    const newId = uuidv4();
-    dispatch(resetStore(newId));
+    // const newId = uuidv4();
+    // dispatch(resetStore(newId));
+    // TODO
 
     // Force persistence to ensure other tabs see this change
+    dispatch(setCurrentConversation("reset"))
     await persistor.flush();
+    // Go to empty chat
+    navigate(`/chat`);
 
     // Navigate to the new conversation
-    navigate(`/chat/${newId}`, { replace: true });
+    // navigate(`/chat/${newId}`, { replace: true });
   };
 
   return (

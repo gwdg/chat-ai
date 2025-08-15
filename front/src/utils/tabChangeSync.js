@@ -13,10 +13,10 @@ export function setupTabChangeSync(store) {
   // Handle before unload event (tab/window closing or navigating away)
   const handleBeforeUnload = (event) => {
     const state = store.getState();
-    const isResponding = state.conversations.isResponding;
+    const lockConversation = state.lock_conversation;
 
     // If we're currently getting a response, show warning
-    if (isResponding) {
+    if (lockConversation) {
       // Standard way to show confirmation dialog when leaving page
       event.preventDefault();
       event.returnValue =
@@ -36,22 +36,21 @@ export function setupTabChangeSync(store) {
       const currentState = store.getState();
 
       // Check if currently responding - don't sync if we are
-      if (currentState.conversations.isResponding) {
+      if (currentState.lockConversation) {
         finishSync();
         return;
       }
 
       // Set isResponding to indicate sync in progress
-      store.dispatch({ type: "conversations/setIsResponding", payload: true });
+      store.dispatch({ type: "conversations/setLockConversation", payload: true });
 
-      const currentConversationId =
-        currentState.conversations.currentConversationId;
+      const currentConversationId = currentState.current_conversation;
 
       // Get the current prompt so we can preserve it
-      const currentConversation = currentState.conversations.conversations.find(
+      const currentConversation = currentState.conversations.find(
         (conv) => conv.id === currentConversationId
       );
-      const currentPrompt = currentConversation?.prompt || "";
+      const currentPrompt = currentConversation?.messages[-1].content.data || "";
 
       // Get persisted data from localStorage
       const persistedData = localStorage.getItem("persist:root");
@@ -75,8 +74,8 @@ export function setupTabChangeSync(store) {
       }
 
       // Get the persisted conversations array
-      const persistedConversations = conversationsData.conversations;
-      const currentConversations = currentState.conversations.conversations;
+      const persistedConversations = conversationsData;
+      const currentConversations = currentState.conversations;
 
       // Update the Redux store with merged data
       store.dispatch({
@@ -98,7 +97,7 @@ export function setupTabChangeSync(store) {
   // Clean up after sync
   const finishSync = () => {
     setTimeout(() => {
-      store.dispatch({ type: "conversations/setIsResponding", payload: false });
+      store.dispatch({ type: "conversations/setLockConversation", payload: false });
       isSyncing = false;
     }, 300);
   };

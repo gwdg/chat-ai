@@ -1,4 +1,4 @@
-import ModelSelector from "../Chat/SettingsPanel/ModelSelector";
+import ModelSelector from "./ModelSelector";
 import ThemeToggle from "./ThemeToggle";
 import LogoContainer from "./LogoContainer";
 import PartnerContainer from "./PartnerContainer";
@@ -26,6 +26,20 @@ function Header({
         <ThemeToggle />
         {/* Logo */}
         <LogoContainer />
+      </div>
+
+      {/* Center Section */}
+      <div
+        className="flex-shrink flex-grow min-w-0 px-2 relative"
+        style={{ maxWidth: "calc(100vw - 200px)" }}
+        tabIndex={0}
+      >
+        {/* Model Selection */}
+        <ModelSelector
+          localState={localState}
+          setLocalState={setLocalState}
+          modelsData={modelsData}
+        />  
       </div>
       
       {/* Right Section */}

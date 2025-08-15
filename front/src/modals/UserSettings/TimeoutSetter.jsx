@@ -1,11 +1,11 @@
 import { Trans, useTranslation } from "react-i18next";
 import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { setTimeoutTime } from "../../Redux/reducers/timeoutReducer";
+import { setTimeoutTime } from "../../Redux/reducers/userSettingsReducer";
 
 export default function TimeoutSetter () {
     const dispatch = useDispatch();
-    const timeoutTime = useSelector((state) => state.timeout.timeoutTime);
+    const timeoutTime = useSelector((state) => state.user_settings.timeout);
 
     useEffect(() => {
         if (!timeoutTime || timeoutTime === 0) {
