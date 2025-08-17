@@ -19,10 +19,18 @@ async function* chatCompletions (
     const model = typeof conversation.settings.model === 'string'
       ? conversation.settings.model
       : conversation.settings.model?.id;
+
+    // Define base URL from config
+    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
+    try {
+      // If absolute, parse directly
+      baseURL = new URL(baseURL).toString();
+    } catch {
+      // If relative, resolve against current origin
+      baseURL = new URL(baseURL, window.location.origin).toString();
+    }
+
     // Define openai object
-    const baseURL = import.meta.env.VITE_BACKEND_ENDPOINT
-    // TODO Support relative URLs
-    // const url = String(new URL('/relative-url-to/api-docs', document.baseURI));
     const openai = new OpenAI({baseURL : baseURL, apiKey: null, dangerouslyAllowBrowser: true});
     const response = await openai.chat.completions.create({
       model: model,
