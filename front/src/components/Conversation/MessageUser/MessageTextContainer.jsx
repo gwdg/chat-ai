@@ -1,5 +1,9 @@
 import { useRef, useEffect } from "react";
 
+// Constants
+const MAX_HEIGHT = 200;
+const MIN_HEIGHT = 56;
+
 export default function MessageTextContainer({ message }) {
     const textareaRef = useRef(null);
 
