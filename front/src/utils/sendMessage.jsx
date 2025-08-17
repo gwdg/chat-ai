@@ -10,29 +10,18 @@ import { updateConversationMeta } from "../db";
 const sendMessage = async ({
   localState,
   setLocalState,
-  modelsData,
   openModal,
   // === OPERATION CONFIG ===
-  operationType, // 'new', 'resend', 'edit'
-  index = null,
-  editedText = null,
   notifyError,
   notifySuccess,
 
   // === REACT STATE & DISPATCHERS ===
   dispatch,
-  setLoading = null, // only for 'new'
-  setLoadingResend = null, // only for 'resend' and 'edit'
-
-  // === FILES (only for 'new' operation) ===
-  selectedFiles = [],
-  setSelectedFiles = null,
 
   // === EXTERNAL FUNCTIONS ===
-  timeoutTime,
+  timeout,
 }) => {
   const memories = []// useSelector(selectAllMemories);
-  
   // Set loading state
   dispatch(setLockConversation(true));
   // if (operationType === "new") {
@@ -462,7 +451,7 @@ const sendMessage = async ({
     // Stream assistant response into localState
     async function getChatChunk() {
       let currentResponse = "";
-      for await (const chunk of chatCompletions(conversationForAPI, timeoutTime)) {
+      for await (const chunk of chatCompletions(conversationForAPI, timeout)) {
         currentResponse += chunk;
         // UI update happens here in the caller
         setLocalState(prev => {
@@ -572,22 +561,22 @@ const sendMessage = async ({
     // });
 
     // Clear loading states
-    dispatch(setLockConversation(false));
-    if (operationType === "new") {
-      setLoading(false);
-      setSelectedFiles([]);
-    } else {
-      setLoadingResend(false);
-    }
+    // dispatch(setLockConversation(false));
+    // if (operationType === "new") {
+    //   setLoading(false);
+    //   setSelectedFiles([]);
+    // } else {
+    //   setLoadingResend(false);
+    // }
   } catch (error) {
     // Handle errors
-    dispatch(setLockConversation(false));
-    if (operationType === "new") {
-      setLoading(false);
-      setSelectedFiles([]);
-    } else {
-      setLoadingResend(false);
-    }
+    // dispatch(setLockConversation(false));
+    // if (operationType === "new") {
+    //   setLoading(false);
+    //   setSelectedFiles([]);
+    // } else {
+    //   setLoadingResend(false);
+    // }
 
     // Handle different error types
     if (error.name === "AbortError") {

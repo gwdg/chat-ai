@@ -1,6 +1,7 @@
 import Dexie, { Table } from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useMemo, useEffect, useState } from 'react'
+import {v4 as uuidv4} from 'uuid';
 
 // ---------- Types ----------
 
@@ -113,7 +114,7 @@ function newId(): string {
     return crypto.randomUUID()
   }
   // Simple fallback
-  return 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36)
+  return uuidv4();
 }
 
 // ---------- Dexie DB ----------

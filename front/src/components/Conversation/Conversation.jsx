@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Hooks
-import MessageUser from "./MessageUser";
+import MessageUser from "./MessageUser/MessageUser";
 import ExportConversationButton from "./ExportConversationButton";
 import ImportConversationButton from "./ImportConversationButton";
 import UndoButton from "./UndoButton";
@@ -9,9 +9,9 @@ import ClearHistoryButton from "./ClearHistoryButton";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
 
 export default function Conversation({
-  modelsData,
   localState,
   setLocalState,
+  modelsData,
 }) {
   // Hooks
  
@@ -329,34 +329,35 @@ export default function Conversation({
         ref={containerRef}
         className="p-1.5 flex flex-col gap-1.5 overflow-y-auto flex-1 relative"
       >
-        {localState.messages.slice(0, -1)?.map((msg, index) => (
+        {localState.messages.slice(0, -1)?.map((message, message_index) => (
           <>
             {/* User message */}
-            {(msg.role === "user") && (
+            {(message.role === "user") && (
               <MessageUser
-                msg={msg}
-                index={index}
+                localState={localState}
+                setLocalState={setLocalState}
+                message_index={message_index}
                 containerRefs={containerRefs}
                 loading={loading}
                 loadingResend={loadingResend}
               />
             )}
             {/* Assistant message */}
-            {(msg.role === "assistant") && (
+            {(message.role === "assistant") && (
               <MessageAssistant
-                msg={msg}
-                index={index}
+                message={message}
+                index={message_index}
                 containerRefs={containerRefs}
                 loading={loading}
                 loadingResend={loadingResend}
               />
             )}
             {/* Render info message */}
-            {msg.role === "info" && (
+            {message.role === "info" && (
               <div key={index} className="flex flex-col gap-1">
-                {msg.content && (
+                {message.content && (
                   <div className="text-xs font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                    {msg.content?.data}
+                    {message.content?.data}
                   </div>
                 )}
               </div>

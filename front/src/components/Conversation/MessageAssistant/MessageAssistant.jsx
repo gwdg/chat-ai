@@ -6,6 +6,7 @@ import icon_send from "../../../assets/icons/send.svg";
 import { useState, useEffect, useCallback, useRef} from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import Typing from "./Typing";
+import CopyButton from "./CopyButton";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -13,11 +14,10 @@ const MIN_HEIGHT = 56;
 
 export default React.memo(({
     localState,
-    msg, 
+    setLocalState,
+    message, 
     index, 
-    containerRefs, 
 }) => {
-    
     //Refs
     const textareaRef = useRef(null);
     const textareaRefs = useRef([]);
@@ -135,13 +135,16 @@ export default React.memo(({
         <div className="text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
             {/* TODO check loading for typing */}
             <div key={index} className="flex flex-col gap-1">
-                {msg.content[0]?.data?.trim() ? (
+                {message.content[0]?.data?.trim() ? (
+                <>
                 <MarkdownRenderer
                     isLoading={false}
                     renderMode={false}
                 >
-                    {msg.content[0]?.data}
+                    {message.content[0]?.data}
                 </MarkdownRenderer>
+                <CopyButton message={message} />
+                </>
             ) : <Typing />}
             {/* Render mode selection with updated styling for 4 modes */}
             <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -166,10 +169,11 @@ export default React.memo(({
                 </div>
                 </div>
             </div>
+            
         {/* File rendering */}
         {/* <MessageContainer
             localState={localState}
-            msg={msg}
+            message={message}
             index={index}
             copied={copied}
             setCopied={setCopied}
