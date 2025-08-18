@@ -443,7 +443,7 @@ const sendMessage = async ({
       // Add two new placeholder messages
       messages: [
         ...prev.messages,
-        { role: "assistant", content: [{ type: "text", data: "" }] },
+        { role: "assistant", content: [{ type: "text", data: ""}], loading: true },
         { role: "user", content: [{ type: "text", data: "" }] },
       ],
     }));
@@ -460,21 +460,45 @@ const sendMessage = async ({
             role: "assistant",
             content: [
               { type: "text", data: currentResponse }
-            ]
+            ],
+            loading: true,
           };
           return { ...prev, messages };
         });
       }
       return currentResponse;
     }
-    const response = await getChatChunk();
+
+    let response = "";
+    try {
+      // Get chat completion response
+      response = await getChatChunk();
+    } catch (error) {
+      console.error("Error fetching chat chunk:", error);
+    } finally {
+      // Set loading to false
+      setLocalState(prev => {
+        const messages = [...prev.messages];
+        messages[messages.length - 2] = {
+          role: "assistant",
+          content: [
+            { type: "text", data: response }
+          ],
+          loading: false,
+        };
+        return { ...prev, messages };
+      });
+    }
+
     // Handle errors
     if (response === 401) {
       // TODO clean up localState
       openModal("errorSessionExpired")
+      return;
     } else if (response === 413) {
       // TODO clean up localState
       openModal("errorBadRequest")
+      return;
     }
 
     // Generate title if conversation is new

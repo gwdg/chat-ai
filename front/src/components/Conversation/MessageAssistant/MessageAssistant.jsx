@@ -15,13 +15,13 @@ const MIN_HEIGHT = 56;
 export default React.memo(({
     localState,
     setLocalState,
-    message, 
-    index, 
+    message_index, 
 }) => {
     //Refs
     const textareaRef = useRef(null);
     const textareaRefs = useRef([]);
-    const { isLoading, setIsLoading } = useState(false);
+    const message = localState.messages[message_index];
+    const loading = message?.loading || false;
     const [renderMode, setRenderMode] = useState("Default");
     // Define render modes with better styling
     const renderModes = ["Default", "Markdown", "LaTeX", "Plain Text"];
@@ -50,32 +50,6 @@ export default React.memo(({
         textarea.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
         }
     };
-
-     // Function to handle resending a previous message
-    const handleRetryClick = async (index) => {
-        await sendMessage({
-        localState,
-        setLocalState,
-        openModal,
-        operationType: "resend",
-        index,
-        dispatch,
-        setLoadingResend,
-        modelsData,
-        memories,
-        timeoutTime,
-        });
-    };
-
-    // Function to handle closing edit mode
-    const handleEditClose = useCallback(
-        (index) => {
-        if (editingIndex === index) {
-            setEditingIndex(null);
-        }
-        },
-        [editingIndex]
-    );
 
     useEffect(() => {
         if (editingIndex !== null) {
@@ -132,43 +106,45 @@ export default React.memo(({
 
     return (
         // Typing
-        <div className="text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
-            {/* TODO check loading for typing */}
-            <div key={index} className="flex flex-col gap-1">
-                {message.content[0]?.data?.trim() ? (
-                <>
-                <MarkdownRenderer
-                    isLoading={false}
-                    renderMode={false}
-                >
-                    {message.content[0]?.data}
-                </MarkdownRenderer>
-                <CopyButton message={message} />
-                </>
-            ) : <Typing />}
-            {/* Render mode selection with updated styling for 4 modes */}
-            <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
-                {renderModes.map((mode) => (
-                    <button
-                    key={mode}
-                    onClick={() => !isLoading && setRenderMode(mode)}
-                    className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
-                    ${isLoading ? "cursor-not-allowed opacity-50" : ""}
-                    ${
-                        renderMode === mode
-                        ? "bg-tertiary text-white"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }
-                    `}
-                    disabled={isLoading}
+        <div key={message_index} className="text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
+                {/* Display dots when loading */}
+                {loading && message.content[0].data === "" 
+                ? (<Typing />) 
+                : (<>
+                    {/* Display message content */}
+                    <MarkdownRenderer
+                        loading={loading}
+                        renderMode={renderMode}
                     >
-                    {mode}
-                    </button>
-                ))}
-                </div>
-                </div>
-            </div>
+                        {message.content[0]?.data}
+                    </MarkdownRenderer>
+                    {/* Bottom panel for message */}
+                    <div className="flex items-center justify-between mb-2 opacity-100 group-hover:opacity-100 transition-opacity duration-300">
+                        {/* Render Mode Selector */}
+                        <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
+                        {renderModes.map((mode) => (
+                            <button
+                            key={mode}
+                            onClick={() => !loading && setRenderMode(mode)}
+                            className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
+                            ${loading ? "cursor-not-allowed opacity-50" : ""}
+                            ${
+                                renderMode === mode
+                                ? "bg-tertiary text-white"
+                                : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                            }
+                            `}
+                            disabled={loading}
+                            >
+                            {mode}
+                            </button>
+                        ))}
+                        </div>
+                        {/* Copy Button */}
+                        <CopyButton message={message} />
+                    </div>
+                </>
+            )}
             
         {/* File rendering */}
         {/* <MessageContainer

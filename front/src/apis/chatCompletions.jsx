@@ -2,7 +2,6 @@ import OpenAI from "openai";
 
 // Controller for handling API request cancellation
 let controller = new AbortController();
-let signal = controller.signal;
 
 async function* chatCompletions (
   rawConversation,
@@ -31,7 +30,8 @@ async function* chatCompletions (
     }
 
     // Define openai object
-    const openai = new OpenAI({baseURL : baseURL, apiKey: null, dangerouslyAllowBrowser: true});
+    const openai = new OpenAI({baseURL : baseURL, apiKey: null, dangerouslyAllowBrowser: true, timeout: timeout});
+    // Get chat completion response
     const response = await openai.chat.completions.create({
       model: model,
       messages: conversation.messages,
@@ -39,9 +39,9 @@ async function* chatCompletions (
       top_p: conversation.settings.top_p,
       stream: true,
       stream_options: {include_usage: true },
-      timeout: timeout,
       extra_body: {arcana: (conversation.settings.arcana && conversation.settings?.enable_tools) ? conversation.settings.arcana : ""}
-    }).asResponse();
+    }, { signal: controller.signal }
+    ).asResponse();
 
     console.log(response.statusText);
 
@@ -82,7 +82,7 @@ async function* chatCompletions (
     } catch (error) {
       // Handle AbortError specifically during streaming
       if (error.name === "AbortError") {
-        console.log("Aborted error")
+        console.log("Request aborted by user")
         return currentResponse;
       }
       throw error;
@@ -97,20 +97,11 @@ async function* chatCompletions (
   }
 }
 
-function cancelRequest() {
-  // Check if there's an active request to cancel
-  if (!controller.signal.aborted) {
-    controller.abort();
+function abortRequest() {
+  if (controller) {
+    controller.abort(); // stops the stream/fetch
   }
-
-  // Create new controller for next request
   controller = new AbortController();
-  signal = controller.signal;
 }
 
-// Additional helper function to check if a request is active
-function isRequestActive() {
-  return !controller.signal.aborted;
-}
-
-export { chatCompletions, cancelRequest, isRequestActive };
+export { chatCompletions, abortRequest };

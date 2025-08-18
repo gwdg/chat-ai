@@ -17,9 +17,6 @@ export default function Conversation({
  
   const [copied, setCopied] = useState(false);;
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [loadingResend, setLoadingResend] = useState(false);
-
   // New state for scroll management
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
@@ -211,39 +208,39 @@ export default function Conversation({
   }, [copied]);
 
   // Enhanced effect for auto-scrolling with user intent detection
-  useEffect(() => {
-    if (!containerRef.current || !localState.responses) return;
+  // useEffect(() => {
+  //   if (!containerRef.current || !localState.responses) return;
 
-    const currentLength = localState.responses.length;
-    const lastResponse = localState.responses[currentLength - 1];
+  //   const currentLength = localState.responses.length;
+  //   const lastResponse = localState.responses[currentLength - 1];
 
-    // Only auto-scroll if user hasn't manually scrolled up
-    if (!userScrolledUp) {
-      // For new responses
-      if (currentLength > lastResponseLength.current) {
-        scrollToBottom(true); // smooth scroll for new responses
-      }
-      // For updating responses, check if user is near bottom
-      else if (lastResponse?.response && (loading || loadingResend)) {
-        const container = containerRef.current;
-        const { scrollTop, scrollHeight, clientHeight } = container;
-        const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+  //   // Only auto-scroll if user hasn't manually scrolled up
+  //   if (!userScrolledUp) {
+  //     // For new responses
+  //     if (currentLength > lastResponseLength.current) {
+  //       scrollToBottom(true); // smooth scroll for new responses
+  //     }
+  //     // For updating responses, check if user is near bottom
+  //     else if (lastResponse?.response && (loading || loadingResend)) {
+  //       const container = containerRef.current;
+  //       const { scrollTop, scrollHeight, clientHeight } = container;
+  //       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
-        // Only auto-scroll if very close to bottom
-        if (distanceFromBottom < 50) {
-          scrollToBottom(false); // instant scroll for updates
-        }
-      }
-    }
+  //       // Only auto-scroll if very close to bottom
+  //       if (distanceFromBottom < 50) {
+  //         scrollToBottom(false); // instant scroll for updates
+  //       }
+  //     }
+  //   }
 
-    lastResponseLength.current = currentLength;
-  }, [
-    localState.responses,
-    loading,
-    scrollToBottom,
-    loadingResend,
-    userScrolledUp,
-  ]);
+  //   lastResponseLength.current = currentLength;
+  // }, [
+  //   localState.responses,
+  //   loading,
+  //   scrollToBottom,
+  //   loadingResend,
+  //   userScrolledUp,
+  // ]);
 
   useEffect(() => {
     handleScroll();
@@ -309,19 +306,19 @@ export default function Conversation({
   }, [localState?.responses?.length]);
 
   // Add this new useEffect after your existing ones
-  useEffect(() => {
-    // Ensure scroll button shows when user scrolls up during loading
-    if ((loading || loadingResend) && userScrolledUp && containerRef.current) {
-      const container = containerRef.current;
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const hasOverflow = scrollHeight > clientHeight + 10;
-      const scrolledFromBottom = scrollHeight - (scrollTop + clientHeight);
+  // useEffect(() => {
+  //   // Ensure scroll button shows when user scrolls up during loading
+  //   if ((loading || loadingResend) && userScrolledUp && containerRef.current) {
+  //     const container = containerRef.current;
+  //     const { scrollTop, scrollHeight, clientHeight } = container;
+  //     const hasOverflow = scrollHeight > clientHeight + 10;
+  //     const scrolledFromBottom = scrollHeight - (scrollTop + clientHeight);
 
-      if (hasOverflow && scrolledFromBottom > 150) {
-        setShowScrollButton(true);
-      }
-    }
-  }, [loading, loadingResend, userScrolledUp]);
+  //     if (hasOverflow && scrolledFromBottom > 150) {
+  //       setShowScrollButton(true);
+  //     }
+  //   }
+  // }, [loading, loadingResend, userScrolledUp]);
 
   return (
     <>
@@ -337,19 +334,14 @@ export default function Conversation({
                 localState={localState}
                 setLocalState={setLocalState}
                 message_index={message_index}
-                containerRefs={containerRefs}
-                loading={loading}
-                loadingResend={loadingResend}
               />
             )}
             {/* Assistant message */}
             {(message.role === "assistant") && (
               <MessageAssistant
-                message={message}
-                index={message_index}
-                containerRefs={containerRefs}
-                loading={loading}
-                loadingResend={loadingResend}
+                localState={localState}
+                setLocalState={setLocalState}
+                message_index={message_index}
               />
             )}
             {/* Render info message */}

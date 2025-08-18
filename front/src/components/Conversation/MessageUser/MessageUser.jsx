@@ -16,11 +16,9 @@ export default React.memo(({
     const message = localState.messages[message_index];
 
     return (
-        <div key={message_index} className="flex flex-col gap-1">
-            <div
-            className={`text-black dark:text-white overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark ${
-                editMode ? "p-0" : "p-2.5"
-            } flex flex-col gap-1.5`}
+        <div key={message_index}
+            className={`flex flex-col gap-1.5 text-black dark:text-white overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark
+                ${ editMode ? "p-0" : "p-2.5"}`}
             >
             {/* Non-edit mode */}
             {!editMode && (
@@ -51,7 +49,6 @@ export default React.memo(({
                     setEditMode={setEditMode}
                 />
             )}
-            </div>
         {/* File rendering */}
         {/* <MessageContainer
             localState={localState}

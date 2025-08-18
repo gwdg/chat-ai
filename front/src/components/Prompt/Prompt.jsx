@@ -13,9 +13,7 @@ import icon_mic from "../../assets/icons/mic.svg";
 import icon_stop from "../../assets/icons/stop.svg";
 import icon_file_uploaded from "../../assets/icons/file_uploaded.svg";
 
-import {
-  cancelRequest,
-} from "../../apis/chatCompletions";
+import { abortRequest } from "../../apis/chatCompletions";
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,11 +30,11 @@ const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
 function Prompt({
+  localState,
+  setLocalState,
   modelsData,
   currentModel,
   selectedFiles,
-  localState,
-  setLocalState,
   setSelectedFiles,
 }) {
   //Hooks
@@ -74,9 +72,11 @@ function Prompt({
   const [isRecording, setIsRecording] = useState(false);
   const [pressTimer, setPressTimer] = useState(null);
   const [isLongPress, setIsLongPress] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [loadingResend, setLoadingResend] = useState(false);
   // Prompt is actually the last message's first content
+  const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
+    ? localState.messages[localState.messages.length - 2]?.loading || false
+    : false;
   const prompt = localState.messages[localState.messages.length - 1].content[0].data;
 
   // Update partial local state while preserving other values
@@ -127,7 +127,6 @@ function Prompt({
       operationType: "new",
       openModal,
       dispatch,
-      setLoading,
       selectedFiles,
       setSelectedFiles,
       memories,
@@ -316,10 +315,9 @@ function Prompt({
     return types.join(",");
   };
   // Handle cancellation of ongoing requests
-  const handleCancelRequest = () => {
-    cancelRequest(notifyError);
-    dispatch(setLockConversation(false));
-    setLoading(false);
+  const handleAbort = () => {
+    abortRequest(notifyError);
+    // dispatch(setLockConversation(false));
   };
 
   // Handle form submission with prompt and files
@@ -1767,6 +1765,7 @@ function Prompt({
             ) : null}
 
             <div className="flex gap-4 w-full justify-end items-center">
+              {/* Settings Button */}
               {!showSettings ? (
                 <Tooltip text={t("description.settings_toggle")}>
                   <button
@@ -1781,6 +1780,7 @@ function Prompt({
                   </button>
                 </Tooltip>
               ) : null}
+              {/* Attach Button */}
               <input
                 type="file"
                 ref={hiddenFileInput}
@@ -1831,6 +1831,7 @@ function Prompt({
                   </Tooltip>
                 </>
               )}
+              {/* Mic Button */}
               {isAudioSupported && (
                 <>
                   <Tooltip
@@ -1853,7 +1854,7 @@ function Prompt({
                       onMouseLeave={handleAudioMouseUp} // Stop recording if mouse leaves while holding
                       onTouchStart={handleAudioMouseDown} // Mobile support
                       onTouchEnd={handleAudioMouseUp} // Mobile support
-                      disabled={loading || loadingResend}
+                      disabled={loading}
                     >
                       {isRecording ? (
                         // Stop icon when recording
@@ -1870,19 +1871,22 @@ function Prompt({
                   </Tooltip>
                 </>
               )}
-              {loading || loadingResend ? (
-                <Tooltip text={t("description.pause")}>
+              
+              {loading 
+              ? ( <Tooltip text={t("description.pause")}>
+                  {/* Abort Button */}
                   <button className="h-[30px] w-[30px] cursor-pointer">
                     <img
                       className="cursor-pointer h-[30px] w-[30px]"
                       src={icon_stop}
-                      alt="pause"
-                      onClick={handleCancelRequest}
+                      alt="abort"
+                      onClick={handleAbort}
                     />
                   </button>
                 </Tooltip>
               ) : prompt !== "" || selectedFiles.length > 0 ? (
                 <Tooltip text={t("description.send")}>
+                  {/* Send Button */}
                   <button className="h-[30px] w-[30px] cursor-pointer">
                     <img
                       className="cursor-pointer h-[30px] w-[30px]"
@@ -1891,7 +1895,7 @@ function Prompt({
                       onClick={(event) => {
                         handleSubmit(event);
                       }}
-                      disabled={loading || loadingResend}
+                      disabled={loading}
                     />
                   </button>
                 </Tooltip>
