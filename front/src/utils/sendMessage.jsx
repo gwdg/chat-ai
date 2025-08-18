@@ -408,8 +408,6 @@ const sendMessage = async ({
         })
     };
 
-    // === COMMON PROCESSING FOR ALL OPERATIONS ===
-    console.log("Sending message with state", conversationForAPI.messages);
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content.data
@@ -432,9 +430,29 @@ const sendMessage = async ({
       ]}
     }
 
-    if (conversationForAPI.settings.arcana?.id !== "") {
-      conversationForAPI.settings.arcana["limit"] = 3
-      // TODO add arcana limit in settingsPanel
+    // Clean conversation for API call
+    conversationForAPI = {
+      ...conversationForAPI,
+      messages: conversationForAPI.messages.filter(
+        (message) => message.role === "system"
+        || message.role === "user"
+        || message.role === "assistant"
+      ),
+    };
+    
+    // Handle tools
+    if (conversationForAPI.settings?.enable_tools) {
+      conversationForAPI.settings.tools = [];
+      if (conversationForAPI.settings?.enable_web_search) {
+        conversationForAPI.settings.tools.push({ type: "web_search_preview" });
+      }
+      if (conversationForAPI.settings.arcana?.id !== "") {
+        conversationForAPI.settings.arcana["limit"] = 3
+        // TODO add arcana limit in settingsPanel
+      }
+    } else {
+      delete conversationForAPI.settings.arcana;
+      delete conversationForAPI.settings.tools;
     }
 
     // Pushing message into conversation history

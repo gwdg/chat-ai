@@ -11,7 +11,7 @@ import ArcanaContainer from "./ArcanaContainer";
 import TemperatureSlider from "./TemperatureSlider";
 import TopPSlider from "./TopPSlider";
 import MemorySelector from "./MemorySelector";
-import GWDGToggle from "./GWDGToggle";
+import ToolsToggle from "./ToolsToggle";
 import SystemPromptContainer from "./SystemPromptContainer";
 import ShareSettingsButton from "./ShareSettingsButton";
 
@@ -30,6 +30,7 @@ import {
   selectShowSettings,
   selectShowSidebar,
   toggleSettings } from "../../Redux/reducers/interfaceSettingsSlice";
+import WebSearchToggle from "./WebSearchToggle";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -675,10 +676,15 @@ const SettingsPanel = ({
                 </div>
               )}
 
-              {/* Use GWDG Tools – checkbox */}
-              <GWDGToggle
+              {/* Use Tools – checkbox */}
+              <ToolsToggle
                 localState = {localState}
                 setLocalState = {setLocalState}
+              />
+
+              <WebSearchToggle
+                localState={localState}
+                setLocalState={setLocalState}
               />
 
               {/* Arcana box */}

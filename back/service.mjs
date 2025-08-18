@@ -164,20 +164,15 @@ app.post("/chat/completions", async (req, res) => {
     top_p = 0.5,
     arcana = null,
     timeout = 30000,
-    gwdg_tools = null,
+    enable_tools = null,
+    tools = null,
   } = req.body;
   const inference_id = req.headers["inference-id"];
-
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
   }
 
   const validatedTimeout = Math.min(Math.max(timeout, 5000), 900000);
-  console.log(
-    `Request timeout set to: ${validatedTimeout}ms (${
-      validatedTimeout / 1000
-    }s)`
-  );
 
   try {
     // Create a single timeout that applies to the entire request
@@ -196,9 +191,9 @@ app.post("/chat/completions", async (req, res) => {
     });
 
     // Define openai object
-    console.log({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id, extra_headers: {"inference-service": model}})
-    const openai = new OpenAI({baseURL : "https://chat-ai.academiccloud.de/v1", apiKey: apiKey ? apiKey : inference_id});
-    const stream = await openai.chat.completions.create({
+    console.log({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id})
+
+    const params = {
       model: model,
       messages: messages,
       temperature: temperature,
@@ -206,13 +201,39 @@ app.post("/chat/completions", async (req, res) => {
       stream: true,
       stream_options: {include_usage: true },
       timeout: timeout,
-      extra_headers: {"inference-service": model}
+    }
+
+
+    let inference_service = model;
+
+    // Handle tools and arcana
+    if (enable_tools) {
+      inference_service = "saia-openai-gateway";
+      if (arcana && arcana.id !== "") {
+        params.arcana = arcana;
+      }
+      if (tools && tools.length > 0) {
+        params.tools = [];
+        for (const tool of tools) {
+          if (tool.type === "web_search_preview") {
+            params.tools.push({type: "web_search_preview"});
+          }
+        }
+      }
+    }
+    
+    console.log(params);
+    console.log({"inference-service": inference_service});
+    // Temporary for testing gwdg tools
+    const openai = new OpenAI({baseURL : "https://chat-ai.academiccloud.de/v1", apiKey: apiKey ? apiKey : inference_id});
+    const stream = await openai.chat.completions.create(
+      params, {
+      headers: {"inference-service": inference_service}
     });
     
     let answer = ""
     for await (const chunk of stream) {
       try {
-        console.log(chunk.choices[0])
         answer += chunk.choices[0].delta.content
         res.write(chunk.choices[0].delta.content)
         if (chunk?.choices?.[0]?.finish_reason === 'stop') {

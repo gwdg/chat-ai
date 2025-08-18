@@ -2,14 +2,14 @@ import { useState } from "react";
 import icon_help from "../../assets/icons/help.svg";
 import { useModal } from "../../modals/ModalContext";
 
-export default function GWDGToggle({ localState, setLocalState}) {
+export default function WebSearchToggle({ localState, setLocalState}) {
     const { openModal } = useModal();
     const settings = localState.settings;
-    return (
-        <div className="flex flex-col md:flex-row md:gap-4 gap-3 w-full md:items-center mt-4">
+    return settings?.enable_tools && (
+        <div className="flex flex-col md:flex-row md:gap-2 gap-2 w-full md:items-center mt-2">
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
-            <p className="text-sm">Use GWDG Tools</p>
-            {/* If you ever want a tooltip/help‑icon you can reuse the same pattern */}
+            <p className="text-sm">Allow Web Search</p>
+            {/* Help Button */}
             <img
             src={icon_help}
             alt="help"
@@ -19,30 +19,29 @@ export default function GWDGToggle({ localState, setLocalState}) {
         </div>
         <div className="w-full flex items-center">
             <input
-                id="use-gwdg-tools"
                 type="checkbox"
-                checked={settings?.enable_tools}
+                checked={settings?.enable_tools && settings?.enable_web_search}
                 onChange={(e) =>
                 setLocalState((prev) => ({
                     ...prev,
                     settings: {
                     ...prev.settings,
-                    enable_tools: e.target.checked,
+                    enable_web_search: e.target.checked,
                     },
                 }))
                 }
                 className="h-4 w-4 text-tertiary bg-gray-200 border-gray-300 rounded focus:ring-tertiary focus:ring-2"
             />
             {/* Description that appears only when the box is unchecked */}
-            {!settings?.enable_tools && (
+            {!settings?.enable_web_search && (
                 <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
-                Additional features are disabled.
+                Web search is disabled
                 </span>
             )}
             {/* Description that appears only when the box is checked */}
-            {settings?.enable_tools && (
+            {settings?.enable_web_search && (
                 <span className="ml-2 text-sm text-green-600 dark:text-green-300">
-                Additional features are now enabled.
+                Web search is enabled
                 </span>
             )}
         </div>
