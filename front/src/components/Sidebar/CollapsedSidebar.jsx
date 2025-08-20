@@ -8,7 +8,7 @@ function CollapsedSidebar({
   lockConversation = false,
 }) {
   return (
-    <div className="flex flex-col w-full h-full bg-white dark:bg-bg_secondary_dark rounded-lg dark:shadow-dark shadow-lg border border-gray-200 dark:border-gray-800 p-2 gap-3">
+    <div className="flex flex-col w-full h-full bg-white dark:bg-bg_secondary_dark rounded-xl dark:shadow-dark shadow-lg border border-gray-200 dark:border-gray-800 p-2 gap-3">
       {/* Toggle sidebar open */}
       <button
         onClick={onToggleSidebar}

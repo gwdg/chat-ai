@@ -32,7 +32,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewChat }) {
 
   return (
     <div
-      className="flex flex-col bg-white dark:bg-bg_secondary_dark desktop:rounded-lg dark:shadow-dark shadow-lg border border-gray-200 dark:border-gray-800 select-none h-full w-full max-w-[280px] lg:max-w-[245px] transition-all duration-300 ease-in-out"
+      className="flex flex-col bg-white dark:bg-bg_secondary_dark desktop:rounded-xl dark:shadow-dark shadow-lg border border-gray-200 dark:border-gray-800 select-none h-full w-full max-w-[280px] lg:max-w-[245px] transition-all duration-300 ease-in-out"
       style={{
         WebkitTapHighlightColor: "transparent",
       }}

@@ -168,17 +168,18 @@ function ChatPage({ conversationId }) {
         userData={userData}
       />
 
-      <div className="flex flex-1 overflow-hidden relative bg-bg_light dark:bg-bg_dark">
+      <div className="flex flex-1  overflow-hidden relative bg-bg_light dark:bg-bg_dark ">
         {/* Desktop Sidebar Container with smooth width transitions */}
+        {isDesktop && (
         <div
         className={`relative flex-shrink-0 h-full transition-all duration-300 ease-in-out overflow-hidden
-          ${shouldShowSidebar ? "w-72" : "w-14"}`}
-      >
+          ${shouldShowSidebar ? "w-62" : "w-14"}`}
+        >
         {/* Full Sidebar */}
         <div
-          className={`absolute inset-0 transition-all duration-300 ease-in-out
+          className={`absolute inset-0 transition-all duration-300 ease-in-out pb-1 pt-1
             ${shouldShowSidebar ? "opacity-100" : "opacity-0 pointer-events-none"}
-            ${shouldShowSidebar ? "w-72" : "w-14"}`}
+            ${shouldShowSidebar ? "w-65" : "w-14"}`}
         >
           <Sidebar
             localState={localState}
@@ -190,9 +191,9 @@ function ChatPage({ conversationId }) {
 
         {/* Collapsed Sidebar */}
         <div
-          className={`absolute inset-0 transition-all duration-300 ease-in-out
+          className={`absolute inset-0 transition-all duration-300 ease-in-out pb-1 pt-1
             ${shouldShowSidebar ? "opacity-0 pointer-events-none" : "opacity-100"}
-            ${shouldShowSidebar ? "w-72" : "w-14"}`}
+            ${shouldShowSidebar ? "w-65" : "w-14"}`}
         >
           <CollapsedSidebar
             onToggleSidebar={() => dispatch(toggleSidebar())}
@@ -203,11 +204,11 @@ function ChatPage({ conversationId }) {
                 currentTitle: localState?.title || "Untitled Conversation",
               });
             }}
-            currentTitle={localState?.title || "Untitled Conversation"}
+            currentTitlfe={localState?.title || "Untitled Conversation"}
             lockConversation={lockConversation}
           />
         </div>
-      </div>
+      </div>)}
 
         {/* Mobile/Tablet Sidebar Overlay */}
         <Transition show={shouldShowMobileSidebar} as={Fragment}>

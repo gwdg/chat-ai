@@ -160,45 +160,6 @@ export default function Conversation({
     scrollToBottom(true, true); // force smooth scroll, user initiated
   }, [scrollToBottom]);
 
-  function formatFileSize(bytes) {
-    const units = ["Bytes", "KB", "MB", "GB", "TB"];
-    let size = bytes;
-    let unitIndex = 0;
-
-    // Keep dividing by 1024 until we reach the appropriate unit
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-
-    // Return formatted string with 2 decimal places and unit
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
-  }
-
-  // Utility function to convert base64 image data to file-like objects
-  const convertBase64ArrayToImageList = (base64Array) => {
-    const imageFileList = base64Array.map((item, index) => {
-      if (
-        item.type === "image_url" &&
-        item.image_url.url.startsWith("data:image")
-      ) {
-        const base64Data = item.image_url.url;
-        const fileName = `image_${index + 1}`;
-        const fileSize = atob(base64Data.split(",")[1]).length;
-
-        return {
-          name: fileName,
-          type: "image",
-          size: fileSize,
-          text: base64Data,
-        };
-      }
-      return null;
-    });
-
-    return imageFileList.filter(Boolean);
-  };
-
   useEffect(() => {
     if (!copied) return;
 
@@ -351,7 +312,7 @@ export default function Conversation({
               <div key={index} className="flex flex-col gap-1">
                 {message.content && (
                   <div className="text-xs font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl">
-                    {message.content?.data}
+                    {message.content?.text}
                   </div>
                 )}
               </div>
