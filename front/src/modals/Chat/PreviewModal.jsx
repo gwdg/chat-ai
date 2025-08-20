@@ -1,6 +1,8 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
+import icon_cross_sm from "../../assets/icons/cross_sm.svg";
+import { loadFile, useFile, useFileBase64 } from "../../db";
 import { X } from "lucide-react";
 
 // --------------------
@@ -141,10 +143,26 @@ const AudioPlayer = ({ file }) => {
   // -------------------------------
 };
 
-export default function PreviewModal({ isOpen, onClose, file }) {
+export default function PreviewModal({ isOpen, onClose, fileId }) {
+
   const [loadError, setLoadError] = useState(null);
-  const getTextContent = (file) =>
-    typeof file === "string" ? file : file?.content || file?.text || "";
+  const {file, data} = useFile(fileId);
+  const base64 = useFileBase64(fileId); // TODO only load if important
+  if (!file) return null;
+  console.log(file)
+  
+  if (!file) return null; // TODO placeholder
+
+    //  if (!file?.data && attachment.fileId) {
+    //           file.data = await loadFile(attachment.fileId);
+              
+    //           if (file.type.startsWith("image/")) {
+    //             setBase64(await readFileAsBase64(newFile));
+    //           }
+    //       }
+
+  
+  const getTextContent = (file) => (typeof file === "string") ? file : file?.content || file?.text || "";
 
   const getFileType = (file) => {
     if (file?.type === "audio" || file?.isAudio) return "audio";
@@ -170,48 +188,33 @@ export default function PreviewModal({ isOpen, onClose, file }) {
     return "unknown";
   };
 
-  const fileName = useMemo(() => {
-    if (file?.name) return file.name;
-    if (typeof file === "string") return "Preview";
-    const textContent = getTextContent(file);
-    if (textContent && typeof textContent === "string") {
-      const firstLine = textContent.split("\n")[0];
-      if (firstLine && firstLine.includes(":"))
-        return firstLine.split(":")[0].trim();
-    }
-    return "Preview";
-  }, [file]);
+  // const pdfUrl = useMemo(() => {
+  //   try {
+  //     if (getFileType(file) !== "pdf") return null;
+  //     if (file.originalFile instanceof File) return URL.createObjectURL(file.originalFile);
+  //     if (file.file instanceof File) return URL.createObjectURL(file.file);
+  //     if (file.data && typeof file.data === "string") {
+  //       const byteCharacters = atob(file.data);
+  //       const byteArray = new Uint8Array([...byteCharacters].map(c=>c.charCodeAt(0)));
+  //       const blob = new Blob([byteArray], { type: "application/pdf" });
+  //       return URL.createObjectURL(blob);
+  //     }
+  //     if (file.text?.startsWith("data:application/pdf")) return file.text;
+  //     return null;
+  //   } catch (error) {
+  //     console.error("Error creating PDF URL:", error);
+  //     setLoadError("Failed to load PDF file");
+  //     return null;
+  //   }
+  // }, [file]);
 
-  const pdfUrl = useMemo(() => {
-    try {
-      if (getFileType(file) !== "pdf") return null;
-      if (file.originalFile instanceof File)
-        return URL.createObjectURL(file.originalFile);
-      if (file.file instanceof File) return URL.createObjectURL(file.file);
-      if (file.data && typeof file.data === "string") {
-        const byteCharacters = atob(file.data);
-        const byteArray = new Uint8Array(
-          [...byteCharacters].map((c) => c.charCodeAt(0))
-        );
-        const blob = new Blob([byteArray], { type: "application/pdf" });
-        return URL.createObjectURL(blob);
-      }
-      if (file.text?.startsWith("data:application/pdf")) return file.text;
-      return null;
-    } catch (error) {
-      console.error("Error creating PDF URL:", error);
-      setLoadError("Failed to load PDF file");
-      return null;
-    }
-  }, [file]);
-
-  useEffect(() => {
-    return () => {
-      if (pdfUrl && !pdfUrl.startsWith("data:")) {
-        URL.revokeObjectURL(pdfUrl);
-      }
-    };
-  }, [pdfUrl]);
+  // useEffect(() => {
+  //   return () => {
+  //     if (pdfUrl && !pdfUrl.startsWith("data:")) {
+  //       URL.revokeObjectURL(pdfUrl);
+  //     }
+  //   };
+  // }, [pdfUrl]);
 
   const handleDownload = () => {
     try {
@@ -221,10 +224,7 @@ export default function PreviewModal({ isOpen, onClose, file }) {
 
       if (fileType === "audio") {
         if (!name.includes(".")) name += `.${file.format || "wav"}`;
-        const base64Data = file.text || file.data;
-        const byteArray = new Uint8Array(
-          [...atob(base64Data)].map((c) => c.charCodeAt(0))
-        );
+        const byteArray = new Uint8Array([...atob(base64)].map(c=>c.charCodeAt(0)));
         blob = new Blob([byteArray], { type: `audio/${file.format || "wav"}` });
         downloadUrl = URL.createObjectURL(blob);
       } else if (fileType === "pdf") {
@@ -239,9 +239,8 @@ export default function PreviewModal({ isOpen, onClose, file }) {
           downloadUrl = pdfUrl;
         } else throw new Error("No PDF content available for download");
       } else {
-        const textContent = getTextContent(file);
         if (fileType === "image") {
-          downloadUrl = textContent;
+          downloadUrl = base64;
         } else {
           if (!name.includes(".")) name += ".txt";
           blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
@@ -279,7 +278,7 @@ export default function PreviewModal({ isOpen, onClose, file }) {
         );
 
       const fileType = getFileType(file);
-      const textContent = getTextContent(file);
+      // const textContent = getTextContent(file);
       // Audio Player
       if (fileType === "audio") {
         return (
@@ -294,8 +293,8 @@ export default function PreviewModal({ isOpen, onClose, file }) {
         return (
           <div className="flex justify-center">
             <img
-              src={textContent}
-              alt={fileName}
+              src={base64}
+              alt={file.name}
               className="max-h-[85vh] max-w-full object-contain"
               onError={() => setLoadError("Failed to load image")}
             />
@@ -428,7 +427,7 @@ export default function PreviewModal({ isOpen, onClose, file }) {
                 src={pdfUrl}
                 className="w-full flex-1"
                 style={{ minWidth: "800px" }}
-                title={fileName}
+                title={file.name}
                 onError={() => setLoadError("Failed to display PDF")}
               />
             </div>
@@ -479,7 +478,7 @@ export default function PreviewModal({ isOpen, onClose, file }) {
       }
 
       // Code Viewer
-      if (isCodeFile(fileName)) {
+      if (isCodeFile(file.name)) {
         return (
           <pre className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg overflow-auto max-h-[85vh] w-full">
             <code className="font-mono text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200">
@@ -524,7 +523,7 @@ export default function PreviewModal({ isOpen, onClose, file }) {
       {/* Custom Header with Filename + Actions */}
       <div className="flex justify-between items-center mb-4 px-2">
         <p className="text-lg font-medium text-tertiary dark:text-gray-200 truncate max-w-[70%]">
-          {fileName || "Preview"}
+          {file.name}
         </p>
         <div className="flex items-center gap-4">
           {/* Download File Button */}
@@ -540,7 +539,7 @@ export default function PreviewModal({ isOpen, onClose, file }) {
             <X
               className="h-[20px] w-[20px] cursor-pointer text-[#009EE0]"
               alt="cross"
-              onClick={handleClose}
+              onClick={onClose}
             />{" "}
           </button>
         </div>

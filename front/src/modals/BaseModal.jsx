@@ -23,6 +23,7 @@ export default function BaseModal({
   maxWidth = "max-w-md",
   isForced = false
 }) {
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog

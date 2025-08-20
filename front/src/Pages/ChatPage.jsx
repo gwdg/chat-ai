@@ -292,16 +292,13 @@ function ChatPage({ conversationId }) {
                   <Conversation
                     localState={localState}
                     setLocalState={setLocalState}
-                    modelsData={modelsData}
                   />
                 </div>
 
                 <Prompt
                   localState={localState}
                   setLocalState={setLocalState}
-                  modelsData={modelsData}
-                  selectedFiles={selectedFiles}
-                  setSelectedFiles={setSelectedFiles}
+                  userData={userData}
                 />
               </div>
             </div>

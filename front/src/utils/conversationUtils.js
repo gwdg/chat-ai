@@ -14,9 +14,9 @@ export const getDefaultSettings = () => {
     model: envSettings.model,
     temperature: envSettings.temperature,
     top_p: envSettings.top_p,
-    memory: 2,
+    memory: envSettings?.memory || 2,
     enable_tools: envSettings?.enable_tools || false,
-    tools: [],
+    enable_web_search: envSettings?.enable_web_search || false,
     arcana: {
       id: "",
     },
@@ -35,7 +35,7 @@ export const getDefaultConversation = (customSettings = {}) => {
         content: [
           {
             type: "text",
-            data: "You are a helpful dog."
+            text: "You are a helpful assistant."
           }
         ],
       }, {
@@ -43,7 +43,7 @@ export const getDefaultConversation = (customSettings = {}) => {
         content: [
           {
             type: "text",
-            data: ""
+            text: ""
           }
         ]
       }

@@ -96,30 +96,29 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     });
   };
 
-  return (
-    // Typing
-    <div
-      key={message_index}
-      className="text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3"
-    >
-      {/* Display dots when loading */}
-      {loading && message.content[0].data === "" ? (
-        <Typing />
-      ) : (
-        <>
-          {/* Display message content */}
-          <MarkdownRenderer loading={loading} renderMode={renderMode}>
-            {message.content[0]?.data}
-          </MarkdownRenderer>
-          {/* Bottom panel for message */}
-          <div className="flex items-center justify-between mb-2 opacity-100 group-hover:opacity-100 transition-opacity duration-300">
-            {/* Render Mode Selector */}
-            <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
-              {renderModes.map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => !loading && setRenderMode(mode)}
-                  className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
+    return (
+        // Typing
+        <div key={message_index} className="text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 rounded-2xl bg-bg_chat dark:bg-bg_chat_dark p-3">
+                {/* Display dots when loading */}
+                {loading && message.content[0].text === "" 
+                ? (<Typing />) 
+                : (<>
+                    {/* Display message content */}
+                    <MarkdownRenderer
+                        loading={loading}
+                        renderMode={renderMode}
+                    >
+                        {message.content[0]?.text}
+                    </MarkdownRenderer>
+                    {/* Bottom panel for message */}
+                    <div className="flex items-center justify-between mb-2 opacity-100 group-hover:opacity-100 transition-opacity duration-300">
+                        {/* Render Mode Selector */}
+                        <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
+                        {renderModes.map((mode) => (
+                            <button
+                            key={mode}
+                            onClick={() => !loading && setRenderMode(mode)}
+                            className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
                             ${loading ? "cursor-not-allowed opacity-50" : ""}
                             ${
                               renderMode === mode

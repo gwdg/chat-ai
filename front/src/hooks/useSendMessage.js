@@ -10,8 +10,9 @@ export function useSendMessage() {
   const { notifyError, notifySuccess } = useToast();
   const timeout = useSelector(selectTimeout);
 
-  return ({localState, setLocalState}) => {
-    sendMessage({
+  // Make this async
+  return async ({localState, setLocalState}) => {
+    await sendMessage({
       localState,
       setLocalState,
       dispatch,

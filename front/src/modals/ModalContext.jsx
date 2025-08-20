@@ -99,7 +99,7 @@ export function ModalProvider({ children }) {
             <ErrorBadRequestModal isOpen onClose={closeModal} {...modalProps} />
         )}
         {modalType === "errorSessionExpired" && (
-            <ErrorSessionExpiredModal isOpen={sessionExpired} />
+            <ErrorSessionExpiredModal isOpen onClose={closeModal} {...modalProps} />
         )}
         {modalType === "clearHistory" && (
             <ClearHistoryModal isOpen onClose={closeModal} {...modalProps} />

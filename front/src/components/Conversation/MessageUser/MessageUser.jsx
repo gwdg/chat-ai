@@ -4,6 +4,7 @@ import RetryButton from "./RetryButton";
 import EditButton from "./EditButton";
 import EditBox from "./EditBox";
 import MessageTextContainer from "./MessageTextContainer";
+import Attachment from "../../Prompt/Attachment"
 
 export default React.memo(({
     localState,
@@ -41,7 +42,7 @@ export default React.memo(({
                 </div>
             )}
             {/* Edit mode */}
-            {editMode && (
+            {editMode && ( 
                 <EditBox
                     localState={localState}
                     setLocalState={setLocalState}
@@ -50,23 +51,17 @@ export default React.memo(({
                 />
             )}
         {/* File rendering */}
-        {/* <MessageContainer
-            localState={localState}
-            message={message}
-            index={index}
-            copied={copied}
-            setCopied={setCopied}
-            indexChecked={indexChecked}
-            setIndexChecked={setIndexChecked}
-            loading={loading}
-            loadingResend={loadingResend}
-            editingResponseIndex={editingResponseIndex}
-            setEditedResponse={setEditedResponse}
-            handleResponseEdit={handleResponseEdit}
-            editedResponse={editedResponse}
-            setEditingResponseIndex={setEditingResponseIndex}
-            handleResendClick={handleRetryClick}
-        /> */}
+       {Array.isArray(message.content) && message.content.length > 1 && (
+            message.content.slice(1).map((attachment, i) => (
+                <Attachment
+                    localState={localState}
+                    setLocalState={setLocalState}
+                    attachment={attachment}
+                    index={i}
+                    inHistory={true}
+                />
+            ))
+        )}
         </div>
     )
 });

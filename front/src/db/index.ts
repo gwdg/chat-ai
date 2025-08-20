@@ -3,16 +3,54 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useMemo, useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid';
 
+// ---------- Dexie DB ----------
+
+export class AppDB extends Dexie {
+  conversations!: Table<ConversationRow, string>
+  messages!: Table<MessageRow, string>
+  content_items!: Table<ContentItemRow, string>
+  files_meta!: Table<FileMetaRow, string>
+  files_data!: Table<FileDataRow, string>
+
+  constructor() {
+    super('app-conversations-db')
+    // Indexes:
+    // - conversations: order by lastModified quickly; search by title if needed
+    // - messages: fast range queries by conversation + idx
+    // - files_meta: link to conversation/message; fast lookup per conversation
+    // - files_data: keyed by id
+    this.version(2).stores({
+      conversations: 'id, lastModified, createdAt, title',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, messageId, type, size, name',
+      files_data: 'id',
+    })
+  }
+}
+
+export const db = new AppDB()
+
+// ---------- Utilities ----------
+
+function newId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  // Simple fallback
+  return uuidv4();
+}
+
 // ---------- Types ----------
 
-export type MessageRole = 'user' | 'assistant' | 'system' | 'info'
+export type MessageRole = 'system' | 'developer' | 'user' | 'assistant' | 'tool' | 'function' | 'info'
 
 export type ModelSpec = {
   id: string
   name: string
   input: string[]
   output: string[]
-  // you can add more fields as needed
+  // More fields can be added
   [k: string]: any
 }
 
@@ -22,9 +60,9 @@ export type ConversationSettings = {
   top_p: number
   memory: number
   enable_tools: boolean
+  enable_web_search: boolean
   tools: any[]
   arcana: Record<string, any>
-  // store as plain JSON; Dexie can persist it
 }
 
 export type ConversationRow = {
@@ -41,10 +79,9 @@ type MessageRow = {
   conversationId: string
   idx: number
   role: MessageRole
-  content: ContentItem[] // stored normalized items
   createdAt: number
   updatedAt?: number
-  meta?: any
+  meta?: any // e.g. model
 }
 
 export type MessageInput = {
@@ -52,28 +89,39 @@ export type MessageInput = {
   idx: number
   role: MessageRole
   content: ContentItem[]
-  files?: FileInput[]
   createdAt?: number
   updatedAt?: number
   meta?: any
 }
 
-export type ContentItem = {
-  type: 'text' | 'image' | 'file'
-  data: string | Blob
+export type ContentItemRow = {
+  id: string
+  messageId: string
+  idx: number
+  type: 'text' | 'file'
+  text?: string // for text, file ID for files
+  fileId?: string
+  // what to do for meta?
 }
 
 export type ContentItemInput = {
-  type: 'text' | 'image' | 'file'
-  data: string | Blob
+  type: 'text' | 'file'
+  text?: string
+  file?: File
+  fileId?: string
+}
+
+// Table: file_data
+export type FileDataRow = {
+  id: string // shared with FileMetaRow
+  data: ArrayBuffer
 }
 
 export type FileMetaRow = {
-  id: string // uuid; shared with FileDataRow
-  conversationId: string
+  id: string // shared with FileDataRow
   messageId: string
   name: string
-  mimeType: string
+  type: string
   size: number
   width?: number
   height?: number
@@ -81,123 +129,96 @@ export type FileMetaRow = {
   extra?: any
 }
 
-export type FileDataRow = {
-  id: string // same as FileMetaRow.id
-  data: Blob // actual binary
-}
-
-// For returning messages with file placeholders (no Blob)
-export type FilePlaceholder = Omit<FileMetaRow, 'conversationId' | 'messageId'>
-export type HydratedMessage = Omit<MessageRow, 'fileIds'> & { files: FilePlaceholder[] }
-
-// For writes
-export type FileInput =
-  | ({ id: string } & Partial<FilePlaceholder>) // existing file reference by id; optional meta updates
-  | ({
-      id?: undefined
-      name: string
-      mimeType: string
-      size: number
-      data: Blob
-      width?: number
-      height?: number
-      duration?: number
-      extra?: any
-    })
-
-
-
-// ---------- Utilities ----------
-
-function newId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-  // Simple fallback
-  return uuidv4();
-}
-
-// ---------- Dexie DB ----------
-
-export class AppDB extends Dexie {
-  conversations!: Table<ConversationRow, string>
-  messages!: Table<MessageRow, string>
-  files_meta!: Table<FileMetaRow, string>
-  files_data!: Table<FileDataRow, string>
-
-  constructor() {
-    super('app-conversations-db')
-    // Indexes:
-    // - conversations: order by lastModified quickly; search by title if needed
-    // - messages: fast range queries by conversation + idx
-    // - files_meta: link to conversation/message; fast lookup per conversation
-    // - files_data: keyed by id
-    this.version(1).stores({
-      conversations: 'id, lastModified, createdAt, title',
-      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
-      files_meta: 'id, conversationId, messageId, mimeType, size, name',
-      files_data: 'id',
-    })
-  }
-}
-
-export const db = new AppDB()
-
 // ---------- Low-level helpers ----------
 
 async function hydrateConversation(conversationId: string) {
+  // Get conversation
   const convo = await db.conversations.get(conversationId)
   if (!convo) return null
 
+  // Get all messages ordered by idx
   const messages = await db.messages
     .where('[conversationId+idx]')
     .between([conversationId, Dexie.minKey], [conversationId, Dexie.maxKey])
-    .sortBy('idx') // ensures order
+    .sortBy('idx')
 
-  // Fetch all file meta for this conversation once
-  const fileMeta = await db.files_meta.where('conversationId').equals(conversationId).toArray()
-  const filesById = new Map(fileMeta.map((f) => [f.id, f]))
+  // Get all message IDs
+  const messageIds = messages.map(m => m.id)
 
-  const hydratedMessages: HydratedMessage[] = messages.map((m) => ({
+  // Get all content items for those messages, ordered within messages
+  const allContentItems = await db.content_items
+    .where('messageId')
+    .anyOf(messageIds)
+    .sortBy('idx')
+
+  // Get all file IDs referenced by content items
+  const fileIds = allContentItems
+    .filter(ci => ci.type === 'file' && ci.fileId)
+    .map(ci => ci.fileId!)
+
+  // Fetch file meta for those files
+  const fileMetaRows = fileIds.length > 0
+    ? await db.files_meta.where('id').anyOf(fileIds).toArray()
+    : []
+
+  const filesById = new Map(fileMetaRows.map(f => [f.id, f]))
+
+  // Group content items by messageId
+  const contentByMessage = new Map<string, any[]>()
+  for (const ci of allContentItems) {
+    let items = contentByMessage.get(ci.messageId)
+    if (!items) {
+      items = []
+      contentByMessage.set(ci.messageId, items)
+    }
+    if (ci.type === 'text') {
+      items.push({
+        type: 'text',
+        text: ci.text ?? ''
+      })
+    }
+    else if (ci.type === 'file') {
+      // const meta = filesById.get(ci.fileId!)
+      // if (meta) {
+      //   // Placeholder with meta only
+      //   items.push({
+      //     type: 'file',
+      //     fileId: meta.id,
+      //     file: {
+      //       name: meta.name,
+      //       type: meta.type,
+      //       size: meta.size,
+      //       width: meta.width,
+      //       height: meta.height,
+      //       duration: meta.duration,
+      //       extra: meta.extra
+      //     }
+      //   })
+      // } else {
+        // File meta missing
+      items.push({
+        type: 'file',
+        fileId: ci.fileId,
+      })
+    }
+  }
+
+  // Build hydrated messages
+  const hydratedMessages: HydratedMessage[] = messages.map(m => ({
     id: m.id,
-    conversationId,
+    conversationId: m.conversationId,
     idx: m.idx,
     role: m.role,
-    content: m.content,
     createdAt: m.createdAt,
     updatedAt: m.updatedAt,
     meta: m.meta,
+    content: contentByMessage.get(m.id) || []
   }))
-  return ({ ...convo, messages: hydratedMessages })
-}
 
-// Insert file meta+data; returns the new id
-async function insertFile(conversationId: string, messageId: string, f: Exclude<FileInput, { id: string }>) {
-  const id = newId()
-  const meta: FileMetaRow = {
-    id,
-    conversationId,
-    messageId,
-    name: f.name,
-    mimeType: f.mimeType,
-    size: f.size,
-    width: f.width,
-    height: f.height,
-    duration: f.duration,
-    extra: f.extra,
+  return {
+    ...convo,
+    messages: hydratedMessages
   }
-  const data: FileDataRow = { id, data: f.data }
-  await db.files_meta.add(meta)
-  await db.files_data.add(data)
-  return id
-}
-
-// Upsert existing file meta (does not modify data/blob)
-async function upsertFileMeta(partial: { id: string } & Partial<FileMetaRow>) {
-  const { id, ...rest } = partial
-  if (!id) return
-  if (Object.keys(rest).length === 0) return
-  await db.files_meta.update(id, rest)
 }
 
 // ---------- Public API ----------
@@ -214,7 +235,7 @@ export async function createConversation(params: {
   const settings = params.settings
   const messages = params.messages
 
-  await db.transaction('rw', db.conversations, db.messages, db.files_meta, db.files_data, async () => {
+  await db.transaction('rw', db.conversations, db.messages, db.content_items, db.files_meta, db.files_data, async () => {
     await db.conversations.add({
       id,
       title,
@@ -232,20 +253,12 @@ export async function createConversation(params: {
   return id
 }
 
-// Get minimal list for sidebar
-export async function listConversationMetas(): Promise<
-  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'messageCount'>>
-> {
-  return db.conversations.orderBy('id').toArray()
-}
-
 // Get one conversation fully hydrated (messages + file placeholders)
 export async function getConversation(conversationId: string) {
   return hydrateConversation(conversationId)
 }
 
 // Replace the entire content (title/settings/messages) of a conversation in one go.
-// Good fit for your "debounced save" pattern.
 export async function updateConversation(
   conversationId: string,
   data: {
@@ -255,107 +268,141 @@ export async function updateConversation(
       id?: string
       idx: number
       role: MessageRole
-      content: ContentItemInput[] | string
+      content: ContentItemInput[] | string // text or content array
       createdAt?: number
       updatedAt?: number
       meta?: any
     }>
   }
 ) {
-  const now = Date.now()
-  await db.transaction('rw', db.conversations, db.messages, db.files_meta, db.files_data, async () => {
-    const convo = await db.conversations.get(conversationId)
-    if (!convo) throw new Error('Conversation not found')
+  const now = Date.now();
 
-    // Build message inputs with ids
-    const normalizedMsgs: Required<Pick<MessageInput, 'id' | 'idx' | 'role' | 'text'>> &
-      Omit<MessageInput, 'id'>[] = data.messages.map((m, index) => ({
-      id: m.id ?? newId(),
-      idx: m.idx ?? index,
-      role: m.role,
-      content: m.content ?? [],
-      files: m.files ?? [],
-      createdAt: m.createdAt ?? now,
-      updatedAt: m.updatedAt,
-      meta: m.meta,
-    }))
+  await db.transaction(
+    'rw',
+    db.conversations,
+    db.messages,
+    db.content_items,
+    db.files_meta,
+    db.files_data,
+    async () => {
+      const convo = await db.conversations.get(conversationId);
+      if (!convo) throw new Error('Conversation not found');
 
-    // Delete messages (and their files) that are not in the new set
-    const keepIds = new Set(normalizedMsgs.map((m) => m.id))
-    const existingMsgIds = await db.messages
-      .where('conversationId')
-      .equals(conversationId)
-      .primaryKeys()
+      // Normalize incoming messages (ensure IDs)
+      const normalizedMsgs = data.messages.map((m, index) => ({
+        id: m.id ?? newId(),
+        idx: m.idx ?? index,
+        role: m.role,
+        content: m.content ?? [],
+        createdAt: m.createdAt ?? now,
+        updatedAt: m.updatedAt,
+        meta: m.meta
+      }));
 
-    const toDeleteMsgIds = existingMsgIds.filter((id) => !keepIds.has(id))
-    if (toDeleteMsgIds.length) {
-      // Delete orphan files first
-      const orphanFileIds = await db.files_meta
-        .where('messageId')
-        .anyOf(toDeleteMsgIds)
-        .primaryKeys()
-      if (orphanFileIds.length) {
-        await db.files_data.bulkDelete(orphanFileIds)
-        await db.files_meta.bulkDelete(orphanFileIds)
+      // Figure out message IDs to keep / delete
+      const keepIds = new Set(normalizedMsgs.map(m => m.id));
+      const existingMsgIds = await db.messages
+        .where('conversationId')
+        .equals(conversationId)
+        .primaryKeys();
+
+      const toDeleteMsgIds = existingMsgIds.filter(id => !keepIds.has(id));
+
+      if (toDeleteMsgIds.length) {
+        // Delete all content items for these messages
+        await db.content_items.where('messageId').anyOf(toDeleteMsgIds).delete();
+
+        // // Delete orphan files (meta + data)
+        // const orphanFileIds = await db.files_meta
+        //   .where('messageId')
+        //   .anyOf(toDeleteMsgIds)
+        //   .primaryKeys();
+
+        // if (orphanFileIds.length) {
+        //   await db.files_data.bulkDelete(orphanFileIds);
+        //   await db.files_meta.bulkDelete(orphanFileIds);
+        // }
+
+        // Delete the messages themselves
+        await db.messages.bulkDelete(toDeleteMsgIds);
       }
-      await db.messages.bulkDelete(toDeleteMsgIds)
-    }
-    // Upsert messages and attach files
-    // Also add idx from index in list
-    for (const m of normalizedMsgs) {
-      // resolve fileIds
-    //   const desiredFileIds: string[] = []
-        
-    //   for (const f of m.files ?? []) {
-    //     if ('id' in f && f.id) {
-    //       desiredFileIds.push(f.id)
-    //       // Optionally update meta
-    //       await upsertFileMeta({ id: f.id, name: f.name, mimeType: f.mimeType, size: f.size, width: f.width, height: f.height, duration: f.duration, extra: f.extra })
-    //     } else {
-    //       const fnew = f as Exclude<FileInput, { id: string }>
-    //       const newIdForFile = await insertFile(conversationId, m.id!, fnew)
-    //       desiredFileIds.push(newIdForFile)
-    //     }
-    //   }
-        const processedContent: ContentItem[] = []
-        if (typeof m.content === 'string') {
-            processedContent.push({ type: 'text', data: m.content });
-        }
-        else { // Content is list
-            for (const item of m.content) {
-                // If type is string then make it a text item
-                if (typeof item === 'string') {
-                    processedContent.push({ type: 'text', data: item })
-                }
-                // Handle other content types
-                if (!item || typeof item !== 'object' || !('type' in item)) continue
-                if (item.type === 'text' || item.type === 'image' || item.type === 'file') {
-                    processedContent.push({ type: item.type, data: item.data })
-                } else {
-                    console.log("Error: unknown message content type: ", item.type)
-                }
-            // TODO replace large files with file handler
+
+      // Now upsert each message and insert new content items
+      for (const m of normalizedMsgs) {
+        // Upsert message row (no content field)
+        const msgRow: MessageRow = {
+          id: m.id,
+          conversationId,
+          idx: m.idx,
+          role: m.role,
+          createdAt: m.createdAt,
+          updatedAt: now,
+          meta: m.meta
+        };
+        await db.messages.put(msgRow);
+
+        // Delete old content items for this message before inserting new ones
+        await db.content_items.where('messageId').equals(m.id).delete();
+
+        // Build & insert new content items
+        const contentArray: ContentItemInput[] =
+        m.content as ContentItemInput[];
+
+        let ciIdx = 0;
+        for (const item of contentArray) {
+          if (item.type === 'text') {
+            // Simple text content item
+            const ci: ContentItemRow = {
+              id: newId(),
+              messageId: m.id,
+              idx: ciIdx++,
+              type: 'text',
+              text: typeof item.text === 'string' ? item.text : String(item.text)
+            };
+            await db.content_items.add(ci);
+          }
+          else if (item.type === 'file') {
+            //let fileId = newId(); // Get new file ID
+            //console.log("New file ", fileId);
+            // if (item?.file) {
+            //   // If item has data, store in files data and meta tables
+            //   await db.files_data.add({ id: fileId, data: item.file.data });
+            //   await db.files_meta.add({
+            //     id: fileId,
+            //     conversationId,
+            //     messageId: m.id,
+            //     name: (item.file as any).name ?? 'file', // name might need to be passed separately
+            //     type: item.file.type || 'application/octet-stream',
+            //     size: item.file.size,
+            //   });
+            // } else if (item?.fileId) {
+              // If item refers to existing file, simply add
+              //fileId = item.fileId;
+            //}
+
+            // Add content item referencing fileId
+            await db.content_items.add({
+              id: newId(),
+              messageId: m.id,
+              idx: ciIdx++,
+              type: 'file',
+              fileId: item.fileId
+            });
+          }
+          else {
+            console.warn('Unknown content item type: ', item);
           }
         }
-      const msgRow: MessageRow = {
-        id: m.id!,
-        conversationId,
-        idx: m.idx,
-        role: m.role,
-        content: processedContent,
-        createdAt: m.createdAt ?? now,
-        updatedAt: now,
-        meta: m.meta,
       }
-      await db.messages.put(msgRow)
+
+      // Finally update conversation info
+      await db.conversations.update(conversationId, {
+        title: data.title ?? convo.title,
+        settings: data.settings ?? convo.settings,
+        lastModified: now
+      });
     }
-    await db.conversations.update(conversationId, {
-      title: data.title ?? convo.title,
-      settings: data.settings ?? convo.settings,
-      lastModified: now,
-      messageCount: normalizedMsgs.length,
-    })
-  })
+  );
 }
 
 // Add a single message (returns its id)
@@ -369,7 +416,7 @@ export async function updateConversation(
 //     for (const f of message.files ?? []) {
 //       if ('id' in f && f.id) {
 //         fileIds.push(f.id)
-//         await upsertFileMeta({ id: f.id, name: f.name, mimeType: f.mimeType, size: f.size, width: f.width, height: f.height, duration: f.duration, extra: f.extra })
+//         await upsertFileMeta({ id: f.id, name: f.name, type: f.type, size: f.size, width: f.width, height: f.height, duration: f.duration, extra: f.extra })
 //       } else {
 //         const fnew = f as Exclude<FileInput, { id: string }>
 //         const fid = await insertFile(conversationId, id, fnew)
@@ -435,6 +482,15 @@ export async function updateConversation(
 //   })
 // }
 
+// ---------- Conversation List ----------
+
+// Get list of conversation Metas
+export async function listConversationMetas(): Promise<
+  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'messageCount'>>
+> {
+  return db.conversations.orderBy('id').toArray()
+}
+
 // Rename conversation or update settings
 export async function updateConversationMeta(
   conversationId: string,
@@ -443,32 +499,44 @@ export async function updateConversationMeta(
   await db.conversations.update(conversationId, { ...updates, lastModified: Date.now() })
 }
 
-// Delete entire conversation (messages + files)
+// Delete entire conversation (messages + content items + files)
 export async function deleteConversation(conversationId: string) {
-  await db.transaction('rw', db.messages, db.files_meta, db.files_data, db.conversations, async () => {
-    const fileIds = await db.files_meta.where('conversationId').equals(conversationId).primaryKeys()
-    if (fileIds.length) {
-      await db.files_data.bulkDelete(fileIds)
-      await db.files_meta.bulkDelete(fileIds)
+  await db.transaction(
+    'rw',
+    db.messages,
+    db.content_items,
+    db.files_meta,
+    db.files_data,
+    db.conversations,
+    async () => {
+      // Delete all files for this conversation (meta + data)
+      const fileIds = await db.files_meta
+        .where('conversationId')
+        .equals(conversationId)
+        .primaryKeys();
+
+      if (fileIds.length) {
+        await db.files_data.bulkDelete(fileIds);
+        await db.files_meta.bulkDelete(fileIds);
+      }
+
+      // Find all message IDs from this conversation
+      const messageIds = await db.messages
+        .where('conversationId')
+        .equals(conversationId)
+        .primaryKeys();
+
+      if (messageIds.length) {
+        // Delete all related content items
+        await db.content_items.where('messageId').anyOf(messageIds).delete();
+        // Delete messages
+        await db.messages.bulkDelete(messageIds);
+      }
+
+      // Finally, delete the conversation record itself
+      await db.conversations.delete(conversationId);
     }
-    await db.messages.where('conversationId').equals(conversationId).delete()
-    await db.conversations.delete(conversationId)
-  })
-}
-
-// File APIs
-export async function getFileMeta(fileId: string) {
-  return db.files_meta.get(fileId)
-}
-
-export async function getFileData(fileId: string) {
-  const row = await db.files_data.get(fileId)
-  return row?.data ?? null
-}
-
-export async function getFileObjectURL(fileId: string) {
-  const blob = await getFileData(fileId)
-  return blob ? URL.createObjectURL(blob) : null
+  );
 }
 
 // Maintenance
@@ -493,64 +561,7 @@ function debounce<T extends (...args: any[]) => any>(fn: T, wait = 1000) {
   }
 }
 
-// 1) Hook to load a full conversation (messages + file placeholders)
-// Returns a plain JS object you can copy into your local component state.
-// Also returns a debounced save function that accepts the same shape back.
-// export function useConversation(conversationId: string | undefined) {
-//   const live = useLiveQuery(
-//     async () => {
-//       if (!conversationId) return null
-//       return await hydrateConversation(conversationId)
-//     },
-//     [conversationId],
-//     null
-//   )
-
-//   const loading = !live && !!conversationId
-
-//   const save = useCallback(
-//     async (next: {
-//       id: string
-//       title: string
-//       settings: ConversationSettings
-//       messages: Array<{
-//         id?: string
-//         idx: number
-//         role: MessageRole
-//         text: string
-//         files?: FileInput[]
-//         createdAt?: number
-//         updatedAt?: number
-//         meta?: any
-//       }>
-//     }) => {
-//       await replaceConversation(next.id, {
-//         title: next.title,
-//         settings: next.settings,
-//         messages: next.messages,
-//       })
-//     },
-//     []
-//   )
-
-//   const saveDebounced = useMemo(() => debounce(save, 1000), [save])
-
-//   return {
-//     data: live, // { conversation, messages } | null
-//     loading,
-//     save,
-//     saveDebounced,
-//     refresh: async () => {
-//       if (conversationId) {
-//         // no-op: useLiveQuery will auto-refresh on DB changes
-//         // but you can force a re-read by touching a no-op read:
-//         await db.conversations.get(conversationId)
-//       }
-//     },
-//   }
-// }
-
-// 2) Hook to list conversation metas for a sidebar
+// Hook to list conversation metas for a sidebar
 export function useConversationList() {
   const list = useLiveQuery(
     async () => {
@@ -569,10 +580,183 @@ export function useConversationList() {
   return list
 }
 
-// 3) Helper to fetch file Blob on demand (lazy loading)
-export function useFileLoader() {
-  const loadMeta = useCallback((fileId: string) => getFileMeta(fileId), [])
-  const loadData = useCallback((fileId: string) => getFileData(fileId), [])
-  const loadObjectURL = useCallback((fileId: string) => getFileObjectURL(fileId), [])
-  return { loadMeta, loadData, loadObjectURL }
+// ---------- Files ----------
+
+// Insert file meta+data; returns the new id
+export function saveFile(messageId: string, file: File): string {
+  const id = newId();
+
+  async function saveFileDB(id: string, file: File, messageId: string) {
+    // Read file data into an ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    const meta: FileMetaRow = {
+      id,
+      messageId,
+      name: file.name,
+      type: file.type || "application/octet-stream",
+      size: file.size,
+      // Optional: width, height, duration extraction later
+    };
+
+    const data: FileDataRow = {
+      id,
+      data: arrayBuffer
+    };
+
+    // Store in IndexedDB
+    await db.files_meta.add(meta);
+    await db.files_data.add(data);
+    console.log("File saved successfully")
+  }
+
+  // Fire and forget, but handle errors
+  saveFileDB(id, file, messageId)
+    .catch(err => console.error("Failed to save file:", err));
+
+  return id;
+}
+
+// Load only file metadata (no data)
+export async function loadFileMeta(fileId: string): Promise<FileMetaRow | null> {
+  return (await db.files_meta.get(fileId)) ?? null;
+}
+
+// Load file data */
+export async function loadFileData(fileId: string): Promise<ArrayBuffer | null> {
+  console.log("Loading file:", fileId);
+  const row = (await db.files_data.get(fileId)) ?? null;
+  return row?.data;
+}
+
+// Load file as a real File object using meta + data
+export async function loadFile(fileId: string): Promise<File | null> {
+  const meta = await loadFileMeta(fileId);
+  if (!meta) {
+    console.warn("File meta not found for:", fileId);
+    return null;
+  }
+  const data = await loadFileData(fileId);
+  if (!data) {
+    console.warn("File data not found for:", fileId);
+    return null;
+  }
+  // Construct a proper File object (Blob + filename + type)
+  return new File([data], meta.name, { type: meta.type });
+}
+// File Helper Functions
+export function useFiles() {
+  return {
+    loadFileMeta: useCallback(loadFileMeta, []),
+    loadFileData: useCallback(loadFileData, []),
+    loadFile: useCallback(loadFile, []),
+    saveFile: useCallback(saveFile, []),
+  };
+}
+
+// Hook to load file metadata in React
+export function useFileMeta(fileId : string) {
+  const [file, setFile] = useState<FileMetaRow | null>(null);
+  useEffect(() => {
+    if (!fileId) {
+      setFile(null);
+      return;
+    }
+    let cancelled = false;
+    async function checkUntilReady() {
+      while (!cancelled) {
+        const result = await loadFileMeta(fileId);
+        if (result) {
+          setFile(result);
+          break; // stop polling once we find it
+        }
+        // Wait 200ms before trying again
+        await new Promise(res => setTimeout(res, 200));
+      }
+    }
+    checkUntilReady();
+    return () => {
+      cancelled = true;
+    };
+  }, [fileId]);
+  return file;
+}
+
+// Hook to load actual file in React
+export function useFile(fileId : string) {
+  const [file, setFile] = useState<FileMetaRow | null>(null);
+  const [data, setData] = useState<ArrayBuffer | null>(null);
+  useEffect(() => {
+    if (!fileId) {
+      setFile(null);
+      return;
+    }
+    let cancelled = false;
+    async function checkMetaUntilReady() {
+      while (!cancelled) {
+        const meta = await loadFileMeta(fileId);
+        if (meta) {
+          setFile(meta);
+          setData(data);
+          break; // stop polling once we find it
+        }
+        // Wait 200ms before trying again
+        await new Promise(res => setTimeout(res, 200));
+      }
+    }
+    async function checkDataUntilReady() {
+      while (!cancelled) {
+        const data = await loadFileData(fileId);
+        if (data) {
+          setData(data);
+          break; // stop polling once we find it
+        }
+        // Wait 200ms before trying again
+        await new Promise(res => setTimeout(res, 200));
+      }
+    }
+    checkMetaUntilReady();
+    checkDataUntilReady
+    return () => {
+      cancelled = true;
+    };
+  }, [fileId]);
+  return {file, data};
+}
+
+export function useFileBase64(fileId: string) {
+  // Converts a file to base64 string format using FileReader
+  const [base64, setBase64] = useState<string | null>(null);
+  useEffect(() => {
+    if (!fileId) {
+      setBase64(null);
+      return;
+    }
+    let cancelled = false;
+    async function checkUntilReady() {
+      while (!cancelled) {
+        const file = await loadFile(fileId);
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (!cancelled) {
+              setBase64(reader.result as string);
+            }
+          };
+          reader.onerror = (err) => {
+            console.error("FileReader error:", err);
+            if (!cancelled) setBase64(null);
+          };
+          reader.readAsDataURL(file);
+          break; // stop polling once we find it
+        }
+        // Wait 200ms before trying again
+        await new Promise(res => setTimeout(res, 200));
+      }
+    }
+    checkUntilReady();
+    return () => {
+      cancelled = true;
+    };
+  }, [fileId]);
+  return base64;
 }

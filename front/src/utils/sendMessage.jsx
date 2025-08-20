@@ -5,7 +5,102 @@ import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/user
 import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
 import generateTitle from "../apis/generateTitle";
-import { updateConversationMeta } from "../db";
+import { loadFile, loadFileMeta } from "../db";
+import { readFileAsBase64 } from "./attachments";
+
+// Convert content items to standard OpenAI API
+export async function processContentItems(items, ignoreImages = false, ignoreAudio = false, ignoreFiles = false) {
+  const output = [];
+  for (const item of items) {
+    if (item.type === 'text') {
+      if (item.text && items.length === 1) {
+        //output.push(item.text); // Just the text itself
+        return item.text
+      }
+      output.push(item)
+      continue;
+    }
+
+    if (item.type === 'file' && item.fileId) {
+      const meta = await loadFileMeta(item.fileId);
+      if (!meta) {
+        console.warn(`File meta not found for fileId=${item.fileId}`);
+        continue;
+      }
+
+      // Ignore unsupported files
+      if (ignoreImages && file.type.startsWith("image/")) continue;
+      else if (ignoreAudio && file.type.startsWith("audio/")) continue;
+      else if (ignoreFiles
+        && !file.type.startsWith("image/")
+        && !file.type.startsWith("audio/"))
+        continue;
+
+      // Load supported files
+      const file = await loadFile(item.fileId);
+      if (!file) {
+        console.warn(`File data not found for fileId=${item.fileId}`);
+        continue;
+      }
+
+      const mimeType = meta.type.toLowerCase();
+
+      if (mimeType.startsWith('image')) {
+        // Get base64 data URL for image
+        const dataUrl = await readFileAsBase64(file);
+        output.push({
+          type: "image_url",
+          image_url: { url: dataUrl }
+        });
+      }
+
+      else if (mimeType.startsWith('audio')) {
+        // Base64 encode without the data prefix
+        const base64Data = await readFileAsBase64(file);
+        // Determine audio format from the MIME type
+        let format = 'mp3';
+        if (mimeType.includes('wav')) {
+          format = 'wav';
+        }
+        output.push({
+          type: "input_audio",
+          input_audio: {
+            data: base64Data,
+            format
+          }
+        });
+      }
+
+      // TODO handle generic files
+
+      else {
+        console.warn(`Unsupported file type: ${mimeType}`);
+      }
+    }
+  }
+
+  return output;
+}
+
+// Build OpenAI standard conversation from localState
+async function buildConversationForAPI(localState) {
+  const processedMessages = await Promise.all(
+    localState.messages.map(async (message) => {
+      if (Array.isArray(message.content)) {
+        return {
+          role: message.role,
+          content: await processContentItems(message.content)
+        };
+      }
+      return message;
+    })
+  );
+
+  return {
+    ...localState,
+    messages: processedMessages
+  };
+}
 
 const sendMessage = async ({
   localState,
@@ -389,28 +484,29 @@ const sendMessage = async ({
     //   processedConversation = updatedConversation;
     //   finalConversationForState = newConversation;
     // }
-    let conversationForAPI = {
-        ...localState,
-        messages: localState.messages.map((message) => {
-          // Handle simple text messages
-          if (Array.isArray(message.content)) {
-            // Only handle texts for now
-            return {
-              role: message.role,
-              content: message.content
-              .filter((item) => item.type === "text")
-              .map((item) => item.data)
-              .join("\n"),
-            };
-            // TODO handle images and files here
-          }
-          return message;
-        })
-    };
+    // let conversationForAPI = {
+    //     ...localState,
+    //     messages: localState.messages.map((message) => {
+    //       // Handle simple text messages
+    //       if (Array.isArray(message.content)) {
+    //         return {
+    //           role: message.role,
+    //           content: await processContentItems(message.content)
+    //           // .filter((item) => item.type === "text")
+    //           // .map((item) => item.text)
+    //           // .join("\n"),
+    //         };
+    //         // TODO handle images and files here
+    //       }
+    //       return message;
+    //     })
+    // };
+
+    let conversationForAPI = await buildConversationForAPI(localState);
 
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
-      ? localState.messages[0].content.data
+      ? localState.messages[0].content.text
       : "";
     if (memories.length > 0) {
       const memoryContext = memories.map((memory) => memory.text).join("\n");
@@ -446,9 +542,9 @@ const sendMessage = async ({
       if (conversationForAPI.settings?.enable_web_search) {
         conversationForAPI.settings.tools.push({ type: "web_search_preview" });
       }
-      if (conversationForAPI.settings.arcana?.id !== "") {
-        conversationForAPI.settings.arcana["limit"] = 3
-        // TODO add arcana limit in settingsPanel
+      // If arcana id exists and isn't empty string ""
+      if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
+        conversationForAPI.settings.arcana.limit = 3;
       }
     } else {
       delete conversationForAPI.settings.arcana;
@@ -461,8 +557,8 @@ const sendMessage = async ({
       // Add two new placeholder messages
       messages: [
         ...prev.messages,
-        { role: "assistant", content: [{ type: "text", data: ""}], loading: true },
-        { role: "user", content: [{ type: "text", data: "" }] },
+        { role: "assistant", content: [{ type: "text", text: ""}], loading: true },
+        { role: "user", content: [{ type: "text", text: "" }] },
       ],
     }));
 
@@ -477,7 +573,7 @@ const sendMessage = async ({
           messages[messages.length - 2] = {
             role: "assistant",
             content: [
-              { type: "text", data: currentResponse }
+              { type: "text", text: currentResponse }
             ],
             loading: true,
           };
@@ -498,10 +594,7 @@ const sendMessage = async ({
       setLocalState(prev => {
         const messages = [...prev.messages];
         messages[messages.length - 2] = {
-          role: "assistant",
-          content: [
-            { type: "text", data: response }
-          ],
+          ...messages[messages.length - 2],
           loading: false,
         };
         return { ...prev, messages };
@@ -516,6 +609,12 @@ const sendMessage = async ({
     } else if (response === 413) {
       // TODO clean up localState
       openModal("errorBadRequest")
+      return;
+    }
+    
+    // If not successful don't continue
+    if (!response) {
+      // TODO clean up localState
       return;
     }
 

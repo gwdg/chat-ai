@@ -34,7 +34,7 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
           content: [
             {
               type: "text",
-              data: value,
+              text: value,
             },
           ],
         },
@@ -60,12 +60,12 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
             type="text"
             name="systemPrompt"
             placeholder="Enter the system prompt here"
-            value={localState.messages[0].content[0].data}
+            value={localState.messages[0].content[0].text}
             onChange={handleInstructionsChange}
             onBlur={() => validateSystemPrompt()}
           />
         </div>
-        {(systemPromptError || !localState.messages[0].content[0].data) && (
+        {(systemPromptError || !localState.messages[0].content[0].text) && (
           <p className="text-yellow-600 text-xs">
             <Trans i18nKey="description.custom6" />
           </p>

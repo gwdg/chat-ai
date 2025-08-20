@@ -22,7 +22,7 @@ export default function MessageTextContainer({ message }) {
     // UseEffect to adjust height on content change
     useEffect(() => {
         requestAnimationFrame(() => adjustHeight());
-    }, [message.content[0].data, adjustHeight]);
+    }, [message.content[0]?.text, adjustHeight]);
 
     return (
         <pre
@@ -34,7 +34,7 @@ export default function MessageTextContainer({ message }) {
                 wordBreak: "break-word",
             }}
         >
-            {message.content[0].data}
+            {message.content[0]?.text}
         </pre>
     );
 }

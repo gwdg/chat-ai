@@ -41,7 +41,7 @@ const getDefaultState = () => {
     // Conditionally preserve memories
     user_settings: {
       memories: [],
-      timeout: 300,
+      timeout: 300000,
     },
   };
 };

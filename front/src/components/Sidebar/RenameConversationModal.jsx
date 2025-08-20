@@ -37,6 +37,7 @@ export default function RenameConversationModal({
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       handleRename();
+      e.preventDefault();
     } else if (e.key === "Escape") {
       onClose();
     }

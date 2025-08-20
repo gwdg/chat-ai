@@ -32,13 +32,8 @@ import WebSearchToggle from "./WebSearchToggle";
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
 const SettingsPanel = ({
-  selectedFiles,
-  setSelectedFiles,
-  modelsData,
-  onModelChange,
   localState,
   setLocalState,
-  setShowModalSession,
   userData,
 }) => {
   const conversations = useSelector(selectConversations);
@@ -100,29 +95,18 @@ const SettingsPanel = ({
   const hasFetchedModels = useRef(false);
 
   //Functions
-  // Remove a file from the selectedFiles array at specified index
-  const removeFile = (index) => {
-    // Create deep copy to avoid mutating state directly
-    const newFiles = JSON.parse(JSON.stringify(selectedFiles));
-    newFiles.splice(index, 1);
-    setSelectedFiles(newFiles);
-  };
+  // // 3. SIMPLIFIED startTour FUNCTION (no loading states)
+  // const startTour = useCallback(() => {
+  //   if (!showAdvOpt) {
+  //     // If settings panel isn't open, don't start tour yet
+  //     return;
+  //   }
 
-  // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
-  function formatFileSize(bytes) {
-    const units = ["Bytes", "KB", "MB", "GB", "TB"];
-    let size = bytes;
-    let unitIndex = 0;
-
-    // Keep dividing by 1024 until we reach the appropriate unit
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-
-    // Return formatted string with 2 decimal places and unit
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
-  }
+  //   // Start tour after zoom transition
+  //   setTimeout(() => {
+  //     setRunTour(true);
+  //   }, 450);
+  // }, [showAdvOpt]);
 
   // 4. UPDATED handleJoyrideCallback WITH VERSION UPDATE
   const handleJoyrideCallback = useCallback(
@@ -179,15 +163,12 @@ const SettingsPanel = ({
     // Update system prompt in conversation history
     let updatedMessages = localState.messages.map((item) => {
       if (item.role === "system") {
-        return {
-          ...item,
-          content: [
-            {
-              type: "text",
-              data: "You are a helpful assistant",
-            },
-          ],
-        };
+        return { ...item, content: [
+          {
+            type: "text",
+            text: "You are a helpful assistant"
+          }
+        ] };
       } else {
         return item;
       }
@@ -225,50 +206,6 @@ const SettingsPanel = ({
     }
   }, [isOpen]); // Only recalculate when dropdown opens/closes
 
-  // processing function
-  const handlePdfProcess = async (file, index) => {
-    try {
-      setProcessingFiles((prev) => new Set(prev).add(index));
-
-      // Pass the original File object
-      const result = await processFile(file.file);
-
-      if (result.success && result.content) {
-        setSelectedFiles((prevFiles) => {
-          const newFiles = [...prevFiles];
-          newFiles[index] = {
-            ...newFiles[index],
-            processed: true,
-            processedContent: result.content,
-          };
-          return newFiles;
-        });
-
-        notifySuccess("PDF processed successfully");
-      } else {
-        throw new Error(
-          result.error || "No content received from PDF processing"
-        );
-      }
-    } catch (error) {
-      setSelectedFiles((prevFiles) => {
-        const newFiles = [...prevFiles];
-        newFiles[index] = {
-          ...newFiles[index],
-          processed: false,
-        };
-        return newFiles;
-      });
-      console.error("PDF processing error:", error);
-      notifyError(`Failed to process PDF: ${error.message}`);
-    } finally {
-      setProcessingFiles((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(index);
-        return newSet;
-      });
-    }
-  };
 
   // Helper function to process URL settings
   const processUrlSettings = (urlSettings) => {
@@ -362,13 +299,6 @@ const SettingsPanel = ({
     notifyError,
     setLocalState,
   ]);
-
-  const handleBeforeUnload = (e) => {
-    if (selectedFiles.length > 0) {
-      e.preventDefault();
-      e.returnValue = "";
-    }
-  };
 
   // Handle importing chat from URL
   useEffect(() => {
