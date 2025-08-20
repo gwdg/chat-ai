@@ -9,6 +9,8 @@ import FormData from "form-data";
 import fs from "fs";
 import path from "path";
 
+import localModelData from "./models.json" with { type: "json" };
+
 const app = express();
 
 // Path to the external config file
@@ -130,8 +132,22 @@ app.get("/models", async (req, res) => {
       "inference-portal": "Chat AI",
     };
     const response = await fetch(url, { method: "GET", headers });
+
+    // combine response with models.json by joining on their id
+    const jsonData = await response.json();
+    const localMap = Object.fromEntries(localModelData.map(m => [m.id, m]));
+    jsonData.data = jsonData.data.map(
+      (model) => {
+        const localModel = localMap[model.id];
+        return {
+          ...model,
+          ...localModel,
+        };
+      }
+    );
+
     //console.log(await response.json())
-    res.status(200).json(await response.json());
+    res.status(200).json(jsonData);
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch models." });

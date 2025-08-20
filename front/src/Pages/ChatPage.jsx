@@ -41,6 +41,9 @@ import { useSyncConversation } from "../hooks/useSyncConversation";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 
+import { useGetUserQuery } from "../Redux/reducers/appApi";
+import ModelSelectorWrapper from "../components/Header/ModelSelectorWrapper";
+
 function ChatPage({ conversationId }) {
   const [showFooter, setShowFooter] = useState(false);
   const showSettings = useSelector(selectShowSettings);
@@ -58,7 +61,7 @@ function ChatPage({ conversationId }) {
   const lockConversation = useSelector(selectLockConversation);
 
   const modelsData = useUpdateModelsData();
-  const userData = useUpdateUserData();
+  const {data: userData} = useGetUserQuery(undefined, {refetchOnMountOrArgChange: true})
 
   const [localState, setLocalState] = useState(() => getDefaultConversation());
 
@@ -288,6 +291,10 @@ function ChatPage({ conversationId }) {
                   }
                 })()}`}
               >
+                <ModelSelectorWrapper
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
                 <div className="flex-1 min-h-0 overflow-y-auto flex flex-col relative w-full border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
                   <HallucinationWarning />
                   <Conversation
