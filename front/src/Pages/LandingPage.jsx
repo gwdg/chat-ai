@@ -46,9 +46,9 @@ const LandingPage = () => {
         <button
           onClick={() =>
             // navigate(`/`, { replace: false })
-            window.location.href = '/'
+            (window.location.href = "/")
           }
-          className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+          className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
         >
           <Trans i18nKey="description.landing.buttonText"></Trans>
         </button>

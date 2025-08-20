@@ -14,8 +14,8 @@ export default function Conversation({
   modelsData,
 }) {
   // Hooks
- 
-  const [copied, setCopied] = useState(false);;
+
+  const [copied, setCopied] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   // New state for scroll management
   const [userScrolledUp, setUserScrolledUp] = useState(false);
@@ -128,7 +128,9 @@ export default function Conversation({
 
     scrollTimeout.current = setTimeout(() => {
       const container = containerRef.current;
-      if (!container) {return;}
+      if (!container) {
+        return;
+      }
       const { scrollTop, scrollHeight, clientHeight } = container;
 
       // More sensitive scroll direction detection (only when not auto-scrolling)
@@ -329,7 +331,7 @@ export default function Conversation({
         {localState.messages.slice(0, -1)?.map((message, message_index) => (
           <>
             {/* User message */}
-            {(message.role === "user") && (
+            {message.role === "user" && (
               <MessageUser
                 localState={localState}
                 setLocalState={setLocalState}
@@ -337,7 +339,7 @@ export default function Conversation({
               />
             )}
             {/* Assistant message */}
-            {(message.role === "assistant") && (
+            {message.role === "assistant" && (
               <MessageAssistant
                 localState={localState}
                 setLocalState={setLocalState}
@@ -348,7 +350,7 @@ export default function Conversation({
             {message.role === "info" && (
               <div key={index} className="flex flex-col gap-1">
                 {message.content && (
-                  <div className="text-xs font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <div className="text-xs font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl">
                     {message.content?.data}
                   </div>
                 )}
@@ -360,24 +362,24 @@ export default function Conversation({
 
       {localState?.messages?.length <= 2 ? (
         // Empty conversation
-          <ImportConversationButton
+        <ImportConversationButton
+          localState={localState}
+          setLocalState={setLocalState}
+        />
+      ) : (
+        // Non-empty conversation
+        <div className="w-full bottom-0 sticky select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
+          {/* Export conversation button */}
+          <ClearHistoryButton
             localState={localState}
             setLocalState={setLocalState}
           />
-      ) : (
-        // Non-empty conversation
-        <div className="w-full bottom-0 sticky select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-xl">
-          {/* Export conversation button */}
-            <ClearHistoryButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
           {showScrollButton && (
             // Scroll to top button
             <button
               onClick={handleScrollButtonClick}
               aria-label="Scroll to bottom"
-              className="text-tertiary max-w-[130px] w-full p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+              className="cursor-pointer text-tertiary max-w-[130px] w-full p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-2xl flex items-center justify-center gap-1.5 transition-colors"
             >
               <p className="text-xs">Scroll to bottom</p>
             </button>
@@ -394,10 +396,7 @@ export default function Conversation({
               setLocalState={setLocalState}
             />
             {/* Undo button */}
-            <UndoButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
+            <UndoButton localState={localState} setLocalState={setLocalState} />
           </div>
         </div>
       )}

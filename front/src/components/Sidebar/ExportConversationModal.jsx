@@ -581,7 +581,7 @@ export default function ExportConversationModal({
           <button
             onClick={handleExport}
             type="button"
-            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none text-sm"
+            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none text-sm cursor-pointer"
           >
             <Trans i18nKey="description.export" />
           </button>

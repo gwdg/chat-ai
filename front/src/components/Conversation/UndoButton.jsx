@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import Tooltip from "../Others/Tooltip";
-import icon_undo from "../../assets/icons/undo.svg";
+import { Undo2 } from "lucide-react";
 
-export default function UndoButton ({localState, setLocalState}) {
+export default function UndoButton({ localState, setLocalState }) {
   const { t } = useTranslation();
   const loading = false; // TODO handle loading
 
@@ -23,12 +23,8 @@ export default function UndoButton ({localState, setLocalState}) {
         onClick={handleUndo}
         disabled={loading} // TODO handle loading
       >
-        <img
-          className="cursor-pointer h-[26px] w-[26px]"
-          src={icon_undo}
-          alt="undo"
-        />
+        <Undo2 className="cursor-pointer h-[26px] w-[26px] text-[#009EE0] hover:text-blue-600 transition-colors" />
       </button>
     </Tooltip>
   );
-};
+}

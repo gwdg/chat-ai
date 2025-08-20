@@ -91,7 +91,10 @@ export default function UserMemoryModal({
       <div className="p-4 border-b dark:border-border_dark -mx-4 mb-4">
         <div className="flex flex-col gap-3">
           <p className="text-sm font-medium dark:text-white">
-            <Trans i18nKey="description.memory.addNew" defaultValue="Add New Memory" />
+            <Trans
+              i18nKey="description.memory.addNew"
+              defaultValue="Add New Memory"
+            />
           </p>
           <div className="flex gap-2">
             <textarea
@@ -104,7 +107,7 @@ export default function UserMemoryModal({
             <button
               onClick={handleAddMemory}
               disabled={!newMemoryText.trim()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg transition-colors disabled:cursor-not-allowed text-sm"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed text-sm"
             >
               <Trans i18nKey="description.memory.add" defaultValue="Add" />
             </button>
@@ -115,14 +118,20 @@ export default function UserMemoryModal({
       {/* Saved Memories */}
       <div className="flex justify-between items-center mb-2">
         <p className="text-sm font-medium dark:text-white">
-          <Trans i18nKey="description.memory.savedMemories" defaultValue="Saved Memories" />
+          <Trans
+            i18nKey="description.memory.savedMemories"
+            defaultValue="Saved Memories"
+          />
         </p>
         {memories.length > 0 && (
           <button
             onClick={handleDeleteAll}
-            className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer"
           >
-            <Trans i18nKey="description.memory.deleteAll" defaultValue="Delete All" />
+            <Trans
+              i18nKey="description.memory.deleteAll"
+              defaultValue="Delete All"
+            />
           </button>
         )}
       </div>
@@ -132,10 +141,16 @@ export default function UserMemoryModal({
         {memories.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <p className="text-sm">
-              <Trans i18nKey="description.memory.noMemories" defaultValue="No memories saved yet." />
+              <Trans
+                i18nKey="description.memory.noMemories"
+                defaultValue="No memories saved yet."
+              />
             </p>
             <p className="text-xs mt-1">
-              <Trans i18nKey="description.memory.addFirst" defaultValue="Add your first memory above!" />
+              <Trans
+                i18nKey="description.memory.addFirst"
+                defaultValue="Add your first memory above!"
+              />
             </p>
           </div>
         ) : (
@@ -168,15 +183,21 @@ export default function UserMemoryModal({
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEditMemory(index)}
-                          className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                          className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors cursor-pointer"
                         >
-                          <Trans i18nKey="description.memory.save" defaultValue="Save" />
+                          <Trans
+                            i18nKey="description.memory.save"
+                            defaultValue="Save"
+                          />
                         </button>
                         <button
                           onClick={cancelEditing}
-                          className="px-3 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                          className="px-3 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
                         >
-                          <Trans i18nKey="description.memory.cancel" defaultValue="Cancel" />
+                          <Trans
+                            i18nKey="description.memory.cancel"
+                            defaultValue="Cancel"
+                          />
                         </button>
                       </div>
                     </div>
@@ -192,22 +213,30 @@ export default function UserMemoryModal({
                             i18nKey="description.memory.created"
                             defaultValue="Created: {{date}}"
                             values={{
-                              date: new Date(memory.createdAt).toLocaleDateString(),
+                              date: new Date(
+                                memory.createdAt
+                              ).toLocaleDateString(),
                             }}
                           />
                         </span>
                         <div className="flex gap-2">
                           <button
                             onClick={() => startEditing(index, memory)}
-                            className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                            className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors cursor-pointer"
                           >
-                            <Trans i18nKey="description.memory.edit" defaultValue="Edit" />
+                            <Trans
+                              i18nKey="description.memory.edit"
+                              defaultValue="Edit"
+                            />
                           </button>
                           <button
                             onClick={() => handleDeleteMemory(index)}
-                            className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                            className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer"
                           >
-                            <Trans i18nKey="description.memory.delete" defaultValue="Delete" />
+                            <Trans
+                              i18nKey="description.memory.delete"
+                              defaultValue="Delete"
+                            />
                           </button>
                         </div>
                       </div>

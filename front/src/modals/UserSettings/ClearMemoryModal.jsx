@@ -100,7 +100,7 @@ export default function ClearMemoryModal({
           {/* Cancel */}
           <button
             onClick={onClose}
-            className="text-gray-700 dark:text-white p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none transition-colors"
+            className="text-gray-700 dark:text-white p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer transition-colors"
           >
             <Trans i18nKey="description.memory.cancel" defaultValue="Cancel" />
           </button>
@@ -109,7 +109,7 @@ export default function ClearMemoryModal({
           <button
             onClick={handleClearAllMemories}
             disabled={memories.length === 0}
-            className="text-white p-3 bg-red-600 hover:bg-red-700 active:bg-red-800 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-white p-3 bg-red-600 hover:bg-red-700 active:bg-red-800 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trans
               i18nKey="description.memory.clearAll"

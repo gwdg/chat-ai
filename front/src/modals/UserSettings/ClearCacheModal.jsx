@@ -6,7 +6,10 @@ import { useToast } from "../../hooks/useToast";
 import { useCallback, useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 // Hooks
-import { getDefaultConversation, getDefaultSettings } from "../../utils/conversationUtils";
+import {
+  getDefaultConversation,
+  getDefaultSettings,
+} from "../../utils/conversationUtils";
 import { createConversation, resetDB } from "../../db";
 
 import BaseModal from "../BaseModal";
@@ -37,7 +40,7 @@ export default function ClearCacheModal({ isOpen, onClose }) {
       // await persistor.purge();
       // Dispatch RESET_ALL
       // Prepare to navigate
-      setIsCleared(true); 
+      setIsCleared(true);
       await resetDB();
       await dispatch({
         type: "RESET_ALL",
@@ -45,8 +48,10 @@ export default function ClearCacheModal({ isOpen, onClose }) {
           sync: true,
         },
       });
-      const newConversationId = await createConversation(getDefaultConversation());
-      console.log("New conversation", newConversationId)
+      const newConversationId = await createConversation(
+        getDefaultConversation()
+      );
+      console.log("New conversation", newConversationId);
       navigate(`/chat/${newConversationId}`, { replace: true });
     } catch (error) {
       notifyError("Failed to clear chats: " + error.message);
@@ -70,7 +75,7 @@ export default function ClearCacheModal({ isOpen, onClose }) {
       <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm mt-2">
         {/* Cancel button */}
         <button
-          className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+          className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={onClose}
         >
           <Trans i18nKey="description.cache2" />
@@ -78,7 +83,7 @@ export default function ClearCacheModal({ isOpen, onClose }) {
 
         {/* Clear cache button */}
         <button
-          className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+          className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={clearCache}
         >
           <Trans i18nKey="description.cache3" />

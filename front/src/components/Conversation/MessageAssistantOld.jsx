@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import MarkdownRenderer from "./MessageAssistant/MarkdownRenderer";
 import Typing from "../Others/Typing";
-import icon_copy from "../../assets/icons/copy.svg";
-import icon_check from "../../assets/icons/check.svg";
-import icon_edit from "../../assets/icons/edit.svg";
+import { Edit, Copy, Check } from "lucide-react";
+
 import ErrorBoundary from "./MessageAssistant/ErrorBoundary";
 import { RotateCw } from "lucide-react";
 
@@ -233,7 +232,7 @@ export default React.memo(
             <div className="flex flex-col items-start py-2">
               <button
                 onClick={() => handleResendClick(index)}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-tertiary rounded-lg hover:bg-tertiary/90 transition-colors"
+                className="cursor-pointer flex items-center gap-2 px-4 py-2 text-sm text-white bg-tertiary rounded-lg hover:bg-tertiary/90 transition-colors"
                 disabled={isLoading}
               >
                 <RotateCw className="w-4 h-4" />
@@ -268,13 +267,13 @@ export default React.memo(
                   <div className="flex justify-end w-full gap-2">
                     <button
                       onClick={() => setEditingResponseIndex(-1)}
-                      className="text-gray-500 dark:text-gray-400 px-4 py-2 rounded-2xl"
+                      className="text-gray-500 dark:text-gray-400 px-4 py-2 rounded-2xl cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={() => {}}//() => handleResponseSave(index)}
-                      className="bg-tertiary text-white rounded-2xl px-4 py-2"
+                      onClick={() => {}} //() => handleResponseSave(index)}
+                      className="bg-tertiary text-white rounded-2xl px-4 py-2 cursor-pointer"
                     >
                       Save
                     </button>
@@ -290,7 +289,7 @@ export default React.memo(
                         </p>
                         <button
                           onClick={() => handleResendClick(index)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-tertiary rounded-lg hover:bg-tertiary/90 transition-colors"
+                          className="cursor-pointer flex items-center gap-2 px-4 py-2 text-sm text-white bg-tertiary rounded-lg hover:bg-tertiary/90 transition-colors"
                           disabled={isLoading}
                         >
                           <RotateCw className="w-4 h-4" />
@@ -332,25 +331,22 @@ export default React.memo(
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => handleResponseEdit(index, msg.response)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer"
                         title="Edit"
                         disabled={isLoading}
                       >
-                        <img
-                          src={icon_edit}
-                          alt="edit"
-                          className="h-20px] w-[20px]"
-                        />
+                        <Edit className="h-[20px] w-[20px] text-[#009EE0]" />
                       </button>
                       <button
                         onClick={handleCopy}
                         title="Copy response (without references)"
+                        className="cursor-pointer"
                       >
-                        <img
-                          src={copied && indexChecked === index ? icon_check : icon_copy}
-                          alt="copy"
-                          className="h-[18px] w-[18px]"
-                        />
+                        {copied && indexChecked === index ? (
+                          <Check className="h-[18px] w-[18px] text-green-500" />
+                        ) : (
+                          <Copy className="h-[18px] w-[18px] text-[#009EE0]" />
+                        )}
                       </button>
                     </div>
                   </div>

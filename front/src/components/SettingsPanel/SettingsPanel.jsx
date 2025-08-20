@@ -1,35 +1,32 @@
 /* eslint-disable no-unused-vars */
 //Libraries
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Joyride from "react-joyride-react-19";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import Joyride from "react-joyride-react-19";
 
 //Components
 import ArcanaContainer from "./ArcanaContainer";
-import TemperatureSlider from "./TemperatureSlider";
-import TopPSlider from "./TopPSlider";
 import MemorySelector from "./MemorySelector";
-import ToolsToggle from "./ToolsToggle";
-import SystemPromptContainer from "./SystemPromptContainer";
 import ShareSettingsButton from "./ShareSettingsButton";
+import SystemPromptContainer from "./SystemPromptContainer";
+import TemperatureSlider from "./TemperatureSlider";
+import ToolsToggle from "./ToolsToggle";
+import TopPSlider from "./TopPSlider";
 
 //Redux
-import {
-  selectConversations,
-} from "../../Redux/reducers/conversationsSlice";
 import { processFile } from "../../apis/processFile";
+import { selectConversations } from "../../Redux/reducers/conversationsSlice";
 import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 
 // Hooks
 import { useImportConversation } from "../../hooks/useImportConversation";
-import { getDefaultSettings } from "../../utils/conversationUtils";
 import { useToast } from "../../hooks/useToast";
 import {
   selectShowSettings,
-  selectShowSidebar,
-  toggleSettings } from "../../Redux/reducers/interfaceSettingsSlice";
+  toggleSettings
+} from "../../Redux/reducers/interfaceSettingsSlice";
 import WebSearchToggle from "./WebSearchToggle";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
@@ -127,19 +124,6 @@ const SettingsPanel = ({
     return `${size.toFixed(2)} ${units[unitIndex]}`;
   }
 
-  // // 3. SIMPLIFIED startTour FUNCTION (no loading states)
-  // const startTour = useCallback(() => {
-  //   if (!showAdvOpt) {
-  //     // If settings panel isn't open, don't start tour yet
-  //     return;
-  //   }
-
-  //   // Start tour after zoom transition
-  //   setTimeout(() => {
-  //     setRunTour(true);
-  //   }, 450);
-  // }, [showAdvOpt]);
-
   // 4. UPDATED handleJoyrideCallback WITH VERSION UPDATE
   const handleJoyrideCallback = useCallback(
     (data) => {
@@ -195,12 +179,15 @@ const SettingsPanel = ({
     // Update system prompt in conversation history
     let updatedMessages = localState.messages.map((item) => {
       if (item.role === "system") {
-        return { ...item, content: [
-          {
-            type: "text",
-            data: "You are a helpful assistant"
-          }
-        ] };
+        return {
+          ...item,
+          content: [
+            {
+              type: "text",
+              data: "You are a helpful assistant",
+            },
+          ],
+        };
       } else {
         return item;
       }
@@ -222,21 +209,21 @@ const SettingsPanel = ({
     // if (systemPromptError) {
     //   setSystemPromptError("");
     // }
-  }
+  };
 
   const dropdownRef = useRef(null);
-    // Calculate dropdown direction based on available space
-    useEffect(() => {
-        if (dropdownRef.current) {
-            // Get dropdown position relative to viewport
-            const rect = dropdownRef.current.getBoundingClientRect();
-            // Calculate available space above and below
-            const spaceBelow = window.innerHeight - rect.bottom;
-            const spaceAbove = rect.top;
-            // Set direction based on which has more space
-            setDirection(spaceBelow > spaceAbove ? "down" : "up");
-        }
-    }, [isOpen]); // Only recalculate when dropdown opens/closes
+  // Calculate dropdown direction based on available space
+  useEffect(() => {
+    if (dropdownRef.current) {
+      // Get dropdown position relative to viewport
+      const rect = dropdownRef.current.getBoundingClientRect();
+      // Calculate available space above and below
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      // Set direction based on which has more space
+      setDirection(spaceBelow > spaceAbove ? "down" : "up");
+    }
+  }, [isOpen]); // Only recalculate when dropdown opens/closes
 
   // processing function
   const handlePdfProcess = async (file, index) => {
@@ -425,146 +412,6 @@ const SettingsPanel = ({
     notifySuccess,
   ]);
 
-  // // Handle Arcana parameters from URL
-  // useEffect(() => {
-  //   const handleArcanaParams = async (modelsList) => {
-  //     const arcanaID = searchParams.get("arcana");
-  //     // const arcanaKey = searchParams.get("arcana_key");
-  //     const modelParam = searchParams.get("model");
-
-  //     // Check if we have an arcana ID and model param (key is now optional)
-  //     if (
-  //       arcanaID &&
-  //       modelParam &&
-  //       modelsList?.length > 0 &&
-  //       location.pathname === "/chat" &&
-  //       !hasProcessedArcana.current
-  //     ) {
-  //       try {
-  //         hasProcessedArcana.current = true;
-
-  //         const formattedModelParam = modelParam
-  //           .toLowerCase()
-  //           .replace(/\s+/g, "-");
-
-  //         const matchedModel = modelsList.find(
-  //           (m) => m.id === formattedModelParam && m.input.includes("arcana")
-  //         );
-
-  //         if (!matchedModel) {
-  //           throw new Error("Model not found or does not support Arcana.");
-  //         }
-
-  //         // Create arcana object with optional key
-  //         const arcanaObject = {
-  //           id: decodeURIComponent(arcanaID),
-  //           // Only include key if it exists, otherwise use null or empty string
-  //           // depending on what your backend expects for missing key
-  //           // key: arcanaKey ? decodeURIComponent(arcanaKey) : null,
-  //         };
-
-  //         // Create custom settings for the new conversation
-  //         const customSettings = {
-  //           // ["model-name"]: matchedModel.name,
-  //           model: matchedModel,
-  //           temperature: 0,
-  //           top_p: 0.05,
-  //         };
-
-  //         // Create a new conversation with arcana settings
-  //         const newConversationAction = dispatch(
-  //           addConversation(null, customSettings)
-  //         );
-
-  //         const newConversationId = newConversationAction.meta.id;
-
-  //         // Update the newly created conversation with arcana data
-  //         dispatch(
-  //           updateConversation({
-  //             id: newConversationId,
-  //             updates: {
-  //               arcana: arcanaObject,
-  //             },
-  //           })
-  //         );
-
-  //         // Update local state to match the new conversation
-  //         setLocalState((prev) => ({
-  //           ...prev,
-  //           arcana: arcanaObject,
-  //           settings: {
-  //             ...prev.settings,
-  //             ...customSettings,
-  //           },
-  //         }));
-
-  //         // Safe scrollTop access (if relevant)
-  //         const chatContainer = document.getElementById("chat-container");
-  //         if (chatContainer) {
-  //           chatContainer.scrollTop = chatContainer.scrollHeight;
-  //         }
-
-  //         // Navigate to the new conversation
-  //         navigate(`/chat/${newConversationId}`, { replace: true });
-  //       } catch (error) {
-  //         hasProcessedArcana.current = false; // Reset flag if failed
-  //         notifyError(
-  //           "Invalid model or arcana parameters. Redirecting to default chat."
-  //         );
-  //         navigate(`/chat/${currentConversationId}`, { replace: true });
-  //       }
-  //     }
-  //   };
-
-  //   // const fetchModelsAndProcess = async () => {
-  //   //   if (hasFetchedModels.current) return;
-
-  //   //   try {
-  //   //     hasFetchedModels.current = true;
-  //   //     const modelsData = await getModelsData();
-  //   //     if (modelsData === 401) {
-  //   //       openModal('errorSessionExpired');
-  //   //     }
-  //   //     if (!modelsData || modelsData.length === 0) {
-  //   //       throw new Error("Failed to fetch models.");
-  //   //     }
-  //   //     handleArcanaParams(modelsData);
-  //   //   } catch (error) {
-  //   //     notifyError("Failed to fetch models. Please try again.");
-  //   //     await sleep(10000);
-  //   //     hasFetchedModels.current = false;
-  //   //   }
-  //   // };
-
-  //   // if (
-  //   //   conversations.length > 0 &&
-  //   //   !hasFetchedModels.current &&
-  //   //   !hasProcessedArcana.current
-  //   // ) {
-  //   //   fetchModelsAndProcess();
-  //   // }
-  // }, [
-  //   searchParams,
-  //   location.pathname,
-  //   conversations,
-  //   currentConversationId,
-  //   dispatch,
-  //   navigate,
-  //   notifyError,
-  //   setLocalState,
-  //   setShowModalSession,
-  // ]);
-
-  // useEffect(() => {
-  //   // Auto-start tour if version is 2 and settings panel is open
-  //   if (currentVersion === 2 && showAdvOpt && !runTour) {
-  //     // Small delay to ensure panel is fully rendered
-  //     setTimeout(() => {
-  //       startTour();
-  //     }, 800); // Give time for panel animation to complete
-  //   }
-  // }, [currentVersion, showAdvOpt, runTour, startTour]);
-
   return (
     <>
       <Joyride
@@ -637,86 +484,59 @@ const SettingsPanel = ({
         }}
       />
 
-      <div
-        className={`relative transition-all duration-300 ease-in-out
-          ${
-            showSettings
-              ? "opacity-100 desktop:w-[40%] w-full flex transform translate-y-0"
-              : "opacity-0 max-h-0 transform -translate-y-4 overflow-hidden"
-          }`}
-      >
-        <div
-          className={`relative w-full flex-col items-center p-1 mobile:p-0 text-tertiary flex gap-4 mobile:max-h-[40px]`}
-        >
+      <div className="w-full h-fit">
+        <div className="relative w-full flex-col items-center text-tertiary flex gap-4">
           {/* Settings Panel */}
-          <div
-            className={`${
-              showSettings
-                ? "flex desktop:static absolute bottom-0 left-0"
-                : "hidden"
-            } w-full rounded-2xl bg-white dark:bg-bg_secondary_dark`}
-          >
-            <div
-              className={`transform transition-all duration-300 ${
-                showSettings
-                  ? "translate-y-0 opacity-100"
-                  : "translate-y-full opacity-0"
-              } flex flex-col gap-4 p-3 sm:p-4 h-fit w-full`}
-            >
-              
+          <div className="w-full rounded-2xl bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark border border-gray-200 dark:border-gray-800">
+            <div className="flex flex-col gap-4 p-3 sm:p-4 lg:p-6 h-fit w-full">
               {/* Warning for external models */}
-              { localState.settings?.model?.name?.toLowerCase().includes("external") && (
+              {localState.settings?.model?.name
+                ?.toLowerCase()
+                .includes("external") && (
                 <div className="text-yellow-600 text-sm mb-3 select-none">
-                  <Trans i18nKey={
-                    userData?.org == "MPG" 
-                      ? "description.warning_settings_mpg" 
-                      : "description.warning_settings"
+                  <Trans
+                    i18nKey={
+                      userData?.org == "MPG"
+                        ? "description.warning_settings_mpg"
+                        : "description.warning_settings"
                     }
-                    />
+                  />
                 </div>
               )}
-
               {/* Use Tools – checkbox */}
               <ToolsToggle
-                localState = {localState}
-                setLocalState = {setLocalState}
+                localState={localState}
+                setLocalState={setLocalState}
               />
-
               <WebSearchToggle
                 localState={localState}
                 setLocalState={setLocalState}
               />
-
               {/* Arcana box */}
               <ArcanaContainer
                 localState={localState}
                 setLocalState={setLocalState}
               />
-
               {/* temperature Slider */}
               <TemperatureSlider
                 localState={localState}
                 setLocalState={setLocalState}
               />
-
               {/* top_p Slider */}
               <TopPSlider
                 localState={localState}
                 setLocalState={setLocalState}
               />
-                
               {/* Memory Selector */}
               <MemorySelector
                 localState={localState}
                 setLocalState={setLocalState}
               />
-              
               {/* System Prompt */}
               <SystemPromptContainer
                 localState={localState}
                 setLocalState={setLocalState}
               />
-
               <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
                 {/* Hide Options Button */}
                 <div
@@ -739,7 +559,7 @@ const SettingsPanel = ({
 
                 {/* Reset Default Button */}
                 <button
-                  className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none"
+                  className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none cursor-pointer"
                   type="reset"
                   onClick={resetDefault}
                 >

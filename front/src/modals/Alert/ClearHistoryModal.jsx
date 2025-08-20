@@ -53,7 +53,7 @@ export default function ClearHistoryModal({
       <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm mt-4">
         {/* Cancel button */}
         <button
-          className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+          className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={onClose}
         >
           <Trans i18nKey="description.cache2" />
@@ -61,7 +61,7 @@ export default function ClearHistoryModal({
 
         {/* Clear history button */}
         <button
-          className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+          className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={() => {clearHistory(); onClose();}}
         >
           <Trans i18nKey="description.cache3" />

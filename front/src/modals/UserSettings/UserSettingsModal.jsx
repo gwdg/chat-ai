@@ -24,27 +24,17 @@ export default function UserSettingsModal({
       maxWidth="max-w-3xl"
     >
       {/* User Info Container */}
-      {userData? (
-        <UserInfoContainer
-          userData={userData}
-        /> ) : (<></>
-        )}
+      {userData ? <UserInfoContainer userData={userData} /> : <></>}
 
       <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1 min-h-0">
         {/* Default Model Selector */}
-        {modelsData? (
-        <DefaultModelSelector
-          modelsData={modelsData}
-        /> ) : (<></>
-        )}
+        {modelsData ? <DefaultModelSelector modelsData={modelsData} /> : <></>}
 
         {/* Timeout Setter */}
         <TimeoutSetter />
 
         {/* User Memory Management */}
-        <UserMemoryContainer
-          localState={localState}
-        />
+        <UserMemoryContainer localState={localState} />
 
         {/* Clear Cache */}
         <div className="flex flex-col gap-2">
@@ -64,14 +54,13 @@ export default function UserSettingsModal({
                         flex items-center justify-center gap-2
                         shadow-md hover:shadow-lg 
                         active:scale-95
-                        transition-all duration-200 text-sm"
+                        transition-all duration-200 text-sm cursor-pointer"
               onClick={() => openModal("clearCache")}
             >
               <Trans i18nKey="description.file2" />
             </button>
           </div>
         </div>
-
       </div>
     </BaseModal>
   );

@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import Tooltip from "../Others/Tooltip";
-import icon_cross_sm from "../../assets/icons/cross_sm.svg";
+import { X } from "lucide-react"
 
-export default function ClearHistoryButton (localState, setLocalState) {
+export default function ClearHistoryButton(localState, setLocalState) {
   const { t } = useTranslation();
   const loading = false; // TODO handle loading
 
@@ -25,7 +25,7 @@ export default function ClearHistoryButton (localState, setLocalState) {
     if (localState.dontShow.dontShowAgain) {
       clearHistory();
     } else {
-      openModal("clearHistory", {clearHistory})
+      openModal("clearHistory", { clearHistory })
     }
   };
 
@@ -36,10 +36,8 @@ export default function ClearHistoryButton (localState, setLocalState) {
         disabled={loading}
         onClick={handleClearHistory}
       >
-        <img
-          className="cursor-pointer h-[22px] w-[22px]"
-          src={icon_cross_sm}
-          alt="clear"
+        <X
+          className="cursor-pointer h-[22px] w-[22px] text-[#009EE0] hover:text-red-500 transition-colors"
         />
       </button>
     </Tooltip>

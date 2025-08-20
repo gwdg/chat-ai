@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import ContainerModal from "./ContainerModal";
-import cross from "../assets/cross.svg"; // Close icon
+import { X } from "lucide-react";
 
 const CODE_EXTENSIONS = [
   ".py",
@@ -297,7 +297,7 @@ const AudioPlayer = ({ file }) => {
           <div className="flex justify-center">
             <button
               onClick={togglePlayPause}
-              className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-full p-3 transition-colors"
+              className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-full p-3 transition-colors cursor-pointer"
             >
               {isPlaying ? (
                 <svg
@@ -904,17 +904,15 @@ const PreviewModal = ({ file, onClose }) => {
             {/* Download button */}
             <button
               onClick={handleDownload}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 rounded-2xl text-white font-medium text-sm transition-colors"
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 rounded-2xl text-white font-medium text-sm transition-colors cursor-pointer"
               aria-label="Download file"
               title="Download file"
             >
               Download
             </button>
-
-            <img
-              src={cross}
+            <X
+              className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity text-[#009EE0]"
               alt="close"
-              className="h-[24px] w-[24px] cursor-pointer hover:opacity-80 transition-opacity"
               onClick={onClose}
             />
           </div>
@@ -925,7 +923,7 @@ const PreviewModal = ({ file, onClose }) => {
           <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 mx-2">
             <button
               onClick={() => setActiveTab("original")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`cursor-pointer px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "original"
                   ? "border-blue-500 text-blue-600 dark:text-blue-400"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
@@ -935,7 +933,7 @@ const PreviewModal = ({ file, onClose }) => {
             </button>
             <button
               onClick={() => setActiveTab("processed")}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`cursor-pointer px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "processed"
                   ? "border-blue-500 text-blue-600 dark:text-blue-400"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"

@@ -1,12 +1,61 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
-import icon_cross_sm from "../../assets/icons/cross_sm.svg";
+import { X } from "lucide-react";
 
 // --------------------
 // Utility + helper components
 // --------------------
-const CODE_EXTENSIONS = [".py",".js",".java",".cpp",".c",".h",".cs",".rb",".php",".go",".rs",".swift",".kt",".ts",".jsx",".tsx",".html",".json",".txt",".csv",".pdf",".md",".tex",".xml",".yaml",".yml",".ini",".toml",".properties",".css",".scss",".sass",".less",".sh",".ps1",".pl",".lua",".r",".m",".mat",".asm",".sql",".ipynb",".rmd",".dockerfile",".proto",".cfg",".bat"];
+const CODE_EXTENSIONS = [
+  ".py",
+  ".js",
+  ".java",
+  ".cpp",
+  ".c",
+  ".h",
+  ".cs",
+  ".rb",
+  ".php",
+  ".go",
+  ".rs",
+  ".swift",
+  ".kt",
+  ".ts",
+  ".jsx",
+  ".tsx",
+  ".html",
+  ".json",
+  ".txt",
+  ".csv",
+  ".pdf",
+  ".md",
+  ".tex",
+  ".xml",
+  ".yaml",
+  ".yml",
+  ".ini",
+  ".toml",
+  ".properties",
+  ".css",
+  ".scss",
+  ".sass",
+  ".less",
+  ".sh",
+  ".ps1",
+  ".pl",
+  ".lua",
+  ".r",
+  ".m",
+  ".mat",
+  ".asm",
+  ".sql",
+  ".ipynb",
+  ".rmd",
+  ".dockerfile",
+  ".proto",
+  ".cfg",
+  ".bat",
+];
 
 const isCodeFile = (filename) => {
   try {
@@ -34,8 +83,16 @@ const CSVTable = ({ content }) => {
     }
   }, [content]);
 
-  if (error) return <div className="p-4 text-red-500 dark:text-red-400">Error: {error}</div>;
-  if (!parsedData?.length) return <div className="p-4 text-gray-600 dark:text-gray-400">No data available</div>;
+  if (error)
+    return (
+      <div className="p-4 text-red-500 dark:text-red-400">Error: {error}</div>
+    );
+  if (!parsedData?.length)
+    return (
+      <div className="p-4 text-gray-600 dark:text-gray-400">
+        No data available
+      </div>
+    );
 
   const headers = Object.keys(parsedData[0]);
 
@@ -45,7 +102,10 @@ const CSVTable = ({ content }) => {
         <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
           <tr>
             {headers.map((header, index) => (
-              <th key={index} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border border-gray-200 dark:border-gray-600">
+              <th
+                key={index}
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border border-gray-200 dark:border-gray-600"
+              >
                 {header}
               </th>
             ))}
@@ -55,7 +115,10 @@ const CSVTable = ({ content }) => {
           {parsedData.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {headers.map((header, colIndex) => (
-                <td key={colIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
+                <td
+                  key={colIndex}
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600"
+                >
                   {row[header] || "-"}
                 </td>
               ))}
@@ -80,7 +143,8 @@ const AudioPlayer = ({ file }) => {
 
 export default function PreviewModal({ isOpen, onClose, file }) {
   const [loadError, setLoadError] = useState(null);
-  const getTextContent = (file) => (typeof file === "string") ? file : file?.content || file?.text || "";
+  const getTextContent = (file) =>
+    typeof file === "string" ? file : file?.content || file?.text || "";
 
   const getFileType = (file) => {
     if (file?.type === "audio" || file?.isAudio) return "audio";
@@ -96,11 +160,11 @@ export default function PreviewModal({ isOpen, onClose, file }) {
     if (file?.name) {
       const ext = file.name.toLowerCase().split(".").pop();
       if (ext === "pdf") return "pdf";
-      if (["jpg","jpeg","png","gif","webp"].includes(ext)) return "image";
-      if (["mp4","avi","mov"].includes(ext)) return "video";
-      if (["mp3","wav","ogg"].includes(ext)) return "audio";
+      if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "image";
+      if (["mp4", "avi", "mov"].includes(ext)) return "video";
+      if (["mp3", "wav", "ogg"].includes(ext)) return "audio";
       if (["csv"].includes(ext)) return "csv";
-      if (["md","markdown"].includes(ext)) return "markdown";
+      if (["md", "markdown"].includes(ext)) return "markdown";
       if (["txt"].includes(ext)) return "text";
     }
     return "unknown";
@@ -112,7 +176,8 @@ export default function PreviewModal({ isOpen, onClose, file }) {
     const textContent = getTextContent(file);
     if (textContent && typeof textContent === "string") {
       const firstLine = textContent.split("\n")[0];
-      if (firstLine && firstLine.includes(":")) return firstLine.split(":")[0].trim();
+      if (firstLine && firstLine.includes(":"))
+        return firstLine.split(":")[0].trim();
     }
     return "Preview";
   }, [file]);
@@ -120,11 +185,14 @@ export default function PreviewModal({ isOpen, onClose, file }) {
   const pdfUrl = useMemo(() => {
     try {
       if (getFileType(file) !== "pdf") return null;
-      if (file.originalFile instanceof File) return URL.createObjectURL(file.originalFile);
+      if (file.originalFile instanceof File)
+        return URL.createObjectURL(file.originalFile);
       if (file.file instanceof File) return URL.createObjectURL(file.file);
       if (file.data && typeof file.data === "string") {
         const byteCharacters = atob(file.data);
-        const byteArray = new Uint8Array([...byteCharacters].map(c=>c.charCodeAt(0)));
+        const byteArray = new Uint8Array(
+          [...byteCharacters].map((c) => c.charCodeAt(0))
+        );
         const blob = new Blob([byteArray], { type: "application/pdf" });
         return URL.createObjectURL(blob);
       }
@@ -154,13 +222,18 @@ export default function PreviewModal({ isOpen, onClose, file }) {
       if (fileType === "audio") {
         if (!name.includes(".")) name += `.${file.format || "wav"}`;
         const base64Data = file.text || file.data;
-        const byteArray = new Uint8Array([...atob(base64Data)].map(c=>c.charCodeAt(0)));
+        const byteArray = new Uint8Array(
+          [...atob(base64Data)].map((c) => c.charCodeAt(0))
+        );
         blob = new Blob([byteArray], { type: `audio/${file.format || "wav"}` });
         downloadUrl = URL.createObjectURL(blob);
       } else if (fileType === "pdf") {
         if (file.processed && file.processedContent) {
-          if (!name.includes(".")) name = name.replace(".pdf","") + "_processed.txt";
-          blob = new Blob([file.processedContent], { type: "text/plain;charset=utf-8" });
+          if (!name.includes("."))
+            name = name.replace(".pdf", "") + "_processed.txt";
+          blob = new Blob([file.processedContent], {
+            type: "text/plain;charset=utf-8",
+          });
           downloadUrl = URL.createObjectURL(blob);
         } else if (pdfUrl) {
           downloadUrl = pdfUrl;
@@ -192,20 +265,30 @@ export default function PreviewModal({ isOpen, onClose, file }) {
 
   const renderContent = () => {
     try {
-      if (loadError) return <div className="p-4 text-red-500 dark:text-red-400">Error: {loadError}</div>;
-      if (!file) return <div className="p-4 text-gray-600 dark:text-gray-400">No file to preview</div>;
+      if (loadError)
+        return (
+          <div className="p-4 text-red-500 dark:text-red-400">
+            Error: {loadError}
+          </div>
+        );
+      if (!file)
+        return (
+          <div className="p-4 text-gray-600 dark:text-gray-400">
+            No file to preview
+          </div>
+        );
 
       const fileType = getFileType(file);
       const textContent = getTextContent(file);
       // Audio Player
-       if (fileType === "audio") {
+      if (fileType === "audio") {
         return (
           <div className="flex justify-center items-center min-h-[400px]">
             <AudioPlayer file={file} />
           </div>
         );
       }
-      
+
       // Image Viewer
       if (fileType === "image") {
         return (
@@ -247,15 +330,26 @@ export default function PreviewModal({ isOpen, onClose, file }) {
               {/* Show processed status */}
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-3 mb-4 mx-4">
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-5 h-5 text-green-600 dark:text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <div>
                     <p className="text-sm font-medium text-green-800 dark:text-green-200">
                       Processed PDF Content
                     </p>
                     <p className="text-xs text-green-600 dark:text-green-300">
-                      Text has been extracted and is searchable in conversations.
+                      Text has been extracted and is searchable in
+                      conversations.
                     </p>
                   </div>
                 </div>
@@ -366,7 +460,7 @@ export default function PreviewModal({ isOpen, onClose, file }) {
           </div>
         );
       }
-      
+
       // CSV Table Viewer
       if (fileType === "csv") {
         return <CSVTable content={file.content || textContent} />;
@@ -412,7 +506,11 @@ export default function PreviewModal({ isOpen, onClose, file }) {
       );
     } catch (error) {
       console.error("Error rendering content:", error);
-      return <div className="p-4 text-red-500 dark:text-red-400">Error displaying content: {error.message}</div>;
+      return (
+        <div className="p-4 text-red-500 dark:text-red-400">
+          Error displaying content: {error.message}
+        </div>
+      );
     }
   };
 
@@ -432,14 +530,18 @@ export default function PreviewModal({ isOpen, onClose, file }) {
           {/* Download File Button */}
           <button
             onClick={handleDownload}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 rounded-2xl text-white font-medium text-sm transition-colors"
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 rounded-2xl text-white font-medium text-sm transition-colors cursor-pointer"
             aria-label="Download file"
           >
             Download
           </button>
           {/* Close Button */}
           <button onClick={onClose} aria-label="Close">
-            <img src={icon_cross_sm} alt="Close" className="h-[24px] w-[24px]" />
+            <X
+              className="h-[20px] w-[20px] cursor-pointer text-[#009EE0]"
+              alt="cross"
+              onClick={handleClose}
+            />{" "}
           </button>
         </div>
       </div>

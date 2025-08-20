@@ -21,7 +21,7 @@ const ThinkingBlock = memo(({ children, autoExpand = false }) => {
     <div className="my-4 rounded-lg border border-tertiary">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center w-full p-3 text-xs bg-blue-50 dark:bg-blue-900/30 rounded-t-lg hover:bg-blue-100 dark:hover:bg-blue-900/50"
+        className="cursor-pointer flex items-center w-full p-3 text-xs bg-blue-50 dark:bg-blue-900/30 rounded-t-lg hover:bg-blue-100 dark:hover:bg-blue-900/50"
         aria-expanded={isOpen}
         aria-controls="thinking-content"
       >

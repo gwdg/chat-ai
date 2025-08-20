@@ -12,9 +12,7 @@ const NotFoundPage = () => {
   const currentConversationId = useSelector(
     (state) => state.current_conversation
   );
-  const conversations = useSelector(
-    (state) => state.conversations
-  );
+  const conversations = useSelector((state) => state.conversations);
 
   const handleGoToChat = async () => {
     // If current conversation exists, go to it
@@ -29,15 +27,13 @@ const NotFoundPage = () => {
     //   return;
     // }
 
-    
-
     // If no conversations at all, create a new one
     // const newId = uuidv4();
     // dispatch(resetStore(newId));
     // TODO
 
     // Force persistence to ensure other tabs see this change
-    dispatch(setCurrentConversation("reset"))
+    dispatch(setCurrentConversation("reset"));
     await persistor.flush();
     // Go to empty chat
     navigate(`/chat`);
@@ -85,7 +81,7 @@ const NotFoundPage = () => {
 
         <button
           onClick={handleGoToChat}
-          className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+          className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
         >
           <Trans i18nKey="description.notFound.buttonText" />
         </button>

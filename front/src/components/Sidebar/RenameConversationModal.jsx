@@ -7,10 +7,12 @@ import { updateConversationMeta } from "../../db";
 export default function RenameConversationModal({
   id,
   isOpen,
-  onClose
+  onClose,
+  currentTitle,
 }) {
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(currentTitle || "");
   const [error, setError] = useState("");
+
   // const dispatch = useDispatch();
   const { t } = useTranslation();
 
@@ -76,7 +78,7 @@ export default function RenameConversationModal({
         {/* Buttons */}
         <div className="flex justify-end gap-3 w-full pt-2">
           <button
-            className="p-3 border dark:border-border_dark rounded-2xl
+            className="cursor-pointer p-3 border dark:border-border_dark rounded-2xl
                      text-black dark:text-white bg-gray-100 dark:bg-gray-800
                      hover:bg-gray-200 dark:hover:bg-gray-700
                      min-w-[100px] select-none"
@@ -86,7 +88,7 @@ export default function RenameConversationModal({
           </button>
 
           <button
-            className="p-3 bg-tertiary text-white rounded-2xl
+            className="cursor-pointer p-3 bg-tertiary text-white rounded-2xl
                      hover:bg-tertiary/90 min-w-[100px]
                      select-none shadow-lg dark:shadow-dark"
             onClick={handleRename}

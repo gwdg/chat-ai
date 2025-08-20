@@ -1,30 +1,33 @@
 /* eslint-disable no-unused-vars */
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 //Assets
-import icon_cross_sm from "../../assets/icons/cross_sm.svg";
-import icon_cross from "../../assets/icons/cross.svg";
-import icon_settings from "../../assets/icons/settings.svg";
-import icon_support_vision from "../../assets/icons/support_vision.svg";
-import icon_support_video from "../../assets/icons/support_video.svg";
-import icon_send from "../../assets/icons/send.svg";
-import icon_attach from "../../assets/icons/attach.svg";
-import icon_mic from "../../assets/icons/mic.svg";
-import icon_stop from "../../assets/icons/stop.svg";
-import icon_file_uploaded from "../../assets/icons/file_uploaded.svg";
+import {
+  Eye,
+  FileCheck,
+  Mic,
+  Paperclip,
+  Send,
+  Settings,
+  Square,
+  Video,
+  X,
+} from "lucide-react";
 
-import { abortRequest } from "../../apis/chatCompletions";
-import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { setLockConversation } from "../../Redux/reducers/conversationsSlice";
+import { abortRequest } from "../../apis/chatCompletions";
+import Tooltip from "../Others/Tooltip";
 
 import { processFile } from "../../apis/processFile";
-import { selectAllMemories } from "../../Redux/reducers/userSettingsReducer";
-import { selectShowSettings, toggleSettings } from "../../Redux/reducers/interfaceSettingsSlice";
-import sendMessage from "../../utils/sendMessage";
-import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
+import { useModal } from "../../modals/ModalContext";
+import {
+  selectShowSettings,
+  toggleSettings,
+} from "../../Redux/reducers/interfaceSettingsSlice";
+import { selectAllMemories } from "../../Redux/reducers/userSettingsReducer";
+import sendMessage from "../../utils/sendMessage";
 
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
@@ -74,10 +77,12 @@ function Prompt({
   const [isLongPress, setIsLongPress] = useState(false);
   const [loadingResend, setLoadingResend] = useState(false);
   // Prompt is actually the last message's first content
-  const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
-    ? localState.messages[localState.messages.length - 2]?.loading || false
-    : false;
-  const prompt = localState.messages[localState.messages.length - 1].content[0].data;
+  const loading =
+    localState.messages[localState.messages.length - 2]?.role === "assistant"
+      ? localState.messages[localState.messages.length - 2]?.loading || false
+      : false;
+  const prompt =
+    localState.messages[localState.messages.length - 1].content[0].data;
 
   // Update partial local state while preserving other values
   const setPrompt = (prompt) => {
@@ -85,12 +90,14 @@ function Prompt({
       const messages = [...prev.messages]; // shallow copy
       messages[messages.length - 1] = {
         role: "user",
-        content: [ { // Replace first content item
+        content: [
+          {
+            // Replace first content item
             type: "text",
-            data: prompt
+            data: prompt,
           }, // Keep other content items
-          ...prev.messages[messages.length - 1].content.slice(1)
-        ]
+          ...prev.messages[messages.length - 1].content.slice(1),
+        ],
       };
       return { ...prev, messages };
     });
@@ -106,9 +113,9 @@ function Prompt({
     });
   };
 
-  const isAudioSupported = (currentModel?.input?.includes("audio") || false)
-  const isVideoSupported = (currentModel?.input?.includes("video") || false)
-  const isImageSupported = (currentModel?.input?.includes("image") || false)
+  const isAudioSupported = currentModel?.input?.includes("audio") || false;
+  const isVideoSupported = currentModel?.input?.includes("video") || false;
+  const isImageSupported = currentModel?.input?.includes("image") || false;
 
   // Main function to fetch and process LLM response
   const getRes = async () => {
@@ -136,7 +143,7 @@ function Prompt({
       videoFiles,
       textFiles,
       notifyError,
-      notifySuccess
+      notifySuccess,
     });
   };
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
@@ -1447,11 +1454,7 @@ function Prompt({
                           "hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30",
                         iconBg: "bg-blue-500 dark:bg-blue-600",
                         icon: (
-                          <img
-                            className="h-4 w-4 brightness-0 invert"
-                            src={icon_mic}
-                            alt={file.name}
-                          />
+                          <Mic className="h-4 w-4 text-white" alt={file.name} />
                         ),
                         badge: file.format?.toUpperCase() || "AUDIO",
                       };
@@ -1483,11 +1486,7 @@ function Prompt({
                           "hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800/30 dark:hover:to-purple-700/30",
                         iconBg: "bg-purple-500 dark:bg-purple-600",
                         icon: (
-                          <img
-                            className="h-4 w-4 brightness-0 invert"
-                            src={icon_support_video}
-                            alt="video"
-                          />
+                          <Video className="h-4 w-4 text-white" alt="video" />
                         ),
                         badge: "VIDEO",
                       };
@@ -1511,9 +1510,8 @@ function Prompt({
                           "hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700/60 dark:hover:to-gray-600/60",
                         iconBg: "bg-gray-500 dark:bg-gray-600",
                         icon: (
-                          <img
-                            className="h-4 w-4 brightness-0 invert"
-                            src={icon_file_uploaded}
+                          <FileCheck
+                            className="h-4 w-4 text-white"
                             alt="uploaded"
                           />
                         ),
@@ -1563,7 +1561,7 @@ function Prompt({
                           };
                         }
 
-                        openModal("preview", {file: previewFile} );
+                        openModal("preview", { file: previewFile });
                       }}
                     >
                       <div className="p-2 w-full h-full flex flex-col relative">
@@ -1607,17 +1605,16 @@ function Prompt({
 
                         {/* Remove button - positioned at card corner */}
                         <button
-                          className="absolute top-1 right-1 p-1 hover:bg-white/90 dark:hover:bg-black/70 rounded-full flex-shrink-0 focus:outline-none transition-colors"
+                          className="cursor-pointer absolute top-1 right-1 p-1 hover:bg-white/90 dark:hover:bg-black/70 rounded-full flex-shrink-0 focus:outline-none transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             removeFile(index);
                           }}
                           aria-label="Remove file"
                         >
-                          <img
-                            src={icon_cross}
+                          <X
+                            className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity text-[#009EE0]"
                             alt="remove"
-                            className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity"
                           />
                         </button>
 
@@ -1660,7 +1657,7 @@ function Prompt({
                                   e.stopPropagation();
                                   handleDocumentProcess(file, index); // Use the new generic function
                                 }}
-                                className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-medium transition-colors w-full"
+                                className="cursor-pointer px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-medium transition-colors w-full"
                               >
                                 Process {file.fileType.toUpperCase()}
                               </button>
@@ -1677,7 +1674,7 @@ function Prompt({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-4 w-full">
+      <div className="flex flex-col gap-4 w-full overflow-x-hidden">
         <div
           className={`relative select-none ${
             selectedFiles.length > 0 ? "border dark:border-border_dark" : ""
@@ -1755,10 +1752,9 @@ function Prompt({
                   }}
                   disabled={loading || loadingResend}
                 >
-                  <img
-                    className="cursor-pointer h-[25px] w-[25px]"
-                    src={icon_cross_sm}
-                    alt="clear"
+                  <X
+                    className="h-[25px] w-[25px] cursor-pointer text-[#009EE0]"
+                    alt="cross"
                   />
                 </button>
               </Tooltip>
@@ -1772,9 +1768,8 @@ function Prompt({
                     className="flex h-[25px] w-[25px] cursor-pointer"
                     onClick={() => dispatch(toggleSettings())}
                   >
-                    <img
-                      className="cursor-pointer h-[25px] w-[25px]"
-                      src={icon_settings}
+                    <Settings
+                      className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
                       alt="settings"
                     />
                   </button>
@@ -1795,9 +1790,8 @@ function Prompt({
                   onClick={handleClick}
                   disabled={loading || loadingResend}
                 >
-                  <img
-                    className="cursor-pointer h-[25px] w-[25px]"
-                    src={icon_attach}
+                  <Paperclip
+                    className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
                     alt="upload"
                   />
                 </button>
@@ -1822,9 +1816,8 @@ function Prompt({
                       onClick={() => hiddenFileInputImage.current?.click()}
                       disabled={loading || loadingResend}
                     >
-                      <img
-                        className="cursor-pointer h-[25px] w-[25px]"
-                        src={icon_support_vision}
+                      <Eye
+                        className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
                         alt="attach file"
                       />
                     </button>
@@ -1861,24 +1854,19 @@ function Prompt({
                         <div className="w-3 h-3 bg-white rounded-sm"></div>
                       ) : (
                         // Microphone icon when not recording
-                        <img
-                          className="h-[18px] w-[18px]"
-                          src={icon_mic}
-                          alt="microphone"
-                        />
+                        <Mic className="h-4 w-4 text-white" alt={file.name} />
                       )}
                     </button>
                   </Tooltip>
                 </>
               )}
-              
-              {loading 
-              ? ( <Tooltip text={t("description.pause")}>
+
+              {loading ? (
+                <Tooltip text={t("description.pause")}>
                   {/* Abort Button */}
                   <button className="h-[30px] w-[30px] cursor-pointer">
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={icon_stop}
+                    <Square
+                      className="cursor-pointer h-[30px] w-[30px] text-[#009EE0]"
                       alt="abort"
                       onClick={handleAbort}
                     />
@@ -1888,9 +1876,8 @@ function Prompt({
                 <Tooltip text={t("description.send")}>
                   {/* Send Button */}
                   <button className="h-[30px] w-[30px] cursor-pointer">
-                    <img
-                      className="cursor-pointer h-[30px] w-[30px]"
-                      src={icon_send}
+                    <Send
+                      className="cursor-pointer h-[30px] w-[30px] text-[#009EE0]"
                       alt="send"
                       onClick={(event) => {
                         handleSubmit(event);

@@ -27,7 +27,7 @@ export default function UnsentFilesModal({ isOpen, onClose, intentionalRefresh }
       {/* Action buttons */}
       <div className="flex flex-col md:flex-row gap-2 justify-center w-full">
         <button
-          className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+          className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={handleRefresh}
         >
           Refresh

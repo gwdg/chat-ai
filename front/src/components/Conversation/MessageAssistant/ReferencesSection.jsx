@@ -348,7 +348,7 @@ const ProgressiveReferenceItem = memo(
             {hasContent && isRendered && !isPartial && (
               <button
                 onClick={copyReference}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors cursor-pointer"
                 title="Copy reference"
               >
                 {copySuccess ? (
@@ -578,7 +578,7 @@ const ReferencesSection = memo(
                   disabled={!isFullyLoaded || references.length === 0}
                   className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                     isFullyLoaded && references.length > 0
-                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md"
+                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md cursor-pointer"
                       : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                   }`}
                   aria-label="Copy all references"

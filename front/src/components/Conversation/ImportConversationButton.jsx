@@ -3,9 +3,9 @@ import { useRef } from "react";
 import Tooltip from "../Others/Tooltip";
 import { useImportConversation } from "../../hooks/useImportConversation";
 
-import icon_import from "../../assets/icons/import.svg";
+import { Upload } from "lucide-react"
 
-export default function ImportConversationButton ({localState, setLocalState}) {
+export default function ImportConversationButton({ localState, setLocalState }) {
   const { t } = useTranslation();
   const loading = false; // TODO handle loading
   const importConversation = useImportConversation();
@@ -71,10 +71,8 @@ export default function ImportConversationButton ({localState, setLocalState}) {
           onClick={handleClickJSON}
           disabled={loading}
         >
-          <img
-            className="h-[26px] w-[26px]"
-            src={icon_import}
-            alt="import"
+          <Upload
+            className="h-[26px] w-[26px] text-[#009EE0]"
           />
         </button>
       </Tooltip>

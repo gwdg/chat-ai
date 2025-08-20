@@ -34,7 +34,11 @@ export default function ShareSettingsModal({
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} titleKey="description.help_title">
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      titleKey="description.help_title"
+    >
       {/* Intro Text */}
       <div className="pt-0 pb-2">
         <p className="dark:text-white text-black text-justify text-sm">
@@ -91,7 +95,7 @@ export default function ShareSettingsModal({
       {/* Action Buttons */}
       <div className="flex flex-col md:flex-row gap-2 justify-end w-full mt-4">
         <button
-          className="text-white p-3 bg-green-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none"
+          className="text-white p-3 bg-green-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={handleShareSettings}
         >
           <Trans i18nKey="description.exportSettings2" />

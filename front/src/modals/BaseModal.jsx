@@ -25,8 +25,11 @@ export default function BaseModal({
 }) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={isForced? () => {}: onClose}>
-        
+      <Dialog
+        as="div"
+        className="relative z-[1000]"
+        onClose={isForced ? () => {} : onClose}
+      >
         {/* Overlay */}
         <Transition.Child
           as={Fragment}
@@ -41,9 +44,8 @@ export default function BaseModal({
         </Transition.Child>
 
         {/* Centered Modal */}
-        <div className="fixed inset-0 overflow-y-auto">
+        <div className="fixed z-[999] inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
-            
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-200"
@@ -56,7 +58,6 @@ export default function BaseModal({
               <Dialog.Panel
                 className={`select-none rounded-2xl bg-white dark:bg-black w-full ${maxWidth} shadow-lg`}
               >
-                
                 {/* Header */}
                 <div className="flex justify-between items-center px-4 pt-4">
                   <Dialog.Title className="text-sm text-tertiary">
@@ -78,16 +79,11 @@ export default function BaseModal({
                 </div>
 
                 {/* Content */}
-                <div className="p-4 pt-0 flex flex-col gap-0">
-                  {children}
-                </div>
-
+                <div className="p-4 pt-0 flex flex-col gap-0">{children}</div>
               </Dialog.Panel>
             </Transition.Child>
-
           </div>
         </div>
-
       </Dialog>
     </Transition>
   );

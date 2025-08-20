@@ -1,31 +1,21 @@
 import { useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { Trans } from "react-i18next";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
-  selectConversations,
   selectCurrentConversationId,
   selectLockConversation,
 } from "../../Redux/reducers/conversationsSlice";
-import { useCallback, useEffect } from "react";
 
-// Asset imports
-import icon_cross_sm from "../../assets/icons/cross_sm.svg";
-import icon_edit from "../../assets/icons/edit.svg";
-import icon_arrow_left from "../../assets/icons/arrow_left.svg";
-import { persistor } from "../../Redux/store/store";
-import { getDefaultConversation, getDefaultSettings } from "../../utils/conversationUtils";
+import { ChevronLeft, Edit, X } from "lucide-react";
+import { useConversationList } from "../../db";
 import { useModal } from "../../modals/ModalContext";
-import { createConversation, useConversationList } from "../../db";
+import { getDefaultSettings } from "../../utils/conversationUtils";
 
-function Sidebar({
-    localState,
-    setLocalState,
-    onClose
-  }) {
+function Sidebar({ localState, setLocalState, onClose, handleNewChat }) {
   const { openModal } = useModal();
-  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [hoveredId, setHoveredId] = useState(null);
 
   const conversations = useConversationList();
   const currentConversationId = useSelector(selectCurrentConversationId);
@@ -33,62 +23,37 @@ function Sidebar({
   const defaultSettings = useRef(getDefaultSettings);
 
   const handleSelectConversation = (id) => {
-      if (lockConversation || id === currentConversationId) return;
-      navigate(`/chat/${id}`);
-      // Only close sidebar on mobile (below custom breakpoint 1081px)
-      if (window.innerWidth < 1081) {
-        onClose?.();
-      }
+    if (lockConversation || id === currentConversationId) return;
+    navigate(`/chat/${id}`);
+    if (window.innerWidth < 1081) {
+      onClose?.();
     }
-
-  const handleNewChat = useCallback(async () => {
-    // Temporarily disable interaction
-    dispatch({ type: "conversations/setLockConversation", payload: true });
-    // Add default conversation
-    const newId = await createConversation(getDefaultConversation());
-    if (newId) {
-      // Force persistence to localStorage BEFORE navigation
-      persistor.flush().then(() => {
-        // Select new conversation
-        handleSelectConversation(newId);
-        // // Re-enable interaction after navigation
-        // setTimeout(() => {
-        //   dispatch({ type: "conversations/setLockConversation", payload: false });
-        // }, 300);
-      });
-    } else {
-      // If no ID was created (unlikely), still re-enable interaction
-      // dispatch({ type: "conversations/setLockConversation", payload: false });
-    }
-  }, [dispatch, navigate, onClose, lockConversation, defaultSettings]);
+  };
 
   return (
     <div
-      className="flex flex-col bg-white dark:bg-bg_secondary_dark rounded-2xl shadow-lg dark:shadow-dark select-none h-full"
+      className="flex flex-col bg-white dark:bg-bg_secondary_dark desktop:rounded-lg dark:shadow-dark shadow-lg border border-gray-200 dark:border-gray-800 select-none h-full w-full max-w-[280px] lg:max-w-[245px] transition-all duration-300 ease-in-out"
       style={{
         WebkitTapHighlightColor: "transparent",
       }}
     >
-      {/* Mobile Header */}
-      <div className="custom:hidden flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 h-14 flex-shrink-0">
-        <p className="text-base font-medium text-black dark:text-white">
-          Conversations
-        </p>
-        {/* <button
+      {/* Desktop Header with close button */}
+      <div className="hidden desktop:flex items-center justify-end px-3 py-2">
+        <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors touch-manipulation w-8 h-8 flex items-center justify-center"
-          style={{ WebkitTapHighlightColor: "transparent" }}
+          className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          title="Close sidebar"
         >
-          <img src={icon_arrow_left} alt="close" className="h-4 w-4" />
-        </button> */}
+          <ChevronLeft className="w-5 h-5 text-tertiary" />
+        </button>
       </div>
 
       {/* New Chat Button */}
-      <div className="flex-shrink-0 p-3 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex-shrink-0 m-3 border-b border-gray-100 dark:border-gray-800 pb-3">
         <button
           onClick={handleNewChat}
           disabled={lockConversation}
-          className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-medium transition-colors touch-manipulation ${
+          className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors ${
             lockConversation ? "cursor-not-allowed opacity-50" : ""
           }`}
           style={{
@@ -97,7 +62,7 @@ function Sidebar({
           }}
         >
           <svg
-            className="h-4 w-4"
+            className="h-4 w-4 flex-shrink-0"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -109,89 +74,110 @@ function Sidebar({
               d="M12 4v16m8-8H4"
             />
           </svg>
-          <span>
+          <span className="truncate">
             <Trans i18nKey="description.newConversation" />
           </span>
         </button>
       </div>
 
-      {/* Conversations List - This should take available space */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      {/* Conversations List */}
+      <div className="flex-1 mx-3 min-h-0 overflow-hidden">
         <div
-          className="h-full p-3 overflow-y-auto overscroll-behavior-contain"
+          className="h-full overflow-y-auto overflow-x-hidden overscroll-behavior-contain"
           style={{
             WebkitOverflowScrolling: "touch",
           }}
         >
-          <div className="space-y-1">
+          <div className="space-y-1 pb-3">
             {conversations.map((conv) => {
               const id = conv.id;
               if (!conv) return null;
+              const isActive = id === currentConversationId;
+              const isHovered = hoveredId === id;
+
               return (
                 <div
                   key={id}
                   onClick={() => handleSelectConversation(id)}
-                  className={`group px-3 py-2 rounded-xl relative touch-manipulation transition-colors ${
-                    lockConversation ? "cursor-not-allowed" : "cursor-pointer"
+                  onMouseEnter={() => setHoveredId(id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  className={`group relative px-3 py-3 rounded-2xl cursor-pointer touch-manipulation transition-all duration-200 ${
+                    lockConversation ? "cursor-not-allowed opacity-60" : ""
                   } ${
-                    id === currentConversationId
-                      ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white border border-gray-200 dark:border-gray-700"
+                    isActive
+                      ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
                       : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
                   }`}
-                  data-current={id === currentConversationId ? "true" : "false"}
+                  data-current={isActive ? "true" : "false"}
                   style={{
                     WebkitTapHighlightColor: "transparent",
-                    minHeight: "48px",
+                    minHeight: "52px",
                   }}
                 >
-                  <div className="flex items-center justify-between relative">
-                    {/* Title with proper truncation */}
+                  {/* Title container */}
+                  <div className="flex items-center h-full w-full">
                     <div
-                      className="flex-1 overflow-hidden pr-2 min-w-0"
-                      title={conv.title}
+                      className="flex-1 overflow-hidden min-w-0 mr-12"
+                      title={conv.title || "Untitled Conversation"}
                     >
-                      <div className="truncate text-xs font-medium">
+                      <div className="truncate text-xs font-medium leading-relaxed">
                         {conv.title || "Untitled Conversation"}
                       </div>
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex-shrink-0 flex items-center gap-1 desktop:opacity-0 desktop:group-hover:opacity-100 opacity-100">
+                    <div
+                      className={`absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 transition-opacity duration-200 ${
+                        window.innerWidth < 1024 || isHovered
+                          ? "opacity-100"
+                          : "opacity-0"
+                      } group-hover:opacity-100`}
+                    >
                       <button
                         onClick={(e) => {
                           if (lockConversation) return;
                           e.stopPropagation();
-                          openModal("renameConversation", {id, localState, setLocalState})
+                          openModal("renameConversation", {
+                            id,
+                            currentTitle: conv.title || "Untitled Conversation",
+                            localState,
+                            setLocalState,
+                          });
                         }}
                         disabled={lockConversation}
-                        className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation w-7 h-7 flex items-center justify-center ${
-                          lockConversation ? "cursor-not-allowed" : ""
+                        className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center ${
+                          lockConversation
+                            ? "cursor-not-allowed opacity-50"
+                            : "hover:scale-110 active:scale-95 cursor-pointer"
                         }`}
                         style={{
                           WebkitTapHighlightColor: "transparent",
                         }}
+                        title="Edit conversation"
                       >
-                        <img
-                          src={icon_edit}
-                          alt="edit"
-                          className="w-3.5 h-3.5"
-                        />
+                        <Edit className="w-3 h-3 text-[#009EE0]" alt="edit" />
                       </button>
                       <button
                         onClick={(e) => {
                           if (lockConversation) return;
                           e.stopPropagation();
-                          openModal("deleteConversation", {id, conversations})
+                          openModal("deleteConversation", {
+                            id,
+                            conversations,
+                          });
                         }}
                         disabled={lockConversation}
-                        className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation w-7 h-7 flex items-center justify-center ${
-                          lockConversation ? "cursor-not-allowed" : ""
+                        className={`p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center ${
+                          lockConversation
+                            ? "cursor-not-allowed opacity-50"
+                            : "hover:scale-110 active:scale-95 cursor-pointer"
                         }`}
                         style={{
                           WebkitTapHighlightColor: "transparent",
                         }}
+                        title="Delete conversation"
                       >
-                        <img src={icon_cross_sm} alt="delete" className="w-3.5 h-3.5" />
+                        <X className="h-3.5 w-3.5 text-[#009EE0]" alt="cross" />
                       </button>
                     </div>
                   </div>
@@ -202,14 +188,14 @@ function Sidebar({
         </div>
       </div>
 
-      {/* Import Persona button - Fixed at bottom */}
-      <div className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
+      {/* Import Persona button */}
+      <div className="flex-shrink-0 m-3 border-t border-gray-200 dark:border-gray-800 pt-3">
         <button
           onClick={() => {
             openModal("importPersona");
           }}
           disabled={lockConversation}
-          className={`w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-medium transition-colors touch-manipulation ${
+          className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors ${
             lockConversation ? "cursor-not-allowed opacity-50" : ""
           }`}
           style={{
@@ -217,7 +203,7 @@ function Sidebar({
             minHeight: "44px",
           }}
         >
-          <span>
+          <span className="truncate">
             <Trans i18nKey="description.importPersona" />
           </span>
         </button>

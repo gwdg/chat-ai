@@ -227,7 +227,7 @@ export default function ImportPersonaModal({
             {pathHistory.length > 0 && (
               <button
                 onClick={handleBackClick}
-                className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-700 dark:text-white"
+                className="cursor-pointer flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-700 dark:text-white"
               >
                 <img src={icon_arrow_left} alt="" className="h-3 w-3" />
                 <Trans i18nKey="description.persona.back" />
@@ -265,7 +265,7 @@ export default function ImportPersonaModal({
             </div>
             <button
               onClick={() => fetchContents(currentPath)}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors text-xs"
+              className="cursor-pointer px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors text-xs"
             >
               <Trans i18nKey="description.persona.retry" />
             </button>
@@ -298,7 +298,8 @@ export default function ImportPersonaModal({
                           item.subtitle
                         ) : (
                           <>
-                            <Trans i18nKey="description.persona.configuration" /> • {formatFileSize(item.size)}
+                            <Trans i18nKey="description.persona.configuration" />{" "}
+                            • {formatFileSize(item.size)}
                           </>
                         )}
                       </div>
@@ -322,15 +323,18 @@ export default function ImportPersonaModal({
           <button
             onClick={handleInsertFromClipboard}
             disabled={loading}
-            className="px-4 py-2 bg-tertiary hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
+            className="cursor-pointer px-4 py-2 bg-tertiary hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
           >
             <Trans i18nKey="description.persona.importFromClipboard" />
           </button>
           <button
             onClick={() =>
-              window.open(`https://github.com/${repoOwner}/${repoName}`, "_blank")
+              window.open(
+                `https://github.com/${repoOwner}/${repoName}`,
+                "_blank"
+              )
             }
-            className="px-4 py-2 bg-tertiary hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
+            className="cursor-pointer px-4 py-2 bg-tertiary hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
           >
             <Trans i18nKey="description.persona.createOwn" />
           </button>

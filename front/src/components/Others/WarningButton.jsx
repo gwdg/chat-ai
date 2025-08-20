@@ -1,7 +1,7 @@
 import { Trans } from "react-i18next";
 import { useState } from "react";
 
-const WarningButton = ({ localState, userData}) => {
+const WarningButton = ({ localState, userData }) => {
   // Add safety check for model
   if (
     !localState.settings ||
@@ -22,7 +22,7 @@ const WarningButton = ({ localState, userData}) => {
                    dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 
                    border border-yellow-300 dark:border-yellow-600 
                    rounded-md text-yellow-800 dark:text-yellow-300 
-                   text-sm font-medium transition-colors shadow-md"
+                   text-sm font-medium transition-colors shadow-md cursor-pointer"
       >
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
           <path
@@ -42,14 +42,20 @@ const WarningButton = ({ localState, userData}) => {
                         rounded-lg shadow-xl min-w-80 max-w-96"
         >
           <div className="text-yellow-600 dark:text-yellow-400 text-sm leading-relaxed">
-            <Trans i18nKey={userData?.org == "MPG" ? "description.warning_settings_mpg" : "description.warning_settings"} />
+            <Trans
+              i18nKey={
+                userData?.org == "MPG"
+                  ? "description.warning_settings_mpg"
+                  : "description.warning_settings"
+              }
+            />
           </div>
           <button
             onClick={() => setShowWarning(false)}
             className="absolute top-2 right-2 
                        text-gray-500 hover:text-gray-700 
                        dark:text-gray-400 dark:hover:text-white 
-                       transition-colors"
+                       transition-colors cursor-pointer"
             title="Close"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
