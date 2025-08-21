@@ -19,6 +19,7 @@ export interface ExtendedModelInfo extends Omit<BaseModelInfo, 'extended'> {
   contextLength: string;
   numParameters: string;
   description: string;
+  external: boolean;
 };
 
 export type ModelInfo = BaseModelInfo | ExtendedModelInfo;

@@ -15,6 +15,10 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@reduxjs/toolkit": "^2.8.2",
+    "@fortawesome/fontawesome-svg-core": "^7.0.0",
+    "@fortawesome/free-regular-svg-icons": "^7.0.0",
+    "@fortawesome/free-solid-svg-icons": "^7.0.0",
+    "@fortawesome/react-fontawesome": "^0.2.3",
     "@headlessui/react": "^2.2.7",
     "@tailwindcss/vite": "^4.1.12",
     "dexie": "^4.0.11",
@@ -37,7 +41,6 @@
     "react-router-dom": "^7.8.0",
     "react-speech-recognition": "^4.0.1",
     "react-syntax-highlighter": "^15.6.1",
-    "react-table": "^7.8.0",
     "react-toastify": "^11.0.5",
     "redux": "^5.0.1",
     "redux-persist": "^6.0.0",
@@ -51,5 +54,10 @@
     "openai": "^5.12.2",
     "vite": "^7.1.2",
     "@vitejs/plugin-react": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "typescript": "^5.9.2"
   }
 }

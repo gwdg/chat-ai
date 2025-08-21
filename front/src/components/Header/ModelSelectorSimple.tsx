@@ -3,19 +3,25 @@ import { useState, useMemo, useEffect, useRef, memo } from "react";
 import Tooltip from "../Others/Tooltip";
 import { useUpdateModelsData } from "../../hooks/useUpdateModelsData";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { useSelector } from "react-redux";
 import {
   faChevronDown,  faMagnifyingGlass, faBrain, faImage, faVideo
 } from '@fortawesome/free-solid-svg-icons'
-
+import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 import DemandIndicator from "./DemandIndicator";
 import type { BaseModelInfo } from "../../types/models";
 
-export default function ModelSelectorSimple({modelsList}: {modelsList: BaseModelInfo[]}) {
-  const [selectedModel, setSelectedModel] = useState<BaseModelInfo | null>(null);
+export default function ModelSelectorSimple({currentModelId, modelsList, onChange}: {currentModelId: string | undefined, modelsList: BaseModelInfo[], onChange: (model: BaseModelInfo) => void}) {
+  const userDefaultModel = useSelector(selectDefaultModel);
+
+  const selectedModel = modelsList ? modelsList.find(model => model.id === currentModelId) || modelsList.find(model => model.id === userDefaultModel) || modelsList[0] || null : null;
+
+  function setSelectedModel(model: BaseModelInfo | null) {
+    onChange && onChange(model);
+  }
+
   const [searchQuery, setSearchQuery] = useState("");
-
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
   const [sortBy, setSortBy] = useState("name-asc"); // name-asc, name-desc, date-asc, date-desc, params-asc, params-desc
 
   // Dropdown close on click outside logic
@@ -32,15 +38,6 @@ export default function ModelSelectorSimple({modelsList}: {modelsList: BaseModel
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  // setSelectedModel to the first element of the modelList if its loaded
-  useEffect(() => {
-    if (modelsList !== undefined && modelsList.length > 0) {
-      const foundModel = modelsList.find((model) => model.id === "meta-llama-3.1-8b-instruct");
-      setSelectedModel(foundModel || modelsList[0]);
-    }
-  }, [modelsList]);
-
 
   const filteredModelsList = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();

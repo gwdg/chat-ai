@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef, memo } from "react";
 import Tooltip from "../Others/Tooltip";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-
+import { useSelector } from "react-redux";
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 
 import {
@@ -28,6 +28,7 @@ import {
   faMicrochip,
   faFont,
 } from "@fortawesome/free-solid-svg-icons";
+import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 
 const sortOptions = [
   { value: "name-asc", label: "Name (A→Z)" },
@@ -40,19 +41,19 @@ const sortOptions = [
   { value: "context-asc", label: "Context (low→high)" },
 ];
 
-export default function ModelSelectorSimple({ modelsList, onChange }: { modelsList: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void }) {
+export default function ModelSelectorSimple({ currentModelId, modelsList, onChange }: { currentModelId: string | undefined, modelsList: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void }) {
 
-  const [selectedModel, setSelectedModel] = useState<ExtendedModelInfo | null>(null);
+  const defaultModel = useSelector(selectDefaultModel);
 
-  useEffect(()=>{
-    // set the on change function model
-    onChange && onChange(selectedModel);
-  }, [selectedModel])
+  // choose model of conversation, or default model or first model in list 
+  const selectedModel = modelsList.find(model => model.id === currentModelId) || modelsList.find(model => model.id === defaultModel) || modelsList[0] || null;
+
+  function setSelectedModel(model: ExtendedModelInfo | null) {
+    onChange && onChange(model);
+  }
 
   const [searchQuery, setSearchQuery] = useState("");
-
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
   const [resultViewMode, setResultViewMode] = useState("list"); // list, expanded, grid
   const [sortBy, setSortBy] = useState("name-asc"); // name-asc, name-desc, date-asc, date-desc, params-asc, params-desc
 
@@ -70,16 +71,6 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
     };
   }, []);
 
-  // setSelectedModel to the first element of the modelList if its loaded
-  useEffect(() => {
-    if (modelsList !== undefined && modelsList.length > 0) {
-      const foundModel = modelsList.find((model) => model.id === "meta-llama-3.1-8b-instruct");
-      setSelectedModel(foundModel || modelsList[0]);
-    }
-  }, [modelsList]);
-
-
-
   const filteredModelsList = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (modelsList === undefined || modelsList.length === 0) {
@@ -87,6 +78,13 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
     }
     let result = modelsList.slice(); // copy list
     result = result.filter((model) => model.id !== "meta-llama-3.1-8b-rag-dev");
+
+    // strip out "(External)" of the model names
+    result = result.map((model) => ({
+      ...model,
+      name: model.name.replace(/\s*\(External\)\s*/i, ""),
+    }));
+
     if (q && q !== "") {
       result = modelsList.filter((m) =>
         m.name.toLowerCase().includes(q) ||
@@ -96,7 +94,6 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
       );
     }
     const digitsOnly = str => parseFloat(str ? str.replace(/\D/g, "") : 0);
-    console.log("sort by", sortBy)
     // Apply sorting based on sortOption
     switch (sortBy) {
       case "name-asc":
@@ -128,15 +125,25 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
   }, [searchQuery, modelsList, sortBy]);
 
 
-  
+  const Chip = memo(({text, colorPreset}: {text: string | undefined, colorPreset?: string})=>{
+    let color = "bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-medium"
+    if (colorPreset === "orange") {
+      color = "bg-amber-100 text-amber-700 border-amber-100 text-xs font-medium";
+    }
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full ${color}`}>
+        {text && text !== "" ? text : "-"}
+      </span>
+    );
+  });
 
   // use memo to not rerender on search input
   const ListElement = memo(({ idx, model, onClick }: { idx: number, model: ExtendedModelInfo, onClick: () => void }) => {
     return (
-      <div
+      <div 
         onClick={onClick}
         tabIndex={idx} data-index={idx} data-id={model.id}
-        className="item cursor-pointer my-1 px-2 py-1 hover:bg-slate-100 rounded-2xl border border-slate-200 bg-white"
+        className="item cursor-pointer px-2 py-1 hover:bg-slate-100 rounded-2xl border border-slate-200 bg-white"
       >
         <div className="flex justify-between md:flex-row flex-col ">
           <div className="flex items-center md:gap-2 gap-1">
@@ -144,6 +151,8 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
               <DemandIndicator demand={model.demand} online={model.status === "ready"} />
             </div>
             <span className="font-medium">{model.name}</span>
+            {model.external == true &&(<Chip text={"External"} colorPreset={"orange"} />)}
+            <Chip text={model.company} />
 
           </div>
           <div className="grid grid-cols-[6rem_6rem_4.5rem] items-center gap-2">
@@ -176,7 +185,7 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
       <div
         onClick={onClick}
         tabIndex={idx} data-index={idx} data-id={model.id}
-        className="item cursor-pointer my-1 px-4 py-3 hover:bg-slate-100 rounded-2xl border border-slate-200 bg-white"
+        className="item cursor-pointer px-4 py-3 hover:bg-slate-100 rounded-2xl border border-slate-200 bg-white"
       >
         <div className="flex items-center md:gap-2 gap-1">
           <div className="pl-1">
@@ -194,9 +203,8 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
           </div>
         </div>
         <div className="flex items-center gap-2 mt-1">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-            {model.company && model.company !== "" ? model.company : "-"}
-          </span>
+          <Chip text={model.company} />
+          
           <span className="text-xs text-slate-500">
             <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
             Context {model.contextLength && model.contextLength !== "" ? model.contextLength : "-"}
@@ -209,7 +217,6 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
 
         </div>
         <p className="mt-2 text-sm text-slate-700">{model.description}</p>
-
 
       </div>
     );
@@ -225,7 +232,7 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
         <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
           <div className="">
             <div className="font-semibold tracking-tight">{model.name}</div>
-            <div className="text-xs text-slate-600 mt-0.5">{model.company}</div>
+            <Chip text={model.company} />
           </div>
           <DemandIndicator demand={model.demand} online={model.status === "ready"} />
         </div>
@@ -283,6 +290,8 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
               <DemandIndicator demand={selectedModel?.demand} online={selectedModel?.status === "ready"} />
             </div>
             <span className="font-medium">{selectedModel?.name}</span>
+            {selectedModel?.external == true &&(<Chip text={"External"} colorPreset={"orange"} />)}
+            <Chip text={selectedModel?.company} />
             <span className="text-xs text-slate-500 hidden sm:inline-block">
               <FontAwesomeIcon icon={faCalendar} />
               {selectedModel?.releaseDate}
@@ -291,10 +300,11 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
               <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
               Context {selectedModel?.contextLength !== "" ? selectedModel?.contextLength : "-"}
             </span>
+            {/*
             <span className="text-xs text-slate-500 hidden sm:inline-block">
               <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
               Param {selectedModel?.numParameters !== "" ? selectedModel?.numParameters : "-"}
-            </span>
+            </span>*/}
           </div>
 
           <div className="flex items-center gap-2">
@@ -412,7 +422,7 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
         {/** Results List **/}
         <div id="model-listbox" role="listbox" aria-label="Models" tabIndex={-1} className="max-h-110 overflow-auto px-2">
           {resultViewMode === 'list' && (
-            <div className="rounded-xl overflow-hidden">
+            <div className="rounded-xl overflow-hidden grid gap-1 py-2">
               {filteredModelsList.map((m, idx) => (
                 <ListElement
                   key={m.id} idx={idx} model={m}
@@ -421,7 +431,7 @@ export default function ModelSelectorSimple({ modelsList, onChange }: { modelsLi
             </div>
           )}
           {resultViewMode === 'extended' && (
-            <div className="rounded-xl overflow-hidden">
+            <div className="rounded-xl overflow-hidden grid gap-1 py-2">
               {filteredModelsList.map((m, idx) => (
                 <ExtendedListElement
                   key={m.id} idx={idx} model={m}
