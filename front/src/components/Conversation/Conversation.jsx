@@ -321,14 +321,7 @@ export default function Conversation({
         ))}
       </div>
 
-      {localState?.messages?.length <= 2 ? (
-        // Empty conversation
-        <ImportConversationButton
-          localState={localState}
-          setLocalState={setLocalState}
-        />
-      ) : (
-        // Non-empty conversation
+      {localState?.messages?.length >= 4 && (
         <div className="w-full bottom-0 sticky select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
           {/* Export conversation button */}
           <ClearHistoryButton
@@ -346,16 +339,6 @@ export default function Conversation({
             </button>
           )}
           <div className="flex items-baseline gap-4">
-            {/* Export conversation button */}
-            <ExportConversationButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
-            {/* Import conversation button */}
-            <ImportConversationButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
             {/* Undo button */}
             <UndoButton localState={localState} setLocalState={setLocalState} />
           </div>

@@ -204,7 +204,7 @@ function ChatPage({ conversationId }) {
                 currentTitle: localState?.title || "Untitled Conversation",
               });
             }}
-            currentTitlfe={localState?.title || "Untitled Conversation"}
+            currentTitle={localState?.title || "Untitled Conversation"}
             lockConversation={lockConversation}
           />
         </div>

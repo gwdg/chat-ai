@@ -506,7 +506,7 @@ i18n
             fileFormat2: "PDF-Datei",
             fileFormat3: "TXT-Datei",
 
-            export: "exportieren",
+            export: "Exportieren",
 
             //Session
             session1:
