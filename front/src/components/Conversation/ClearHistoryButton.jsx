@@ -1,19 +1,22 @@
 import { useTranslation } from "react-i18next";
 import Tooltip from "../Others/Tooltip";
 import { X } from "lucide-react"
+import { useModal } from "../../modals/ModalContext";
+import { useToast } from "../../hooks/useToast";
 
-export default function ClearHistoryButton(localState, setLocalState) {
+export default function ClearHistoryButton({localState, setLocalState}) {
   const { t } = useTranslation();
   const loading = false; // TODO handle loading
+  const { openModal } = useModal();
+  const {notifySuccess, notifyError } = useToast();
 
   // Clear conversation history
   const clearHistory = () => {
     setLocalState((prevState) => ({
       ...prevState,
-      responses: [], // Clear all responses
       messages:
-        prevState.messages.length > 0
-          ? [prevState.messages[0]] // Keep only system message if it exists
+        prevState.messages.length > 1
+          ? [prevState.messages[0], prevState.messages[prevState.messages.length-1]] // Keep only system message if it exists
           : prevState.messages,
     }));
 
@@ -22,7 +25,7 @@ export default function ClearHistoryButton(localState, setLocalState) {
 
   // Function to handle clearing chat history
   const handleClearHistory = () => {
-    if (localState.dontShow.dontShowAgain) {
+    if (localState?.dontShow?.dontShowAgain) {
       clearHistory();
     } else {
       openModal("clearHistory", { clearHistory })

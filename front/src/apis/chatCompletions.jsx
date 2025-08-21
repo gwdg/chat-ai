@@ -22,8 +22,6 @@ async function* chatCompletions (
       baseURL = new URL(baseURL, window.location.origin).toString();
     }
 
-    console.log("baseurl", baseURL)
-
     // Initialize params
     const params = {
       model: model,

@@ -1,6 +1,7 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
+import AudioPlayer from "./AudioPlayer";
 import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 import { loadFile, useFile, useFileBase64 } from "../../db";
 import { X } from "lucide-react";
@@ -132,38 +133,14 @@ const CSVTable = ({ content }) => {
   );
 };
 
-// We'll keep your AudioPlayer intact here
-const AudioPlayer = ({ file }) => {
-  // ... keep ALL your existing AudioPlayer code unchanged ...
-  // (No need to alter, just copy it over from your existing file)
-  // Note: Doesn't depend on modal logic so we can plug it in the same way.
-  // -------------------------------
-  // For brevity, I won't re-paste the full AudioPlayer implementation here
-  // Copy exactly as you have it.
-  // -------------------------------
-};
-
 export default function PreviewModal({ isOpen, onClose, fileId }) {
 
   const [loadError, setLoadError] = useState(null);
   const {file, data} = useFile(fileId);
   const base64 = useFileBase64(fileId); // TODO only load if important
   if (!file) return null;
-  console.log(file)
-  
-  if (!file) return null; // TODO placeholder
 
-    //  if (!file?.data && attachment.fileId) {
-    //           file.data = await loadFile(attachment.fileId);
-              
-    //           if (file.type.startsWith("image/")) {
-    //             setBase64(await readFileAsBase64(newFile));
-    //           }
-    //       }
-
-  
-  const getTextContent = (file) => (typeof file === "string") ? file : file?.content || file?.text || "";
-
+  // Get file type for previewing
   const getFileType = (file) => {
     if (file?.type === "audio" || file?.isAudio) return "audio";
     if (file?.fileType === "pdf") return "pdf";
@@ -188,66 +165,13 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
     return "unknown";
   };
 
-  // const pdfUrl = useMemo(() => {
-  //   try {
-  //     if (getFileType(file) !== "pdf") return null;
-  //     if (file.originalFile instanceof File) return URL.createObjectURL(file.originalFile);
-  //     if (file.file instanceof File) return URL.createObjectURL(file.file);
-  //     if (file.data && typeof file.data === "string") {
-  //       const byteCharacters = atob(file.data);
-  //       const byteArray = new Uint8Array([...byteCharacters].map(c=>c.charCodeAt(0)));
-  //       const blob = new Blob([byteArray], { type: "application/pdf" });
-  //       return URL.createObjectURL(blob);
-  //     }
-  //     if (file.text?.startsWith("data:application/pdf")) return file.text;
-  //     return null;
-  //   } catch (error) {
-  //     console.error("Error creating PDF URL:", error);
-  //     setLoadError("Failed to load PDF file");
-  //     return null;
-  //   }
-  // }, [file]);
-
-  // useEffect(() => {
-  //   return () => {
-  //     if (pdfUrl && !pdfUrl.startsWith("data:")) {
-  //       URL.revokeObjectURL(pdfUrl);
-  //     }
-  //   };
-  // }, [pdfUrl]);
-
   const handleDownload = () => {
     try {
-      const fileType = getFileType(file);
-      let name = file?.name || "download";
-      let downloadUrl, blob;
+      // Create file as is
+      const downloadFile = new File([data], file?.name || "download", { type: file.type })     
 
-      if (fileType === "audio") {
-        if (!name.includes(".")) name += `.${file.format || "wav"}`;
-        const byteArray = new Uint8Array([...atob(base64)].map(c=>c.charCodeAt(0)));
-        blob = new Blob([byteArray], { type: `audio/${file.format || "wav"}` });
-        downloadUrl = URL.createObjectURL(blob);
-      } else if (fileType === "pdf") {
-        if (file.processed && file.processedContent) {
-          if (!name.includes("."))
-            name = name.replace(".pdf", "") + "_processed.txt";
-          blob = new Blob([file.processedContent], {
-            type: "text/plain;charset=utf-8",
-          });
-          downloadUrl = URL.createObjectURL(blob);
-        } else if (pdfUrl) {
-          downloadUrl = pdfUrl;
-        } else throw new Error("No PDF content available for download");
-      } else {
-        if (fileType === "image") {
-          downloadUrl = base64;
-        } else {
-          if (!name.includes(".")) name += ".txt";
-          blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
-          downloadUrl = URL.createObjectURL(blob);
-        }
-      }
-
+      // Create and use download link
+      const downloadUrl = URL.createObjectURL(downloadFile);
       const a = document.createElement("a");
       a.href = downloadUrl;
       a.download = name;
@@ -255,7 +179,8 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       a.click();
       document.body.removeChild(a);
 
-      if (blob) URL.revokeObjectURL(downloadUrl);
+      // Clean up
+      URL.revokeObjectURL(downloadUrl);
     } catch (err) {
       console.error("Download failed:", err);
       alert("Failed to download file");
@@ -278,16 +203,14 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         );
 
       const fileType = getFileType(file);
-      // const textContent = getTextContent(file);
       // Audio Player
       if (fileType === "audio") {
         return (
           <div className="flex justify-center items-center min-h-[400px]">
-            <AudioPlayer file={file} />
+            <AudioPlayer file={file} dataURL={base64} />
           </div>
         );
       }
-
       // Image Viewer
       if (fileType === "image") {
         return (
@@ -301,13 +224,12 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
           </div>
         );
       }
-
       // Video Player
       if (fileType === "video") {
         return (
           <div className="flex justify-center">
             <video
-              src={textContent}
+              src={base64}
               controls
               className="max-h-[85vh] max-w-full"
               onError={() => setLoadError("Failed to load video")}
@@ -391,7 +313,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         }
 
         // Priority 3: If we have a valid PDF URL for preview (original PDF) AND not processed
-        if (pdfUrl && !isMobile && !file.processed) {
+        if (base64 && !isMobile && !file.processed) {
           return (
             <div className="w-full h-[85vh] flex flex-col">
               {/* Show processing status if not processed */}
@@ -424,7 +346,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
               </div>
 
               <iframe
-                src={pdfUrl}
+                src={base64}
                 className="w-full flex-1"
                 style={{ minWidth: "800px" }}
                 title={file.name}

@@ -19,9 +19,8 @@ export default function ExportConversationModal({
   const [value, setValue] = useState("json");
   const [containsImage, setContainsImage] = useState(false);
   const isArcanaSupported = false; // TODO
-  const currentConversation = useSelector(selectCurrentConversation);
-  const messages = currentConversation?.messages
-  const arcana = currentConversation.arcana
+  const messages = localState?.messages
+  const arcana = localState.settings?.arcana
 
   // ==== EXPORT FUNCTIONALITY ====
   // Generate timestamped filename for exports
@@ -85,10 +84,10 @@ export default function ExportConversationModal({
       }\ntemperature: ${localState.settings.temperature}\ntop_p: ${
         localState.settings.top_p
       }${
-        localState.exportOptions.exportArcana && isArcanaSupported
-          ? // ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
-            `\nArcana: {\n  id: ${localState.arcana.id}}`
-          : ""
+        // localState.exportOptions.exportArcana && isArcanaSupported
+        //   ? // ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
+            `\nArcana: {\n  id: ${localState.settings.arcana.id}}`
+          // : ""
       }`;
       finalTextContent += additionalText;
     }
@@ -144,7 +143,7 @@ export default function ExportConversationModal({
           ...(localState.exportOptions.exportArcana &&
             isArcanaSupported && {
               arcana: {
-                id: localState.arcana.id,
+                id: localState.settings.arcana.id,
                 //key: localState.arcana.key,
               },
             }),
@@ -400,7 +399,7 @@ export default function ExportConversationModal({
       if (localState.exportOptions.exportArcana && isArcanaSupported) {
         doc.text("Arcana: {", margin, y);
         y += lineHeight;
-        doc.text(`  id: ${localState.arcana.id}`, margin, y);
+        doc.text(`  id: ${localState.settings.arcana.id}`, margin, y);
         y += lineHeight;
         doc.text("}", margin, y);
         y += lineHeight;

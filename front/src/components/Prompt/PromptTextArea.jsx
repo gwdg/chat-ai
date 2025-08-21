@@ -28,6 +28,7 @@ export default function PromptTextArea({
 
   // Prompt is actually the last message's first content
   const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
+  const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
   // Update partial local state while preserving other values
   const setPrompt = (prompt) => {
     setLocalState((prev) => {
@@ -103,7 +104,7 @@ export default function PromptTextArea({
         if (
             event.key === "Enter" &&
             !event.shiftKey &&
-            (prompt?.trim() !== "" || selectedFiles.length > 0)
+            (prompt?.trim() !== "" || attachments.length > 0)
         ) {
             event.preventDefault();
             handleSend(event);

@@ -30,7 +30,7 @@ export default function EditBox({
         // Create a shallow copy without cutting off elements
         newMessages = [...prevState.messages];
       }
-      newMessages[message_index].content[0].data = editBox.current.value;
+      newMessages[message_index].content[0].text = editBox.current.value;
       return { ...prevState, messages: newMessages };
     });
     setEditMode(false);
@@ -50,7 +50,7 @@ export default function EditBox({
       <textarea
         ref={editBox}
         className="p-1.5 outline-none text-sm rounded-xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
-        defaultValue={message.content[0].data}
+        defaultValue={message.content[0]?.text}
         style={{
           minHeight: `${MIN_HEIGHT}px`,
           maxHeight: `${MAX_HEIGHT}px`,

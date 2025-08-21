@@ -5,19 +5,21 @@ export default function ClearHistoryModal({
   isOpen,
   onClose,
   setLocalState,
-  dontShowAgain,
-  clearHistory
+  // dontShowAgain,
+  clearHistory,
 }) {
   // Handler for checkbox state change
   const handleCheckboxChange = (event) => {
-    setLocalState((prevState) => ({
-      ...prevState,
-      dontShow: {
-        ...prevState.exportOptions,
-        dontShowAgain: event.target.checked,
-      },
-    }));
+    // setLocalState((prevState) => ({
+    //   ...prevState,
+    //   dontShow: {
+    //     ...prevState.exportOptions,
+    //     dontShowAgain: event.target.checked,
+    //   },
+    // }));
   };
+
+  const dontShowAgain = false;
 
   return (
     <BaseModal

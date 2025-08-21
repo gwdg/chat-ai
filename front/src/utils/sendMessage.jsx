@@ -65,7 +65,7 @@ export async function processContentItems(items, ignoreImages = false, ignoreAud
         output.push({
           type: "input_audio",
           input_audio: {
-            data: base64Data,
+            data: base64Data.split(",")[1], // No prefix
             format
           }
         });
@@ -74,7 +74,20 @@ export async function processContentItems(items, ignoreImages = false, ignoreAud
       // TODO handle generic files
 
       else {
-        console.warn(`Unsupported file type: ${mimeType}`);
+        try {
+          // Base64 encode without the data prefix
+          // const base64Data = await readFileAsBase64(file);
+          // output.push({
+          //   type: "file",
+          //   file: {
+          //     file_data: base64Data, // No prefix
+          //     filename: meta.name,
+          //   }
+          // });
+          // Load data
+        } catch (error) {
+          console.warn(`Unsupported file type: ${mimeType}, ${error}`);
+        }
       }
     }
   }
@@ -550,7 +563,7 @@ const sendMessage = async ({
       delete conversationForAPI.settings.arcana;
       delete conversationForAPI.settings.tools;
     }
-
+    
     // Pushing message into conversation history
     setLocalState((prev) => ({
       ...prev,

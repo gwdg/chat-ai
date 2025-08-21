@@ -7,6 +7,7 @@ import { useToast } from "../../hooks/useToast";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleSettings } from "../../Redux/reducers/interfaceSettingsSlice";
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
+import { Settings } from "lucide-react";
 
 export default function SettingsButton() {
     const { t, i18n } = useTranslation();
@@ -20,9 +21,8 @@ export default function SettingsButton() {
             className="flex h-[25px] w-[25px] cursor-pointer"
             onClick={() => dispatch(toggleSettings())}
             >
-            <img
-                className="cursor-pointer h-[25px] w-[25px]"
-                src={icon_settings}
+            <Settings
+                className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
                 alt="settings"
             />
             </button>

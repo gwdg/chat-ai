@@ -9,7 +9,7 @@ export default function CopyButton({ message, cooldown_ms = 700 }) {
   // Copy function
   const handleCopy = useCallback(async () => {
     try {
-      const textToCopy = message.content[0]?.data;
+      const textToCopy = message.content[0]?.text;
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setIndexChecked(index);

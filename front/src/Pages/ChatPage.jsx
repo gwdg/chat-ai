@@ -13,7 +13,6 @@ import { useNavigate } from "react-router-dom";
 import Conversation from "../components/Conversation/Conversation";
 import Footer from "../components/Footer/Footer";
 import Header from "../components/Header/Header";
-import HallucinationWarning from "../components/Others/HallucinationWarning";
 import WarningButton from "../components/Others/WarningButton";
 import Prompt from "../components/Prompt/Prompt";
 import SettingsPanel from "../components/SettingsPanel/SettingsPanel";
@@ -42,6 +41,7 @@ import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 
 import ModelSelectorWrapper from "../components/Header/ModelSelectorWrapper";
+import EmptyConversation from "../components/Conversation/EmptyConversation";
 
 function ChatPage({ conversationId }) {
   const [showFooter, setShowFooter] = useState(false);
@@ -77,6 +77,8 @@ function ChatPage({ conversationId }) {
   // Determine if sidebar should be shown based on screen size
   const shouldShowSidebar = isDesktop && showSidebar;
   const shouldShowMobileSidebar = !isDesktop && showSidebar;
+
+  const emptyConversation = Boolean(localState.messages?.length <= 2);
 
   // Function to create a new conversation
   const handleNewConversation = useCallback(async () => {
@@ -249,7 +251,7 @@ function ChatPage({ conversationId }) {
 
               {/* Chat Container with responsive width calculations */}
               <div
-                className={`mx-auto h-full flex flex-col gap-2 sm:justify-between relative p-1 ${(() => {
+                className={`mx-auto h-full flex flex-col gap-2 sm:justify-start relative p-1 ${(() => {
                   if (isMobile || isTablet) {
                     return "w-full";
                   } else if (showSettings) {
@@ -257,26 +259,33 @@ function ChatPage({ conversationId }) {
                   } else {
                     return "w-full max-w-[80%]";
                   }
-                })()}`}
+                })()}
+                ${emptyConversation ? "justify-start" : "justify-between"} 
+                `}
               >
                 <ModelSelectorWrapper
                   modelsList={modelsData}
                   localState={localState}
                   setLocalState={setLocalState}
                 />
-                <div className="flex-1 min-h-0 overflow-y-auto flex flex-col relative w-full border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md dark:shadow-dark bg-white dark:bg-bg_secondary_dark">
-                  <HallucinationWarning />
-                  <Conversation
+                <div className={`transition-all duration-500 ease-in-out 
+                ${emptyConversation
+                  ? "flex flex-col flex-grow items-center justify-center opacity-90 space-y-16"
+                  : "contents space-y-0 opacity-100"}
+                `}> 
+                {emptyConversation && (<EmptyConversation />) }
+                <Conversation
                     localState={localState}
                     setLocalState={setLocalState}
                   />
+                 <div className={`transition-all duration-500 ease-in-out w-full`} >
+                  <Prompt
+                    localState={localState}
+                    setLocalState={setLocalState}
+                    userData={userData}
+                  />
+                  </div>
                 </div>
-
-                <Prompt
-                  localState={localState}
-                  setLocalState={setLocalState}
-                  userData={userData}
-                />
               </div>
             </div>
           </div>

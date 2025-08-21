@@ -343,7 +343,6 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
           </div>
         </div>
       )}
-
       {/* Dark mode styles */}
       <style jsx>{`
         .dark div[style*="background-color: rgb(255, 255, 255)"] {

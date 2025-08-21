@@ -12,7 +12,7 @@ export default function UndoButton({ localState, setLocalState }) {
     // Remove last two messages
     setLocalState((prevState) => ({
       ...prevState,
-      messages: localState.messages.slice(0, -2),
+      messages: localState.messages.slice(0, Math.max(2, localState.messages.length - 2)),
     }));
   };
 

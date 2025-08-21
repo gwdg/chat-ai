@@ -623,7 +623,6 @@ export function useFile(fileId : string) {
         const meta = await loadFileMeta(fileId);
         if (meta) {
           setFile(meta);
-          setData(data);
           break; // stop polling once we find it
         }
         // Wait 200ms before trying again
@@ -642,7 +641,7 @@ export function useFile(fileId : string) {
       }
     }
     checkMetaUntilReady();
-    checkDataUntilReady
+    checkDataUntilReady();
     return () => {
       cancelled = true;
     };

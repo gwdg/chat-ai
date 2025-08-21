@@ -2,6 +2,7 @@ import { useAttachments } from "../../hooks/useAttachments";
 import icon_file_uploaded from "../../assets/icons/file_uploaded.svg";
 import icon_cross from "../../assets/icons/cross.svg";
 import icon_mic from "../../assets/icons/mic.svg";
+import icon_support_video from "../../assets/icons/support_video.svg";
 import { useEffect, useRef, useState } from "react";
 import { useModal } from "../../modals/ModalContext";
 import { useFiles, useFileMeta, useFileBase64 } from "../../db";

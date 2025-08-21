@@ -6,6 +6,8 @@ import { abortRequest } from "../../apis/chatCompletions";
 import { useToast } from "../../hooks/useToast";
 import icon_attach from "../../assets/icons/attach.svg";
 import { useAttachments } from "../../hooks/useAttachments";
+//Assets
+import { Paperclip } from "lucide-react";
 
 export default function AttachButton({
     localState, 
@@ -54,9 +56,8 @@ export default function AttachButton({
                     onClick={handleClick}
                     disabled={loading}
                 >
-                    <img
-                    className="cursor-pointer h-[25px] w-[25px]"
-                    src={icon_attach}
+                    <Paperclip
+                    className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
                     alt="upload"
                     />
                 </button>

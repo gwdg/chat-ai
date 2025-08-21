@@ -28,6 +28,7 @@ import {
   toggleSettings
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import WebSearchToggle from "./WebSearchToggle";
+import { getDefaultSettings } from "../../utils/conversationUtils";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 

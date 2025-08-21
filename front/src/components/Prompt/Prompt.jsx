@@ -16,7 +16,8 @@ export default function Prompt({
 }) { 
   const sendMessage = useSendMessage();
   const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
-
+  const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
+  
   // Handle form submission with prompt and files
   const handleSend = async (event) => {
       event.preventDefault();
@@ -43,7 +44,7 @@ export default function Prompt({
   };
   
   return (
-    <div className="overflow-x-hidden w-full flex flex-shrink-0 flex-col bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-between sm:overflow-y-auto  rounded-2xl shadow-bottom dark:shadow-darkBottom">
+    <div className="overflow-x-hidden w-full flex flex-shrink-0 flex-col bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-center sm:overflow-y-auto rounded-2xl shadow-bottom dark:shadow-darkBottom">
         {/* Attachments Container */}
         <AttachmentsContainer
           localState={localState}

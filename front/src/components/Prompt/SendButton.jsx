@@ -4,6 +4,7 @@ import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useToast } from "../../hooks/useToast";
 import { useSendMessage } from "../../hooks/useSendMessage";
+import { Send } from "lucide-react";
 
 export default function SendButton({localState, setLocalState, handleSend}) {
     const { t, i18n } = useTranslation();
@@ -17,18 +18,12 @@ export default function SendButton({localState, setLocalState, handleSend}) {
 
     return !loading && (prompt !== "" || attachments.length > 0) &&  (
          <Tooltip text={t("description.send")}>
-            <button
-            className="h-[30px] w-[30px] cursor-pointer"
-            disabled={loading}
-            onClick={handleSend}
-            >
-            {loading ? null : <img
-                className="cursor-pointer h-[30px] w-[30px]"
-                src={icon_send}
+            <Send
+                className="cursor-pointer h-[30px] w-[30px] text-[#009EE0]"
                 alt="send"
+                onClick={handleSend}
+                disabled={loading}
             />
-            }
-            </button>
         </Tooltip>
     );
 }
