@@ -1,11 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
-import Tooltip from "../Others/Tooltip";
 import { useImportConversation } from "../../hooks/useImportConversation";
+import { Upload } from "lucide-react";
 
-import { Upload } from "lucide-react"
-
-export default function ImportConversationButton({ localState, setLocalState }) {
+export default function ImportConversationButton({
+  localState,
+  setLocalState,
+  variant = "icon",
+}) {
   const { t } = useTranslation();
   const loading = false; // TODO handle loading
   const importConversation = useImportConversation();
@@ -15,19 +17,24 @@ export default function ImportConversationButton({ localState, setLocalState }) 
   const handleFilesChangeJSON = async (e) => {
     try {
       const selectedFile = e.target.files[0];
+
       // Validate file selection and type
       if (!selectedFile) {
         notifyError("No file selected.");
         return;
       }
+
       if (selectedFile.type !== "application/json") {
         notifyError("Please select a valid JSON file.");
         return;
       }
+
       const reader = new FileReader();
+
       reader.onerror = () => {
         notifyError("Error reading file.");
       };
+
       // Handle file content after loading
       reader.onload = async () => {
         // Parse and process JSON data
@@ -56,26 +63,58 @@ export default function ImportConversationButton({ localState, setLocalState }) 
     hiddenFileInputJSON.current.click();
   };
 
-  return (
-    <div className="w-full bottom-0 sticky select-none h-fit px-3 py-1.5 flex justify-end items-center bg-white dark:bg-bg_secondary_dark rounded-b-xl">
-      <input
-        type="file"
-        ref={hiddenFileInputJSON}
-        accept="application/JSON"
-        onChange={handleFilesChangeJSON}
-        className="hidden"
-      />
-      <Tooltip text={t("description.import")}>
+  // Render icon variant (original behavior)
+  if (variant === "icon") {
+    return (
+      <>
+        <input
+          type="file"
+          ref={hiddenFileInputJSON}
+          accept="application/JSON"
+          onChange={handleFilesChangeJSON}
+          className="hidden"
+        />
         <button
-          className="h-[26px] w-[26px] cursor-pointer"
+          className={`cursor-pointer p-1.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center `}
           onClick={handleClickJSON}
           disabled={loading}
+          title={t("description.import")}
         >
-          <Upload
-            className="h-[26px] w-[26px] text-[#009EE0]"
-          />
+          <Upload className="w-5 h-5 text-[#009EE0]" />
         </button>
-      </Tooltip>
-    </div>
-  );
-};
+      </>
+    );
+  }
+
+  // Render button variant (with text)
+  if (variant === "button") {
+    return (
+      <>
+        <input
+          type="file"
+          ref={hiddenFileInputJSON}
+          accept="application/JSON"
+          onChange={handleFilesChangeJSON}
+          className="hidden"
+        />
+        <button
+          onClick={handleClickJSON}
+          disabled={loading}
+          className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors ${
+            loading ? "cursor-not-allowed opacity-50" : ""
+          } `}
+          style={{
+            WebkitTapHighlightColor: "transparent",
+            minHeight: "44px",
+          }}
+        >
+          <Upload className="h-4 w-4 flex-shrink-0" />
+          <span className="truncate">{t("description.import")}</span>
+        </button>
+      </>
+    );
+  }
+
+  // Default fallback
+  return null;
+}
