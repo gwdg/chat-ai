@@ -47,7 +47,6 @@ function ChatPage({ conversationId }) {
   const [showFooter, setShowFooter] = useState(false);
   const showSettings = useSelector(selectShowSettings);
   const showSidebar = useSelector(selectShowSidebar);
-  const [selectedFiles, setSelectedFiles] = useState([]);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   const { openModal } = useModal();
@@ -79,7 +78,8 @@ function ChatPage({ conversationId }) {
   const shouldShowSidebar = isDesktop && showSidebar;
   const shouldShowMobileSidebar = !isDesktop && showSidebar;
 
-  const handleNewChat = useCallback(async () => {
+  // Function to create a new conversation
+  const handleNewConversation = useCallback(async () => {
     dispatch({ type: "conversations/setLockConversation", payload: true });
     const newId = await createConversation(getDefaultConversation());
     if (newId) {
@@ -91,30 +91,6 @@ function ChatPage({ conversationId }) {
       });
     }
   }, [dispatch, navigate, isDesktop]);
-
-  const isIntentionalRefresh = useRef(false);
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "F5" || (e.ctrlKey && e.key === "r")) {
-        if (selectedFiles.length > 0) {
-          e.preventDefault();
-          openModal("unsentFiles");
-        }
-      }
-    };
-    const handleBeforeUnload = (e) => {
-      if (selectedFiles.length > 0 && !isIntentionalRefresh.current) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [selectedFiles]);
 
   const scrollToBottom = useCallback(() => {
     if (mainDiv.current) {
@@ -187,7 +163,7 @@ function ChatPage({ conversationId }) {
             localState={localState}
             setLocalState={setLocalState}
             onClose={() => dispatch(toggleSidebar())}
-            handleNewChat={handleNewChat}
+            handleNewConversation={handleNewConversation}
           />
         </div>
 
@@ -198,16 +174,9 @@ function ChatPage({ conversationId }) {
             ${shouldShowSidebar ? "w-65" : "w-14"}`}
         >
           <CollapsedSidebar
+            localState={localState}
             onToggleSidebar={() => dispatch(toggleSidebar())}
-            onNewChat={handleNewChat}
-            onEditTitle={() => {
-              openModal("renameConversation", {
-                id: currentConversationId,
-                currentTitle: localState?.title || "Untitled Conversation",
-              });
-            }}
-            currentTitle={localState?.title || "Untitled Conversation"}
-            lockConversation={lockConversation}
+            handleNewConversation={handleNewConversation}
           />
         </div>
       </div>)}
@@ -244,7 +213,7 @@ function ChatPage({ conversationId }) {
                   localState={localState}
                   setLocalState={setLocalState}
                   onClose={() => dispatch(toggleSidebar())}
-                  handleNewChat={handleNewChat}
+                  handleNewConversation={handleNewConversation}
                 />
               </div>
             </div>
@@ -333,8 +302,6 @@ function ChatPage({ conversationId }) {
               setLocalState={setLocalState}
               modelsData={modelsData}
               userData={userData}
-              selectedFiles={selectedFiles}
-              setSelectedFiles={setSelectedFiles}
             />
           </div>
         </Transition>
@@ -357,8 +324,6 @@ function ChatPage({ conversationId }) {
                 setLocalState={setLocalState}
                 modelsData={modelsData}
                 userData={userData}
-                selectedFiles={selectedFiles}
-                setSelectedFiles={setSelectedFiles}
               />
             </div>
           </div>

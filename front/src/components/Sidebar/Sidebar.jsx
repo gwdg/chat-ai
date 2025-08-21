@@ -18,7 +18,7 @@ import { useModal } from "../../modals/ModalContext";
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import ImportConversationButton from "../Conversation/ImportConversationButton";
 
-function Sidebar({ localState, setLocalState, onClose, handleNewChat }) {
+function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) {
   const { openModal } = useModal();
   const navigate = useNavigate();
   const [hoveredId, setHoveredId] = useState(null);
@@ -146,11 +146,8 @@ function Sidebar({ localState, setLocalState, onClose, handleNewChat }) {
         {/* New Chat Button */}
         <div className="flex-shrink-0 m-3 border-b border-gray-100 dark:border-gray-800 pb-3">
           <button
-            onClick={handleNewChat}
-            disabled={lockConversation}
-            className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors ${
-              lockConversation ? "cursor-not-allowed opacity-50" : ""
-            }`}
+            onClick={handleNewConversation}
+            className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
             style={{
               WebkitTapHighlightColor: "transparent",
               minHeight: "44px",
@@ -198,8 +195,6 @@ function Sidebar({ localState, setLocalState, onClose, handleNewChat }) {
                     onMouseEnter={() => setHoveredId(id)}
                     onMouseLeave={() => setHoveredId(null)}
                     className={`group relative px-3 py-3 rounded-2xl cursor-pointer touch-manipulation transition-all duration-200 ${
-                      lockConversation ? "cursor-not-allowed opacity-60" : ""
-                    } ${
                       isActive
                         ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
                         : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -235,7 +230,6 @@ function Sidebar({ localState, setLocalState, onClose, handleNewChat }) {
                         <button
                           ref={(el) => (menuButtonRefs.current[id] = el)}
                           onClick={(e) => openMenu(e, id)}
-                          disabled={lockConversation}
                           className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center ${
                             lockConversation
                               ? "cursor-not-allowed opacity-50"
@@ -256,21 +250,20 @@ function Sidebar({ localState, setLocalState, onClose, handleNewChat }) {
           </div>
         </div>
 
-        {/* Import Persona button */}
+        {/* Bottom section */}
         <div className="flex flex-col gap-4 m-3 border-t border-gray-200 dark:border-gray-500 pt-3">
+          {/* Import Conversation button */}
           <ImportConversationButton
             localState={localState}
             setLocalState={setLocalState}
             variant="button"
           />
+          {/* Import Persona button */}
           <button
             onClick={() => {
               openModal("importPersona");
             }}
-            disabled={lockConversation}
-            className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors ${
-              lockConversation ? "cursor-not-allowed opacity-50" : ""
-            }`}
+            className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
             style={{
               WebkitTapHighlightColor: "transparent",
               minHeight: "44px",
