@@ -28,12 +28,12 @@ function Header({ localState, setLocalState, modelsData, userData }) {
           style={{ maxWidth: "calc(100vw - 200px)" }}
           tabIndex={0}
         >
-          {/* Model Selection */}
+          {/* Model Selection 
           <ModelSelector
             localState={localState}
             setLocalState={setLocalState}
             modelsData={modelsData}
-          />
+          />*/}
         </div>
 
         {/* Right Section */}
@@ -67,12 +67,12 @@ function Header({ localState, setLocalState, modelsData, userData }) {
             style={{ maxWidth: "calc(100vw - 200px)" }}
             tabIndex={0}
           >
-            {/* Model Selection */}
+            {/* Model Selection 
             <ModelSelector
               localState={localState}
               setLocalState={setLocalState}
               modelsData={modelsData}
-            />
+            />*/}
           </div>
 
           {/* Right Section */}

@@ -3,6 +3,19 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useMemo, useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid';
 
+import type { 
+  ConversationRow, 
+  MessageRow, 
+  ContentItemRow, 
+  FileMetaRow, 
+  FileDataRow, 
+  HydratedMessage,
+  ConversationSettings,
+  MessageInput,
+  MessageRole,
+  ContentItemInput
+} from "./dbTypes"
+
 // ---------- Dexie DB ----------
 
 export class AppDB extends Dexie {
@@ -41,93 +54,7 @@ function newId(): string {
   return uuidv4();
 }
 
-// ---------- Types ----------
 
-export type MessageRole = 'system' | 'developer' | 'user' | 'assistant' | 'tool' | 'function' | 'info'
-
-export type ModelSpec = {
-  id: string
-  name: string
-  input: string[]
-  output: string[]
-  // More fields can be added
-  [k: string]: any
-}
-
-export type ConversationSettings = {
-  model: ModelSpec
-  temperature: number
-  top_p: number
-  memory: number
-  enable_tools: boolean
-  enable_web_search: boolean
-  tools: any[]
-  arcana: Record<string, any>
-}
-
-export type ConversationRow = {
-  id: string // uuid
-  title: string
-  createdAt: number
-  lastModified: number
-  settings: ConversationSettings
-  messageCount: number
-}
-
-type MessageRow = {
-  id: string
-  conversationId: string
-  idx: number
-  role: MessageRole
-  createdAt: number
-  updatedAt?: number
-  meta?: any // e.g. model
-}
-
-export type MessageInput = {
-  id?: string
-  idx: number
-  role: MessageRole
-  content: ContentItem[]
-  createdAt?: number
-  updatedAt?: number
-  meta?: any
-}
-
-export type ContentItemRow = {
-  id: string
-  messageId: string
-  idx: number
-  type: 'text' | 'file'
-  text?: string // for text, file ID for files
-  fileId?: string
-  // what to do for meta?
-}
-
-export type ContentItemInput = {
-  type: 'text' | 'file'
-  text?: string
-  file?: File
-  fileId?: string
-}
-
-// Table: file_data
-export type FileDataRow = {
-  id: string // shared with FileMetaRow
-  data: ArrayBuffer
-}
-
-export type FileMetaRow = {
-  id: string // shared with FileDataRow
-  messageId: string
-  name: string
-  type: string
-  size: number
-  width?: number
-  height?: number
-  duration?: number
-  extra?: any
-}
 
 // ---------- Low-level helpers ----------
 
