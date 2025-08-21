@@ -9,7 +9,8 @@ import FormData from "form-data";
 import fs from "fs";
 import path from "path";
 
-import localModelData from "./models.json" with { type: "json" };
+import extraModelData from "./modelData.json"
+// import modelsJson from "./models.json"
 
 const app = express();
 
@@ -125,6 +126,7 @@ app.post("/process-pdf", async (req, res) => {
 // Get list of models
 app.get("/models", async (req, res) => {
   try {
+    
     const url = apiEndpoint + "/models";
     const headers = {
       Accept: "application/json",
@@ -132,10 +134,12 @@ app.get("/models", async (req, res) => {
       "inference-portal": "Chat AI",
     };
     const response = await fetch(url, { method: "GET", headers });
-
-    // combine response with models.json by joining on their id
     const jsonData = await response.json();
-    const localMap = Object.fromEntries(localModelData.map(m => [m.id, m]));
+    
+    /* const jsonData = modelsJson;*/
+    // combine response with models.json by joining on their id
+    
+    const localMap = Object.fromEntries(extraModelData.map(m => [m.id, m]));
     jsonData.data = jsonData.data.map(
       (model) => {
         const localModel = localMap[model.id];

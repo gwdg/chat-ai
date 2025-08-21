@@ -1,0 +1,335 @@
+[
+  {
+    "id": "meta-llama-3.1-8b-instruct",
+    "name": "Meta Llama 3.1 8B Instruct",
+    "releaseDate": "2024-07-23",
+    "company": "Meta",
+    "modelFamily": "Llama",
+    "contextLength": "128K",
+    "numParameters": "8b",
+    "description": "Lightweight multilingual chat model fine-tuned for safe instruction following, text generation and code assistance."
+  },
+  {
+    "id": "meta-llama-3.1-8b-rag",
+    "name": "Meta Llama 3.1 8B RAG",
+    "releaseDate": "2024-07-23",
+    "company": "Meta",
+    "modelFamily": "Llama",
+    "contextLength": "128K",
+    "numParameters": "8b",
+    "description": "Same Model as Meta Llama 3.1 8B Instruct, but added RAG capabilities."
+  },
+  {
+    "id": "llama-3.3-70b-instruct",
+    "name": "Meta Llama 3.3 70B Instruct",
+    "releaseDate": "2024-12-06",
+    "company": "Meta",
+    "modelFamily": "Llama",
+    "contextLength": "128K",
+    "numParameters": "70b",
+    "description": "High-capacity general-purpose model that excels at reasoning and multilingual dialogue."
+  },
+  {
+    "id": "llama-3.1-sauerkrautlm-70b-instruct",
+    "name": "Llama 3.1 SauerkrautLM 70B Instruct",
+    "releaseDate": "2024-07-24",
+    "company": "Meta",
+    "modelFamily": "Llama",
+    "contextLength": "128K",
+    "numParameters": "70b",
+    "description": "German-centric fine-tune of Llama 3.1 for bilingual conversational agents, localisation and German NLP research."
+  },
+  {
+    "id": "qwen3-32b",
+    "name": "Qwen 3 32B",
+    "releaseDate": "2025-04-28",
+    "company": "Alibaba",
+    "modelFamily": "Qwen",
+    "contextLength": "32K",
+    "numParameters": "32b",
+    "description": "Balanced mid-size model for multilingual chat, code generation and document reasoning"
+  },
+  {
+    "id": "qwen3-235b-a22b-2507",
+    "name": "Qwen 3 235B A22B 2507",
+    "releaseDate": "2025-04-28",
+    "company": "Alibaba",
+    "modelFamily": "Qwen",
+    "contextLength": "32K",
+    "numParameters": "235b",
+    "description": "Mixture-of-Experts giant aimed at research-grade reasoning, long-document analysis and complex tool-using agents."
+  },
+  {
+    "id": "qwen3-235b-a22b",
+    "name": "Qwen 3 235B A22B",
+    "releaseDate": "2025-04-29",
+    "company": "Alibaba",
+    "modelFamily": "Qwen",
+    "contextLength": "32K",
+    "numParameters": "235b",
+    "description": "Sibling of the 235 B qwen3 family; best suited for heavy-duty analytical and scientific workloads."
+  },
+  {
+    "id": "qwen2.5-vl-72b-instruct",
+    "name": "Qwen 2.5 VL 72B Instruct",
+    "releaseDate": "2024-09-19",
+    "company": "Alibaba",
+    "modelFamily": "Qwen",
+    "contextLength": "32K",
+    "numParameters": "72b",
+    "description": "Vision-language model for multimodal chat, image grounding and slide or chart interpretation."
+  },
+  {
+    "id": "qwen2.5-coder-32b-instruct",
+    "name": "Qwen 2.5 Coder 32B Instruct",
+    "releaseDate": "2024-09-19",
+    "company": "Alibaba",
+    "modelFamily": "Qwen",
+    "contextLength": "32K",
+    "numParameters": "32b",
+    "description": "Code-specialised fork offering structured completion, fill-in-the-middle and natural-language-to-code synthesis."
+  },
+  {
+    "id": "qwq-32b",
+    "name": "Qwen QwQ 32B",
+    "releaseDate": "2025-04-29",
+    "company": "Alibaba",
+    "modelFamily": "Qwen",
+    "contextLength": "131K",
+    "numParameters": "32b",
+    "description": "Reasoning-oriented variant that uses internal chain-of-thought to tackle math, logic puzzles and step-by-step proofs."
+  },
+  {
+    "id": "qwen2.5-omni-7b",
+    "name": "Qwen 2.5 Omni 7B",
+    "releaseDate": "2025-03-26",
+    "company": "Alibaba",
+    "modelFamily": "Qwen",
+    "contextLength": "32K",
+    "numParameters": "7b",
+    "description": "Multimodal model (text, image, audio, video) for lightweight assistants."
+  },
+  {
+    "id": "gemma-3-27b-it",
+    "name": "Gemma 3 27B Instruct",
+    "releaseDate": "2025-03-12",
+    "company": "Google",
+    "modelFamily": "Gemma",
+    "contextLength": "128K",
+    "numParameters": "27b",
+    "description": "Google's openly licensed model for multilingual chat and image-aware reasoning."
+  },
+  {
+    "id": "medgemma-27b-it",
+    "name": "MedGemma 27B Instruct",
+    "releaseDate": "2025-03-12",
+    "company": "Google",
+    "modelFamily": "Gemma",
+    "contextLength": "128K",
+    "numParameters": "27b",
+    "description": "Derivative fine-tune targeting clinical language understanding, medical Q&A and radiology report drafting."
+  },
+  {
+    "id": "deepseek-r1",
+    "name": "DeepSeek R1",
+    "releaseDate": "2025-01-20",
+    "company": "DeepSeek",
+    "modelFamily": "DeepSeek",
+    "contextLength": "128K",
+    "numParameters": "671B",
+    "description": "Flagship Mixture-of-Experts reasoning model to rival closed-source leaders in maths, code and planning."
+  },
+  {
+    "id": "deepseek-r1-distill-llama-70b",
+    "name": "DeepSeek R1 Distill Llama 70B",
+    "releaseDate": "2025-01-20",
+    "company": "DeepSeek",
+    "modelFamily": "DeepSeek",
+    "contextLength": "130K",
+    "numParameters": "70b",
+    "description": "DeepSeek R1 Distill LLaMA-70B is a distilled, high-efficiency language model based on DeepSeek's own pretraining, designed for fast and accurate text and code generation."
+  },
+  {
+    "id": "mistral-large-instruct",
+    "name": "Mistral Large Instruct",
+    "releaseDate": "2024-07-24",
+    "company": "Mistral",
+    "modelFamily": "Mistral",
+    "contextLength": "128K",
+    "numParameters": "123b",
+    "description": "Frontier-class dense model covering 80+ languages and advanced function-calling for production copilots."
+  },
+  {
+    "id": "codestral-22b",
+    "name": "Codestral 22B",
+    "releaseDate": "2024-05-24",
+    "company": "Mistral",
+    "modelFamily": "Mistral",
+    "contextLength": "32K",
+    "numParameters": "22b",
+    "description": "Codestral-22B is a powerful AI model from Mistral built for code generation and understanding. It supports over 80 programming languages to help you write and improve code faster."
+  },
+  {
+    "id": "internvl2.5-8b",
+    "name": "InternVL2.5 8B MPO",
+    "releaseDate": "2024-12-20",
+    "company": "OpenGVLab ",
+    "modelFamily": "InternVL",
+    "contextLength": "",
+    "numParameters": "8b",
+    "description": "Compact multimodal model aimed at vision-language tasks such as image captioning, VQA and CoT visual reasoning."
+  },
+  {
+    "id": "teuken-7b-instruct-research",
+    "name": "Teuken 7B Instruct Research",
+    "releaseDate": "2024-10-25",
+    "company": "OpenGPT-X",
+    "modelFamily": "Teuken",
+    "contextLength": "",
+    "numParameters": "7b",
+    "description": "EU-centric multilingual chatbot tuned on 24 official EU languages for public-sector and corporate knowledge bots."
+  },
+  {
+    "id": "openai-o3",
+    "name": "OpenAI o3 (External)",
+    "releaseDate": "2025-04-16",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-gpt4o",
+    "name": "OpenAI GPT-4o (External)",
+    "releaseDate": "2024-05-13",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-gpt41",
+    "name": "OpenAI GPT-4.1 (External)",
+    "releaseDate": "2025-04-14",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-o3-mini",
+    "name": "OpenAI o3 Mini (External)",
+    "releaseDate": "2025-01-31",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-gpt4o-mini",
+    "name": "OpenAI GPT-4o Mini (External)",
+    "releaseDate": "2024-06-18",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-gpt41-mini",
+    "name": "OpenAI GPT-4.1 Mini (External)",
+    "releaseDate": "2025-04-14",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-o1",
+    "name": "OpenAI o1 (External)",
+    "releaseDate": "2024-12-05",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-o1-mini",
+    "name": "OpenAI o1 Mini (External)",
+    "releaseDate": "2024-09-12",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-gpt-oss-120b",
+    "name": "OpenAI GPT OSS 120B",
+    "releaseDate": "2025-08-04",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "128K",
+    "numParameters": "120b",
+    "description": "openai-gpt-oss-120b is an open-source 120B parameter language model from OpenAI. It's designed for advanced text generation, reasoning, and coding tasks at scale.",
+    "external": false
+  },
+  {
+    "id": "openai-gpt5",
+    "name": "OpenAI GPT-5 (External)",
+    "releaseDate": "07-08-2025",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-gpt5-chat",
+    "name": "OpenAI GPT-5 Chat (External)",
+    "releaseDate": "07-08-2025",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-gpt5-mini",
+    "name": "OpenAI GPT-5 Mini (External)",
+    "releaseDate": "07-08-2025",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  },
+  {
+    "id": "openai-gpt5-nano",
+    "name": "OpenAI GPT-5 Nano (External)",
+    "releaseDate": "07-08-2025",
+    "company": "OpenAI",
+    "modelFamily": "OpenAI",
+    "contextLength": "",
+    "numParameters": "",
+    "description": "",
+    "external": true
+  }
+]
