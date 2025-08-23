@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Trans } from "react-i18next";
 import BaseModal from "../../modals/BaseModal";
-import icon_arrow_left from "../../assets/icons/arrow_left.svg";
 import { useImportConversation } from "../../hooks/useImportConversation";
-import i18n from '../../i18n';
-
-
+import i18n from "../../i18n";
 import { useToast } from "../../hooks/useToast";
+import {
+  Folder,
+  FolderOpen,
+  FileJson,
+  Bot,
+  ChevronRight,
+  X,
+  Menu,
+} from "lucide-react";
+
 export default function ImportPersonaModal({
   isOpen,
   onClose,
@@ -14,25 +21,100 @@ export default function ImportPersonaModal({
   onError,
   repoOwner = "gwdg",
   repoName = "chat-ai-personas",
-  branch = "main"
+  branch = "main",
 }) {
-  const [currentPath, setCurrentPath] = useState("");
-  const [contents, setContents] = useState([]);
+  const [selectedPath, setSelectedPath] = useState(null);
+  const [rootContents, setRootContents] = useState({ folders: [], files: [] });
+  const [currentFolderContents, setCurrentFolderContents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingFolder, setLoadingFolder] = useState(false);
   const [error, setError] = useState(null);
-  const [pathHistory, setPathHistory] = useState([]);
+  const [folderStructure, setFolderStructure] = useState({});
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
   const { notifySuccess, notifyError } = useToast();
-  
   const importConversation = useImportConversation();
 
-  const handleImportPersona = async (parsedData) => {
-    return importConversation(
-      parsedData
-    );
+  // Fetch root contents and organize into folders and files
+  const fetchRootContents = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/?ref=${branch}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Filter & categorize
+      const folders = [];
+      const files = [];
+
+      for (const item of data) {
+        if (
+          item.name.toLowerCase().includes("license") ||
+          item.name.toLowerCase().includes("readme")
+        )
+          continue;
+
+        if (item.type === "dir") {
+          folders.push(item);
+        } else if (
+          item.type === "file" &&
+          item.name.toLowerCase().endsWith(".json")
+        ) {
+          // Fetch file metadata
+          try {
+            const resp = await fetch(item.download_url);
+            if (resp.ok) {
+              const text = await resp.text();
+              const cleaned = text.replace(/,(\s*[}$])/g, "$1");
+              const parsed = JSON.parse(cleaned);
+              files.push({
+                ...item,
+                title: parsed.title || item.name.replace(".json", ""),
+                subtitle:
+                  parsed.subtitle ||
+                  `Configuration • ${formatFileSize(item.size)}`,
+              });
+            } else {
+              files.push({
+                ...item,
+                title: item.name.replace(".json", ""),
+                subtitle: `Configuration • ${formatFileSize(item.size)}`,
+              });
+            }
+          } catch {
+            files.push({
+              ...item,
+              title: item.name.replace(".json", ""),
+              subtitle: `Configuration • ${formatFileSize(item.size)}`,
+            });
+          }
+        }
+      }
+
+      // Sort alphabetically
+      folders.sort((a, b) => a.name.localeCompare(b.name));
+      files.sort((a, b) =>
+        (a.title || a.name).localeCompare(b.title || b.name)
+      );
+
+      setRootContents({ folders, files });
+    } catch (err) {
+      setError(err.message);
+      setRootContents({ folders: [], files: [] });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const fetchContents = async (path = "") => {
-    setLoading(true);
+  // Fetch folder contents
+  const fetchFolderContents = async (path) => {
+    setLoadingFolder(true);
     setError(null);
 
     try {
@@ -44,126 +126,120 @@ export default function ImportPersonaModal({
 
       const data = await response.json();
 
-      // Filter & sort 
-      const filteredData = data.filter((item) => {
-        if (
-          item.name.toLowerCase().includes("license") ||
-          item.name.toLowerCase().includes("readme")
-        ) return false;
-        if (item.type === "dir") return true;
-        if (item.type === "file") return item.name.toLowerCase().endsWith(".json");
-        return false;
-      });
+      // Filter and process files
+      const files = [];
 
-      const sortedData = filteredData.sort((a, b) => {
-        if (a.type === "dir" && b.type !== "dir") return -1;
-        if (a.type !== "dir" && b.type === "dir") return 1;
-        return a.name.localeCompare(b.name);
-      });
-
-      // Files: fetch JSON titles
-      const fileItems = sortedData.filter((item) => item.type === "file");
-      const dirItems = sortedData.filter((item) => item.type === "dir");
-
-      const filePromises = fileItems.map(async (item) => {
-        try {
-          const resp = await fetch(item.download_url);
-          if (!resp.ok) return { ...item, title: null, subtitle: null };
-          const text = await resp.text();
-          const cleaned = text.replace(/,(\s*[}$$])/g, "$1");
-          const parsed = JSON.parse(cleaned);
-          return { ...item, title: parsed.title || null, subtitle: parsed.subtitle || null };
-        } catch {
-          return { ...item, title: null, subtitle: null };
+      for (const item of data) {
+        if (item.type === "file" && item.name.toLowerCase().endsWith(".json")) {
+          // Fetch file metadata
+          try {
+            const resp = await fetch(item.download_url);
+            if (resp.ok) {
+              const text = await resp.text();
+              const cleaned = text.replace(/,(\s*[}$])/g, "$1");
+              const parsed = JSON.parse(cleaned);
+              files.push({
+                ...item,
+                title: parsed.title || item.name.replace(".json", ""),
+                subtitle:
+                  parsed.subtitle ||
+                  `Configuration • ${formatFileSize(item.size)}`,
+              });
+            } else {
+              files.push({
+                ...item,
+                title: item.name.replace(".json", ""),
+                subtitle: `Configuration • ${formatFileSize(item.size)}`,
+              });
+            }
+          } catch {
+            files.push({
+              ...item,
+              title: item.name.replace(".json", ""),
+              subtitle: `Configuration • ${formatFileSize(item.size)}`,
+            });
+          }
         }
-      });
+      }
 
-      const filesWithTitle = await Promise.all(filePromises);
-      setContents([...dirItems, ...filesWithTitle]);
+      files.sort((a, b) =>
+        (a.title || a.name).localeCompare(b.title || b.name)
+      );
+      setCurrentFolderContents(files);
+
+      // Cache the folder contents
+      setFolderStructure((prev) => ({
+        ...prev,
+        [path]: files,
+      }));
     } catch (err) {
       setError(err.message);
-      setContents([]);
+      setCurrentFolderContents([]);
+    } finally {
+      setLoadingFolder(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchRootContents();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedPath(null);
+      setRootContents({ folders: [], files: [] });
+      setCurrentFolderContents([]);
+      setFolderStructure({});
+      setError(null);
+      setSidebarOpen(false);
+    }
+  }, [isOpen]);
+
+  const handleFolderClick = (folder) => {
+    // If clicking the same folder, toggle visibility
+    if (selectedPath === folder.path) {
+      setSelectedPath(null);
+      setCurrentFolderContents([]);
+    } else {
+      setSelectedPath(folder.path);
+      setSidebarOpen(false); // Close sidebar on mobile after selection
+
+      // Fetch contents if not cached
+      if (!folderStructure[folder.path]) {
+        fetchFolderContents(folder.path);
+      } else {
+        setCurrentFolderContents(folderStructure[folder.path]);
+      }
+    }
+  };
+
+  const handleFileImport = async (file) => {
+    try {
+      setLoading(true);
+      const resp = await fetch(file.download_url);
+      if (!resp.ok) {
+        throw new Error(
+          resp.status >= 500
+            ? "Server Error: Please try again later."
+            : "Client Error: The provided link might be incorrect."
+        );
+      }
+      const rawText = await resp.text();
+      const cleaned = rawText.replace(/,(\s*[}$])/g, "$1");
+      const parsed = JSON.parse(cleaned);
+
+      await importConversation(parsed);
+      onClose();
+    } catch (err) {
+      console.error("Import error:", err);
+      if (onError) onError("Failed to import persona");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (isOpen) fetchContents(currentPath);
-  }, [currentPath, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setCurrentPath("");
-      setPathHistory([]);
-      setContents([]);
-      setError(null);
-    }
-  }, [isOpen]);
-
-  const handleItemClick = async (item) => {
-    if (item.type === "dir") {
-      setPathHistory([...pathHistory, currentPath]);
-      setCurrentPath(item.path);
-    } else {
-      try {
-        setLoading(true);
-        const resp = await fetch(item.download_url);
-        if (!resp.ok) {
-          throw new Error(resp.status >= 500
-            ? "Server Error: Please try again later."
-            : "Client Error: The provided link might be incorrect.");
-        }
-        const rawText = await resp.text();
-        const cleaned = rawText.replace(/,(\s*[}$])/g, "$1");
-        const parsed = JSON.parse(cleaned);
-
-        await importConversation(parsed);
-
-        /*
-        if (handleImportPersona) {
-          onClose();
-          await handleImportPersona(parsed, item.name.replace(".json", ""));
-        } else if (onFileSelect) {
-          onFileSelect(item, parsed);
-        } else {
-          window.open(item.html_url, "_blank");
-        }
-          */
-      } catch (err) {
-        console.error("Import error:", err);
-        if (onError) onError("Failed to import persona");
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const handleBackClick = () => {
-    if (pathHistory.length > 0) {
-      const prevPath = pathHistory[pathHistory.length - 1];
-      setPathHistory(pathHistory.slice(0, -1));
-      setCurrentPath(prevPath);
-    }
-  };
-
-  const getFileIcon = (name, type) => {
-    return type === "dir" 
-      ? <span className="text-blue-500 text-xl">📁</span>
-      : <span className="text-green-600 text-xl">🤖</span>;
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
-  };
-
-  const breadcrumbs = currentPath ? currentPath.split("/") : [];
-
-  // ADD below other handlers
   const handleInsertFromClipboard = async () => {
     try {
       if (!navigator?.clipboard?.readText) {
@@ -178,24 +254,107 @@ export default function ImportPersonaModal({
       try {
         parsed = JSON.parse(cleaned);
       } catch {
-        throw new Error(i18n.t("description.persona.importFromClipboardErrorInvalidJson"));
+        throw new Error(
+          i18n.t("description.persona.importFromClipboardErrorInvalidJson")
+        );
       }
       try {
         await importConversation(parsed);
       } catch (err) {
         console.error("Import error:", err);
-        throw new Error(i18n.t("description.persona.importFromClipboardErrorInvalidPersona"));
+        throw new Error(
+          i18n.t("description.persona.importFromClipboardErrorInvalidPersona")
+        );
       }
-      
-      onClose(); // match file import flow
-      //notifySuccess?.("Persona imported from clipboard.");
+
+      onClose();
     } catch (err) {
       console.error("Clipboard import error:", err);
       const msg = err?.message || "Failed to import persona from clipboard.";
-      onError ? onError(msg) : notifyError(i18n.t("description.persona.importFromClipboardErrorInvalidJson"));
+      onError
+        ? onError(msg)
+        : notifyError(
+            i18n.t("description.persona.importFromClipboardErrorInvalidJson")
+          );
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
+  const renderSidebarFile = (file) => (
+    <div
+      key={file.sha}
+      onClick={() => handleFileImport(file)}
+      className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded transition-colors group"
+    >
+      <Bot className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+      <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">
+        {file.title || file.name.replace(".json", "")}
+      </span>
+    </div>
+  );
+
+  const renderContentGrid = () => {
+    if (loadingFolder) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        </div>
+      );
+    }
+
+    if (!selectedPath) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+          <Folder className="w-16 h-16 mb-4 text-gray-300 dark:text-gray-600" />
+          <p className="text-sm font-medium">
+            <Trans i18nKey="description.persona.selectFolder" />
+          </p>
+          <p className="text-xs mt-2 text-center px-4">
+            <Trans i18nKey="description.persona.selectFolderDescription" />
+          </p>
+        </div>
+      );
+    }
+
+    if (currentFolderContents.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+          <FolderOpen className="w-16 h-16 mb-4 text-gray-300 dark:text-gray-600" />
+          <p className="text-sm">
+            <Trans i18nKey="description.persona.emptyFolder" />
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4">
+        {currentFolderContents.map((file) => (
+          <div
+            key={file.sha}
+            onClick={() => handleFileImport(file)}
+            className="flex flex-col items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-all hover:shadow-md group"
+          >
+            <Bot className="w-10 h-10 mb-2 text-blue-500 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+            <p className="text-xs font-medium text-gray-900 dark:text-white text-center line-clamp-2">
+              {file.title}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center line-clamp-1">
+              {file.subtitle}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -205,14 +364,19 @@ export default function ImportPersonaModal({
       titleKey={null}
       maxWidth="max-w-4xl"
     >
-      {/* Header row with icon & close built-in */}
-      <div className="flex justify-between items-center px-4 pt-4">
+      {/* Header */}
+      <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b dark:border-gray-700">
         <div className="flex items-center gap-3">
-          <span className="text-lg">⚙️</span>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="sm:hidden p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+          >
+            <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          </button>
           <div>
-            <p className="text-sm text-tertiary font-medium">
-              <Trans i18nKey="description.persona.selectPersona" />
-            </p>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+              <Trans i18nKey="description.persona.personaLibrary" />
+            </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               <Trans i18nKey="description.persona.browsePersonas" />
             </p>
@@ -220,124 +384,111 @@ export default function ImportPersonaModal({
         </div>
       </div>
 
-      {/* Navigation bar */}
-      {(pathHistory.length > 0 || currentPath) && (
-        <div className="px-4 py-3 border-b dark:border-border_dark">
-          <div className="flex items-center gap-2">
-            {pathHistory.length > 0 && (
-              <button
-                onClick={handleBackClick}
-                className="cursor-pointer flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-700 dark:text-white"
-              >
-                <img src={icon_arrow_left} alt="" className="h-3 w-3" />
-                <Trans i18nKey="description.persona.back" />
-              </button>
-            )}
-            <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-              <span className="font-medium">
-                <Trans i18nKey="description.persona.personas" />
-              </span>
-              {breadcrumbs.map((part, idx) => (
-                <React.Fragment key={idx}>
-                  <span className="mx-1">/</span>
-                  <span className="font-medium">{part}</span>
-                </React.Fragment>
-              ))}
+      {/* Main Content Area */}
+      <div className="flex h-[400px] sm:h-[450px] relative overflow-hidden">
+        {/* Sidebar */}
+        <div
+          className={`
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          sm:translate-x-0 transition-transform duration-200 ease-in-out
+          absolute sm:relative z-50 sm:z-auto
+          w-56 sm:w-60 h-full
+          border-r dark:border-gray-700 
+          bg-gray-50 dark:bg-gray-900 
+          overflow-y-auto
+        `}
+        >
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="min-h-96 max-h-96 overflow-y-auto">
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          </div>
-        )}
-        {error && (
-          <div className="p-4 text-center">
-            <div className="text-red-500 mb-2 dark:text-red-400 text-sm">
-              <Trans i18nKey="description.persona.errorLoading" />
-            </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-              {error}
-            </div>
-            <button
-              onClick={() => fetchContents(currentPath)}
-              className="cursor-pointer px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-colors text-xs"
-            >
-              <Trans i18nKey="description.persona.retry" />
-            </button>
-          </div>
-        )}
-        {!loading && !error && contents.length === 0 && (
-          <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-            <Trans i18nKey="description.persona.noPersonas" />
-          </div>
-        )}
-        {!loading && !error && contents.length > 0 && (
-          <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {contents.map((item) => (
-              <div
-                key={item.sha}
-                onClick={() => handleItemClick(item)}
-                className="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors group"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  {getFileIcon(item.name, item.type)}
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm">
-                      {item.type === "file"
-                        ? item.title || item.name.replace(".json", "")
-                        : item.name}
-                    </div>
-                    {item.type === "file" && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {item.subtitle ? (
-                          item.subtitle
-                        ) : (
-                          <>
-                            <Trans i18nKey="description.persona.configuration" />{" "}
-                            • {formatFileSize(item.size)}
-                          </>
-                        )}
-                      </div>
+          ) : (
+            <div className="p-3">
+              {/* Folders Section */}
+              <div className="mb-4">
+                <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
+                  <Trans i18nKey="description.persona.categories" />
+                </h3>
+                {rootContents.folders.map((folder) => (
+                  <div
+                    key={folder.sha}
+                    onClick={() => handleFolderClick(folder)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded cursor-pointer transition-colors ${
+                      selectedPath === folder.path
+                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                        : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    {selectedPath === folder.path ? (
+                      <FolderOpen className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                    ) : (
+                      <Folder className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
                     )}
-                    {item.type === "dir" && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        <Trans i18nKey="description.persona.folder" />
-                      </div>
-                    )}
+                    <span className="text-xs font-medium truncate flex-1">
+                      {folder.name}
+                    </span>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+
+              {/* Direct Files Section */}
+              {rootContents.files.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
+                    <Trans i18nKey="description.persona.quickImport" />
+                  </h3>
+                  {rootContents.files.map(renderSidebarFile)}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 bg-white dark:bg-gray-900 overflow-y-auto relative">
+          {/* Mobile Sidebar Overlay - only on content area */}
+          {sidebarOpen && (
+            <div
+              className="sm:hidden absolute inset-0 bg-transparent backdrop-blur-md bg-opacity-45 dark:bg-opacity-30 z-40"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+          {renderContentGrid()}
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t dark:border-border_dark text-xs text-gray-600 dark:text-gray-400">
-        <div className="flex justify-center gap-2">
-          <button
-            onClick={handleInsertFromClipboard}
-            disabled={loading}
-            className="cursor-pointer px-4 py-2 bg-tertiary hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
-          >
-            <Trans i18nKey="description.persona.importFromClipboard" />
-          </button>
-          <button
-            onClick={() =>
-              window.open(
-                `https://github.com/${repoOwner}/${repoName}`,
-                "_blank"
-              )
-            }
-            className="cursor-pointer px-4 py-2 bg-tertiary hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
-          >
-            <Trans i18nKey="description.persona.createOwn" />
-          </button>
+      <div className="px-4 sm:px-6 py-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+          <div className="flex gap-3">
+            <button
+              onClick={handleInsertFromClipboard}
+              disabled={loading}
+              className="cursor-pointer px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
+            >
+              <Trans i18nKey="description.persona.importFromClipboard" />
+            </button>
+            <button
+              onClick={() =>
+                window.open(
+                  `https://github.com/${repoOwner}/${repoName}`,
+                  "_blank"
+                )
+              }
+              className="cursor-pointer px-3 py-1.5 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-xs"
+            >
+              <Trans i18nKey="description.persona.createOwn" />
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            <Trans
+              i18nKey="description.persona.categoryCount"
+              values={{
+                folders: rootContents.folders.length,
+                files: rootContents.files.length,
+              }}
+            />
+          </p>
         </div>
       </div>
     </BaseModal>

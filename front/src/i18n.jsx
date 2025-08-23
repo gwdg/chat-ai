@@ -58,7 +58,6 @@ i18n
                   "Recall: Chat AI can use relevant memories about you from previous conversations, but won't memorize anything from the current conversation.",
                 on: "Learn: Chat AI actively learns stuff about you from the current conversation and also recalls memories it gained previously.",
                 settings:
-                 
                   "You can always view, add, edit, and remove memories from the User Profile panel in the top-right corner. Memories are only stored locally in your browser.",
               },
               back: "Back",
@@ -71,7 +70,7 @@ i18n
             importPersona: "Import Persona",
             persona: {
               selectPersona: "Select Persona",
-              browsePersonas: "Browse available personas from repository",
+              browsePersonas: "Browse and import AI personas",
               personas: "Personas",
               back: "Back",
               errorLoading: "Error loading personas",
@@ -79,10 +78,20 @@ i18n
               noPersonas: "No personas found in this folder",
               configuration: "Persona configuration",
               folder: "Folder",
-              createOwn: "Create Your Own Persona",
-              importFromClipboard: "Import Persona from Clipboard",
-              importFromClipboardErrorInvalidJson: "Failed to import persona from clipboard. No valid JSON found.",
-              importFromClipboardErrorInvalidPersona: "Failed to import persona from clipboard. Invalid persona data."
+              createOwn: "Create Your Own",
+              importFromClipboard: "Import from Clipboard",
+              importFromClipboardErrorInvalidJson:
+                "Failed to import persona from clipboard. No valid JSON found.",
+              importFromClipboardErrorInvalidPersona:
+                "Failed to import persona from clipboard. Invalid persona data.",
+              personaLibrary: "Persona Library",
+              categories: "Categories",
+              quickImport: "Quick Import",
+              selectFolder: "No category selected",
+              selectFolderDescription:
+                "Select a category from the sidebar to view personas",
+              emptyFolder: "This folder is empty",
+              categoryCount: "{{folders}} categories • {{files}} personas",
             },
             settings: {
               userMemory: "User Memory",
@@ -385,19 +394,28 @@ i18n
             importPersona: "Persona importieren",
             persona: {
               selectPersona: "Persona auswählen",
-              browsePersonas:
-                "Verfügbare Personas aus dem Repository durchsuchen",
+              browsePersonas: "KI-Personas durchsuchen und importieren",
               personas: "Personas",
               back: "Zurück",
               errorLoading: "Fehler beim Laden der Personas",
-              retry: "Wiederholen",
+              retry: "Erneut versuchen",
               noPersonas: "Keine Personas in diesem Ordner gefunden",
               configuration: "Persona-Konfiguration",
               folder: "Ordner",
-              createOwn: "Eigene Persona erstellen",
-              importFromClipboard: "Persona aus Zwischenablage importieren",
-              importFromClipboardErrorInvalidJson: "Fehler beim Importieren der Persona aus der Zwischenablage. Ungültiges JSON.",
-              importFromClipboardErrorInvalidPersona: "Fehler beim Importieren der Persona aus der Zwischenablage. Ungültige Persona-Daten."
+              createOwn: "Eigene erstellen",
+              importFromClipboard: "Aus Zwischenablage",
+              importFromClipboardErrorInvalidJson:
+                "Import aus Zwischenablage fehlgeschlagen. Kein gültiges JSON gefunden.",
+              importFromClipboardErrorInvalidPersona:
+                "Import aus Zwischenablage fehlgeschlagen. Ungültige Persona-Daten.",
+              personaLibrary: "Persona-Bibliothek",
+              categories: "Kategorien",
+              quickImport: "Schnellimport",
+              selectFolder: "Keine Kategorie ausgewählt",
+              selectFolderDescription:
+                "Wählen Sie eine Kategorie aus der Seitenleiste, um Personas anzuzeigen",
+              emptyFolder: "Dieser Ordner ist leer",
+              categoryCount: "{{folders}} Kategorien • {{files}} Personas",
             },
             settings: {
               userMemory: "Benutzerspeicher",
