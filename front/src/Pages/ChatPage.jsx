@@ -78,7 +78,7 @@ function ChatPage({ conversationId }) {
   const shouldShowSidebar = isDesktop && showSidebar;
   const shouldShowMobileSidebar = !isDesktop && showSidebar;
 
-  const emptyConversation = Boolean(localState.messages?.length <= 2);
+  const emptyConversation = Boolean(localState?.messages?.length <= 2);
 
   // Function to create a new conversation
   const handleNewConversation = useCallback(async () => {

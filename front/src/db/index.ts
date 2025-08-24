@@ -203,7 +203,6 @@ export async function updateConversation(
   }
 ) {
   const now = Date.now();
-
   await db.transaction(
     'rw',
     db.conversations,
@@ -225,6 +224,8 @@ export async function updateConversation(
         updatedAt: m.updatedAt,
         meta: m.meta
       }));
+
+      
 
       // Figure out message IDs to keep / delete
       const keepIds = new Set(normalizedMsgs.map(m => m.id));

@@ -79,6 +79,15 @@ export function useSyncConversation({
         if (timeoutIds.current[currentConversationId]) {
         clearTimeout(timeoutIds.current[currentConversationId]);
         }
+        if (localState?.flush) {
+            console.log("Flushing to DB....")
+            delete localState.flush
+            updateConversation(
+                currentConversationId,
+                localState
+            )
+            return;
+        }
         // Schedule a save after `delay` ms
         timeoutIds.current[currentConversationId] = setTimeout(() => {
             updateConversation(

@@ -310,7 +310,8 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <Edit className="w-3.5 h-3.5" />
-              <Trans i18nKey="description.memory.edit" />
+              Rename
+              {/* TODO use Translation */}
             </button>
 
             <button
