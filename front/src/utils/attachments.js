@@ -8,6 +8,15 @@ export const readFileAsBase64 = (file) => {
     });
 };
 
+export const readFileAsText = (file) => {
+    return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+    });
+};
+
 // Format CSV text for display
 const formatCSVText = (csvText) => {
     const rows = csvText.split("\n");
@@ -16,14 +25,7 @@ const formatCSVText = (csvText) => {
 };
 
 // Read file content as text
-const readFileAsText = (file) => {
-    return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsText(file);
-    });
-};
+
 
 const setAttachments = ({
     localState,

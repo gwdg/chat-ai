@@ -5,7 +5,7 @@ export const processFile = async (file) => {
     formData.append("document", file);
 
     const response = await fetch(
-      import.meta.env.VITE_BACKEND_ENDPOINT + "/process-pdf",
+      import.meta.env.VITE_BACKEND_ENDPOINT + "/documents",
       {
         method: "POST",
         body: formData,

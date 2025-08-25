@@ -687,3 +687,48 @@ export function useFileBase64(fileId: string) {
   }, [fileId]);
   return base64;
 }
+
+// Converts a file to a decoded string using TextDecoder
+export function useFileContent(fileId: string, encoding: string = "utf-8") {
+  const [content, setContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!fileId) {
+      setContent(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function checkUntilReady() {
+      while (!cancelled) {
+        const file = await loadFile(fileId); // Your own function to retrieve a File object
+        if (file) {
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+            const decoder = new TextDecoder(encoding);
+            const text = decoder.decode(arrayBuffer);
+
+            if (!cancelled) {
+              setContent(text);
+            }
+          } catch (err) {
+            console.error("Error decoding file:", err);
+            if (!cancelled) setContent(null);
+          }
+          break; // stop polling once we have loaded/decoded
+        }
+        // Wait 200ms before trying again
+        await new Promise((res) => setTimeout(res, 200));
+      }
+    }
+
+    checkUntilReady();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fileId, encoding]);
+
+  return content;
+}

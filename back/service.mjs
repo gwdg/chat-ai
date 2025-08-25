@@ -18,7 +18,7 @@ const configPath = path.resolve("/run/secrets/back");
 let port = 8081;
 let apiEndpoint = "https://chat-ai.academiccloud.de/v1";
 let apiKey = "";
-let serviceName = "Custom Chat AI";
+let serviceName = "Chat AI Dev";
 
 // Load configuration
 try {
@@ -55,7 +55,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use((err, req, res, next) => {
   if (err.name === "FileUploadError") {
-    console.error("File Upload Error:", err);
+    console.error("File Send Error:", err);
     return res.status(400).json({ error: err.message });
   }
   next(err);
@@ -64,8 +64,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
-// Function to process PDF file
-async function processPdfFile(file, inference_id) {
+// Function to process file with docling
+async function processFile(file, inference_id) {
   const url = apiEndpoint + "/documents/convert";
   const formData = new FormData();
   formData.append("document", file.data, {
@@ -92,21 +92,23 @@ async function processPdfFile(file, inference_id) {
     headers,
     body: formData,
   });
+  if (response.status !== 200) console.log(response.text);
+  console.log(response.status)
   return response;
 }
 
 // Process PDF file
-app.post("/process-pdf", async (req, res) => {
+app.post("/documents", async (req, res) => {
   // Check for the presence of `document` file key
   if (!req.files || !req.files.document) {
-    return res.status(422).json({ error: "No PDF file provided" });
+    return res.status(422).json({ error: "No file provided" });
   }
 
   const inference_id = req.headers["inference-id"];
   try {
     // Access the file using the correct key name
-    const pdfFile = req.files.document;
-    const response = await processPdfFile(pdfFile, inference_id);
+    const file = req.files.document;
+    const response = await processFile(file, inference_id);
     if (!response.ok) {
       return res.status(response.status).send(response.statusText);
     }
@@ -115,7 +117,7 @@ app.post("/process-pdf", async (req, res) => {
   } catch (err) {
     console.error("Processing error:", err);
     return res.status(500).json({
-      error: "An internal server error occurred while processing PDF",
+      error: "An internal server error occurred while processing file",
     });
   }
 });
@@ -203,9 +205,7 @@ app.post("/chat/completions", async (req, res) => {
       timeout: timeout,
     }
 
-
     let inference_service = model;
-
     // Handle tools and arcana
     if (enable_tools) {
       inference_service = "saia-openai-gateway";
@@ -224,8 +224,7 @@ app.post("/chat/completions", async (req, res) => {
     
     console.log(params);
     console.log({"inference-service": inference_service});
-    // Temporary for testing gwdg tools
-    const openai = new OpenAI({baseURL : "https://chat-ai.academiccloud.de/v1", apiKey: apiKey ? apiKey : inference_id});
+    const openai = new OpenAI({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id});
     const stream = await openai.chat.completions.create(
       params, {
       headers: {"inference-service": inference_service}

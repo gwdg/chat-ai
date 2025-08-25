@@ -3,7 +3,7 @@ import Papa from "papaparse";
 import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
 import AudioPlayer from "./AudioPlayer";
 import icon_cross_sm from "../../assets/icons/cross_sm.svg";
-import { loadFile, useFile, useFileBase64 } from "../../db";
+import { loadFile, useFile, useFileBase64, useFileContent } from "../../db";
 import { X } from "lucide-react";
 
 // --------------------
@@ -138,6 +138,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
   const [loadError, setLoadError] = useState(null);
   const {file, data} = useFile(fileId);
   const base64 = useFileBase64(fileId); // TODO only load if important
+  const textContent = useFileContent(fileId);
   if (!file) return null;
 
   // Get file type for previewing
@@ -165,22 +166,22 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
     return "unknown";
   };
 
-  const handleDownload = () => {
+  const handleSave = () => {
     try {
       // Create file as is
-      const downloadFile = new File([data], file?.name || "download", { type: file.type })     
+      const fileToSave = new File([data], file?.name || "Save", { type: file.type })     
 
       // Create and use download link
-      const downloadUrl = URL.createObjectURL(downloadFile);
+      const downloadUrl = URL.createObjectURL(fileToSave);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = name;
+      a.download = file?.name || "Save";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
 
       // Clean up
-      URL.revokeObjectURL(downloadUrl);
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 300);
     } catch (err) {
       console.error("Download failed:", err);
       alert("Failed to download file");
@@ -384,7 +385,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
 
       // CSV Table Viewer
       if (fileType === "csv") {
-        return <CSVTable content={file.content || textContent} />;
+        return <CSVTable content={file.content || data} />;
       }
 
       if (
@@ -450,11 +451,11 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         <div className="flex items-center gap-4">
           {/* Download File Button */}
           <button
-            onClick={handleDownload}
+            onClick={handleSave}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 rounded-2xl text-white font-medium text-sm transition-colors cursor-pointer"
             aria-label="Download file"
           >
-            Download
+            Save to device
           </button>
           {/* Close Button */}
           <button onClick={onClose} aria-label="Close">

@@ -6,7 +6,7 @@ import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, updateConversation } from "../db";
-import { readFileAsBase64 } from "./attachments";
+import { readFileAsBase64, readFileAsText } from "./attachments";
 
 // Convert content items to standard OpenAI API
 export async function processContentItems(items, ignoreImages = false, ignoreAudio = false, ignoreVideo = false, ignoreFiles = false) {
@@ -86,14 +86,11 @@ export async function processContentItems(items, ignoreImages = false, ignoreAud
       else {
         try {
           // Base64 encode without the data prefix
-          // const base64Data = await readFileAsBase64(file);
-          // output.push({
-          //   type: "file",
-          //   file: {
-          //     file_data: base64Data, // No prefix
-          //     filename: meta.name,
-          //   }
-          // });
+          const textContent = await readFileAsText(file);
+          output.push({
+            type: "text",
+            text: textContent
+          });
           // Load data
         } catch (error) {
           console.warn(`Unsupported file type: ${mimeType}, ${error}`);
