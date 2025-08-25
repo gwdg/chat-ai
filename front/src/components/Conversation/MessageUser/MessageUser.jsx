@@ -50,9 +50,10 @@ export default React.memo(({
                     setEditMode={setEditMode}
                 />
             )}
-        {/* File rendering */}
+        {/* Attachments Section */}
        {Array.isArray(message.content) && message.content.length > 1 && (
-            message.content.slice(1).map((attachment, i) => (
+            <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 hide-scrollbar">
+            {message.content.slice(1).map((attachment, i) => (
                 <Attachment
                     localState={localState}
                     setLocalState={setLocalState}
@@ -60,7 +61,8 @@ export default React.memo(({
                     index={i}
                     inHistory={true}
                 />
-            ))
+            ))}
+            </div>
         )}
         </div>
     )

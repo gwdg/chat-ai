@@ -8,6 +8,7 @@ import { useModal } from "../../modals/ModalContext";
 import { useFiles, useFileMeta, useFileBase64, loadFile, saveFile } from "../../db";
 import { FileWarning } from "lucide-react";
 import { processFile } from "../../apis/processFile";
+import { getFileType } from "../../utils/attachments";
 
 export default function Attachment({
     localState,
@@ -24,6 +25,16 @@ export default function Attachment({
     const isImage = file?.type?.startsWith('image/');
     const base64 = useFileBase64(isImage ? attachment.fileId : null);
     if (!file) return "" // TODO placeholder file
+    const fileType = getFileType(file); // Get readable file type, e.g., "image"
+    const model = localState.settings.model;
+    const isAudioSupported = (model?.input?.includes("audio") || false)
+    const isVideoSupported = (model?.input?.includes("video") || false)
+    const isImageSupported = (model?.input?.includes("image") || false)
+    const isFileSupported = !fileType ? false 
+        : fileType === "image" ? isImageSupported
+        : fileType === "audio" ? isAudioSupported
+        : fileType === "video" ? isVideoSupported
+        : true
 
     const handleRemove = () => {
         removeAttachment({
@@ -70,21 +81,14 @@ export default function Attachment({
     }
 
     const getFileBadge = (file) => {
-        //if (file.fileType === "pdf") return "PDF";
-        if (file.type?.startsWith("audio/")) return file.format?.toUpperCase() || "AUDIO";
-        if (file.type?.startsWith("application/pdf")) return "PDF";
-        if (file.type?.startsWith("image/")) return "IMAGE";
-        if (file.type?.startsWith("video/")) return "VIDEO";
-        if (file.type?.startsWith("text/csv")) return "CSV";
-        if (file.type?.startsWith("text/markdown")) return "MD";
-        if (file.type?.startsWith("text/x-code")) return "CODE";
-        if (file.type?.startsWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) return "EXCEL";
-        if (file.type?.startsWith("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) return "DOCX";
-        return "DOC";
+        const fileType = getFileType(file);
+        if (fileType === "markdown") return "MD";
+        if (fileType === "unknown") return "DOC";
+        return fileType.toUpperCase();
     };
 
     const badge = getFileBadge(file);
-    const canProcess = !inHistory && (badge === "PDF"); // TODO add excel and other supported types
+    const canProcess = !inHistory && (fileType === "pdf"); // TODO add excel and other supported types
     
     const getFileDisplayInfo = (file) => {
         if (canProcess) {
@@ -352,6 +356,28 @@ export default function Attachment({
         </div>
         </div>
         </div>
+        {/* Process Needed Warning*/}
+        {(!isFileSupported || fileType === "pdf") && (
+        <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
+            <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-3 h-3 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+            >
+            <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.721-1.36 
+                3.486 0l6.857 12.177c.75 1.332-.213 2.974-1.742 
+                2.974H3.142c-1.53 0-2.492-1.642-1.743-2.974L8.257 3.1zM11 
+                14a1 1 0 10-2 0 1 1 0 002 0zm-1-2a1 1 
+                0 01-1-1V8a1 1 0 112 0v3a1 1 0 01-1 1z"
+                clipRule="evenodd"
+            />
+            </svg>
+            {!isFileSupported ? `Switch model to support ${fileType}` : "Unprocessed file" }
+        </span>
+        )}
     </div>
     )}
       </div>

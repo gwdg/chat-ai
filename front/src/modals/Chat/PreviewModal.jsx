@@ -5,69 +5,11 @@ import AudioPlayer from "./AudioPlayer";
 import icon_cross_sm from "../../assets/icons/cross_sm.svg";
 import { loadFile, useFile, useFileBase64, useFileContent } from "../../db";
 import { X } from "lucide-react";
+import { getFileType } from "../../utils/attachments";
 
 // --------------------
 // Utility + helper components
 // --------------------
-const CODE_EXTENSIONS = [
-  ".py",
-  ".js",
-  ".java",
-  ".cpp",
-  ".c",
-  ".h",
-  ".cs",
-  ".rb",
-  ".php",
-  ".go",
-  ".rs",
-  ".swift",
-  ".kt",
-  ".ts",
-  ".jsx",
-  ".tsx",
-  ".html",
-  ".json",
-  ".txt",
-  ".csv",
-  ".pdf",
-  ".md",
-  ".tex",
-  ".xml",
-  ".yaml",
-  ".yml",
-  ".ini",
-  ".toml",
-  ".properties",
-  ".css",
-  ".scss",
-  ".sass",
-  ".less",
-  ".sh",
-  ".ps1",
-  ".pl",
-  ".lua",
-  ".r",
-  ".m",
-  ".mat",
-  ".asm",
-  ".sql",
-  ".ipynb",
-  ".rmd",
-  ".dockerfile",
-  ".proto",
-  ".cfg",
-  ".bat",
-];
-
-const isCodeFile = (filename) => {
-  try {
-    return CODE_EXTENSIONS.some((ext) => filename?.toLowerCase().endsWith(ext));
-  } catch (error) {
-    console.error("Error checking file extension:", error);
-    return false;
-  }
-};
 
 const CSVTable = ({ content }) => {
   const [error, setError] = useState(null);
@@ -140,31 +82,6 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
   const base64 = useFileBase64(fileId); // TODO only load if important
   const textContent = useFileContent(fileId);
   if (!file) return null;
-
-  // Get file type for previewing
-  const getFileType = (file) => {
-    if (file?.type === "audio" || file?.isAudio) return "audio";
-    if (file?.fileType === "pdf") return "pdf";
-    if (file?.fileType === "csv") return "csv";
-    if (file?.fileType === "markdown") return "markdown";
-    if (file?.fileType === "code") return "code";
-    if (file?.fileType === "text") return "text";
-    if (file?.type === "image") return "image";
-    if (file?.type === "video") return "video";
-    if (file?.type === "document") return "pdf";
-
-    if (file?.name) {
-      const ext = file.name.toLowerCase().split(".").pop();
-      if (ext === "pdf") return "pdf";
-      if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "image";
-      if (["mp4", "avi", "mov"].includes(ext)) return "video";
-      if (["mp3", "wav", "ogg"].includes(ext)) return "audio";
-      if (["csv"].includes(ext)) return "csv";
-      if (["md", "markdown"].includes(ext)) return "markdown";
-      if (["txt"].includes(ext)) return "text";
-    }
-    return "unknown";
-  };
 
   const handleSave = () => {
     try {
@@ -245,49 +162,8 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       if (fileType === "pdf") {
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-        // Priority 1: If processed, show the processed content FIRST
-        if (file.processed && file.processedContent) {
-          return (
-            <div className="w-full h-[85vh] flex flex-col">
-              {/* Show processed status */}
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-3 mb-4 mx-4">
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-green-600 dark:text-green-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                      Processed PDF Content
-                    </p>
-                    <p className="text-xs text-green-600 dark:text-green-300">
-                      Text has been extracted and is searchable in
-                      conversations.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-900 p-6 overflow-auto flex-1 mx-4 rounded-lg border dark:border-gray-700">
-                <pre className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 font-sans text-sm leading-relaxed">
-                  {file.processedContent}
-                </pre>
-              </div>
-            </div>
-          );
-        }
-
-        // Priority 2: Show mobile warning for PDF previews (only if not processed)
-        if (isMobile && pdfUrl) {
+        // Show mobile warning for PDF previews (only if not processed)
+        if (isMobile && base64) {
           return (
             <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg">
               <svg
@@ -313,8 +189,8 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
           );
         }
 
-        // Priority 3: If we have a valid PDF URL for preview (original PDF) AND not processed
-        if (base64 && !isMobile && !file.processed) {
+        // If we have a valid PDF URL for preview (original PDF) AND not processed
+        if (base64 && !isMobile) {
           return (
             <div className="w-full h-[85vh] flex flex-col">
               {/* Show processing status if not processed */}
@@ -339,8 +215,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
                     </p>
                     <p className="text-xs text-blue-600 dark:text-blue-300">
                       This PDF hasn&quot;t been processed yet. Click
-                      &quot;Process PDF&quot; to extract searchable text
-                      content.
+                      &quot;Process&quot; to extract text content.
                     </p>
                   </div>
                 </div>
@@ -357,7 +232,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
           );
         }
 
-        // Priority 4: If no PDF data available, show helpful message
+        // If no PDF data available, show helpful message
         return (
           <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg mx-4">
             <svg
@@ -401,7 +276,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       }
 
       // Code Viewer
-      if (isCodeFile(file.name)) {
+      if (fileType === "code") {
         return (
           <pre className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg overflow-auto max-h-[85vh] w-full">
             <code className="font-mono text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200">
@@ -440,6 +315,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
+      minimal={true}
       titleKey={null} // We'll pass custom header
       maxWidth="max-w-[1000px]"
     >

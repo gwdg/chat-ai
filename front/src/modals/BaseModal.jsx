@@ -21,7 +21,8 @@ export default function BaseModal({
   titleKey,
   children,
   maxWidth = "max-w-md",
-  isForced = false
+  isForced = false,
+  minimal = false,
 }) {
 
   return (
@@ -66,6 +67,7 @@ export default function BaseModal({
                   </Dialog.Title>
 
                   {/* Close button */}
+                  {!minimal && (
                   <button
                     onClick={onClose}
                     className="cursor-pointer p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition"
@@ -77,6 +79,7 @@ export default function BaseModal({
                       className="h-[24px] w-[24px]"
                     />
                   </button>
+                  )}
                 </div>
 
                 {/* Content */}

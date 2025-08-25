@@ -14,7 +14,7 @@ export const getDefaultSettings = () => {
     model: envSettings.model,
     temperature: envSettings.temperature,
     top_p: envSettings.top_p,
-    memory: envSettings?.memory || 2,
+    memory: envSettings?.memory || 0,
     enable_tools: envSettings?.enable_tools || false,
     enable_web_search: envSettings?.enable_web_search || false,
     arcana: {

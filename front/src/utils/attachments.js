@@ -8,6 +8,7 @@ export const readFileAsBase64 = (file) => {
     });
 };
 
+// Read file content as text
 export const readFileAsText = (file) => {
     return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -17,14 +18,90 @@ export const readFileAsText = (file) => {
     });
 };
 
+const CODE_EXTENSIONS = [
+  "py",
+  "js",
+  "java",
+  "cpp",
+  "c",
+  "h",
+  "cs",
+  "rb",
+  "php",
+  "go",
+  "rs",
+  "swift",
+  "kt",
+  "ts",
+  "jsx",
+  "tsx",
+  "html",
+  "json",
+  "txt",
+  "md",
+  "tex",
+  "xml",
+  "yaml",
+  "yml",
+  "ini",
+  "toml",
+  "properties",
+  "css",
+  "scss",
+  "sass",
+  "less",
+  "sh",
+  "ps1",
+  "pl",
+  "lua",
+  "r",
+  "m",
+  "mat",
+  "asm",
+  "sql",
+  "ipynb",
+  "rmd",
+  "dockerfile",
+  "proto",
+  "cfg",
+  "bat",
+];
+
+// Get file type
+export const getFileType = (file) => {
+    // Attempt to use MIME type
+    if (file?.type?.startsWith("audio/")) return "audio";
+    if (file?.type?.startsWith("application/pdf")) return "pdf";
+    if (file?.type?.startsWith("image/")) return "image";
+    if (file?.type?.startsWith("video/")) return "video";
+    if (file?.type?.startsWith("text/csv")) return "csv";
+    if (file?.type?.startsWith("text/markdown")) return "markdown";
+    if (file?.type?.startsWith("text/x-code")) return "code";
+    if (file?.type?.startsWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) return "excel";
+    if (file?.type?.startsWith("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) return "docx";
+    
+    // Attempt to use file extension
+    if (file?.name) {
+      const ext = file.name.toLowerCase().split(".").pop();
+      if (ext === "pdf") return "pdf";
+      if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "image";
+      if (["mp4", "avi", "mov"].includes(ext)) return "video";
+      if (["mp3", "wav", "ogg"].includes(ext)) return "audio";
+      if (["csv"].includes(ext)) return "csv";
+      if (["md", "markdown"].includes(ext)) return "markdown";
+      if (["txt"].includes(ext)) return "text";
+      if (CODE_EXTENSIONS.includes(ext)) return "code";
+    }
+    // Failed to find file type
+    return "unknown";
+};
+
 // Format CSV text for display
 const formatCSVText = (csvText) => {
     const rows = csvText.split("\n");
     const formattedRows = rows.map((row) => row.split(",").join(" | "));
     return formattedRows.join("\n");
 };
-
-// Read file content as text
 
 
 const setAttachments = ({
@@ -71,34 +148,36 @@ const addAttachments = async ({
     
     try {
     // All supported file types
-    const supportedTypes = [
-        // Images
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-        // Videos
-        "video/mp4",
-        "video/avi",
-        "video/msvideo",
-        // Audio
-        "audio/mpeg",
-        "audio/mp3",
-        "audio/wav",
-        "audio/wave",
-        "audio/x-wav",
-    ];
+    // const supportedTypes = [
+    //     // Images
+    //     "image/jpeg",
+    //     "image/png",
+    //     "image/gif",
+    //     "image/webp",
+    //     // Videos
+    //     "video/mp4",
+    //     "video/avi",
+    //     "video/msvideo",
+    //     // Audio
+    //     "audio/mpeg",
+    //     "audio/mp3",
+    //     "audio/wav",
+    //     "audio/wave",
+    //     "audio/x-wav",
+    // ];
+
+    // fileType = getFileType(file.type);
 
     // Filter for supported file types
     const files = Array.from(selectedFiles).filter((file) => {
-        return supportedTypes.includes(file.type);
+        return (getFileType(file) !== "unknown");
     });
 
     // Validate file types
     if (files.length !== selectedFiles.length) {
         console.error("❌ Some files are not supported");
         notifyError(
-        "Only images, videos, and audio files (MP3/WAV) are supported"
+        "File type is not supported"
         );
         return;
     }

@@ -6,10 +6,16 @@ import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, updateConversation } from "../db";
-import { readFileAsBase64, readFileAsText } from "./attachments";
+import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 
 // Convert content items to standard OpenAI API
-export async function processContentItems(items, ignoreImages = false, ignoreAudio = false, ignoreVideo = false, ignoreFiles = false) {
+export async function processContentItems({
+  items,
+  ignoreImages = false, 
+  ignoreAudio = false, 
+  ignoreVideo = false, 
+  ignoreFiles = false,
+}) {
   const output = [];
   for (const item of items) {
     if (item.type === 'text') {
@@ -26,48 +32,45 @@ export async function processContentItems(items, ignoreImages = false, ignoreAud
         console.warn(`File meta not found for fileId=${item.fileId}`);
         continue;
       }
-
-      // Ignore unsupported files
-      if (ignoreImages && file.type.startsWith("image/")) continue;
-      else if (ignoreAudio && file.type.startsWith("audio/")) continue;
-      else if (ignoreVideo && file.type.startsWith("video/")) continue;
+      const mimeType = meta.type.toLowerCase();
+      const fileType = getFileType(meta);
+      // Skip unsupported files
+      if (ignoreImages && fileType === "image") continue;
+      else if (ignoreAudio && fileType === "audio") continue;
+      else if (ignoreVideo && fileType === "video") continue;
       else if (ignoreFiles
-        && !file.type.startsWith("image/")
-        && !file.type.startsWith("audio/")
-        && !file.type.startsWith("video/"))
+        && fileType !== "image"
+        && fileType !== "audio"
+        && fileType !== "video")
         continue;
-
       // Load supported files
       const file = await loadFile(item.fileId);
       if (!file) {
         console.warn(`File data not found for fileId=${item.fileId}`);
         continue;
       }
-
-      const mimeType = meta.type.toLowerCase();
-
-      if (mimeType.startsWith('image')) {
-        // Get Base64 data URL for image
+      
+      // Handle based on generic file type
+      if (fileType === "image") {
+        // Send as Base64 data URL for image
         const dataUrl = await readFileAsBase64(file);
         output.push({
           type: "image_url",
           image_url: { url: dataUrl }
         });
       }
-
-      if (mimeType.startsWith('video')) {
-        // Get Base64 data URL for image
+      else if (fileType === "video") {
+        // Send as Base64 data URL for video
         const dataUrl = await readFileAsBase64(file);
         output.push({
           type: "video_url",
           video_url: { url: dataURL }
         });
       }
-
-      else if (mimeType.startsWith('audio')) {
-        // Base64 encode without the data prefix
+      else if (fileType === "audio") {
+        // Base64 encoding without data prefix for audio
         const base64Data = await readFileAsBase64(file);
-        // Determine audio format from the MIME type
+        // Determine audio format from MIME type
         let format = 'mp3';
         if (mimeType.includes('wav')) {
           format = 'wav';
@@ -75,23 +78,24 @@ export async function processContentItems(items, ignoreImages = false, ignoreAud
         output.push({
           type: "input_audio",
           input_audio: {
-            data: base64Data.split(",")[1], // No prefix
+            data: base64Data.split(",")[1], // Remove prefix
             format
           }
         });
       }
-
-      // TODO handle generic files
-
+      else if (fileType === "pdf") {
+        // Shouldn't send unprocessed PDF file
+        continue;
+      }
       else {
         try {
-          // Base64 encode without the data prefix
+          console.log("Rendering fileType ", fileType, " stored as text")
+          // Send file as text
           const textContent = await readFileAsText(file);
           output.push({
             type: "text",
             text: textContent
           });
-          // Load data
         } catch (error) {
           console.warn(`Unsupported file type: ${mimeType}, ${error}`);
         }
@@ -104,18 +108,29 @@ export async function processContentItems(items, ignoreImages = false, ignoreAud
 
 // Build OpenAI standard conversation from localState
 async function buildConversationForAPI(localState) {
+  // Determine supported file types from model
+  const model = localState.settings.model;
+  const ignoreAudio = !(model?.input?.includes("audio") || false)
+  const ignoreVideo = !(model?.input?.includes("video") || false)
+  const ignoreImages = !(model?.input?.includes("image") || false)
+  // Convert to API standard, ignore unsupported files
   const processedMessages = await Promise.all(
     localState.messages.map(async (message) => {
       if (Array.isArray(message.content)) {
         return {
           role: message.role,
-          content: await processContentItems(message.content)
+          content: await processContentItems({
+            items: message.content,
+            ignoreImages,
+            ignoreAudio,
+            ignoreVideo,
+        })
         };
       }
       return message;
     })
   );
-
+  // Return full standard conversation
   return {
     ...localState,
     messages: processedMessages
@@ -137,21 +152,6 @@ const sendMessage = async ({
   try {
     const isArcanaSupported = (localState.settings.model?.input?.includes("arcana") || false)    
     let finalConversationForState; // For local state updates
-    // Deepcopy of localState
-
-      //   const textContent = textFiles.map((file) => ({
-      //     name: file.name,
-      //     fileType: file.fileType || "text",
-      //     content:
-      //       file.fileType === "pdf" ||
-      //       file.fileType === "docx" ||
-      //       file.fileType === "excel"
-      //         ? `${file.name}: ${file.processedContent}`
-      //         : `${file.name}: ${file.content}`,
-      //     type: "text",
-      //     size: file.size,
-      //   }));
-
     let conversationForAPI = await buildConversationForAPI(localState);
 
     // Prepare system prompt

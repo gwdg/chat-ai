@@ -19,12 +19,9 @@ export default function PromptTextArea({
 }) {
   const { t, i18n } = useTranslation();
   const textareaRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
   const { notifySuccess, notifyError } = useToast();
   const { addAttachments, pasteAttachments } = useAttachments();
-  const model = localState.settings.model;
-  const isAudioSupported = (model?.input?.includes("audio") || false)
-  const isVideoSupported = (model?.input?.includes("video") || false)
-  const isImageSupported = (model?.input?.includes("image") || false)
 
   // Prompt is actually the last message's first content
   const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
@@ -56,13 +53,13 @@ export default function PromptTextArea({
 
   // Handle file drop events for images and videos
   const handleDrop = async (e) => {
-    if (!isImageSupported && !isVideoSupported && !isAudioSupported) return;
     e.preventDefault();
     addAttachments({
       localState,
       setLocalState,
       selectedFiles: Array.from(e.dataTransfer.files),
     });
+    setIsDragging(false);
   };
 
   // Handle changes in the prompt textarea
@@ -84,36 +81,50 @@ export default function PromptTextArea({
 
   return (
     <div
-    className="drag-drop-container"
-    onDragOver={(e) => e.preventDefault()}
-    onDrop={handleDrop}
+    className="drag-drop-container relative"
     >
-    <textarea
-        autoFocus
-        ref={textareaRef}
-        className="p-5 outline-none text-base rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
-        value={prompt}
-        name="prompt"
-        placeholder={t("description.placeholder")}
-        style={{
-        minHeight: `${MIN_HEIGHT}px`,
-        maxHeight: `${MAX_HEIGHT}px`,
-        }}
-        onChange={handleChange}
-        onKeyDown={(event) => {
-        if (
-            event.key === "Enter" &&
-            !event.shiftKey &&
-            (prompt?.trim() !== "" || attachments.length > 0)
-        ) {
-            event.preventDefault();
-            handleSend(event);
-        }
-        }}
-        onPaste={
-        isImageSupported || isVideoSupported ? handlePaste : null
-        }
-    />
+      {/* Drop Here text */}
+      <span
+        className={`
+          absolute inset-0 flex items-center justify-center
+          text-4xl font-bold 
+          transition-opacity duration-300 ease-in-out
+          pointer-events-none
+          ${isDragging ? "opacity-80 " : "opacity-0"}
+        `}
+      >
+        Drop Here
+      </span>
+      {/* Actual text area */}
+      <textarea
+          autoFocus
+          ref={textareaRef}
+          className="p-5 transition-opacity duration-300 ease-in-out outline-none text-base rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
+          value={prompt}
+          name="prompt"
+          placeholder={t("description.placeholder")}
+          style={{
+          minHeight: `${MIN_HEIGHT}px`,
+          maxHeight: `${MAX_HEIGHT}px`,
+          opacity: isDragging ? 0.5 : 1
+          }}
+          onChange={handleChange}
+          onDragOver={(e) => {e.preventDefault(); }}
+          onDragEnter={(e) => {e.preventDefault(); setIsDragging(true);}}
+          onDragLeave={(e) => {e.preventDefault(); setIsDragging(false);}}
+          onDrop={handleDrop}
+          onKeyDown={(event) => {
+          if (
+              event.key === "Enter" &&
+              !event.shiftKey &&
+              (prompt?.trim() !== "" || attachments.length > 0)
+          ) {
+              event.preventDefault();
+              handleSend(event);
+          }
+          }}
+          onPaste={handlePaste}
+      />
     </div>
   );
 }
