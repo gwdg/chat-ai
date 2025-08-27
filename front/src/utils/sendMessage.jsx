@@ -5,7 +5,7 @@ import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/user
 import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
 import generateTitle from "../apis/generateTitle";
-import { loadFile, loadFileMeta, updateConversation } from "../db";
+import { loadFile, loadFileMeta, saveFile, updateConversation } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 
 // Convert content items to standard OpenAI API
@@ -215,31 +215,74 @@ const sendMessage = async ({
 
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
-      let currentResponse = "";
+      let currentContent = [{"type": "text", "text": ""}];
       for await (const chunk of chatCompletions(conversationForAPI, timeout)) {
-        currentResponse += chunk;
+        if (typeof chunk !== String) {
+          // Attempt to save file
+          let fileId = "";
+          try {
+            if (chunk?.type === "image") {
+              console.log("Attempting to create file");
+              const base64_dataURL = chunk?.image_url;
+
+              // Extract base64 and mime type
+              const matches = base64_dataURL.match(/^data:(.+);base64,(.*)$/);
+              if (!matches) {
+                throw new Error("Invalid base64 image data");
+              }
+
+              const mimeType = matches[1];
+              const base64Data = matches[2];
+              const byteCharacters = atob(base64Data);
+              const byteNumbers = new Array(byteCharacters.length);
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+
+              // Create File object
+              const file = new File([byteArray], "image." + mimeType.split("/")[1], { type: mimeType });
+
+              // Save file (assuming saveFile returns an ID)
+              fileId = await saveFile(localState.messages[localState.messages.length - 2].id, file);
+              currentContent.push({"type": "file", "fileId": fileId})
+              setLocalState(prev => {
+                if (prev.id !== conversationId) {return prev;}
+                const messages = [...prev.messages];
+                messages[messages.length - 2] = {
+                  role: "assistant",
+                  content: currentContent,
+                  loading: true,
+                };
+                return { ...prev, messages };
+              });
+              continue
+            }
+          } catch (err) {
+            console.error("Error processing image chunk:", err);
+          }
+        }
+        currentContent[0].text += chunk;
         // UI update happens here in the caller
         setLocalState(prev => {
           if (prev.id !== conversationId) {return prev;}
           const messages = [...prev.messages];
           messages[messages.length - 2] = {
             role: "assistant",
-            content: [
-              { type: "text", text: currentResponse }
-            ],
+            content: currentContent,
             loading: true,
           };
           return { ...prev, messages };
         });
       }
-      return currentResponse;
+      return currentContent;
     }
 
-    let response = "";
+    let responseContent = "";
     let inBackground = false;
     try {
       // Get chat completion response
-      response = await getChatChunk(conversationId);
+      responseContent = await getChatChunk(conversationId);
     } catch (error) {
       console.error("Error fetching chat chunk:", error);
     } finally {
@@ -252,7 +295,7 @@ const sendMessage = async ({
             ...localState,
             messages: [
               ...localState.messages,
-              { role: "assistant", content: [{ type: "text", text: response}], loading: false },
+              { role: "assistant", content: responseContent, loading: false },
               { role: "user", content: [{ type: "text", text: "" }] },
               // TODO what if prompt changes before switching?
             ]
@@ -262,9 +305,7 @@ const sendMessage = async ({
         const messages = [...prev.messages];
         messages[messages.length - 2] = {
           role: "assistant",
-          content: [
-            { type: "text", text: response }
-          ],
+          content: responseContent,
           loading: false,
         };
         return { ...prev, messages };
@@ -272,18 +313,18 @@ const sendMessage = async ({
     }
 
     // Handle errors
-    if (response === 401) {
-      // TODO clean up localState
-      openModal("errorSessionExpired")
-      return;
-    } else if (response === 413) {
-      // TODO clean up localState
-      openModal("errorBadRequest")
-      return;
-    }
+    // if (response === 401) {
+    //   // TODO clean up localState
+    //   openModal("errorSessionExpired")
+    //   return;
+    // } else if (response === 413) {
+    //   // TODO clean up localState
+    //   openModal("errorBadRequest")
+    //   return;
+    // }
     
     // If not successful don't continue
-    if (!response) {
+    if (!responseContent) {
       // TODO clean up localState
       return;
     }
@@ -291,7 +332,7 @@ const sendMessage = async ({
     // Generate title if conversation is new
     conversationForAPI.messages = [
       ...conversationForAPI.messages,
-      { role: "assistant", content: response },
+      { role: "assistant", content: responseContent },
       { role: "user", content: "" }
     ];
     if (conversationForAPI.messages.length <= 4) {
@@ -303,7 +344,7 @@ const sendMessage = async ({
             ...localState,
             messages: [
               ...localState.messages,
-              { role: "assistant", content: [{ type: "text", text: response}] },
+              { role: "assistant", content: [{ type: "text", text: responseContent[0].text}] },
               { role: "user", content: [{ type: "text", text: "" }] },
               // TODO what if prompt changes before switching?
             ],

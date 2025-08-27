@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import Typing from "./Typing";
 import CopyButton from "./CopyButton";
+import Attachment from "../../Prompt/Attachment";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -137,25 +138,20 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           </div>
         </>
       )}
-
-      {/* File rendering */}
-      {/* <MessageContainer
-            localState={localState}
-            message={message}
-            index={index}
-            copied={copied}
-            setCopied={setCopied}
-            indexChecked={indexChecked}
-            setIndexChecked={setIndexChecked}
-            loading={loading}
-            loadingResend={loadingResend}
-            editingResponseIndex={editingResponseIndex}
-            setEditedResponse={setEditedResponse}
-            handleResponseEdit={handleResponseEdit}
-            editedResponse={editedResponse}
-            setEditingResponseIndex={setEditingResponseIndex}
-            handleResendClick={handleRetryClick}
-        /> */}
+      {/* Attachments Section */}
+      {Array.isArray(message.content) && message.content.length > 1 && (
+          <div className="flex flex-nowrap gap-2 overflow-x-auto w-full pb-2 hide-scrollbar">
+          {message.content.slice(1).map((attachment, i) => (
+              <Attachment
+                  localState={localState}
+                  setLocalState={setLocalState}
+                  attachment={attachment}
+                  index={i}
+                  inHistory={true}
+              />
+          ))}
+          </div>
+      )}
     </div>
   );
 });

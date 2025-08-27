@@ -1,4 +1,5 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
+import OpenAI from "openai";
 
 export default async function generateTitle(messages) {
   const defaultSettings = getDefaultSettings();
@@ -50,13 +51,27 @@ export default async function generateTitle(messages) {
     "Create a very short title (maximum 4 words) for this conversation that captures its main topic. Respond only with the title - no quotes, punctuation, or additional text.";
 
   try {
-    // TODO Replace with openai or chatCompletions
-    const baseURL = import.meta.env.VITE_BACKEND_ENDPOINT + "/chat/completions"
-    const response = await fetch(baseURL, {
-      method: "post",
-      headers: { "Content-type": "application/json" },
-      body: JSON.stringify({
-        model: defaultSettings.model.id,
+    // Define base URL from config
+    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
+    try {
+      // If absolute, parse directly
+      baseURL = new URL(baseURL).toString();
+    } catch {
+      // If relative, resolve against current origin
+      baseURL = new URL(baseURL, window.location.origin).toString();
+    }
+
+    // Define openai object to call backend
+    const openai = new OpenAI({
+      baseURL : baseURL,
+      apiKey: null,
+      dangerouslyAllowBrowser: true,
+      timeout: 20000
+    });
+
+    // Initialize params
+    const params = {
+       model: defaultSettings.model.id,
         messages: [
           { role: "system", content: "You are a helpful assistant." },
           ...processedMessages,
@@ -64,25 +79,11 @@ export default async function generateTitle(messages) {
         ],
         temperature: defaultSettings.temperature,
         top_p: defaultSettings.top_p,
-      }),
-    });
+        stream: false,
+    };
 
-    if (!response.ok) throw new Error(response.statusText);
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let title = "";
-    let streamComplete = false;
-
-    // Stream response until complete
-    while (!streamComplete) {
-      const { value, done } = await reader.read();
-      if (done) {
-        streamComplete = true;
-        break;
-      }
-      title += decoder.decode(value, { stream: true });
-    }
-
+    const response = await openai.chat.completions.create(params);
+    const title = response?.choices[0]?.message?.content || "Untitled Conversation"
     return title?.trim();
   } catch (error) {
     // Handle AbortError specifically

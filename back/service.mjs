@@ -8,6 +8,7 @@ import fileUpload from "express-fileupload";
 import FormData from "form-data";
 import fs from "fs";
 import path from "path";
+import { Readable } from "stream"; // Node's stream module
 
 const app = express();
 
@@ -168,6 +169,7 @@ app.post("/chat/completions", async (req, res) => {
     timeout = 30000,
     enable_tools = null,
     tools = null,
+    stream = true,
   } = req.body;
   const inference_id = req.headers["inference-id"];
   if (!Array.isArray(messages)) {
@@ -200,8 +202,8 @@ app.post("/chat/completions", async (req, res) => {
       messages: messages,
       temperature: temperature,
       top_p: top_p,
-      stream: true,
-      stream_options: {include_usage: true },
+      stream: stream,
+      stream_options: stream ? {include_usage: true } : null,
       timeout: timeout,
     }
 
@@ -225,29 +227,76 @@ app.post("/chat/completions", async (req, res) => {
     console.log(params);
     console.log({"inference-service": inference_service});
     const openai = new OpenAI({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id});
-    const stream = await openai.chat.completions.create(
+    // const stream = await openai.chat.completions.create(
+    //   params, {
+    //   headers: {"inference-service": inference_service}
+    // });
+
+    // Get chat completion response
+    const response = await openai.chat.completions.create(
       params, {
-      headers: {"inference-service": inference_service}
+        headers: {"inference-service": inference_service}
+      }
+    ).asResponse();
+
+    // Pass through headers (optional but recommended)
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      res.setHeader(key, value);
     });
+
+    // Convert web ReadableStream → Node Readable → pipe to res
+    Readable.fromWeb(response.body).pipe(res);
+
+    // const reader = response.body.getReader();
+    // const decoder = new TextDecoder();
+    // let currentResponse = "";
+    // let streamComplete = false;
+
+    // try {
+    //   // Stream and process response chunks
+    //   while (!streamComplete) {
+    //     const { value, done } = await reader.read();
+    //     if (done) {
+    //       streamComplete = true;
+    //       break;
+    //     }
+    //     const decodedChunk = decoder.decode(value, { stream: true });
+    //     yield decodedChunk
+    //     currentResponse += decodedChunk;
+    //   }
+    //   return currentResponse;
+    // } catch (error) {
+    //   // Handle AbortError specifically during streaming
+    //   if (error.name === "AbortError") {
+    //     console.log("Request aborted by user")
+    //     return currentResponse;
+    //   }
+    //   throw error;
+    // }
     
-    let answer = ""
-    for await (const chunk of stream) {
-      try {
-        answer += chunk.choices[0].delta.content
-        res.write(chunk.choices[0].delta.content)
-        if (chunk?.choices?.[0]?.finish_reason === 'stop') {
-          res.status(200).end();
-          return
-        }
-      }
-      catch (err) {
-        console.error(err);
-        // TODO forward exact error
-        //res.status(response.status).send(response.statusText);
-        res.status(500).end();
-      }
-      //console.log(answer);
-    }
+    // let answer = ""
+    // for await (const chunk of stream) {
+    //   try {
+    //     answer += chunk.choices[0].delta.content
+    //     res.write(chunk.choices[0].delta.content)
+    //     if (chunk?.choices?.[0]?.finish_reason === 'stop') {
+    //       res.status(200).end();
+    //       return
+    //     } else {
+    //       console.log(chunk)
+    //     }
+    //   }
+    //   catch (err) {
+    //     // console.error(err);
+    //     console.log(chunk)
+    //     console.log("Well couldn't due to ", err)
+    //     // TODO forward exact error
+    //     //res.status(response.status).send(response.statusText);
+    //     res.status(500).end();
+    //   }
+    //   //console.log(answer);
+    // }
   } catch (err) {
     console.error(err);
     try {

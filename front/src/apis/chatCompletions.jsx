@@ -5,7 +5,8 @@ let controller = new AbortController();
 
 async function* chatCompletions (
   conversation,
-  timeout = 30000
+  timeout = 30000,
+  stream = true,
 ) {
   try {
     const model = typeof conversation.settings.model === 'string'
@@ -28,7 +29,7 @@ async function* chatCompletions (
       messages: conversation.messages,
       temperature: conversation.settings.temperature,
       top_p: conversation.settings.top_p,
-      stream: true,
+      stream: stream,
       stream_options: {include_usage: true },
       timeout: timeout,
     };
@@ -54,54 +55,80 @@ async function* chatCompletions (
     });
 
     // Get chat completion response
-    const response = await openai.chat.completions.create(
+    const streamResponse = await openai.chat.completions.create(
       params, { 
       signal: controller.signal,
-    }
-    ).asResponse();
+    });
 
-    // Handle auth error
-    if (response.status === 401) {
-      //setShowModalSession(true);
-      return 401;
-    }
-
-    // Handle request size error
-    if (response.status === 413) {
-      // setShowBadRequest(true);
-      return 413;
+    if (!stream) {
+      const result = streamResponse;
+      console.log(result)
+      return result;
     }
 
-    if (!response.ok) {
-      throw new Error(response.statusText || "Error: " + response.status);
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let currentResponse = "";
-    let streamComplete = false;
-
-    try {
-      // Stream and process response chunks
-      while (!streamComplete) {
-        const { value, done } = await reader.read();
-        if (done) {
-          streamComplete = true;
-          break;
+    let answer = ""
+    for await (const chunk of streamResponse) {
+      try {
+        answer += chunk.choices[0].delta.content
+        yield (chunk.choices[0].delta.content)
+        if (chunk?.choices?.[0]?.finish_reason === 'stop') {
+          // res.status(200).end();
+          return answer
         }
-        const decodedChunk = decoder.decode(value, { stream: true });
-        yield decodedChunk
-        currentResponse += decodedChunk;
       }
-      return currentResponse;
-    } catch (error) {
-      // Handle AbortError specifically during streaming
-      if (error.name === "AbortError") {
-        console.log("Request aborted by user")
-        return currentResponse;
+      catch (err) {
+        // console.error(err);
+        console.log(chunk)
+        console.log("Well couldn't due to ", err)
+        // TODO forward exact error
+        //res.status(response.status).send(response.statusText);
+        res.status(500).end();
       }
-      throw error;
+      //console.log(answer);
     }
+
+    // // Handle auth error
+    // if (response.status === 401) {
+    //   //setShowModalSession(true);
+    //   return 401;
+    // }
+
+    // // Handle request size error
+    // if (response.status === 413) {
+    //   // setShowBadRequest(true);
+    //   return 413;
+    // }
+
+    // if (!response.ok) {
+    //   throw new Error(response.statusText || "Error: " + response.status);
+    // }
+
+    // const reader = response.body.getReader();
+    // const decoder = new TextDecoder();
+    // let currentResponse = "";
+    // let streamComplete = false;
+
+    // try {
+    //   // Stream and process response chunks
+    //   while (!streamComplete) {
+    //     const { value, done } = await reader.read();
+    //     if (done) {
+    //       streamComplete = true;
+    //       break;
+    //     }
+    //     const decodedChunk = decoder.decode(value, { stream: true });
+    //     yield decodedChunk
+    //     currentResponse += decodedChunk;
+    //   }
+    //   return currentResponse;
+    // } catch (error) {
+    //   // Handle AbortError specifically during streaming
+    //   if (error.name === "AbortError") {
+    //     console.log("Request aborted by user")
+    //     return currentResponse;
+    //   }
+    //   throw error;
+    // }
   } catch (error) {
     // Handle AbortError at the top level
     if (error.name === "AbortError") {
