@@ -412,6 +412,15 @@ export async function updateConversation(
 
 // ---------- Conversation List ----------
 
+export async function getLastModifiedConversationMeta(): Promise<ConversationRow | undefined> {
+  const conversations = await db.conversations.orderBy('lastModified').reverse().toArray();
+  return conversations[0];
+}
+
+export async function getConversationMeta(conversationId: string): Promise<ConversationRow | undefined> {
+  return await db.conversations.get(conversationId);
+}
+
 // Get list of conversation Metas
 export async function listConversationMetas(): Promise<
   Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'messageCount'>>
@@ -493,17 +502,10 @@ function debounce<T extends (...args: any[]) => any>(fn: T, wait = 1000) {
 export function useConversationList() {
   const list = useLiveQuery(
     async () => {
-      const rows = await db.conversations.orderBy('createdAt').reverse().toArray()
-      return rows.map((r) => ({
-        id: r.id,
-        title: r.title,
-        createdAt: r.createdAt,
-        lastModified: r.lastModified,
-        messageCount: r.messageCount,
-      }))
+      return await db.conversations.orderBy('createdAt').reverse().toArray()
     },
-    [],
-    [] as Array<{ id: string; title: string; createdAt: number; lastModified: number; messageCount: number }>
+  [],
+  [] as ConversationRow[]
   )
   return list
 }

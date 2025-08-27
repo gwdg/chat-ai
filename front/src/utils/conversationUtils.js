@@ -28,8 +28,9 @@ export const getDefaultConversation = (customSettings = {}) => {
   const defaultSettings = getDefaultSettings();
   const settings = { ...defaultSettings, ...customSettings };
   return {
-    id: uuidv4(),
+    id: "default UUID",
     title: "Untitled Conversation",
+    messageCount: 0,
     messages: [ {
         role: "system",
         content: [

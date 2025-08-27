@@ -14,34 +14,33 @@ import { getDefaultConversation } from "../../utils/conversationUtils";
 export default function DeleteConversationModal({
   id,
   conversations,
+  currentConversationId,
   isOpen,
   onClose,
 }) {
-  const currentConversationId = useSelector(selectCurrentConversationId);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const handleDelete = () => {
+  async function handleDelete() {
     const currentIndex = conversations.findIndex((conv) => conv.id === id);
     // If conversation not found, do nothing
     if (currentIndex === -1) return;
+
+    // If this is the only conversation, create a new one
+    if (conversations.length === 1) {
+      console.log("Only one conversation, creating a new one.");
+      
+      const newConversationId = await createConversation(getDefaultConversation());
+      console.log("Created new conversation with id:", newConversationId);
+      navigate(`/chat/${newConversationId}`);
+      // const action = dispatch(addConversation());
+      // nextConversationId = action.payload.id;
+    }
+
     // If deleting current conversation
     if (id === currentConversationId) {
-      let nextConversationId;
-      if (conversations.length === 1) {
-        // If this is the only conversation, create a new one
-        createConversation(getDefaultConversation());
-        // const action = dispatch(addConversation());
-        // nextConversationId = action.payload.id;
-      } else {
-        // Find adjacent conversation
-        const nextIndex = currentIndex === 0 ? 1 : currentIndex - 1;
-        nextConversationId = conversations[nextIndex].id;
-      }
-      persistor.flush().then(() => {
-        // Force persistence before navigating to alternate
-        navigate(`/chat/${nextConversationId}`);
-      });
+      //navigate to base page and logic there decide which page to show
+      navigate(`/chat/`);
     }
     deleteConversation(id);
     onClose();

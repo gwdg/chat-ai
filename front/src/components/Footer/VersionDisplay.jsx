@@ -3,7 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 
 export default function VersionDisplay() {
     return (
-    <div className="flex flex-col md:flex-row justify-center items-center gap-4 dark:text-white text-black md:border-none border-t border-b w-full md:p-0 py-2">
+    <div className="flex flex-col md:flex-row justify-center items-center gap-4 dark:text-white text-black w-full md:p-0 py-2">
         <p className="flex items-center gap-2">
         <a
             href="https://github.com/gwdg/chat-ai"
@@ -28,7 +28,6 @@ export default function VersionDisplay() {
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
             </svg>
         </a>{" "}
-        | © 2025 GWDG | <Trans i18nKey="description.copyright"></Trans>
         </p>
     </div>
     );

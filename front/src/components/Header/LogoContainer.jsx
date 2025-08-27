@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export default function LogoContainer({ isMobile = false }) {
   return !isMobile ? (
     <Link to={"https://chat-ai.academiccloud.de/"}>
-    <div className="flex items-center border-l border-gray-200 dark:border-gray-700 pl-3">
+    <div className="flex items-center dark:border-gray-700">
       <img
         className="h-8 w-auto object-contain"
         src={Logo}

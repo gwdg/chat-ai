@@ -6,9 +6,9 @@ import { updateConversationMeta } from "../../db";
 
 export default function RenameConversationModal({
   id,
+  currentTitle,
   isOpen,
   onClose,
-  currentTitle,
 }) {
   const [title, setTitle] = useState(currentTitle || "");
   const [error, setError] = useState("");

@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useEffect, useRef, memo } from "react";
+import { useState, useMemo, useEffect, useRef, memo, use } from "react";
 import Tooltip from "../Others/Tooltip";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useSelector } from "react-redux";
@@ -31,6 +31,7 @@ import {
   faFont,
 } from "@fortawesome/free-solid-svg-icons";
 import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
+import SidebarToggleMobile from "../Sidebar/SidebarToggleMobile";
 
 const sortOptions = [
   { value: "name-asc", label: "Name (A→Z)" },
@@ -43,15 +44,22 @@ const sortOptions = [
   { value: "context-asc", label: "Context (low→high)" },
 ];
 
-export default function ModelSelectorSimple({ currentModelId, modelsList, onChange }: { currentModelId: string | undefined, modelsList: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void }) {
+export default function ModelSelectorSimple({ currentModelId, modelsList: modelsData, onChange }: { currentModelId: string | undefined, modelsList: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void }) {
 
   const defaultModel = useSelector(selectDefaultModel); // load from redis
 
   // choose model of conversation, or default model or first model in list 
-  const selectedModel = modelsList.find(model => model.id === currentModelId) || modelsList.find(model => model.id === defaultModel) || modelsList[0] || null;
+  const selectedModel = modelsData.find(model => model.id === currentModelId) || modelsData.find(model => model.id === defaultModel) || modelsData[0] || null;
+
+  //this catches the case that the current model is not in the list or is invalid
+  useEffect(() => {
+    if(currentModelId === undefined || currentModelId !== selectedModel?.id){
+      setSelectedModel(selectedModel);
+    }
+  }, []);
 
   function setSelectedModel(model: ExtendedModelInfo | null) {
-    onChange && onChange(model);
+    onChange?.(model);
   }
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,13 +83,13 @@ export default function ModelSelectorSimple({ currentModelId, modelsList, onChan
 
   const filteredModelsList = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (modelsList === undefined || modelsList.length === 0) {
+    if (modelsData === undefined || modelsData.length === 0) {
       return [];
     }
-    let result = modelsList.slice(); // copy list
+    let result = modelsData.slice(); // copy list
 
     if (q && q !== "") {
-      result = modelsList.filter((m) =>
+      result = modelsData.filter((m) =>
         m.name.toLowerCase().includes(q) ||
         m.id.toLowerCase().includes(q) ||
         m.input.some(input => input.toLowerCase().includes(q)) ||
@@ -117,7 +125,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsList, onChan
         break;
     }
     return result;
-  }, [searchQuery, modelsList, sortBy]);
+  }, [searchQuery, modelsData, sortBy]);
 
   const SecureIndicator = memo(({ external }: { external: boolean }) => {
     return (
@@ -217,7 +225,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsList, onChan
             <FontAwesomeIcon icon={faCalendar} className="mr-1" />
             {model.releaseDate && model.releaseDate !== "" ? model.releaseDate : "-"}
           </span>
-          
+
         </div>
         <div className="flex items-center gap-2 mt-1">
           <Chip text={model.company} />
@@ -258,10 +266,10 @@ export default function ModelSelectorSimple({ currentModelId, modelsList, onChan
               <span className="pr-1">
                 <SecureIndicator external={model.external} />
               </span>
-              {model.name} 
+              {model.name}
             </div>
             <Chip text={model.company} />
-            
+
           </div>
           <DemandIndicator demand={model.demand} online={model.status === "ready"} />
         </div>
@@ -309,10 +317,13 @@ export default function ModelSelectorSimple({ currentModelId, modelsList, onChan
   return (
 
     <div ref={dropdownRef} className="w-full relative">
+
+
+
       {/** Trigger/Input **/}
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="w-full text-left desktop:w-full border border-gray-200 dark:border-gray-800 rounded-xl shadow-md bg-white px-3 py-2.5 shadow-sm hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
+        className="h-13 min-h-[4rem] w-full text-left desktop:w-full border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md bg-white px-3 py-2.5 shadow-sm hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
         <div id="trigger-content" className="flex justify-between">
           <div className="flex items-center justify-between gap-2">
             <div className="pl-2">
@@ -348,6 +359,8 @@ export default function ModelSelectorSimple({ currentModelId, modelsList, onChan
         </div>
 
       </button>
+
+
 
 
       {/** Dropdown Panel **/}

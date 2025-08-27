@@ -3,7 +3,6 @@ import { User } from "lucide-react";
 
 export default function UserContainer({
   localState,
-  setLocalState,
   modelsData,
   userData,
 }) {
@@ -25,7 +24,7 @@ export default function UserContainer({
 
   return userData?.username ? (
     <div
-      className="cursor-pointer border-l border-gray-200 dark:border-gray-700 pl-3 hover:opacity-80 transition-opacity touch-manipulation"
+      className="cursor-pointer dark:border-gray-700 hover:opacity-80 transition-opacity touch-manipulation"
       onClick={() =>
         openModal("userSettings", { localState, userData, modelsData })
       }

@@ -2,13 +2,14 @@ import { useTranslation } from "react-i18next";
 import { useRef } from "react";
 import { useImportConversation } from "../../hooks/useImportConversation";
 import { Upload } from "lucide-react";
+import { useToast } from "../../hooks/useToast";
+
 
 export default function ImportConversationButton({
-  localState,
-  setLocalState,
   variant = "icon",
 }) {
   const { t } = useTranslation();
+  const { notifySuccess, notifyError } = useToast();
   const loading = false; // TODO handle loading
   const importConversation = useImportConversation();
   const hiddenFileInputJSON = useRef(null);

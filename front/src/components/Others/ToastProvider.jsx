@@ -7,8 +7,6 @@ export const ToastProvider = memo(({ children }) => {
   const isDarkMode = useSelector((state) => state.interface_settings.dark_mode);
 
   return (
-    <>
-      {children}
       <ToastContainer
         position="top-right"
         autoClose={1000}
@@ -23,7 +21,6 @@ export const ToastProvider = memo(({ children }) => {
         limit={1}
         enableMultiContainer={false}
       />
-    </>
   );
 });
 

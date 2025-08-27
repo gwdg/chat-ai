@@ -28,6 +28,11 @@ import {
   toggleSettings
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import WebSearchToggle from "./WebSearchToggle";
+import PartnerContainer from "../Header/PartnerContainer";
+import UserContainer from "../Header/UserContainer";
+import ThemeToggle from "../Header/ThemeToggle";
+import { ChevronRight } from "lucide-react";
+
 import { getDefaultSettings } from "../../utils/conversationUtils";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
@@ -36,6 +41,7 @@ const SettingsPanel = ({
   localState,
   setLocalState,
   userData,
+  modelsData
 }) => {
   const conversations = useSelector(selectConversations);
 
@@ -164,12 +170,14 @@ const SettingsPanel = ({
     // Update system prompt in conversation history
     let updatedMessages = localState.messages.map((item) => {
       if (item.role === "system") {
-        return { ...item, content: [
-          {
-            type: "text",
-            text: "You are a helpful assistant"
-          }
-        ] };
+        return {
+          ...item, content: [
+            {
+              type: "text",
+              text: "You are a helpful assistant"
+            }
+          ]
+        };
       } else {
         return item;
       }
@@ -417,23 +425,52 @@ const SettingsPanel = ({
 
       <div className="w-full h-fit">
         <div className="relative w-full flex-col items-center text-tertiary flex gap-4">
-          {/* Settings Panel */}
-          <div className="w-full rounded-2xl bg-white dark:bg-bg_secondary_dark shadow-lg dark:shadow-dark border border-gray-200 dark:border-gray-800">
+
+            {/* Logos and User Profile */}
+            <div className="w-full hidden md:flex">
+              <div className="w-full flex items-center gap-3 justify-between p-3">
+                <button
+                  onClick={() => dispatch(toggleSettings())}
+                  className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Close Settings"
+                >
+                  <ChevronRight className="w-7 h-7 text-tertiary" />
+                </button>
+                {/* Partner logos */}
+                <div className="flex gap-2 px-5">
+                  <PartnerContainer />
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* User profile */}
+                  <span className="border-l border-gray-200 dark:border-gray-700 pl-3">
+                    <UserContainer
+                      localState={localState}
+                      userData={userData}
+                      modelsData={modelsData}
+                    />
+                  </span>
+
+                  <ThemeToggle />
+                </div>
+              </div>
+            </div>
+            {/* Settings Panel */}
             <div className="flex flex-col gap-4 p-3 sm:p-4 lg:p-6 h-fit w-full">
+
               {/* Warning for external models */}
               {localState.settings?.model?.name
                 ?.toLowerCase()
                 .includes("external") && (
-                <div className="text-yellow-600 text-sm mb-3 select-none">
-                  <Trans
-                    i18nKey={
-                      userData?.org == "MPG"
-                        ? "description.warning_settings_mpg"
-                        : "description.warning_settings"
-                    }
-                  />
-                </div>
-              )}
+                  <div className="text-yellow-600 text-sm mb-3 select-none">
+                    <Trans
+                      i18nKey={
+                        userData?.org == "MPG"
+                          ? "description.warning_settings_mpg"
+                          : "description.warning_settings"
+                      }
+                    />
+                  </div>
+                )}
               {/* Use Tools – checkbox */}
               <ToolsToggle
                 localState={localState}
@@ -503,7 +540,7 @@ const SettingsPanel = ({
                 </button>
               </div>
             </div>
-          </div>
+          
         </div>
       </div>
     </>

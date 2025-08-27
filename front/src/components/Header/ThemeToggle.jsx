@@ -28,12 +28,12 @@ export default function ThemeToggle() {
     >
       {isDarkMode ? (
         <Sun
-          className="h-5 w-5 flex-shrink-0 text-[#009EE0]"
+          className="h-5 w-5 flex-shrink-0 text-tertiary"
           alt="Light Mode"
         />
       ) : (
         <Moon
-          className="h-5 w-5 -rotate-45 flex-shrink-0 text-[#009EE0]"
+          className="h-5 w-5 flex-shrink-0 text-tertiary"
           alt="Dark Mode"
         />
       )}

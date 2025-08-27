@@ -1,20 +1,23 @@
 import { Trans } from "react-i18next";
 import { useState } from "react";
 
-const WarningButton = ({ localState, userData }) => {
+export default function WarningExternalModel({ localState, userData }) {
   // Add safety check for model
   if (
+    /*
     !localState.settings ||
     !localState.settings.model ||
     !localState.settings.model.name ||
     !localState.settings.model.name.toLowerCase().includes("external")
+    */
+   !localState?.settings?.model?.name?.toLowerCase().includes("external")
   ) {
     return null;
   }
 
   const [showWarning, setShowWarning] = useState(true);
   return (
-    <div className="absolute top-0 right-0 z-50">
+    <div className="absolute top-1 right-1 z-50">
       <button
         onClick={() => setShowWarning(!showWarning)}
         className="flex items-center gap-2 px-3 py-2 
@@ -78,4 +81,3 @@ const WarningButton = ({ localState, userData }) => {
   );
 };
 
-export default WarningButton;

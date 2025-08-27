@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 
-export default function PartnerLogo() {
+export default function PartnerLogo({className}) {
     return (
-    <div className="flex gap-4 md:hidden">
+    <div className={`flex gap-4 ${className}`}>
         {/* Kisski Logo - Mobile */}
         <div className="pr-2">
         <Link to={"https://kisski.gwdg.de/"} target="_blank">

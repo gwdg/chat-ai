@@ -16,8 +16,17 @@ const interfaceSettingsSlice = createSlice({
     toggleTheme: (state) => {
       state.dark_mode = !state.dark_mode;
     },
+    openSidebar: (state) => {
+      state.show_sidebar = true;
+    },
+    closeSidebar: (state) => {
+      state.show_sidebar = false;
+    },
     toggleSidebar: (state) => {
       state.show_sidebar = !state.show_sidebar;
+    },
+    closeSettings: (state) => {
+      state.show_settings = false;
     },
     toggleSettings: (state) => {
       state.show_settings = !state.show_settings;
@@ -44,6 +53,6 @@ export const selectCountHallucination = (state) => state.interface_settings.coun
 export const selectCountAnnouncement = (state) => state.interface_settings.count_announcement;
 export const { 
   toggleTheme, setDarkMode, setLightMode,
-  toggleSettings, toggleSidebar, closeAnnouncement, closeHallucination
+  closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar, closeAnnouncement, closeHallucination
  } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

@@ -56,7 +56,7 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
       <div className="w-full relative">
         <div className="relative z-10">
           <textarea
-            className="dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border border-gray-200 dark:border-gray-800 outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[120px] text-sm"
+            className=" bg-white text-black dark:text-white dark:bg-bg_secondary_dark p-4 border border-gray-200 dark:border-black/20 outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[120px] text-sm"
             type="text"
             name="systemPrompt"
             placeholder="Enter the system prompt here"

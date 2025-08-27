@@ -1,5 +1,5 @@
 import { useSelector } from "react-redux";
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { useGetModelsQuery } from "../../Redux/reducers/appApi";
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
@@ -8,14 +8,13 @@ import { setConversationModelDB, useConversationModelDB } from "../../db/queries
 import { selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
 
 
-export default function ModelSelectorWrapper({modelsList, localState, setLocalState}: {modelsList: ModelInfo, localState: any, setLocalState: any}) {
+function ModelSelectorWrapper({modelsData, localState, setLocalState}: {modelsData: ModelInfo, localState: any, setLocalState: any}) {
   /*
-  loads the model list and current model and decides which component to render
+  render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
-  const currentModelId = localState.settings.model?.id;
-
-  //render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
-  const hasExtendedModels = modelsList?.[0]?.description !== undefined;
+  const currentModelId = localState.settings.model.id;
+  //
+  const hasExtendedModels = modelsData?.[0]?.description !== undefined;
 
   function setModel(newModel: ModelInfo) {
     setLocalState((prev) => ({
@@ -32,10 +31,13 @@ export default function ModelSelectorWrapper({modelsList, localState, setLocalSt
     <>
       {
         hasExtendedModels ? 
-          <ModelSelectorExtended currentModelId={currentModelId} modelsList={modelsList} onChange={setModel} /> 
+          <ModelSelectorExtended currentModelId={currentModelId} modelsList={modelsData} onChange={setModel} /> 
         : 
-          <ModelSelectorSimple currentModelId={currentModelId} modelsList={modelsList} onChange={setModel} />
+          <ModelSelectorSimple currentModelId={currentModelId} modelsList={modelsData} onChange={setModel} />
       }
     </>
   )
 }
+
+
+export default memo(ModelSelectorWrapper);

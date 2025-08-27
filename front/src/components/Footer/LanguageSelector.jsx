@@ -15,19 +15,21 @@ export default function LanguageSelector() {
   return (
     <div className="flex gap-4 flex-col">
       {/* Language Toggle Buttons */}
-      {Object.keys(lngs).map((lng) => (
-        <button
-          key={lng}
-          style={{
-            fontWeight: i18n.resolvedLanguage === lng ? "bold" : "normal",
-          }}
-          type="submit"
-          onClick={() => i18n.changeLanguage(lng)}
-          className="cursor-pointer"
-        >
-          <img src={lngs[lng]} alt={`${lng} language flag`} />
-        </button>
-      ))}
+      {Object.keys(lngs)
+        .filter((lng) => lng !== i18n.resolvedLanguage) // hide current language
+        .map((lng) => (
+          <button
+            key={lng}
+            type="submit"
+            onClick={() => {
+              console.log("Language changed to:", lng);
+              i18n.changeLanguage(lng);
+            }}
+            className="cursor-pointer"
+          >
+            <img src={lngs[lng]} alt={`${lng} language flag`} />
+          </button>
+        ))}
     </div>
   );
 }

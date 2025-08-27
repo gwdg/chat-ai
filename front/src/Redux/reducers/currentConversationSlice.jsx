@@ -14,6 +14,7 @@ const currentConversationSlice = createSlice({
 
 export const { setCurrentConversation } = currentConversationSlice.actions
 export default currentConversationSlice.reducer;
+export const selectCurrentConversation = (state) => state.currentConversation;
     // if (state.conversations.some((conv) => conv.id === conversationId)) {
     //     state.current_conversation = conversationId;
     // } else if (state.conversations.length > 0) {
