@@ -7,7 +7,6 @@ export default function SettingsPanel({ localState, setLocalState, userData, mod
   /*
   Small Container for the Desktop Extended Sidebar
   */
- const dispatch = useDispatch();
   return (
     <div
       className="h-full bg-white dark:bg-bg_secondary_dark

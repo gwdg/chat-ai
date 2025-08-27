@@ -25,8 +25,6 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
   }, [isDesktop, dispatch]);
 
   async function handleNewConversation() {
-    //TODO: is this correct to lock it?
-    dispatch({ type: "conversations/setLockConversation", payload: true });
     const newId = await createConversation(getDefaultConversation());
     navigate(`/chat/${newId}`);
   };

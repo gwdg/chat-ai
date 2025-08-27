@@ -13,7 +13,7 @@ export default function SettingsDrawer({ localState, setLocalState, userData, mo
       {/* Backdrop */}
       {showSettings && (
         <div
-          className="fixed inset-0 z-30 backdrop-blur-sm bg-black/30 dark:bg-gray/30 transition-opacity"
+          className="fixed inset-0 z-30 backdrop-blur-sm bg-black/5 dark:bg-gray/30  transition-opacity"
           onClick={() => dispatch(toggleSettings())} // clicking backdrop closes drawer
         />
       )}
