@@ -263,41 +263,57 @@ export default function Conversation({
   // if (localState.messages?.length <= 2) return null;
 
   return (
-    <div className={`w-full md:max-w-[85vw] xl:max-w-[75vw] xl:max-w-[1300px]
+    <div
+      className={`w-full md:max-w-[85vw] xl:max-w-[75vw] xl:max-w-[1300px]
                         transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none
-                        w-full mx-auto flex flex-col gap-2 sm:justify-start relative p-1
+                        mx-auto flex flex-col gap-2 relative p-1 h-full
         ${emptyConversation ? "justify-start" : "justify-between"} 
             `}
-      >
+    >
       <ModelSelectorWrapper
         localState={localState}
         setLocalState={setLocalState}
         modelsData={modelsData}
       />
+
       {/* Empty conversation */}
-      <div className={`transition-all duration-500 flex flex-col flex-grow ease-in-out space-y-16 md:max-h-[40vh] xl:max-h-[40vh] xl:max-h-[40vh] p-10
-        ${emptyConversation
-          ? "scale-100 items-center justify-end opacity-80"
-          : "absolute scale-90 opacity-0"}
-      `}> 
-        {emptyConversation && (<EmptyConversation />) }
+      <div
+        className={`transition-all duration-500 flex flex-col ease-in-out space-y-16 md:max-h-[40vh] xl:max-h-[40vh] p-10
+        ${
+          emptyConversation
+            ? "scale-100 items-center justify-end opacity-80 flex-grow"
+            : "absolute scale-90 opacity-0 pointer-events-none"
+        }
+      `}
+      >
+        {emptyConversation && <EmptyConversation />}
       </div>
-      {/* Messages area */}
-      <div className={`flex-1 min-h-0 h-full overflow-y-auto flex flex-col relative w-full rounded-xl
+
+      {/* Messages area - Key changes here */}
+      <div
+        className={`flex flex-col relative w-full rounded-xl
         bg-white dark:bg-bg_secondary_dark shadow-md dark:shadow-dark
-        transition-opacity duration-500 ease-in-out w-full
-      ${localState.messages.length <= 2 ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden" : "scale-100 opacity-100"}`}>
+        transition-opacity duration-500 ease-in-out
+        ${
+          localState.messages.length <= 2
+            ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden"
+            : "scale-100 opacity-100 flex-1 min-h-0"
+        }`}
+      >
         <HallucinationWarning />
+
         {/* External model warning aligned top right in the messages area */}
         {!showSettings && (
           <WarningExternalModel localState={localState} userData={userData} />
         )}
+
+        {/* Scrollable messages container */}
         <div
           ref={containerRef}
-          className="p-1.5 flex flex-col gap-1.5 flex-1 relative"
+          className="p-1.5 flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto"
         >
           {localState.messages.slice(0, -1)?.map((message, message_index) => (
-            <>
+            <div key={message_index}>
               {/* User message */}
               {message.role === "user" && (
                 <MessageUser
@@ -316,7 +332,7 @@ export default function Conversation({
               )}
               {/* Render info message */}
               {message.role === "info" && (
-                <div key={index} className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
                   {message.content && (
                     <div className="text-xs font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl">
                       {message.content?.text}
@@ -324,42 +340,38 @@ export default function Conversation({
                   )}
                 </div>
               )}
-            </>
+            </div>
           ))}
         </div>
-      {/* Messages bottom panel */}
-      {localState?.messages?.length >= 4 && (
-        <div className="w-full bottom-0 sticky select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
-          {/* Export conversation button */}
-          <ClearHistoryButton
-            localState={localState}
-            setLocalState={setLocalState}
-          />
-          {showScrollButton && (
-            // Scroll to top button
-            <button
-              onClick={handleScrollButtonClick}
-              aria-label="Scroll to bottom"
-              className="cursor-pointer text-tertiary max-w-[130px] w-full p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-2xl flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <p className="text-xs">Scroll to bottom</p>
-            </button>
-          )}
-          <div className="flex items-baseline gap-4">
-            {/* Undo button */}
-            <UndoButton localState={localState} setLocalState={setLocalState} />
-          </div>
-        </div>
-      )}
-      
-      </div>
-      {/* Prompt area */}
-      
-      <Prompt
-        localState={localState}
-        setLocalState={setLocalState}
-      />
 
+        {/* Messages bottom panel */}
+        {localState?.messages?.length >= 4 && (
+          <div className="w-full select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+            <ClearHistoryButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+            {showScrollButton && (
+              <button
+                onClick={handleScrollButtonClick}
+                aria-label="Scroll to bottom"
+                className="cursor-pointer text-tertiary max-w-[130px] w-full p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-2xl flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <p className="text-xs">Scroll to bottom</p>
+              </button>
+            )}
+            <div className="flex items-baseline gap-4">
+              <UndoButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Prompt area */}
+      <Prompt localState={localState} setLocalState={setLocalState} />
     </div>
   );
 }

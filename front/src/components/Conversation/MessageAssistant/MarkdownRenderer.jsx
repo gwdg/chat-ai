@@ -4,6 +4,8 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
+import DOMPurify from "dompurify";
+
 import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
@@ -185,26 +187,74 @@ const extractThinkingBlocks = (content) => {
 
 // Safe markdown wrapper
 const SafeMarkdown = ({ children: markdownContent, ...props }) => {
+  if (!markdownContent || typeof markdownContent !== "string") {
+    return null;
+  }
+
   try {
-    if (!markdownContent || typeof markdownContent !== "string") {
-      return null;
-    }
+    // Strict DOMPurify config to prevent CSS injection
+    const cleanContent = DOMPurify.sanitize(markdownContent, {
+      // Remove dangerous tags that can contain CSS or scripts
+      FORBID_TAGS: [
+        "script",
+        "style",
+        "link",
+        "meta",
+        "title",
+        "head",
+        "html",
+        "body",
+        "object",
+        "embed",
+        "form",
+        "input",
+        "button",
+        "textarea",
+        "select",
+        "option",
+        "iframe",
+        "frame",
+        "frameset",
+        "base",
+      ],
 
-    let sanitizedContent = markdownContent
-      .replace(
-        /<meta\s+[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi,
-        "[META REFRESH REMOVED]"
-      )
-      .replace(/<script\s*([^>]*)>(.*?)<\/script>/gi, "")
-      .replace(/javascript:/gi, "javascript-protocol:")
-      .replace(/\son(\w+)\s*=\s*["']([^"']+)["']/gi, "");
+      // Remove all event handlers and style attributes
+      FORBID_ATTR: [
+        "style",
+        "onerror",
+        "onload",
+        "onclick",
+        "onmouseover",
+        "onfocus",
+        "onblur",
+        "onchange",
+        "onsubmit",
+        "onkeydown",
+        "onkeyup",
+        "onmousedown",
+        "onmouseup",
+        "onmousemove",
+        "onmouseout",
+        "onmouseover",
+      ],
 
-    return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
+      // Additional security
+      ALLOW_DATA_ATTR: false,
+      ALLOW_UNKNOWN_PROTOCOLS: false,
+      SANITIZE_DOM: true,
+      KEEP_CONTENT: true,
+
+      // Only allow safe href protocols
+      ALLOWED_URI_REGEXP:
+        /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    });
+
+    return <ReactMarkdown {...props}>{cleanContent}</ReactMarkdown>;
   } catch (error) {
     console.error("Error rendering markdown:", error);
     return (
       <div className="text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded">
-        Error rendering content: {error.message}
+        Error rendering content
       </div>
     );
   }
