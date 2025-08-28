@@ -19,7 +19,7 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
 
   useEffect(() => {
     if (!isDesktop) {
-      // one tablet or mobile default sidebar to closed
+      // on tablet or mobile default sidebar to closed
       dispatch(closeSidebar());
     }
   }, [isDesktop, dispatch]);
@@ -31,7 +31,7 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
 
   return (
     <>
-      <div className="hidden md:flex relative min-w-[4rem]">
+      <div className="hidden md:flex relative min-w-[4rem] min-h-0">
         {/**<div className={`hidden h-full md:flex ${showSidebar && isDesktop && "md:hidden"}`}> */}
         <div className={`h-full absolute
                       transition-all duration-300 ease-in-out

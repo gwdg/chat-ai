@@ -3,15 +3,12 @@ import { useModal } from "../../modals/ModalContext";
 import { HelpCircle } from "lucide-react";
 
 export default function TopPSlider({ localState, setLocalState }) {
-  const [isHoveringTopP, setHoveringTopP] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
   const { openModal } = useModal();
-  const settings = localState.current_conversation
-    ? localState.conversations[localState.current_conversation].settings
-    : { model: { id: "meta-llama-3.1-8b-instruct" } };
 
-  // Handle top_p setting change
   const handleChangeTopP = (newValue) => {
-    // Convert to float and update settings
     const numVal = parseFloat(newValue);
     setLocalState((prev) => ({
       ...prev,
@@ -22,8 +19,31 @@ export default function TopPSlider({ localState, setLocalState }) {
     }));
   };
 
+  const progressPercentage = (localState.settings.top_p / 1) * 100;
+  const showValue = isHovering || isDragging || isClicked;
+
+  const handleMouseDown = () => {
+    setIsDragging(true);
+    setIsClicked(true);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setTimeout(() => setIsClicked(false), 2000);
+  };
+
+  const handleTouchStart = () => {
+    setIsClicked(true);
+    setIsDragging(true);
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setTimeout(() => setIsClicked(false), 3000);
+  };
+
   return (
-    <div className="flex flex-col md:flex-row md:gap-4 gap-3 w-full md:items-center">
+    <div className="flex flex-col md:flex-row w-full md:items-center">
       <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
         <p className="text-sm font-medium">top_p</p>
         <HelpCircle
@@ -32,81 +52,53 @@ export default function TopPSlider({ localState, setLocalState }) {
           onClick={() => openModal("helpTopP")}
         />
       </div>
+
       <div className="w-full">
-        <div className="relative w-full">
-          {/* Slider labels */}
-          <div className="select-none flex justify-between text-[10px] text-tertiary mb-2">
-            <span>Focused</span>
-            <span>Diverse</span>
+        <div className="select-none flex justify-between text-[10px] text-tertiary">
+          <span>Focused</span>
+          <span>Diverse</span>
+        </div>
+
+        <div className="relative w-full h-6 flex items-center">
+          <div className="w-full h-1 bg-gray-300 dark:bg-gray-600 rounded-full">
+            <div
+              className="h-full bg-tertiary rounded-full"
+              style={{ width: `${progressPercentage}%` }}
+            />
           </div>
 
-          {/* Clean slider track */}
-          <div className="relative">
-            {/* Background track - thin line */}
-            <div className="w-full h-1 bg-gray-300 dark:bg-gray-600 rounded-full">
-              {/* Progress fill - thin colored line */}
-              <div
-                className="h-full bg-tertiary rounded-full transition-all duration-150"
-                style={{
-                  width: `${
-                    ((localState.settings.top_p - 0.05) / 0.95) * 100
-                  }%`,
-                }}
-              />
-            </div>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={localState.settings.top_p}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onChange={(e) => handleChangeTopP(e.target.value)}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+          />
 
-            {/* Tick marks - smaller and cleaner */}
-            <div className="absolute top-1/2 transform -translate-y-1/2 w-full flex justify-between px-0.5 pointer-events-none">
-              {[...Array(20)].map((_, i) => (
-                <div
-                  key={i}
-                  className={`bg-gray-400 dark:bg-gray-500 ${
-                    i % 5 === 0 ? "w-0.5 h-3" : "w-px h-2"
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* Slider input - handles both clicking and dragging */}
-            <input
-              type="range"
-              min="0.05"
-              max="1"
-              step="0.05"
-              value={localState.settings.top_p}
-              className="absolute top-1/2 transform -translate-y-1/2 w-full h-6 opacity-0 cursor-pointer"
-              onChange={(event) => handleChangeTopP(event.target.value)}
-            />
-
-            {/* Visual thumb indicator */}
-            <div
-              className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white dark:bg-gray-200 border-2 border-tertiary rounded-full shadow-md transition-all duration-150 hover:scale-110 pointer-events-none"
-              style={{
-                left: `${((localState.settings.top_p - 0.05) / 0.95) * 100}%`,
-              }}
-            />
-
-            {/* Larger hover area for tooltip */}
-            <div
-              className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-8 h-8 pointer-events-none"
-              style={{
-                left: `${((localState.settings.top_p - 0.05) / 0.95) * 100}%`,
-              }}
-              onMouseEnter={() => setHoveringTopP(true)}
-              onMouseLeave={() => setHoveringTopP(false)}
-            />
-
-            {/* Hover tooltip */}
-            {isHoveringTopP && (
-              <div
-                className="absolute -top-10 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none z-10"
-                style={{
-                  left: `${((localState.settings.top_p - 0.05) / 0.95) * 100}%`,
-                }}
-              >
+          <div
+            className="absolute top-1/2 transform -translate-y-1/2 -translate-x-1/2 pointer-events-none"
+            style={{ left: `${progressPercentage}%` }}
+          >
+            {showValue && (
+              <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 bg-white dark:bg-bg_dark text-tertiary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
                 {Number(localState.settings.top_p).toFixed(2)}
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-l-transparent border-r-transparent border-t-white dark:border-t-bg_dark"></div>
               </div>
             )}
+
+            <div
+              className={`w-4 h-4 bg-white dark:bg-gray-200 border-2 border-tertiary rounded-full shadow-md ${
+                showValue ? "scale-125" : ""
+              }`}
+            />
           </div>
         </div>
       </div>

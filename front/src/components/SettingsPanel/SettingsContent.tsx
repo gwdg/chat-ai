@@ -452,7 +452,7 @@ const SettingsPanel = ({
           </div>
         </div>
         {/* Settings Panel */}
-        <div className="flex flex-col gap-4 p-2 sm:p-4 lg:p-4 h-full w-full">
+        <div className="flex flex-col gap-3 p-2 sm:p-4 lg:p-4 h-full w-full">
 
           {/* Warning for external models */}
           {localState.settings?.model?.name

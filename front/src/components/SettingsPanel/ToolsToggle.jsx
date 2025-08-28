@@ -5,7 +5,7 @@ export default function ToolsToggle({ localState, setLocalState }) {
   const { openModal } = useModal();
   const settings = localState.settings;
   return (
-    <div className="flex flex-col md:flex-row md:gap-4 gap-3 w-full md:items-center mt-2">
+    <div className="flex flex-col md:flex-row md:gap-4 gap-3 w-full md:items-center">
       <div className="flex-shrink-0 flex items-center gap-2 select-none">
         <p className="text-sm">Use GWDG Tools</p>
         {/* Help Button */}
