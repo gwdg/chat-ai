@@ -334,6 +334,7 @@ export default function Conversation({
         >
           {localState.messages.slice(0, -1)?.map((message, message_index) => (
             <div key={message_index}>
+              
               {/* User message */}
               {message.role === "user" && (
                 <MessageUser
@@ -352,10 +353,11 @@ export default function Conversation({
               )}
               {/* Render info message */}
               {message.role === "info" && (
+                
                 <div className="flex flex-col gap-1">
                   {message.content && (
-                    <div className="text-xs font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl">
-                      {message.content?.text}
+                    <div className="text-sm font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl">
+                      {message.content[0]?.text}
                     </div>
                   )}
                 </div>

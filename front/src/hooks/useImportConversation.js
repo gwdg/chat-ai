@@ -84,7 +84,10 @@ export function useImportConversation() {
             }
             if (message.role === "system") continue;
             if (message.role === "info") {
-              sanitizedMessages.push(extractMessageContent(message));
+              sanitizedMessages.push({
+                "role": "info",
+                "content": extractMessageContent(message),
+              });
               continue;
             }
 
