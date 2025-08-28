@@ -9,7 +9,7 @@ export default function SettingsPanel({ localState, setLocalState, userData, mod
   */
   return (
     <div
-      className="h-full bg-white dark:bg-bg_secondary_dark
+      className="bg-white dark:bg-bg_secondary_dark
               rounded-xl shadow-md dark:shadow-dark
               overflow-hidden
               w-[30rem] min-w-[15rem]"

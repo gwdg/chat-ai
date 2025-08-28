@@ -47,13 +47,13 @@ export default function SidebarRail({localState, setLocalState, userData, models
       className="bg-white dark:bg-bg_secondary_dark
               rounded-xl shadow-md
               overflow-hidden
-              h-full"
+              "
     >
       <div className="h-full flex flex-col items-center gap-2">
           
 
-          <div className="mt-2 flex flex-col gap-3 items-center">
-            {/* User profile */}
+          <div className="mt-2 mb-2 flex flex-col gap-3 items-center">
+            {/* User profile 
             <UserContainer
               localState={localState}
               setLocalState={setLocalState}
@@ -61,7 +61,7 @@ export default function SidebarRail({localState, setLocalState, userData, models
               modelsData={modelsData}
             />
             
-            <ThemeToggle />
+            <ThemeToggle />*/}
             <button
               onClick={() => onOpen?.()}
               className="h-10 w-10 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
@@ -70,6 +70,7 @@ export default function SidebarRail({localState, setLocalState, userData, models
               <FontAwesomeIcon size="xl" className="text-tertiary" icon={faGear} />
             </button>
           </div>
+          {/** 
           <div id="placeholder" className="group flex-1 w-full hover:bg-light_hover dark:hover:bg-dark_hover cursor-pointer grid place-items-center"
             onClick={() => onOpen?.()}
           >
@@ -84,9 +85,10 @@ export default function SidebarRail({localState, setLocalState, userData, models
             >
               <FontAwesomeIcon size="xl" className=" text-tertiary" icon={faChevronLeft} />
             </button>
-          </div>
-          <div className="mt-2 items-center flex flex-col gap-2 mx-1 pb-2 p-1 ">
-            {/* Logo */}
+          </div>*/}
+          
+          {/* <div className="mt-2 items-center flex flex-col gap-2 mx-1 pb-2 p-1 ">
+            {/* Logo 
             <img
               className="h-10 w-10 object-contain"
               src={gwdgLogoSmall}
@@ -97,7 +99,7 @@ export default function SidebarRail({localState, setLocalState, userData, models
               src={kisskiLogoSmall}
               alt="Chat AI Logo"
             />
-          </div>        
+          </div>*/}        
           
           
         </div>

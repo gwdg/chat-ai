@@ -506,7 +506,7 @@ const SettingsPanel = ({
                 setLocalState={setLocalState}
               />
               <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
-                {/* Hide Options Button */}
+                {/* Hide Options Button 
                 <div
                   className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
                   onClick={() => dispatch(toggleSettings())}
@@ -517,7 +517,7 @@ const SettingsPanel = ({
                   <p className="block desktop:hidden text-sm h-full text-tertiary cursor-pointer">
                     <Trans i18nKey="description.text10" />
                   </p>
-                </div>
+                </div>*/}
 
                 {/* Share Settings Button */}
                 <ShareSettingsButton

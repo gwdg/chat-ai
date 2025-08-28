@@ -111,7 +111,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
                 h-10 w-10 inset-0 grid place-items-center rounded-xl
                 transition duration-200 opacity-0 
                 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-dark_hover cursor-pointer
-                ${isTouch ? "opacity-100" : "opacity-0"}`}
+                ${true || isTouch ? "opacity-100" : "opacity-0"}`}
             title="Expand"
           >
             <FontAwesomeIcon size="xl" className=" text-tertiary" icon={faChevronRight} />
