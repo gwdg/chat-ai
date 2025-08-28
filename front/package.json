@@ -12,6 +12,7 @@
     "preview": "vite preview --host --no-open"
   },
   "dependencies": {
+    "dompurify": "^3.2.6",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@reduxjs/toolkit": "^2.8.2",

@@ -1,9 +1,6 @@
-
 import { useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import {
-  getDefaultConversation,
-} from "../utils/conversationUtils";
+import { getDefaultConversation } from "../utils/conversationUtils";
 
 import { useSyncConversation } from "../hooks/useSyncConversation";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
@@ -47,7 +44,8 @@ export default function ChatPage() {
   }, [conversationId]);
 
   return (
-    <div className={`h-[calc(100%-55px)] min-h-screen overflow-hidden 
+    <div
+      className={`h-screen overflow-hidden 
                   grid 
                   grid-cols-1 grid-rows-[auto_1fr_auto]
                   md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
@@ -61,13 +59,13 @@ export default function ChatPage() {
         modelsData={modelsData}
         userData={userData}
       />
-      
+
       {/* Sidebar left */}
-      <SidebarWrapper 
-        localState={localState} 
-        setLocalState={setLocalState} 
-        userData={userData} 
-        modelsData={modelsData} 
+      <SidebarWrapper
+        localState={localState}
+        setLocalState={setLocalState}
+        userData={userData}
+        modelsData={modelsData}
       />
 
       {/* Conversation */}
@@ -79,21 +77,14 @@ export default function ChatPage() {
       />
 
       {/* Sidebar right*/}
-      <SettingsWrapper 
+      <SettingsWrapper
         localState={localState}
         setLocalState={setLocalState}
         userData={userData}
         modelsData={modelsData}
       />
-      {/*<SidebarRight
-        localState={localState}
-        setLocalState={setLocalState}
-        userData={userData}
-        modelsData={modelsData}
-      /> */}
-      
 
-      <CollapsibleFooter className="row-start-3 col-span-full"/>
+      <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-4" />
     </div>
   );
 }
