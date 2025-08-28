@@ -30,7 +30,7 @@ export const getDefaultConversation = (customSettings = {}) => {
   return {
     id: uuidv4(),
     title: "Untitled Conversation",
-    messageCount: 0,
+    messageCount: 2,
     messages: [ {
         role: "system",
         content: [

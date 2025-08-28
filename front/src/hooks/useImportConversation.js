@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
+import { createConversation } from "../db";
 
 /**
  * useImportConversation
@@ -13,131 +14,164 @@ export function useImportConversation() {
   const { notifySuccess, notifyError } = useToast();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const defaultSettings = getDefaultSettings();
+
+  const extractMessageContent = (message) => {
+    const res = [{
+      "type": "text",
+      "text": "",
+    }]
+    try {
+      if (!message) return res;
+      const content = message?.content || message;
+      if (!content) return res;
+      // if message or content is string
+      if (typeof content === "string") {
+        res[0].text = content;
+        return res;
+      }    
+      // if message or content is array
+      if (Array.isArray(content)) {
+        res = content.map(item => extractMessageContent(item));
+        if (res[0]?.type !== "text") {
+          res.unshift({type: "text", text: ""});
+        } 
+        return res;
+      }
+      // if message or content has "text" element
+      if (typeof content?.text === "string") {
+        res[0].text = content.text;
+        return res;
+      }
+      // if message or content has "data" element
+      if (typeof content?.data === "string") {
+        res[0].text = content.data;
+        return res;
+      }
+    } catch(err) {
+      console.warn("Failed to parse message:", err)
+    }
+    return res;
+  }
 
   const importConversation = async (data) => {
     try {
       const defaultSettings = getDefaultSettings();
-      const defaultModel = { name: "Hi", id: "TODO" };
+      
+      // Sanitize messages
+      let sanitizedMessages = [ {
+        role: "system",
+        content: [
+          {
+            type: "text",
+            text: "You are a helpful assistant."
+          }
+        ],},
+      ];
+  
+      let expectUserMessage = true; // switch roles after each message
+      if (data?.messages) {
+        // Look for system prompt
+        const systemMessage = data.messages.find((msg) => msg.role === "system");
+        sanitizedMessages[0].content = extractMessageContent(systemMessage);
+        // Sanitize user + assistant messages
+        try {       
+          for (let i = 0; i < data.messages.length; i++) {
+            const message = data.messages[i];
+            if (!message?.role) {
+              // TODO robustness - check if string and add it
+              continue;
+            }
+            if (message.role === "system") continue;
+            if (message.role === "info") {
+              sanitizedMessages.push(extractMessageContent(message));
+              continue;
+            }
+
+            if (message.role === "user") {
+              if (!expectUserMessage) {
+                // Add an empty assistant message to fix the ordering
+                sanitizedMessages.push({
+                  "role": "assistant",
+                  "content": [{
+                    "type": "text",
+                    "text": "",
+                  }]
+                })
+                expectUserMessage = true;
+              }
+              sanitizedMessages.push({
+                "role": "user",
+                "content": extractMessageContent(message),
+              })
+              
+            } else if (message.role === "assistant") {
+              if (expectUserMessage) {
+                // Add an empty user message to fix the ordering
+                sanitizedMessages.push({
+                  "role": "user",
+                  "content": [{
+                    "type": "text",
+                    "text": "",
+                  }]
+                })
+                expectUserMessage = false;
+              }
+              sanitizedMessages.push({
+                "role": "assistant",
+                "content": extractMessageContent(message),
+              })
+            } else {
+              console.warn("Unrecognized role: ", message.role)
+              continue;
+            }
+            expectUserMessage = !expectUserMessage;
+          }
+        } catch (err) {
+          console.warn("Failed to extract all messages:", err)
+        }
+      }
+
+      // Final touches
+      if (!expectUserMessage) {
+        sanitizedMessages.push({
+          "role": "assistant",
+          "content": [{
+            "type": "text",
+            "text": "",
+          }],
+        })
+        expectUserMessage = true;
+      }
+
+      // Push user message as prompt
+      sanitizedMessages.push({
+        "role": "assistant",
+        "content": [{
+          "type": "text",
+          "text": "",
+        }]
+      })
 
       // Create new conversation
-      const action = dispatch(addConversation());
-      const newId = action?.payload?.id;
+      const newId = await createConversation(
+        {
+          title: data?.title || "Imported Conversation",
+          messages: sanitizedMessages,
+          settings: defaultSettings,
+        },
+      )
 
       if (!newId) {
         throw new Error("Failed to create new conversation");
       }
 
-      // Handle both formats: array and object with messages
-      const messages = Array.isArray(data) ? data : data?.messages;
-
-      if (!Array.isArray(messages)) {
-        throw new Error("Invalid format: messages must be an array");
-      }
-
-      // Process messages into conversation format
-      const responses = [];
-      for (let i = 0; i < messages.length; i++) {
-        const currentMessage = messages[i];
-
-        if (currentMessage.role === "info") {
-          responses.push({ info: currentMessage.content });
-          continue;
-        }
-
-        if (currentMessage.role === "user" && messages[i + 1]?.role === "assistant") {
-          const userContent = currentMessage.content;
-          let images = [];
-
-          if (Array.isArray(userContent)) {
-            let textContent = "";
-
-            userContent.forEach((item) => {
-              if (item.type === "text") {
-                textContent += (item.text ?? "") + "\n";
-              } else if (item.type === "image_url" && item.image_url) {
-                images.push({
-                  type: item.type,
-                  image_url: { url: item.image_url.url },
-                });
-              }
-            });
-
-            responses.push({
-              prompt: textContent.trim(),
-              images,
-              response: messages[i + 1]?.content,
-            });
-          } else {
-            responses.push({
-              prompt: userContent,
-              response: messages[i + 1]?.content,
-            });
-          }
-
-          // IMPORTANT FIX: Skip the assistant message in the next iteration
-          // since we've already processed it as part of this user-assistant pair
-          i++;
-        } else if (currentMessage.role === "user") {
-          // Handle user message without assistant response (incomplete conversation)
-          responses.push({
-            prompt: currentMessage.content,
-            response: "",
-          });
-        }
-        // Skip standalone assistant messages or system messages in the loop
-        // (system message is handled separately below)
-      }
-
-      // System message (optional)
-      const systemMessage = messages.find((msg) => msg.role === "system");
-
-      // Title
-      const title = data.title || "Imported Conversation";
-
-      // Settings with defaults
-      const settings = {
-        systemPrompt: systemMessage?.content || "You are a helpful assistant",
-        ["model-name"]: defaultModel.name,
-        model: defaultModel.id,
-        temperature: defaultSettings.temperature,
-        top_p: defaultSettings.top_p,
-        memory: 2,
-      };
-
-      // If it's object format, apply any provided settings
-      if (!Array.isArray(data)) {
-        if (data["model-name"]) settings["model-name"] = data["model-name"];
-        if (data.model) settings.model = data.model;
-        if (data.temperature !== undefined)
-          settings.temperature = Number(data.temperature);
-        if (data.top_p !== undefined) settings.top_p = Number(data.top_p);
-      }
-
-      // Prepare conversation update
-      const updates = {
-        messages,
-        responses,
-        title,
-        settings,
-      };
-
-      if (!Array.isArray(data) && data.arcana?.id) {
-        updates.arcana = { id: data.arcana.id };
-      }
-
-      // Update the conversation
-      dispatch(updateConversation({ id: newId, updates }));
-
-      // Go to the new chat & notify
       navigate(`/chat/${newId}`, { replace: true });
-      //notifySuccess("Chat imported successfully");
-      // let caller handle notification this is only a hook
+      notifySuccess("Chat imported successfully");
     } catch (error) {
       console.error("Import error:", error);
+      notifyError("Failed to import conversation")
       throw new Error("Failed to import conversation");
-      //notifyError(error?.message || "An unexpected error occurred");
-      // Keep this if you explicitly want a hard refresh on failure
-      //window.location.reload();
     }
   }
 
