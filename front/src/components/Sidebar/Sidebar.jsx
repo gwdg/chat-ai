@@ -16,7 +16,7 @@ import {
 import { useConversationList } from "../../db";
 import { useModal } from "../../modals/ModalContext";
 import { getDefaultSettings } from "../../utils/conversationUtils";
-import ImportConversationButton from "../Conversation/ImportConversationButton";
+import ImportConversationButton from "./ImportConversationButton";
 
 function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) {
   const { openModal } = useModal();

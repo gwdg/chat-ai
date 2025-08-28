@@ -1,9 +1,6 @@
 import { useDispatch } from "react-redux";
 import HamburgerMenu from "./HamburgerMenu";
 import LogoContainer from "./LogoContainer";
-import ModelSelector from "./ModelSelector";
-import PartnerContainer from "./PartnerContainer";
-import ThemeToggle from "./ThemeToggle";
 import UserContainer from "./UserContainer";
 import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 
@@ -38,8 +35,6 @@ function Header({ className, localState, setLocalState, modelsData, userData }) 
 
           {/* Right Section */}
           <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Theme Toggle */}
-            <ThemeToggle />
             {/* User profile */}
             <UserContainer
               localState={localState}

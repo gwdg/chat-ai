@@ -28,9 +28,9 @@ import {
   getDefaultSettings,
 } from "../../utils/conversationUtils";
 
-import { Sidebar } from "lucide-react";
+import { Bot, Sidebar } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
-import ImportConversationButton from "../Conversation/ImportConversationButton";
+import ImportConversationButton from "./ImportConversationButton";
 
 export default function SidebarContent({ localState, setLocalState, handleNewConversation }: { localState: any, setLocalState: (state: any) => void, handleNewConversation: () => void }) {
   const navigate = useNavigate();
@@ -365,6 +365,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
             minHeight: "44px",
           }}
         >
+          <Bot className="h-5 w-5 flex-shrink-0" />
           <span className="truncate">
             <Trans i18nKey="description.importPersona" />
           </span>

@@ -9,6 +9,7 @@ import PartnerLogo from "./PartnerLogo";
 import LanguageSelector from "./LanguageSelector";
 import { Link } from "react-router";
 import { Trans } from "react-i18next";
+import ThemeToggle from "../Header/ThemeToggle";
 
 export default function CollapsibleFooter({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
@@ -30,6 +31,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
           />
         </button>
         <div className="absolute h-[3vh] left-0 top-0 flex items-center justify-center pl-3 gap-3">
+          
           {/* Version Display */}
           <VersionDisplay />
           <Link
@@ -45,9 +47,9 @@ export default function CollapsibleFooter({ className }: { className?: string })
           </Link>
         </div>
 
-        {/* Imprint Link - right Aligned */}
+        {/* Langauge and Theme toggles */}
         <div className="absolute h-[3vh] right-0 top-0 flex items-center pr-3 gap-2"> 
-          
+          <ThemeToggle />
           <LanguageSelector />
         </div>
 

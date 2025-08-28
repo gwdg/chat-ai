@@ -17,7 +17,7 @@ export function useImportConversation() {
   const defaultSettings = getDefaultSettings();
 
   const extractMessageContent = (message) => {
-    const res = [{
+    let res = [{
       "type": "text",
       "text": "",
     }]

@@ -11,13 +11,13 @@ export const getDefaultSettings = () => {
     }
   }
   const result = {
-    model: envSettings.model,
-    temperature: envSettings.temperature,
-    top_p: envSettings.top_p,
+    model: envSettings?.model || "",
+    temperature: envSettings?.temperature || 0.5,
+    top_p: envSettings?.top_p || 0.5,
     memory: envSettings?.memory || 0,
     enable_tools: envSettings?.enable_tools || false,
     enable_web_search: envSettings?.enable_web_search || false,
-    arcana: {
+    arcana: envSettings?.arcana || {
       id: "",
     },
   };

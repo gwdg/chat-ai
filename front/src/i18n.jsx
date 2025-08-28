@@ -67,7 +67,7 @@ i18n
               skip: "Skip",
             },
             newConversation: "New Conversation",
-            importPersona: "Import Persona",
+            importPersona: "Chat with Persona",
             persona: {
               selectPersona: "Select Persona",
               browsePersonas: "Browse and import AI personas",

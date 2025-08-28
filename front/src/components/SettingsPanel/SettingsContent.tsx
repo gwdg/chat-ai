@@ -189,10 +189,10 @@ const SettingsPanel = ({
       messages: updatedMessages,
       settings: {
         ...prevState.settings,
-        temperature: defaultSettings.temperature,
-        top_p: defaultSettings.top_p,
-        enable_tools: defaultSettings?.enable_tools,
-        memory: 2,
+        temperature: defaultSettings?.temperature || 0.5,
+        top_p: defaultSettings?.top_p || 0.5,
+        enable_tools: defaultSettings?.enable_tools || false,
+        memory: defaultSettings?.memory || 0,
       },
     }));
     // TODO look at this
@@ -422,125 +422,120 @@ const SettingsPanel = ({
           },
         }}
       />
-
-      <div className="w-full h-fit">
-        <div className="relative w-full flex-col items-center text-tertiary flex gap-4">
-
-            {/* Logos and User Profile */}
-            <div className="w-full hidden md:flex">
-              <div className="w-full flex items-center gap-3 justify-between p-3">
-                <button
-                  onClick={() => dispatch(toggleSettings())}
-                  className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Close Settings"
-                >
-                  <ChevronRight className="w-7 h-7 text-tertiary" />
-                </button>
-                {/* Partner logos */}
-                <div className="flex gap-2 px-5">
-                  <PartnerContainer />
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* User profile */}
-                  <span className="border-l border-gray-200 dark:border-gray-700 pl-3">
-                    <UserContainer
-                      localState={localState}
-                      userData={userData}
-                      modelsData={modelsData}
-                    />
-                  </span>
-
-                  <ThemeToggle />
-                </div>
-              </div>
+    <div className="relative w-full h-full flex-col items-center text-tertiary flex gap-4">
+        {/* Logos and User Profile */}
+        <div className="w-full hidden md:flex">
+          <div className="w-full flex items-center gap-3 justify-between p-3">
+            <button
+              onClick={() => dispatch(toggleSettings())}
+              className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Close Settings"
+            >
+              <ChevronRight className="w-7 h-7 text-tertiary" />
+            </button>
+            {/* Partner logos */}
+            <div className="flex gap-2 px-5">
+              <PartnerContainer />
             </div>
-            {/* Settings Panel */}
-            <div className="flex flex-col gap-4 p-3 sm:p-4 lg:p-6 h-fit w-full">
-
-              {/* Warning for external models */}
-              {localState.settings?.model?.name
-                ?.toLowerCase()
-                .includes("external") && (
-                  <div className="text-yellow-600 text-sm mb-3 select-none">
-                    <Trans
-                      i18nKey={
-                        userData?.org == "MPG"
-                          ? "description.warning_settings_mpg"
-                          : "description.warning_settings"
-                      }
-                    />
-                  </div>
-                )}
-              {/* Use Tools – checkbox */}
-              <ToolsToggle
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              <WebSearchToggle
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* Arcana box */}
-              <ArcanaContainer
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* temperature Slider */}
-              <TemperatureSlider
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* top_p Slider */}
-              <TopPSlider
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* Memory Selector */}
-              <MemorySelector
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* System Prompt */}
-              <SystemPromptContainer
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              <div className="flex flex-wrap justify-left md:justify-end gap-2 md:gap-4 items-center w-full">
-                {/* Hide Options Button 
-                <div
-                  className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
-                  onClick={() => dispatch(toggleSettings())}
-                >
-                  <p className="hidden desktop:block text-sm h-full text-tertiary cursor-pointer">
-                    <Trans i18nKey="description.text9" />
-                  </p>
-                  <p className="block desktop:hidden text-sm h-full text-tertiary cursor-pointer">
-                    <Trans i18nKey="description.text10" />
-                  </p>
-                </div>*/}
-
-                {/* Share Settings Button */}
-                <ShareSettingsButton
+            <div className="flex items-center gap-2">
+              {/* User profile */}
+              <span className="border-l border-gray-200 dark:border-gray-700 pl-3">
+                <UserContainer
                   localState={localState}
-                  setLocalState={setLocalState}
+                  userData={userData}
+                  modelsData={modelsData}
                 />
+              </span>
 
-                {/* Reset Default Button */}
-                <button
-                  className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none cursor-pointer"
-                  type="reset"
-                  onClick={resetDefault}
-                >
-                  <div className="hidden desktop:block text-sm">
-                    <Trans i18nKey="description.custom7" />
-                  </div>
-                  <div className="block desktop:hidden text-sm">
-                    <Trans i18nKey="description.custom10" />
-                  </div>
-                </button>
-              </div>
+              {/* <ThemeToggle /> */}
             </div>
-          
+          </div>
+        </div>
+        {/* Settings Panel */}
+        <div className="flex flex-col gap-4 p-2 sm:p-4 lg:p-4 h-full w-full">
+
+          {/* Warning for external models */}
+          {localState.settings?.model?.name
+            ?.toLowerCase()
+            .includes("external") && (
+              <div className="text-yellow-600 text-sm mb-3 select-none">
+                <Trans
+                  i18nKey={
+                    userData?.org == "MPG"
+                      ? "description.warning_settings_mpg"
+                      : "description.warning_settings"
+                  }
+                />
+              </div>
+            )}
+          {/* Use Tools – checkbox */}
+          <ToolsToggle
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+          <WebSearchToggle
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+          {/* Arcana box */}
+          <ArcanaContainer
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+          {/* temperature Slider */}
+          <TemperatureSlider
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+          {/* top_p Slider */}
+          <TopPSlider
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+          {/* Memory Selector */}
+          <MemorySelector
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+          {/* System Prompt */}
+          <SystemPromptContainer
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+          <div className="flex flex-wrap md:justify-end gap-2 md:gap-4 items-center w-full">
+            {/* Hide Options Button 
+            <div
+              className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
+              onClick={() => dispatch(toggleSettings())}
+            >
+              <p className="hidden desktop:block text-sm h-full text-tertiary cursor-pointer">
+                <Trans i18nKey="description.text9" />
+              </p>
+              <p className="block desktop:hidden text-sm h-full text-tertiary cursor-pointer">
+                <Trans i18nKey="description.text10" />
+              </p>
+            </div>*/}
+
+            {/* Share Settings Button */}
+            <ShareSettingsButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+
+            {/* Reset Default Button */}
+            <button
+              className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none cursor-pointer"
+              type="reset"
+              onClick={resetDefault}
+            >
+              <div className="hidden desktop:block text-sm">
+                <Trans i18nKey="description.custom7" />
+              </div>
+              <div className="block desktop:hidden text-sm">
+                <Trans i18nKey="description.custom10" />
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </>

@@ -44,7 +44,7 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
   };
 
   return (
-    <div className="w-full flex flex-col gap-4">
+    <div className="w-full flex flex-col flex-grow gap-4">
       <div className="flex-shrink-0 flex items-center gap-2 select-none">
         <p className="text-sm">System prompt</p>
         <HelpCircle
@@ -53,10 +53,9 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
           onClick={() => openModal("helpSystemPrompt")}
         />
       </div>
-      <div className="w-full relative">
-        <div className="relative z-10">
+      <div className="w-full relative z-10 flex-grow">
           <textarea
-            className=" bg-white text-black dark:text-white dark:bg-bg_secondary_dark p-4 border border-gray-200 dark:border-black/20 outline-none rounded-2xl shadow-lg dark:shadow-dark w-full min-h-[120px] text-sm"
+            className="h-full resize-none bg-white text-black dark:text-white dark:bg-bg_secondary_dark p-3 border border-gray-200 dark:border-black/20 outline-none rounded-lg shadow-lg dark:shadow-dark w-full min-h-[24vh] text-sm overflow-y-auto"
             type="text"
             name="systemPrompt"
             placeholder="Enter the system prompt here"
@@ -64,13 +63,12 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
             onChange={handleInstructionsChange}
             onBlur={() => validateSystemPrompt()}
           />
-        </div>
-        {(systemPromptError || !localState.messages[0]?.content[0]?.text) && (
+      </div>
+      {(systemPromptError || !localState.messages[0]?.content[0]?.text) && (
           <p className="text-yellow-600 text-xs">
             <Trans i18nKey="description.custom6" />
           </p>
         )}
-      </div>
     </div>
   );
 }

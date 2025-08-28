@@ -4,8 +4,6 @@ import { useSelector } from "react-redux";
 // Hooks
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
 import MessageUser from "./MessageUser/MessageUser";
-import ExportConversationButton from "./ExportConversationButton";
-import ImportConversationButton from "./ImportConversationButton";
 import UndoButton from "./UndoButton";
 import ClearHistoryButton from "./ClearHistoryButton";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
@@ -15,6 +13,7 @@ import Prompt from "../Prompt/Prompt";
 import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
 import WarningExternalModel from "../Others/WarningExternalModel";
 import EmptyConversation from "./EmptyConversation";
+import Motto from "./Motto";
 
 export default function Conversation({
   localState,
@@ -391,6 +390,7 @@ export default function Conversation({
 
       {/* Prompt area */}
       <Prompt localState={localState} setLocalState={setLocalState} />
+      {emptyConversation && <Motto />} 
     </div>
   );
 }

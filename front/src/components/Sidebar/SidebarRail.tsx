@@ -29,7 +29,7 @@ import {
 
 import { Bot, ChevronRight, Download, Edit, Plus, Sidebar, SquarePen } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
-import ImportConversationButton from "../Conversation/ImportConversationButton";
+import ImportConversationButton from "./ImportConversationButton";
 import { useModal } from "../../modals/ModalContext";
 
 export default function SidebarRail({ localState, onOpen, handleNewConversation }: { localState: any, onOpen: () => void, handleNewConversation: () => void }) {

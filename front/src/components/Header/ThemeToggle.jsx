@@ -22,7 +22,7 @@ export default function ThemeToggle() {
 
   return (
     <button
-      className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors p-2 touch-manipulation w-10 h-10 flex items-center justify-center cursor-pointer"
+      className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation w-7 h-7 pl-6 pr-6 flex items-center justify-center cursor-pointer"
       onClick={toggleDarkMode}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >

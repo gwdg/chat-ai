@@ -1,5 +1,5 @@
 import { ChevronRight, Edit, Plus, Bot } from "lucide-react";
-import ImportConversationButton from "../Conversation/ImportConversationButton";
+import ImportConversationButton from "./ImportConversationButton";
 import { useModal } from "../../modals/ModalContext";
 
 function CollapsedSidebar({
