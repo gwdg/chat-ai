@@ -134,7 +134,6 @@ export function useSyncConversation({
     }
     // Schedule a save after `delay` ms
     timeoutIds.current[currentConversation] = setTimeout(async () => {
-      console.log("Saving conversation to browser");
       const lastModified = await updateConversation(
         currentConversation,
         localState
@@ -144,6 +143,7 @@ export function useSyncConversation({
         openModal("conversationConflict", {localState, setLocalState, setUnsavedChanges});
         return;
       }
+      console.log("Conversation auto-saved");
       setUnsavedChanges(false);
       localState.lastModified = lastModified;
       delete timeoutIds.current[currentConversation];

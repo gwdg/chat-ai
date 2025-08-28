@@ -29,24 +29,25 @@ export default function CollapsibleFooter({ className }: { className?: string })
             className={`size-5 text-tertiary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
           />
         </button>
-        <div className="absolute h-[3vh] left-0 top-0 flex items-center justify-center pl-3 ">
+        <div className="absolute h-[3vh] left-0 top-0 flex items-center justify-center pl-3 gap-3">
           {/* Version Display */}
           <VersionDisplay />
-        </div>
-
-        {/* Imprint Link - right Aligned */}
-        <div className="absolute h-[3vh] right-0 top-0 flex items-center pr-3 gap-2"> 
           <Link
-            className="justify-center text-tertiary"
+            className="justify-center"
             to={
               "https://gwdg.de/imprint/"
             }
             target="_blank"
           >
-            <p className="text-center text-tertiary">
+            <p className="text-center text-blue-600 dark:text-blue-400 hover:underline">
               <Trans i18nKey="description.note5"></Trans>
             </p>
           </Link>
+        </div>
+
+        {/* Imprint Link - right Aligned */}
+        <div className="absolute h-[3vh] right-0 top-0 flex items-center pr-3 gap-2"> 
+          
           <LanguageSelector />
         </div>
 

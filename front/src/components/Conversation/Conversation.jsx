@@ -263,11 +263,11 @@ export default function Conversation({
   // if (localState.messages?.length <= 2) return null;
 
   return (
-    <div className="min-h-0 h-full overflow-hidden flex flex-col">
+
     <div
       className={`w-full md:max-w-[85vw] xl:max-w-[75vw] xl:max-w-[1300px]
                         transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none
-                        mx-auto flex flex-col gap-2 relative p-1 h-full
+                        mx-auto flex flex-col gap-2 relative p-1 min-h-0  h-full overflow-hidden
         ${emptyConversation ? "justify-start" : "justify-between"} 
             `}
     >
@@ -279,15 +279,24 @@ export default function Conversation({
 
       {/* Empty conversation */}
       <div
-        className={`transition-all duration-500 flex flex-col ease-in-out space-y-16 md:max-h-[40vh] xl:max-h-[40vh] p-10
-        ${
+        className={` flex flex-col space-y-16 md:max-h-[40vh] xl:max-h-[40vh] p-10 justify-end
+          ${
           emptyConversation
-            ? "scale-100 items-center justify-end opacity-80 flex-grow"
-            : "absolute scale-90 opacity-0 pointer-events-none"
-        }
-      `}
+            ? "flex-grow "
+            : "absolute pointer-events-none"
+        }`}
       >
+        <div
+          className={`transition-all duration-500 ease-in-out  
+          ${
+            emptyConversation
+              ? "scale-100 opacity-80"
+              : "scale-90 opacity-0 pointer-events-none"
+          }
+        `}
+        >
         {emptyConversation && <EmptyConversation />}
+        </div>
       </div>
 
       {/* Messages area - Key changes here */}
@@ -373,7 +382,6 @@ export default function Conversation({
 
       {/* Prompt area */}
       <Prompt localState={localState} setLocalState={setLocalState} />
-    </div>
     </div>
   );
 }

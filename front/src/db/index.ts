@@ -211,10 +211,11 @@ export async function updateConversation(
   force: boolean = false,
 ) {
   if (!force) {
-    // Check if last modified date is correct
+    // Soft change, check lastModified
     const lastModifiedDB = (await getConversationMeta(conversationId)).lastModified;
-    console.log(lastModifiedDB, " vs. ", data?.lastModified)
+    // console.log(lastModifiedDB, " vs. ", data?.lastModified)
     if (lastModifiedDB !== data?.lastModified) {
+      // Conflict detected
       return -1;
     }
   }
