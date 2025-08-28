@@ -279,15 +279,20 @@ export default function Conversation({
 
       {/* Empty conversation */}
       <div
-        className={` flex flex-col space-y-16 md:max-h-[40vh] xl:max-h-[40vh] p-10 justify-end
+        className={`flex flex-col space-y-16 md:max-h-[40vh] xl:max-h-[40vh] justify-between
           ${
           emptyConversation
             ? "flex-grow "
             : "absolute pointer-events-none"
         }`}
       >
+        <div className="relative">
+          {emptyConversation && !showSettings && (
+          <WarningExternalModel className="absolute top-1 right-1" localState={localState} userData={userData} />
+        )}
+        </div>
         <div
-          className={`transition-all duration-500 ease-in-out  
+          className={`transition-all duration-500 ease-in-out p-10  
           ${
             emptyConversation
               ? "scale-100 opacity-80"
@@ -295,7 +300,8 @@ export default function Conversation({
           }
         `}
         >
-        {emptyConversation && <EmptyConversation />}
+        
+        {emptyConversation && <EmptyConversation localState={localState} userData={userData} />}
         </div>
       </div>
 
@@ -310,12 +316,15 @@ export default function Conversation({
             : "scale-100 opacity-100 flex-1 min-h-0"
         }`}
       >
-        <HallucinationWarning />
+        <div className="flex justify-between">
+          <HallucinationWarning />
 
-        {/* External model warning aligned top right in the messages area */}
-        {!showSettings && (
-          <WarningExternalModel localState={localState} userData={userData} />
-        )}
+          {/* External model warning aligned top right in the messages area */}
+          {!showSettings && (
+            <WarningExternalModel className="p-1" localState={localState} userData={userData} />
+          )}
+        </div>
+        
 
         {/* Scrollable messages container */}
         <div

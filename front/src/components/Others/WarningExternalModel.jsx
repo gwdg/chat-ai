@@ -1,7 +1,7 @@
 import { Trans } from "react-i18next";
 import { useState } from "react";
 
-export default function WarningExternalModel({ localState, userData }) {
+export default function WarningExternalModel({ className, localState, userData }) {
   // Add safety check for model
   if (
     /*
@@ -17,10 +17,10 @@ export default function WarningExternalModel({ localState, userData }) {
 
   const [showWarning, setShowWarning] = useState(true);
   return (
-    <div className="absolute top-1 right-1 z-50">
+    <div className={`${className}`}>
       <button
         onClick={() => setShowWarning(!showWarning)}
-        className="flex items-center gap-2 px-3 py-2 
+        className="flex items-center h-10 gap-2 px-3 py-2 relative
                    bg-yellow-100 hover:bg-yellow-200 
                    dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 
                    border border-yellow-300 dark:border-yellow-600 
@@ -39,7 +39,7 @@ export default function WarningExternalModel({ localState, userData }) {
 
       {showWarning && (
         <div
-          className="absolute top-full right-0 mt-2 p-4 
+          className="absolute right-0 mt-2 p-4 
                         bg-white dark:bg-gray-800 
                         border border-gray-200 dark:border-gray-600 
                         rounded-lg shadow-xl min-w-80 max-w-96"
