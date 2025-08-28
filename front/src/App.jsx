@@ -15,9 +15,12 @@ function App() {
   // Add or remove the 'dark' class to the body based on the dark mode state
   useEffect(() => {
     if (isDarkMode) {
-      document.body.classList.add("dark");
+      document.body.classList.remove("lightScrollbar");
+      document.body.classList.add("dark", "darkScrollbar");
+
     } else {
-      document.body.classList.remove("dark");
+      document.body.classList.remove("dark", "darkScrollbar");
+      document.body.classList.add("lightScrollbar");
     }
   }, [isDarkMode]);
 

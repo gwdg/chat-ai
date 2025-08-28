@@ -10,7 +10,8 @@ import {
   faImage, faVideo, faCircleDot, faLayerGroup, faFilter,
   faHashtag, faTriangleExclamation,
   faShield,
-  faShieldHalved
+  faShieldHalved,
+  faMicrophone
 } from '@fortawesome/free-solid-svg-icons'
 
 import { faCalendar, faRectangleList } from '@fortawesome/free-regular-svg-icons'
@@ -20,19 +21,9 @@ import DemandIndicator from "./DemandIndicator";
 import type { ExtendedModelInfo } from "../../types/models";
 
 import {
-  faArrowUpAZ,
-  faArrowDownAZ,
-  faArrowUpLong,
-  faArrowDownLong,
-  faArrowUp19,
-  faArrowDown19,
-  faCalendarDays,
-  faMicrochip,
-  faFont,
+  faArrowUpAZ
 } from "@fortawesome/free-solid-svg-icons";
 import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
-import SidebarToggleMobile from "../Sidebar/SidebarToggleMobile";
-
 const sortOptions = [
   { value: "name-asc", label: "Name (A→Z)" },
   { value: "name-desc", label: "Name (Z→A)" },
@@ -44,12 +35,12 @@ const sortOptions = [
   { value: "context-asc", label: "Context (low→high)" },
 ];
 
-export default function ModelSelectorSimple({ currentModelId, modelsList: modelsData, onChange }: { currentModelId: string | undefined, modelsList: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void }) {
+export default function ModelSelectorSimple({ currentModelId, modelsData, onChange }: { currentModelId: string | undefined, modelsData: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void }) {
 
   const defaultModel = useSelector(selectDefaultModel); // load from redis
 
-  // choose model of conversation, or default model or first model in list 
-  const selectedModel = modelsData.find(model => model.id === currentModelId) || modelsData.find(model => model.id === defaultModel) || modelsData[0] || null;
+  // choose model of conversation, or default model or first model in list
+  const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData.find(model => model.id === defaultModel) || modelsData[0] || null : null;
 
   //this catches the case that the current model is not in the list or is invalid
   useEffect(() => {
@@ -145,16 +136,13 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
   });
 
   const Chip = memo(({ text, colorPreset }: { text: string | undefined, colorPreset?: string }) => {
-    let color = "bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-medium"
+    let color = "bg-tertiary/20 dark:bg-indigo-600 text-indigo-700 dark:text-white border border-indigo-100 dark:border-indigo-600 text-xs font-medium"
     switch (colorPreset) {
       case "orange":
-        color = "bg-amber-100 text-amber-700 border-amber-100 text-xs font-medium";
-        break;
-      case "red":
-        color = "bg-red-100 text-red-700 border-red-100 text-xs font-medium";
+        color = "bg-amber-100 dark:bg-amber-600 text-amber-700 dark:text-white border-amber-100 dark:border-amber-600 text-xs font-medium";
         break;
       case "green":
-        color = "bg-green-100 text-green-700 border-green-100 text-xs font-medium";
+        color = "bg-green-100 dark:bg-green-600 text-green-700 dark:text-white border-green-100 dark:border-green-600 text-xs font-medium";
         break;
     }
     return (
@@ -171,7 +159,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
       <div
         onClick={onClick}
         tabIndex={idx} data-index={idx} data-id={model.id}
-        className="item cursor-pointer px-2 py-1 hover:bg-slate-100 rounded-2xl border border-slate-200 bg-white"
+        className="item cursor-pointer px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl border border-slate-200 dark:border-gray-500"
       >
         <div className="flex justify-between md:flex-row flex-col ">
           <div className="flex items-center md:gap-2 gap-1">
@@ -184,11 +172,11 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
 
           </div>
           <div className="grid grid-cols-[6rem_6rem_4.5rem] items-center gap-2">
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-500 dark:text-slate-300">
               <FontAwesomeIcon icon={faCalendar} className="mr-1" />
               {model.releaseDate && model.releaseDate !== "" ? model.releaseDate : "-"}
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-500 dark:text-slate-300">
               <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
               Context {model.contextLength && model.contextLength !== "" ? model.contextLength : "-"}
             </span>
@@ -197,10 +185,12 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
               <FontAwesomeIcon icon={faHashtag} className="mr-1" />
               Param {model.numParameters && model.numParameters !== "" ? model.numParameters : "-"}
             </span>*/}
-            <div className="flex items-center gap-1 text-indigo-600">
+            <div className="flex items-center gap-1 text-tertiary">
               {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
               {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
+              {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
               {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+              
             </div>
           </div>
         </div>
@@ -213,7 +203,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
       <div
         onClick={onClick}
         tabIndex={idx} data-index={idx} data-id={model.id}
-        className="item cursor-pointer px-4 py-3 hover:bg-slate-100 rounded-2xl border border-slate-200 bg-white"
+        className="item cursor-pointer px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl border border-slate-200 dark:border-gray-500"
       >
         <div className="flex items-center md:gap-2 gap-1">
           <div className="pl-1">
@@ -221,7 +211,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
           </div>
           <span className="font-medium">{model.name}</span>
           <SecureIndicator external={model.external} />
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-slate-500 dark:text-slate-300">
             <FontAwesomeIcon icon={faCalendar} className="mr-1" />
             {model.releaseDate && model.releaseDate !== "" ? model.releaseDate : "-"}
           </span>
@@ -230,13 +220,14 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
         <div className="flex items-center gap-2 mt-1">
           <Chip text={model.company} />
 
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-slate-500 dark:text-slate-300">
             <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
             Context {model.contextLength && model.contextLength !== "" ? model.contextLength : "-"}
           </span>
-          <div className="flex items-center gap-1 text-indigo-600">
+          <div className="flex items-center gap-1 text-tertiary">
             {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
             {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
+            {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
             {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
           </div>
           {/*
@@ -246,7 +237,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
             </span>*/}
 
         </div>
-        <p className="mt-2 text-sm text-slate-700">{model.description}</p>
+        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{model.description}</p>
 
       </div>
     );
@@ -257,7 +248,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
       <div
         onClick={onClick}
         tabIndex={idx} data-index={idx} data-id={model.id}
-        className="group rounded-2xl border border-slate-200 bg-white p-3 h-full hover:bg-slate-100 hover:shadow-md transition dark:border-slate-700 dark:bg-slate-800 focus-within:ring-2 focus-within:ring-indigo-500 flex flex-col justify-between"
+        className="group rounded-2xl border border-slate-200 p-3 h-full hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-md transition dark:border-slate-700  focus-within:ring-2 focus-within:ring-indigo-500 flex flex-col justify-between"
       >
         <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
           <div className="">
@@ -273,7 +264,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
           </div>
           <DemandIndicator demand={model.demand} online={model.status === "ready"} />
         </div>
-        <div className="mt-2 text-sm text-slate-700 flex flex-wrap gap-x-1 justify-between">
+        <div className="mt-2 text-sm text-slate-700 dark:text-slate-200 flex flex-wrap gap-x-1 justify-between">
           <div className="flex items-center gap-x-3">
             <span className="flex items-center">
               <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
@@ -288,22 +279,29 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
           <div className="flex items-center gap-1">
             {model.output.includes("thought") && (
               <Tooltip text={"Thinking"}>
-                <div className="text-indigo-600 dark:text-indigo-400 size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-700" aria-label="Text input">
+                <div className="text-tertiary size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-500" aria-label="Text input">
                   <FontAwesomeIcon icon={faBrain} />
                 </div>
               </Tooltip>
             )}
             {model.input.includes("image") && (
               <Tooltip text={"Image Input"}>
-                <div className="text-indigo-600 dark:text-indigo-400 size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-700" aria-label="Text input">
+                <div className="text-tertiary size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-500" aria-label="Text input">
                   <FontAwesomeIcon icon={faImage} />
                 </div>
               </Tooltip>
             )}
             {model.input.includes("video") && (
               <Tooltip text={"Video Input"}>
-                <div className="text-indigo-600 dark:text-indigo-400 size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-700" aria-label="Text input">
+                <div className="text-tertiary size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-500" aria-label="Text input">
                   <FontAwesomeIcon icon={faVideo} />
+                </div>
+              </Tooltip>
+            )}
+            {model.input.includes("audio") && (
+              <Tooltip text={"Audio Input"}>
+                <div className="text-tertiary size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-500" aria-label="Text input">
+                  <FontAwesomeIcon icon={faMicrophone} />
                 </div>
               </Tooltip>
             )}
@@ -316,15 +314,17 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
 
   return (
 
-    <div ref={dropdownRef} className="w-full relative">
+    <div ref={dropdownRef} className="w-full relative dark:text-white">
 
 
 
       {/** Trigger/Input **/}
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="h-13 min-h-[4rem] w-full text-left desktop:w-full border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md bg-white px-3 py-2.5 shadow-sm hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
-        <div id="trigger-content" className="flex justify-between">
+        className="h-13 min-h-[4rem] w-full text-left desktop:w-full border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md bg-white dark:bg-bg_secondary_dark px-3 py-2.5 shadow-sm hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
+        
+        {/** Selected Model View **/}
+        <div className="flex justify-between">
           <div className="flex items-center justify-between gap-2">
             <div className="pl-2">
               <DemandIndicator demand={selectedModel?.demand} online={selectedModel?.status === "ready"} />
@@ -332,11 +332,11 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
             <span className="font-medium">{selectedModel?.name}</span>
             {selectedModel?.external == true && (<Chip text={"External"} colorPreset={"orange"} />)}
             <Chip text={selectedModel?.company} />
-            <span className="text-xs text-slate-500 hidden sm:inline-block">
+            <span className="text-xs text-slate-500 dark:text-slate-300 hidden sm:inline-block">
               <FontAwesomeIcon icon={faCalendar} />
               {selectedModel?.releaseDate}
             </span>
-            <span className="text-xs text-slate-500 hidden sm:inline-block">
+            <span className="text-xs text-slate-500 dark:text-slate-300 hidden sm:inline-block">
               <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
               Context {selectedModel?.contextLength !== "" ? selectedModel?.contextLength : "-"}
             </span>
@@ -348,7 +348,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="ml-2 flex items-center gap-1 text-indigo-600">
+            <div className="ml-2 flex items-center gap-1 text-tertiary">
               {selectedModel?.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
               {selectedModel?.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
               {selectedModel?.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
@@ -360,37 +360,34 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
 
       </button>
 
-
-
-
       {/** Dropdown Panel **/}
-      <div className={`${dropdownOpen ? "" : "hidden"} absolute z-50 mt-1 w-full rounded-2xl border border-slate-200 bg-white shadow-2xl  pb-4`}>
+      <div className={`${dropdownOpen ? "" : "hidden"} bg-white dark:bg-bg_secondary_dark absolute z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500 shadow-2xl dark:shadow-dark pb-4`}>
 
-        {/** Controls **/}
-        <div className="text-sm flex items-center gap-2 p-2 border-b border-slate-100 to-white">
+        {/** Search Controls **/}
+        <div className="text-sm flex items-center gap-2 p-2 border-b border-slate-100 dark:border-gray-500 to-white">
           <div className="relative flex-1">
             <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              type="text" placeholder="Search models…" autoComplete="off" className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30" />
+              type="text" placeholder="Search models…" autoComplete="off" className="w-full rounded-xl border border-slate-200 dark:border-gray-500 pl-9 pr-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30" />
           </div>
 
           {/** View tabs (kept; default is List) **/}
           <div className=" rounded-xl border border-slate-200 overflow-hidden" role="tablist" aria-label="View mode">
             <button
               onClick={() => setResultViewMode("list")}
-              data-view="simple" className="view-btn px-3 py-2 text-sm hover:bg-slate-50 aria-selected:bg-indigo-600 aria-selected:text-white" role="tab" aria-selected={resultViewMode === "list"} title="List">
+              data-view="simple" className="view-btn px-3 py-2 text-sm hover:bg-tertiary/30 aria-selected:bg-tertiary aria-selected:text-white" role="tab" aria-selected={resultViewMode === "list"} title="List">
               <FontAwesomeIcon icon={faList} />
             </button>
             <button
               onClick={() => setResultViewMode("extended")}
-              data-view="extended" className="view-btn px-3 py-2 text-sm hover:bg-slate-50 aria-selected:bg-indigo-600 aria-selected:text-white" role="tab" aria-selected={resultViewMode === "extended"} title="Extended">
+              data-view="extended" className="view-btn px-3 py-2 text-sm hover:bg-tertiary/30 aria-selected:bg-tertiary aria-selected:text-white" role="tab" aria-selected={resultViewMode === "extended"} title="Extended">
               <FontAwesomeIcon icon={faRectangleList} />
             </button>
             <button
               onClick={() => setResultViewMode("grid")}
-              data-view="grid" className="view-btn px-3 py-2 text-sm hover:bg-slate-50 aria-selected:bg-indigo-600 aria-selected:text-white" role="tab" aria-selected={resultViewMode === "grid"} title="Grid">
+              data-view="grid" className="view-btn px-3 py-2 text-sm hover:bg-tertiary/30 aria-selected:bg-tertiary aria-selected:text-white" role="tab" aria-selected={resultViewMode === "grid"} title="Grid">
               <FontAwesomeIcon icon={faTableCells} />
             </button>
           </div>
@@ -429,29 +426,30 @@ export default function ModelSelectorSimple({ currentModelId, modelsList: models
 
           {/** Sort **/}
           <Menu as="div" className="relative inline-block text-left">
-            <div>
-              <MenuButton className="inline-flex w-full justify-between items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
-                <span className="hidden sm:block">
-                  {sortOptions.find((opt) => opt.value === sortBy)?.label || "Sort by"}
-                  <FontAwesomeIcon size="sm" icon={faChevronDown} />
-                </span>
-                <span className="sm:hidden">
-                  <FontAwesomeIcon icon={faArrowUpAZ} className="ml-1" />
-                </span>
-              </MenuButton>
-            </div>
+            
+            <MenuButton className="inline-flex w-full justify-between items-center rounded-xl border border-slate-200 bg-white dark:bg-bg_secondary_dark px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-200 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+              <span className="hidden sm:block">
+                {sortOptions.find((opt) => opt.value === sortBy)?.label || "Sort by"}
+                <FontAwesomeIcon size="sm" icon={faChevronDown} />
+              </span>
+              <span className="sm:hidden">
+                <FontAwesomeIcon icon={faArrowUpAZ} className="ml-1" />
+              </span>
+            </MenuButton>
 
-            <MenuItems className="absolute right-0 mt-2 w-40 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-50">
+            <MenuItems className="absolute right-0 mt-2 w-40 origin-top-right rounded-xl bg-white dark:bg-bg_secondary_dark shadow-lg ring-1 ring-black/5 focus:outline-none z-50">
               <div className="py-1">
                 {sortOptions.map((option) => (
                   <MenuItem key={option.value}>
-                    <button
-                      onClick={() => setSortBy(option.value)}
-                      className="data-focus:bg-indigo-50 data-focus:text-indigo-600 text-slate-700 block w-full px-4 py-2 text-left text-sm"
-                    >
-                      {option.label}
+                    {({ close }) => (
+                      <button
+                        onClick={() => {setSortBy(option.value); close()}}
+                        className="data-focus:bg-tertiary/10 dark:data-focus:bg-secondary rounded-xl text-slate-700 dark:text-slate-200 block w-full px-4 py-2 text-left text-sm"
+                      >
+                        {option.label}
 
-                    </button>
+                      </button>
+                    )}
                   </MenuItem>
                 ))}
               </div>

@@ -5,17 +5,30 @@ import { useUpdateModelsData } from "../../hooks/useUpdateModelsData";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useSelector } from "react-redux";
 import {
-  faChevronDown, faMagnifyingGlass, faBrain, faImage, faVideo
+  faChevronDown, faMagnifyingGlass, faBrain, faImage, faVideo,
+  faMicrophone,
+  faArrowUpAZ
 } from '@fortawesome/free-solid-svg-icons'
 import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 import DemandIndicator from "./DemandIndicator";
 import type { BaseModelInfo } from "../../types/models";
-import SidebarToggleMobile from "../Sidebar/SidebarToggleMobile";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 
-export default function ModelSelectorSimple({ currentModelId, modelsData: modelsData, onChange }: { currentModelId: string | undefined, modelsList: BaseModelInfo[], onChange: (model: BaseModelInfo) => void }) {
+const sortOptions = [
+  { value: "name-asc", label: "Name (A→Z)" },
+  { value: "name-desc", label: "Name (Z→A)" },
+];
+
+export default function ModelSelectorSimple({ currentModelId, modelsData, onChange }: { currentModelId: string | undefined, modelsData: BaseModelInfo[], onChange: (model: BaseModelInfo) => void }) {
   const userDefaultModel = useSelector(selectDefaultModel);
 
   const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData.find(model => model.id === userDefaultModel) || modelsData[0] || null : null;
+
+  useEffect(() => {
+    if (currentModelId === undefined || currentModelId !== selectedModel?.id) {
+      setSelectedModel(selectedModel);
+    }
+  }, []);
 
   function setSelectedModel(model: BaseModelInfo | null) {
     onChange && onChange(model);
@@ -69,7 +82,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsData: models
       <div
         onClick={onClick}
         data-index={idx} data-id={model.id} tabIndex={idx}
-        className="item cursor-pointer my-1 px-2 py-1 hover:bg-slate-100 rounded-2xl border border-slate-200 bg-white"
+        className="item cursor-pointer my-1 px-2 py-1 hover:bg-slate-100 rounded-2xl border border-slate-200 dark:border-gray-500 bg-white dark:bg-bg_secondary_dark"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -78,9 +91,10 @@ export default function ModelSelectorSimple({ currentModelId, modelsData: models
             </div>
             <span className="font-medium">{model.name}</span>
           </div>
-          <div className="ml-2 flex items-center gap-1 text-indigo-600">
+          <div className="ml-2 flex items-center gap-1 text-tertiary">
             {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
             {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
+            {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
             {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
           </div>
         </div>
@@ -90,13 +104,13 @@ export default function ModelSelectorSimple({ currentModelId, modelsData: models
 
   return (
 
-    <div ref={dropdownRef} className="w-full">
+    <div ref={dropdownRef} className="w-full relative dark:text-white">
 
 
       {/** Trigger/Input **/}
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="w-full text-left desktop:w-full border border-gray-200 dark:border-gray-800 rounded-xl shadow-md bg-white px-3 py-2.5 shadow-sm hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
+        className="w-full text-left desktop:w-full border border-gray-200 dark:border-bg_secondary_dark rounded-xl shadow-md bg-white dark:bg-bg_secondary_dark px-3 py-2.5 shadow-sm hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
         <div id="trigger-content" className="flex justify-between">
           <div className="flex items-center justify-between gap-2">
             <div className="pl-2">
@@ -120,28 +134,51 @@ export default function ModelSelectorSimple({ currentModelId, modelsData: models
 
 
       {/** Dropdown Panel **/}
-      <div className={`${dropdownOpen ? "" : "hidden"} absolute z-50 mt-1 w-full rounded-2xl border border-slate-200 bg-white shadow-2xl  pb-4`}>
+      <div className={`${dropdownOpen ? "" : "hidden"} bg-white dark:bg-bg_secondary_dark absolute z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500  shadow-2xl dark:shadow-dark pb-4`}>
 
         {/** Controls **/}
-        <div className="text-sm flex items-center gap-2 p-2 border-b border-slate-100 to-white">
+        <div className="text-sm flex items-center gap-2 p-2 border-b border-slate-100 dark:border-gray-500 to-white">
           <div className="relative flex-1">
             <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              type="text" placeholder="Search models…" autoComplete="off" className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30" />
+              type="text" placeholder="Search models…" autoComplete="off" className="w-full rounded-xl border border-slate-200 dark:border-gray-500 pl-9 pr-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30" />
           </div>
 
           {/** Sort **/}
-          <label className="md:flex items-center text-sm text-slate-600">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              id="sort-select" className="text-xs rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500/30">
-              <option value="name-asc">Name (A→Z)</option>
-              <option value="name-desc">Name (Z→A)</option>
-            </select>
-          </label>
+          <Menu as="div" className="relative inline-block text-left">
+
+            <MenuButton className="inline-flex w-full justify-between items-center rounded-xl border border-slate-200 bg-white dark:bg-bg_secondary_dark px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-200 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+              <span className="hidden sm:block">
+                {sortOptions.find((opt) => opt.value === sortBy)?.label || "Sort by"}
+                <FontAwesomeIcon size="sm" icon={faChevronDown} />
+              </span>
+              <span className="sm:hidden">
+                <FontAwesomeIcon icon={faArrowUpAZ} className="ml-1" />
+              </span>
+            </MenuButton>
+
+            <MenuItems className="absolute right-0 mt-2 w-40 origin-top-right rounded-xl bg-white dark:bg-bg_secondary_dark shadow-lg ring-1 ring-black/5 focus:outline-none z-50">
+              <div className="py-1">
+                {sortOptions.map((option) => (
+                  <MenuItem key={option.value}>
+                    {({ close }) => (
+                      <button
+                        onClick={() => {setSortBy(option.value); close()}}
+                        className="data-focus:bg-indigo-50 dark:data-focus:bg-secondary rounded-xl data-focus:text-indigo-600 text-slate-700 dark:text-slate-200 block w-full px-4 py-2 text-left text-sm"
+                      >
+                        {option.label}
+
+                      </button>
+                    )}
+
+                  </MenuItem>
+                ))}
+              </div>
+            </MenuItems>
+          </Menu>
+
         </div>
 
         {/** Results List **/}
