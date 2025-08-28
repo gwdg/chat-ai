@@ -19,7 +19,7 @@ const sortOptions = [
   { value: "name-desc", label: "Name (Z→A)" },
 ];
 
-export default function ModelSelectorSimple({ currentModelId, modelsData, onChange }: { currentModelId: string | undefined, modelsData: BaseModelInfo[], onChange: (model: BaseModelInfo) => void }) {
+export default function ModelSelectorSimple({ currentModelId, modelsData, onChange, inHeader = false }: { currentModelId: string | undefined, modelsData: BaseModelInfo[], inHeader: boolean, onChange: (model: BaseModelInfo) => void }) {
   const userDefaultModel = useSelector(selectDefaultModel);
 
   const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData.find(model => model.id === userDefaultModel) || modelsData[0] || null : null;
@@ -105,18 +105,17 @@ export default function ModelSelectorSimple({ currentModelId, modelsData, onChan
   return (
 
     <div ref={dropdownRef} className="w-full relative dark:text-white">
-
-
       {/** Trigger/Input **/}
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="w-full text-left desktop:w-full border border-gray-200 dark:border-bg_secondary_dark rounded-xl shadow-md bg-white dark:bg-bg_secondary_dark px-3 py-2.5 shadow-sm hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
+        className={`${inHeader ? "border border-gray-200 dark:border-bg_secondary_dark" : " border border-gray-200 dark:border-bg_secondary_dark shadow-md shadow-sm"}  w-full text-center desktop:w-full rounded-xl bg-white dark:bg-bg_secondary_dark px-3 py-2.5 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30`}>
         <div id="trigger-content" className="flex justify-between">
-          <div className="flex items-center justify-between gap-2">
+          {/* Left section - allow to shrink */}
+          <div className="flex items-center gap-2 min-w-0">
             <div className="pl-2">
               <DemandIndicator demand={selectedModel?.demand} online={selectedModel?.status === "ready"} />
             </div>
-            <span className="font-medium">{selectedModel?.name}</span>
+            <span className="font-medium truncate">{selectedModel?.name}</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -134,10 +133,10 @@ export default function ModelSelectorSimple({ currentModelId, modelsData, onChan
 
 
       {/** Dropdown Panel **/}
-      <div className={`${dropdownOpen ? "" : "hidden"} bg-white dark:bg-bg_secondary_dark absolute z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500  shadow-2xl dark:shadow-dark pb-4`}>
+      <div className={`${dropdownOpen ? "" : "hidden"} ${inHeader ? "fixed left-0 top-12 w-screen" : "absolute"} bg-white dark:bg-bg_secondary_dark z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500  shadow-2xl dark:shadow-dark pb-4`}>
 
         {/** Controls **/}
-        <div className="text-sm flex items-center gap-2 p-2 border-b border-slate-100 dark:border-gray-500 to-white">
+        <div className={`text-sm flex items-center gap-2 p-2 border-b border-slate-100 dark:border-gray-500 to-white`}>
           <div className="relative flex-1">
             <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input

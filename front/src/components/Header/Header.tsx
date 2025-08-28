@@ -3,6 +3,10 @@ import HamburgerMenu from "./HamburgerMenu";
 import LogoContainer from "./LogoContainer";
 import UserContainer from "./UserContainer";
 import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
+import SettingsWrapper from "../SettingsPanel/SettingsWrapper";
+import SettingsButton from "./SettingsButton";
+import ModelSelectorWrapper from "./ModelSelectorWrapper";
+import ModelSelector from "./ModelSelector";
 
 function Header({ className, localState, setLocalState, modelsData, userData }) {
   const dispatch = useDispatch();
@@ -14,17 +18,23 @@ function Header({ className, localState, setLocalState, modelsData, userData }) 
           {/* Left Section */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Hamburger Menu - Always show on mobile/tablet */}
-            <HamburgerMenu onOpen={() => dispatch(toggleSidebar())} />
+            <HamburgerMenu />
             {/* Logo (Mobile) */}
             <LogoContainer isMobile={true} />
           </div>
 
           {/* Center Section */}
           <div
-            className="flex-shrink flex-grow min-w-0 px-2 relative"
+            className="flex-grow min-w-0 px-2 relative w-full"
             style={{ maxWidth: "calc(100vw - 200px)" }}
             tabIndex={0}
           >
+            <ModelSelectorWrapper
+              localState={localState}
+              setLocalState={setLocalState}
+              modelsData={modelsData}
+              inHeader={true}
+            />
             {/* Model Selection 
             <ModelSelector
               localState={localState}
@@ -34,14 +44,19 @@ function Header({ className, localState, setLocalState, modelsData, userData }) 
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-4 flex-shrink-0">
             {/* User profile */}
+            
             <UserContainer
               localState={localState}
               setLocalState={setLocalState}
               userData={userData}
               modelsData={modelsData}
             />
+            <SettingsButton
+              localState={localState}
+              setLocalState={setLocalState}
+             />
           </div>
         </div>
       </nav>

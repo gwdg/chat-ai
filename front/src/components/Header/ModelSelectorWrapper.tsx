@@ -8,7 +8,7 @@ import { setConversationModelDB, useConversationModelDB } from "../../db/queries
 import { selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
 
 
-function ModelSelectorWrapper({modelsData, localState, setLocalState}: {modelsData: ModelInfo, localState: any, setLocalState: any}) {
+function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false}: {modelsData: ModelInfo, localState: any, setLocalState: any, inHeader: boolean}) {
   /*
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
@@ -25,14 +25,14 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState}: {modelsDa
       },
     }));
   }
- 
+
   return (
     <>
       {
         hasExtendedModels ? 
-          <ModelSelectorExtended currentModelId={currentModelId} modelsData={modelsData} onChange={setModel} /> 
+          <ModelSelectorExtended currentModelId={currentModelId} modelsData={modelsData} inHeader={inHeader} onChange={setModel} /> 
         : 
-          <ModelSelectorSimple currentModelId={currentModelId} modelsData={modelsData} onChange={setModel} />
+          <ModelSelectorSimple currentModelId={currentModelId} modelsData={modelsData} inHeader={inHeader} onChange={setModel} />
       }
     </>
   )

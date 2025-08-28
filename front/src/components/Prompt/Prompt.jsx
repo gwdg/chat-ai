@@ -2,7 +2,7 @@ import AbortButton from "./AbortButton";
 import SendButton from "./SendButton";
 import MicButton from "./MicButton";
 import AttachmentsContainer from "./AttachmentsContainer";
-import SettingsButton from "./SettingsButton";
+import SettingsButton from "../Header/SettingsButton";
 import AttachButton from "./AttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import ClearButton from "./ClearButton";
@@ -67,17 +67,17 @@ export default function Prompt({
             {/* Buttons on the right */}
             <div className="flex gap-4 w-full justify-end items-center">
               {/* Settings Button */}
-              <SettingsButton />
+              {/* <SettingsButton /> */}
               {/* Attach Button */}
               <AttachButton
                 localState={localState}
                 setLocalState={setLocalState}
               />
               {/* Attach Media Button */}
-              <AttachMediaButton
+              {/* <AttachMediaButton
                 localState={localState}
                 setLocalState={setLocalState}
-              />
+              /> */}
               {/* Mic Button */}
               <MicButton 
                 localState={localState}

@@ -5,7 +5,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { abortRequest } from "../../apis/chatCompletions";
 import { useToast } from "../../hooks/useToast";
 import { useDispatch, useSelector } from "react-redux";
-import { toggleSettings } from "../../Redux/reducers/interfaceSettingsSlice";
+import { selectShowSidebar, toggleSettings, toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
 import { Settings } from "lucide-react";
 
@@ -14,12 +14,16 @@ export default function SettingsButton() {
     const { notifySuccess, notifyError } = useToast();
     const dispatch = useDispatch();
     const showSettings = useSelector(selectShowSettings);
+    const showSidebar = useSelector(selectShowSidebar);
 
-    return !showSettings ? (
+    return (
         <Tooltip text={t("description.settings_toggle")}>
             <button
             className="flex h-[25px] w-[25px] cursor-pointer"
-            onClick={() => dispatch(toggleSettings())}
+            onClick={() => {
+                if (showSidebar) dispatch(toggleSidebar());
+                dispatch(toggleSettings());
+            }}
             >
             <Settings
                 className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
@@ -27,5 +31,5 @@ export default function SettingsButton() {
             />
             </button>
         </Tooltip>
-    ) : null;
+    );
 }

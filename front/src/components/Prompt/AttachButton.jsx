@@ -7,7 +7,7 @@ import { useToast } from "../../hooks/useToast";
 import icon_attach from "../../assets/icons/attach.svg";
 import { useAttachments } from "../../hooks/useAttachments";
 //Assets
-import { Paperclip } from "lucide-react";
+import { Paperclip, FilePlus2, CirclePlus } from "lucide-react";
 
 export default function AttachButton({
     localState, 
@@ -38,29 +38,27 @@ export default function AttachButton({
         });
     };
 
+
     return (
         <>
-            {/* Hidden file input for attachments */}
-            <input
+            
+            {/* Attach button */}
+            <Tooltip text={t("description.attachFile")}>
+                {/* Hidden file input for attachments */}
+                <input
                     type="file"
                     ref={hiddenFileInput}
                     multiple
-                    accept=".txt, .csv, .pdf, .md, .xlsx, .xls, .docx, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json, .tex, .xml, .yaml, .yml, .ini, .toml, .properties, .css, .scss, .sass, .less, .sh, .ps1, .pl, .lua, .r, .m, .mat, .asm, .sql, .ipynb, .rmd, .dockerfile, .proto, .cfg, .bat"
+                    //accept=".txt, .csv, .pdf, .md, .xlsx, .xls, .docx, .py, .js, .java, .cpp, .c, .h, .cs, .rb, .php, .go, .rs, .swift, .kt, .ts, .jsx, .tsx, .html, .json, .tex, .xml, .yaml, .yml, .ini, .toml, .properties, .css, .scss, .sass, .less, .sh, .ps1, .pl, .lua, .r, .m, .mat, .asm, .sql, .ipynb, .rmd, .dockerfile, .proto, .cfg, .bat, */*"
                     onChange={handleFilesChange}
                     className="hidden"
                 />
-            {/* Attach button */}
-            <Tooltip text={t("description.attachFile")}>
-                <button
-                    className="h-[25px] w-[25px] cursor-pointer"
+                <Paperclip
+                    className="cursor-pointer flex h-[25px] w-[25px] text-[#009EE0]"
                     onClick={handleClick}
                     disabled={loading}
-                >
-                    <Paperclip
-                    className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
                     alt="upload"
-                    />
-                </button>
+                />
             </Tooltip>
         </>
     );

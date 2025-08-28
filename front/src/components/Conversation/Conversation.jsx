@@ -270,11 +270,13 @@ export default function Conversation({
         ${emptyConversation ? "justify-start" : "justify-between"} 
             `}
     >
+      <div className ={`hidden md:block`} >
       <ModelSelectorWrapper
         localState={localState}
         setLocalState={setLocalState}
         modelsData={modelsData}
       />
+      </div>
 
       {/* Empty conversation */}
       <div
