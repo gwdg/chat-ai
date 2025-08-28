@@ -11,7 +11,7 @@ async function* chatCompletions (
   try {
     const model = typeof conversation.settings.model === 'string'
       ? conversation.settings.model
-      : conversation.settings.model?.id;
+      : conversation.settings.model?.id; // TODO fall back to defaultModel
 
     // Define base URL from config
     let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
@@ -37,10 +37,7 @@ async function* chatCompletions (
     // Handle tools
     if (conversation.settings?.enable_tools) {
       params.enable_tools = true;
-      params.tools = [];
-      if (conversation.settings?.enable_web_search) {
-        params.tools.push({ type: "web_search_preview" });
-      }
+      params.tools = conversation?.settings?.tools || [];
       if (conversation.settings?.arcana && conversation.settings.arcana.id !== "") {
         params.arcana = conversation.settings.arcana;
       }

@@ -273,12 +273,12 @@ const SettingsPanel = ({
             }));
 
             // Update conversation in Redux store
-            dispatch(
-              updateConversation({
-                id: newId,
-                updates: conversationUpdates,
-              })
-            );
+            // dispatch(
+            //   updateConversation({
+            //     id: newId,
+            //     updates: conversationUpdates,
+            //   })
+            // );
 
             // Navigate to new conversation
             navigate(`/chat/${newId}`, { replace: true });

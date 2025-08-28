@@ -160,7 +160,7 @@ const sendMessage = async ({
       : "";
     if (memories.length > 0) {
       const memoryContext = memories.map((memory) => memory.text).join("\n");
-      const memorySection = `\n\n--- User Memory ---\nThe following information represents the user's preferences, important details, and context from previous conversations. Use this information when relevant to provide a more personalized and contextual response:\n\n${memoryContext}\n--- End User Memory ---`;
+      const memorySection = `\n\n--- Begin User Memory ---\nThe following information was gathered by the system from previous conversations and may be irrelevant. You may use this information only when relevant to provide a more personalized and contextual response, but do not make assumptions, and focus on the provided system message instea :\n\n${memoryContext}\n--- End User Memory ---`;
       systemPromptAPI = systemPromptAPI + memorySection;
     }
 
@@ -196,6 +196,8 @@ const sendMessage = async ({
       if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
         conversationForAPI.settings.arcana.limit = 3;
       }
+      // Always enable image generation for now
+      conversationForAPI.settings.tools.push({ type: "image_generation" })
     } else {
       delete conversationForAPI.settings.arcana;
       delete conversationForAPI.settings.tools;

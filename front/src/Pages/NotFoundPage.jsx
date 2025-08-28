@@ -4,20 +4,21 @@ import { Trans } from "react-i18next";
 // import { resetStore } from "../Redux/reducers/conversationsSlice";
 import { v4 as uuidv4 } from "uuid";
 import { persistor } from "../Redux/store/store";
-import { setCurrentConversation } from "../Redux/reducers/currentConversationSlice";
+import { setLastConversation, selectLastConversation } from "../Redux/reducers/lastConversationSlice";
+import { listConversationMetas } from "../db";
 
 const NotFoundPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const currentConversationId = useSelector(
-    (state) => state.current_conversation
-  );
-  const conversations = useSelector((state) => state.conversations);
-
+  const lastConversation = useSelector(selectLastConversation);
   const handleGoToChat = async () => {
-    // If current conversation exists, go to it
-    // if (conversations.some((conv) => conv.id === currentConversationId)) {
-    //   navigate(`/chat/${currentConversationId}`, { replace: true });
+    
+    // const conversations = await listConversationMetas()
+
+    // // If current conversation exists, go to it
+    // if (conversations?.some((conv) => conv.id === lastConversation)) {
+    //   console.log("Navigating to last conversation, ", lastConversation);
+    //   navigate(`/chat/${lastConversation}`, { replace: true });
     //   return;
     // }
 
@@ -33,7 +34,7 @@ const NotFoundPage = () => {
     // TODO
 
     // Force persistence to ensure other tabs see this change
-    dispatch(setCurrentConversation("reset"));
+    dispatch(setLastConversation(null));
     await persistor.flush();
     // Go to empty chat
     navigate(`/chat`);

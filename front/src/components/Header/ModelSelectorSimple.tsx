@@ -12,7 +12,7 @@ import DemandIndicator from "./DemandIndicator";
 import type { BaseModelInfo } from "../../types/models";
 import SidebarToggleMobile from "../Sidebar/SidebarToggleMobile";
 
-export default function ModelSelectorSimple({ currentModelId, modelsList: modelsData, onChange }: { currentModelId: string | undefined, modelsList: BaseModelInfo[], onChange: (model: BaseModelInfo) => void }) {
+export default function ModelSelectorSimple({ currentModelId, modelsData: modelsData, onChange }: { currentModelId: string | undefined, modelsList: BaseModelInfo[], onChange: (model: BaseModelInfo) => void }) {
   const userDefaultModel = useSelector(selectDefaultModel);
 
   const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData.find(model => model.id === userDefaultModel) || modelsData[0] || null : null;

@@ -173,7 +173,7 @@ export async function createConversation(params: {
     })
 
     if (messages.length > 0) {
-      await updateConversation(id, { title, settings, messages })
+      await updateConversation(id, { title, settings, messages }, true)
     }
   })
 
@@ -183,6 +183,12 @@ export async function createConversation(params: {
 // Get one conversation fully hydrated (messages + file placeholders)
 export async function getConversation(conversationId: string) {
   return hydrateConversation(conversationId)
+}
+
+export async function getConversationLastModified(conversationId: string) {
+  // Find conversation
+  const convo = await db.conversations.get(conversationId);
+  return convo?.lastModified || 0;
 }
 
 // Replace the entire content (title/settings/messages) of a conversation in one go.
@@ -199,9 +205,19 @@ export async function updateConversation(
       createdAt?: number
       updatedAt?: number
       meta?: any
-    }>
-  }
+    }>,
+    lastModified?: number,
+  },
+  force: boolean = false,
 ) {
+  if (!force) {
+    // Check if last modified date is correct
+    const lastModifiedDB = (await getConversationMeta(conversationId)).lastModified;
+    console.log(lastModifiedDB, " vs. ", data?.lastModified)
+    if (lastModifiedDB !== data?.lastModified) {
+      return -1;
+    }
+  }
   const now = Date.now();
   await db.transaction(
     'rw',
@@ -331,6 +347,7 @@ export async function updateConversation(
       });
     }
   );
+  return now;
 }
 
 // Add a single message (returns its id)
@@ -431,9 +448,11 @@ export async function listConversationMetas(): Promise<
 // Rename conversation or update settings
 export async function updateConversationMeta(
   conversationId: string,
-  updates: Partial<Pick<ConversationRow, 'title' | 'settings'>>
+  updates: Partial<Pick<ConversationRow, 'title' | 'settings'>>,
 ) {
-  await db.conversations.update(conversationId, { ...updates, lastModified: Date.now() })
+  const now = Date.now();
+  await db.conversations.update(conversationId, { ...updates, lastModified: now })
+  return now;
 }
 
 // Delete entire conversation (messages + content items + files)

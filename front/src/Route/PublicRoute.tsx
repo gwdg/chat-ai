@@ -8,12 +8,6 @@ import NotFoundPage from "../Pages/NotFoundPage";
 import LandingPage from "../Pages/LandingPage";
 import ChatPage from "../Pages/ChatPage";
 
-// Separate route components
-const RootRoute = () => {
-  console.log("RootRoute rendered");
-  return <Navigate to={`/chat`} replace />;
-};
-
 const PublicRoute = () => {
   return (
     <Routes>

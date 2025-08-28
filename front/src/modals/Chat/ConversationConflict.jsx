@@ -10,48 +10,28 @@ import {
   getDefaultConversation,
   getDefaultSettings,
 } from "../../utils/conversationUtils";
-import { createConversation, resetDB } from "../../db";
+import { createConversation, resetDB, updateConversation } from "../../db";
 
 import BaseModal from "../BaseModal";
+import { selectLockConversation } from "../../Redux/reducers/conversationsSlice";
 import { setLastConversation } from "../../Redux/reducers/lastConversationSlice";
 
-export default function ClearCacheModal({ isOpen, onClose }) {
+export default function ConversationConflict({ isOpen, onClose, localState, setLocalState, setUnsavedChanges }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useToast();
-  // const currentConversationId = useSelector(selectCurrentConversationId);
-  const [isCleared, setIsCleared] = useState(false);
 
-  // Navigate to the current conversation after clearing cache
-  // useEffect(() => {
-  //   if (!isCleared) return;
-  //   if (currentConversationId) {
-  //     navigate(`/chat/${currentConversationId}`, { replace: true });
-  //   }
-  //   notifySuccess("Chats cleared successfully");
-  //   onClose();
-  // }, [currentConversationId]);
-
-  const clearCache = useCallback(async () => {
-    try {
-      // Prepare to navigate
-      setIsCleared(true);
-      await resetDB(); // Reset IndexedDB
-      await dispatch({ // Reset Redux
-        type: "RESET_ALL",
-        meta: {
-          sync: true,
-        },
-      });
-      const newConversationId = await createConversation(
-        getDefaultConversation()
-      );
-      console.log("New conversation", newConversationId);
-      navigate(`/chat/${newConversationId}`, { replace: true });
-    } catch (error) {
-      notifyError("Failed to clear chats: " + error.message);
-    }
-  }, [dispatch, notifySuccess, notifyError]);
+  const handleOverwrite = async () => {
+    // Force save
+    const lastModified = await updateConversation(localState.id, localState, true);
+    localState.lastModified = lastModified;
+    setUnsavedChanges(false);
+    onClose();
+  }
+  const handleReload = () => {
+    navigate(0)
+    onClose();
+  }
 
   return (
     <BaseModal
@@ -62,26 +42,26 @@ export default function ClearCacheModal({ isOpen, onClose }) {
       {/* Message */}
       <div className="pt-0 pb-2">
         <p className="dark:text-white text-black text-justify text-sm">
-          <Trans i18nKey="description.cache1" />
+          Conversation was changed by another tab or process. Would you like to overwrite, or reload the conversation?
         </p>
       </div>
 
       {/* Buttons */}
       <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm mt-2">
-        {/* Cancel button */}
+        {/* Reload button */}
         <button
           className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
-          onClick={onClose}
+          onClick={handleReload}
         >
-          <Trans i18nKey="description.cache2" />
+          Reload
         </button>
 
-        {/* Clear cache button */}
+        {/* Overwrite button */}
         <button
           className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
-          onClick={clearCache}
+          onClick={handleOverwrite}
         >
-          <Trans i18nKey="description.cache3" />
+          Overwrite
         </button>
       </div>
     </BaseModal>

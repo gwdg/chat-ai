@@ -17,14 +17,9 @@ import Header from "../components/Header/Header";
 import SettingsWrapper from "../components/SettingsPanel/SettingsWrapper";
 import Conversation from "../components/Conversation/Conversation";
 import { useEffect, useState } from "react";
-import { setCurrentConversation } from "../Redux/reducers/currentConversationSlice";
+import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
 
 import { Navigate, useNavigate } from "react-router";
-
-import { validate as validateUUID, version as versionUUID } from "uuid";
-function validateConversationId(conversationId: string): boolean {
-  return validateUUID(conversationId) && versionUUID(conversationId) === 4;
-}
 
 export default function ChatPage() {
   const { conversationId } = useParams();
@@ -32,30 +27,24 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const { isMobile } = useWindowSize();
 
-  if(conversationId !== undefined && !validateConversationId(conversationId)) {
-    console.error("Invalid conversationId:", conversationId);
-    navigate("/notfound");
-    return <div>Invalid conversation ID. Redirecting...</div>; // as a Fallback: this will actually not render due to the navigate
-  }
-
   const [localState, setLocalState] = useState(() => getDefaultConversation());
 
+  const modelsData = useUpdateModelsData();
+  const userData = useUpdateUserData();
+
+  // Sync localState conversation with IndexedDB
   useSyncConversation({
     localState,
     setLocalState,
     conversationId,
   });
 
-
+  // Save last conversation when current conversation changes
   useEffect(() => {
     if (conversationId) {
-      dispatch(setCurrentConversation(conversationId));
+      dispatch(setLastConversation(conversationId));
     }
   }, [conversationId]);
-
-  const modelsData = useUpdateModelsData();
-  const userData = useUpdateUserData();
-
 
   return (
     <div className={`h-[calc(100%-55px)] min-h-screen overflow-hidden 

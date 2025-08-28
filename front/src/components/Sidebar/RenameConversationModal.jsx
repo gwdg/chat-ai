@@ -9,6 +9,8 @@ export default function RenameConversationModal({
   currentTitle,
   isOpen,
   onClose,
+  localState,
+  setLocalState,
 }) {
   const [title, setTitle] = useState(currentTitle || "");
   const [error, setError] = useState("");
@@ -21,15 +23,16 @@ export default function RenameConversationModal({
     setError(""); // Clear error when modal reopens
   }, [title]);
 
-  const handleRename = () => {
+  const handleRename = async () => {
     if (!title?.trim()) {
       setError(t("description.error_title"));
       return;
     }
-    updateConversationMeta(id, {
+    const lastModified = await updateConversationMeta(id, {
       title: title.trim(),
-      lastModified: new Date().toISOString(),
     });
+    if (!localState) return;
+    localState.lastModified = lastModified;
     // Optional for speed - change conversations locally
     onClose();
   };

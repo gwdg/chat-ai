@@ -12,7 +12,7 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState}: {modelsDa
   /*
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
-  const currentModelId = localState.settings.model.id;
+  const currentModelId = localState?.settings?.model?.id;
   //
   const hasExtendedModels = modelsData?.[0]?.description !== undefined;
 
@@ -26,14 +26,13 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState}: {modelsDa
     }));
   }
  
-
   return (
     <>
       {
         hasExtendedModels ? 
-          <ModelSelectorExtended currentModelId={currentModelId} modelsList={modelsData} onChange={setModel} /> 
+          <ModelSelectorExtended currentModelId={currentModelId} modelsData={modelsData} onChange={setModel} /> 
         : 
-          <ModelSelectorSimple currentModelId={currentModelId} modelsList={modelsData} onChange={setModel} />
+          <ModelSelectorSimple currentModelId={currentModelId} modelsData={modelsData} onChange={setModel} />
       }
     </>
   )

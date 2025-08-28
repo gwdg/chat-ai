@@ -25,7 +25,6 @@ export function useUpdateModelsData() {
       }
 
       // TODO handle if current model is offline
-
       setModelsData(data);
     } catch {
       notifyError("Error fetching models");

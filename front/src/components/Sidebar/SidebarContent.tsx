@@ -397,6 +397,8 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
                 openModal("renameConversation", {
                   id: activeMenu,
                   currentTitle: conv?.title || "Untitled Conversation",
+                  localState: localState,
+                  setLocalState: setLocalState,
                 });
                 closeMenu();
               }}

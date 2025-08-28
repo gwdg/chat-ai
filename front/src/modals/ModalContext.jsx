@@ -25,6 +25,7 @@ import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
 import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
+import ConversationConflict from "./Chat/ConversationConflict";
 
 const ModalContext = createContext();
 
@@ -119,6 +120,9 @@ export function ModalProvider({ children }) {
         )}
         {modalType === "serviceOffline" && (
             <ServiceOfflineModal isOpen onClose={closeModal} {...modalProps} />
+        )}
+        {modalType === "conversationConflict" && (
+            <ConversationConflict isOpen onClose={closeModal} {...modalProps} />
         )}
       
     </ModalContext.Provider>

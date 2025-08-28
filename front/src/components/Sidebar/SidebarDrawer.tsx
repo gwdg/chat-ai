@@ -6,7 +6,6 @@ export default function SidebarDrawer({ localState, setLocalState, handleNewConv
 
   const dispatch = useDispatch();
   const showSidebar = useSelector(selectShowSidebar);
-  console.log("Rendering SidebarDrawer, isOpen:", showSidebar);
   return (
     <>
       {/* Backdrop */}

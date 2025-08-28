@@ -7,7 +7,6 @@ export default function SettingsDrawer({ localState, setLocalState, userData, mo
   
   const dispatch = useDispatch();
   const showSettings = useSelector(selectShowSettings);
-  console.log("Rendering SettingsDrawer showSettings", showSettings);
   return (
     <>
       {/* Backdrop */}
