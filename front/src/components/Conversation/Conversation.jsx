@@ -266,10 +266,11 @@ export default function Conversation({
     <div
       className={`w-full md:max-w-[85vw] xl:max-w-[75vw] xl:max-w-[1300px]
                         transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none
-                        mx-auto flex flex-col gap-2 relative p-1 min-h-0  h-full overflow-hidden
+                        mx-auto flex flex-col gap-2 relative min-h-0  h-full overflow-hidden
         ${emptyConversation ? "justify-start" : "justify-between"} 
             `}
     >
+      {/* Model selector at top, on tablet and desktop */}
       <div className ={`hidden md:block`} >
       <ModelSelectorWrapper
         localState={localState}

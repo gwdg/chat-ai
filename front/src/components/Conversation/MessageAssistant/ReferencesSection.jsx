@@ -314,8 +314,8 @@ const ProgressiveReferenceItem = memo(
             </span>
             <div className="text-sm font-medium truncate text-gray-800 dark:text-gray-200 flex-grow min-w-0">
               <SafeMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
+                remarkplugins={[remarkGfm]}
+                rehypeplugins={[rehypeRaw]}
                 components={linkRenderer}
                 className="inline"
               >
@@ -380,8 +380,8 @@ const ProgressiveReferenceItem = memo(
           >
             <div className="px-4 py-4 bg-gray-50 dark:bg-gray-800/30 border-t border-gray-200 dark:border-gray-700 animate-in slide-in-from-top-2 duration-300">
               <SafeMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
+                remarkplugins={[remarkGfm]}
+                rehypeplugins={[rehypeRaw]}
                 components={linkRenderer}
                 className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed"
               >

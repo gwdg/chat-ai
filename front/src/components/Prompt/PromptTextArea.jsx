@@ -6,6 +6,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { setLockConversation } from "../../Redux/reducers/conversationsSlice";
 
 import { useToast } from "../../hooks/useToast";
+import { useDebounce } from "../../hooks/useDebounce";
 
 import { useAttachments } from "../../hooks/useAttachments";
 
@@ -15,7 +16,10 @@ const MIN_HEIGHT = 56;
 export default function PromptTextArea({
     localState,
     setLocalState,
-    handleSend
+    handleSend,
+    handleChange,
+    prompt,
+    setPrompt
 }) {
   const { t, i18n } = useTranslation();
   const textareaRef = useRef(null);
@@ -24,24 +28,7 @@ export default function PromptTextArea({
   const { addAttachments, pasteAttachments } = useAttachments();
 
   // Prompt is actually the last message's first content
-  const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
   const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
-  // Update partial local state while preserving other values
-  const setPrompt = (prompt) => {
-    setLocalState((prev) => {
-      const messages = [...prev.messages]; // shallow copy
-      messages[messages.length - 1] = {
-        role: "user",
-        content: [ { // Replace first content item
-            type: "text",
-            text: prompt
-          }, // Keep other content items
-          ...prev.messages[messages.length - 1].content.slice(1)
-        ]
-      };
-      return { ...prev, messages };
-    });
-  };
 
   const adjustHeight = () => {
     if (textareaRef.current) {
@@ -60,12 +47,6 @@ export default function PromptTextArea({
       selectedFiles: Array.from(e.dataTransfer.files),
     });
     setIsDragging(false);
-  };
-
-  // Handle changes in the prompt textarea
-  const handleChange = (event) => {
-    setPrompt(event.target.value);
-    adjustHeight();
   };
   
   // Handle pasting images from clipboard
@@ -108,7 +89,10 @@ export default function PromptTextArea({
           maxHeight: `${MAX_HEIGHT}px`,
           opacity: isDragging ? 0.5 : 1
           }}
-          onChange={handleChange}
+          onChange={(e) => {
+            adjustHeight();
+            handleChange(e);
+          }}
           onDragOver={(e) => {e.preventDefault(); }}
           onDragEnter={(e) => {e.preventDefault(); setIsDragging(true);}}
           onDragLeave={(e) => {e.preventDefault(); setIsDragging(false);}}

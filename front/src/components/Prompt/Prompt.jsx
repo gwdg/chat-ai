@@ -1,3 +1,5 @@
+import { useState, useEffect} from "react";
+
 import AbortButton from "./AbortButton";
 import SendButton from "./SendButton";
 import MicButton from "./MicButton";
@@ -9,34 +11,55 @@ import ClearButton from "./ClearButton";
 import PromptTextArea from "./PromptTextArea";
 
 import { useSendMessage } from "../../hooks/useSendMessage";
+import { useDebounce } from "../../hooks/useDebounce";
 
 export default function Prompt({
   localState,
   setLocalState,
 }) { 
   const sendMessage = useSendMessage();
-  const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
+  const [prompt, setPrompt] = useState(localState.messages[localState.messages.length - 1].content[0]?.text || "");
+
+  // Effect, watch for changes to prompt in localState
+  useEffect(() => {
+    setPrompt(
+      localState.messages[localState.messages.length - 1]?.content[0]?.text || ""
+    );
+  }, [localState.messages]);
+
+  //const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
   const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
+  
+  // Update partial local state while preserving other values
+  const savePrompt = () => {
+    setLocalState((prev) => {
+      const messages = [...prev.messages]; // shallow copy
+      messages[messages.length - 1] = {
+        role: "user",
+        content: [ { // Replace first content item
+            type: "text",
+            text: prompt
+          }, // Keep other content items
+          ...prev.messages[messages.length - 1].content.slice(1)
+        ]
+      };
+      return { ...prev, messages };
+    });
+  };
+
+  // Handle changes to the prompt
+  const debouncedSave = useDebounce(savePrompt, 300);
+  const handleChange = (e) => {
+    setPrompt(e.target.value);
+    debouncedSave();
+  };
   
   // Handle form submission with prompt and files
   const handleSend = async (event) => {
       event.preventDefault();
       if (prompt?.trim() === "" && attachments.length === 0) return;
-
-      // TODO update
-      const hasUnprocessedDocument = false // attachments.some(
-      // (file) =>
-      //     (file.fileType === "pdf" ||
-      //     file.fileType === "excel" ||
-      //     file.fileType === "docx") &&
-      //     !file.processed
-      // );
-
-      if (hasUnprocessedDocument) {
-          openModal("unprocessedFiles");
-          return;
-      }
-
+      debouncedSave.cancel();
+      savePrompt();
       await sendMessage({
           localState,
           setLocalState,
@@ -56,6 +79,9 @@ export default function Prompt({
             localState={localState}
             setLocalState={setLocalState}
             handleSend={handleSend}
+            handleChange={handleChange}
+            prompt={prompt}
+            setPrompt={setPrompt}
           />
           {/* Buttons Section */}
           <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
@@ -93,6 +119,7 @@ export default function Prompt({
                 localState={localState}
                 setLocalState={setLocalState}
                 handleSend={handleSend}
+                prompt={prompt}
               />
             </div>
           </div>

@@ -8,6 +8,8 @@ export default function TemperatureSlider({ localState, setLocalState }) {
   const [isClicked, setIsClicked] = useState(false);
   const { openModal } = useModal();
 
+  const [value, setValue] = useState(localState?.settings?.temperature || 0.5);
+
   const handleChangeTemp = (newValue) => {
     const numVal = parseFloat(newValue);
     setLocalState((prev) => ({
@@ -16,10 +18,11 @@ export default function TemperatureSlider({ localState, setLocalState }) {
         ...prev.settings,
         temperature: numVal,
       },
+      flush: true,
     }));
   };
 
-  const progressPercentage = (localState.settings.temperature / 2) * 100;
+  const progressPercentage = (value / 2) * 100;
   const showValue = isHovering || isDragging || isClicked;
 
   const handleMouseDown = () => {
@@ -29,6 +32,7 @@ export default function TemperatureSlider({ localState, setLocalState }) {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    handleChangeTemp(value);
     setTimeout(() => setIsClicked(false), 2000);
   };
 
@@ -74,7 +78,7 @@ export default function TemperatureSlider({ localState, setLocalState }) {
             step="0.1"
             value={localState.settings.temperature}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onChange={(e) => handleChangeTemp(e.target.value)}
+            onChange={(e) => setValue(e.target.value)}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onTouchStart={handleTouchStart}

@@ -8,6 +8,8 @@ export default function TopPSlider({ localState, setLocalState }) {
   const [isClicked, setIsClicked] = useState(false);
   const { openModal } = useModal();
 
+  const [value, setValue] = useState(localState?.settings?.top_p || 0.5)
+
   const handleChangeTopP = (newValue) => {
     const numVal = parseFloat(newValue);
     setLocalState((prev) => ({
@@ -16,10 +18,11 @@ export default function TopPSlider({ localState, setLocalState }) {
         ...prev.settings,
         top_p: numVal,
       },
+      flush: true,
     }));
   };
 
-  const progressPercentage = (localState.settings.top_p / 1) * 100;
+  const progressPercentage = (value / 1) * 100;
   const showValue = isHovering || isDragging || isClicked;
 
   const handleMouseDown = () => {
@@ -29,6 +32,7 @@ export default function TopPSlider({ localState, setLocalState }) {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    handleChangeTopP(value);
     setTimeout(() => setIsClicked(false), 2000);
   };
 
@@ -74,7 +78,7 @@ export default function TopPSlider({ localState, setLocalState }) {
             step="0.05"
             value={localState.settings.top_p}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onChange={(e) => handleChangeTopP(e.target.value)}
+            onChange={(e) => setValue(e.target.value)}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onTouchStart={handleTouchStart}

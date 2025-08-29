@@ -6,11 +6,10 @@ import { useToast } from "../../hooks/useToast";
 import { useSendMessage } from "../../hooks/useSendMessage";
 import { Send } from "lucide-react";
 
-export default function SendButton({localState, setLocalState, handleSend}) {
+export default function SendButton({localState, setLocalState, handleSend, prompt}) {
     const { t, i18n } = useTranslation();
     const { notifySuccess, notifyError } = useToast();
 
-    const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
     const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
     ? localState.messages[localState.messages.length - 2]?.loading || false
     : false;

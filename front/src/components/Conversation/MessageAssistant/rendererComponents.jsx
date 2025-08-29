@@ -23,7 +23,7 @@ export const rendererComponents = {
     // Use the dedicated Code component for code blocks
     return <Code language={match ? match[1] : null}>{content}</Code>;
   },
-  p: ({ children }) => <p className="mb-3 text-sm">{children}</p>,
+  p: ({ children }) => <div className="mb-3 text-sm">{children}</div>,
   a: ({ href, children }) => (
     <a
       href={href}
