@@ -6,7 +6,7 @@ import CopyButton from "./CopyButton";
 import Attachment from "../../Prompt/Attachment";
 import EditButton from "./EditButton";
 import { RotateCw } from "lucide-react";
-import sendMessage from "../../../utils/sendMessage";
+import { useSendMessage } from "../../../hooks/useSendMessage";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -21,6 +21,8 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
   const renderModes = ["Default", "Markdown", "LaTeX", "Plain Text"];
+
+  const sendMessage = useSendMessage();
 
   //Functions
   const adjustHeight = () => {

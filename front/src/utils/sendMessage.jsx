@@ -223,7 +223,7 @@ const sendMessage = async ({
           let fileId = "";
           try {
             if (chunk?.type === "image") {
-              console.log("Attempting to create file");
+              console.log("Receiving file...");
               const base64_dataURL = chunk?.image_url;
 
               // Extract base64 and mime type
@@ -285,7 +285,8 @@ const sendMessage = async ({
       // Get chat completion response
       responseContent = await getChatChunk(conversationId);
     } catch (error) {
-      console.error("Error fetching chat chunk:", error);
+      notifyError(String(error))
+      console.error("Error:", error);
     } finally {
       // Set loading to false
       setLocalState(prev => {
