@@ -45,7 +45,7 @@ export default function ChatPage() {
 
   return (
     <div
-      className={`h-screen overflow-hidden 
+      className={`h-dvh overflow-hidden 
                   grid 
                   grid-cols-1 grid-rows-[auto_1fr_auto]
                   md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
