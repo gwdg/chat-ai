@@ -5,6 +5,8 @@ import Typing from "./Typing";
 import CopyButton from "./CopyButton";
 import Attachment from "../../Prompt/Attachment";
 import EditButton from "./EditButton";
+import { RotateCw } from "lucide-react";
+import sendMessage from "../../../utils/sendMessage";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -59,7 +61,6 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     requestAnimationFrame(() => adjustHeight());
   }, [editedText, adjustHeight]);
 
-  // Function to handle saving edited messages
   // Function to handle saving edited message
   const handleSave = () => {
     setLocalState((prev) => {
@@ -70,15 +71,48 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     setEditMode(false);
   };
 
+  // Function to handle resending a failed message
+  const handleRetry = async () => {
+    // Remove messages until current index
+    setLocalState((prevState) => {
+      const newMessages = [...prevState.messages];
+      newMessages.splice(message_index);
+      return { ...prevState, messages: newMessages };
+    });
+    // Retry sending the message
+    await sendMessage({
+      localState,
+      setLocalState,
+    });
+  };
 
+
+  const content = message?.content?.[0]?.text ?? ""
+  const isContentEmpty = !content.trim();
     return (
         // Typing
         <div key={message_index} className={`text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 
           rounded-2xl bg-bg_chat dark:bg-bg_chat_dark
-          ${editMode ? "px-1 pt-1" : "px-3 pt-3"}`}>
-        {/* Display dots when loading */}
-        {loading && message.content[0].text === "" 
-        ? (<Typing />) 
+          ${editMode ? "px-1 pt-1" : "px-3 pt-3"}
+          ${isContentEmpty && !loading ? "bg-bg_chat/50 dark:bg-bg_chat_dark/50 pt-0": " bg-bg_chat dark:bg-bg_chat_dark"}`}>
+        
+        {isContentEmpty 
+        ? (<div className={`flex flex-col
+            ${loading ? "pb-4": "pb-3"}`}>
+            {loading && <Typing />}
+            {!loading && (
+              <div className="flex flex-col items-center justify-start gap-3 py-1">
+                <button
+                  onClick={handleRetry}
+                  className="cursor-pointer flex items-center gap-2 px-4 py-3 text-sm opacity-100 text-black dark:text-white bg-red-500/40 rounded-full hover:bg-red-400/100 transition-all"
+                  disabled={loading}
+                >
+                  <RotateCw className="w-4 h-4" />
+                  Try Again
+                </button>
+              </div>
+            )}
+          </div>) 
         : (<>
             {/* Edit Mode */}
             {editMode && (
