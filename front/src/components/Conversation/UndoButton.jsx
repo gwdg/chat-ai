@@ -12,10 +12,41 @@ export default function UndoButton({ localState, setLocalState }) {
   const handleUndo = (e) => {
     e.preventDefault();
     // Remove last two messages
-    setLocalState((prevState) => ({
-      ...prevState,
-      messages: localState.messages.slice(0, Math.max(2, localState.messages.length - 2)),
-    }));
+    // setLocalState((prev) => ({
+    //   ...prev,
+    //   messages: localState.messages.slice(0, Math.max(2, localState.messages.length - 2)),
+    // }));
+
+    setLocalState(prev => {
+      if (prev.messages.length <= 3) return prev;
+      // Truncated messages after the removal
+      const truncated = prev.messages.slice(0, Math.max(2, prev.messages.length - 2))
+
+      // Check if the user prompt has attachments
+      const prompt = prev.messages[prev.messages.length - 1];
+      const hasAttachments =
+        Array.isArray(prompt.content) &&
+        prompt.content.length > 1
+
+      // If no attachments, move on
+      if (!hasAttachments) {
+        return { ...prev, messages: truncated };
+      }
+
+      // Append all attachments to the new last message
+      const newPrompt = {
+        ...truncated[truncated.length - 1],
+        content: [
+          ...truncated[truncated.length - 1].content,
+          ...prompt.content.slice(1),
+        ],
+      }
+      
+      const merged = [...truncated]; // Avoid mutating prev
+      merged[merged.length - 1] = newPrompt;
+      // Return new truncated
+      return { ...prev, messages: merged };
+    });
   };
 
   return (
