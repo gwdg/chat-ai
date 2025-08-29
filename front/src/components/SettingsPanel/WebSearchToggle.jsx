@@ -27,6 +27,7 @@ export default function WebSearchToggle({ localState, setLocalState }) {
                   ...prev.settings,
                   enable_web_search: e.target.checked,
                 },
+                flush: true,
               }))
             }
             className="h-4 w-4 text-tertiary bg-gray-200 border-gray-300 rounded focus:ring-tertiary focus:ring-2"

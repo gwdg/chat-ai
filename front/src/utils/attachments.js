@@ -8,6 +8,22 @@ export const readFileAsBase64 = (file) => {
     });
 };
 
+// function to convert base64 to a File object
+export function dataURLtoFile(dataurl, filenameWithoutExt) {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    // derive extension from MIME type
+    const extension = mime.split('/')[1]; // e.g. "image/png" → "png"
+    return new File([u8arr], `${filenameWithoutExt}.${extension}`, { type: mime });
+}
+
+
 // Read file content as text
 export const readFileAsText = (file) => {
     return new Promise((resolve, reject) => {
@@ -109,7 +125,6 @@ const setAttachments = ({
     setLocalState,
     newAttachments
 }) => {
-    console.log("Attachments: ", newAttachments)
     setLocalState((prev) => {
     const messages = [...prev.messages]; // shallow copy
     messages[messages.length - 1] = {

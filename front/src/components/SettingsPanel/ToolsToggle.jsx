@@ -28,6 +28,7 @@ export default function ToolsToggle({ localState, setLocalState }) {
                 ...prev.settings,
                 enable_tools: e.target.checked,
               },
+              flush: true,
             }))
           }
           className="h-4 w-4 text-tertiary bg-gray-200 border-gray-300 rounded focus:ring-tertiary focus:ring-2"

@@ -265,7 +265,8 @@ const ProgressiveReferenceItem = memo(
             }
           );
 
-        return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
+        //return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
+        return (<div {...props}><ReactMarkdown>{sanitizedContent}</ReactMarkdown></div>);
       } catch (error) {
         console.error("Error rendering markdown:", error);
         return (
