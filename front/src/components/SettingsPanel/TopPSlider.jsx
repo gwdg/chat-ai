@@ -22,7 +22,7 @@ export default function TopPSlider({ localState, setLocalState }) {
     }));
   };
 
-  const progressPercentage = (value / 1) * 100;
+  const progressPercentage = ((value - 0.05) / 0.95) * 100;
   const showValue = isHovering || isDragging || isClicked;
 
   const handleMouseDown = () => {
@@ -73,10 +73,10 @@ export default function TopPSlider({ localState, setLocalState }) {
 
           <input
             type="range"
-            min="0"
+            min="0.05"
             max="1"
             step="0.05"
-            value={localState.settings.top_p}
+            value={value}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             onChange={(e) => setValue(e.target.value)}
             onMouseDown={handleMouseDown}
@@ -93,7 +93,7 @@ export default function TopPSlider({ localState, setLocalState }) {
           >
             {showValue && (
               <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 bg-white dark:bg-bg_dark text-tertiary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
-                {Number(localState.settings.top_p).toFixed(2)}
+                {Number(value).toFixed(2)}
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-l-transparent border-r-transparent border-t-white dark:border-t-bg_dark"></div>
               </div>
             )}

@@ -76,7 +76,7 @@ export default function TemperatureSlider({ localState, setLocalState }) {
             min="0"
             max="2"
             step="0.1"
-            value={localState.settings.temperature}
+            value={value}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             onChange={(e) => setValue(e.target.value)}
             onMouseDown={handleMouseDown}
@@ -93,7 +93,7 @@ export default function TemperatureSlider({ localState, setLocalState }) {
           >
             {showValue && (
               <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 bg-white dark:bg-bg_dark text-tertiary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
-                {Number(localState.settings.temperature).toFixed(1)}
+                {Number(value).toFixed(1)}
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-l-transparent border-r-transparent border-t-white dark:border-t-bg_dark"></div>
               </div>
             )}

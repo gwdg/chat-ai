@@ -410,7 +410,15 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
               onClick={(e) => {
                 e.stopPropagation();
                 const conv = conversations.find((c) => c.id === activeMenu);
-                handleExportConversation(conv);
+                if (conv.id === localState.id) {
+                  // Flush changes
+                  setLocalState((prev) => ({
+                    ...prev,
+                    flush: true,
+                  }));
+                }
+                console.log(conv);
+                openModal("exportConversation", { localState, conversationId: conv.id });
                 closeMenu();
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -425,6 +433,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
                 openModal("deleteConversation", {
                   id: activeMenu,
                   conversations,
+                  currentConversationId: localState?.id,
                 });
                 closeMenu();
               }}

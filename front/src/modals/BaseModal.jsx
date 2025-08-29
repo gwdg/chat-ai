@@ -42,7 +42,7 @@ export default function BaseModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 backdrop-blur-sm bg-black/30 dark:bg-gray-700/30" />
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/5 dark:bg-gray-700/5" />
         </Transition.Child>
 
         {/* Centered Modal */}

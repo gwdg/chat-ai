@@ -6,7 +6,9 @@ import { useToast } from "../../hooks/useToast";
 
 export default function ClearHistoryButton({localState, setLocalState}) {
   const { t } = useTranslation();
-  const loading = false; // TODO handle loading
+  const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
+    ? localState.messages[localState.messages.length - 2]?.loading || false
+    : false;
   const { openModal } = useModal();
   const {notifySuccess, notifyError } = useToast();
 

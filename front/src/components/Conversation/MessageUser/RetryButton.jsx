@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
 
 export default function RetryButton({
@@ -25,7 +25,7 @@ export default function RetryButton({
 
   return (
     <button onClick={handleRetry}>
-      <RotateCcw
+      <RotateCw
         className="h-[22px] w-[22px] cursor-pointer text-[#009EE0]"
         alt="icon_retry"
       />

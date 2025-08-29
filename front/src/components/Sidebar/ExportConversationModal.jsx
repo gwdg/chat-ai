@@ -6,21 +6,54 @@ import icon_file_json from "../../assets/icons/file_json.svg";
 import icon_file_pdf from "../../assets/icons/file_pdf.svg";
 import icon_file_text from "../../assets/icons/file_text.svg";
 import { selectCurrentConversation } from "../../Redux/reducers/conversationsSlice";
+import { getConversation } from "../../db";
+import { useToast } from "../../hooks/useToast";
+import { jsPDF } from "jspdf";
+import Logo from "../../assets/logos/chat_ai.png"
 
 export default function ExportConversationModal({
   isOpen,
   onClose,
   localState,
-  setLocalState,
-  exportSettings,
-  exportImage,
-  exportArcana,
+  conversationId,
 }) {
-  const [value, setValue] = useState("json");
-  const [containsImage, setContainsImage] = useState(false);
+  const [exportFormat, setExportFormat] = useState("json");
+  const [exportSettings, setExportSettings] = useState(true);
+  const [exportFiles, setExportFiles] = useState(false);
+  const [exportArcana, setExportArcana] = useState(false);
+  const [containsFiles, setContainsFiles] = useState(false);
+  const {notifyError, notifySuccess } = useToast();
+  const [conversation, setConversation] = useState(null);
+
+  // Async function to load conversation from DB
+  const refreshConversation = async () => {
+    if (localState?.id === conversationId) {
+      setConversation(localState);
+      return;
+    }
+    const data = await getConversation(conversationId);
+    console.log("Data from DB: ", data)
+    if (data) setConversation(data);
+  };
+
+  // useEffect to load conversation on mount
+  useEffect(() => {
+    let isMounted = true; // Prevent setting state on unmounted component
+    const fetchData = async () => {
+      if (isMounted) { // Check if component is still mounted
+        refreshConversation();
+      }
+    };
+    fetchData();
+    return () => {
+      isMounted = false; // Cleanup function to prevent memory leaks
+    };
+  }, [conversationId, isOpen, onClose]); // Re-run when conversationId changes
+
+  if (!conversation) return null; // Or a loading indicator
   const isArcanaSupported = false; // TODO
-  const messages = localState?.messages
-  const arcana = localState.settings?.arcana
+  const messages = conversation?.messages
+  const arcana = conversation.settings?.arcana
 
   // ==== EXPORT FUNCTIONALITY ====
   // Generate timestamped filename for exports
@@ -35,121 +68,144 @@ export default function ExportConversationModal({
     return `chat-ai-${year}-${month}-${day}-${hour}${minute}${second}.${extension}`;
   };
 
-  // Export conversation as plain text
-  const exportTextFile = (messages) => {
-    let exportData = [...messages];
-
-    // Update system message with current system prompt
-    const systemMessageIndex = exportData.findIndex(
-      (msg) => msg.role === "system"
-    );
-    if (systemMessageIndex !== -1) {
-      exportData[systemMessageIndex] = {
-        role: "system",
-        content: localState.settings.systemPrompt,
-      };
-    }
-
-    // Convert messages to formatted text
-    const textContent = exportData
-      .map((msg) => {
-        let contentString = `${msg.role.toUpperCase()}: `;
-
-        if (Array.isArray(msg.content)) {
-          msg.content.forEach((item) => {
-            if (item.type === "text") {
-              contentString += `${item.text}\n`;
-            } else if (item.type === "image_url") {
-              if (localState.exportOptions.exportImage) {
-                contentString += "[Image]\n";
-              }
-            }
-          });
+  // Function to process messages into export format
+  const processMessages = () => {
+    let processedMessages = [];
+    if (!Array.isArray(messages)) return processedMessages;
+    for (let i = 0; i < messages.length; i++) {
+      if (!messages[i]?.content) continue;
+      if (!["system", "user", "assistant", "info"].includes(messages[i]?.role)) continue;
+      const role = messages[i].role;
+      const content = messages[i].content;
+      let processedMessage = {"role": role};
+      if (typeof content === "string") processedMessage.content = content;
+      else if (Array.isArray(content)) {
+        
+        if (content.length === 0) continue;
+        if (content.length === 1 && content[0]?.text != null) {
+          processedMessage.content = content[0].text;
         } else {
-          contentString += msg.content;
+          processedMessage.content = content;
         }
-
-        return contentString;
-      })
-      .join("\n\n");
-
-    let finalTextContent = textContent;
-
-    // Add settings information if enabled
-    if (localState.exportOptions.exportSettings) {
-      const additionalText = `\n\nSettings used\ntitle: ${
-        localState.title
-      }\nmodel-name: ${localState.settings["model-name"]}\nmodel: ${
-        localState.settings.model
-      }\ntemperature: ${localState.settings.temperature}\ntop_p: ${
-        localState.settings.top_p
-      }${
-        // localState.exportOptions.exportArcana && isArcanaSupported
-        //   ? // ? `\nArcana: {\n  id: ${localState.arcana.id},\n  key: ${localState.arcana.key}\n}`
-            `\nArcana: {\n  id: ${localState.settings.arcana.id}}`
-          // : ""
-      }`;
-      finalTextContent += additionalText;
+      }
+      // Check if empty user prompt at the end
+      if (i === messages.length-1 
+        && processedMessage.role === "user" 
+        && processedMessage.content === "")
+          continue;
+      processedMessages.push(processedMessage);
     }
+    return processedMessages;
+  }
+  
+  // Function to process settings into export format
+  const processSettings = () => {
+    let settings = {}
+    if (conversation?.title) settings.title = conversation.title;
+    if (conversation?.settings?.temperature) settings.temperature = conversation.settings.temperature;
+    if (conversation?.settings?.top_p) settings.top_p = conversation.settings.top_p;
+    if (exportArcana && isArcanaSupported && conversation?.settings?.arcana?.id) {
+      settings.arcana = conversation.settings.arcana;
+    }
+    if (conversation?.settings?.model) {
+      if (typeof conversation.settings.model === "string") settings.model = conversation.settings.model;
+      else if (conversation.settings.model?.id) {
+        settings.model = conversation.settings.model.id
+        if (conversation.settings.model?.name) settings["model-name"] = conversation.settings.model.name;
+      }
+    }
+    return settings
+  };
 
-    // Create and download text file
-    const blob = new Blob([finalTextContent], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = generateFileName("txt");
-    link.click();
-    URL.revokeObjectURL(link.href);
+  // Export conversation as plain text
+  const exportTextFile = () => {
+    try {
+      // Process Messages
+      let processedMessages = processMessages(conversation.messages);
+
+      // Convert messages to formatted text
+      let textContent = processedMessages
+        .map((msg) => {
+          let contentString = `${msg.role.toUpperCase()}: `;
+
+          if (Array.isArray(msg.content)) {
+            msg.content.forEach((item) => {
+              if (item.type === "text") {
+                contentString += `${item.text}\n`;
+              } else if (item.type === "image_url") {
+                if (exportFiles) {
+                  contentString += "[Image]\n";
+                }
+              }
+            });
+          } else {
+            contentString += msg.content;
+          }
+
+          return contentString;
+        })
+        .join("\n\n");
+
+      // Add settings information if enabled
+      if (exportSettings) {
+        let settings = processSettings();
+        const additionalText =
+        `\n\nConversation settings\ntitle: ${
+          conversation.title
+        }\nmodel-name: ${
+          settings?.["model-name"]
+        }\nmodel: ${
+          settings?.model
+        }\ntemperature: ${
+          settings?.temperature
+        }\ntop_p: ${
+          settings?.top_p
+        }\n${exportArcana && isArcanaSupported && settings?.arcana?.id
+            ? `Arcana ID: ${settings.arcana.id}}`
+            : ""
+        }`;
+        textContent += additionalText;
+      }
+
+      // Create and download text file
+      const blob = new Blob([textContent], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = generateFileName("txt");
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.log(error)
+      notifyError("An error occurred while exporting to TXT");
+    }
   };
 
   // Export conversation as JSON
-  const exportJSON = (messages) => {
+  const exportJSON = () => {
     try {
-      let exportData = [...messages];
+      // Process Messages
+      let processedMessages = processMessages(conversation.messages);
 
-      // Update system message
-      const systemMessageIndex = exportData.findIndex(
-        (msg) => msg.role === "system"
-      );
-      if (systemMessageIndex !== -1) {
-        exportData[systemMessageIndex] = {
-          role: "system",
-          content: localState.settings.systemPrompt,
-        };
-      }
+      // TODO Filter out files if not enabled
+      // if (!exportFiles) {
+      //   processedMessages = processedMessages.map((msg) => {
+      //     if (Array.isArray(msg.content)) {
+      //       let filteredContent = msg.content
+      //         .filter((item) => item.type === "text")
+      //         .map((item) => item.text)
+      //         .join("\n");
 
-      // Filter out images if not enabled
-      if (!localState.exportOptions.exportImage) {
-        exportData = exportData.map((msg) => {
-          if (Array.isArray(msg.content)) {
-            let filteredContent = msg.content
-              .filter((item) => item.type === "text")
-              .map((item) => item.text)
-              .join("\n");
-
-            return { ...msg, content: filteredContent };
-          }
-          return msg;
-        });
-      }
+      //       return { ...msg, content: filteredContent };
+      //     }
+      //     return msg;
+      //   });
+      // }
+      let exportData = {messages: processedMessages};
 
       // Add settings if enabled
-      if (localState.exportOptions.exportSettings) {
-        const settingsObject = {
-          title: localState.title,
-          ["model-name"]: localState.settings["model-name"],
-          model: localState.settings.model,
-          temperature: localState.settings.temperature,
-          top_p: localState.settings.top_p,
-          ...(localState.exportOptions.exportArcana &&
-            isArcanaSupported && {
-              arcana: {
-                id: localState.settings.arcana.id,
-                //key: localState.arcana.key,
-              },
-            }),
-        };
-
-        exportData = { ...settingsObject, messages: exportData };
+      if (exportSettings) {
+        let processedSettings = processSettings();
+        exportData = { ...processedSettings, ...exportData };
       }
 
       // Create and download JSON file
@@ -164,281 +220,270 @@ export default function ExportConversationModal({
 
       notifySuccess("Chat exported successfully");
     } catch (error) {
-      notifyError("An error occurred while exporting to JSON: ", error);
+      console.log(error)
+      notifyError("An error occurred while exporting to JSON");
     }
   };
 
   // Export conversation as PDF
-  const exportPDF = async (conversation) => {
-    // Initialize PDF document
-    const doc = new jsPDF();
-    doc.setProperties({
-      title: "Chat AI Conversation", // TODO Replace with actual title
-      subject: "History",
-      author: "Chat AI",
-      keywords: "LLM Generated",
-      creator: "GWDG",
-    });
-    doc.setFont("helvetica");
-
-    // Define colors for PDF elements
-    const COLORS = {
-      DEFAULT: [0, 0, 0],
-      HEADER_DATE: [150, 150, 150],
-      ROLE: [0, 102, 204],
-    };
-
-    // Set up page dimensions and margins
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 15;
-    const contentWidth = pageWidth - 2 * margin;
-    const lineHeight = 7;
-    let y = margin;
-    const headerHeight = 25;
-
-    // Add header to each page
-    const addHeader = (isFirstPage) => {
-      y = margin;
-      if (isFirstPage) {
-        doc.addImage(Logo, "PNG", margin, margin, 20, 8);
-      }
-      const date = new Date().toLocaleDateString();
-      doc.setFontSize(10);
-      doc.setTextColor(...COLORS.HEADER_DATE);
-      doc.text(date, pageWidth - margin - 5, margin + 8, { align: "right" });
-      doc.line(margin, headerHeight, pageWidth - margin, headerHeight);
-      y = headerHeight + 10;
-    };
-
-    // Add page numbers to all pages
-    const addPageNumbers = () => {
-      const totalPages = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setFontSize(10);
-        doc.setTextColor(...COLORS.DEFAULT);
-        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, {
-          align: "center",
-        });
-      }
-    };
-
-    // Reset text styling to default
-    const resetTextStyle = () => {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(...COLORS.DEFAULT);
-    };
-
-    // Add new page if content would overflow
-    const addNewPageIfNeeded = (spaceNeeded) => {
-      if (y + spaceNeeded > pageHeight - margin) {
-        doc.addPage();
-        addHeader(false);
-        resetTextStyle();
-      }
-    };
-
-    // Initialize first page
-    addHeader(true);
-    resetTextStyle();
-
-    // Prepare conversation data
-    let messagesData = [...messages];
-
-    // Update system message
-    const systemMessageIndex = messagesData.findIndex(
-      (msg) => msg.role === "system"
-    );
-    if (systemMessageIndex !== -1) {
-      messagesData[systemMessageIndex] = {
-        role: "system",
-        content: localState.settings.systemPrompt,
-      };
-    }
-
-    // Filter images if not enabled
-    if (!localState.exportOptions.exportImage) {
-      messagesData = messagesData.map((entry) => {
-        if (Array.isArray(entry.content)) {
-          const filteredContent = entry.content
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n");
-          return { ...entry, content: filteredContent };
-        }
-        return entry;
+  const exportPDF = async () => {
+    try {
+      // Initialize PDF document
+      const doc = new jsPDF();
+      doc.setProperties({
+        title: conversation?.title || "Chat AI Conversation", // TODO Replace with actual title
+        subject: "History",
+        author: "Chat AI",
+        keywords: "AI-Generated",
+        creator: "GWDG",
       });
-    }
+      doc.setFont("helvetica");
 
-    // Process each message in conversation
-    for (const entry of messagesData) {
-      addNewPageIfNeeded(lineHeight * 2);
+      // Define colors for PDF elements
+      const COLORS = {
+        DEFAULT: [0, 0, 0],
+        HEADER_DATE: [150, 150, 150],
+        ROLE: [0, 102, 204],
+      };
 
-      // Add role label
-      doc.setFontSize(10);
-      doc.setTextColor(...COLORS.ROLE);
-      doc.text(`${entry.role}:`, margin, y);
-      y += lineHeight;
+      // Set up page dimensions and margins
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 15;
+      const contentWidth = pageWidth - 2 * margin;
+      const lineHeight = 7;
+      let y = margin;
+      const headerHeight = 25;
 
-      resetTextStyle();
+      // Add header to each page
+      const addHeader = (isFirstPage) => {
+        y = margin;
+        // TODO fix logo
+        if (isFirstPage) {
+          doc.addImage(Logo, "PNG", margin, margin, 20, 8);
+        }
+        const date = new Date().toLocaleDateString();
+        doc.setFontSize(10);
+        doc.setTextColor(...COLORS.HEADER_DATE);
+        doc.text(date, pageWidth - margin - 5, margin + 8, { align: "right" });
+        doc.line(margin, headerHeight, pageWidth - margin, headerHeight);
+        y = headerHeight + 10;
+      };
 
-      // Handle different content types
-      if (typeof entry.content === "string") {
-        // Handle code blocks and regular text
-        if (entry.content.includes("```")) {
-          const parts = entry.content.split(/(```[\s\S]+?```)/);
-          for (const part of parts) {
-            if (part.startsWith("```")) {
-              const [, language, code] =
-                part.match(/```(\w+)?\n([\s\S]+?)```/) || [];
-              if (code) {
-                const codeLines = code?.trim().split("\n");
-                addNewPageIfNeeded(lineHeight * (codeLines.length + 2));
-
-                doc.text(language || "Code:", margin, y);
-                y += lineHeight * 0.5;
-
-                // Add gray background for code blocks
-                doc.setFillColor(240, 240, 240);
-                doc.rect(
-                  margin,
-                  y,
-                  contentWidth,
-                  lineHeight * codeLines.length,
-                  "F"
-                );
-
-                // Add code content with monospace font
-                doc.setFont("Courier", "normal");
-                codeLines.forEach((line, index) => {
-                  doc.text(line, margin + 5, y + 5 + index * lineHeight);
-                });
-                y += lineHeight * (codeLines.length + 0.5);
-                resetTextStyle();
-              }
-            } else {
-              // Handle regular text with word wrapping
-              const lines = doc.splitTextToSize(part, contentWidth);
-              lines.forEach((line) => {
-                addNewPageIfNeeded(lineHeight);
-                doc.text(line, margin, y);
-                y += lineHeight;
-              });
-            }
-          }
-        } else {
-          // Handle regular text without code blocks
-          const lines = doc.splitTextToSize(entry.content, contentWidth);
-          lines.forEach((line) => {
-            addNewPageIfNeeded(lineHeight);
-            doc.text(line, margin, y);
-            y += lineHeight;
+      // Add page numbers to all pages
+      const addPageNumbers = () => {
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          doc.setPage(i);
+          doc.setFontSize(10);
+          doc.setTextColor(...COLORS.DEFAULT);
+          doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, {
+            align: "center",
           });
         }
-      } else if (
-        Array.isArray(entry.content) &&
-        localState.exportOptions.exportImage
-      ) {
-        // Handle mixed content (text and images)
-        entry.content.forEach((item) => {
-          if (item.type === "text") {
-            // Handle text content
-            const lines = doc.splitTextToSize(item.text, contentWidth);
+      };
+
+      // Reset text styling to default
+      const resetTextStyle = () => {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(...COLORS.DEFAULT);
+      };
+
+      // Add new page if content would overflow
+      const addNewPageIfNeeded = (spaceNeeded) => {
+        if (y + spaceNeeded > pageHeight - margin) {
+          doc.addPage();
+          addHeader(false);
+          resetTextStyle();
+        }
+      };
+
+      // Initialize first page
+      addHeader(true);
+      resetTextStyle();
+
+      // Process Messages
+      let processedMessages = processMessages(conversation.messages);
+
+      // Convert messages to formatted text
+      // let textContent = processedMessages
+      //   .map((msg) => {
+      //     let contentString = `${msg.role.toUpperCase()}: `;
+
+      //     if (Array.isArray(msg.content)) {
+      //       msg.content.forEach((item) => {
+      //         if (item.type === "text") {
+      //           contentString += `${item.text}\n`;
+      //         } else if (item.type === "image_url") {
+      //           if (exportFiles) {
+      //             contentString += "[Image]\n";
+      //           }
+      //         }
+      //       });
+      //     } else {
+      //       contentString += msg.content;
+      //     }
+
+      //     return contentString;
+      //   })
+      //   .join("\n\n");
+
+      // Process each message in conversation
+      for (const entry of processedMessages) {
+        addNewPageIfNeeded(lineHeight * 2);
+
+        // Add role label
+        doc.setFontSize(10);
+        doc.setTextColor(...COLORS.ROLE);
+        doc.text(`${entry.role}:`, margin, y);
+        y += lineHeight;
+
+        resetTextStyle();
+
+        // Handle different content types
+        if (typeof entry.content === "string") {
+          // Handle code blocks and regular text
+          if (entry.content.includes("```")) {
+            const parts = entry.content.split(/(```[\s\S]+?```)/);
+            for (const part of parts) {
+              if (part.startsWith("```")) {
+                const [, language, code] =
+                  part.match(/```(\w+)?\n([\s\S]+?)```/) || [];
+                if (code) {
+                  const codeLines = code?.trim().split("\n");
+                  addNewPageIfNeeded(lineHeight * (codeLines.length + 2));
+
+                  doc.text(language || "Code:", margin, y);
+                  y += lineHeight * 0.5;
+
+                  // Add gray background for code blocks
+                  doc.setFillColor(240, 240, 240);
+                  doc.rect(
+                    margin,
+                    y,
+                    contentWidth,
+                    lineHeight * codeLines.length,
+                    "F"
+                  );
+
+                  // Add code content with monospace font
+                  doc.setFont("Courier", "normal");
+                  codeLines.forEach((line, index) => {
+                    doc.text(line, margin + 5, y + 5 + index * lineHeight);
+                  });
+                  y += lineHeight * (codeLines.length + 0.5);
+                  resetTextStyle();
+                }
+              } else {
+                // Handle regular text with word wrapping
+                const lines = doc.splitTextToSize(part, contentWidth);
+                lines.forEach((line) => {
+                  addNewPageIfNeeded(lineHeight);
+                  doc.text(line, margin, y);
+                  y += lineHeight;
+                });
+              }
+            }
+          } else {
+            // Handle regular text without code blocks
+            const lines = doc.splitTextToSize(entry.content, contentWidth);
             lines.forEach((line) => {
               addNewPageIfNeeded(lineHeight);
               doc.text(line, margin, y);
               y += lineHeight;
             });
-          } else if (item.type === "image_url") {
-            // Handle image content
-            addNewPageIfNeeded(lineHeight + 60);
-            if (item.image_url.url.startsWith("data:image")) {
-              doc.addImage(item.image_url.url, "JPEG", margin, y, 50, 50);
-              y += 60;
-            } else {
-              doc.text("[Invalid image format]", margin, y);
-              y += lineHeight;
-            }
           }
-        });
-      } else {
-        // Handle unavailable content
-        addNewPageIfNeeded(lineHeight);
-        doc.text("Content unavailable", margin, y);
-        y += lineHeight;
+        } else if (
+          Array.isArray(entry.content) &&
+          exportFiles
+        ) {
+          // Handle mixed content (text and images)
+          entry.content.forEach((item) => {
+            if (item.type === "text") {
+              // Handle text content
+              const lines = doc.splitTextToSize(item.text, contentWidth);
+              lines.forEach((line) => {
+                addNewPageIfNeeded(lineHeight);
+                doc.text(line, margin, y);
+                y += lineHeight;
+              });
+            } else if (item.type === "image_url") {
+              // Handle image content
+              addNewPageIfNeeded(lineHeight + 60);
+              if (item.image_url.url.startsWith("data:image")) {
+                doc.addImage(item.image_url.url, "JPEG", margin, y, 50, 50);
+                y += 60;
+              } else {
+                doc.text("[Invalid image format]", margin, y);
+                y += lineHeight;
+              }
+            }
+          });
+        } else {
+          // Handle unavailable content
+          addNewPageIfNeeded(lineHeight);
+          doc.text("Content unavailable", margin, y);
+          y += lineHeight;
+        }
+
+        y += lineHeight; // Add spacing between messages
       }
 
-      y += lineHeight; // Add spacing between messages
-    }
+      // Add settings section if enabled
+      if (exportSettings) {
+        let settings = processSettings();
+        addNewPageIfNeeded(
+          lineHeight *
+            (exportArcana && isArcanaSupported ? 8 : 6)
+        );
+        y += lineHeight * 2;
 
-    // Add settings section if enabled
-    if (localState.exportOptions.exportSettings) {
-      addNewPageIfNeeded(
-        lineHeight *
-          (localState.exportOptions.exportArcana && isArcanaSupported ? 7 : 5)
-      );
-      y += lineHeight * 2;
+        resetTextStyle();
+        doc.text("Conversation settings", margin, y);
+        y += lineHeight;
+        doc.text(`title: ${conversation?.title}`, margin, y);
+        y += lineHeight;
+        doc.text(`model: ${settings?.model}`, margin, y);
+        y += lineHeight;
+        doc.text(`model name: ${settings?.["model-name"]}`, margin, y);
+        y += lineHeight;
+        doc.text(`temperature: ${settings?.temperature}`, margin, y);
+        y += lineHeight;
+        doc.text(`top_p: ${settings?.top_p}`, margin, y);
+        y += lineHeight;
 
-      resetTextStyle();
-      doc.text("Settings used", margin, y);
-      y += lineHeight;
-      doc.text(`title: ${localState.title}`, margin, y);
-      y += lineHeight;
-      doc.text(`model-name: ${localState.settings.model}`, margin, y);
-      y += lineHeight;
-      doc.text(`model-name: ${modelSettings["model-name"]}`, margin, y);
-      y += lineHeight;
-      doc.text(`temperature: ${localState.settings.temperature}`, margin, y);
-      y += lineHeight;
-      doc.text(`top_p: ${localState.settings.top_p}`, margin, y);
-      y += lineHeight;
-
-      // Add Arcana settings if enabled
-      if (localState.exportOptions.exportArcana && isArcanaSupported) {
-        doc.text("Arcana: {", margin, y);
-        y += lineHeight;
-        doc.text(`  id: ${localState.settings.arcana.id}`, margin, y);
-        y += lineHeight;
-        doc.text("}", margin, y);
-        y += lineHeight;
+        // Add Arcana settings if enabled
+        if (exportArcana && isArcanaSupported && settings?.arcana?.id) {
+          doc.text(`Arcana ID ${settings?.arcana?.id}`, margin, y);
+          y += lineHeight;
+        }
       }
-    }
 
-    // Add page numbers and save the PDF
-    addPageNumbers();
-    doc.save(generateFileName("pdf"));
-  };
-
-  // Handle different export format selections
-  const exportFile = (value) => {
-    if (value === "json") {
-      exportJSON(localState.messages);
-    } else if (value === "pdf") {
-      exportPDF(localState.messages);
-    } else if (value === "text") {
-      exportTextFile(localState.messages);
+      // Add page numbers and save the PDF
+      addPageNumbers();
+      doc.save(generateFileName("pdf"));
+    } catch (error) {
+      console.log(error)
+      notifyError("An error occurred while exporting to JSON");
     }
   };
 
-  useEffect(() => {
-    setContainsImage(
-      messages.some(
-        (message) =>
-          message.role === "user" &&
-          Array.isArray(message.content) &&
-          message.content.some((item) => item.type === "image_url")
-      )
-    );
-  }, [messages]);
-
-  const handleChange = (format) => {
-    setValue(format);
+  // Handle Format Change
+  const handleFormatChange = (format) => {
+    setExportFormat(format);
   };
 
-  const handleExport = () => {
-    exportFile(value, messages);
+  // Handle export
+  const handleExport = async () => {
+    await refreshConversation();
+    if (exportFormat === "json") {
+      exportJSON();
+    } else if (exportFormat === "pdf") {
+      exportPDF();
+    } else if (exportFormat === "text") {
+      exportTextFile();
+    }
     onClose();
   };
 
@@ -449,33 +494,15 @@ export default function ExportConversationModal({
   ];
 
   const handleCheckboxChange = (event) => {
-    setLocalState((prev) => ({
-      ...prev,
-      exportOptions: {
-        ...prev.exportOptions,
-        exportSettings: event.target.checked,
-      },
-    }));
+    setExportSettings(event.target.checked);
   };
 
-  const handleCheckboxChangeImages = (event) => {
-    setLocalState((prev) => ({
-      ...prev,
-      exportOptions: {
-        ...prev.exportOptions,
-        exportImage: event.target.checked,
-      },
-    }));
+  const handleCheckboxChangeFiles = (event) => {
+    setExportFiles(event.target.checked);
   };
 
   const handleCheckboxChangeArcana = (event) => {
-    setLocalState((prev) => ({
-      ...prev,
-      exportOptions: {
-        ...prev.exportOptions,
-        exportArcana: event.target.checked,
-      },
-    }));
+    setExportArcana(event.target.checked);
   };
 
   return (
@@ -492,16 +519,16 @@ export default function ExportConversationModal({
             key={option.id}
             className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-all duration-200
               ${
-                value === option.id
+                exportFormat === option.id
                   ? "border-tertiary bg-gray-100 dark:bg-gray-800"
                   : "border-gray-300 dark:border-gray-600"
               }`}
-            onClick={() => handleChange(option.id)}
+            onClick={() => handleFormatChange(option.id)}
           >
             <img src={option.icon} alt={option.id} className="h-8 w-8" />
             <label
               className={`text-sm ${
-                value === option.id
+                exportFormat === option.id
                   ? "text-tertiary"
                   : "text-black dark:text-white"
               }`}
@@ -559,16 +586,16 @@ export default function ExportConversationModal({
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
-            id="exportImage"
-            checked={exportImage}
-            onChange={handleCheckboxChangeImages}
+            id="exportFiles"
+            checked={exportFiles}
+            onChange={handleCheckboxChangeFiles}
             className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
-              !containsImage ? "bg-gray-400 cursor-not-allowed" : ""
+              !containsFiles ? "bg-gray-400 cursor-not-allowed" : ""
             }`}
-            disabled={!containsImage}
+            disabled={!containsFiles}
           />
           <label
-            htmlFor="exportImage"
+            htmlFor="exportFiles"
             className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
           >
             <Trans i18nKey="description.exportImages" />

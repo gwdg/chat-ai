@@ -53,15 +53,8 @@ export default function SidebarRail({localState, setLocalState, userData, models
           
 
           <div className="mt-2 mb-2 flex flex-col gap-3 items-center">
-            {/* User profile 
-            <UserContainer
-              localState={localState}
-              setLocalState={setLocalState}
-              userData={userData}
-              modelsData={modelsData}
-            />
             
-            <ThemeToggle />*/}
+            {/*<ThemeToggle />*/}
             <button
               onClick={() => onOpen?.()}
               className="h-10 w-10 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
@@ -69,6 +62,14 @@ export default function SidebarRail({localState, setLocalState, userData, models
             >
               <FontAwesomeIcon size="xl" className="text-tertiary" icon={faGear} />
             </button>
+
+            {/* User profile  */}
+            <UserContainer
+              localState={localState}
+              setLocalState={setLocalState}
+              userData={userData}
+              modelsData={modelsData}
+            />
           </div>
           {/** 
           <div id="placeholder" className="group flex-1 w-full hover:bg-light_hover dark:hover:bg-dark_hover cursor-pointer grid place-items-center"

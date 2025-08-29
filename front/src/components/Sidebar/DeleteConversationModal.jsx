@@ -39,6 +39,7 @@ export default function DeleteConversationModal({
 
     // If deleting current conversation
     if (id === currentConversationId) {
+      console.log("Current conversation deleted")
       //navigate to base page and logic there decide which page to show
       navigate(`/chat/`);
     }

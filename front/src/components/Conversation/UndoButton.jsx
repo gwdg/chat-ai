@@ -4,7 +4,9 @@ import { Undo2 } from "lucide-react";
 
 export default function UndoButton({ localState, setLocalState }) {
   const { t } = useTranslation();
-  const loading = false; // TODO handle loading
+  const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
+    ? localState.messages[localState.messages.length - 2]?.loading || false
+    : false;
 
   // Function to handle retry of last message
   const handleUndo = (e) => {

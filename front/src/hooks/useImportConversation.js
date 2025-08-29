@@ -125,14 +125,15 @@ export function useImportConversation() {
       ];
   
       let expectUserMessage = true; // switch roles after each message
-      if (data?.messages) {
+      const messages = data?.messages || (Array.isArray(data) ? data : undefined);
+      if (messages) {
         // Look for system prompt
-        const systemMessage = data.messages.find((msg) => msg.role === "system");
+        const systemMessage = messages.find((msg) => msg.role === "system");
         sanitizedMessages[0].content = extractMessageContent(systemMessage);
         // Sanitize user + assistant messages
         try {       
-          for (let i = 0; i < data.messages.length; i++) {
-            const message = data.messages[i];
+          for (let i = 0; i < messages.length; i++) {
+            const message = messages[i];
             if (!message?.role) {
               // TODO robustness - check if string and add it
               continue;
@@ -190,25 +191,27 @@ export function useImportConversation() {
         }
       }
 
-      // Make sure there is an empty user message at the end, as the prompt
-      if (!expectUserMessage) {
+      // Make sure there is an user message at the end, as the prompt
+      // if (!expectUserMessage) {
+      //   sanitizedMessages.push({
+      //     "role": "assistant",
+      //     "content": [{
+      //       "type": "text",
+      //       "text": "",
+      //     }],
+      //   })
+      //   expectUserMessage = true;
+      // }
+      // Push user message as prompt
+      if (expectUserMessage) {
         sanitizedMessages.push({
-          "role": "assistant",
+          "role": "user",
           "content": [{
             "type": "text",
             "text": "",
-          }],
+          }]
         })
-        expectUserMessage = true;
       }
-      // Push user message as prompt
-      sanitizedMessages.push({
-        "role": "user",
-        "content": [{
-          "type": "text",
-          "text": "",
-        }]
-      })
       // Populate settings from data
       let settings = defaultSettings;
 
