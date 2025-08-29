@@ -1,4 +1,5 @@
 import Logo from "../../assets/logos/chat_ai.svg";
+import LogoSmall from "../../assets/logos/chat_ai_small.ico"
 import { Link } from "react-router-dom";
 
 export default function LogoContainer({ isMobile = false }) {
@@ -17,7 +18,7 @@ export default function LogoContainer({ isMobile = false }) {
     <div className="flex-shrink-0">
       <img
         className="h-6 min-[400px]:h-7 min-[500px]:h-8 w-auto object-contain"
-        src={Logo}
+        src={LogoSmall}
         alt="Chat AI Logo"
       />
     </div>

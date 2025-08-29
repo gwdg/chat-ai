@@ -49,7 +49,7 @@ export default function ChatPage() {
                   grid 
                   grid-cols-1 grid-rows-[auto_1fr_auto]
                   md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
-                  md:gap-x-6 gap-y-1 md:pt-1
+                  md:gap-x-2 gap-y-1 md:pt-1
                   bg-gray-100 dark:bg-bg_dark`}
     >
       <Header

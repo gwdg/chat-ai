@@ -89,7 +89,6 @@ export async function processContentItems({
       }
       else {
         try {
-          console.log("Rendering fileType ", fileType, " stored as text")
           // Send file as text
           const textContent = await readFileAsText(file);
           output.push({

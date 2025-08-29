@@ -266,7 +266,7 @@ i18n
             delete_arcana: "Are you sure you want to delete arcana?",
             delete_arcana1: "Delete",
 
-            history: "Caution! Clearing will erase your history. Proceed?",
+            history: "Clearing will erase all messages in this conversation! Proceed?",
             dont_show_again: "Don't show this again",
 
             exportSettings: "Include model and options",

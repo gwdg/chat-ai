@@ -16,20 +16,18 @@ export default function SettingsButton() {
     const showSettings = useSelector(selectShowSettings);
     const showSidebar = useSelector(selectShowSidebar);
 
-    return (
-        <Tooltip text={t("description.settings_toggle")}>
-            <button
-            className="flex h-[25px] w-[25px] cursor-pointer"
-            onClick={() => {
-                if (showSidebar) dispatch(toggleSidebar());
-                dispatch(toggleSettings());
-            }}
-            >
-            <Settings
-                className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
-                alt="settings"
-            />
-            </button>
-        </Tooltip>
+    return ( 
+        <button
+        className="flex h-[25px] w-[25px] cursor-pointer"
+        onClick={() => {
+            if (showSidebar) dispatch(toggleSidebar());
+            dispatch(toggleSettings());
+        }}
+        >
+        <Settings
+            className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
+            alt="settings"
+        />
+        </button>
     );
 }
