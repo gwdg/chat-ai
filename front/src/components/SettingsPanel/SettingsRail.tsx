@@ -38,6 +38,7 @@ import kisskiLogo from "../../assets/logos/kisski.png";
 import LanguageSelector from "../Footer/LanguageSelector";
 import ThemeToggle from "../Header/ThemeToggle";
 import UserContainer from "../Header/UserContainer";
+import WarningExternalModel from "../Header/WarningExternalModel";
 
 export default function SidebarRail({localState, setLocalState, userData, modelsData, onOpen }: { localState: any; setLocalState: any; userData: any; modelsData: any; onOpen: () => void }) {
 
@@ -70,6 +71,8 @@ export default function SidebarRail({localState, setLocalState, userData, models
               userData={userData}
               modelsData={modelsData}
             />
+
+            <WarningExternalModel className="" localState={localState} userData={userData}  />
           </div>
           {/** 
           <div id="placeholder" className="group flex-1 w-full hover:bg-light_hover dark:hover:bg-dark_hover cursor-pointer grid place-items-center"

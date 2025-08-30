@@ -23,7 +23,7 @@ export default function HallucinationWarning() {
 
   return countHallucination < 3 && !closedHallucination ? (
     <div className="w-full h-10 sticky select-none bg-gray-200 dark:bg-bg_dark m-1 p-2 px-3 rounded-lg flex justify-between items-center shadow-sm dark:shadow-dark">
-      <p className="dark:text-white text-black text-xs">
+      <p className="dark:text-white text-black text-sm">
         <Trans i18nKey="description.note1" />
         <Link
           to="https://en.wikipedia.org/wiki/Hallucination_(artificial_intelligence)"
@@ -35,25 +35,6 @@ export default function HallucinationWarning() {
           &nbsp;
         </Link>
         <Trans i18nKey="description.note2" />
-        <Link
-          to="https://datenschutz.gwdg.de/services/chatai"
-          target="_blank"
-          className="text-tertiary"
-        >
-          &nbsp;
-          <Trans i18nKey="description.note3" />
-          &nbsp;
-        </Link>
-        <Trans i18nKey="description.note4" />
-        <Link
-          to="https://gwdg.de/imprint/"
-          target="_blank"
-          className="text-tertiary"
-        >
-          &nbsp;
-          <Trans i18nKey="description.note5" />
-        </Link>
-        .
       </p>
       <X
         className="h-[20px] w-[20px] cursor-pointer text-[#009EE0]"

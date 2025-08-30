@@ -47,7 +47,7 @@ export default function TemperatureSlider({ localState, setLocalState }) {
   };
 
   return (
-    <div className="flex flex-col md:flex-row w-full md:items-center">
+    <div className="flex flex-row w-full md:items-center">
       <div className="flex-shrink-0 flex items-center gap-2 select-none min-w-[80px]">
         <p className="text-sm font-medium">temp</p>
         <HelpCircle

@@ -6,9 +6,9 @@ export default function WebSearchToggle({ localState, setLocalState }) {
   const settings = localState.settings;
   return (
     settings?.enable_tools && (
-      <div className="flex flex-col md:flex-row md:gap-2 gap-2 w-full md:items-center mt-2">
+      <div className="flex flex-row md:gap-2 gap-2 w-full md:items-center mt-2">
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
-          <p className="text-sm">Allow Web Search</p>
+          <p className="text-sm">Web Search</p>
           {/* Help Button */}
           <HelpCircle
             className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
@@ -41,7 +41,7 @@ export default function WebSearchToggle({ localState, setLocalState }) {
           {/* Description that appears only when the box is checked */}
           {settings?.enable_web_search && (
             <span className="ml-2 text-sm text-green-600 dark:text-green-300">
-              Web search is enabled
+              Web search is allowed
             </span>
           )}
         </div>

@@ -422,42 +422,41 @@ const SettingsPanel = ({
           },
         }}
       />
-    <div className="relative w-full h-full flex-col items-center text-tertiary flex gap-4">
+    <div className="flex relative w-full h-full flex-col items-center text-tertiary ">
         {/* Logos and User Profile */}
-        <div className="w-full hidden md:flex">
-          <div className="w-full flex items-center gap-3 justify-between p-3">
-            <button
-              onClick={() => dispatch(toggleSettings())}
-              className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Close Settings"
-            >
-              <ChevronRight className="w-7 h-7 text-tertiary" />
-            </button>
-            {/* Partner logos */}
-            <div className="flex gap-2 px-5">
-              <PartnerContainer />
-            </div>
-            <div className="flex items-center gap-2">
-              {/* User profile */}
-              <span className="border-l border-gray-200 dark:border-gray-700 pl-3">
-                <UserContainer
-                  localState={localState}
-                  userData={userData}
-                  modelsData={modelsData}
-                />
-              </span>
+        <div className="w-full hidden md:flex items-center gap-3 justify-between p-3">
+          <button
+            onClick={() => dispatch(toggleSettings())}
+            className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            title="Close Settings"
+          >
+            <ChevronRight className="w-7 h-7 text-tertiary" />
+          </button>
+          {/* Partner logos */}
+          <div className="flex gap-2 px-5 hidden md:flex">
+            <PartnerContainer />
+          </div>
+          <div className="flex items-center gap-2">
+            {/* User profile */}
+            <span className="border-l border-gray-200 dark:border-gray-700 pl-3">
+              <UserContainer
+                localState={localState}
+                userData={userData}
+                modelsData={modelsData}
+              />
+            </span>
 
-              {/* <ThemeToggle /> */}
-            </div>
+            {/* <ThemeToggle /> */}
           </div>
         </div>
         {/* Settings Panel */}
-        <div className="flex flex-col gap-3 p-2 sm:p-4 lg:p-4 h-full w-full">
-
+        <div className="flex flex-col gap-3 p-2 lg:p-4 h-full w-full">
+          {/* User profile */}
+          <div className="flex flex-row">
           {/* Warning for external models */}
           {localState.settings?.model?.name
             ?.toLowerCase()
-            .includes("external") && (
+            .includes("external") ? (
               <div className="text-yellow-600 text-sm mb-3 select-none">
                 <Trans
                   i18nKey={
@@ -467,7 +466,15 @@ const SettingsPanel = ({
                   }
                 />
               </div>
-            )}
+            ) : (<div className="flex flex-grow md:hidden h-full py-1 text-lg text-primary"><b>Settings</b></div>)}
+          <span className="md:hidden px-1">
+            <UserContainer
+              localState={localState}
+              userData={userData}
+              modelsData={modelsData}
+            />
+          </span>
+          </div>
           {/* Use Tools – checkbox */}
           <ToolsToggle
             localState={localState}

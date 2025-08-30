@@ -7,11 +7,11 @@ import MessageUser from "./MessageUser/MessageUser";
 import UndoButton from "./UndoButton";
 import ClearHistoryButton from "./ClearHistoryButton";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
-import HallucinationWarning from "../Others/HallucinationWarning";
+import HallucinationWarning from "./HallucinationWarning";
 import ModelSelector from "../Header/ModelSelector";
 import Prompt from "../Prompt/Prompt";
 import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
-import WarningExternalModel from "../Others/WarningExternalModel";
+import WarningExternalModel from "../Header/WarningExternalModel";
 import EmptyConversation from "./EmptyConversation";
 import Motto from "./Motto";
 
@@ -288,11 +288,6 @@ export default function Conversation({
             : "absolute pointer-events-none"
         }`}
       >
-        <div className="relative">
-          {emptyConversation && !showSettings && (
-          <WarningExternalModel className="absolute top-1 right-1" localState={localState} userData={userData} />
-        )}
-        </div>
         <div
           className={`transition-all duration-500 ease-in-out p-10  
           ${
@@ -320,11 +315,6 @@ export default function Conversation({
       >
         <div className="flex justify-between">
           <HallucinationWarning />
-
-          {/* External model warning aligned top right in the messages area */}
-          {!showSettings && (
-            <WarningExternalModel className="p-1" localState={localState} userData={userData} />
-          )}
         </div>
         
 

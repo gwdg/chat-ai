@@ -5,9 +5,9 @@ export default function ToolsToggle({ localState, setLocalState }) {
   const { openModal } = useModal();
   const settings = localState.settings;
   return (
-    <div className="flex flex-col md:flex-row md:gap-4 gap-3 w-full md:items-center">
+    <div className="flex flex-row md:gap-4 gap-3 w-full md:items-center">
       <div className="flex-shrink-0 flex items-center gap-2 select-none">
-        <p className="text-sm">Use GWDG Tools</p>
+        <p className="text-sm">GWDG Tools</p>
         {/* Help Button */}
 
         <HelpCircle
@@ -36,13 +36,13 @@ export default function ToolsToggle({ localState, setLocalState }) {
         {/* Description that appears only when the box is unchecked */}
         {!settings?.enable_tools && (
           <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
-            Additional features are disabled.
+            Tools are disabled.
           </span>
         )}
         {/* Description that appears only when the box is checked */}
         {settings?.enable_tools && (
           <span className="ml-2 text-sm text-green-600 dark:text-green-300">
-            Additional features are enabled.
+            Tools are enabled.
           </span>
         )}
       </div>

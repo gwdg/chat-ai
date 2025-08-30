@@ -7,6 +7,7 @@ import SettingsWrapper from "../SettingsPanel/SettingsWrapper";
 import SettingsButton from "./SettingsButton";
 import ModelSelectorWrapper from "./ModelSelectorWrapper";
 import ModelSelector from "./ModelSelector";
+import WarningExternalModel from "./WarningExternalModel";
 
 function Header({ className, localState, setLocalState, modelsData, userData }) {
   const dispatch = useDispatch();
@@ -14,19 +15,19 @@ function Header({ className, localState, setLocalState, modelsData, userData }) 
     <>
       {/* Mobile/Tablet Header - Show below desktop breakpoint (1281px) */}
       <nav className={`${className} flex top-0 left-0 z-[995] w-full h-14 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800`}>
-        <div className="w-full px-4 flex items-center gap-3">
+        <div className="w-full pr-4 pl-2 flex items-center gap-3">
           {/* Left Section */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0">
             {/* Hamburger Menu - Always show on mobile/tablet */}
             <HamburgerMenu />
-            {/* Logo (Mobile) */}
+            {/* Small Logo (Mobile) */}
             <LogoContainer isMobile={true} />
           </div>
 
-          {/* Center Section */}
+          {/* Center Section - Model Selector*/}
           <div
-            className="flex-grow min-w-0 px-2 relative w-full"
-            style={{ maxWidth: "calc(100vw - 200px)" }}
+            className="flex-grow min-w-0 relative w-full"
+            style={{ maxWidth: "calc(100vw - 50px)" }}
             tabIndex={0}
           >
             <ModelSelectorWrapper
@@ -35,24 +36,13 @@ function Header({ className, localState, setLocalState, modelsData, userData }) 
               modelsData={modelsData}
               inHeader={true}
             />
-            {/* Model Selection 
-            <ModelSelector
-              localState={localState}
-              setLocalState={setLocalState}
-              modelsData={modelsData}
-            />*/}
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center gap-4 flex-shrink-0">
-            {/* User profile */}
-            
-            <UserContainer
-              localState={localState}
-              setLocalState={setLocalState}
-              userData={userData}
-              modelsData={modelsData}
-            />
+          <div className="flex items-center gap-3">
+            {/* External Model Warning */}
+            <WarningExternalModel localState={localState} userData={userData} />
+            {/* Settings Button */}
             <SettingsButton
               localState={localState}
               setLocalState={setLocalState}
