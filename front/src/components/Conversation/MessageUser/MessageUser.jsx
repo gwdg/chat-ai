@@ -1,5 +1,5 @@
 import React from "react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import RetryButton from "./RetryButton";
 import EditButton from "./EditButton";
 import EditBox from "./EditBox";
@@ -13,11 +13,29 @@ export default React.memo(({
 }) => {
     
     //Refs
+    const userMessage = useRef(null);
     const [editMode, setEditMode] = useState(false);
     const message = localState.messages[message_index];
 
+    // Detect outside clicks
+    useEffect(() => {
+        function handleClickOutside(event) {
+        if (userMessage.current && !userMessage.current.contains(event.target)) {
+            setEditMode(false); // Exit edit mode
+        }
+        }
+        // Listen for clicks anywhere in document
+        document.addEventListener("dblclick", handleClickOutside);
+        // Cleanup when component unmounts
+        return () => {
+        document.removeEventListener("dblclick", handleClickOutside);
+        };
+    }, [setEditMode]);
+
     return (
-        <div key={message_index}
+        <div
+            ref={userMessage}
+            key={message_index}
             className={`flex flex-col gap-1.5 text-black dark:text-white overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark
                 ${ editMode ? "p-0" : "p-2.5"}`}
             >

@@ -14,7 +14,8 @@ const MIN_HEIGHT = 56;
 
 export default React.memo(({ localState, setLocalState, message_index }) => {
   //Refs
-  const textareaRef = useRef(null);
+  const assistantMessage = useRef(null);
+  const editBox = useRef(null);
   const textareaRefs = useRef([]);
   const message = localState.messages[message_index];
   const loading = message?.loading || false;
@@ -26,13 +27,13 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
 
   //Functions
   const adjustHeight = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = `${MIN_HEIGHT}px`;
+    if (editBox.current) {
+      editBox.current.style.height = `${MIN_HEIGHT}px`;
 
-      const scrollHeight = textareaRef.current.scrollHeight;
+      const scrollHeight = editBox.current.scrollHeight;
       const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
 
-      textareaRef.current.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
+      editBox.current.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
     }
   };
 
@@ -48,6 +49,18 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     //   textarea.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
     // }
   };
+
+  // Detect outside double clicks
+  useEffect(() => {
+      function handleClickOutside(event) {
+      if (assistantMessage.current && !assistantMessage.current.contains(event.target))
+          setEditMode(false); // Exit edit mode
+      }
+      document.addEventListener("dblclick", handleClickOutside);
+      return () => {
+      document.removeEventListener("dblclick", handleClickOutside);
+      };
+  }, [setEditMode]);
 
   useEffect(() => {
     setEditedText(message?.content[0]?.text || "")
@@ -92,8 +105,10 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const content = message?.content?.[0]?.text ?? ""
   const isContentEmpty = !content.trim();
     return (
-        // Typing
-        <div key={message_index} className={`text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 
+        <div 
+        key={message_index} 
+        ref={assistantMessage}
+        className={`text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 
           rounded-2xl bg-bg_chat dark:bg-bg_chat_dark
           ${editMode ? "px-1 pt-1" : "px-3 pt-3"}
           ${isContentEmpty && !loading ? "bg-bg_chat/50 dark:bg-bg_chat_dark/50 pt-0": " bg-bg_chat dark:bg-bg_chat_dark"}`}>
@@ -120,9 +135,24 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
             {editMode && (
             <div className="flex flex-col justify-between gap-1">
               <textarea
-                ref={textareaRef}
+                ref={editBox}
                 value={editedText}
                 onChange={(e) => setEditedText(e.target.value)}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    editBox.current.value?.trim() !== ""
+                  ) {
+                    event.preventDefault();
+                    handleSave();
+                  } else if (
+                    event.key === "Escape"
+                  ) {
+                    event.preventDefault();
+                    setEditMode(false);
+                  }
+                }}
                 className="p-2 outline-none rounded-sm w-full text-sm dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-y-auto"
                 placeholder="Edit response..."
                 style={{
@@ -130,16 +160,16 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   maxHeight: `${MAX_HEIGHT}px`,
                 }}
               />
-              <div className="flex justify-end w-full gap-2 pb-2 px-2">
+              <div className="flex gap-4 justify-end w-full gap-2 pt-1 pb-2 px-2">
                 <button
                   onClick={() => setEditMode(false)}
-                  className="text-sm text-gray-500 dark:text-gray-400 px-4 py-2 rounded-full cursor-pointer"
+                  className="text-sm text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleSave()}
-                  className="text-sm bg-tertiary text-white rounded-full px-4 py-2 cursor-pointer"
+                  className="text-md text-primary border dark:text-tertiary rounded-full px-3 py-1 cursor-pointer"
                 >
                   Save
                 </button>

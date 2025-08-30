@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 
 import { X, Send } from "lucide-react";
 
@@ -63,6 +63,11 @@ export default function EditBox({
           ) {
             event.preventDefault();
             handleSave();
+          } else if (
+            event.key === "Escape"
+          ) {
+            event.preventDefault();
+            setEditMode(false);
           }
         }}
       />
@@ -80,20 +85,36 @@ export default function EditBox({
             alt="clear"
           />
         </button>
-        {/* Submit edited message button */}
-        <button
-          className="cursor-pointer"
-          onClick={() => {
-            setEditMode(false);
-            handleSend();
-          }}
-          // disabled={loading || loadingResend}
-        >
-          <Send
-            className="cursor-pointer h-[22px] w-[22px] text-[#009EE0]"
-            alt="send"
-          />
-        </button>
+        <div className="w-full flex flex-row justify-end gap-4 px-1">
+          {/* Cancel edit button */}
+          <button
+            onClick={() => setEditMode(false)}
+            className="text-sm text-gray-500 dark:text-gray-400 px-1 py-1 rounded-full cursor-pointer"
+          >
+            Cancel
+          </button>
+          {/* Save edited message button */}
+          <button
+            onClick={() => handleSave()}
+            className="text-md text-primary border dark:text-tertiary rounded-full px-3 py-1 cursor-pointer"
+          >
+            Save
+          </button>
+          {/* Submit edited message button */}
+          <button
+            className="cursor-pointer"
+            onClick={() => {
+              setEditMode(false);
+              handleSend();
+            }}
+            // disabled={loading || loadingResend}
+          >
+            <Send
+              className="cursor-pointer h-[22px] w-[22px] text-[#009EE0]"
+              alt="send"
+            />
+          </button>
+        </div>
       </div>
     </div>
   );
