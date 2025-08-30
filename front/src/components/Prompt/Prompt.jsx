@@ -18,10 +18,15 @@ export default function Prompt({
   setLocalState,
 }) { 
   const sendMessage = useSendMessage();
+  const [shouldSend, setShouldSend] = useState(false);
   const [prompt, setPrompt] = useState(localState.messages[localState.messages.length - 1].content[0]?.text || "");
 
   // Effect, watch for changes to prompt in localState
   useEffect(() => {
+    if (shouldSend) {
+      sendMessage({localState, setLocalState});
+      setShouldSend(false);
+    }
     setPrompt(
       localState.messages[localState.messages.length - 1]?.content[0]?.text || ""
     );
@@ -60,10 +65,7 @@ export default function Prompt({
       if (prompt?.trim() === "" && attachments.length === 0) return;
       debouncedSave.cancel();
       savePrompt();
-      await sendMessage({
-          localState,
-          setLocalState,
-      });
+      setShouldSend(true);
   };
   
   return (

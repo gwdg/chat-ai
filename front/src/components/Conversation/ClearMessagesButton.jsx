@@ -4,7 +4,7 @@ import { X } from "lucide-react"
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 
-export default function ClearHistoryButton({localState, setLocalState}) {
+export default function ClearMessagesButton({localState, setLocalState}) {
   const { t } = useTranslation();
   const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
     ? localState.messages[localState.messages.length - 2]?.loading || false
@@ -13,24 +13,24 @@ export default function ClearHistoryButton({localState, setLocalState}) {
   const {notifySuccess, notifyError } = useToast();
 
   // Clear conversation history
-  const clearHistory = () => {
-    setLocalState((prevState) => ({
-      ...prevState,
+  const clearMessages = () => {
+    setLocalState((prev) => ({
+      ...prev,
       messages:
-        prevState.messages.length > 1
-          ? [prevState.messages[0], prevState.messages[prevState.messages.length-1]] // Keep only system message if it exists
-          : prevState.messages,
+        prev.messages.length >= 2
+          ? [prev.messages[0], prev.messages[prev.messages.length-1]] // Keep only system message and prompt
+          : prev.messages,
     }));
 
-    notifySuccess("History cleared");
+    notifySuccess("Messages cleared");
   };
 
   // Function to handle clearing chat history
   const handleClearHistory = () => {
-    if (localState?.dontShow?.dontShowAgain) {
-      clearHistory();
+    if (localState?.dontShow?.clearMessages) {
+      clearMessages();
     } else {
-      openModal("clearHistory", { clearHistory })
+      openModal("clearMessages", { localState, setLocalState, clearMessages })
     }
   };
 

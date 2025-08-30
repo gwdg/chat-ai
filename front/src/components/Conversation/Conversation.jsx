@@ -5,7 +5,7 @@ import { useSelector } from "react-redux";
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
 import MessageUser from "./MessageUser/MessageUser";
 import UndoButton from "./UndoButton";
-import ClearHistoryButton from "./ClearHistoryButton";
+import ClearMessagesButton from "./ClearMessagesButton";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
 import HallucinationWarning from "./HallucinationWarning";
 import ModelSelector from "../Header/ModelSelector";
@@ -360,7 +360,7 @@ export default function Conversation({
         {/* Messages bottom panel */}
         {localState?.messages?.length >= 4 && (
           <div className="w-full select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
-            <ClearHistoryButton
+            <ClearMessagesButton
               localState={localState}
               setLocalState={setLocalState}
             />

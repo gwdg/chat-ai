@@ -1,25 +1,26 @@
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
 
-export default function ClearHistoryModal({
+export default function ClearMessagesModal({
   isOpen,
   onClose,
+  localState,
   setLocalState,
   // dontShowAgain,
-  clearHistory,
+  clearMessages,
 }) {
   // Handler for checkbox state change
   const handleCheckboxChange = (event) => {
-    // setLocalState((prevState) => ({
-    //   ...prevState,
-    //   dontShow: {
-    //     ...prevState.exportOptions,
-    //     dontShowAgain: event.target.checked,
-    //   },
-    // }));
+    setLocalState((prev) => ({
+      ...prev,
+      dontShow: {
+        ...prev?.dontShow,
+        clearMessages: event.target.checked,
+      },
+    }));
   };
 
-  const dontShowAgain = false;
+  const dontShowAgain = localState?.dontShow?.clearMessages;
 
   return (
     <BaseModal
@@ -64,7 +65,7 @@ export default function ClearHistoryModal({
         {/* Clear history button */}
         <button
           className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
-          onClick={() => {clearHistory(); onClose();}}
+          onClick={() => {clearMessages(); onClose();}}
         >
           <Trans i18nKey="description.cache3" />
         </button>

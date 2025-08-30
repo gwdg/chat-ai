@@ -17,10 +17,10 @@ import ErrorBadRequestModal from "./Alert/ErrorBadRequestModal";
 import ErrorSessionExpiredModal from "./Alert/ErrorSessionExpiredModal";
 import DeleteConversationModal from "../components/Sidebar/DeleteConversationModal";
 import RenameConversationModal from "../components/Sidebar/RenameConversationModal";
-import ClearHistoryModal from "./Alert/ClearHistoryModal";
 import ExportConversationModal from "../components/Sidebar/ExportConversationModal";
 import ImportPersonaModal from "../components/Sidebar/ImportPersonaModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
+import ClearMessagesModal from "./Alert/ClearMessagesModal";
 import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
@@ -102,8 +102,8 @@ export function ModalProvider({ children }) {
         {modalType === "errorSessionExpired" && (
             <ErrorSessionExpiredModal isOpen onClose={closeModal} {...modalProps} />
         )}
-        {modalType === "clearHistory" && (
-            <ClearHistoryModal isOpen onClose={closeModal} {...modalProps} />
+        {modalType === "clearMessages" && (
+            <ClearMessagesModal isOpen onClose={closeModal} {...modalProps} />
         )}
         {/* General Modals */}
         {modalType === "exportConversation" && (
