@@ -1,6 +1,7 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
+import OpenAI from "openai";
 
-export default async function generateMemory(conversation, memories) {
+export default async function generateMemory(newUserMessage, memories) {
   const defaultSettings = getDefaultSettings();
   const memoryPrompt = `
     Determine whether the *new user message* below contains any **new personal information**
@@ -21,7 +22,7 @@ export default async function generateMemory(conversation, memories) {
     ${memories.map(({ id, text }, i) => `${i + 1}. ${text}`).join('\n')}
 
     Here is the new user message:  
-    "${conversation.at(-1).content}"
+    "${newUserMessage}"
 
     Respond in one of the following JSON formats with **no extra text**:
 
@@ -73,43 +74,45 @@ export default async function generateMemory(conversation, memories) {
   };
 
   try {
-    // TODO Replace with openai or chatCompletions
-    const baseURL = import.meta.env.VITE_BACKEND_ENDPOINT + "/chat/completions"
-    const response = await fetch(baseURL, {
-      method: "post",
-      headers: { "Content-type": "application/json" },
-      body: JSON.stringify({
-        model: defaultSettings.model,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful assistant. Here is the current memory list:\n" +
-              memories.map((memory) => memory.text).join("\n"),
-          },
-          { role: "user", content: memoryPrompt },
-        ],
-        temperature: 0,
-        top_p: 1,
-        extra_body: { guided_json: memoryUpdateSchema },
-      }),
-    });
-
-    if (!response.ok) throw new Error(response.statusText);
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let memory = "";
-    let streamComplete = false;
-
-    // Stream response until complete
-    while (!streamComplete) {
-      const { value, done } = await reader.read();
-      if (done) {
-        streamComplete = true;
-        break;
-      }
-      memory += decoder.decode(value, { stream: true });
+    // Define base URL from config
+    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
+    try {
+      // If absolute, parse directly
+      baseURL = new URL(baseURL).toString();
+    } catch {
+      // If relative, resolve against current origin
+      baseURL = new URL(baseURL, window.location.origin).toString();
     }
+
+    // Define openai object to call backend
+    const openai = new OpenAI({
+      baseURL : baseURL,
+      apiKey: null,
+      dangerouslyAllowBrowser: true,
+      timeout: 20000
+    });
+  
+
+    const params = {
+      model: defaultSettings.model.id,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a helpful assistant. Here is the current memory list:\n" +
+            memories.map((memory) => memory.text).join("\n"),
+        },
+        { role: "user", content: memoryPrompt },
+      ],
+      temperature: 0,
+      top_p: 1,
+      extra_body: {guided_json: memoryUpdateSchema},
+      stream: false,
+    }
+
+    const response = await openai.chat.completions.create(params);
+    if (!response) throw new Error(response.statusText);
+    const memory = response?.choices[0]?.message?.content || ""
     return memory?.trim();
   } catch (error) {
     // Handle AbortError specifically

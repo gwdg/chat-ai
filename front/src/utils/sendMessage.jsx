@@ -8,6 +8,9 @@ import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 
+// Text to be appended to system prompt for memories
+const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
+
 // Convert content items to standard OpenAI API
 export async function processContentItems({
   items,
@@ -139,27 +142,26 @@ async function buildConversationForAPI(localState) {
 const sendMessage = async ({
   localState,
   setLocalState,
+  memories,
   openModal,
   notifyError,
   notifySuccess,
   dispatch,
   timeout,
 }) => {
-  const memories = []// TODO get memories useSelector(selectAllMemories);
   const conversationId = `${localState.id}`
 
   try {
     const isArcanaSupported = (localState.settings.model?.input?.includes("arcana") || false)    
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState);
-
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content.text
       : "";
-    if (memories.length > 0) {
+    if (localState.settings?.memory != 0 && memories.length > 0) {
       const memoryContext = memories.map((memory) => memory.text).join("\n");
-      const memorySection = `\n\n--- Begin User Memory ---\nThe following information was gathered by the system from previous conversations and may be irrelevant. You may use this information only when relevant to provide a more personalized and contextual response, but do not make assumptions, and focus on the provided system message instea :\n\n${memoryContext}\n--- End User Memory ---`;
+      const memorySection = `\n\n--- Begin User Memory ---\n${memoryExplanation}\n\n${memoryContext}\n--- End User Memory ---`;
       systemPromptAPI = systemPromptAPI + memorySection;
     }
 
@@ -331,6 +333,15 @@ const sendMessage = async ({
       return;
     }
 
+    // Keep last message sent by user for possible memory update
+    let newUserMessage = undefined;
+    try {
+      newUserMessage = conversationForAPI.messages.at(-1).content;
+      if (Array.isArray(newUserMessage)) newUserMessage = newUserMessage[0].text;
+    } catch (error) {
+      console.log("Warning: couldn't find new user message. Memory will not be updated");
+    }
+
     // Generate title if conversation is new
     conversationForAPI.messages = [
       ...conversationForAPI.messages,
@@ -358,11 +369,11 @@ const sendMessage = async ({
       });
     }
 
-    // Update memory if necessary
+    // Update memory if enabled
     try {
-      if (memories.length >= 2) {
+      if (localState.settings?.memory == 2 && newUserMessage) {
         const memoryResponse = await generateMemory(
-          conversationForAPI.messages,
+          newUserMessage,
           memories
         );
         const cleanedResponse = memoryResponse.replace(/,(\s*[}$])/g, "$1");
