@@ -1,22 +1,20 @@
-import { useSelector } from "react-redux";
-import { useState, useEffect, memo } from 'react'
-import { useGetModelsQuery } from "../../Redux/reducers/appApi";
+
+import { memo, useEffect } from 'react'
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
-import { ExtendedModelInfo, ModelInfo } from "../../types/models";
-import { setConversationModelDB, useConversationModelDB } from "../../db/queries"
-import { selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
-
+import { useModal } from '../../modals/ModalContext';
 
 function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false}: {modelsData: ModelInfo, localState: any, setLocalState: any, inHeader: boolean}) {
   /*
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
   const currentModelId = localState?.settings?.model?.id;
-
   const hasExtendedModels = modelsData?.[0]?.description !== undefined;
+  const { openModal } = useModal();
 
   function setModel(newModel: ModelInfo) {
+    if (newModel?.status === "offline")
+      openModal("serviceOffline");
     setLocalState((prev) => ({
       ...prev,
       settings: {

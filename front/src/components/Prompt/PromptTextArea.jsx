@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
-import { setLockConversation } from "../../Redux/reducers/conversationsSlice";
 
 import { useToast } from "../../hooks/useToast";
 import { useDebounce } from "../../hooks/useDebounce";

@@ -13,15 +13,17 @@ import { setLastConversation, selectLastConversation } from "../Redux/reducers/l
 
 import { getConversationMeta, getLastModifiedConversationMeta, createConversation } from "../db/index";
 
-import { getDefaultConversation } from "../utils/conversationUtils";
-
 import { validate as validateUUID, version as versionUUID } from "uuid";
 import { useModal } from "../modals/ModalContext";
+import { getDefaultConversation } from "../utils/conversationUtils";
+import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 function validateConversationId(conversationId: string): boolean {
   return validateUUID(conversationId) && versionUUID(conversationId) === 4;
 }
 
-async function loadConversation(navigate, conversationId, lastConversationId): Promise<ConversationRow | undefined> {
+async function loadConversation(navigate, conversationId, lastConversationId, userSettings = {}): Promise<ConversationRow | undefined> {
+  
+  // const { getDefaultConversation } = useConversationUtils();
   // conversationId in URL, try to use it
   if (conversationId) {
     // Check if Id is valid UUID
@@ -66,13 +68,12 @@ async function loadConversation(navigate, conversationId, lastConversationId): P
   // if the two above failed try to load last modified conversation or create new
   const lastConversationMeta = await getLastModifiedConversationMeta();
   if (lastConversationMeta !== undefined) {
-    console.log("Got most recent conversation: ", lastConversationMeta?.id);
+    console.log("Loading most recent conversation: ", lastConversationMeta?.id);
     navigate(`/chat/${lastConversationMeta?.id}`);
     return undefined
   } else {
     // if above fails create a new conversation
-    console.log("Creating new conversation");
-    const newConversationId = await createConversation(getDefaultConversation());
+    const newConversationId = await createConversation(getDefaultConversation(userSettings));
     navigate(`/chat/${newConversationId}`);
     return undefined
   }
@@ -95,6 +96,7 @@ export function useSyncConversation({
   const [isActive, setIsActive] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
+  const userSettings = useSelector(selectUserSettings);
 
   const timeoutIds = useRef({});
   const lastModified = useRef(0);
@@ -104,7 +106,7 @@ export function useSyncConversation({
   useEffect(() => {
     (async () => {
       setInitialized(false);
-      const conversation = await loadConversation(navigate, conversationId, lastConversation);
+      const conversation = await loadConversation(navigate, conversationId, lastConversation, userSettings);
       lastModified.current = conversation?.lastModified || 0;
       if (!conversation) return;
       setLocalState(conversation);
@@ -179,7 +181,7 @@ export function useSyncConversation({
       if (lastModified === lastModifiedDB) return; // No changes
       // Changes detected, load from DB
       setInitialized(false);
-      const conversation = await loadConversation(navigate, conversationId, lastConversation);
+      const conversation = await loadConversation(navigate, conversationId, lastConversation, userSettings);
       if (!conversation) return;
       lastModified.current = conversation?.lastModified || 0;
       setLocalState(conversation);

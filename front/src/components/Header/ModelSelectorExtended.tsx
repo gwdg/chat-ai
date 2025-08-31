@@ -164,7 +164,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsData, onChan
         <div className="flex justify-between md:flex-row flex-col ">
           <div className="flex items-center md:gap-2 gap-1">
             <div className="pl-1">
-              <DemandIndicator demand={model.demand} online={model.status === "ready"} />
+              <DemandIndicator demand={model.demand} status={model?.status} />
             </div>
             <span className="font-medium">{model.name}</span>
             <SecureIndicator external={model.external} />
@@ -207,7 +207,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsData, onChan
       >
         <div className="flex items-center md:gap-2 gap-1">
           <div className="pl-1">
-            <DemandIndicator demand={model.demand} online={model.status === "ready"} />
+            <DemandIndicator demand={model.demand} status={model?.status} />
           </div>
           <span className="font-medium">{model.name}</span>
           <SecureIndicator external={model.external} />
@@ -262,7 +262,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsData, onChan
             <Chip text={model.company} />
 
           </div>
-          <DemandIndicator demand={model.demand} online={model.status === "ready"} />
+          <DemandIndicator demand={model.demand} status={model?.status} />
         </div>
         <div className="mt-2 text-sm text-slate-700 dark:text-slate-200 flex flex-wrap gap-x-1 justify-between">
           <div className="flex items-center gap-x-3">
@@ -327,7 +327,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsData, onChan
         <div className="flex justify-between">
           <div className="flex items-center justify-between gap-2">
             <div className="pl-2">
-              <DemandIndicator demand={selectedModel?.demand} online={selectedModel?.status === "ready"} />
+              <DemandIndicator demand={selectedModel?.demand} status={selectedModel?.status} />
             </div>
             <span className="font-medium">{selectedModel?.name}</span>
             {selectedModel?.external == true && (<Chip text={"External"} colorPreset={"orange"} />)}

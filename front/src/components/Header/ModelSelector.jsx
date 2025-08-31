@@ -10,12 +10,7 @@ import icon_support_video from "../../assets/icons/support_video.svg";
 import icon_support_reasoning from "../../assets/icons/support_reasoning.svg";
 import icon_support_arcana from "../../assets/icons/support_arcana.svg";
 import icon_dropdown from "../../assets/icons/dropdown.svg";
-import DemandStatusIcon from "../Others/DemandStatusIcon";
-
-import {
-  selectCurrentConversation,
-  selectCurrentConversationId,
-} from "../../Redux/reducers/conversationsSlice";
+import DemandStatusIcon from "./DemandStatusIcon";
 
 export default function ModelSelector({
   localState,
@@ -35,14 +30,12 @@ export default function ModelSelector({
   };
 
   // Conversation state management
-  const currentConversationId = useSelector(selectCurrentConversationId);
-  const currentConversation = useSelector(selectCurrentConversation);
   const currentModel = localState?.settings?.model;
 
   // Handle model selection changes
   const handleModelChange = useCallback(
     (model) => {
-      if (!model || !currentConversationId) return;
+      if (!model) return;
       console.log("Changing model to ", model);
       if (model?.status === "offline") {
         openModal("serviceOffline");
@@ -55,7 +48,7 @@ export default function ModelSelector({
         },
       }));
     },
-    [dispatch, currentConversationId, currentConversation]
+    [dispatch]
   );
 
   // Filter function to search through models

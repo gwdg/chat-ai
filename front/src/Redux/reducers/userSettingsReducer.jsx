@@ -3,7 +3,7 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   memories: [],
-  default_model: "meta-llama-3.1-8b-instruct", // TODO load from file
+  // model: "", // TODO load from file
   timeout: 300,
 };
 
@@ -49,7 +49,7 @@ const userSettingsSlice = createSlice({
 
     // Set default model
     setDefaultModel: (state, action) => {
-      state.default_model = action.payload;
+      state.model = action.payload;
     },
 
     // Timeout
@@ -82,6 +82,6 @@ export const {
 export const selectAllMemories = (state) => state.user_settings.memories;
 export const selectMemoryByIndex = (state, index) => state.user_settings.memories[index];
 export const selectTimeout = (state) => state.user_settings.timeout;
-export const selectDefaultModel = (state) => state.user_settings.default_model;
-
+export const selectDefaultModel = (state) => state.user_settings.model;
+export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;

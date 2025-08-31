@@ -16,9 +16,7 @@ import ToolsToggle from "./ToolsToggle";
 import TopPSlider from "./TopPSlider";
 
 //Redux
-import { processFile } from "../../apis/processFile";
-import { selectConversations } from "../../Redux/reducers/conversationsSlice";
-import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
+import { selectDefaultModel, selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
 // Hooks
 import { useImportConversation } from "../../hooks/useImportConversation";
@@ -30,10 +28,10 @@ import {
 import WebSearchToggle from "./WebSearchToggle";
 import PartnerContainer from "../Header/PartnerContainer";
 import UserContainer from "../Header/UserContainer";
-import ThemeToggle from "../Header/ThemeToggle";
 import { ChevronRight } from "lucide-react";
 
 import { getDefaultSettings } from "../../utils/conversationUtils";
+import { useConversationList } from "../../db";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -43,7 +41,7 @@ const SettingsPanel = ({
   userData,
   modelsData
 }) => {
-  const conversations = useSelector(selectConversations);
+  const conversations = useConversationList();
 
   //Hooks
   const { t } = useTranslation();
@@ -55,6 +53,7 @@ const SettingsPanel = ({
   const currentConversationId = useSelector(
     (state) => state.current_conversation
   );
+  const userSettings = useSelector(selectUserSettings);
   const settings = localState.settings;
   const { notifySuccess, notifyError } = useToast();
 
@@ -165,7 +164,7 @@ const SettingsPanel = ({
 
   // Reset settings to default values
   const resetDefault = () => {
-    const defaultSettings = getDefaultSettings();
+    const defaultSettings = getDefaultSettings(userSettings);
 
     // Update system prompt in conversation history
     let updatedMessages = localState.messages.map((item) => {
@@ -174,7 +173,7 @@ const SettingsPanel = ({
           ...item, content: [
             {
               type: "text",
-              text: "You are a helpful assistant"
+              text: defaultSettings?.system_prompt || "You are a helpful assistant"
             }
           ]
         };
@@ -184,15 +183,12 @@ const SettingsPanel = ({
     });
 
     // Reset temperature, top_p, and system prompt to defaults
-    setLocalState((prevState) => ({
-      ...prevState,
+    setLocalState((prev) => ({
+      ...prev,
       messages: updatedMessages,
       settings: {
-        ...prevState.settings,
-        temperature: defaultSettings?.temperature || 0.5,
-        top_p: defaultSettings?.top_p || 0.5,
-        enable_tools: defaultSettings?.enable_tools || false,
-        memory: defaultSettings?.memory || 0,
+        ...prev.settings,
+        ...defaultSettings,
       },
     }));
     // TODO look at this
@@ -218,14 +214,14 @@ const SettingsPanel = ({
 
   // Helper function to process URL settings
   const processUrlSettings = (urlSettings) => {
-    const defaultSettings = getDefaultSettings();
+    const defaultSettings = getDefaultSettings(userSettings);
     return {
       ...defaultSettings,
       ...urlSettings,
       // Handle systemPrompt decoding specifically
       systemPrompt: urlSettings.systemPrompt
         ? decodeURIComponent(urlSettings.systemPrompt)
-        : defaultSettings.systemPrompt,
+        : defaultSettings?.systemPrompt,
     };
   };
 

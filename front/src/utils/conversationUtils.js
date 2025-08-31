@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
+import { useSelector } from "react-redux";
 
-export const getDefaultSettings = () => {
+export const getDefaultSettings = (userSettings = {}) => {
   let envSettings = {};
 
   if (import.meta.env.VITE_DEFAULT_SETTINGS) {
@@ -10,23 +11,21 @@ export const getDefaultSettings = () => {
       envSettings = {};
     }
   }
-  const result = {
-    model: envSettings?.model || "",
-    temperature: envSettings?.temperature || 0.5,
-    top_p: envSettings?.top_p || 0.5,
-    memory: envSettings?.memory || 0,
-    enable_tools: envSettings?.enable_tools || false,
-    enable_web_search: envSettings?.enable_web_search || false,
-    arcana: envSettings?.arcana || {
-      id: "",
-    },
+  // Codebase default settings if not in envSettings or userSettings
+  const defaultSettings = {
+    model: "",
+    temperature: 0.5,
+    top_p: 0.5,
+    memory: 0,
+    enable_tools: false,
+    enable_web_search: false,
+    arcana: {id: "",},
   };
-  return result;
+  return { ...defaultSettings, ...envSettings, ...userSettings } ;
 };
 
-export const getDefaultConversation = (customSettings = {}) => {
-  const defaultSettings = getDefaultSettings();
-  const settings = { ...defaultSettings, ...customSettings };
+export const getDefaultConversation = (userSettings = {}) => {
+  const settings = getDefaultSettings(userSettings);
   return {
     id: uuidv4(),
     title: "Untitled Conversation",

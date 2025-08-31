@@ -2,10 +2,6 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { Trans } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
-import {
-  selectCurrentConversationId,
-  selectLockConversation,
-} from "../../Redux/reducers/conversationsSlice";
 
 import { ChevronLeft, Download, Edit, MoreVertical, Trash2, X } from "lucide-react";
 import { useConversationList } from "../../db";
@@ -23,11 +19,6 @@ import {
   toggleSidebar,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 
-import {
-  getDefaultConversation,
-  getDefaultSettings,
-} from "../../utils/conversationUtils";
-
 import { Bot, Sidebar } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
@@ -36,7 +27,6 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { openModal } = useModal();
-  const lockConversation = useSelector(selectLockConversation);
   const currentConversationId = localState?.id;
 
   // have an own state of selected Conversation id to update the ui smoothly
@@ -62,7 +52,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
   }
 
   const handleSelectConversation = (id) => {
-    if (lockConversation || id === currentConversationId) return;
+    if (id === currentConversationId) return;
     setSelectedConversationId(id); // update selected now for nicer user interaction
     navigate(`/chat/${id}`);
     if (!isDesktop) {
@@ -194,9 +184,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
       <div className="flex-shrink-0 m-3 border-b border-gray-100 dark:border-gray-800 pb-3">
         <button
           onClick={onNewConversation}
-          disabled={lockConversation}
-          className={`cursor-pointer w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors ${lockConversation ? "cursor-not-allowed opacity-50" : ""
-            }`}
+          className={`cursor-pointer w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
           style={{
             WebkitTapHighlightColor: "transparent",
             minHeight: "44px",
@@ -239,8 +227,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
             <div
               key={id}
               onClick={() => handleSelectConversation(id)}
-              className={`group relative px-3 py-3 rounded-2xl cursor-pointer touch-manipulation transition-all duration-200 ${lockConversation ? "cursor-not-allowed opacity-60" : ""
-                } ${isActive
+              className={`group relative px-3 py-3 rounded-2xl cursor-pointer touch-manipulation transition-all duration-200 ${isActive
                   ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
                   : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 }`}
@@ -327,10 +314,8 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
                   <button
                     ref={(el) => (menuButtonRefs.current[id] = el)}
                     onClick={(e) => openMenu(e, id)}
-                    className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center ${lockConversation
-                      ? "cursor-not-allowed opacity-50"
-                      : "hover:scale-110 active:scale-95 cursor-pointer"
-                      }`}
+                    className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center 
+                      hover:scale-110 active:scale-95 cursor-pointer`}
                     style={{
                       WebkitTapHighlightColor: "transparent",
                     }}

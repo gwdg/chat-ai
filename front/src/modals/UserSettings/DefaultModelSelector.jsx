@@ -6,7 +6,7 @@ import icon_support_audio from "../../assets/icons/support_audio.svg";
 import icon_support_video from "../../assets/icons/support_video.svg";
 import icon_support_reasoning from "../../assets/icons/support_reasoning.svg";
 import icon_support_arcana from "../../assets/icons/support_arcana.svg";
-import DemandStatusIcon from "../../components/Others/DemandStatusIcon";
+import DemandStatusIcon from "../../components/Header/DemandStatusIcon";
 import { selectDefaultModel, setDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 
 export default function DefaultModelSelector({ modelsData }) {

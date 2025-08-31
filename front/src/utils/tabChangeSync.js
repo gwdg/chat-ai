@@ -41,9 +41,6 @@ export function setupTabChangeSync(store) {
         return;
       }
 
-      // Set isResponding to indicate sync in progress
-      store.dispatch({ type: "conversations/setLockConversation", payload: true });
-
       const currentConversationId = currentState.current_conversation;
 
       // Get the current prompt so we can preserve it
@@ -92,14 +89,6 @@ export function setupTabChangeSync(store) {
     } finally {
       finishSync();
     }
-  };
-
-  // Clean up after sync
-  const finishSync = () => {
-    setTimeout(() => {
-      store.dispatch({ type: "conversations/setLockConversation", payload: false });
-      isSyncing = false;
-    }, 300);
   };
 
   // Set up the event listeners

@@ -10,11 +10,13 @@ import SidebarDrawer from "./SidebarDrawer";
 import { createConversation } from "../../db";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 import { useNavigate } from "react-router";
+import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
 export default function SidebarWrapper({ localState, setLocalState, userData, modelsData }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const showSidebar = useSelector(selectShowSidebar);
+  const userSettings = useSelector(selectUserSettings);
   const { isMobile, isTablet, isDesktop } = useWindowSize();
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
   }, [isDesktop, dispatch]);
 
   async function handleNewConversation() {
-    const newId = await createConversation(getDefaultConversation());
+    const newId = await createConversation(getDefaultConversation(userSettings));
     navigate(`/chat/${newId}`);
   };
 

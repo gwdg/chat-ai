@@ -14,20 +14,16 @@ const persistConfig = {
   storage,
   whitelist: [
     "interface_settings",
-    // "conversations",
-    "current_conversation",
+    "last_conversation",
     "user_settings",
     "version",
   ],
 };
 
 const getDefaultState = () => {
-  // const newConversation = getDefaultConversation();
   return {
     version: 4,
-    // conversations: [newConversation],
-    current_conversation: null,
-    // lock_conversation: false,
+    last_conversation: null,
     interface_settings: {
       dark_mode: false,
       show_settings: true,
@@ -61,23 +57,6 @@ const rootReducerWithReset = (state, action) => {
   return newState;
 };
 
-// Custom middleware to prevent certain actions from syncing
-const preventSyncMiddleware = (store) => (next) => (action) => {
-  // Don't sync navigation-related actions - each tab should handle its own navigation
-  if (
-    action.type === "setCurrentConversation" &&
-    action.meta?.skipSync
-  ) {
-    // This is a local navigation action, don't sync it
-    return next({
-      ...action,
-      meta: { ...action.meta, skipBroadcast: true },
-    });
-  }
-
-  return next(action);
-};
-
 const persistedRootReducer = persistReducer(
   persistConfig,
   rootReducerWithReset
@@ -92,18 +71,18 @@ const stateSyncConfig = {
     // "conversations/deleteConversation",
     // "conversations/resetStore",
     // "conversations/setIsResponding",
-    "defaultModel/setDefaultModel",
-    "defaultModel/resetDefaultModel",
-    "theme/toggleTheme",
-    "theme/setDarkMode",
-    "theme/setLightMode",
-    "userMemory/addMemory",
-    "userMemory/editMemory",
-    "userMemory/deleteMemory",
-    "userMemory/deleteAllMemories",
-    "timeout/setTimeoutTime",
-    "timeout/resetTimeoutTime",
-    "timeout/setTimeoutInSeconds",
+    // "defaultModel/setDefaultModel",
+    // "defaultModel/resetDefaultModel",
+    // "theme/toggleTheme",
+    // "theme/setDarkMode",
+    // "theme/setLightMode",
+    // "userMemory/addMemory",
+    // "userMemory/editMemory",
+    // "userMemory/deleteMemory",
+    // "userMemory/deleteAllMemories",
+    // "timeout/setTimeoutTime",
+    // "timeout/resetTimeoutTime",
+    // "timeout/setTimeoutInSeconds",
     "SET_ADV",
     "RESET_ALL",
     "MIGRATE",
@@ -122,7 +101,6 @@ export const store = configureStore({
     getDefaultMiddleware({
       serializableCheck: false, // Ignore checking non-serializable values
     })
-      .concat(preventSyncMiddleware)
       .concat(createStateSyncMiddleware(stateSyncConfig)),
 });
 

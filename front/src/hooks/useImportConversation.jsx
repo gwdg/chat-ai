@@ -1,11 +1,12 @@
 // hooks/useImportConversation.ts (or .js)
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
 import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
 import { createConversation, saveFile } from "../db";
 import { dataURLtoFile } from "../utils/attachments";
+import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 
 /**
  * useImportConversation
@@ -15,7 +16,8 @@ export function useImportConversation() {
   const { notifySuccess, notifyError } = useToast();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const defaultSettings = getDefaultSettings();
+  const userSettings = useSelector(selectUserSettings);
+  const defaultSettings = getDefaultSettings(userSettings);
 
   const extractMessageContent = (message) => {
     let res = [{
@@ -113,8 +115,6 @@ export function useImportConversation() {
 
   const importConversation = async (data) => {
     try {
-      const defaultSettings = getDefaultSettings();
-      
       // Sanitize messages
       let sanitizedMessages = [ {
         role: "system",

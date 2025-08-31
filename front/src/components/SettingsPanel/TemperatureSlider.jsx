@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useModal } from "../../modals/ModalContext";
 import { HelpCircle } from "lucide-react";
 
@@ -45,6 +45,11 @@ export default function TemperatureSlider({ localState, setLocalState }) {
     setIsDragging(false);
     setTimeout(() => setIsClicked(false), 3000);
   };
+
+  // UseEffect to listen to indirect changes to temperature
+  useEffect(() => {
+    setValue(localState?.settings?.temperature || 0.5);
+  }, [localState?.settings?.temperature]);
 
   return (
     <div className="flex flex-row w-full md:items-center">

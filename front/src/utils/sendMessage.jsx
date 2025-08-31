@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 import { useSelector } from "react-redux";
-import { setLockConversation } from "../Redux/reducers/conversationsSlice";
 import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/userSettingsReducer";
 import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";

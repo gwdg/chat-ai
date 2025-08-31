@@ -87,7 +87,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsData, onChan
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="pl-1">
-              <DemandIndicator demand={model.demand} online={model.status === "ready"} />
+              <DemandIndicator demand={model.demand} status={model?.status} />
             </div>
             <span className="font-medium">{model.name}</span>
           </div>
@@ -113,7 +113,7 @@ export default function ModelSelectorSimple({ currentModelId, modelsData, onChan
           {/* Left section - allow to shrink */}
           <div className="flex items-center gap-2 min-w-0">
             <div className="pl-2">
-              <DemandIndicator demand={selectedModel?.demand} online={selectedModel?.status === "ready"} />
+              <DemandIndicator demand={selectedModel?.demand} status={selectedModel?.status} />
             </div>
             <span className="font-medium truncate">{selectedModel?.name}</span>
           </div>

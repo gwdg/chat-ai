@@ -13,7 +13,6 @@ import {
 import { createConversation, resetDB, updateConversation } from "../../db";
 
 import BaseModal from "../BaseModal";
-import { selectLockConversation } from "../../Redux/reducers/conversationsSlice";
 import { setLastConversation } from "../../Redux/reducers/lastConversationSlice";
 
 export default function ConversationConflict({ isOpen, onClose, localState, setLocalState, setUnsavedChanges }) {

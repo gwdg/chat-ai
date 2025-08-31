@@ -1,15 +1,12 @@
 import { Trans } from "react-i18next";
 import BaseModal from "../../modals/BaseModal";
-import {
-  selectConversations,
-  selectCurrentConversationId,
-} from "../../Redux/reducers/conversationsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { persistor } from "../../Redux/store/store";
 import { createConversation, deleteConversation } from "../../db";
 import { getDefaultConversation } from "../../utils/conversationUtils";
+import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
 export default function DeleteConversationModal({
   id,
@@ -20,6 +17,7 @@ export default function DeleteConversationModal({
 }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const userSettings = useSelector(selectUserSettings);
 
   async function handleDelete() {
     const currentIndex = conversations.findIndex((conv) => conv.id === id);
@@ -30,7 +28,7 @@ export default function DeleteConversationModal({
     if (conversations.length === 1) {
       console.log("Only one conversation, creating a new one.");
       
-      const newConversationId = await createConversation(getDefaultConversation());
+      const newConversationId = await createConversation(getDefaultConversation(userSettings));
       console.log("Created new conversation with id:", newConversationId);
       navigate(`/chat/${newConversationId}`);
       // const action = dispatch(addConversation());
