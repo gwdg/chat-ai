@@ -20,6 +20,13 @@ i18n
       en: {
         translation: {
           description: {
+            user_settings: {
+              data_title: "Manage Data",
+              data_description: `Here you can manage all locally stored data. This data is only stored on your device.\n\n
+                                 Clearing data will result in permanently losing access to all past conversations, memories, settings, and attachments.`,
+              clear_data_button: "Clear Data",
+              export_data_button: "Export Data",
+            },
             settings_timeout: {
               requestTimeout: "Request Timeout",
               requestTimeoutDescription:

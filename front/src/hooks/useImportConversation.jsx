@@ -115,6 +115,13 @@ export function useImportConversation() {
 
   const importConversation = async (data) => {
     try {
+      // Handle multiple conversations import
+      if (Array.isArray(data?.conversations)) {
+        for (const c of data.conversations) {
+          importConversation(c);
+        }
+        return;
+      }
       // Sanitize messages
       let sanitizedMessages = [ {
         role: "system",
