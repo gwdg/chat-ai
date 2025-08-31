@@ -3,7 +3,7 @@ import sendMessage from "../utils/sendMessage";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "./useToast";
 import { useFiles } from "../db";
-import { readFileAsBase64, addAttachments, addTextAttachments, pasteAttachments, addAudioAttachment } from "../utils/attachments";
+import { readFileAsBase64, addAttachments, pasteAttachments, addAudioAttachment } from "../utils/attachments";
 
 export function useAttachments() {
   const dispatch = useDispatch();
@@ -13,17 +13,6 @@ export function useAttachments() {
 
   const handleAddAttachments = async ({ localState, setLocalState, selectedFiles }) => {
     await addAttachments({
-      localState,
-      setLocalState,
-      notifyError,
-      notifySuccess,
-      selectedFiles,
-      saveFile,
-    });
-  };
-
-  const handleAddTextAttachments = async ({ localState, setLocalState, selectedFiles }) => {
-    await addTextAttachments({
       localState,
       setLocalState,
       notifyError,
@@ -94,7 +83,6 @@ export function useAttachments() {
     removeAttachment: handleRemoveAttachment,
     addAudioAttachment: handleAddAudioAttachment,
     clearAttachments: handleClearAttachments,
-    addTextAttachments: handleAddTextAttachments,
     pasteAttachments: handlePasteAttachments,
     readFileAsBase64: handleReadFileAsBase64,
   };

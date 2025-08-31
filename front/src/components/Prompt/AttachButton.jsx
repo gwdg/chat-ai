@@ -17,7 +17,7 @@ export default function AttachButton({
     const { notifySuccess, notifyError } = useToast();
     const hiddenFileInput = useRef(null);
 
-    const { addTextAttachments } = useAttachments();
+    const { addAttachments } = useAttachments();
 
     const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
     ? localState.messages[localState.messages.length - 2]?.loading || false
@@ -31,7 +31,7 @@ export default function AttachButton({
 
     // Handle text and CSV file uploads
     const handleFilesChange = async (e) => {
-        addTextAttachments({
+        addAttachments({
             localState,
             setLocalState,
             selectedFiles: e.target.files,

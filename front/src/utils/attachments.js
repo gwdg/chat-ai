@@ -162,58 +162,51 @@ const addAttachments = async ({
 }) => {
     
     try {
-    // All supported file types
-    // const supportedTypes = [
-    //     // Images
-    //     "image/jpeg",
-    //     "image/png",
-    //     "image/gif",
-    //     "image/webp",
-    //     // Videos
-    //     "video/mp4",
-    //     "video/avi",
-    //     "video/msvideo",
-    //     // Audio
-    //     "audio/mpeg",
-    //     "audio/mp3",
-    //     "audio/wav",
-    //     "audio/wave",
-    //     "audio/x-wav",
-    // ];
 
-    // fileType = getFileType(file.type);
-
-    // Filter for supported file types
+    // Validate generic file types
     const files = Array.from(selectedFiles).filter((file) => {
         return (getFileType(file) !== "unknown");
     });
-
-    // Validate file types
+    // Notify if unsupported files were removed
     if (files.length !== selectedFiles.length) {
         console.error("❌ Some files are not supported");
-        notifyError(
-        "File type is not supported"
-        );
+        notifyError("Unsupported File Type(s)");
         return;
     }
 
-    // Process files and check size limits
+    // Further validate files
     const validFiles = [];
     for (const file of files) {
-        // Different size limits based on file type
-        const isAudio = file.type.startsWith("audio/");
-        const sizeLimit = isAudio ? 25 * 1024 * 1024 : 50 * 1024 * 1024; // 25MB for audio, 50MB for media
-        const limitText = isAudio ? "25MB" : "50MB";
+        try {
+            const mimeType = file.type;
 
-        if (file.size > sizeLimit) {
-        console.error(
-            `❌ File too large: ${file.name} (${file.size} bytes > ${sizeLimit} bytes)`
-        );
-        notifyError(
-            `File too large: ${file.name}. Maximum size is ${limitText}.`
-        );
-        } else {
-        validFiles.push(file);
+            // Ensure file does not exceed size limit
+            const isAudio = mimeType.startsWith("audio/");
+            const fileLimit = isAudio ? 25 * 1024 * 1024 : 50 * 1024 * 1024; // 25MB for audio, 50MB for media
+            const fileLimitText = isAudio ? "25MB" : "50MB";
+            if (file.size > fileLimit) {
+                notifyError(
+                    `File too large: ${file.name} Maximum size is ${fileLimitText}.`
+                );
+                continue;
+            }
+
+            // Ensure media type is supported
+            if (mimeType.startsWith("image/")) {
+                if (!["image/jpeg", "image/png", "image/gif", "image/webp"].includes(mimeType))
+                    continue;
+            } else if (mimeType.startsWith("audio/")) {
+                if (!["audio/mpeg","audio/mp3","audio/wav","audio/wave","audio/x-wav"].includes(mimeType))
+                    continue;
+            } else if (mimeType.startsWith("video/")) {
+                if (!["video/mp4","video/avi","video/msvideo"].includes(mimeType))
+                    continue;
+            }
+
+            // All checks successful - keep file
+            validFiles.push(file);
+        } catch (err) {
+            notifyError(`Error while attaching ${file.name}.`);
         }
     }
 
@@ -244,222 +237,6 @@ const addAttachments = async ({
     } catch (error) {
         console.log(error)
     notifyError(`An error occurred: ${error.message}`);
-    }
-};
-
-// Add text attachments
-const addTextAttachments = async ({
-    localState,
-    setLocalState,
-    notifyError,
-    notifySuccess,
-    selectedFiles,
-    saveFile,
-}) => {
-    try {
-      // Filter for text, CSV, PDF and Markdown files
-    //   const excelFiles = Array.from(selectedFiles).filter(
-    //         (file) =>
-    //         file.type ===
-    //             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || // .xlsx
-    //         file.type === "application/vnd.ms-excel" || // .xls
-    //         file.name.toLowerCase().endsWith(".xlsx") ||
-    //         file.name.toLowerCase().endsWith(".xls")
-    //     );
-
-    //     const docxFiles = Array.from(selectedFiles).filter(
-    //         (file) =>
-    //         file.type ===
-    //             "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || // .docx
-    //         file.name.toLowerCase().endsWith(".docx")
-    //     );
-
-    //     const textFiles = Array.from(selectedFiles).filter(
-    //         (file) => file.type === "text/plain"
-    //     );
-    //     const csvFiles = Array.from(selectedFiles).filter(
-    //         (file) => file.type === "text/csv"
-    //     );
-    //     const pdfFiles = Array.from(selectedFiles).filter(
-    //         (file) => file.type === "application/pdf"
-    //     );
-    //     const mdFiles = Array.from(selectedFiles).filter(
-    //         (file) => file.type === "text/markdown" || file.name.endsWith(".md")
-    //     );
-    //     const codeFiles = Array.from(selectedFiles).filter(
-    //         (file) =>
-    //         file.name.endsWith(".py") ||
-    //         file.name.endsWith(".js") ||
-    //         file.name.endsWith(".java") ||
-    //         file.name.endsWith(".cpp") ||
-    //         file.name.endsWith(".c") ||
-    //         file.name.endsWith(".h") ||
-    //         file.name.endsWith(".cs") ||
-    //         file.name.endsWith(".rb") ||
-    //         file.name.endsWith(".php") ||
-    //         file.name.endsWith(".go") ||
-    //         file.name.endsWith(".rs") ||
-    //         file.name.endsWith(".swift") ||
-    //         file.name.endsWith(".kt") ||
-    //         file.name.endsWith(".ts") ||
-    //         file.name.endsWith(".jsx") ||
-    //         file.name.endsWith(".tsx") ||
-    //         file.name.endsWith(".html") ||
-    //         file.name.endsWith(".json") ||
-    //         file.name.endsWith(".tex") ||
-    //         file.name.endsWith(".yaml") ||
-    //         file.name.endsWith(".toml") ||
-    //         file.name.endsWith(".dart") ||
-    //         file.name.endsWith(".tex") ||
-    //         file.name.endsWith(".xml") ||
-    //         file.name.endsWith(".yaml") ||
-    //         file.name.endsWith(".yml") ||
-    //         file.name.endsWith(".csv") ||
-    //         file.name.endsWith(".ini") ||
-    //         file.name.endsWith(".toml") ||
-    //         file.name.endsWith(".properties") ||
-    //         file.name.endsWith(".css") ||
-    //         file.name.endsWith(".scss") ||
-    //         file.name.endsWith(".sass") ||
-    //         file.name.endsWith(".less") ||
-    //         file.name.endsWith(".sh") ||
-    //         file.name.endsWith(".ps1") ||
-    //         file.name.endsWith(".pl") ||
-    //         file.name.endsWith(".lua") ||
-    //         file.name.endsWith(".r") ||
-    //         file.name.endsWith(".m") ||
-    //         file.name.endsWith(".mat") ||
-    //         file.name.endsWith(".asm") ||
-    //         file.name.endsWith(".sql") ||
-    //         file.name.endsWith(".ipynb") ||
-    //         file.name.endsWith(".rmd") ||
-    //         file.name.endsWith(".dockerfile") ||
-    //         file.name.endsWith(".proto") ||
-    //         file.name.endsWith(".cfg") ||
-    //         file.name.endsWith(".bat")
-    //     );
-
-    //     const totalProcessedFiles =
-    //         textFiles.length +
-    //         csvFiles.length +
-    //         pdfFiles.length +
-    //         mdFiles.length +
-    //         codeFiles.length +
-    //         excelFiles.length +
-    //         docxFiles.length;
-
-    //     if (totalProcessedFiles !== selectedFiles.length) {
-    //         notifyError(
-    //         "All files must be text, CSV, PDF, Excel, DOCX, Markdown, or code files"
-    //         );
-    //         return;
-    //     }
-
-    //     const filesWithText = [];
-
-    //     for (const file of excelFiles) {
-    //         filesWithText.push({
-    //         name: file.name,
-    //         size: file.size,
-    //         file: file,
-    //         originalFile: file,
-    //         fileType: "excel",
-    //         processed: false,
-    //         content: null,
-    //         processedContent: null,
-    //         });
-    //     }
-
-    //     // Add processing for DOCX files
-    //     for (const file of docxFiles) {
-    //         filesWithText.push({
-    //         name: file.name,
-    //         size: file.size,
-    //         file: file,
-    //         originalFile: file,
-    //         fileType: "docx",
-    //         processed: false,
-    //         content: null,
-    //         processedContent: null,
-    //         });
-    //     }
-
-    //     // Process code files
-    //     for (const file of codeFiles) {
-    //         const content = await readFileAsText(file);
-    //         filesWithText.push({
-    //         name: file.name,
-    //         size: file.size,
-    //         content,
-    //         fileType: "code",
-    //         });
-    //     }
-
-    //     // Process text files
-    //     for (const file of textFiles) {
-    //         const content = await readFileAsText(file);
-    //         filesWithText.push({
-    //         name: file.name,
-    //         size: file.size,
-    //         content,
-    //         fileType: "text",
-    //         });
-    //     }
-
-    //     // Process CSV files
-    //     for (const file of csvFiles) {
-    //         const text = await readFileAsText(file);
-    //         filesWithText.push({
-    //         name: file.name,
-    //         size: file.size,
-    //         data: formatCSVText(text),
-    //         fileType: "csv",
-    //         });
-    //     }
-
-    //     // Process Markdown files
-    //     for (const file of mdFiles) {
-    //         const content = await readFileAsText(file);
-    //         filesWithText.push({
-    //         name: file.name,
-    //         size: file.size,
-    //         data,
-    //         fileType: "markdown",
-    //         });
-    //     }
-
-        
-
-    // 🔥 UPDATED: Process PDF files - PRESERVE ORIGINAL FILE
-    // for (const file of pdfFiles) {
-    //     filesWithText.push({
-    //     name: file.name,
-    //     size: file.size,
-    //     file: file, // Keep the original File object for processing
-    //     originalFile: file, // ADDED: Also store as originalFile for preview
-    //     fileType: "pdf",
-    //     processed: false,
-    //     content: null, // Will be filled when processed
-    //     processedContent: null, // Will be filled when processed
-    //     });
-    // }
-
-    const newAttachments = []
-    for (const selectedFile of selectedFiles) {
-        // TODO check if files can be processed
-        const fileId = saveFile(localState.messages[localState.messages.length-1].id, selectedFile)
-        newAttachments.push({"type": "file", "fileId": fileId});
-    }
-
-    // Update state with new files
-    appendAttachments({
-        localState,
-        setLocalState,
-        newAttachments
-    });
-    } catch (error) {
-        console.log(error)
-        notifyError("An error occurred: ", error);
     }
 };
 
@@ -673,4 +450,4 @@ const pasteAttachments = async ({
     }
 };
 
-export { addAttachments, addTextAttachments, addAudioAttachment, pasteAttachments };
+export { addAttachments, addAudioAttachment, pasteAttachments };
