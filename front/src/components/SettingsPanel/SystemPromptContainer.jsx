@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Trans } from "react-i18next";
 import { HelpCircle } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
@@ -19,6 +19,11 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
     }
     return true;
   };
+
+  // UseEffect to listen to indirect changes to system prompt
+  useEffect(() => {
+    setValue(localState.messages[0]?.content[0]?.text || "");
+  }, [localState.messages[0]?.content[0]]);
 
   // Handle changes to the system instructions/prompt
   const saveSystemPrompt = () => {

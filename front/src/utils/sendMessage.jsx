@@ -119,7 +119,8 @@ export async function processContentItems({
       }
     }
   }
-
+  if (output.length == 1 && typeof output[0]?.text === "string")
+    return output[0].text;
   return output;
 }
 
