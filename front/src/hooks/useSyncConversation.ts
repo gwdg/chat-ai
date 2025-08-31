@@ -97,6 +97,7 @@ export function useSyncConversation({
   const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   const timeoutIds = useRef({});
+  const lastModified = useRef(0);
   const delay = 1000;
 
   // Effect 1: Try to load conversation on mount
@@ -104,6 +105,7 @@ export function useSyncConversation({
     (async () => {
       setInitialized(false);
       const conversation = await loadConversation(navigate, conversationId, lastConversation);
+      lastModified.current = conversation?.lastModified || 0;
       if (!conversation) return;
       setLocalState(conversation);
     })();
@@ -119,7 +121,7 @@ export function useSyncConversation({
     }
     const currentConversation = localState?.id;
     // Check if want to write immediately
-    const saveImmediately = localState?.flush || false;
+    const flushChanges = localState?.flush || false;
     if (localState?.flush) {
         console.log("Flushing to DB....")
         delete localState.flush
@@ -133,20 +135,20 @@ export function useSyncConversation({
     }
     // Schedule a save after `delay` ms
     timeoutIds.current[currentConversation] = setTimeout(async () => {
-      const lastModified = await updateConversation(
+      const newLastModified = await updateConversation(
         currentConversation,
-        localState
+        { ...localState, lastModified: lastModified.current }
       )
-      if (lastModified === -1) { // Conflict detected
+      if (newLastModified === -1) { // Conflict detected
         console.log("Conflict detected")
         openModal("conversationConflict", {localState, setLocalState, setUnsavedChanges});
         return;
       }
       console.log("Conversation auto-saved");
       setUnsavedChanges(false);
-      localState.lastModified = lastModified;
+      lastModified.current = newLastModified;
       delete timeoutIds.current[currentConversation];
-    }, (saveImmediately ? 0 : delay));
+    }, (flushChanges ? 0 : delay));
   }, [localState, delay]);
 
   // Effect 3: Listen for tab visibility changes
@@ -173,12 +175,13 @@ export function useSyncConversation({
       if (unsavedChanges) return; // Wait for user decision
       // Check if any changes were made while inactive
       const currentConversation = localState?.id;
-      const lastModified = (await getConversationMeta(currentConversation)).lastModified;
-      if (lastModified === localState.lastModified) return; // No changes
+      const lastModifiedDB = (await getConversationMeta(currentConversation)).lastModified;
+      if (lastModified === lastModifiedDB) return; // No changes
       // Changes detected, load from DB
       setInitialized(false);
       const conversation = await loadConversation(navigate, conversationId, lastConversation);
       if (!conversation) return;
+      lastModified.current = conversation?.lastModified || 0;
       setLocalState(conversation);
       console.log("Loaded updated conversation from browser");
     })();
