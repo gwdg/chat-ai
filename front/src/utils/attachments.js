@@ -9,9 +9,15 @@ export const readFileAsBase64 = (file) => {
 };
 
 // function to convert base64 to a File object
-export function dataURLtoFile(dataurl, filenameWithoutExt) {
+export function dataURLtoFile(dataurl, filenameWithoutExt, mimeType = null) {
     const arr = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
+    let mime;
+    try {
+        mime = mimeType || arr[0].match(/:(.*?);/)[1];
+    } catch (err) {
+        console.log("Failed to extract mimeType of file")
+        return null;
+    }
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);

@@ -17,7 +17,8 @@ export async function processContentItems({
   ignoreImages = false, 
   ignoreAudio = false, 
   ignoreVideo = false, 
-  ignoreFiles = false,
+  ignoreDocs = false,
+  convertDocs = true,
 }) {
   const output = [];
   for (const item of items) {
@@ -41,7 +42,7 @@ export async function processContentItems({
       if (ignoreImages && fileType === "image") continue;
       else if (ignoreAudio && fileType === "audio") continue;
       else if (ignoreVideo && fileType === "video") continue;
-      else if (ignoreFiles
+      else if (ignoreDocs
         && fileType !== "image"
         && fileType !== "audio"
         && fileType !== "video")
@@ -86,13 +87,13 @@ export async function processContentItems({
           }
         });
       }
-      else if (fileType === "pdf") {
-        // Shouldn't send unprocessed PDF file
-        continue;
-      }
-      else {
+      else if (convertDocs) {
+        if (fileType === "pdf") {
+          // Shouldn't send unprocessed PDF file
+          continue;
+        }
+        // Try to add file as text
         try {
-          // Send file as text
           const textContent = await readFileAsText(file);
           output.push({
             type: "text",
@@ -101,6 +102,20 @@ export async function processContentItems({
         } catch (error) {
           console.warn(`Unsupported file type: ${mimeType}, ${error}`);
         }
+      } else {
+          // Try to add file in OpenAI format
+          try {
+            const base64Data = await readFileAsBase64(file);
+            output.push({
+              type: "file",
+              file: {
+                file_data: base64Data,
+                filename: file.name,
+              }
+            });
+          } catch (error) {
+            console.warn(`Unsupported file type: ${mimeType}, ${error}`);
+          }
       }
     }
   }

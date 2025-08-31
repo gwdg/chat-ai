@@ -56,9 +56,11 @@ export function useImportConversation() {
       // If contentItem is an audio file
       if (content?.type === "input_audio") {
         if (!content?.input_audio || !content?.input_audio?.data) return res;
-        const dataURL = content.input_audio.data; // base64
         const format = content.input_audio?.format || "wav";
         const filename = content?.name || content.input_audio?.filename || "audio"; 
+        const mimeType = format === "wav" ? "audio/wav" : "audio/mpeg";
+        // Convert OpenAI format to DataURL
+        const dataURL = "data:" + mimeType + ";base64," + content.input_audio.data;
         const file = dataURLtoFile(dataURL, filename);
         if (!file) return res; // fallback
         const fileId = saveFile(null, file);

@@ -102,7 +102,6 @@ export function useSyncConversation({
   // Effect 1: Try to load conversation on mount
   useEffect(() => {
     (async () => {
-      console.log("Setting initializd to false")
       setInitialized(false);
       const conversation = await loadConversation(navigate, conversationId, lastConversation);
       if (!conversation) return;

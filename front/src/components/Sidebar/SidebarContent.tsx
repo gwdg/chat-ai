@@ -417,7 +417,6 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
                     flush: true,
                   }));
                 }
-                console.log(conv);
                 openModal("exportConversation", { localState, conversationId: conv.id });
                 closeMenu();
               }}

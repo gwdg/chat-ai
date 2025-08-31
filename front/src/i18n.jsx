@@ -270,7 +270,7 @@ i18n
             dont_show_again: "Don't show this again",
 
             exportSettings: "Include model and options",
-            exportImages: "Include images",
+            exportFiles: "Include files",
             exportArcana: "Include Arcana details",
             arcana_warn:
               "Warning: Exporting Arcana details to a file may compromise your private data, as it can be accessed by others.",

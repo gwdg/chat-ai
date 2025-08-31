@@ -6,10 +6,11 @@ import icon_file_json from "../../assets/icons/file_json.svg";
 import icon_file_pdf from "../../assets/icons/file_pdf.svg";
 import icon_file_text from "../../assets/icons/file_text.svg";
 import { selectCurrentConversation } from "../../Redux/reducers/conversationsSlice";
-import { getConversation } from "../../db";
+import { getConversation, loadFile, loadFileMeta } from "../../db";
 import { useToast } from "../../hooks/useToast";
 import { jsPDF } from "jspdf";
 import Logo from "../../assets/logos/chat_ai.png"
+import { processContentItems } from "../../utils/sendMessage";
 
 export default function ExportConversationModal({
   isOpen,
@@ -19,11 +20,13 @@ export default function ExportConversationModal({
 }) {
   const [exportFormat, setExportFormat] = useState("json");
   const [exportSettings, setExportSettings] = useState(true);
-  const [exportFiles, setExportFiles] = useState(false);
   const [exportArcana, setExportArcana] = useState(false);
-  const [containsFiles, setContainsFiles] = useState(false);
-  const {notifyError, notifySuccess } = useToast();
+  const [exportFiles, setExportFiles] = useState(false);
+  const [containsFiles, setContainsFiles] = useState(true); // TODO set dynamically
   const [conversation, setConversation] = useState(null);
+
+  const { notifyError, notifySuccess } = useToast();
+
 
   // Async function to load conversation from DB
   const refreshConversation = async () => {
@@ -32,7 +35,6 @@ export default function ExportConversationModal({
       return;
     }
     const data = await getConversation(conversationId);
-    console.log("Data from DB: ", data)
     if (data) setConversation(data);
   };
 
@@ -55,8 +57,7 @@ export default function ExportConversationModal({
   const messages = conversation?.messages
   const arcana = conversation.settings?.arcana
 
-  // ==== EXPORT FUNCTIONALITY ====
-  // Generate timestamped filename for exports
+  // Function to generate timestamped filename for exports
   const generateFileName = (extension) => {
     const date = new Date();
     const year = date.getFullYear();
@@ -69,31 +70,48 @@ export default function ExportConversationModal({
   };
 
   // Function to process messages into export format
-  const processMessages = () => {
+  const processMessages = async () => {
     let processedMessages = [];
     if (!Array.isArray(messages)) return processedMessages;
+    let expectUser = true;
     for (let i = 0; i < messages.length; i++) {
       if (!messages[i]?.content) continue;
-      if (!["system", "user", "assistant", "info"].includes(messages[i]?.role)) continue;
-      const role = messages[i].role;
+      const role = messages[i]?.role;
+      if (!["system", "user", "assistant", "info"].includes(role)) continue;
       const content = messages[i].content;
       let processedMessage = {"role": role};
       if (typeof content === "string") processedMessage.content = content;
       else if (Array.isArray(content)) {
-        
-        if (content.length === 0) continue;
+        if (content.length === 0) continue; // Invalid message
         if (content.length === 1 && content[0]?.text != null) {
           processedMessage.content = content[0].text;
+        } else if (exportFiles) {
+          // Content includes files
+          processedMessage.content = await processContentItems({
+            items: content,
+            convertDocs: false, // Keep OpenAI file format
+          })
         } else {
-          processedMessage.content = content;
+          // Ignore files
+          processedMessage.content = content[0]?.text || "";
         }
       }
+
       // Check if empty user prompt at the end
       if (i === messages.length-1 
         && processedMessage.role === "user" 
         && processedMessage.content === "")
           continue;
+
+      // Handle user-assistant not switching roles
+      if (role === "assistant" && expectUser)
+        processedMessages.push({"role": "user", "content": ""})
+      else if (role === "user" && !expectUser)
+        processedMessages.push({"role": "assistant", "content": ""})
+
       processedMessages.push(processedMessage);
+      if (role === "user") expectUser = false;
+      if (role === "assistant") expectUser = true;
     }
     return processedMessages;
   }
@@ -118,10 +136,10 @@ export default function ExportConversationModal({
   };
 
   // Export conversation as plain text
-  const exportTextFile = () => {
+  const exportTextFile = async () => {
     try {
       // Process Messages
-      let processedMessages = processMessages(conversation.messages);
+      let processedMessages = await processMessages();
 
       // Convert messages to formatted text
       let textContent = processedMessages
@@ -181,25 +199,10 @@ export default function ExportConversationModal({
   };
 
   // Export conversation as JSON
-  const exportJSON = () => {
+  const exportJSON = async () => {
     try {
       // Process Messages
-      let processedMessages = processMessages(conversation.messages);
-
-      // TODO Filter out files if not enabled
-      // if (!exportFiles) {
-      //   processedMessages = processedMessages.map((msg) => {
-      //     if (Array.isArray(msg.content)) {
-      //       let filteredContent = msg.content
-      //         .filter((item) => item.type === "text")
-      //         .map((item) => item.text)
-      //         .join("\n");
-
-      //       return { ...msg, content: filteredContent };
-      //     }
-      //     return msg;
-      //   });
-      // }
+      let processedMessages = await processMessages(conversation.messages);
       let exportData = {messages: processedMessages};
 
       // Add settings if enabled
@@ -304,7 +307,7 @@ export default function ExportConversationModal({
       resetTextStyle();
 
       // Process Messages
-      let processedMessages = processMessages(conversation.messages);
+      let processedMessages = await processMessages();
 
       // Convert messages to formatted text
       // let textContent = processedMessages
@@ -478,11 +481,11 @@ export default function ExportConversationModal({
   const handleExport = async () => {
     await refreshConversation();
     if (exportFormat === "json") {
-      exportJSON();
+      await exportJSON();
     } else if (exportFormat === "pdf") {
-      exportPDF();
+      await exportPDF();
     } else if (exportFormat === "text") {
-      exportTextFile();
+      await exportTextFile();
     }
     onClose();
   };
@@ -493,15 +496,15 @@ export default function ExportConversationModal({
     { id: "text", icon: icon_file_text, label: "description.fileFormat3" },
   ];
 
-  const handleCheckboxChange = (event) => {
+  const toggleExportSettings = (event) => {
     setExportSettings(event.target.checked);
   };
 
-  const handleCheckboxChangeFiles = (event) => {
+  const toggleExportFiles = (event) => {
     setExportFiles(event.target.checked);
   };
 
-  const handleCheckboxChangeArcana = (event) => {
+  const toggleExportArcana = (event) => {
     setExportArcana(event.target.checked);
   };
 
@@ -549,7 +552,7 @@ export default function ExportConversationModal({
                 type="checkbox"
                 id="exportArcana"
                 checked={exportArcana}
-                onChange={handleCheckboxChangeArcana}
+                onChange={toggleExportArcana}
                 className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
                   !arcana.id ? "bg-gray-400 cursor-not-allowed" : ""
                 }`}
@@ -571,7 +574,7 @@ export default function ExportConversationModal({
             type="checkbox"
             id="exportSettings"
             checked={exportSettings}
-            onChange={handleCheckboxChange}
+            onChange={toggleExportSettings}
             className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
           />
           <label
@@ -582,13 +585,13 @@ export default function ExportConversationModal({
           </label>
         </div>
 
-        {/* Export Images Checkbox */}
+        {/* Export files checkbox */}
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
             id="exportFiles"
             checked={exportFiles}
-            onChange={handleCheckboxChangeFiles}
+            onChange={toggleExportFiles}
             className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
               !containsFiles ? "bg-gray-400 cursor-not-allowed" : ""
             }`}
@@ -598,7 +601,7 @@ export default function ExportConversationModal({
             htmlFor="exportFiles"
             className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
           >
-            <Trans i18nKey="description.exportImages" />
+            <Trans i18nKey="description.exportFiles" />
           </label>
         </div>
 
