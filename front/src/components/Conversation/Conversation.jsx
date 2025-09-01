@@ -25,336 +25,301 @@ export default function Conversation({
   const showSettings = useSelector(selectShowSettings);
   const [copied, setCopied] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const emptyConversation = Boolean(localState?.messages?.length <= 2);
-  // New state for scroll management
-  const [userScrolledUp, setUserScrolledUp] = useState(false);
-  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
 
-  //Refs
-  const containerRefs = useRef([]);
-
+  // Refs
   const containerRef = useRef(null);
-  const scrollTimeout = useRef(null);
-  const lastResponseLength = useRef(0);
+  const previousMessageLength = useRef(0);
+  const userHasScrolledUp = useRef(false);
+  const autoScrollActive = useRef(false);
   const lastScrollTop = useRef(0);
-  const autoScrollTimeout = useRef(null);
 
-  // Enhanced scroll to bottom function
-  const scrollToBottom = useCallback(
-    (forceSmooth = false, isUserInitiated = false) => {
-      if (!containerRef.current) return;
+  // Check if container has actual overflow
+  const hasOverflow = useCallback(() => {
+    if (!containerRef.current) return false;
+    return (
+      containerRef.current.scrollHeight > containerRef.current.clientHeight + 5
+    ); // 5px tolerance
+  }, []);
 
-      const container = containerRef.current;
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+  // Check if user is at bottom of chat
+  const checkIfAtBottom = useCallback(() => {
+    if (!containerRef.current) return true;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    return scrollHeight - scrollTop - clientHeight < 50; // 50px threshold
+  }, []);
 
-      // If user initiated, always scroll and update state
-      if (isUserInitiated) {
-        setUserScrolledUp(false);
-        setIsAutoScrolling(true);
+  // Direct scroll to bottom without animation
+  const scrollToBottom = useCallback(() => {
+    if (!containerRef.current) return;
+    containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    userHasScrolledUp.current = false;
+  }, []);
 
-        container.scrollTo({
-          top: scrollHeight,
-          behavior: "smooth",
-        });
-
-        // Clear auto-scrolling flag after animation
-        if (autoScrollTimeout.current) {
-          clearTimeout(autoScrollTimeout.current);
-        }
-        autoScrollTimeout.current = setTimeout(() => {
-          setIsAutoScrolling(false);
-        }, 1000);
-        return;
-      }
-
-      // For auto-scroll, only proceed if user hasn't scrolled up
-      if (!userScrolledUp) {
-        const behavior =
-          forceSmooth || distanceFromBottom < 500 ? "smooth" : "auto";
-
-        setIsAutoScrolling(true);
-        container.scrollTo({
-          top: scrollHeight,
-          behavior,
-        });
-
-        // Clear auto-scrolling flag
-        if (autoScrollTimeout.current) {
-          clearTimeout(autoScrollTimeout.current);
-        }
-        autoScrollTimeout.current = setTimeout(
-          () => {
-            setIsAutoScrolling(false);
-          },
-          behavior === "smooth" ? 1000 : 100
-        );
-      }
-    },
-    [userScrolledUp]
-  );
-
-  // Enhanced scroll handler that detects user intent
+  // Handle scroll events
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
 
-    if (scrollTimeout.current) {
-      clearTimeout(scrollTimeout.current);
+    const currentScrollTop = containerRef.current.scrollTop;
+
+    // Detect if user is scrolling up (against auto-scroll)
+    if (currentScrollTop < lastScrollTop.current - 5) {
+      userHasScrolledUp.current = true;
+      autoScrollActive.current = false;
     }
 
-    scrollTimeout.current = setTimeout(() => {
-      const container = containerRef.current;
-      if (!container) {
-        return;
-      }
-      const { scrollTop, scrollHeight, clientHeight } = container;
+    lastScrollTop.current = currentScrollTop;
 
-      // More sensitive scroll direction detection (only when not auto-scrolling)
-      if (!isAutoScrolling) {
-        const scrolledUp = scrollTop < lastScrollTop.current - 5; // Add threshold
-        const isAtBottom = scrollHeight - (scrollTop + clientHeight) < 20; // Increase threshold
+    const atBottom = checkIfAtBottom();
+    setIsAtBottom(atBottom);
 
-        // Update user scroll state with better logic
-        if (scrolledUp) {
-          setUserScrolledUp(true);
-        } else if (isAtBottom) {
-          setUserScrolledUp(false);
-        }
-      }
+    // Reset flag if user scrolled back to bottom
+    if (atBottom) {
+      userHasScrolledUp.current = false;
+    }
 
-      // Better scroll button visibility logic (always update regardless of auto-scrolling)
-      const hasOverflow = scrollHeight > clientHeight + 10;
-      const scrolledFromBottom = scrollHeight - (scrollTop + clientHeight);
-      setShowScrollButton(hasOverflow && scrolledFromBottom > 150); // Show when above 150px threshold
+    // Update button visibility - ONLY show if there's overflow AND not at bottom
+    const shouldShowButton = hasOverflow() && !atBottom;
+    setShowScrollButton(shouldShowButton);
+  }, [checkIfAtBottom, hasOverflow]);
 
-      lastScrollTop.current = scrollTop;
-    }, 16); // Reduce to ~60fps for smoother detection
-  }, []); // Remove isAutoScrolling dependency
-
-  // Click handler for scroll button
+  // Handle scroll button click
   const handleScrollButtonClick = useCallback(() => {
-    scrollToBottom(true, true); // force smooth scroll, user initiated
+    userHasScrolledUp.current = false;
+    autoScrollActive.current = true;
+    scrollToBottom();
+    setShowScrollButton(false);
   }, [scrollToBottom]);
 
+  // Auto-scroll for new messages
   useEffect(() => {
-    if (!copied) return;
+    if (!localState?.messages || !containerRef.current) return;
 
-    const timer = setTimeout(() => {
-      setCopied(false);
-    }, 1000);
+    const messages = localState.messages.slice(0, -1);
+    const currentLength = JSON.stringify(messages).length;
 
-    return () => clearTimeout(timer);
-  }, [copied]);
+    if (currentLength !== previousMessageLength.current) {
+      // Only auto-scroll if user hasn't scrolled up and there's overflow
+      if (!userHasScrolledUp.current && hasOverflow()) {
+        autoScrollActive.current = true;
+        // Small delay to ensure DOM is updated
+        setTimeout(() => {
+          if (autoScrollActive.current && !userHasScrolledUp.current) {
+            scrollToBottom();
+          }
+        }, 10);
+      }
 
-  // Enhanced effect for auto-scrolling with user intent detection
-  // useEffect(() => {
-  //   if (!containerRef.current || !localState.responses) return;
+      previousMessageLength.current = currentLength;
+    }
+  }, [localState?.messages, hasOverflow, scrollToBottom]);
 
-  //   const currentLength = localState.responses.length;
-  //   const lastResponse = localState.responses[currentLength - 1];
-
-  //   // Only auto-scroll if user hasn't manually scrolled up
-  //   if (!userScrolledUp) {
-  //     // For new responses
-  //     if (currentLength > lastResponseLength.current) {
-  //       scrollToBottom(true); // smooth scroll for new responses
-  //     }
-  //     // For updating responses, check if user is near bottom
-  //     else if (lastResponse?.response && (loading || loadingResend)) {
-  //       const container = containerRef.current;
-  //       const { scrollTop, scrollHeight, clientHeight } = container;
-  //       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-
-  //       // Only auto-scroll if very close to bottom
-  //       if (distanceFromBottom < 50) {
-  //         scrollToBottom(false); // instant scroll for updates
-  //       }
-  //     }
-  //   }
-
-  //   lastResponseLength.current = currentLength;
-  // }, [
-  //   localState.responses,
-  //   loading,
-  //   scrollToBottom,
-  //   loadingResend,
-  //   userScrolledUp,
-  // ]);
-
+  // Continuous scroll for streaming responses
   useEffect(() => {
-    handleScroll();
-  }, [localState.responses, handleScroll]);
+    if (!localState?.messages) return;
 
-  // Cleanup and event listeners
-  useEffect(() => {
-    const container = containerRef.current;
-    if (container) {
-      // Initial check
-      handleScroll();
+    const messages = localState.messages.slice(0, -1);
+    const lastMessage = messages[messages.length - 1];
 
-      // Use passive listeners for better scroll performance
-      container.addEventListener("scroll", handleScroll, { passive: true });
-      window.addEventListener("resize", handleScroll, { passive: true });
+    // Only set up interval for assistant messages
+    if (lastMessage?.role === "assistant" && !userHasScrolledUp.current) {
+      const interval = setInterval(() => {
+        // Stop if user has scrolled up or no overflow
+        if (
+          userHasScrolledUp.current ||
+          !hasOverflow() ||
+          !containerRef.current
+        ) {
+          clearInterval(interval);
+          return;
+        }
+
+        // Keep scrolling to bottom during streaming
+        if (checkIfAtBottom()) {
+          autoScrollActive.current = true;
+          containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        }
+      }, 50); // Very frequent updates for smooth streaming
+
+      // Cleanup after 30 seconds
+      const timeout = setTimeout(() => clearInterval(interval), 30000);
 
       return () => {
-        container.removeEventListener("scroll", handleScroll);
-        window.removeEventListener("resize", handleScroll);
-        if (scrollTimeout.current) {
-          clearTimeout(scrollTimeout.current);
-        }
-        if (autoScrollTimeout.current) {
-          clearTimeout(autoScrollTimeout.current);
-        }
+        clearInterval(interval);
+        clearTimeout(timeout);
       };
     }
+  }, [localState?.messages, checkIfAtBottom, hasOverflow]);
+
+  // Set up scroll listener
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Add both passive scroll and active wheel listeners
+    const scrollHandler = () => handleScroll();
+    const wheelHandler = (e) => {
+      // Detect manual wheel scroll
+      if (e.deltaY < 0) {
+        // Scrolling up
+        userHasScrolledUp.current = true;
+        autoScrollActive.current = false;
+      }
+      handleScroll();
+    };
+
+    container.addEventListener("scroll", scrollHandler, { passive: true });
+    container.addEventListener("wheel", wheelHandler, { passive: true });
+
+    // Initial check
+    handleScroll();
+
+    return () => {
+      container.removeEventListener("scroll", scrollHandler);
+      container.removeEventListener("wheel", wheelHandler);
+    };
   }, [handleScroll]);
 
-  // useEffect(() => {
-  //   const handleClickOutside = (event) => {
-  //     if (
-  //       containerRef.current &&
-  //       !containerRef.current.contains(event.target)
-  //     ) {
-  //       setEditingIndex(-1);
-  //       setEditingResponseIndex(-1);
-  //       setIsEditing(false);
-  //     }
-  //   };
-
-  //   document.addEventListener("mousedown", handleClickOutside);
-  //   return () => document.removeEventListener("mousedown", handleClickOutside);
-  // }, []);
-
-  // Add this new effect after your existing useEffects
+  // Reset when conversation changes
   useEffect(() => {
-    // Reset scroll state when conversation changes significantly
-    if (localState?.messages?.length === 2) {
-      setUserScrolledUp(false);
+    if (localState?.messages?.length <= 2) {
+      setIsAtBottom(true);
       setShowScrollButton(false);
+      previousMessageLength.current = 0;
+      userHasScrolledUp.current = false;
+      autoScrollActive.current = false;
+      lastScrollTop.current = 0;
     }
   }, [localState?.messages?.length]);
 
+  // Handle copied state
   useEffect(() => {
-    if (localState?.messages?.length > 2 && containerRef.current) {
-      const container = containerRef.current;
-      const hasOverflow = container.scrollHeight > container.clientHeight;
-      if (hasOverflow) {
-        setShowScrollButton(true);
-      }
-    }
-  }, [localState?.responses?.length]);
-
-  // Add this new useEffect after your existing ones
-  // useEffect(() => {
-  //   // Ensure scroll button shows when user scrolls up during loading
-  //   if ((loading || loadingResend) && userScrolledUp && containerRef.current) {
-  //     const container = containerRef.current;
-  //     const { scrollTop, scrollHeight, clientHeight } = container;
-  //     const hasOverflow = scrollHeight > clientHeight + 10;
-  //     const scrolledFromBottom = scrollHeight - (scrollTop + clientHeight);
-
-  //     if (hasOverflow && scrolledFromBottom > 150) {
-  //       setShowScrollButton(true);
-  //     }
-  //   }
-  // }, [loading, loadingResend, userScrolledUp]);
-
-  // if (localState.messages?.length <= 2) return null;
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1000);
+    return () => clearTimeout(timer);
+  }, [copied]);
 
   return (
-
     <div
-      className={`w-full md:max-w-[85vw] xl:max-w-[75vw] xl:max-w-[1300px]
-                        transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none
-                        mx-auto flex flex-col gap-2 relative min-h-0  h-full overflow-hidden
-        ${emptyConversation ? "justify-start" : "justify-between"} 
-            `}
+      className={`w-full md:max-w-[85vw] xl:max-w-[1300px]
+                  transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none
+                  mx-auto flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
+                  ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
       {/* Model selector at top, on tablet and desktop */}
-      <div className ={`hidden md:block`} >
-      <ModelSelectorWrapper
-        localState={localState}
-        setLocalState={setLocalState}
-        modelsData={modelsData}
-      />
+      <div className="hidden md:block">
+        <ModelSelectorWrapper
+          localState={localState}
+          setLocalState={setLocalState}
+          modelsData={modelsData}
+        />
       </div>
 
       {/* Empty conversation */}
       <div
         className={`flex flex-col space-y-16 md:max-h-[40vh] xl:max-h-[40vh] justify-end
-          ${
-          emptyConversation
-            ? "flex-grow "
-            : "absolute pointer-events-none"
-        }`}
+          ${emptyConversation ? "flex-grow" : "absolute pointer-events-none"}`}
       >
         <div
           className={`transition-all duration-500 ease-in-out p-10  
-          ${
-            emptyConversation
-              ? "scale-100 opacity-80"
-              : "scale-90 opacity-0 pointer-events-none"
-          }
-        `}
+            ${
+              emptyConversation
+                ? "scale-100 opacity-80"
+                : "scale-90 opacity-0 pointer-events-none"
+            }`}
         >
-        
-        {emptyConversation && <EmptyConversation localState={localState} userData={userData} />}
+          {emptyConversation && (
+            <EmptyConversation localState={localState} userData={userData} />
+          )}
         </div>
       </div>
 
-      {/* Messages area - Key changes here */}
+      {/* Messages area */}
       <div
         className={`flex flex-col relative w-full rounded-xl
-        bg-white dark:bg-bg_secondary_dark shadow-md dark:shadow-dark
-        transition-opacity duration-500 ease-in-out
-        ${
-          localState.messages.length <= 2
-            ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden"
-            : "scale-100 opacity-100 flex-1 min-h-0"
-        }`}
+          bg-white dark:bg-bg_secondary_dark shadow-md dark:shadow-dark
+          transition-opacity duration-500 ease-in-out
+          ${
+            localState.messages.length <= 2
+              ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden"
+              : "scale-100 opacity-100 flex-1 min-h-0"
+          }`}
       >
         <div className="flex justify-between">
           <HallucinationWarning />
         </div>
-        
 
-        {/* Scrollable messages container */}
-        <div
-          ref={containerRef}
-          className="p-1.5 flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto"
-        >
-          {localState.messages.slice(0, -1)?.map((message, message_index) => (
-            <div key={message_index}>
-              
-              {/* User message */}
-              {message.role === "user" && (
-                <MessageUser
-                  localState={localState}
-                  setLocalState={setLocalState}
-                  message_index={message_index}
-                />
-              )}
-              {/* Assistant message */}
-              {message.role === "assistant" && (
-                <MessageAssistant
-                  localState={localState}
-                  setLocalState={setLocalState}
-                  message_index={message_index}
-                />
-              )}
-              {/* Render info message */}
-              {message.role === "info" && (
-                
-                <div className="flex flex-col gap-1">
-                  {message.content && (
-                    <div className="text-sm font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl">
-                      {message.content[0]?.text}
-                    </div>
-                  )}
-                </div>
-              )}
+        {/* Scrollable messages container with floating button */}
+        <div className="relative flex-1 min-h-0">
+          <div
+            ref={containerRef}
+            className="p-1.5 flex flex-col gap-1.5 h-full overflow-y-auto"
+            style={{
+              scrollPaddingBottom: "20px",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            {localState.messages.slice(0, -1)?.map((message, message_index) => (
+              <div key={message_index}>
+                {/* User message */}
+                {message.role === "user" && (
+                  <MessageUser
+                    localState={localState}
+                    setLocalState={setLocalState}
+                    message_index={message_index}
+                  />
+                )}
+                {/* Assistant message */}
+                {message.role === "assistant" && (
+                  <MessageAssistant
+                    localState={localState}
+                    setLocalState={setLocalState}
+                    message_index={message_index}
+                  />
+                )}
+                {/* Render info message */}
+                {message.role === "info" && (
+                  <div className="flex flex-col gap-1">
+                    {message.content && (
+                      <div className="text-sm font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl">
+                        {message.content[0]?.text}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Floating scroll to bottom button - only shows when there's overflow AND not at bottom */}
+          {showScrollButton && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+              <button
+                onClick={handleScrollButtonClick}
+                aria-label="Scroll to bottom"
+                className="cursor-pointer bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 
+                         px-2 py-2 rounded-full shadow-lg hover:shadow-xl dark:shadow-dark
+                         flex items-center justify-center gap-2 transition-all duration-200 
+                         hover:scale-105 border border-gray-200 dark:border-gray-600
+                         backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
+                </svg>
+              </button>
             </div>
-          ))}
+          )}
         </div>
 
         {/* Messages bottom panel */}
@@ -364,15 +329,7 @@ export default function Conversation({
               localState={localState}
               setLocalState={setLocalState}
             />
-            {showScrollButton && (
-              <button
-                onClick={handleScrollButtonClick}
-                aria-label="Scroll to bottom"
-                className="cursor-pointer text-tertiary max-w-[130px] w-full p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-2xl flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <p className="text-xs">Scroll to bottom</p>
-              </button>
-            )}
+
             <div className="flex items-baseline gap-4">
               <UndoButton
                 localState={localState}
@@ -385,7 +342,7 @@ export default function Conversation({
 
       {/* Prompt area */}
       <Prompt localState={localState} setLocalState={setLocalState} />
-      {emptyConversation && <Motto />} 
+      {emptyConversation && <Motto />}
     </div>
   );
 }
