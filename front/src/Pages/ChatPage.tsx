@@ -19,6 +19,8 @@ import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
 import { Navigate, useNavigate } from "react-router";
 
 export default function ChatPage() {
+  const params = useParams();
+ 
   const { conversationId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();

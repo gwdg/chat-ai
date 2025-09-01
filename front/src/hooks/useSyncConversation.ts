@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getConversation, updateConversation, listConversationMetas } from "../db";
 
 import {
@@ -17,13 +17,25 @@ import { validate as validateUUID, version as versionUUID } from "uuid";
 import { useModal } from "../modals/ModalContext";
 import { getDefaultConversation } from "../utils/conversationUtils";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
+import { useImportConversation } from "./useImportConversation";
 function validateConversationId(conversationId: string): boolean {
   return validateUUID(conversationId) && versionUUID(conversationId) === 4;
 }
 
-async function loadConversation(navigate, conversationId, lastConversationId, userSettings = {}): Promise<ConversationRow | undefined> {
-  
-  // const { getDefaultConversation } = useConversationUtils();
+async function loadConversation(navigate, conversationId, lastConversationId, userSettings = {}, sharedSettings = null, importURL = null, importConversation = null): Promise<ConversationRow | undefined> {
+  if (importURL) {
+    try {
+        const response = await fetch(importURL);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        await importConversation(data);
+    } catch (error) {
+        console.error("Failed to import from URL:", error);
+    }
+    return;
+  }
   // conversationId in URL, try to use it
   if (conversationId) {
     // Check if Id is valid UUID
@@ -69,14 +81,50 @@ async function loadConversation(navigate, conversationId, lastConversationId, us
   const lastConversationMeta = await getLastModifiedConversationMeta();
   if (lastConversationMeta !== undefined) {
     console.log("Loading most recent conversation: ", lastConversationMeta?.id);
+    if (sharedSettings) {
+      navigate(`/chat/${lastConversationMeta?.id}?settings=${sharedSettings}`);
+      return undefined;
+    }
     navigate(`/chat/${lastConversationMeta?.id}`);
     return undefined
   } else {
     // if above fails create a new conversation
     const newConversationId = await createConversation(getDefaultConversation(userSettings));
+    if (sharedSettings) {
+      navigate(`/chat/${newConversationId}?settings=${sharedSettings}`);
+      return undefined;
+    }
     navigate(`/chat/${newConversationId}`);
     return undefined
   }
+}
+
+function decodeSettings(base64Settings) {
+  let settings;
+  try{
+    // Step 1: Base64 decode
+    const jsonString = atob(base64Settings);
+    // Step 2: Parse into object
+    settings = JSON.parse(jsonString);
+    // Step 3: Recursively URL-decode all string values
+    function decodeURIComponentDeep(obj) {
+      if (typeof obj === 'string') {
+        return decodeURIComponent(obj);
+      } else if (Array.isArray(obj)) {
+        return obj.map(decodeURIComponentDeep);
+      } else if (obj !== null && typeof obj === 'object') {
+        return Object.fromEntries(
+          Object.entries(obj).map(([k, v]) => [k, decodeURIComponentDeep(v)])
+        );
+      }
+      return obj;
+    }
+    settings = decodeURIComponentDeep(settings);
+  } catch (err) {
+    console.warn("Failed to read settings", err);
+    return {};
+  }
+  return settings;
 }
 
 export function useSyncConversation({
@@ -87,9 +135,16 @@ export function useSyncConversation({
   localState: any;
   setLocalState: (state: any) => void;
   conversationId: string;
+  sharedSettings: string | null,
+  importURL: string | null,
 }) {
   const navigate = useNavigate();
   const lastConversation = useSelector(selectLastConversation);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sharedSettings = searchParams.get("settings");
+  const importURL = searchParams.get("import");
+  const importConversation = useImportConversation();
+
   const { openModal } = useModal();
 
   // State if tab is active or not
@@ -105,10 +160,27 @@ export function useSyncConversation({
   // Effect 1: Try to load conversation on mount
   useEffect(() => {
     (async () => {
-      setInitialized(false);
-      const conversation = await loadConversation(navigate, conversationId, lastConversation, userSettings);
+      const conversation = await loadConversation(navigate, conversationId, lastConversation, userSettings, sharedSettings, importURL, importConversation);
       if (!conversation) return;
       lastModified.current[conversationId] = conversation?.lastModified || 0;
+      if (sharedSettings) {
+        const decodedSettings = decodeSettings(sharedSettings);
+        const system_prompt = decodedSettings?.system_prompt || decodedSettings?.systemPrompt ||
+          conversation?.messages?.content[0] || "";
+        delete decodedSettings?.system_prompt;
+        delete decodedSettings?.systemPrompt;
+        const updatedConversation = {
+          ...conversation,
+          messages: [
+            {"role": "system", "content": [{"type": "text", "text": system_prompt}]},
+            ...conversation.messages.slice(1),
+          ],
+          settings: {...conversation.settings, ...decodedSettings}
+        }
+        setSearchParams();
+        setLocalState( updatedConversation );
+        return;
+      } 
       setLocalState(conversation);
     })();
   }, [conversationId]);

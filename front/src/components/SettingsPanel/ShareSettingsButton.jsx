@@ -1,15 +1,17 @@
 import { Trans } from "react-i18next";
 import { useModal } from "../../modals/ModalContext";
 import { Share } from "lucide-react";
+import { useToast } from "../../hooks/useToast";
 
 export default function ShareSettingsButton({ localState, setLocalState }) {
   const { openModal } = useModal();
+  const { notifyError, notifySuccess } = useToast();
   // ==== SHARING FUNCTIONALITY ====
 
   // Generate and copy shareable settings URL
-  const handleShareSettings = () => {
+  const handleShareSettings = (shareArcana = false) => {
     // Validate system prompt exists
-    if (!localState.settings.systemPrompt) {
+    if (!localState?.messages[0]?.content[0]?.text) {
       notifyError("System prompt is missing");
       return;
     }
@@ -17,25 +19,23 @@ export default function ShareSettingsButton({ localState, setLocalState }) {
     try {
       // Prepare settings object for sharing
       const settings = {
-        systemPrompt: encodeURIComponent(localState.settings.systemPrompt),
-        ["model-name"]: localState.settings["model-name"],
+        system_prompt: encodeURIComponent(localState?.messages[0]?.content[0]?.text),
+        // ["model-name"]: localState.settings["model-name"],
         model: localState.settings.model,
         temperature:
-          localState.settings.temperature !== undefined &&
-          localState.settings.temperature !== null
+          localState?.settings?.temperature !== undefined &&
+          localState?.settings?.temperature !== null
             ? Number(localState.settings.temperature)
             : null,
         top_p:
-          localState.settings.top_p !== undefined &&
-          localState.settings.top_p !== null
+          localState?.settings?.top_p !== undefined &&
+          localState?.settings?.top_p !== null
             ? Number(localState.settings.top_p)
             : null,
         // Include arcana settings if enabled
-        ...(localState.exportOptions.exportArcana &&
-          isArcanaSupported && {
+        ...(shareArcana && {
             arcana: {
-              id: localState.arcana.id,
-              // key: localState.arcana.key,
+              id: localState?.arcana?.id,
             },
           }),
       };
@@ -62,8 +62,6 @@ export default function ShareSettingsButton({ localState, setLocalState }) {
           console.error("Failed to copy text: ", err);
           notifyError("Failed to copy URL to clipboard");
         });
-
-      setModalShareSettings(false);
     } catch (error) {
       console.error("Error generating settings URL:", error);
       notifyError("Failed to generate settings URL");
@@ -72,20 +70,20 @@ export default function ShareSettingsButton({ localState, setLocalState }) {
 
   // Handle share settings modal display
   // TODO use this to handle dont show again
-  const handleShareSettingsModal = () => {
-    // Check if user has chosen to not show the modal again
-    if (localState.dontShow.dontShowAgainShare) {
-      handleShareSettings();
-    } else {
-      setModalShareSettings(true);
-    }
-  };
+  // const handleShareSettingsModal = () => {
+  //   // Check if user has chosen to not show the modal again
+  //   if (localState.dontShow.dontShowAgainShare) {
+  //     handleShareSettings();
+  //   } else {
+  //     setModalShareSettings(true);
+  //   }
+  // };
 
   return (
     <button
       className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2 cursor-pointer"
       type="reset"
-      onClick={() => openModal("shareSettings")}
+      onClick={() => openModal("shareSettings", {handleShareSettings})}
     >
       {/* <ShareSettingsModal
             isOpen={modalShareSettings}

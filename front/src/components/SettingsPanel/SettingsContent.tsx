@@ -19,7 +19,6 @@ import TopPSlider from "./TopPSlider";
 import { selectDefaultModel, selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
 // Hooks
-import { useImportConversation } from "../../hooks/useImportConversation";
 import { useToast } from "../../hooks/useToast";
 import {
   selectShowSettings,
@@ -49,7 +48,6 @@ const SettingsPanel = ({
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const importConversation = useImportConversation();
   const currentConversationId = useSelector(
     (state) => state.current_conversation
   );
@@ -211,142 +209,6 @@ const SettingsPanel = ({
     }
   }, [isOpen]); // Only recalculate when dropdown opens/closes
 
-
-  // Helper function to process URL settings
-  const processUrlSettings = (urlSettings) => {
-    const defaultSettings = getDefaultSettings(userSettings);
-    return {
-      ...defaultSettings,
-      ...urlSettings,
-      // Handle systemPrompt decoding specifically
-      systemPrompt: urlSettings.systemPrompt
-        ? decodeURIComponent(urlSettings.systemPrompt)
-        : defaultSettings?.systemPrompt,
-    };
-  };
-
-  // Handle settings from URL parameters
-  useEffect(() => {
-    const handleSettings = async () => {
-      const encodedSettings = searchParams.get("settings");
-
-      // Only process settings if they exist, we're on chat page, and haven't processed them yet
-      if (
-        encodedSettings &&
-        location.pathname === "/chat" &&
-        !hasProcessedSettings.current
-      ) {
-        try {
-          hasProcessedSettings.current = true;
-
-          // Decode and parse settings from URL
-          const decodedSettings = atob(encodedSettings);
-          const urlSettings = JSON.parse(decodedSettings);
-
-          // Process settings with defaults
-          const processedSettings = processUrlSettings(urlSettings);
-
-          // Create new conversation
-          const action = dispatch(addConversation());
-          const newId = action.payload?.id;
-
-          if (newId) {
-            // Prepare update object
-            const conversationUpdates = {
-              settings: processedSettings,
-              ...(urlSettings.arcana && {
-                arcana: {
-                  id: urlSettings.arcana.id,
-                  // key: urlSettings.arcana.key,
-                },
-              }),
-            };
-
-            // Update local state
-            setLocalState((prev) => ({
-              ...prev,
-              ...conversationUpdates,
-            }));
-
-            // Update conversation in Redux store
-            // dispatch(
-            //   updateConversation({
-            //     id: newId,
-            //     updates: conversationUpdates,
-            //   })
-            // );
-
-            // Navigate to new conversation
-            navigate(`/chat/${newId}`, { replace: true });
-          }
-        } catch (error) {
-          console.error("Error applying shared settings:", error);
-          notifyError(
-            "Invalid settings in shared link. Redirecting to default chat."
-          );
-          navigate(`/chat/${currentConversationId}`, { replace: true });
-          window.location.reload();
-        }
-      }
-    };
-
-    // Only process if conversations are loaded
-    if (conversations?.length > 0) {
-      handleSettings();
-    }
-  }, [
-    searchParams,
-    location.pathname,
-    conversations,
-    currentConversationId,
-    dispatch,
-    navigate,
-    notifyError,
-    setLocalState,
-  ]);
-
-  // Handle importing chat from URL
-  useEffect(() => {
-    const handleImportUrl = async () => {
-      const importUrl = searchParams.get("import");
-      if (
-        !importUrl ||
-        location.pathname !== "/chat" ||
-        hasProcessedImport.current
-      ) {
-        return;
-      }
-
-      hasProcessedImport.current = true;
-
-      // Download JSON file
-      const response = await fetch(importUrl, dispatch);
-
-      if (!response.ok) {
-        throw new Error(
-          response.status >= 500
-            ? "Server Error: Please try again later."
-            : "Client Error: The provided link might be incorrect."
-        );
-      }
-      const parsedData = await response.json();
-      return await importConversation(parsedData);
-    };
-
-    if (conversations?.length > 0) {
-      handleImportUrl();
-    }
-  }, [
-    searchParams,
-    location.pathname,
-    conversations,
-    currentConversationId,
-    dispatch,
-    navigate,
-    notifyError,
-    notifySuccess,
-  ]);
-
   return (
     <>
       <Joyride
@@ -506,19 +368,6 @@ const SettingsPanel = ({
             setLocalState={setLocalState}
           />
           <div className="flex flex-wrap md:justify-end gap-2 md:gap-4 items-center w-full">
-            {/* Hide Options Button 
-            <div
-              className="cursor-pointer select-none flex-1 gap-4 justify-center items-center p-4 bg-white dark:bg-bg_secondary_dark h-fit"
-              onClick={() => dispatch(toggleSettings())}
-            >
-              <p className="hidden desktop:block text-sm h-full text-tertiary cursor-pointer">
-                <Trans i18nKey="description.text9" />
-              </p>
-              <p className="block desktop:hidden text-sm h-full text-tertiary cursor-pointer">
-                <Trans i18nKey="description.text10" />
-              </p>
-            </div>*/}
-
             {/* Share Settings Button */}
             <ShareSettingsButton
               localState={localState}

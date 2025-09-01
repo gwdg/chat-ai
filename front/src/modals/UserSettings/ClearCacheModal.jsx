@@ -32,7 +32,7 @@ export default function ClearCacheModal({ isOpen, onClose }) {
   //   onClose();
   // }, [currentConversationId]);
 
-  const clearCache = useCallback(async () => {
+  const clearData = useCallback(async () => {
     try {
       // Prepare to navigate
       setIsCleared(true);
@@ -48,6 +48,7 @@ export default function ClearCacheModal({ isOpen, onClose }) {
       );
       console.log("New conversation", newConversationId);
       navigate(`/chat/${newConversationId}`, { replace: true });
+      onClose();
     } catch (error) {
       notifyError("Failed to clear chats: " + error.message);
     }
@@ -76,10 +77,10 @@ export default function ClearCacheModal({ isOpen, onClose }) {
           <Trans i18nKey="description.cache2" />
         </button>
 
-        {/* Clear cache button */}
+        {/* Clear data button */}
         <button
           className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
-          onClick={clearCache}
+          onClick={clearData}
         >
           <Trans i18nKey="description.cache3" />
         </button>

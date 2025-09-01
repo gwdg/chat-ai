@@ -288,7 +288,7 @@ export function useImportConversation() {
       if (!newId) {
         throw new Error("Failed to create new conversation");
       }
-
+      console.log("Navigating to new chat");
       navigate(`/chat/${newId}`, { replace: true });
       notifySuccess("Chat imported successfully");
     } catch (error) {

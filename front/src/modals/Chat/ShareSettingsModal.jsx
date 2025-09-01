@@ -1,16 +1,17 @@
+import { useState } from "react";
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
 
 export default function ShareSettingsModal({
   isOpen,
   onClose,
-  arcana,
-  exportArcana,
-  dontShowAgain,
+  localState,
   setLocalState,
-  isArcanaSupported,
   handleShareSettings
 }) {
+
+  const isArcanaSupported = false; // TODO
+  const [shareArcana, setShareArcana] = useState(false);
   // Handler for "Don't Show Again" checkbox
   const handleCheckboxChange = (event) => {
     setLocalState((prevState) => ({
@@ -18,17 +19,6 @@ export default function ShareSettingsModal({
       exportOptions: {
         ...prevState.exportOptions,
         dontShowAgainShare: event.target.checked,
-      },
-    }));
-  };
-
-  // Handler for "Export Arcana" checkbox
-  const handleCheckboxChangeArcana = (event) => {
-    setLocalState((prevState) => ({
-      ...prevState,
-      exportOptions: {
-        ...prevState.exportOptions,
-        exportArcana: event.target.checked,
       },
     }));
   };
@@ -47,7 +37,7 @@ export default function ShareSettingsModal({
       </div>
 
       {/* Arcana Export Option */}
-      {arcana?.id && (
+      {localState?.settings?.arcana?.id && (
         <>
           <div>
             <p className="text-red-600">
@@ -58,8 +48,8 @@ export default function ShareSettingsModal({
             <input
               type="checkbox"
               id="exportArcana"
-              checked={exportArcana}
-              onChange={handleCheckboxChangeArcana}
+              checked={shareArcana}
+              onChange={() => {setShareArcana(true)}}
               className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
                 !arcana.id ? "bg-gray-400 cursor-not-allowed" : ""
               }`}
@@ -76,7 +66,7 @@ export default function ShareSettingsModal({
       )}
 
       {/* "Don't Show Again" Option */}
-      <div className="flex items-center gap-3">
+      {/* <div className="flex items-center gap-3">
         <input
           type="checkbox"
           id="dontShowAgain"
@@ -90,13 +80,13 @@ export default function ShareSettingsModal({
         >
           <Trans i18nKey="description.dont_show_again" />
         </label>
-      </div>
+      </div> */}
 
       {/* Action Buttons */}
       <div className="flex flex-col md:flex-row gap-2 justify-end w-full mt-4">
         <button
           className="text-white p-3 bg-green-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
-          onClick={handleShareSettings}
+          onClick={() => handleShareSettings(shareArcana)}
         >
           <Trans i18nKey="description.exportSettings2" />
         </button>

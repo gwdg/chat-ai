@@ -26,7 +26,7 @@ const getDefaultState = () => {
     last_conversation: null,
     interface_settings: {
       dark_mode: false,
-      show_settings: true,
+      show_settings: false,
       show_sidebar: true,
       warn_clear_history: true,
       warn_clear_memory: true,
