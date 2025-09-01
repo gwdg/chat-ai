@@ -4,7 +4,7 @@ import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/user
 import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
 import generateTitle from "../apis/generateTitle";
-import { loadFile, loadFileMeta, saveFile, updateConversation } from "../db";
+import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 
 // Text to be appended to system prompt for memories
@@ -164,7 +164,7 @@ const sendMessage = async ({
   dispatch,
   timeout,
 }) => {
-  const conversationId = `${localState.id}`
+  const conversationId = localState.id
 
   try {
     const isArcanaSupported = (localState.settings.model?.input?.includes("arcana") || false)    
@@ -265,39 +265,43 @@ const sendMessage = async ({
               fileId = await saveFile(localState.messages[localState.messages.length - 2].id, file);
               currentContent.push({"type": "file", "fileId": fileId})
               setLocalState(prev => {
-                if (prev.id !== conversationId) {return prev;}
+                if (prev.id !== conversationId) {
+                  return prev;
+                }
                 const messages = [...prev.messages];
                 messages[messages.length - 2] = {
                   role: "assistant",
                   content: currentContent,
                   loading: true,
                 };
-                return { ...prev, messages };
+                return { ...prev, messages, ignoreConflict: true };
               });
               continue
             }
           } catch (err) {
             console.error("Error processing image chunk:", err);
+            continue;
           }
         }
         currentContent[0].text += chunk;
         // UI update happens here in the caller
         setLocalState(prev => {
-          if (prev.id !== conversationId) {return prev;}
+          if (prev.id !== conversationId) {
+            return prev;
+          }
           const messages = [...prev.messages];
           messages[messages.length - 2] = {
             role: "assistant",
             content: currentContent,
             loading: true,
           };
-          return { ...prev, messages };
+          return { ...prev, messages, ignoreConflict: true };
         });
       }
       return currentContent;
     }
 
     let responseContent = "";
-    let inBackground = false;
     try {
       // Get chat completion response
       responseContent = await getChatChunk(conversationId);
@@ -308,17 +312,16 @@ const sendMessage = async ({
       // Set loading to false
       setLocalState(prev => {
         if (prev.id !== conversationId) {
-          // Handle save when conversation is not active
-          // Save directly into DB
-          updateConversation(conversationId, {
-            ...localState,
-            messages: [
-              ...localState.messages,
-              { role: "assistant", content: responseContent, loading: false },
-              { role: "user", content: [{ type: "text", text: "" }] },
-              // TODO what if prompt changes before switching?
-            ]
-          })
+          // Handle save when conversation is not activ, ideally save directly into DB (TODO)
+          const messages = [...localState.messages,
+            { role: "assistant", content: responseContent, loading: false },
+            { role: "user", content: [{ type: "text", text: "" }] },
+          ];
+          updateConversation(
+            conversationId,
+            { ...localState, messages },
+            true
+          );
           return prev;
         }
         const messages = [...prev.messages];
@@ -327,7 +330,7 @@ const sendMessage = async ({
           content: responseContent,
           loading: false,
         };
-        return { ...prev, messages };
+        return { ...prev, messages, flush: true };
       });
     }
 
@@ -368,19 +371,10 @@ const sendMessage = async ({
       console.log("Generated title is ", title)
       setLocalState(prev => {
         if (prev.id !== conversationId) {
-          updateConversation(conversationId, {
-            ...localState,
-            messages: [
-              ...localState.messages,
-              { role: "assistant", content: [{ type: "text", text: responseContent[0].text}] },
-              { role: "user", content: [{ type: "text", text: "" }] },
-              // TODO what if prompt changes before switching?
-            ],
-            title
-          })
+          updateConversationMeta(conversationId, {title})
           return prev;
         }
-        return { ...prev, title };
+        return { ...prev, title, flush: true, };
       });
     }
 

@@ -1,3 +1,4 @@
+import { useState, useEffect} from "react";
 import { RotateCw } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
 
@@ -11,15 +12,13 @@ export default function RetryButton({
   // Function to handle resending a previous message
   const handleRetry = async () => {
     // Remove messages after current index
-    setLocalState((prevState) => {
-      const newMessages = [...prevState.messages];
+    let newState;
+    setLocalState((prev) => {
+      const newMessages = [...prev.messages];
       newMessages.splice(message_index + 1);
-      return { ...prevState, messages: newMessages };
-    });
-    // Retry sending the message
-    await sendMessage({
-      localState,
-      setLocalState,
+      newState = { ...prev, messages: newMessages }
+      sendMessage({localState: newState, setLocalState});
+      return { ...prev, messages: newMessages };
     });
   };
 

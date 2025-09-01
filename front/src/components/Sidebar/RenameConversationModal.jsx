@@ -28,13 +28,19 @@ export default function RenameConversationModal({
       setError(t("description.error_title"));
       return;
     }
-    const lastModified = await updateConversationMeta(id, {
-      title: title.trim(),
-    });
     if (!localState) return;
-    localState.lastModified = lastModified;
-    // Optional for speed - change conversations locally
-    onClose();
+    if (localState?.id !== id) {
+      await updateConversationMeta(id, {
+        title: title.trim(),
+      });
+    } else {
+      setLocalState((prev) => ({
+        ...prev,
+        title: title.trim(),
+        flush: true,
+      }));
+      onClose();
+    }
   };
 
   const handleKeyDown = (e) => {

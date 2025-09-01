@@ -99,16 +99,16 @@ export function useSyncConversation({
   const userSettings = useSelector(selectUserSettings);
 
   const timeoutIds = useRef({});
-  const lastModified = useRef(0);
-  const delay = 1000;
+  const lastModified = useRef({});
+  const delay = 600;
 
   // Effect 1: Try to load conversation on mount
   useEffect(() => {
     (async () => {
       setInitialized(false);
       const conversation = await loadConversation(navigate, conversationId, lastConversation, userSettings);
-      lastModified.current = conversation?.lastModified || 0;
       if (!conversation) return;
+      lastModified.current[conversationId] = conversation?.lastModified || 0;
       setLocalState(conversation);
     })();
   }, [conversationId]);
@@ -125,7 +125,7 @@ export function useSyncConversation({
     // Check if want to write immediately
     const flushChanges = localState?.flush || false;
     if (localState?.flush) {
-        console.log("Flushing to DB....")
+        // console.log("Flushing to DB....")
         delete localState.flush
     }
     if (!isActive) return; // Only auto-save when tab active
@@ -137,18 +137,24 @@ export function useSyncConversation({
     }
     // Schedule a save after `delay` ms
     timeoutIds.current[currentConversation] = setTimeout(async () => {
+      let ignoreConflict = false;
+      if (localState?.ignoreConflict) {
+          ignoreConflict = true;
+          delete localState.ignoreConflict;
+      }
       const newLastModified = await updateConversation(
         currentConversation,
-        { ...localState, lastModified: lastModified.current }
+        { ...localState, lastModified: lastModified.current[currentConversation] }
       )
       if (newLastModified === -1) { // Conflict detected
-        console.log("Conflict detected")
+        if (ignoreConflict) return;
+        console.log("Conflict for conversation ", currentConversation);
         openModal("conversationConflict", {localState, setLocalState, setUnsavedChanges});
         return;
       }
       console.log("Conversation auto-saved");
       setUnsavedChanges(false);
-      lastModified.current = newLastModified;
+      lastModified.current[currentConversation] = newLastModified;
       delete timeoutIds.current[currentConversation];
     }, (flushChanges ? 0 : delay));
   }, [localState, delay]);
@@ -178,12 +184,12 @@ export function useSyncConversation({
       // Check if any changes were made while inactive
       const currentConversation = localState?.id;
       const lastModifiedDB = (await getConversationMeta(currentConversation)).lastModified;
-      if (lastModified === lastModifiedDB) return; // No changes
+      if (lastModified.current[currentConversation] === lastModifiedDB) return; // No changes
       // Changes detected, load from DB
       setInitialized(false);
       const conversation = await loadConversation(navigate, conversationId, lastConversation, userSettings);
       if (!conversation) return;
-      lastModified.current = conversation?.lastModified || 0;
+      lastModified.current[currentConversation] = conversation?.lastModified || 0;
       setLocalState(conversation);
       console.log("Loaded updated conversation from browser");
     })();

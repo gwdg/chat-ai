@@ -213,7 +213,6 @@ export async function updateConversation(
   if (!force) {
     // Soft change, check lastModified
     const lastModifiedDB = (await getConversationMeta(conversationId)).lastModified;
-    // console.log(lastModifiedDB, " vs. ", data?.lastModified)
     if (lastModifiedDB !== data?.lastModified) {
       // Conflict detected
       return -1;
@@ -451,9 +450,9 @@ export async function updateConversationMeta(
   conversationId: string,
   updates: Partial<Pick<ConversationRow, 'title' | 'settings'>>,
 ) {
-  const now = Date.now();
-  await db.conversations.update(conversationId, { ...updates, lastModified: now })
-  return now;
+  //const now = Date.now();
+  await db.conversations.update(conversationId, { ...updates })
+  return 0;
 }
 
 // Delete entire conversation (messages + content items + files)

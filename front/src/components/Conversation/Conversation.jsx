@@ -281,7 +281,7 @@ export default function Conversation({
 
       {/* Empty conversation */}
       <div
-        className={`flex flex-col space-y-16 md:max-h-[40vh] xl:max-h-[40vh] justify-between
+        className={`flex flex-col space-y-16 md:max-h-[40vh] xl:max-h-[40vh] justify-end
           ${
           emptyConversation
             ? "flex-grow "

@@ -86,18 +86,16 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     setEditMode(false);
   };
 
-  // Function to handle resending a failed message
+  // Function to handle resending a previous message
   const handleRetry = async () => {
-    // Remove messages until current index
-    setLocalState((prevState) => {
-      const newMessages = [...prevState.messages];
+    // Remove messages after current index
+    
+    setLocalState((prev) => {
+      const newMessages = [...prev.messages];
       newMessages.splice(message_index);
-      return { ...prevState, messages: newMessages };
-    });
-    // Retry sending the message
-    await sendMessage({
-      localState,
-      setLocalState,
+      let newState = { ...prev, messages: newMessages }
+      sendMessage({localState: newState, setLocalState});
+      return { ...prev, messages: newMessages };
     });
   };
 

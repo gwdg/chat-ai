@@ -155,7 +155,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
 
   return (
     <div
-      className="flex flex-col select-none h-full w-full transition-all duration-300 ease-in-out"
+      className="flex flex-col select-none h-full w-full transition-all duration-200 ease-in-out"
       style={{
         WebkitTapHighlightColor: "transparent",
       }}
