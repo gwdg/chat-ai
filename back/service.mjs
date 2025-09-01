@@ -48,7 +48,7 @@ app.use(
     limits: {
       fileSize: 50 * 1024 * 1024, // 50MB max file size
     },
-    debug: true,
+    debug: false,
   })
 );
 app.use(express.json());
@@ -133,7 +133,6 @@ app.get("/models", async (req, res) => {
       "inference-portal": "Chat AI",
     };
     const response = await fetch(url, { method: "GET", headers });
-    //console.log(await response.json())
     res.status(200).json(await response.json());
   } catch (error) {
     console.error(`Error: ${error}`);
@@ -171,6 +170,7 @@ app.post("/chat/completions", async (req, res) => {
     tools = null,
     stream = true,
   } = req.body;
+
   const inference_id = req.headers["inference-id"];
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
@@ -179,23 +179,20 @@ app.post("/chat/completions", async (req, res) => {
   const validatedTimeout = Math.min(Math.max(timeout, 5000), 900000);
 
   try {
-    // Create a single timeout that applies to the entire request
-    let timeoutId;
-    let isTimedOut = false;
+    // // Create a single timeout that applies to the entire request
+    // let timeoutId;
+    // let isTimedOut = false;
 
-    const timeoutPromise = new Promise((resolve, reject) => {
-      timeoutId = setTimeout(() => {
-        isTimedOut = true;
-        reject(
-          new Error(
-            `Request timed out after ${validatedTimeout / 1000} seconds`
-          )
-        );
-      }, validatedTimeout);
-    });
-
-    // Define openai object
-    console.log({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id})
+    // const timeoutPromise = new Promise((resolve, reject) => {
+    //   timeoutId = setTimeout(() => {
+    //     isTimedOut = true;
+    //     reject(
+    //       new Error(
+    //         `Request timed out after ${validatedTimeout / 1000} seconds`
+    //       )
+    //     );
+    //   }, validatedTimeout);
+    // });
 
     const params = {
       model: model,
@@ -208,12 +205,14 @@ app.post("/chat/completions", async (req, res) => {
     }
 
     let inference_service = model;
+
+    if (arcana && arcana.id !== "") {
+        params.arcana = arcana;
+      }
+
     // Handle tools and arcana
     if (enable_tools) {
       inference_service = "saia-openai-gateway";
-      if (arcana && arcana.id !== "") {
-        params.arcana = arcana;
-      }
       if (tools && tools.length > 0) {
         params.tools = [];
         for (const tool of tools) {
@@ -224,13 +223,10 @@ app.post("/chat/completions", async (req, res) => {
       }
     }
     
-    console.log(params);
-    console.log({"inference-service": inference_service});
     const openai = new OpenAI({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id});
-    // const stream = await openai.chat.completions.create(
-    //   params, {
-    //   headers: {"inference-service": inference_service}
-    // });
+
+    // Temporary workaround as middleware doesn't support timeout yet
+    if (params.arcana || params.model.includes("rag") || params.model.includes("sauerkraut")) delete params.timeout;
 
     // Get chat completion response
     const response = await openai.chat.completions.create(
@@ -238,65 +234,33 @@ app.post("/chat/completions", async (req, res) => {
         headers: {"inference-service": inference_service}
       }
     ).asResponse();
-
+    
     // Pass through headers (optional but recommended)
     res.status(response.status);
     response.headers.forEach((value, key) => {
       res.setHeader(key, value);
     });
 
-    // Convert web ReadableStream → Node Readable → pipe to res
-    Readable.fromWeb(response.body).pipe(res);
+    // Stream with error handling
+    const nodeStream = Readable.fromWeb(response.body);
 
-    // const reader = response.body.getReader();
-    // const decoder = new TextDecoder();
-    // let currentResponse = "";
-    // let streamComplete = false;
+    nodeStream.on('error', (err) => {
+      console.error("Stream error:", err);
+      if (!res.headersSent) {
+        res.status(500).end("Upstream error");
+      } else {
+        res.end(); // gracefully end if already streaming
+      }
+    });
 
-    // try {
-    //   // Stream and process response chunks
-    //   while (!streamComplete) {
-    //     const { value, done } = await reader.read();
-    //     if (done) {
-    //       streamComplete = true;
-    //       break;
-    //     }
-    //     const decodedChunk = decoder.decode(value, { stream: true });
-    //     yield decodedChunk
-    //     currentResponse += decodedChunk;
-    //   }
-    //   return currentResponse;
-    // } catch (error) {
-    //   // Handle AbortError specifically during streaming
-    //   if (error.name === "AbortError") {
-    //     console.log("Request aborted by user")
-    //     return currentResponse;
-    //   }
-    //   throw error;
-    // }
-    
-    // let answer = ""
-    // for await (const chunk of stream) {
-    //   try {
-    //     answer += chunk.choices[0].delta.content
-    //     res.write(chunk.choices[0].delta.content)
-    //     if (chunk?.choices?.[0]?.finish_reason === 'stop') {
-    //       res.status(200).end();
-    //       return
-    //     } else {
-    //       console.log(chunk)
-    //     }
-    //   }
-    //   catch (err) {
-    //     // console.error(err);
-    //     console.log(chunk)
-    //     console.log("Well couldn't due to ", err)
-    //     // TODO forward exact error
-    //     //res.status(response.status).send(response.statusText);
-    //     res.status(500).end();
-    //   }
-    //   //console.log(answer);
-    // }
+    nodeStream.on('end', () => {
+      // Ensure the connection is closed properly
+      if (!res.writableEnded) {
+        res.end();
+      }
+    });
+
+    nodeStream.pipe(res);
   } catch (err) {
     console.error(err);
     try {

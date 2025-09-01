@@ -38,9 +38,10 @@ async function* chatCompletions (
     if (conversation.settings?.enable_tools) {
       params.enable_tools = true;
       params.tools = conversation?.settings?.tools || [];
-      if (conversation.settings?.arcana && conversation.settings.arcana.id !== "") {
-        params.arcana = conversation.settings.arcana;
-      }
+    }
+
+    if (conversation.settings?.arcana && conversation.settings.arcana.id !== "") {
+      params.arcana = conversation.settings.arcana;
     }
 
     // Define openai object to call backend
@@ -59,7 +60,6 @@ async function* chatCompletions (
 
     if (!stream) {
       const result = streamResponse;
-      console.log(result)
       return result;
     }
 
@@ -75,8 +75,7 @@ async function* chatCompletions (
       }
       catch (err) {
         // console.error(err);
-        console.log(chunk)
-        console.log("Well couldn't due to ", err)
+        console.log("Error: ", err)
         // TODO forward exact error
         //res.status(response.status).send(response.statusText);
         res.status(500).end();

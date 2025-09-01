@@ -227,9 +227,9 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
             <div
               key={id}
               onClick={() => handleSelectConversation(id)}
-              className={`group relative px-3 py-3 rounded-2xl cursor-pointer touch-manipulation transition-all duration-200 ${isActive
+              className={`group relative px-3 py-3 rounded-2xl cursor-pointer touch-manipulation ${isActive
                   ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
-                  : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-100"
                 }`}
               data-current={isActive ? "true" : "false"}
               style={{

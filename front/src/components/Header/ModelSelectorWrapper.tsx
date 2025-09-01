@@ -1,5 +1,5 @@
 
-import { memo, useEffect } from 'react'
+import { memo, useEffect, useState } from 'react'
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';
@@ -23,6 +23,25 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
       },
     }));
   }
+
+  // Automatically update the model when the ID changes
+  useEffect(() => {
+    if (!currentModelId || !modelsData) return;
+    const foundModel = modelsData.find(
+      (model) => model.id === currentModelId
+    );
+    if (foundModel) {
+      setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        model: foundModel,
+      },
+      }));
+    }
+  }, [currentModelId, modelsData]);
+
+  
 
   return (
     <>

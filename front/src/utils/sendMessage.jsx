@@ -150,7 +150,8 @@ async function buildConversationForAPI(localState) {
   // Return full standard conversation
   return {
     ...localState,
-    messages: processedMessages
+    messages: processedMessages,
+    settings: {...localState.settings},
   };
 }
 
@@ -167,7 +168,7 @@ const sendMessage = async ({
   const conversationId = localState.id
 
   try {
-    const isArcanaSupported = (localState.settings.model?.input?.includes("arcana") || false)    
+    const isArcanaSupported = (localState.settings.model?.input?.includes("arcana") || localState.settings?.enable_tools)   
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState);
     // Prepare system prompt
@@ -215,9 +216,10 @@ const sendMessage = async ({
       // Always enable image generation for now
       conversationForAPI.settings.tools.push({ type: "image_generation" })
     } else {
-      delete conversationForAPI.settings.arcana;
       delete conversationForAPI.settings.tools;
     }
+
+    if (!isArcanaSupported) delete conversationForAPI.settings?.arcana;
     
     // Pushing message into conversation history
     setLocalState((prev) => ({
@@ -350,6 +352,8 @@ const sendMessage = async ({
       // TODO clean up localState
       return;
     }
+
+    delete conversationForAPI.settings?.arcana;
 
     // Keep last message sent by user for possible memory update
     let newUserMessage = undefined;
