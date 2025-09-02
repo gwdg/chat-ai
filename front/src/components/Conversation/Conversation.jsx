@@ -30,168 +30,274 @@ export default function Conversation({
 
   // Refs
   const containerRef = useRef(null);
-  const previousMessageLength = useRef(0);
   const userHasScrolledUp = useRef(false);
-  const autoScrollActive = useRef(false);
-  const lastScrollTop = useRef(0);
+  const isAutoScrolling = useRef(false);
+  const lastContentHeight = useRef(0);
+  const scrollAnimationFrame = useRef(null);
+  const contentObserver = useRef(null);
+  const resizeObserver = useRef(null);
 
   // Check if container has actual overflow
   const hasOverflow = useCallback(() => {
     if (!containerRef.current) return false;
-    return (
-      containerRef.current.scrollHeight > containerRef.current.clientHeight + 5
-    ); // 5px tolerance
+    const { scrollHeight, clientHeight } = containerRef.current;
+    return scrollHeight > clientHeight + 10; // 10px tolerance for rounding
   }, []);
 
   // Check if user is at bottom of chat
   const checkIfAtBottom = useCallback(() => {
     if (!containerRef.current) return true;
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    return scrollHeight - scrollTop - clientHeight < 50; // 50px threshold
+    const threshold = 50; // Reasonable threshold for detection
+    return scrollHeight - scrollTop - clientHeight < threshold;
   }, []);
 
-  // Direct scroll to bottom without animation
-  const scrollToBottom = useCallback(() => {
-    if (!containerRef.current) return;
-    containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    userHasScrolledUp.current = false;
+  // Update scroll button visibility
+  const updateScrollButtonVisibility = useCallback(() => {
+    const shouldShow = hasOverflow() && !checkIfAtBottom();
+    setShowScrollButton(shouldShow);
+    setIsAtBottom(checkIfAtBottom());
+  }, [hasOverflow, checkIfAtBottom]);
+
+  // Smooth auto-scroll with animation frame
+  const performAutoScroll = useCallback(() => {
+    if (!containerRef.current || userHasScrolledUp.current) return;
+
+    const container = containerRef.current;
+    const targetScroll = container.scrollHeight - container.clientHeight;
+    const currentScroll = container.scrollTop;
+    const distance = targetScroll - currentScroll;
+
+    // If distance is small, just snap to bottom
+    if (Math.abs(distance) < 5) {
+      container.scrollTop = container.scrollHeight;
+      isAutoScrolling.current = false;
+      setShowScrollButton(false);
+      return;
+    }
+
+    // Smooth scroll using animation frame
+    const smoothScroll = () => {
+      if (!containerRef.current || userHasScrolledUp.current) return;
+
+      const current = containerRef.current.scrollTop;
+      const target =
+        containerRef.current.scrollHeight - containerRef.current.clientHeight;
+      const diff = target - current;
+
+      if (Math.abs(diff) > 1) {
+        // Ease-out animation - slightly faster
+        containerRef.current.scrollTop = current + diff * 0.15;
+        scrollAnimationFrame.current = requestAnimationFrame(smoothScroll);
+      } else {
+        // Ensure we're absolutely at the bottom
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        isAutoScrolling.current = false;
+        setShowScrollButton(false);
+      }
+    };
+
+    isAutoScrolling.current = true;
+    if (scrollAnimationFrame.current) {
+      cancelAnimationFrame(scrollAnimationFrame.current);
+    }
+    smoothScroll();
   }, []);
 
-  // Handle scroll events
-  const handleScroll = useCallback(() => {
-    if (!containerRef.current) return;
-
-    const currentScrollTop = containerRef.current.scrollTop;
-
-    // Detect if user is scrolling up (against auto-scroll)
-    if (currentScrollTop < lastScrollTop.current - 5) {
-      userHasScrolledUp.current = true;
-      autoScrollActive.current = false;
-    }
-
-    lastScrollTop.current = currentScrollTop;
-
-    const atBottom = checkIfAtBottom();
-    setIsAtBottom(atBottom);
-
-    // Reset flag if user scrolled back to bottom
-    if (atBottom) {
-      userHasScrolledUp.current = false;
-    }
-
-    // Update button visibility - ONLY show if there's overflow AND not at bottom
-    const shouldShowButton = hasOverflow() && !atBottom;
-    setShowScrollButton(shouldShowButton);
-  }, [checkIfAtBottom, hasOverflow]);
-
-  // Handle scroll button click
+  // Handle manual scroll to bottom button click
   const handleScrollButtonClick = useCallback(() => {
+    if (!containerRef.current) return;
+
+    // Reset flags immediately
     userHasScrolledUp.current = false;
-    autoScrollActive.current = true;
-    scrollToBottom();
-    setShowScrollButton(false);
-  }, [scrollToBottom]);
+    isAutoScrolling.current = true;
 
-  // Auto-scroll for new messages
-  useEffect(() => {
-    if (!localState?.messages || !containerRef.current) return;
+    // Directly set scroll to absolute bottom first
+    containerRef.current.scrollTop = containerRef.current.scrollHeight;
 
-    const messages = localState.messages.slice(0, -1);
-    const currentLength = JSON.stringify(messages).length;
+    // Then apply smooth animation for visual feedback
+    setTimeout(() => {
+      if (containerRef.current) {
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        isAutoScrolling.current = false;
+        setShowScrollButton(false); // Immediately hide button
+        updateScrollButtonVisibility();
+      }
+    }, 50);
+  }, [updateScrollButtonVisibility]);
 
-    if (currentLength !== previousMessageLength.current) {
-      // Only auto-scroll if user hasn't scrolled up and there's overflow
-      if (!userHasScrolledUp.current && hasOverflow()) {
-        autoScrollActive.current = true;
-        // Small delay to ensure DOM is updated
-        setTimeout(() => {
-          if (autoScrollActive.current && !userHasScrolledUp.current) {
-            scrollToBottom();
-          }
-        }, 10);
+  // Handle user scroll events
+  const handleScroll = useCallback(
+    (e) => {
+      if (!containerRef.current) return;
+
+      const container = containerRef.current;
+      const isNearBottom = checkIfAtBottom();
+
+      // Detect user scroll up (not during auto-scroll)
+      if (!isAutoScrolling.current) {
+        if (!isNearBottom && hasOverflow()) {
+          userHasScrolledUp.current = true;
+        } else if (isNearBottom) {
+          userHasScrolledUp.current = false;
+        }
       }
 
-      previousMessageLength.current = currentLength;
-    }
-  }, [localState?.messages, hasOverflow, scrollToBottom]);
+      updateScrollButtonVisibility();
+    },
+    [checkIfAtBottom, hasOverflow, updateScrollButtonVisibility]
+  );
 
-  // Continuous scroll for streaming responses
+  // Handle wheel events for better scroll detection
+  const handleWheel = useCallback(
+    (e) => {
+      if (!containerRef.current) return;
+
+      // Cancel any ongoing auto-scroll animation
+      if (scrollAnimationFrame.current) {
+        cancelAnimationFrame(scrollAnimationFrame.current);
+        scrollAnimationFrame.current = null;
+      }
+
+      // User is scrolling up
+      if (e.deltaY < 0 && hasOverflow()) {
+        userHasScrolledUp.current = true;
+        isAutoScrolling.current = false;
+      }
+      // User is scrolling down to bottom
+      else if (e.deltaY > 0) {
+        const isNearBottom = checkIfAtBottom();
+        if (isNearBottom) {
+          userHasScrolledUp.current = false;
+        }
+      }
+
+      // Update button visibility after a short delay
+      setTimeout(updateScrollButtonVisibility, 100);
+    },
+    [hasOverflow, checkIfAtBottom, updateScrollButtonVisibility]
+  );
+
+  // Set up MutationObserver to watch for content changes
   useEffect(() => {
-    if (!localState?.messages) return;
+    if (!containerRef.current) return;
 
-    const messages = localState.messages.slice(0, -1);
-    const lastMessage = messages[messages.length - 1];
-
-    // Only set up interval for assistant messages
-    if (lastMessage?.role === "assistant" && !userHasScrolledUp.current) {
-      const interval = setInterval(() => {
-        // Stop if user has scrolled up or no overflow
-        if (
-          userHasScrolledUp.current ||
-          !hasOverflow() ||
-          !containerRef.current
-        ) {
-          clearInterval(interval);
-          return;
-        }
-
-        // Keep scrolling to bottom during streaming
-        if (checkIfAtBottom()) {
-          autoScrollActive.current = true;
-          containerRef.current.scrollTop = containerRef.current.scrollHeight;
-        }
-      }, 50); // Very frequent updates for smooth streaming
-
-      // Cleanup after 30 seconds
-      const timeout = setTimeout(() => clearInterval(interval), 30000);
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timeout);
-      };
+    // Disconnect previous observer
+    if (contentObserver.current) {
+      contentObserver.current.disconnect();
     }
-  }, [localState?.messages, checkIfAtBottom, hasOverflow]);
 
-  // Set up scroll listener
+    // Create new observer for content changes
+    contentObserver.current = new MutationObserver((mutations) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const currentHeight = container.scrollHeight;
+
+      // Check if content actually changed (increased or decreased)
+      if (currentHeight !== lastContentHeight.current) {
+        // Check if we were at bottom before the content change
+        const wasAtBottom = checkIfAtBottom();
+
+        // Auto-scroll if user hasn't scrolled up OR if we were already at bottom
+        if (!userHasScrolledUp.current || wasAtBottom) {
+          // If we were at bottom, ensure we stay at bottom (like when sending a new message)
+          if (wasAtBottom) {
+            userHasScrolledUp.current = false;
+          }
+          // Small delay to ensure DOM is fully updated
+          requestAnimationFrame(() => {
+            performAutoScroll();
+          });
+        }
+        lastContentHeight.current = currentHeight;
+      }
+
+      // Update button visibility after DOM settles
+      requestAnimationFrame(() => {
+        updateScrollButtonVisibility();
+      });
+    });
+
+    // Observe the container for changes
+    contentObserver.current.observe(containerRef.current, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: false,
+    });
+
+    return () => {
+      if (contentObserver.current) {
+        contentObserver.current.disconnect();
+      }
+      if (scrollAnimationFrame.current) {
+        cancelAnimationFrame(scrollAnimationFrame.current);
+      }
+    };
+  }, [performAutoScroll, updateScrollButtonVisibility]);
+
+  // Set up ResizeObserver to handle container resize
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    if (resizeObserver.current) {
+      resizeObserver.current.disconnect();
+    }
+
+    resizeObserver.current = new ResizeObserver(() => {
+      updateScrollButtonVisibility();
+
+      // If at bottom and container resized, maintain bottom position
+      if (!userHasScrolledUp.current && containerRef.current) {
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      }
+    });
+
+    resizeObserver.current.observe(containerRef.current);
+
+    return () => {
+      if (resizeObserver.current) {
+        resizeObserver.current.disconnect();
+      }
+    };
+  }, [updateScrollButtonVisibility]);
+
+  // Set up scroll and wheel event listeners
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Add both passive scroll and active wheel listeners
-    const scrollHandler = () => handleScroll();
-    const wheelHandler = (e) => {
-      // Detect manual wheel scroll
-      if (e.deltaY < 0) {
-        // Scrolling up
-        userHasScrolledUp.current = true;
-        autoScrollActive.current = false;
-      }
-      handleScroll();
-    };
+    // Use passive listeners for better performance
+    const options = { passive: true };
 
-    container.addEventListener("scroll", scrollHandler, { passive: true });
-    container.addEventListener("wheel", wheelHandler, { passive: true });
+    container.addEventListener("scroll", handleScroll, options);
+    container.addEventListener("wheel", handleWheel, options);
 
     // Initial check
-    handleScroll();
+    updateScrollButtonVisibility();
 
     return () => {
-      container.removeEventListener("scroll", scrollHandler);
-      container.removeEventListener("wheel", wheelHandler);
+      container.removeEventListener("scroll", handleScroll);
+      container.removeEventListener("wheel", handleWheel);
     };
-  }, [handleScroll]);
+  }, [handleScroll, handleWheel, updateScrollButtonVisibility]);
 
-  // Reset when conversation changes
+  // Reset state when conversation becomes empty
   useEffect(() => {
-    if (localState?.messages?.length <= 2) {
+    if (emptyConversation) {
       setIsAtBottom(true);
       setShowScrollButton(false);
-      previousMessageLength.current = 0;
       userHasScrolledUp.current = false;
-      autoScrollActive.current = false;
-      lastScrollTop.current = 0;
+      isAutoScrolling.current = false;
+      lastContentHeight.current = 0;
+
+      if (scrollAnimationFrame.current) {
+        cancelAnimationFrame(scrollAnimationFrame.current);
+        scrollAnimationFrame.current = null;
+      }
     }
-  }, [localState?.messages?.length]);
+  }, [emptyConversation]);
 
   // Handle copied state
   useEffect(() => {
@@ -199,6 +305,45 @@ export default function Conversation({
     const timer = setTimeout(() => setCopied(false), 1000);
     return () => clearTimeout(timer);
   }, [copied]);
+
+  // Handle new messages and maintain scroll position
+  useEffect(() => {
+    if (!localState?.messages || localState.messages.length <= 2) return;
+
+    const messages = localState.messages.slice(0, -1);
+    const lastMessage = messages[messages.length - 1];
+
+    // Check if we're at bottom when a new user message appears
+    if (lastMessage?.role === "user" && containerRef.current) {
+      const wasAtBottom = checkIfAtBottom();
+      if (wasAtBottom) {
+        // Reset scroll flag when user sends a new message while at bottom
+        userHasScrolledUp.current = false;
+        // Force immediate scroll to accommodate new message
+        setTimeout(() => {
+          if (containerRef.current && !userHasScrolledUp.current) {
+            performAutoScroll();
+          }
+        }, 10);
+      }
+    }
+
+    // Force scroll to bottom when conversation starts (first real message)
+    if (localState?.messages?.length === 3 && containerRef.current) {
+      setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = containerRef.current.scrollHeight;
+          userHasScrolledUp.current = false;
+          updateScrollButtonVisibility();
+        }
+      }, 100);
+    }
+  }, [
+    localState?.messages,
+    checkIfAtBottom,
+    performAutoScroll,
+    updateScrollButtonVisibility,
+  ]);
 
   return (
     <div
@@ -254,10 +399,11 @@ export default function Conversation({
         <div className="relative flex-1 min-h-0">
           <div
             ref={containerRef}
-            className="p-1.5 flex flex-col gap-1.5 h-full overflow-y-auto"
+            className="p-1.5 flex flex-col gap-1.5 h-full overflow-y-auto scroll-smooth"
             style={{
               scrollPaddingBottom: "20px",
               WebkitOverflowScrolling: "touch",
+              scrollBehavior: isAutoScrolling.current ? "auto" : "smooth",
             }}
           >
             {localState.messages.slice(0, -1)?.map((message, message_index) => (
@@ -292,7 +438,7 @@ export default function Conversation({
             ))}
           </div>
 
-          {/* Floating scroll to bottom button - only shows when there's overflow AND not at bottom */}
+          {/* Floating scroll to bottom button - only shows when there's actual overflow AND not at bottom */}
           {showScrollButton && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
               <button
@@ -302,7 +448,8 @@ export default function Conversation({
                          px-2 py-2 rounded-full shadow-lg hover:shadow-xl dark:shadow-dark
                          flex items-center justify-center gap-2 transition-all duration-200 
                          hover:scale-105 border border-gray-200 dark:border-gray-600
-                         backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
+                         backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95
+                         animate-pulse-subtle"
               >
                 <svg
                   className="w-4 h-4"
