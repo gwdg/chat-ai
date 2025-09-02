@@ -97,19 +97,49 @@ const ProgressiveReferenceItem = memo(
             !isComplete &&
             (processedContent.length < 50 || !processedContent.includes("\n"));
 
-          // Clean up the title
+          // Clean up the title - remove RREF tag first
           let cleanTitle = firstLine.replace(/\[RREF\d+\]\s*/i, "").trim();
 
-          // Extract URL from title if present
-          const urlMatch = cleanTitle.match(/(https?:\/\/[^\s]+)/);
-          const sourceUrl = urlMatch ? urlMatch[1] : null;
+          // Parse markdown-style link [text](url) or just extract URL
+          let sourceUrl = null;
+          let displayTitle = cleanTitle;
 
-          if (sourceUrl) {
-            cleanTitle = cleanTitle.replace(sourceUrl, "").trim();
+          // Check for markdown link format [text](url)
+          const markdownLinkMatch = cleanTitle.match(/\[([^\]]+)\]\(([^)]+)\)/);
+          if (markdownLinkMatch) {
+            // Use the link text as title, extract URL
+            displayTitle = markdownLinkMatch[1].trim();
+            sourceUrl = markdownLinkMatch[2].trim();
+          } else {
+            // Check for plain URL in the title
+            const urlMatch = cleanTitle.match(/(https?:\/\/[^\s\]]+)/);
+            if (urlMatch) {
+              sourceUrl = urlMatch[1];
+              // If the entire title is just the URL, use domain as title
+              if (
+                cleanTitle === sourceUrl ||
+                cleanTitle === `[${sourceUrl}](${sourceUrl})`
+              ) {
+                try {
+                  const url = new URL(sourceUrl);
+                  displayTitle = url.hostname.replace("www.", "");
+                } catch {
+                  displayTitle = "Source";
+                }
+              } else {
+                // Remove the URL from the title
+                displayTitle = cleanTitle.replace(urlMatch[0], "").trim();
+              }
+            }
           }
 
-          if (!cleanTitle) {
-            cleanTitle = `Reference ${(reference?.number || index) + 1}`;
+          // Check for score in parentheses at the end and remove it
+          displayTitle = displayTitle.replace(/\s*\([0-9.]+\)\s*$/, "").trim();
+
+          if (!displayTitle) {
+            displayTitle = sourceUrl
+              ? "Source"
+              : `Reference ${(reference?.number || index) + 1}`;
           }
 
           // If it's partial and we only have a title, that's okay
@@ -117,7 +147,7 @@ const ProgressiveReferenceItem = memo(
           const hasActualContent = remainingContent.length > 10 || isPartial;
 
           return {
-            titleText: cleanTitle,
+            titleText: displayTitle,
             contentWithoutTitle: remainingContent,
             hasContent: hasActualContent,
             sourceUrl,
@@ -266,7 +296,11 @@ const ProgressiveReferenceItem = memo(
           );
 
         //return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
-        return (<div {...props}><ReactMarkdown>{sanitizedContent}</ReactMarkdown></div>);
+        return (
+          <div {...props}>
+            <ReactMarkdown>{sanitizedContent}</ReactMarkdown>
+          </div>
+        );
       } catch (error) {
         console.error("Error rendering markdown:", error);
         return (
@@ -317,6 +351,7 @@ const ProgressiveReferenceItem = memo(
               <SafeMarkdown
                 remarkplugins={[remarkGfm]}
                 rehypeplugins={[rehypeRaw]}
+                SafeMarkdown
                 components={linkRenderer}
                 className="inline"
               >
@@ -340,7 +375,7 @@ const ProgressiveReferenceItem = memo(
                 onClick={(e) => e.stopPropagation()}
                 title="Open source"
               >
-                <ExternalLink size={14} />
+                <ExternalLink size={18} />
               </a>
             )}
           </div>

@@ -1,36 +1,44 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trans } from "react-i18next";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
 
-import { ChevronLeft, Download, Edit, MoreVertical, Trash2, X } from "lucide-react";
+import {
+  ChevronLeft,
+  Download,
+  Edit,
+  MoreVertical,
+  Trash2,
+} from "lucide-react";
 import { useConversationList } from "../../db";
 import { useModal } from "../../modals/ModalContext";
-import LogoContainer from "../Header/LogoContainer";
-import { persistor } from "../../Redux/store/store";
 
-import { createConversation } from "../../db";
 import Logo from "../../assets/logos/chat_ai.svg";
 
-import {
-  selectDarkMode,
-  selectShowSettings,
-  selectShowSidebar,
-  toggleSidebar,
-} from "../../Redux/reducers/interfaceSettingsSlice";
+import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 
-import { Bot, Sidebar } from "lucide-react";
+import { Bot } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
 
-export default function SidebarContent({ localState, setLocalState, handleNewConversation }: { localState: any, setLocalState: (state: any) => void, handleNewConversation: () => void }) {
+export default function SidebarContent({
+  localState,
+  setLocalState,
+  handleNewConversation,
+}: {
+  localState: any;
+  setLocalState: (state: any) => void;
+  handleNewConversation: () => void;
+}) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { openModal } = useModal();
   const currentConversationId = localState?.id;
 
   // have an own state of selected Conversation id to update the ui smoothly
-  const [selectedConversationId, setSelectedConversationId] = useState(currentConversationId);
+  const [selectedConversationId, setSelectedConversationId] = useState(
+    currentConversationId
+  );
   useEffect(() => {
     if (localState?.id) {
       setSelectedConversationId(currentConversationId);
@@ -45,7 +53,6 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const menuRef = useRef(null);
   const menuButtonRefs = useRef({}); // Add refs for menu buttons
-
 
   function onClose() {
     dispatch(toggleSidebar());
@@ -66,6 +73,21 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
     if (conversations[0]?.id) {
       setSelectedConversationId(currentConversationId);
     }
+  };
+
+  const handleTitleDoubleClick = (e, conv) => {
+    e.stopPropagation(); // Prevent conversation selection
+    e.preventDefault();
+
+    // Only enable double-click rename on desktop
+    if (!isDesktop) return;
+
+    openModal("renameConversation", {
+      id: conv.id,
+      currentTitle: conv.title || "Untitled Conversation",
+      localState: localState,
+      setLocalState: setLocalState,
+    });
   };
 
   const handleExportConversation = (conv) => {
@@ -160,7 +182,6 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
         WebkitTapHighlightColor: "transparent",
       }}
     >
-
       {/* Desktop Header with close button */}
       <div className="hidden md:flex items-center justify-between p-3 ">
         <span className="px-3 flex items-center">
@@ -227,10 +248,11 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
             <div
               key={id}
               onClick={() => handleSelectConversation(id)}
-              className={`group relative px-3 py-3 rounded-2xl cursor-pointer touch-manipulation ${isActive
+              className={`group relative px-3 py-3 rounded-2xl touch-manipulation ${
+                isActive
                   ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
                   : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-100"
-                }`}
+              }`}
               data-current={isActive ? "true" : "false"}
               style={{
                 WebkitTapHighlightColor: "transparent",
@@ -242,8 +264,10 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
                 <div
                   className="flex-1 overflow-hidden min-w-0"
                   title={conv.title || "Untitled Conversation"}
+                  onDoubleClick={(e) => handleTitleDoubleClick(e, conv)}
+                  style={{ cursor: isDesktop ? "text" : "pointer" }}
                 >
-                  <div className="truncate text-xs font-medium leading-relaxed">
+                  <div className="truncate text-xs font-medium leading-relaxed cursor-pointer">
                     {conv.title || "Untitled Conversation"}
                   </div>
                 </div>
@@ -303,13 +327,14 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
                 </div>*/}
                 {/* Dropdown Menu Button */}
                 <div
-                  className={`transition-opacity duration-200 ${window.innerWidth < 1024 ||
+                  className={`transition-opacity duration-200 ${
+                    window.innerWidth < 1024 ||
                     isHovered ||
                     isActive ||
                     isMenuOpen
-                    ? "opacity-100"
-                    : "opacity-0"
-                    } group-hover:opacity-100`}
+                      ? "opacity-100"
+                      : "opacity-0"
+                  } group-hover:opacity-100`}
                 >
                   <button
                     ref={(el) => (menuButtonRefs.current[id] = el)}
@@ -327,14 +352,12 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
             </div>
           );
         })}
-    </div>
+      </div>
 
       {/* Bottom section */}
       <div className="flex flex-col gap-4 m-3 border-t border-gray-200 dark:border-gray-500 pt-3">
         {/* Import Conversation button */}
-        <ImportConversationButton
-          variant="button"
-        />
+        <ImportConversationButton variant="button" />
         {/* Import Persona button */}
         <button
           onClick={() => {
@@ -402,7 +425,10 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
                     flush: true,
                   }));
                 }
-                openModal("exportConversation", { localState, conversationId: conv.id });
+                openModal("exportConversation", {
+                  localState,
+                  conversationId: conv.id,
+                });
                 closeMenu();
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"

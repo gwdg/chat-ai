@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { Trans, useTranslation } from "react-i18next";
 import BaseModal from "../../modals/BaseModal";
@@ -14,14 +14,43 @@ export default function RenameConversationModal({
 }) {
   const [title, setTitle] = useState(currentTitle || "");
   const [error, setError] = useState("");
+  const inputRef = useRef(null);
 
   // const dispatch = useDispatch();
   const { t } = useTranslation();
 
   useEffect(() => {
-    setTitle(title);
+    setTitle(currentTitle || "");
     setError(""); // Clear error when modal reopens
-  }, [title]);
+  }, [currentTitle]);
+
+  // Autofocus the input when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const focusInput = () => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          // Set cursor to the end of the text
+          const length = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(length, length);
+          return true;
+        }
+        return false;
+      };
+
+      // Try focusing immediately first
+      if (!focusInput()) {
+        // If immediate focus fails, try with increasing delays
+        const timeouts = [50, 150, 300];
+
+        timeouts.forEach((delay) => {
+          setTimeout(() => {
+            focusInput();
+          }, delay);
+        });
+      }
+    }
+  }, [isOpen]);
 
   const handleRename = async () => {
     if (!title?.trim()) {
@@ -68,6 +97,7 @@ export default function RenameConversationModal({
         {/* Input Field */}
         <div className="flex flex-col gap-1">
           <input
+            ref={inputRef}
             type="text"
             value={title}
             onChange={handleTitleChange}
@@ -80,7 +110,6 @@ export default function RenameConversationModal({
                      error ? "focus:ring-red-500" : "focus:ring-tertiary"
                    }`}
             placeholder={t("rename_conversation.enter_name")}
-            autoFocus
           />
           {error && <p className="text-red-500 text-sm pl-1">{error}</p>}
         </div>

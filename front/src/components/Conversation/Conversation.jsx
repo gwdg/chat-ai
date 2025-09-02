@@ -384,16 +384,16 @@ export default function Conversation({
       <div
         className={`flex flex-col relative w-full rounded-xl
           bg-white dark:bg-bg_secondary_dark shadow-md dark:shadow-dark
-          transition-opacity duration-500 ease-in-out
+          transition-opacity duration-500 ease-in-out 
           ${
             localState.messages.length <= 2
               ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden"
               : "scale-100 opacity-100 flex-1 min-h-0"
           }`}
       >
-        <div className="flex justify-between">
-          <HallucinationWarning />
-        </div>
+        
+        {/* Hallucination Warning */}
+        <HallucinationWarning />
 
         {/* Scrollable messages container with floating button */}
         <div className="relative flex-1 min-h-0">
