@@ -1,6 +1,8 @@
 import { useState, memo, useMemo, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import {
   ChevronDown,
@@ -43,6 +45,176 @@ const convertHtmlToText = (content) => {
       return ` data-on${event}="${handler}"`;
     });
 };
+
+// Enhanced reference-specific renderer components
+const getReferenceRendererComponents = () => ({
+  ...rendererComponents,
+  // Override components for reference-specific styling
+  p: ({ children }) => (
+    <div className="mb-2 text-xs leading-relaxed">{children}</div>
+  ),
+  h1: ({ children, id }) => (
+    <h1
+      className="text-sm font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
+      {children}
+    </h1>
+  ),
+  h2: ({ children, id }) => (
+    <h2
+      className="text-sm font-semibold mt-3 mb-2 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
+      {children}
+    </h2>
+  ),
+  h3: ({ children, id }) => (
+    <h3
+      className="text-xs font-medium mt-2 mb-1 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
+      {children}
+    </h3>
+  ),
+  h4: ({ children, id }) => (
+    <h4
+      className="text-xs font-medium mt-2 mb-1 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
+      {children}
+    </h4>
+  ),
+  h5: ({ children, id }) => (
+    <h5
+      className="text-xs font-medium mt-1 mb-1 text-gray-900 dark:text-gray-100"
+      id={id}
+    >
+      {children}
+    </h5>
+  ),
+  h6: ({ children, id }) => (
+    <h6
+      className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-1 mb-1"
+      id={id}
+    >
+      {children}
+    </h6>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-bold text-gray-900 dark:text-gray-100 text-xs">
+      {children}
+    </strong>
+  ),
+  em: ({ children }) => (
+    <em className="italic text-gray-800 dark:text-gray-200 text-xs">
+      {children}
+    </em>
+  ),
+  ul: ({ children }) => (
+    <ul className="list-disc pl-4 mb-3 space-y-0.5 text-xs">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal pl-4 mb-3 space-y-0.5 text-xs">{children}</ol>
+  ),
+  li: ({ children }) => (
+    <li className="text-gray-800 dark:text-gray-200 text-xs">{children}</li>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 border-blue-500 pl-3 py-1 my-2 italic text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 rounded-r text-xs">
+      {children}
+    </blockquote>
+  ),
+  table: ({ children }) => (
+    <div className="w-full overflow-x-auto my-3">
+      <table className="w-full border-collapse border border-gray-300 dark:border-gray-700 rounded-md overflow-hidden text-xs">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-gray-100 dark:bg-gray-800">{children}</thead>
+  ),
+  tbody: ({ children }) => (
+    <tbody className="bg-white dark:bg-gray-900">{children}</tbody>
+  ),
+  tr: ({ children }) => (
+    <tr className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      {children}
+    </tr>
+  ),
+  th: ({ children }) => (
+    <th className="border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-left font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 text-xs">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-gray-800 dark:text-gray-200 text-xs">
+      {children}
+    </td>
+  ),
+  hr: () => (
+    <hr className="border-t border-gray-300 dark:border-gray-700 my-3" />
+  ),
+  code({ inline, className, children }) {
+    const content = String(children).replace(/\n$/, "");
+
+    if (inline) {
+      return (
+        <code className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-pink-600 dark:text-pink-400 font-mono text-xs">
+          {content}
+        </code>
+      );
+    }
+
+    // For block code in references, use a simple pre block
+    return (
+      <pre className="bg-gray-100 dark:bg-gray-800 rounded-md p-2 my-2 overflow-x-auto">
+        <code className="text-xs font-mono text-gray-800 dark:text-gray-200">
+          {content}
+        </code>
+      </pre>
+    );
+  },
+  a: ({ href, children, ...props }) => {
+    try {
+      if (
+        href &&
+        (href.startsWith("javascript:") || href.includes("javascript:"))
+      ) {
+        return (
+          <span className="text-gray-600 line-through text-xs">
+            {children} [UNSAFE LINK]
+          </span>
+        );
+      }
+
+      return (
+        <a
+          {...props}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline inline-flex items-center gap-0.5 text-xs"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {children}
+          <ExternalLink size={10} className="opacity-60" />
+        </a>
+      );
+    } catch (error) {
+      console.error("Error rendering link:", error);
+      return <span className="text-blue-600 text-xs">{children}</span>;
+    }
+  },
+  // Add support for math if present in references
+  math: ({ value }) => (
+    <div className="my-2 text-center">
+      <span className="katex-display text-xs">{value}</span>
+    </div>
+  ),
+  inlineMath: ({ value }) => <span className="katex text-xs">{value}</span>,
+});
 
 // Progressive Reference Item that can show partial content
 const ProgressiveReferenceItem = memo(
@@ -182,42 +354,9 @@ const ProgressiveReferenceItem = memo(
       [titleText, contentWithoutTitle]
     );
 
-    // Safe link renderer
-    const linkRenderer = useMemo(
-      () => ({
-        ...rendererComponents,
-        a: ({ href, children, ...props }) => {
-          try {
-            if (
-              href &&
-              (href.startsWith("javascript:") || href.includes("javascript:"))
-            ) {
-              return (
-                <span className="text-gray-600 line-through">
-                  {children} [UNSAFE LINK]
-                </span>
-              );
-            }
-
-            return (
-              <a
-                {...props}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline inline-flex items-center gap-1"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {children}
-                <ExternalLink size={12} className="opacity-60" />
-              </a>
-            );
-          } catch (error) {
-            console.error("Error rendering link:", error);
-            return <span className="text-blue-600">{children}</span>;
-          }
-        },
-      }),
+    // Get reference-specific renderer components
+    const referenceComponents = useMemo(
+      () => getReferenceRendererComponents(),
       []
     );
 
@@ -233,7 +372,7 @@ const ProgressiveReferenceItem = memo(
       }
     }, [hasContent, isRendered, isPartial, isOpen]);
 
-    // Safe markdown rendering
+    // Enhanced Safe markdown rendering with full plugin support
     const SafeMarkdown = ({ children: markdownContent, ...props }) => {
       try {
         if (!markdownContent || typeof markdownContent !== "string") {
@@ -295,16 +434,31 @@ const ProgressiveReferenceItem = memo(
             }
           );
 
-        //return <ReactMarkdown {...props}>{sanitizedContent}</ReactMarkdown>;
         return (
-          <div {...props}>
-            <ReactMarkdown>{sanitizedContent}</ReactMarkdown>
-          </div>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[
+              rehypeRaw,
+              [
+                rehypeKatex,
+                {
+                  output: "htmlAndMathml",
+                  throwOnError: false,
+                  trust: true,
+                  strict: false,
+                },
+              ],
+            ]}
+            components={referenceComponents}
+            {...props}
+          >
+            {sanitizedContent}
+          </ReactMarkdown>
         );
       } catch (error) {
         console.error("Error rendering markdown:", error);
         return (
-          <div className="text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+          <div className="text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded text-xs">
             Error rendering content: {error.message}
           </div>
         );
@@ -348,15 +502,7 @@ const ProgressiveReferenceItem = memo(
               {(reference?.number || index) + 1}
             </span>
             <div className="text-sm font-medium truncate text-gray-800 dark:text-gray-200 flex-grow min-w-0">
-              <SafeMarkdown
-                remarkplugins={[remarkGfm]}
-                rehypeplugins={[rehypeRaw]}
-                SafeMarkdown
-                components={linkRenderer}
-                className="inline"
-              >
-                {titleText}
-              </SafeMarkdown>
+              <SafeMarkdown>{titleText}</SafeMarkdown>
               {isPartial && isStreaming && (
                 <span className="inline-flex items-center ml-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
@@ -366,7 +512,7 @@ const ProgressiveReferenceItem = memo(
                 </span>
               )}
             </div>
-            {sourceUrl && (
+            {/* {sourceUrl && (
               <a
                 href={sourceUrl}
                 target="_blank"
@@ -377,7 +523,7 @@ const ProgressiveReferenceItem = memo(
               >
                 <ExternalLink size={18} />
               </a>
-            )}
+            )} */}
           </div>
 
           <div className="shrink-0 ml-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -408,21 +554,16 @@ const ProgressiveReferenceItem = memo(
           </div>
         </div>
 
-        {/* Expanded content */}
+        {/* Expanded content with enhanced rendering */}
         {isOpen && hasContent && contentWithoutTitle && !isPartial && (
           <div
             id={`reference-${reference?.number || index}`}
             className="overflow-hidden"
           >
             <div className="px-4 py-4 bg-gray-50 dark:bg-gray-800/30 border-t border-gray-200 dark:border-gray-700 animate-in slide-in-from-top-2 duration-300">
-              <SafeMarkdown
-                remarkplugins={[remarkGfm]}
-                rehypeplugins={[rehypeRaw]}
-                components={linkRenderer}
-                className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed"
-              >
-                {contentWithoutTitle}
-              </SafeMarkdown>
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                <SafeMarkdown>{contentWithoutTitle}</SafeMarkdown>
+              </div>
             </div>
           </div>
         )}
