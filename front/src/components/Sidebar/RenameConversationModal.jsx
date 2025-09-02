@@ -94,7 +94,7 @@ export default function RenameConversationModal({
                      min-w-[100px] select-none"
             onClick={onClose}
           >
-            {t("Cancel", "Cancel")}
+            {t("common.cancel")}
           </button>
 
           <button

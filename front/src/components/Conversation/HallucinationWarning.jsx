@@ -22,7 +22,7 @@ export default function HallucinationWarning() {
   };
 
   return countHallucination < 3 && !closedHallucination ? (
-    <div className="w-full h-10 sticky select-none bg-gray-200 dark:bg-bg_dark m-1 p-2 px-3 rounded-lg flex justify-between items-center shadow-sm dark:shadow-dark">
+    <div className="w-full h-full sticky select-none bg-gray-200 dark:bg-bg_dark m-1 py-1 px-3 rounded-lg flex justify-between items-center shadow-sm dark:shadow-dark">
       <p className="dark:text-white text-black text-sm">
         <Trans i18nKey="alert.hallucination.note1" />
         <Link
@@ -37,7 +37,7 @@ export default function HallucinationWarning() {
         <Trans i18nKey="alert.hallucination.note2" />
       </p>
       <X
-        className="h-[20px] w-[20px] cursor-pointer text-[#009EE0]"
+        className="h-[20px] min-w-[20px] cursor-pointer text-[#009EE0]"
         alt="cross"
         onClick={handleClose}
       />
