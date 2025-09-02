@@ -75,13 +75,13 @@ export default function UserMemoryModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.memory.userMemory"
+      titleKey="memory.userMemory"
       maxWidth="max-w-2xl"
     >
       {/* Memory count */}
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
         <Trans
-          i18nKey="description.memory.memoryCount"
+          i18nKey="memory.memoryCount"
           defaultValue="{{count}} memories stored"
           values={{ count: memories.length }}
         />
@@ -92,7 +92,7 @@ export default function UserMemoryModal({
         <div className="flex flex-col gap-3">
           <p className="text-sm font-medium dark:text-white">
             <Trans
-              i18nKey="description.memory.addNew"
+              i18nKey="memory.addNew"
               defaultValue="Add New Memory"
             />
           </p>
@@ -109,7 +109,7 @@ export default function UserMemoryModal({
               disabled={!newMemoryText.trim()}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed text-sm"
             >
-              <Trans i18nKey="description.memory.add" defaultValue="Add" />
+              <Trans i18nKey="memory.add" defaultValue="Add" />
             </button>
           </div>
         </div>
@@ -119,7 +119,7 @@ export default function UserMemoryModal({
       <div className="flex justify-between items-center mb-2">
         <p className="text-sm font-medium dark:text-white">
           <Trans
-            i18nKey="description.memory.savedMemories"
+            i18nKey="memory.savedMemories"
             defaultValue="Saved Memories"
           />
         </p>
@@ -129,7 +129,7 @@ export default function UserMemoryModal({
             className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer"
           >
             <Trans
-              i18nKey="description.memory.deleteAll"
+              i18nKey="memory.deleteAll"
               defaultValue="Delete All"
             />
           </button>
@@ -142,13 +142,13 @@ export default function UserMemoryModal({
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <p className="text-sm">
               <Trans
-                i18nKey="description.memory.noMemories"
+                i18nKey="memory.noMemories"
                 defaultValue="No memories saved yet."
               />
             </p>
             <p className="text-xs mt-1">
               <Trans
-                i18nKey="description.memory.addFirst"
+                i18nKey="memory.addFirst"
                 defaultValue="Add your first memory above!"
               />
             </p>
@@ -186,7 +186,7 @@ export default function UserMemoryModal({
                           className="px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors cursor-pointer"
                         >
                           <Trans
-                            i18nKey="description.memory.save"
+                            i18nKey="memory.save"
                             defaultValue="Save"
                           />
                         </button>
@@ -195,7 +195,7 @@ export default function UserMemoryModal({
                           className="px-3 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer"
                         >
                           <Trans
-                            i18nKey="description.memory.cancel"
+                            i18nKey="memory.cancel"
                             defaultValue="Cancel"
                           />
                         </button>
@@ -210,7 +210,7 @@ export default function UserMemoryModal({
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           <Trans
-                            i18nKey="description.memory.created"
+                            i18nKey="memory.created"
                             defaultValue="Created: {{date}}"
                             values={{
                               date: new Date(
@@ -225,7 +225,7 @@ export default function UserMemoryModal({
                             className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors cursor-pointer"
                           >
                             <Trans
-                              i18nKey="description.memory.edit"
+                              i18nKey="memory.edit"
                               defaultValue="Edit"
                             />
                           </button>
@@ -234,7 +234,7 @@ export default function UserMemoryModal({
                             className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer"
                           >
                             <Trans
-                              i18nKey="description.memory.delete"
+                              i18nKey="memory.delete"
                               defaultValue="Delete"
                             />
                           </button>

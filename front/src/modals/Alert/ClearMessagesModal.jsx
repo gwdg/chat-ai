@@ -26,12 +26,12 @@ export default function ClearMessagesModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.help_title1"
+      titleKey="alert.title1"
     >
       {/* Message */}
       <div className="pt-0 pb-2">
         <p className="dark:text-white text-black text-justify text-sm">
-          <Trans i18nKey="description.history" />
+          <Trans i18nKey="alert.clear_messages" />
         </p>
       </div>
 
@@ -48,7 +48,7 @@ export default function ClearMessagesModal({
           htmlFor="dontShowAgain"
           className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
         >
-          <Trans i18nKey="description.dont_show_again" />
+          <Trans i18nKey="common.dont_show_again" />
         </label>
       </div>
 
@@ -59,7 +59,7 @@ export default function ClearMessagesModal({
           className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={onClose}
         >
-          <Trans i18nKey="description.cache2" />
+          <Trans i18nKey="alert.no" />
         </button>
 
         {/* Clear history button */}
@@ -67,7 +67,7 @@ export default function ClearMessagesModal({
           className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={() => {clearMessages(); onClose();}}
         >
-          <Trans i18nKey="description.cache3" />
+          <Trans i18nKey="alert.yes" />
         </button>
       </div>
     </BaseModal>

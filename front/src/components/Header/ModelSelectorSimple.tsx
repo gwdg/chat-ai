@@ -19,17 +19,8 @@ const sortOptions = [
   { value: "name-desc", label: "Name (Z→A)" },
 ];
 
-export default function ModelSelectorSimple({ currentModelId, modelsData, onChange, inHeader = false }: { currentModelId: string | undefined, modelsData: BaseModelInfo[], inHeader: boolean, onChange: (model: BaseModelInfo) => void }) {
-  const userDefaultModel = useSelector(selectDefaultModel);
-
-  const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData.find(model => model.id === userDefaultModel) || modelsData[0] || null : null;
-
-  useEffect(() => {
-    if (currentModelId === undefined || currentModelId !== selectedModel?.id) {
-      setSelectedModel(selectedModel);
-    }
-  }, []);
-
+export default function ModelSelectorSimple({ selectedModel, modelsData, onChange, inHeader = false }: { selectedModel: Object | undefined, modelsData: BaseModelInfo[], inHeader: boolean, onChange: (model: BaseModelInfo) => void }) {
+  
   function setSelectedModel(model: BaseModelInfo | null) {
     onChange && onChange(model);
   }

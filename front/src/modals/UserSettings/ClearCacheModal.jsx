@@ -58,12 +58,12 @@ export default function ClearCacheModal({ isOpen, onClose }) {
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.help_title1"
+      titleKey="alert.title"
     >
       {/* Message */}
       <div className="pt-0 pb-2">
         <p className="dark:text-white text-black text-justify text-sm">
-          <Trans i18nKey="description.cache1" />
+          <Trans i18nKey="alert.clear_data" />
         </p>
       </div>
 
@@ -74,7 +74,7 @@ export default function ClearCacheModal({ isOpen, onClose }) {
           className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={onClose}
         >
-          <Trans i18nKey="description.cache2" />
+          <Trans i18nKey="alert.no" />
         </button>
 
         {/* Clear data button */}
@@ -82,7 +82,7 @@ export default function ClearCacheModal({ isOpen, onClose }) {
           className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={clearData}
         >
-          <Trans i18nKey="description.cache3" />
+          <Trans i18nKey="alert.yes" />
         </button>
       </div>
     </BaseModal>

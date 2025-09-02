@@ -35,23 +35,7 @@ const sortOptions = [
   { value: "context-asc", label: "Context (low→high)" },
 ];
 
-export default function ModelSelectorSimple({ currentModelId, modelsData, onChange }: { currentModelId: string | undefined, modelsData: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void }) {
-
-  const defaultModel = useSelector(selectDefaultModel); // load from redis
-
-  // choose model of conversation, or default model or first model in list
-  const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData.find(model => model.id === defaultModel) || modelsData[0] || null : null;
-
-  //this catches the case that the current model is not in the list or is invalid
-  useEffect(() => {
-    if(currentModelId === undefined || currentModelId !== selectedModel?.id){
-      setSelectedModel(selectedModel);
-    }
-  }, []);
-
-  function setSelectedModel(model: ExtendedModelInfo | null) {
-    onChange?.(model);
-  }
+export default function ModelSelectorSimple({ selectedModel, modelsData, onChange }: { selectedModel: Object | undefined, modelsData: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void }) {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);

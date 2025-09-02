@@ -34,7 +34,7 @@ export default function ClearButton({
 
     // Display clear button if prompt is not empty
     return (prompt?.trim() !== "" ? (
-        <Tooltip text={t("description.clear")}>
+        <Tooltip text={t("common.clear")}>
             <button
                 className="h-[30px] w-[30px] cursor-pointer"
                 onClick={handleClear}

@@ -42,7 +42,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
             target="_blank"
           >
             <p className="text-center text-blue-600 dark:text-blue-400 hover:underline">
-              <Trans i18nKey="description.note5"></Trans>
+              <Trans i18nKey="footer.imprint"></Trans>
             </p>
           </Link>
         </div>
@@ -80,7 +80,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
               {/* Navigation Links Grid */}
               <NavigationGridLinks />
               <div className="dark:text-white">
-                © 2025 GWDG | <Trans i18nKey="description.copyright"></Trans>
+                © 2025 GWDG | <Trans i18nKey="footer.copyright"></Trans>
               </div>
             </div>
           </div>

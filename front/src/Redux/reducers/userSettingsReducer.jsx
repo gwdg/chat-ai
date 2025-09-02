@@ -4,7 +4,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   memories: [],
   // model: "", // TODO load from file
-  timeout: 300,
+  timeout: 300000,
 };
 
 const userSettingsSlice = createSlice({

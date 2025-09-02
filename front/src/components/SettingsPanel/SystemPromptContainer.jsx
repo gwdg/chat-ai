@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { HelpCircle } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -8,13 +8,11 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
   const { openModal } = useModal();
   const [systemPromptError, setSystemPromptError] = useState("");
   const [value, setValue] = useState(localState.messages[0]?.content[0]?.text || "");
-
+   const { t } = useTranslation();
   // Validate the system prompt is not empty
   const validateSystemPrompt = () => {
     if (!value.trim()) {
-      //setSystemPromptError(t("description.custom6"));
-      // TODO handle t
-      setSystemPromptError("System prompt is empty. Model may not respond.");
+      setSystemPromptError(t("alert.system_prompt_empty"));
       return false;
     }
     return true;
@@ -70,7 +68,7 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
             className="h-full resize-none bg-white text-black dark:text-white dark:bg-bg_secondary_dark p-3 border border-gray-200 dark:border-black/20 outline-none rounded-lg shadow-lg dark:shadow-dark w-full min-h-[24vh] text-sm overflow-y-auto"
             type="text"
             name="systemPrompt"
-            placeholder="Enter the system prompt here"
+            placeholder={t("settings.system_prompt_placeholder")}
             value={value || ""}
             onChange={onChange}
             onBlur={() => validateSystemPrompt()}
@@ -78,7 +76,7 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
       </div>
       {(systemPromptError || !value) && (
           <p className="text-yellow-600 text-xs">
-            <Trans i18nKey="description.custom6" />
+            <Trans i18nKey="alert.system_prompt_empty" />
           </p>
         )}
     </div>

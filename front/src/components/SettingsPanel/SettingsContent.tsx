@@ -68,25 +68,25 @@ const SettingsPanel = ({
   const tourSteps = [
     {
       target: ".memory-option-off",
-      content: t("description.tour.memory.off"),
+      content: t("tour.memory.off"),
       placement: "top",
       disableBeacon: true,
     },
     {
       target: ".memory-option-recall",
-      content: t("description.tour.memory.recall"),
+      content: t("tour.memory.recall"),
       placement: "top",
       disableBeacon: true,
     },
     {
       target: ".memory-option-on",
-      content: t("description.tour.memory.on"),
+      content: t("tour.memory.on"),
       placement: "top",
       disableBeacon: true,
     },
     {
       target: ".user-profile-button",
-      content: t("description.tour.memory.settings"),
+      content: t("tour.memory.settings"),
       placement: "top",
       disableBeacon: true,
     },
@@ -222,11 +222,11 @@ const SettingsPanel = ({
         disableScrolling={true}
         callback={handleJoyrideCallback}
         locale={{
-          back: t("description.tour.back"),
-          close: t("description.tour.close"),
-          last: t("description.tour.last"),
-          next: t("description.tour.next"),
-          skip: t("description.tour.skip"),
+          back: t("tour.back"),
+          close: t("tour.close"),
+          last: t("tour.last"),
+          next: t("tour.next"),
+          skip: t("tour.skip"),
         }}
         styles={{
           options: {
@@ -319,8 +319,8 @@ const SettingsPanel = ({
                 <Trans
                   i18nKey={
                     userData?.org == "MPG"
-                      ? "description.warning_settings_mpg"
-                      : "description.warning_settings"
+                      ? "alert.external_model_mpg"
+                      : "alert.external_model"
                   }
                 />
               </div>
@@ -381,10 +381,10 @@ const SettingsPanel = ({
               onClick={resetDefault}
             >
               <div className="hidden desktop:block text-sm">
-                <Trans i18nKey="description.custom7" />
+                <Trans i18nKey="settings.reset_default" />
               </div>
               <div className="block desktop:hidden text-sm">
-                <Trans i18nKey="description.custom10" />
+                <Trans i18nKey="settings.default" />
               </div>
             </button>
           </div>

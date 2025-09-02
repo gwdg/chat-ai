@@ -1,5 +1,5 @@
 
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useState, useRef } from 'react'
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';
@@ -9,12 +9,16 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
   const currentModelId = localState?.settings?.model?.id;
+  const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData[0] || null : null;
+  const [initialized, setInitialized] = useState(false);
+
   const hasExtendedModels = modelsData?.[0]?.description !== undefined;
   const { openModal } = useModal();
 
   function setModel(newModel: ModelInfo) {
     if (newModel?.status === "offline")
       openModal("serviceOffline");
+    setInitialized(false);
     setLocalState((prev) => ({
       ...prev,
       settings: {
@@ -24,32 +28,26 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
     }));
   }
 
-  // Automatically update the model when the ID changes
+  // currentModelId has changed indirectly
   useEffect(() => {
-    if (!currentModelId || !modelsData) return;
+    if (!currentModelId) return;
+    if (!initialized) {
+      setInitialized(true);
+      return;
+    } 
     const foundModel = modelsData.find(
       (model) => model.id === currentModelId
     );
-    if (foundModel) {
-      setLocalState((prev) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        model: foundModel,
-      },
-      }));
-    }
-  }, [currentModelId, modelsData]);
-
-  
+    if (foundModel) setModel(foundModel);
+  }, [currentModelId]);
 
   return (
     <>
       {
         hasExtendedModels ? 
-          <ModelSelectorExtended currentModelId={currentModelId} modelsData={modelsData} inHeader={inHeader} onChange={setModel} /> 
+          <ModelSelectorExtended selectedModel={selectedModel} modelsData={modelsData} inHeader={inHeader} onChange={setModel} /> 
         : 
-          <ModelSelectorSimple currentModelId={currentModelId} modelsData={modelsData} inHeader={inHeader} onChange={setModel} />
+          <ModelSelectorSimple selectedModel={selectedModel} modelsData={modelsData} inHeader={inHeader} onChange={setModel} />
       }
     </>
   )

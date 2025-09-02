@@ -1,4 +1,5 @@
 import { useModal } from "../../modals/ModalContext";
+import { Trans } from "react-i18next";
 import { HelpCircle } from "lucide-react";
 
 export default function WebSearchToggle({ localState, setLocalState }) {
@@ -35,13 +36,13 @@ export default function WebSearchToggle({ localState, setLocalState }) {
           {/* Description that appears only when the box is unchecked */}
           {!settings?.enable_web_search && (
             <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
-              Web search is disabled
+              <Trans i18nKey="settings.web_search_disabled" /> 
             </span>
           )}
           {/* Description that appears only when the box is checked */}
           {settings?.enable_web_search && (
             <span className="ml-2 text-sm text-green-600 dark:text-green-300">
-              Web search is allowed
+              <Trans i18nKey="settings.web_search_enabled" /> 
             </span>
           )}
         </div>

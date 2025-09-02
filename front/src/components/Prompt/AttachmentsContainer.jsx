@@ -17,7 +17,7 @@ export default function AttachmentsContainer({ localState, setLocalState }) {
         <div className="flex items-center justify-between mb-2">
           {/* Attachments title text */}
           <p className="text-sm font-medium text-tertiary">
-            <Trans i18nKey="description.file1" />
+            <Trans i18nKey="conversation.prompt.attachments" />
           </p>
           {/* Clear attachments button */}
           <p
@@ -29,7 +29,7 @@ export default function AttachmentsContainer({ localState, setLocalState }) {
               })
             }
           >
-            <Trans i18nKey="description.file2" />
+            <Trans i18nKey="conversation.prompt.clear_attachments" />
           </p>
         </div>
 

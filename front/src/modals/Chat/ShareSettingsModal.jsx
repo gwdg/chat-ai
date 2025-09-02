@@ -27,12 +27,12 @@ export default function ShareSettingsModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.help_title"
+      titleKey="common.notice"
     >
       {/* Intro Text */}
       <div className="pt-0 pb-2">
         <p className="dark:text-white text-black text-justify text-sm">
-          <Trans i18nKey="description.exportSettings1" />
+          <Trans i18nKey="share_settings.description" />
         </p>
       </div>
 
@@ -41,7 +41,7 @@ export default function ShareSettingsModal({
         <>
           <div>
             <p className="text-red-600">
-              <Trans i18nKey="description.arcana_warn" />
+              <Trans i18nKey="alert.arcana_export" />
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -59,7 +59,7 @@ export default function ShareSettingsModal({
               htmlFor="exportArcana"
               className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
             >
-              <Trans i18nKey="description.exportArcana" />
+              <Trans i18nKey="export_conversation.export_arcana" />
             </label>
           </div>
         </>
@@ -78,7 +78,7 @@ export default function ShareSettingsModal({
           htmlFor="dontShowAgain"
           className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
         >
-          <Trans i18nKey="description.dont_show_again" />
+          <Trans i18nKey="common.dont_show_again" />
         </label>
       </div> */}
 
@@ -88,7 +88,7 @@ export default function ShareSettingsModal({
           className="text-white p-3 bg-green-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
           onClick={() => handleShareSettings(shareArcana)}
         >
-          <Trans i18nKey="description.exportSettings2" />
+          <Trans i18nKey="common.share" />
         </button>
       </div>
     </BaseModal>

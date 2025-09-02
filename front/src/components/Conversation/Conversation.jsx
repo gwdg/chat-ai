@@ -234,15 +234,15 @@ export default function Conversation({
     }
   }, [localState?.messages?.length]);
 
-  useEffect(() => {
-    if (localState?.messages?.length > 2 && containerRef.current) {
-      const container = containerRef.current;
-      const hasOverflow = container.scrollHeight > container.clientHeight;
-      if (hasOverflow) {
-        setShowScrollButton(true);
-      }
-    }
-  }, [localState?.responses?.length]);
+  // useEffect(() => {
+  //   if (localState?.messages?.length > 2 && containerRef.current) {
+  //     const container = containerRef.current;
+  //     const hasOverflow = container.scrollHeight > container.clientHeight;
+  //     if (hasOverflow) {
+  //       setShowScrollButton(true);
+  //     }
+  //   }
+  // }, [localState?.responses?.length]);
 
   // Add this new useEffect after your existing ones
   // useEffect(() => {

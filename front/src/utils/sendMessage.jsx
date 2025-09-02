@@ -233,10 +233,13 @@ const sendMessage = async ({
       flush: true // Save to DB immediately
     }));
 
+    // Ensure timeout value is within valid range
+    const timeoutAPI = (timeout >= 5000 && timeout <= 900000) ? timeout : 300000;
+
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
       let currentContent = [{"type": "text", "text": ""}];
-      for await (const chunk of chatCompletions(conversationForAPI, timeout)) {
+      for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
         if (typeof chunk !== String) {
           // Attempt to save file
           let fileId = "";

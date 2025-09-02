@@ -50,7 +50,7 @@ export default function UndoButton({ localState, setLocalState }) {
   };
 
   return (
-    <Tooltip text={t("description.undo")}>
+    <Tooltip text={t("common.undo")}>
       <button
         className="h-[26px] w-[26px] cursor-pointer"
         onClick={handleUndo}

@@ -207,8 +207,8 @@ export default function MicButton({
             <Tooltip
             text={
                 isRecording
-                ? t("description.stopRecording")
-                : t("description.startRecording")
+                ? t("common.record_stop")
+                : t("common.record_start")
             }
             >
             <button

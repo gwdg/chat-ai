@@ -18,13 +18,13 @@ export default function ServiceOfflineModal({ isOpen, onClose, model }) {
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.help_title"
+      titleKey="common.notice"
     >
       {/* Message */}
       <div className="flex flex-col gap-2">
         <div className="pt-0 pb-2">
           <p className="dark:text-white text-black text-justify text-sm">
-            <Trans i18nKey="description.offline" />
+            <Trans i18nKey="alert.model_offline" />
           </p>
         </div>
 

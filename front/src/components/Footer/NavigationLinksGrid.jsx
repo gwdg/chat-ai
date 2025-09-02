@@ -12,7 +12,7 @@ export default function NavigationGridLinks() {
         target="_blank"
         >
         <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
-            <Trans i18nKey="description.text2"></Trans>
+            <Trans i18nKey="footer.privacy"></Trans>
         </p>
         </Link>
 
@@ -24,7 +24,7 @@ export default function NavigationGridLinks() {
         target="_blank"
         >
         <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
-            <Trans i18nKey="description.text1"></Trans>
+            <Trans i18nKey="footer.terms"></Trans>
         </p>
         </Link>
 
@@ -34,26 +34,26 @@ export default function NavigationGridLinks() {
         target="_blank"
         >
         <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
-            <Trans i18nKey="description.text8"></Trans>
+            <Trans i18nKey="footer.faq"></Trans>
         </p>
         </Link>
 
         {/* Contact and Feedback Link */}
         <Link to={"https://gwdg.de/about-us/contact/"} target="_blank">
         <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
-            <Trans i18nKey="description.text4"></Trans>
+            <Trans i18nKey="footer.contact"></Trans>
         </p>
         </Link>
 
         {/* Information Link */}
         <Link
         to={
-            "https://info.gwdg.de/news/en/gwdg-llm-service-generative-ai-for-science/"
+            "https://kisski.gwdg.de/en/leistungen/2-02-llm-service/"
         }
         target="_blank"
         >
         <p className="text-base text-center h-full text-secondary">
-            <Trans i18nKey="description.text7"></Trans>
+            <Trans i18nKey="footer.about"></Trans>
         </p>
         </Link>
     </div>

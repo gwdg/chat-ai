@@ -34,7 +34,7 @@ export default function WarningExternalModel({ className, localState, userData }
             clipRule="evenodd"
           />
         </svg>
-        {/* <Trans i18nKey="description.warningTitle" /> */}
+        {/* <Trans i18nKey="alert.title" /> */}
       </button>
 
       {showWarning && (
@@ -48,8 +48,8 @@ export default function WarningExternalModel({ className, localState, userData }
             <Trans
               i18nKey={
                 userData?.org == "MPG"
-                  ? "description.warning_settings_mpg"
-                  : "description.warning_settings"
+                  ? "alert.external_model_mpg"
+                  : "alert.external_model"
               }
             />
           </div>

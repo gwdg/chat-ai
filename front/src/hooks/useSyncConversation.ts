@@ -180,7 +180,7 @@ export function useSyncConversation({
         setSearchParams();
         setLocalState( updatedConversation );
         return;
-      } 
+      }
       setLocalState(conversation);
     })();
   }, [conversationId]);
@@ -200,6 +200,7 @@ export function useSyncConversation({
         // console.log("Flushing to DB....")
         delete localState.flush
     }
+    // console.log("localState changed", localState);
     if (!isActive) return; // Only auto-save when tab active
     if (!currentConversation) return;
     setUnsavedChanges(true);

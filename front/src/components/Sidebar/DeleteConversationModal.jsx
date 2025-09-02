@@ -49,13 +49,13 @@ export default function DeleteConversationModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.delete_title"
+      titleKey="delete_conversation.title"
       maxWidth="max-w-md"
     >
       {/* Warning Message */}
       <div className="pt-0 pb-2">
         <p className="dark:text-white text-black text-justify text-sm">
-          <Trans i18nKey="description.delete_message" />
+          <Trans i18nKey="delete_conversation.description" />
         </p>
       </div>
 
@@ -71,7 +71,7 @@ export default function DeleteConversationModal({
                     dark:hover:bg-gray-600"
           onClick={onClose}
         >
-          <Trans i18nKey="description.delete_cancelText" />
+          <Trans i18nKey="common.cancel" />
         </button>
 
         {/* Delete Button */}
@@ -83,7 +83,7 @@ export default function DeleteConversationModal({
                     dark:shadow-black/30"
           onClick={handleDelete}
         >
-          <Trans i18nKey="description.delete_confirmText" />
+          <Trans i18nKey="common.delete" />
         </button>
       </div>
     </BaseModal>

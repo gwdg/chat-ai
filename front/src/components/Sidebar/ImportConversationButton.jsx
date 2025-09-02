@@ -79,7 +79,7 @@ export default function ImportConversationButton({
           className={`cursor-pointer p-1.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center `}
           onClick={handleClickJSON}
           disabled={loading}
-          title={t("description.import")}
+          title={t("common.import")}
         >
           <Upload className="w-5 h-5 text-[#009EE0]" />
         </button>
@@ -110,7 +110,7 @@ export default function ImportConversationButton({
           }}
         >
           <Upload className="h-4 w-4 flex-shrink-0" />
-          <span className="truncate">{t("description.import")}</span>
+          <span className="truncate">{t("common.import")}</span>
         </button>
       </>
     );

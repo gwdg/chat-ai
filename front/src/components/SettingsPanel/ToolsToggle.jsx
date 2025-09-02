@@ -1,4 +1,5 @@
 import { HelpCircle } from "lucide-react";
+import { Trans } from "react-i18next";
 import { useModal } from "../../modals/ModalContext";
 
 export default function ToolsToggle({ localState, setLocalState }) {
@@ -36,13 +37,13 @@ export default function ToolsToggle({ localState, setLocalState }) {
         {/* Description that appears only when the box is unchecked */}
         {!settings?.enable_tools && (
           <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
-            Tools are disabled.
+            <Trans i18nKey="settings.tools_disabled" /> 
           </span>
         )}
         {/* Description that appears only when the box is checked */}
         {settings?.enable_tools && (
           <span className="ml-2 text-sm text-green-600 dark:text-green-300">
-            Tools are enabled.
+            <Trans i18nKey="settings.tools_enabled" /> 
           </span>
         )}
       </div>

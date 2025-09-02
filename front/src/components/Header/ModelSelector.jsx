@@ -172,10 +172,6 @@ export default function ModelSelector({
               <div className="relative">
                 <input
                   type="text"
-                  // placeholder={t(
-                  // "description.placeholder_modelList"
-                  // )}
-
                   // TODO use translation
                   placeholder={"Search models..."}
                   value={searchQuery}
@@ -269,11 +265,6 @@ export default function ModelSelector({
             </div>
           </div>
         )}
-      </div>
-      <div className="flex-shrink-0 flex items-center gap-2 min-w-fit">
-        {/* <p className="flex-shrink-0 text-sm whitespace-nowrap">
-                    <Trans i18nKey="description.choose" />
-                </p> */}
       </div>
     </div>
   );

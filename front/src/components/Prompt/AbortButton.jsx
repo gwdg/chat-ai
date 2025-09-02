@@ -22,7 +22,7 @@ export default function AbortButton({
     };
 
     return loading && (
-         <Tooltip text={t("description.pause")}>
+         <Tooltip text={t("common.abort")}>
             {/* Abort Button */}
             <button className="h-[30px] w-[30px] cursor-pointer">
             <img

@@ -62,7 +62,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
           settings.model?.input?.includes("arcana") ||
           false) && (
           <div className="text-yellow-600 text-xs w-full select-none">
-            <Trans i18nKey="description.warning_arcana" />
+            <Trans i18nKey="alert.arcana_usage" />
           </div>
         )}
     </>

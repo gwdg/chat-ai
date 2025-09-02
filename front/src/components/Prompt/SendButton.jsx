@@ -16,7 +16,7 @@ export default function SendButton({localState, setLocalState, handleSend, promp
     const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
 
     return !loading && (prompt !== "" || attachments.length > 0) &&  (
-         <Tooltip text={t("description.send")}>
+         <Tooltip text={t("common.send")}>
             <Send
                 className="cursor-pointer h-[28px] w-[28px] text-[#009EE0]"
                 alt="send"

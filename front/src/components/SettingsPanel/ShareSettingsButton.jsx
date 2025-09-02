@@ -97,7 +97,7 @@ export default function ShareSettingsButton({ localState, setLocalState }) {
             isArcanaSupported={(localState.settings.model?.input?.includes("arcana") || false)}
         /> */}
       <div className="hidden desktop:block text-sm">
-        <Trans i18nKey="description.custom9" />
+        <Trans i18nKey="common.share" />
       </div>
       <Share
         className="h-[20px] w-[20px] desktop:h-[16px] desktop:w-[16px] cursor-pointer text-white"

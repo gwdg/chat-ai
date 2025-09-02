@@ -25,7 +25,7 @@ export default function RenameConversationModal({
 
   const handleRename = async () => {
     if (!title?.trim()) {
-      setError(t("description.error_title"));
+      setError(t("rename_conversation.alert_empty"));
       return;
     }
     if (!localState) return;
@@ -61,7 +61,7 @@ export default function RenameConversationModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.rename_conversation"
+      titleKey="rename_conversation.title"
       maxWidth="max-w-md"
     >
       <div className="flex flex-col gap-4">
@@ -79,7 +79,7 @@ export default function RenameConversationModal({
                    focus:outline-none focus:ring-2 ${
                      error ? "focus:ring-red-500" : "focus:ring-tertiary"
                    }`}
-            placeholder={t("description.input_conversation")}
+            placeholder={t("rename_conversation.enter_name")}
             autoFocus
           />
           {error && <p className="text-red-500 text-sm pl-1">{error}</p>}
@@ -103,7 +103,7 @@ export default function RenameConversationModal({
                      select-none shadow-lg dark:shadow-dark"
             onClick={handleRename}
           >
-            <Trans i18nKey="description.input_button" />
+            <Trans i18nKey="common.rename" />
           </button>
         </div>
       </div>

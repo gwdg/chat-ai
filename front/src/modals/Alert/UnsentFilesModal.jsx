@@ -14,13 +14,13 @@ export default function UnsentFilesModal({ isOpen, onClose, intentionalRefresh }
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.help_title"
+      titleKey="common.notice"
       maxWidth="max-w-md"
     >
       {/* Message */}
       <div className="pt-0 pb-2">
         <p className="dark:text-white text-black text-justify text-sm">
-          <Trans i18nKey="description.fileAlert" />
+          <Trans i18nKey="alert.unsent_files" />
         </p>
       </div>
 

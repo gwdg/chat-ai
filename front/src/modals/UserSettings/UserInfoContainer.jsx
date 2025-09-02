@@ -14,7 +14,7 @@ export default function UserInfoContainer({ userData }) {
               const first = userData?.firstname ?? "";
               const last = userData?.lastname ?? "";
               return first === "" && last === "" ? (
-                <Trans i18nKey="description.common.loading" />
+                <Trans i18nKey="common.loading" />
               ) : (
                 `${first} ${last}`.trim()
               );
@@ -22,18 +22,18 @@ export default function UserInfoContainer({ userData }) {
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {userData?.organization ?? (
-              <Trans i18nKey="description.common.loading" />
+              <Trans i18nKey="common.loading" />
             )}
           </span>
         </div>
         <div className="flex flex-col">
           <span className="font-medium text-sm dark:text-white">
             {userData?.username ?? (
-              <Trans i18nKey="description.common.loading" />
+              <Trans i18nKey="common.loading" />
             )}
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            {userData?.email ?? <Trans i18nKey="description.common.loading" />}
+            {userData?.email ?? <Trans i18nKey="common.loading" />}
           </span>
         </div>
         {/* Logout */}
@@ -42,7 +42,7 @@ export default function UserInfoContainer({ userData }) {
           className="cursor-pointer w-full sm:max-w-[200px] p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl flex items-center justify-center gap-2 transition-colors"
         >
           <p className="text-sm">
-            <Trans i18nKey="description.settings.logout" />
+            <Trans i18nKey="user_settings.logout" />
           </p>
         </button>
       </div>

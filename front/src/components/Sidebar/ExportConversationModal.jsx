@@ -52,9 +52,9 @@ export default function ExportConversationModal({
   }, [conversationId, isOpen, onClose]); // Re-run when conversationId changes
 
   if (!conversation) return null; // Or a loading indicator
-  const isArcanaSupported = false; // TODO
+  const isArcanaSupported = conversation.settings?.model?.input?.includes("arcana");
   const messages = conversation?.messages
-  const arcana = conversation.settings?.arcana
+  const arcana = conversation?.settings?.arcana
 
   // Function to generate timestamped filename for exports
   const generateFileName = (extension) => {
@@ -490,9 +490,9 @@ export default function ExportConversationModal({
   };
 
   const exportOptions = [
-    { id: "json", icon: icon_file_json, label: "description.fileFormat1" },
-    { id: "pdf", icon: icon_file_pdf, label: "description.fileFormat2" },
-    { id: "text", icon: icon_file_text, label: "description.fileFormat3" },
+    { id: "json", icon: icon_file_json, label: "export_conversation.json" },
+    { id: "pdf", icon: icon_file_pdf, label: "export_conversation.pdf" },
+    { id: "text", icon: icon_file_text, label: "export_conversation.text" },
   ];
 
   const toggleExportSettings = (event) => {
@@ -511,7 +511,7 @@ export default function ExportConversationModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.export_title"
+      titleKey="export_conversation.title"
       maxWidth="max-w-md"
     >
       <div className="flex flex-col gap-4">
@@ -541,10 +541,10 @@ export default function ExportConversationModal({
         ))}
 
         {/* Arcana Export Option */}
-        {arcana?.id && exportSettings ? (
+        {arcana?.id && isArcanaSupported && exportSettings ? (
           <>
             <p className="text-red-600 text-xs">
-              <Trans i18nKey="description.arcana_warn" />
+              <Trans i18nKey="alert.arcana_export" />
             </p>
             <div className="flex items-center gap-3">
               <input
@@ -555,13 +555,13 @@ export default function ExportConversationModal({
                 className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
                   !arcana.id ? "bg-gray-400 cursor-not-allowed" : ""
                 }`}
-                disabled={!arcana.id || !isArcanaSupported}
+                disabled={!arcana?.id || !isArcanaSupported}
               />
               <label
                 htmlFor="exportArcana"
                 className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
               >
-                <Trans i18nKey="description.exportArcana" />
+                <Trans i18nKey="export_conversation.export_arcana" />
               </label>
             </div>
           </>
@@ -580,7 +580,7 @@ export default function ExportConversationModal({
             htmlFor="exportSettings"
             className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
           >
-            <Trans i18nKey="description.exportSettings" />
+            <Trans i18nKey="export_conversation.export_settings" />
           </label>
         </div>
 
@@ -600,7 +600,7 @@ export default function ExportConversationModal({
             htmlFor="exportFiles"
             className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
           >
-            <Trans i18nKey="description.exportFiles" />
+            <Trans i18nKey="export_conversation.export_files" />
           </label>
         </div>
 
@@ -611,7 +611,7 @@ export default function ExportConversationModal({
             type="button"
             className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none text-sm cursor-pointer"
           >
-            <Trans i18nKey="description.export" />
+            <Trans i18nKey="export_conversation.export" />
           </button>
         </div>
       </div>

@@ -5,7 +5,7 @@ const interfaceSettingsSlice = createSlice({
   initialState: {
     dark_mode: false,
     show_sidebar: true,
-    show_settings: true,
+    show_settings: false,
     warn_clear_history: true,
     warn_clear_memory: true,
     warn_share_settings: true,

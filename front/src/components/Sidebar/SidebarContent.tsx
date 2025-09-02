@@ -204,7 +204,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
             />
           </svg>
           <span className="truncate">
-            <Trans i18nKey="description.newConversation" />
+            <Trans i18nKey="sidebar.new_conversation" />
           </span>
         </button>
       </div>
@@ -348,7 +348,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
         >
           <Bot className="h-5 w-5 flex-shrink-0" />
           <span className="truncate">
-            <Trans i18nKey="description.importPersona" />
+            <Trans i18nKey="sidebar.import_persona" />
           </span>
         </button>
       </div>
@@ -387,7 +387,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <Edit className="w-3.5 h-3.5" />
-              Rename
+              <Trans i18nKey="common.rename" />
               {/* TODO use Translation */}
             </button>
 
@@ -408,7 +408,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <Download className="w-3.5 h-3.5" />
-              <Trans i18nKey="description.export" />
+              <Trans i18nKey="export_conversation.export" />
             </button>
 
             <button
@@ -424,7 +424,7 @@ export default function SidebarContent({ localState, setLocalState, handleNewCon
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/30"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <Trans i18nKey="description.delete_confirmText" />
+              <Trans i18nKey="common.delete" />
             </button>
           </div>
         </div>

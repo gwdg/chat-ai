@@ -12,14 +12,14 @@ export default function UserMemoryContainer({ localState }) {
       <div className="flex items-center gap-2">
         <p className="text-sm font-medium dark:text-white">
           <Trans
-            i18nKey="description.settings.userMemory"
+            i18nKey="user_settings.memory.title"
             defaultValue="User Memory"
           />
         </p>
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
         <Trans
-          i18nKey="description.settings.userMemoryDescription"
+          i18nKey="user_settings.memory.description"
           defaultValue="Manage your personal memories..."
           values={{ count: memories.length }}
         />
@@ -40,7 +40,7 @@ export default function UserMemoryContainer({ localState }) {
           {/* Label */}
           <span>
             <Trans
-              i18nKey="description.settings.manageMemory"
+              i18nKey="user_settings.memory.manage"
               defaultValue="Manage Memory"
             />
           </span>

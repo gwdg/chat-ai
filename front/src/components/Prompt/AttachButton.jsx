@@ -43,7 +43,7 @@ export default function AttachButton({
         <>
             
             {/* Attach button */}
-            <Tooltip text={t("description.attachFile")}>
+            <Tooltip text={t("conversation.prompt.attach")}>
                 {/* Hidden file input for attachments */}
                 <input
                     type="file"

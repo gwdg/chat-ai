@@ -6,12 +6,12 @@ export default function UnprocessedFilesModal({ isOpen, onClose }) {
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.unprocessed_files_title"
+      titleKey="alert.title"
     >
       {/* Description text */}
       <div className="pt-0 pb-2">
         <p className="dark:text-white text-black text-justify text-sm">
-          <Trans i18nKey="description.unprocessed_files" />
+          <Trans i18nKey="alert.unprocessed_files" />
         </p>
       </div>
 

@@ -255,7 +255,7 @@ export default function ImportPersonaModal({
         parsed = JSON.parse(cleaned);
       } catch {
         throw new Error(
-          i18n.t("description.persona.importFromClipboardErrorInvalidJson")
+          i18n.t("persona.importFromClipboardErrorInvalidJson")
         );
       }
       try {
@@ -263,7 +263,7 @@ export default function ImportPersonaModal({
       } catch (err) {
         console.error("Import error:", err);
         throw new Error(
-          i18n.t("description.persona.importFromClipboardErrorInvalidPersona")
+          i18n.t("persona.importFromClipboardErrorInvalidPersona")
         );
       }
 
@@ -274,7 +274,7 @@ export default function ImportPersonaModal({
       onError
         ? onError(msg)
         : notifyError(
-            i18n.t("description.persona.importFromClipboardErrorInvalidJson")
+            i18n.t("persona.importFromClipboardErrorInvalidJson")
           );
     } finally {
       setLoading(false);
@@ -316,10 +316,10 @@ export default function ImportPersonaModal({
         <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
           <Folder className="w-16 h-16 mb-4 text-gray-300 dark:text-gray-600" />
           <p className="text-sm font-medium">
-            <Trans i18nKey="description.persona.selectFolder" />
+            <Trans i18nKey="persona.selectFolder" />
           </p>
           <p className="text-xs mt-2 text-center px-4">
-            <Trans i18nKey="description.persona.selectFolderDescription" />
+            <Trans i18nKey="persona.selectFolderDescription" />
           </p>
         </div>
       );
@@ -330,7 +330,7 @@ export default function ImportPersonaModal({
         <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
           <FolderOpen className="w-16 h-16 mb-4 text-gray-300 dark:text-gray-600" />
           <p className="text-sm">
-            <Trans i18nKey="description.persona.emptyFolder" />
+            <Trans i18nKey="persona.emptyFolder" />
           </p>
         </div>
       );
@@ -375,10 +375,10 @@ export default function ImportPersonaModal({
           </button>
           <div>
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-              <Trans i18nKey="description.persona.personaLibrary" />
+              <Trans i18nKey="persona.personaLibrary" />
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              <Trans i18nKey="description.persona.browsePersonas" />
+              <Trans i18nKey="persona.browsePersonas" />
             </p>
           </div>
         </div>
@@ -407,7 +407,7 @@ export default function ImportPersonaModal({
               {/* Folders Section */}
               <div className="mb-4">
                 <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
-                  <Trans i18nKey="description.persona.categories" />
+                  <Trans i18nKey="persona.categories" />
                 </h3>
                 {rootContents.folders.map((folder) => (
                   <div
@@ -435,7 +435,7 @@ export default function ImportPersonaModal({
               {rootContents.files.length > 0 && (
                 <div>
                   <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
-                    <Trans i18nKey="description.persona.quickImport" />
+                    <Trans i18nKey="persona.quickImport" />
                   </h3>
                   {rootContents.files.map(renderSidebarFile)}
                 </div>
@@ -466,7 +466,7 @@ export default function ImportPersonaModal({
               disabled={loading}
               className="cursor-pointer px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
             >
-              <Trans i18nKey="description.persona.importFromClipboard" />
+              <Trans i18nKey="persona.importFromClipboard" />
             </button>
             <button
               onClick={() =>
@@ -477,12 +477,12 @@ export default function ImportPersonaModal({
               }
               className="cursor-pointer px-3 py-1.5 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-xs"
             >
-              <Trans i18nKey="description.persona.createOwn" />
+              <Trans i18nKey="persona.createOwn" />
             </button>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             <Trans
-              i18nKey="description.persona.categoryCount"
+              i18nKey="persona.categoryCount"
               values={{
                 folders: rootContents.folders.length,
                 files: rootContents.files.length,

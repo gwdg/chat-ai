@@ -36,7 +36,7 @@ export default function ConversationConflict({ isOpen, onClose, localState, setL
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.help_title1"
+      titleKey="alert.title"
     >
       {/* Message */}
       <div className="pt-0 pb-2">

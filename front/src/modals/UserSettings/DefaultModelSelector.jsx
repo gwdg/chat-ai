@@ -24,7 +24,7 @@ export default function DefaultModelSelector({ modelsData }) {
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium dark:text-white">
-              <Trans i18nKey="description.settings.defaultModelTitle" />
+              <Trans i18nKey="user_settings.default_model.title" />
               {": "}
               { currentDefaultModel?.name }
             </p>
@@ -32,7 +32,7 @@ export default function DefaultModelSelector({ modelsData }) {
           {/* Default Model Selector */}
         
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            <Trans i18nKey="description.settings.defaultModelDescription" />
+            <Trans i18nKey="user_settings.default_model.description" />
         </p>
         <div className="border dark:border-border_dark rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
         {modelsData.map((option, index) => (

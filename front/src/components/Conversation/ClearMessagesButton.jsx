@@ -35,7 +35,7 @@ export default function ClearMessagesButton({localState, setLocalState}) {
   };
 
   return (
-    <Tooltip text={t("description.clear")}>
+    <Tooltip text={t("common.clear")}>
       <button
         className="h-[26px] w-[26px] cursor-pointer"
         disabled={loading}

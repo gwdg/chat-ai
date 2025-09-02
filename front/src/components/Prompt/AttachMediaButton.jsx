@@ -71,7 +71,7 @@ export default function AttachMediaButton({
             onChange={handleFilesChangeMedia}
             className="hidden"
             />
-            <Tooltip text={t("description.attachImage")}>
+            <Tooltip text={t("conversation.prompt.attach_media")}>
             <button
                 className="h-[25px] w-[25px] cursor-pointer"
                 onClick={() => hiddenFileInputImage.current?.click()}

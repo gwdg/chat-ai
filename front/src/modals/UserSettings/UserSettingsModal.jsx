@@ -58,7 +58,7 @@ export default function UserSettingsModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="description.settings.userProfileSettings"
+      titleKey="user_settings.title"
       maxWidth="max-w-3xl"
     >
       {/* User Info Container */}
@@ -78,11 +78,11 @@ export default function UserSettingsModal({
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium dark:text-white">
-              <Trans i18nKey="description.user_settings.data_title" />
+              <Trans i18nKey="user_settings.data.title" />
             </p>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-            <Trans i18nKey="description.user_settings.data_description" />
+            <Trans i18nKey="user_settings.data.description" />
           </p>
           <div className="w-full flex justify-center gap-4">
             <button
@@ -95,7 +95,7 @@ export default function UserSettingsModal({
                         transition-all duration-200 text-sm cursor-pointer"
               onClick={() => openModal("clearCache")}
             >
-              <Trans i18nKey="description.user_settings.clear_data_button" />
+              <Trans i18nKey="user_settings.clear_data_button" />
             </button>
             <button
               className="w-full sm:max-w-[200px] px-4 py-3 
@@ -107,7 +107,7 @@ export default function UserSettingsModal({
                         transition-all duration-200 text-sm cursor-pointer"
               onClick={handleExportData}
             >
-              <Trans i18nKey="description.user_settings.export_data_button" />
+              <Trans i18nKey="user_settings.export_data_button" />
             </button>
           </div>
         </div>

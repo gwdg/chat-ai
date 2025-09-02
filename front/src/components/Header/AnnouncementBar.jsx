@@ -24,7 +24,7 @@ export default function AnnouncementBar() {
     <div className="bg-orange-500 text-white select-none">
       <div className="px-2 sm:px-4 flex items-center justify-between">
         <p className="text-xs sm:text-sm md:text-base font-medium py-1.5 sm:py-2 leading-tight sm:leading-normal">
-          <Trans i18nKey="description.announcement" />
+          <Trans i18nKey="announcement" />
         </p>
         <button
           onClick={handleClose}
