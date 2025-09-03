@@ -3,11 +3,25 @@ import MermaidDiagram from "./MermaidDiagram";
 
 // Custom renderer components
 export const rendererComponents = {
-  code({ inline, className, children }) {
+  code({ className, children, node, ...props }) {
     const match = /language-(\w+)/.exec(className || "");
     const content = String(children).replace(/\n$/, "");
 
-    if (inline) {
+    // Method 1: Check if parent is <pre> (most reliable)
+    const isCodeBlock = node?.parent?.tagName === "pre";
+
+    // Method 2: Alternative - check for newlines in content (fallback)
+    const hasNewlines = content.includes("\n");
+
+    // Method 3: Alternative - check position (less reliable but covers edge cases)
+    const isMultiLine =
+      node?.position && node.position.start.line !== node.position.end.line;
+
+    // Determine if this should be treated as inline code
+    // Inline code = not in a pre tag AND doesn't have newlines
+    const isInline = !isCodeBlock && !hasNewlines && !isMultiLine;
+
+    if (isInline) {
       return (
         <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-pink-600 dark:text-pink-400 font-mono text-xs">
           {content}
@@ -23,6 +37,12 @@ export const rendererComponents = {
     // Use the dedicated Code component for code blocks
     return <Code language={match ? match[1] : null}>{content}</Code>;
   },
+
+  // Add a pre component to handle the wrapper properly
+  pre({ children, ...props }) {
+    return <pre {...props}>{children}</pre>;
+  },
+
   p: ({ children }) => <div className="mb-3 text-sm">{children}</div>,
   a: ({ href, children }) => (
     <a
