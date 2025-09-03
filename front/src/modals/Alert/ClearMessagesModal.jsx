@@ -26,7 +26,7 @@ export default function ClearMessagesModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="alert.title1"
+      titleKey="alert.title"
     >
       {/* Message */}
       <div className="pt-0 pb-2">

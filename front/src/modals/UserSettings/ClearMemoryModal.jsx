@@ -9,26 +9,28 @@ import {
 export default function ClearMemoryModal({
   isOpen,
   onClose,
+  notifySuccess,
   setLocalState,
   dontShowAgainMemory,
 }) {
   const dispatch = useDispatch();
   const memories = useSelector(selectAllMemories);
 
-  // Checkbox change handler
-  const handleCheckboxChange = (event) => {
-    setLocalState((prevState) => ({
-      ...prevState,
-      dontShow: {
-        ...prevState.dontShow,
-        dontShowAgainMemory: event.target.checked,
-      },
-    }));
-  };
+  // // Checkbox change handler
+  // const handleCheckboxChange = (event) => {
+  //   setLocalState((prevState) => ({
+  //     ...prevState,
+  //     dontShow: {
+  //       ...prevState.dontShow,
+  //       dontShowAgainMemory: event.target.checked,
+  //     },
+  //   }));
+  // };
 
   // Clear all memories
-  const handleClearAllMemories = () => {
+  const handleDeleteAllMemories = () => {
     dispatch(deleteAllMemories());
+    if (notifySuccess) notifySuccess("Memories Deleted Successfully");
     onClose();
   };
 
@@ -76,7 +78,7 @@ export default function ClearMemoryModal({
         </div>
 
         {/* "Don't show again" checkbox */}
-        <div className="flex items-center gap-3">
+        {/* <div className="flex items-center gap-3">
           <input
             type="checkbox"
             id="dontShowAgainMemory"
@@ -93,7 +95,7 @@ export default function ClearMemoryModal({
               defaultValue="Don't show this warning again"
             />
           </label>
-        </div>
+        </div> */}
 
         {/* Buttons */}
         <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm">
@@ -107,7 +109,7 @@ export default function ClearMemoryModal({
 
           {/* Clear All */}
           <button
-            onClick={handleClearAllMemories}
+            onClick={handleDeleteAllMemories}
             disabled={memories.length === 0}
             className="text-white p-3 bg-red-600 hover:bg-red-700 active:bg-red-800 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >

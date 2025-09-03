@@ -26,16 +26,18 @@ import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
 import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
 import ConversationConflict from "./Chat/ConversationConflict";
+import { useToast } from "../hooks/useToast";
 
 const ModalContext = createContext();
 
 export function ModalProvider({ children }) {
   const [modalType, setModalType] = useState(null);
   const [modalProps, setModalProps] = useState({});
+  const { notifySuccess, notifyError } = useToast();
 
   const openModal = (type, props = {}) => {
     setModalType(type);
-    setModalProps(props);
+    setModalProps( {...props, notifySuccess} );
   };
 
   const closeModal = () => {

@@ -75,10 +75,11 @@ async function* chatCompletions (
       }
       catch (err) {
         // console.error(err);
-        console.log("Error: ", err)
+        console.log("Warning: ", err)
+        console.log(chunk)
         // TODO forward exact error
         //res.status(response.status).send(response.statusText);
-        res.status(500).end();
+        // res.status(500).end();
       }
       //console.log(answer);
     }

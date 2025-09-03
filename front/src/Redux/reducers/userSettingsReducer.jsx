@@ -44,7 +44,7 @@ const userSettingsSlice = createSlice({
 
     // Delete all memories
     deleteAllMemories: (state) => {
-      state.user_settings.memories = [];
+      state.memories = [];
     },
 
     // Set default model

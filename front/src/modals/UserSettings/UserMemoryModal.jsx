@@ -16,6 +16,7 @@ export default function UserMemoryModal({
   isOpen,
   onClose,
   localState,
+  notifySuccess,
 }) {
   const dispatch = useDispatch();
   const memories = useSelector(selectAllMemories);
@@ -61,14 +62,13 @@ export default function UserMemoryModal({
 
   // Delete all memories
   const handleDeleteAll = () => {
-    console.log("Passing on localstate");
-    console.log(localState);
-    if (localState.dontShow?.dontShowAgainMemory) {
-      dispatch(deleteAllMemories());
-    } else {
+    // if (localState.dontShow?.dontShowAgainMemory) {
+    //   dispatch(deleteAllMemories());
+    //   if (notifySuccess) notifySuccess("Memories Deleted Successfully");
+    // } else {
       // setShowClearMemoryModal(true);
       openModal("clearMemory", { localState });
-    }
+    // }
   };
 
   return (
