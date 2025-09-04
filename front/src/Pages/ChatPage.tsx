@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
 
 import { Navigate, useNavigate } from "react-router";
+import AnnouncementBar from "../components/Header/AnnouncementBar";
 
 export default function ChatPage() {
   const params = useParams();
@@ -46,6 +47,10 @@ export default function ChatPage() {
   }, [conversationId]);
 
   return (
+    <>
+    <div className={`hidden md:block`} >
+      <AnnouncementBar />
+    </div>
     <div
       className={`h-dvh overflow-hidden 
                   grid 
@@ -54,6 +59,9 @@ export default function ChatPage() {
                   md:gap-x-2 gap-y-1 md:pt-1
                   bg-gray-100 dark:bg-bg_dark`}
     >
+      <div className={`md:hidden`} >
+        <AnnouncementBar />
+      </div>
       <Header
         className="md:hidden"
         localState={localState}
@@ -88,5 +96,6 @@ export default function ChatPage() {
 
       <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-4" />
     </div>
+    </>
   );
 }

@@ -38,6 +38,9 @@ try {
     } else if (key == "default") {
       process.env["VITE_DEFAULT_SETTINGS"] = JSON.stringify(value);
       console.log("Default settings:", JSON.stringify(value));
+    } else if (key == "announcement") {
+      process.env["VITE_ANNOUNCEMENT"] = value;
+      console.log("Announcement:", value);
     }
   }
 } catch (error) {
