@@ -47,29 +47,23 @@ export default function ChatPage() {
   }, [conversationId]);
 
   return (
-    <>
-    <div className={`hidden md:block`} >
-      <AnnouncementBar />
-    </div>
-    <div
-      className={`h-dvh overflow-hidden 
-                  grid 
+    <div className={`min-h-dvh grid grid-cols-1 grid-rows-[auto_1fr_auto]`}>
+      <div className={`w-full`} >
+        <AnnouncementBar />
+        <Header
+          className="md:hidden"
+          localState={localState}
+          setLocalState={setLocalState}
+          modelsData={modelsData}
+          userData={userData}
+        />
+      </div>
+
+      <div className={`h-full grid 
                   grid-cols-1 grid-rows-[auto_1fr_auto]
                   md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
                   md:gap-x-2 gap-y-1 md:pt-1
-                  bg-gray-100 dark:bg-bg_dark`}
-    >
-      <div className={`md:hidden`} >
-        <AnnouncementBar />
-      </div>
-      <Header
-        className="md:hidden"
-        localState={localState}
-        setLocalState={setLocalState}
-        modelsData={modelsData}
-        userData={userData}
-      />
-
+                  bg-gray-100 dark:bg-bg_dark`} >
       {/* Sidebar left */}
       <SidebarWrapper
         localState={localState}
@@ -93,9 +87,8 @@ export default function ChatPage() {
         userData={userData}
         modelsData={modelsData}
       />
-
       <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-4" />
+      </div>
     </div>
-    </>
   );
 }
