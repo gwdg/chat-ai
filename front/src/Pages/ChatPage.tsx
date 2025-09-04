@@ -47,8 +47,9 @@ export default function ChatPage() {
   }, [conversationId]);
 
   return (
-    <div className={`min-h-dvh grid grid-cols-1 grid-rows-[auto_1fr_auto]`}>
-      <div className={`w-full`} >
+    <div className="h-dvh grid grid-rows-[auto_1fr_auto]">
+      {/* Header + optional Announcement */}
+      <div>
         <AnnouncementBar />
         <Header
           className="md:hidden"
@@ -59,35 +60,41 @@ export default function ChatPage() {
         />
       </div>
 
-      <div className={`h-full grid 
-                  grid-cols-1 grid-rows-[auto_1fr_auto]
-                  md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
-                  md:gap-x-2 gap-y-1 md:pt-1
-                  bg-gray-100 dark:bg-bg_dark`} >
-      {/* Sidebar left */}
-      <SidebarWrapper
-        localState={localState}
-        setLocalState={setLocalState}
-        userData={userData}
-        modelsData={modelsData}
-      />
+      {/* Middle content exactly fills leftover space */}
+      <div
+        className="
+          grid
+          grid-cols-1 grid-rows-[auto_1fr_auto]
+          md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
+          md:gap-x-2 gap-y-1 md:pt-1
+          bg-gray-100 dark:bg-bg_dark
+          overflow-hidden
+        "
+      >
+        <SidebarWrapper
+          localState={localState}
+          setLocalState={setLocalState}
+          userData={userData}
+          modelsData={modelsData}
+        />
 
-      {/* Conversation */}
-      <Conversation
-        localState={localState}
-        setLocalState={setLocalState}
-        userData={userData}
-        modelsData={modelsData}
-      />
+        <Conversation
+          localState={localState}
+          setLocalState={setLocalState}
+          userData={userData}
+          modelsData={modelsData}
+        />
 
-      {/* Sidebar right*/}
-      <SettingsWrapper
-        localState={localState}
-        setLocalState={setLocalState}
-        userData={userData}
-        modelsData={modelsData}
-      />
-      <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-4" />
+        <SettingsWrapper
+          localState={localState}
+          setLocalState={setLocalState}
+          userData={userData}
+          modelsData={modelsData}
+        />
+
+        <CollapsibleFooter
+          className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-4"
+        />
       </div>
     </div>
   );
