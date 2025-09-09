@@ -47,7 +47,7 @@ export default function ChatPage() {
   }, [conversationId]);
 
   return (
-    <div className="h-dvh grid grid-rows-[auto_1fr_auto]">
+    <div className="h-dvh grid grid-rows-[auto_1fr]">
       {/* Header + optional Announcement */}
       <div>
         <AnnouncementBar />
@@ -64,7 +64,7 @@ export default function ChatPage() {
       <div
         className="
           grid
-          grid-cols-1 grid-rows-[auto_1fr_auto]
+          grid-cols-1 grid-rows-[1fr_auto]
           md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
           md:gap-x-2 gap-y-1 md:pt-1
           bg-gray-100 dark:bg-bg_dark

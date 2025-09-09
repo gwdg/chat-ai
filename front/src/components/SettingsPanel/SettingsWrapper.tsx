@@ -22,10 +22,10 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
 
   return (
     <>
-      <div className="flex relative min-w-[4rem]">
+      <div className="hidden md:flex relative min-w-[4rem]">
         <div className={`h-full absolute  right-0
                       transition-all duration-200 ease-in-out
-                      ${showSettings ? "w-[30rem] opacity-0 pointer-events-none" : "w-[4rem] opacity-100"}
+                      ${showSettings && isDesktop ? "w-[30rem] opacity-0 pointer-events-none" : "w-[4rem] opacity-100"}
         `}>
           <SettingsRail
             onOpen={() => dispatch(toggleSettings())}
@@ -42,10 +42,10 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
             <SettingsPanel localState={localState} setLocalState={setLocalState} userData={userData} modelsData={modelsData} />
           </div>
         )}
-        {(!isDesktop) && (
-          <SettingsDrawer localState={localState} setLocalState={setLocalState} userData={userData} modelsData={modelsData} />
-        )}
       </div>
+      {(!isDesktop) && (
+        <SettingsDrawer localState={localState} setLocalState={setLocalState} userData={userData} modelsData={modelsData} />
+      )}
     </>
   );
 }

@@ -55,7 +55,7 @@ export default function SidebarRail({localState, setLocalState, userData, models
 
           <div className="mt-2 mb-2 flex flex-col gap-3 items-center">
             
-            {/*<ThemeToggle />*/}
+            {/*<Settings Toggle />*/}
             <button
               onClick={() => onOpen?.()}
               className="h-10 w-10 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"

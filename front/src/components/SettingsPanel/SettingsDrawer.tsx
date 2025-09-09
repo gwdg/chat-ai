@@ -21,7 +21,7 @@ export default function SettingsDrawer({ localState, setLocalState, userData, mo
       {/* height is: screenheight-header_size which is h-14 */}
       <div
         id="sidebardrawer"
-        className={`fixed w-[80vw] md:w-[55vw] max-w-md top-[3.5rem] md:top-0 right-0 pt-0 md:pt-4 z-40 h-[calc(100dvh-3.5rem)] md:h-dvh overflow-y-auto transition-transform duration-200
+        className={`fixed w-[80vw] md:w-[55vw] max-w-md top-0 right-0 pt-0 md:pt-4 z-40 h-dvh overflow-y-auto transition-transform duration-200
           ${showSettings ? "translate-x-0" : "translate-x-full"} 
           bg-white dark:bg-bg_secondary_dark shadow-lg `}
       >

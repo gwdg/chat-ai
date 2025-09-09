@@ -183,7 +183,7 @@ export default function SidebarContent({
       }}
     >
       {/* Desktop Header with close button */}
-      <div className="hidden md:flex items-center justify-between p-3 ">
+      <div className="flex items-center justify-between p-3 ">
         <span className="px-3 flex items-center">
           <img
             className="h-10 w-auto object-contain"
