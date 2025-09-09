@@ -162,6 +162,8 @@ export default {
     share_settings: {
        description:
         "Mit dieser Funktion wird ein Link für das von Ihnen gewählte Modell, die Systemansage und die Einstellungen erstellt, der gemeinsam genutzt werden kann. Jeder Benutzer, der diesen Link öffnet, kann dieselbe Konfiguration in seinen eigenen Unterhaltungen verwenden. Bitte beachten Sie, dass Ihr Gesprächsverlauf nicht freigegeben wird.",
+      warn_arcana:
+        "Warnung: Die Weitergabe von arcana-Details kann die in arcana hochgeladenen Daten gefährden."
     },
     // Help modals
     help: {

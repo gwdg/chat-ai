@@ -162,7 +162,9 @@ export default {
     // Share Settings Modal
     share_settings: {
        description:
-      "This feature creates a shareable link for your chosen model, system prompt, and settings. Any user who opens this link will be able to use the same configuration in their own conversations. Please note that your conversation history will not be shared.",        
+      "This feature creates a shareable link for your chosen model, system prompt, and settings. Any user who opens this link will be able to use the same configuration in their own conversations. Please note that your conversation history will not be shared.",
+      warn_arcana:
+      "Warning: Sharing arcana details may compromise data uploaded in the arcana.",
     },
     // Help modals
     help: {

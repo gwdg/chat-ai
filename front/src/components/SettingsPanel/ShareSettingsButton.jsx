@@ -21,21 +21,29 @@ export default function ShareSettingsButton({ localState, setLocalState }) {
       const settings = {
         system_prompt: encodeURIComponent(localState?.messages[0]?.content[0]?.text),
         // ["model-name"]: localState.settings["model-name"],
-        model: localState.settings.model,
+        // Model id
+        model: {
+          id: localState.settings.model?.id || localState.settings.model,
+        },
+        // Temperature
         temperature:
           localState?.settings?.temperature !== undefined &&
           localState?.settings?.temperature !== null
             ? Number(localState.settings.temperature)
             : null,
+        // top_p
         top_p:
           localState?.settings?.top_p !== undefined &&
           localState?.settings?.top_p !== null
             ? Number(localState.settings.top_p)
             : null,
+        // tools
+        enable_tools: localState?.settings?.enable_tools,
+        enable_web_search: localState?.settings?.enable_web_search,
         // Include arcana settings if enabled
         ...(shareArcana && {
             arcana: {
-              id: localState?.arcana?.id,
+              id: localState?.settings?.arcana?.id,
             },
           }),
       };
@@ -83,7 +91,7 @@ export default function ShareSettingsButton({ localState, setLocalState }) {
     <button
       className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2 cursor-pointer"
       type="reset"
-      onClick={() => openModal("shareSettings", {handleShareSettings})}
+      onClick={() => openModal("shareSettings", {localState, setLocalState, handleShareSettings})}
     >
       {/* <ShareSettingsModal
             isOpen={modalShareSettings}
