@@ -3,8 +3,9 @@ import { memo, useEffect, useState, useRef } from 'react'
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';
+import type { ModelInfo } from '../../types/models';
 
-function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false}: {modelsData: ModelInfo, localState: any, setLocalState: any, inHeader: boolean}) {
+function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean}) {
   /*
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */

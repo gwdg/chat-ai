@@ -19,7 +19,7 @@ const sortOptions = [
   { value: "name-desc", label: "Name (Z→A)" },
 ];
 
-export default function ModelSelectorSimple({ selectedModel, modelsData, onChange, inHeader = false }: { selectedModel: Object | undefined, modelsData: BaseModelInfo[], inHeader: boolean, onChange: (model: BaseModelInfo) => void }) {
+export default function ModelSelectorSimple({ selectedModel, modelsData, onChange, inHeader = false }: { selectedModel: BaseModelInfo | null, modelsData: BaseModelInfo[], inHeader: boolean, onChange: (model: BaseModelInfo) => void }) {
   
   function setSelectedModel(model: BaseModelInfo | null) {
     onChange && onChange(model);
@@ -32,7 +32,6 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
   // Dropdown close on click outside logic
   const dropdownRef = useRef(null);
   useEffect(() => {
-    if (!dropdownOpen) return;
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false); // close dropdown
@@ -99,7 +98,9 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
       {/** Trigger/Input **/}
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className={`${inHeader ? "border border-gray-200 dark:border-bg_secondary_dark" : " border border-gray-200 dark:border-bg_secondary_dark shadow-md shadow-sm"}  w-full text-center desktop:w-full rounded-xl bg-white dark:bg-bg_secondary_dark px-3 py-2.5 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30`}>
+        className={`border border-gray-200 dark:border-bg_secondary_dark
+                  ${!inHeader && "shadow-md shadow-sm"}  
+                  w-full text-center desktop:w-full rounded-xl bg-white dark:bg-bg_secondary_dark px-3 py-2.5 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30`}>
         <div id="trigger-content" className="flex justify-between">
           {/* Left section - allow to shrink */}
           <div className="flex items-center gap-2 min-w-0">
@@ -110,7 +111,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="ml-2 flex items-center gap-1 text-indigo-600">
+            <div className="ml-2 flex items-center gap-1 text-tertiary">
               {selectedModel?.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
               {selectedModel?.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
               {selectedModel?.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
