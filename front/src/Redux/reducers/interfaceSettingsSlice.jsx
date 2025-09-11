@@ -10,7 +10,8 @@ const interfaceSettingsSlice = createSlice({
     // warn_clear_memory: true,
     warn_share_settings: true,
     count_hallucination: 0,
-    count_announcement: 0
+    count_announcement: 0,
+    agree_web_search: false,
   },
   reducers: {
     toggleTheme: (state) => {
@@ -43,6 +44,9 @@ const interfaceSettingsSlice = createSlice({
     closeAnnouncement: (state) => {
       state.count_announcement += 1;
     },
+    agreeWebSearch: (state) => {
+      state.agree_web_search = true;
+    }
   },
 });
 
@@ -51,8 +55,10 @@ export const selectShowSettings = (state) => state.interface_settings.show_setti
 export const selectShowSidebar = (state) => state.interface_settings.show_sidebar;
 export const selectCountHallucination = (state) => state.interface_settings.count_hallucination;
 export const selectCountAnnouncement = (state) => state.interface_settings.count_announcement;
+export const selectAgreeWebSearch = (state) => state.interface_settings.agree_web_search;
 export const { 
   toggleTheme, setDarkMode, setLightMode,
-  closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar, closeAnnouncement, closeHallucination
+  closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
+  closeAnnouncement, closeHallucination, agreeWebSearch,
  } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

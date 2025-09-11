@@ -66,8 +66,8 @@ async function* chatCompletions (
     let answer = ""
     for await (const chunk of streamResponse) {
       try {
-        answer += chunk.choices[0].delta.content
-        yield (chunk.choices[0].delta.content)
+        answer += chunk.choices[0].delta?.content || ""
+        yield (chunk.choices[0].delta)
         if (chunk?.choices?.[0]?.finish_reason === 'stop') {
           // res.status(200).end();
           return answer

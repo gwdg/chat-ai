@@ -130,7 +130,7 @@ async function buildConversationForAPI(localState) {
   const ignoreAudio = !(model?.input?.includes("audio") || false)
   const ignoreVideo = !(model?.input?.includes("video") || false)
   const ignoreImages = !(model?.input?.includes("image") || false)
-  // Convert to API standard, ignore unsupported files
+  // Convert to API standard, ignore unsupported files and system message
   const processedMessages = await Promise.all(
     localState.messages.map(async (message) => {
       if (Array.isArray(message.content)) {
@@ -173,13 +173,23 @@ const sendMessage = async ({
     let conversationForAPI = await buildConversationForAPI(localState);
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
-      ? localState.messages[0].content.text
+      ? localState.messages[0].content[0].text
       : "";
     if (localState.settings?.memory != 0 && memories.length > 0) {
       const memoryContext = memories.map((memory) => memory.text).join("\n");
       const memorySection = `\n\n--- Begin User Memory ---\n${memoryExplanation}\n\n${memoryContext}\n--- End User Memory ---`;
       systemPromptAPI = systemPromptAPI + memorySection;
     }
+
+    // Clean conversation for API call
+    conversationForAPI = {
+      ...conversationForAPI,
+      messages: conversationForAPI.messages.filter(
+        (message) => 
+        message.role === "user"
+        || message.role === "assistant"
+      ),
+    };
 
     // Set system prompt in conversationForAPI
     if (systemPromptAPI) {
@@ -192,16 +202,6 @@ const sendMessage = async ({
         ...conversationForAPI.messages,
       ]}
     }
-
-    // Clean conversation for API call
-    conversationForAPI = {
-      ...conversationForAPI,
-      messages: conversationForAPI.messages.filter(
-        (message) => message.role === "system"
-        || message.role === "user"
-        || message.role === "assistant"
-      ),
-    };
     
     // Handle tools
     if (conversationForAPI.settings?.enable_tools) {
@@ -239,56 +239,86 @@ const sendMessage = async ({
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
       let currentContent = [{"type": "text", "text": ""}];
-      for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
-        if (typeof chunk !== String) {
-          // Attempt to save file
-          let fileId = "";
+      let info_blocks = "";
+      let web_search_block = "";
+      let message_text = "";
+      for await (const delta of chatCompletions(conversationForAPI, timeoutAPI)) {
+        if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
           try {
-            if (chunk?.type === "image") {
-              console.log("Receiving file...");
-              const base64_dataURL = chunk?.image_url;
-
-              // Extract base64 and mime type
-              const matches = base64_dataURL.match(/^data:(.+);base64,(.*)$/);
-              if (!matches) {
-                throw new Error("Invalid base64 image data");
+            // Handle web search events
+            if (delta.tool_calls[0]?.function?.name === "websearch.event") {
+              let arg = delta.tool_calls[0].function.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (arg.event === "websearch_begin") {
+                web_search_block += "Searching web for \"" + arg.query + "\"...\n\n";
+              } else if (arg.event === "websearch_done") {
+                web_search_block += "Web search completed. Used " + String(arg.sources) + " relevant sources.";
+              } else if (arg.event === "websearch_page_cache") {
+                web_search_block += "Reading source: " + String(arg?.url) + "\n\n";
+              } else {
+                web_search_block += "";
               }
-
-              const mimeType = matches[1];
-              const base64Data = matches[2];
-              const byteCharacters = atob(base64Data);
-              const byteNumbers = new Array(byteCharacters.length);
-              for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-              }
-              const byteArray = new Uint8Array(byteNumbers);
-
-              // Create File object
-              const file = new File([byteArray], "image." + mimeType.split("/")[1], { type: mimeType });
-
-              // Save file (assuming saveFile returns an ID)
-              fileId = await saveFile(localState.messages[localState.messages.length - 2].id, file);
-              currentContent.push({"type": "file", "fileId": fileId})
-              setLocalState(prev => {
-                if (prev.id !== conversationId) {
-                  return prev;
-                }
-                const messages = [...prev.messages];
-                messages[messages.length - 2] = {
-                  role: "assistant",
-                  content: currentContent,
-                  loading: true,
-                };
-                return { ...prev, messages, ignoreConflict: true };
-              });
-              continue
             }
+            // info_text = info_text + currentContent[0].text;
           } catch (err) {
-            console.error("Error processing image chunk:", err);
-            continue;
+            console.warn("Didn't understand: ", delta)
           }
         }
-        currentContent[0].text += chunk;
+        const chunk = delta?.content;
+        if (chunk) {
+          // Check if file was sent
+          if (typeof chunk !== String) {
+            // Attempt to save file
+            let fileId = "";
+            try {
+              if (chunk?.type === "image") {
+                console.log("Receiving file...");
+                const base64_dataURL = chunk?.image_url;
+
+                // Extract base64 and mime type
+                const matches = base64_dataURL.match(/^data:(.+);base64,(.*)$/);
+                if (!matches) {
+                  throw new Error("Invalid base64 image data");
+                }
+
+                const mimeType = matches[1];
+                const base64Data = matches[2];
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                  byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+
+                // Create File object
+                const file = new File([byteArray], "image." + mimeType.split("/")[1], { type: mimeType });
+
+                // Save file (assuming saveFile returns an ID)
+                fileId = await saveFile(localState.messages[localState.messages.length - 2].id, file);
+                currentContent.push({"type": "file", "fileId": fileId})
+                setLocalState(prev => {
+                  if (prev.id !== conversationId) {
+                    return prev;
+                  }
+                  const messages = [...prev.messages];
+                  messages[messages.length - 2] = {
+                    role: "assistant",
+                    content: currentContent,
+                    loading: true,
+                  };
+                  return { ...prev, messages, ignoreConflict: true };
+                });
+                continue
+              }
+            } catch (err) {
+              console.error("Error processing image chunk:", err);
+              continue;
+            }
+          }
+          message_text += chunk;
+        }
+        info_blocks = web_search_block ? "<think>" + web_search_block + "</think>" : "";
+        currentContent[0].text = info_blocks + message_text;
         // UI update happens here in the caller
         setLocalState(prev => {
           if (prev.id !== conversationId) {

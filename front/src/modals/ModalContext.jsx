@@ -31,6 +31,8 @@ import ConversationConflict from "./Chat/ConversationConflict";
 import { useDispatch, useStore } from 'react-redux';
 import { useToast } from "../hooks/useToast";
 import { useImportConversation } from "../hooks/useImportConversation";
+import HelpWebSearchModal from "./Help/HelpWebSearchModal";
+import WebSearchDisclaimer from "./Alert/WebSearchDisclaimer";
 
 const ModalContext = createContext();
 
@@ -87,11 +89,14 @@ export function ModalProvider({ children }) {
         {modalType === "helpTemperature" && (
             <HelpTemperatureModal isOpen onClose={closeModal} {...modalProps} />
         )}
+        {modalType === "helpTopP" && (
+            <HelpTopPModal isOpen onClose={closeModal} {...modalProps} />
+        )}
         {modalType === "helpTools" && (
             <HelpToolsModal isOpen onClose={closeModal} {...modalProps} />
         )}
-        {modalType === "helpTopP" && (
-            <HelpTopPModal isOpen onClose={closeModal} {...modalProps} />
+        {modalType === "helpWebSearch" && (
+            <HelpWebSearchModal isOpen onClose={closeModal} {...modalProps} />
         )}
         {/* User Settings Modals*/}
         {modalType === "userSettings" && (
@@ -134,6 +139,9 @@ export function ModalProvider({ children }) {
         )}
         {modalType === "conversationConflict" && (
             <ConversationConflict isOpen onClose={closeModal} {...modalProps} />
+        )}
+        {modalType === "disclaimerWebSearch" && (
+            <WebSearchDisclaimer isOpen onClose={closeModal} {...modalProps} />
         )}
         {modalType === "migrate" && (
             <MigrateDataModal isOpen onClose={closeModal} store={store} importConversation={importConversation} dispatch={dispatch} {...modalProps} />

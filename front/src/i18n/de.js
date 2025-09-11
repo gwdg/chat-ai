@@ -14,6 +14,8 @@ export default {
       cancel: "Abbrechen",
       refresh: "Aktualisieren",
       notice: "Hinweis",
+      disclaimer: "Haftungsausschluss",
+      understand: "Ich verstehe",
       ok: "OK",
       record_start: "Aufnehmen (klicken/halten)",
       record_stop: "Stopp (klicken/loslassen)",
@@ -26,8 +28,8 @@ export default {
     },
     // Settings panel
     settings: {
-      tools_enabled: "Tools sind aktiviert",
-      tools_disabled: "Tools sind deaktiviert",
+      tools_enabled: "Werkzeuge sind aktiviert",
+      tools_disabled: "Werkzeuge sind deaktiviert",
       web_search_enabled: "Websuche ist erlaubt",
       web_search_disabled: "Websuche ist deaktiviert",
       system_prompt_placeholder: "System-Prompt hier eingeben",
@@ -180,7 +182,9 @@ export default {
       temperature:
         "Eine niedrige Temperatur (z. B. 0-1) erzeugt vorhersehbarere und logischere Antworten, während höhere Temperaturen (z. B. über 1) die Möglichkeit kreativerer und unkonventionellerer Antworten erhöhen. Sie können die Temperatureinstellung anpassen, um verschiedene Stufen der Vorhersagbarkeit und Kreativität zu erreichen.",
       tools:
-        "Tools sind nützlich",
+        "Tools sind eine neue und experimentelle Funktion, die darauf ausgelegt ist, die Fähigkeiten von Chat‑KI zu erweitern. Sie ermöglichen dem Modell, zusätzliche Aktionen auszuführen oder auf weitere Ressourcen zuzugreifen, um nützlichere, genauere oder spezialisierte Antworten zu liefern. Zu den aktuellen Tools gehören Arcana (für alle Modelle) und Websuche (optional); weitere Tools sind für die Zukunft geplant. Da sich diese Funktion noch in Entwicklung befindet, können sich Funktionsumfang und verfügbare Tools im Laufe der Zeit ändern.",
+      web_search:
+        "Das Websuche‑Werkzeug ermöglicht es der KI, aktuelle Informationen aus dem Internet abzurufen, um ihre Antworten zu verbessern. Wenn es aktiviert ist, kann die KI auf Grundlage Ihrer Frage Suchanfragen erstellen, diese an eine Suchmaschine (wie z. B. DuckDuckGo) senden und die erhaltenen Ergebnisse nutzen, um genauere und aktuellere Antworten zu geben. Dies ist besonders nützlich bei Themen, bei denen aktuelle oder sich schnell ändernde Informationen wichtig sind.  ",
       top_p:
         "top_p ist ein Schieberegler von 0 bis 1, der den Gesamtbestand der Wahrscheinlichkeiten anpasst, die für das nächste Token in Betracht gezogen werden. Ein top_p von 0,1 würde bedeuten, dass nur die oberen 10% der kumulativen Wahrscheinlichkeiten berücksichtigt werden. Die Variation von top_p hat einen ähnlichen Effekt auf Vorhersagbarkeit und Kreativität wie die Temperatur.",
     },
@@ -234,6 +238,8 @@ export default {
       },
       // External models
       settings_external: "Diese Einstellungen wirken sich nicht auf externe (OpenAI) Modelle aus.",
+      web_search_disclaimer: 
+      `Wenn die Websuche aktiviert ist, kann die KI auf Grundlage Ihrer Nachricht Suchanfragen erstellen und diese an eine Suchmaschine (z. B. DuckDuckGo) senden, um aktuelle Informationen abzurufen. Dies hilft, genauere und aktuellere Antworten bereitzustellen.\n\nDurch Klicken auf „Ich verstehe“ stimmen Sie zu, dass Ihre Eingaben auf diese Weise verarbeitet werden, und bestätigen, dass Sie während der aktiven Websuche keine vertraulichen, persönlichen oder sensiblen Informationen teilen.`
     },
     // Landing page
     landing: {

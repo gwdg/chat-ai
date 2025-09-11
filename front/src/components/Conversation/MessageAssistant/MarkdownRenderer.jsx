@@ -532,29 +532,74 @@ const MarkdownRenderer = memo(
       liveThink,
     } = useStreamingProcessor(children, isLoading);
 
+    // helper to split think content from a buffer
+    const splitThink = useCallback((buf) => {
+      let temp = buf;
+      const closed = [];
+
+      // 1) remove CLOSED literal <think>...</think>
+      temp = temp.replace(/<think\b[^>]*>([\s\S]*?)<\/think>/gi, (_, inner) => {
+        closed.push(inner);
+        return "";
+      });
+
+      // 2) remove CLOSED escaped &lt;think&gt;...&lt;/think&gt;
+      temp = temp.replace(
+        /&lt;think\b[^&]*&gt;([\s\S]*?)&lt;\/think&gt;/gi,
+        (_, inner) => {
+          closed.push(inner);
+          return "";
+        }
+      );
+
+      // 3) detect UN-CLOSED (literal or escaped)
+      const lastOpenLit = temp.lastIndexOf("<think");
+      const lastOpenEsc = temp.lastIndexOf("&lt;think");
+      const lastCloseLit = temp.lastIndexOf("</think>");
+      const lastCloseEsc = temp.lastIndexOf("&lt;/think&gt;");
+
+      const lastOpen = Math.max(lastOpenLit, lastOpenEsc);
+      const lastClose = Math.max(lastCloseLit, lastCloseEsc);
+
+      let live = "";
+      if (lastOpen !== -1 && lastOpen > lastClose) {
+        // unclosed exists
+        const escaped = lastOpen === lastOpenEsc;
+        const tagEnd = escaped
+          ? temp.indexOf("&gt;", lastOpen)
+          : temp.indexOf(">", lastOpen);
+        const afterOpen =
+          tagEnd !== -1 ? tagEnd + (escaped ? "&gt;".length : 1) : lastOpen;
+        live = temp.slice(afterOpen);
+        temp = temp.slice(0, lastOpen); // cut from opening tag so nothing leaks outside
+      }
+
+      return { main: temp, closed, live };
+    }, []);
+
     const separateContentAndReferences = useCallback((content) => {
       if (!content) return { main: "", refs: "" };
-
+      const { main, closed, live } = splitThink(content || "");
       // Match: a line of 5+ dashes, then optional whitespace, then a line starting with "References:"
       // We capture from the dashes so the refs section starts with "References:" (cleaner for display).
       const re = /(^|\n)[-\s]{5,}\n\s*References\s*:\s*\n/i;
-      const m = content.match(re);
+      const m = main.match(re);
 
       if (!m) {
-        return { main: content, refs: "" };
+        return { main, refs: "" };
       }
 
       // Split at the position where "References:" starts
       const splitIndex = m.index + (m[1] ? m[1].length : 0); // start of the dashes
       // Find the start of the "References:" line itself
-      const afterDashes = content.slice(splitIndex);
+      const afterDashes = main.slice(splitIndex);
       const refsHeaderIdx = afterDashes.search(/\n\s*References\s*:\s*\n/i);
-      if (refsHeaderIdx === -1) return { main: content, refs: "" };
+      if (refsHeaderIdx === -1) return { mai, refs: "" };
 
-      const main = content.slice(0, splitIndex).trim();
+      const processedMain = main.slice(0, splitIndex).trim();
       const refs = afterDashes.slice(refsHeaderIdx + 1).trim(); // start from "References:" line
 
-      return { main, refs };
+      return { main: processedMain, refs };
     }, []);
 
     const { main: processedMainContent, refs: processedReferences } =

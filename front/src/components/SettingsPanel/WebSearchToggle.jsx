@@ -1,10 +1,38 @@
 import { useModal } from "../../modals/ModalContext";
 import { Trans } from "react-i18next";
+import { useSelector, useDispatch } from "react-redux";
 import { HelpCircle } from "lucide-react";
+import { selectAgreeWebSearch, agreeWebSearch } from "../../Redux/reducers/interfaceSettingsSlice";
 
 export default function WebSearchToggle({ localState, setLocalState }) {
   const { openModal } = useModal();
+  const dispatch = useDispatch();
+  const agreedWebSearch = useSelector(selectAgreeWebSearch);
   const settings = localState.settings;
+
+  const toggleWebSearch = (toggleState) => {
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        enable_web_search: toggleState,
+      },
+      flush: true,
+    }))
+  }
+
+  const handleToggleWebSearch = (e) => {
+    const toggleState = e.target.checked;
+    if (toggleState && !agreedWebSearch) {
+      openModal("disclaimerWebSearch", {onAgree: () => {
+        toggleWebSearch(toggleState)
+        dispatch(agreeWebSearch());
+      }});
+      return;
+    }
+    toggleWebSearch(toggleState);
+  }
+
   return (
     settings?.enable_tools && (
       <div className="flex flex-row md:gap-2 gap-2 w-full md:items-center mt-2">
@@ -14,23 +42,14 @@ export default function WebSearchToggle({ localState, setLocalState }) {
           <HelpCircle
             className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
             alt="help"
-            onClick={() => openModal("helpTools")}
+            onClick={() => openModal("helpWebSearch")}
           />
         </div>
         <div className="w-full flex items-center">
           <input
             type="checkbox"
             checked={settings?.enable_tools && settings?.enable_web_search}
-            onChange={(e) =>
-              setLocalState((prev) => ({
-                ...prev,
-                settings: {
-                  ...prev.settings,
-                  enable_web_search: e.target.checked,
-                },
-                flush: true,
-              }))
-            }
+            onChange={(e) => {handleToggleWebSearch(e);}}
             className="h-4 w-4 text-tertiary bg-gray-200 border-gray-300 rounded focus:ring-tertiary focus:ring-2"
           />
           {/* Description that appears only when the box is unchecked */}
