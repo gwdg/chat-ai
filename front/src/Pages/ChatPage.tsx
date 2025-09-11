@@ -49,7 +49,7 @@ export default function ChatPage() {
   return (
     <div className="h-dvh grid grid-rows-[auto_1fr]">
       {/* Header + optional Announcement */}
-      <div>
+      <div className="min-w-0 overflow-hidden">
         <AnnouncementBar />
         <Header
           className="md:hidden"
