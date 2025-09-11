@@ -1,27 +1,70 @@
 import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
+import React from "react";
+
+const flattenToText = (nodes) => {
+  const arr = React.Children.toArray(nodes);
+  const parts = arr.map((child) => {
+    if (typeof child === "string" || typeof child === "number")
+      return String(child);
+    if (React.isValidElement(child))
+      return flattenToText(child.props?.children ?? "");
+    return ""; // ignore booleans/objects/comments
+  });
+  return parts.join("");
+};
+
+const extractTextFromHast = (node) => {
+  if (!node) return "";
+  if (typeof node.value === "string") return node.value;
+  if (Array.isArray(node.children))
+    return node.children.map(extractTextFromHast).join("");
+  return "";
+};
+
+const inferLanguage = (className, node) => {
+  const m = /language-([\w+-]+)/.exec(className || "");
+  if (m?.[1]) return m[1]; // fenced code
+
+  // <code bash> ... </code>
+  const props = node?.properties || {};
+  const candidate = Object.keys(props).find((k) => {
+    if (k === "className") return false;
+    const v = props[k];
+    return v === "" || v === true;
+  });
+  if (candidate && /^[a-z][\w+-]*$/i.test(candidate))
+    return candidate.toLowerCase();
+
+  return null;
+};
 
 // Custom renderer components
 export const rendererComponents = {
-  code({ className, children, node, ...props }) {
-    const match = /language-(\w+)/.exec(className || "");
-    const content = String(children).replace(/\n$/, "");
+  code({ className, children, node, inline }) {
+    let content = flattenToText(children);
 
-    // Method 1: Check if parent is <pre> (most reliable)
-    const isCodeBlock = node?.parent?.tagName === "pre";
+    // fallback to HAST text if needed
+    if (!content || /\[object Object\]/.test(content) || /^,+$/.test(content)) {
+      const hastText = extractTextFromHast(node);
+      if (hastText) content = hastText;
+    }
 
-    // Method 2: Alternative - check for newlines in content (fallback)
-    const hasNewlines = content.includes("\n");
+    content = (content || "")
+      .replace(/\[object Object\]/g, "")
+      .replace(/(^|,)\s*,+/g, "$1") // strip stray commas
+      .replace(/\n$/, "")
+      .trim();
 
-    // Method 3: Alternative - check position (less reliable but covers edge cases)
-    const isMultiLine =
-      node?.position && node.position.start.line !== node.position.end.line;
+    const language = inferLanguage(className, node);
 
-    // Determine if this should be treated as inline code
-    // Inline code = not in a pre tag AND doesn't have newlines
-    const isInline = !isCodeBlock && !hasNewlines && !isMultiLine;
+    const isBlock =
+      node?.parent?.tagName === "pre" ||
+      (!inline && (content.includes("\n") || content.length > 80));
 
-    if (isInline) {
+    if (!isBlock) {
+      // inline
+      if (!content) return null;
       return (
         <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-pink-600 dark:text-pink-400 font-mono text-xs">
           {content}
@@ -29,21 +72,19 @@ export const rendererComponents = {
       );
     }
 
-    // Handle mermaid diagrams
-    if (match && match[1] === "mermaid") {
+    // block
+    if ((language || "").toLowerCase() === "mermaid") {
       return <MermaidDiagram content={content} />;
     }
-
-    // Use the dedicated Code component for code blocks
-    return <Code language={match ? match[1] : null}>{content}</Code>;
+    if (!content) return null;
+    return <Code language={language || "text"}>{content}</Code>;
   },
 
-  // Add a pre component to handle the wrapper properly
+  // keep your existing components below
   pre({ children, ...props }) {
     return <pre {...props}>{children}</pre>;
   },
-
-  p: ({ children }) => <div className="mb-3 text-sm">{children}</div>,
+  p: ({ children }) => <div className="text-sm">{children}</div>,
   a: ({ href, children }) => (
     <a
       href={href}

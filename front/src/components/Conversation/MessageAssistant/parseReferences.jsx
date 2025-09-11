@@ -1,256 +1,99 @@
-const convertHtmlToText = (content) => {
-  return (
-    content
-      // CRITICAL: Escape meta refresh tags to prevent page refresh
-      .replace(
-        /<meta\s+[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi,
-        "[META REFRESH TAG REMOVED FOR SAFETY]"
-      )
-      // Also handle other meta tags safely
-      .replace(/<meta\s+([^>]*)>/gi, (match, attrs) => {
-        return `&lt;meta ${attrs}&gt;`;
-      })
-      .replace(
-        /<script\s*([^>]*)>(.*?)<\/script>/gi,
-        (match, attrs, content) => {
-          return `[SCRIPT${attrs ? ` ${attrs}` : ""}]${
-            content ? `: ${content}` : ""
-          }[/SCRIPT]`;
-        }
-      )
-      .replace(
-        /<iframe\s*([^>]*)>(.*?)<\/iframe>/gi,
-        (match, attrs, content) => {
-          return `[IFRAME${attrs ? ` ${attrs}` : ""}]${content || ""}[/IFRAME]`;
-        }
-      )
-      .replace(
-        /<object\s*([^>]*)>(.*?)<\/object>/gi,
-        (match, attrs, content) => {
-          return `[OBJECT${attrs ? ` ${attrs}` : ""}]${content || ""}[/OBJECT]`;
-        }
-      )
-      .replace(/<embed\s*([^>]*)>/gi, (match, attrs) => {
-        return `[EMBED${attrs ? ` ${attrs}` : ""}]`;
-      })
-      .replace(/<form\s*([^>]*)>(.*?)<\/form>/gi, (match, attrs, content) => {
-        return `[FORM${attrs ? ` ${attrs}` : ""}]${content || ""}[/FORM]`;
-      })
-      .replace(/javascript:/gi, "javascript-protocol:")
-      .replace(/\son(\w+)\s*=\s*([^>\s]*)/gi, (match, event, handler) => {
-        return ` data-on${event}="${handler}"`;
-      })
-  );
-};
+// parseReferences.js
+// SUPER SIMPLE: parse only the section after the explicit References delimiter.
+// Keep every [RREFn] in order, from its tag up to (but not including) the next [RREFm] tag.
 
 const extractTitleFromReferenceLine = (line, rrefNumber, url) => {
-  // Remove RREF marker first
-  let title = line.replace(/\[RREF\d+\]\s*/i, "");
+  let title = (line || "").replace(/\s*\[RREF\d+\]\s*/i, "").trim();
 
-  // Handle various link formats
+  // [Title](url) -> Title
+  const md = title.match(/\[([^\]]+)\]\(([^)]+)\)/);
+  if (md) return md[1].trim();
+
+  // <a href="...">Title</a> -> Title
+  const html = title.match(/<a[^>]*>([^<]+)<\/a>/i);
+  if (html) return html[1].trim();
+
+  // Strip plain URLs on edges + similarity scores
   title = title
-    // Markdown links: [title](url)
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    // HTML links: <a href="url">title</a>
-    .replace(/<a[^>]*>([^<]+)<\/a>/gi, "$1")
-    // Plain URLs at start/end
-    .replace(/^(https?:\/\/[^\s]+)\s*/, "")
-    .replace(/\s*(https?:\/\/[^\s]+)$/, "")
-    // Remove similarity scores: (0.123), [0.123], etc.
-    .replace(/[\(\[\{]\s*\d+\.\d+\s*[\)\]\}].*$/, "")
+    .replace(/^(https?:\/{1,2}\S+)\s*/i, "")
+    .replace(/\s*(https?:\/{1,2}\S+)$/i, "")
+    .replace(/[\(\[\{]\s*\d+\.\d+\s*[\)\]\}]\s*$/i, "")
     .trim();
 
-  // If we still don't have a good title, generate from URL or number
-  if (!title || title.length < 3 || /^https?:\/\//.test(title)) {
+  if (!title || /^https?:\/{1,2}/i.test(title) || title.length < 3) {
     if (url) {
-      // Extract meaningful name from URL
       try {
-        const urlObj = new URL(url.startsWith("http") ? url : "https://" + url);
-        const pathParts = urlObj.pathname.split("/").filter((p) => p);
-        const lastPart =
-          pathParts[pathParts.length - 1] ||
-          pathParts[pathParts.length - 2] ||
-          urlObj.hostname;
-
-        title = lastPart
-          .replace(/\.(md|html?|php|jsp|asp)$/i, "") // Remove file extensions
-          .replace(/[-_]/g, " ") // Replace separators with spaces
-          .replace(/\b\w/g, (l) => l.toUpperCase()) // Title case
+        const u = new URL(url);
+        const parts = u.pathname.split("/").filter(Boolean);
+        const last = parts[parts.length - 1] || u.hostname;
+        const candidate = last
+          .replace(/\.(md|html?|php|jsp|asp)$/i, "")
+          .replace(/[-_]/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase())
           .trim();
-
-        if (title.length < 3) {
-          title = urlObj.hostname.replace(/^www\./, "");
-        }
-      } catch (e) {
-        title = `Reference ${rrefNumber}`;
+        return candidate.length >= 3
+          ? candidate
+          : u.hostname.replace(/^www\./, "");
+      } catch {
+        /* ignore bad URL */
       }
-    } else {
-      title = `Reference ${rrefNumber}`;
     }
+    return `Reference ${rrefNumber}`;
   }
-
   return title;
 };
 
-const findReferenceSections = (content) => {
-  // Look for various reference section markers
-  const sectionMarkers = [
-    /\n\s*[-=]{3,}\s*\n\s*references?\s*:?\s*\n/gi,
-    /\n\s*references?\s*:?\s*\n\s*[-=]{3,}\s*\n/gi,
-    /\n\s*#{1,6}\s*references?\s*\n/gi,
-    /\n\s*references?\s*:?\s*\n/gi,
-    /\n\s*sources?\s*(?:&|and)?\s*references?\s*:?\s*\n/gi,
-  ];
-
-  let sections = [content]; // Start with full content
-
-  for (const marker of sectionMarkers) {
-    const newSections = [];
-    for (const section of sections) {
-      newSections.push(...section.split(marker));
-    }
-    sections = newSections;
-  }
-
-  return sections;
-};
-
 export const parseReferences = (content) => {
-  if (!content || typeof content !== "string") {
-    return [];
+  if (!content || typeof content !== "string") return [];
+
+  // We assume `content` is ONLY the references section (everything after the delimiter).
+  // Find every [RREFn] in order and slice blocks between them.
+  const tagRe = /\[RREF(\d+)\]/gi;
+  const matches = [];
+  let m;
+
+  while ((m = tagRe.exec(content)) !== null) {
+    matches.push({ rrefNumber: parseInt(m[1], 10), index: m.index });
+    if (m.index === tagRe.lastIndex) tagRe.lastIndex++;
   }
 
-  try {
-    // Step 1: Find reference sections
-    const sections = findReferenceSections(content);
+  if (matches.length === 0) return [];
 
-    // Step 2: Find all RREF patterns across all sections
-    const allRrefMatches = [];
+  const refs = [];
+  for (let i = 0; i < matches.length; i++) {
+    const cur = matches[i];
+    const next = matches[i + 1];
+    const start = cur.index;
+    const end = next ? next.index : content.length;
 
-    sections.forEach((section, sectionIndex) => {
-      const rrefPattern = /\[RREF(\d+)\]/gi;
-      let match;
+    const block = content.slice(start, end).trim();
+    const lines = block.split("\n");
+    const firstLine = lines[0] || "";
 
-      while ((match = rrefPattern.exec(section)) !== null) {
-        allRrefMatches.push({
-          rrefNumber: parseInt(match[1], 10),
-          index: match.index,
-          sectionIndex,
-          section,
-          fullMatch: match[0],
-        });
-
-        // Prevent infinite loop
-        if (match.index === rrefPattern.lastIndex) {
-          rrefPattern.lastIndex++;
-        }
-      }
-    });
-
-    if (allRrefMatches.length === 0) {
-      return [];
+    // URL: prefer markdown link on first line, else any URL in block (:/ or ://)
+    let url = null;
+    const mdUrl = firstLine.match(/\[([^\]]+)\]\(([^)]+)\)/i);
+    if (mdUrl) url = (mdUrl[2] || "").trim();
+    if (!url) {
+      const anyUrl = block.match(/https?:\/{1,2}\S+/i);
+      if (anyUrl) url = (anyUrl[0] || "").trim();
     }
 
-    // Step 3: Group by RREF number and find the best content for each
-    const rrefGroups = {};
+    const title = extractTitleFromReferenceLine(
+      firstLine,
+      cur.rrefNumber,
+      url || ""
+    );
 
-    allRrefMatches.forEach((match) => {
-      if (!rrefGroups[match.rrefNumber]) {
-        rrefGroups[match.rrefNumber] = [];
-      }
-      rrefGroups[match.rrefNumber].push(match);
+    refs.push({
+      number: cur.rrefNumber - 1, // zero-based badge if you need it
+      rrefNumber: cur.rrefNumber, // the actual RREFn
+      title,
+      url: url || null,
+      content: block, // RAW markdown from [RREFn] ... up to next tag
     });
-
-    // Step 4: Process each RREF number
-    const references = [];
-    const seenUrls = new Set();
-
-    Object.keys(rrefGroups)
-      .sort((a, b) => parseInt(a) - parseInt(b))
-      .forEach((rrefNumber) => {
-        const matches = rrefGroups[rrefNumber];
-
-        // Find the match with the most content (likely the detailed one)
-        let bestMatch = matches[0];
-        let bestContentLength = 0;
-
-        matches.forEach((match) => {
-          // Find content from this RREF to next RREF or end of section
-          const section = match.section;
-          const nextRrefInSection = section
-            .substring(match.index + match.fullMatch.length)
-            .search(/\[RREF\d+\]/);
-          const endIndex =
-            nextRrefInSection === -1
-              ? section.length
-              : match.index + match.fullMatch.length + nextRrefInSection;
-          const blockContent = section.substring(match.index, endIndex).trim();
-
-          if (blockContent.length > bestContentLength) {
-            bestMatch = match;
-            bestContentLength = blockContent.length;
-          }
-        });
-
-        // Extract content for the best match
-        if (bestContentLength > 20) {
-          // Must have substantial content
-          const section = bestMatch.section;
-          const nextRrefInSection = section
-            .substring(bestMatch.index + bestMatch.fullMatch.length)
-            .search(/\[RREF\d+\]/);
-          const endIndex =
-            nextRrefInSection === -1
-              ? section.length
-              : bestMatch.index +
-                bestMatch.fullMatch.length +
-                nextRrefInSection;
-          const blockContent = section
-            .substring(bestMatch.index, endIndex)
-            .trim();
-
-          const lines = blockContent.split("\n");
-          const firstLine = lines[0] || "";
-
-          // Extract URL
-          const urlMatch = blockContent.match(/(https?:\/\/[^\s\)\]\>]+)/);
-          const url = urlMatch ? urlMatch[1] : null;
-
-          // Skip if we've seen this URL before (deduplication)
-          if (url && seenUrls.has(url)) {
-            return;
-          }
-
-          if (url) seenUrls.add(url);
-
-          // Extract title
-          const title = extractTitleFromReferenceLine(
-            firstLine,
-            parseInt(rrefNumber),
-            url
-          );
-
-          // Clean the full content
-          const cleanContent = convertHtmlToText(blockContent);
-
-          references.push({
-            number: parseInt(rrefNumber) - 1,
-            rrefNumber: parseInt(rrefNumber),
-            content: cleanContent, // Keep content separate
-            title: title, // Add title as separate field
-            url: url,
-          });
-        }
-      });
-
-    // Step 5: Final sort and validation
-    const finalReferences = references
-      .sort((a, b) => a.rrefNumber - b.rrefNumber)
-      .filter((ref) => ref.content && ref.content.length > 30); // Ensure substantial content
-
-    return finalReferences;
-  } catch (error) {
-    console.error("❌ Error parsing references:", error);
-    return [];
   }
+
+  // Keep original order; do NOT filter by length; do NOT dedupe.
+  return refs;
 };

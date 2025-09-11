@@ -1,5 +1,4 @@
-import React from "react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import Typing from "./Typing";
 import CopyButton from "./CopyButton";
@@ -52,18 +51,21 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
 
   // Detect outside double clicks
   useEffect(() => {
-      function handleClickOutside(event) {
-      if (assistantMessage.current && !assistantMessage.current.contains(event.target))
-          setEditMode(false); // Exit edit mode
-      }
-      document.addEventListener("dblclick", handleClickOutside);
-      return () => {
+    function handleClickOutside(event) {
+      if (
+        assistantMessage.current &&
+        !assistantMessage.current.contains(event.target)
+      )
+        setEditMode(false); // Exit edit mode
+    }
+    document.addEventListener("dblclick", handleClickOutside);
+    return () => {
       document.removeEventListener("dblclick", handleClickOutside);
-      };
+    };
   }, [setEditMode]);
 
   useEffect(() => {
-    setEditedText(message?.content[0]?.text || "")
+    setEditedText(message?.content[0]?.text || "");
   }, [editMode]);
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   // Function to handle saving edited message
   const handleSave = () => {
     setLocalState((prev) => {
-      let newMessages = [...prev.messages]
+      let newMessages = [...prev.messages];
       newMessages[message_index].content[0].text = editedText;
       return { ...prev, messages: newMessages, flush: true };
     });
@@ -89,48 +91,54 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   // Function to handle resending a previous message
   const handleRetry = async () => {
     // Remove messages after current index
-    
+
     setLocalState((prev) => {
       const newMessages = [...prev.messages];
       newMessages.splice(message_index);
-      let newState = { ...prev, messages: newMessages }
-      sendMessage({localState: newState, setLocalState});
+      let newState = { ...prev, messages: newMessages };
+      sendMessage({ localState: newState, setLocalState });
       return { ...prev, messages: newMessages };
     });
   };
 
-
-  const content = message?.content?.[0]?.text ?? ""
+  const content = message?.content?.[0]?.text ?? "";
   const isContentEmpty = !content.trim();
-    return (
-        <div 
-        key={message_index} 
-        ref={assistantMessage}
-        className={`text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 
+  return (
+    <div
+      key={message_index}
+      ref={assistantMessage}
+      className={`text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 
           rounded-2xl bg-bg_chat dark:bg-bg_chat_dark
           ${editMode ? "px-1 pt-1" : "px-3 pt-3"}
-          ${isContentEmpty && !loading ? "bg-bg_chat/50 dark:bg-bg_chat_dark/50 pt-0": " bg-bg_chat dark:bg-bg_chat_dark"}`}>
-        
-        {isContentEmpty 
-        ? (<div className={`flex flex-col
-            ${loading ? "pb-4": "pb-3"}`}>
-            {loading && <Typing />}
-            {!loading && (
-              <div className="flex flex-col items-center justify-start gap-3 py-1">
-                <button
-                  onClick={handleRetry}
-                  className="cursor-pointer flex items-center gap-2 px-4 py-3 text-sm opacity-100 text-black dark:text-white bg-red-500/40 rounded-full hover:bg-red-400/100 transition-all"
-                  disabled={loading}
-                >
-                  <RotateCw className="w-4 h-4" />
-                  Try Again
-                </button>
-              </div>
-            )}
-          </div>) 
-        : (<>
-            {/* Edit Mode */}
-            {editMode && (
+          ${
+            isContentEmpty && !loading
+              ? "bg-bg_chat/50 dark:bg-bg_chat_dark/50 pt-0"
+              : " bg-bg_chat dark:bg-bg_chat_dark"
+          }`}
+    >
+      {isContentEmpty ? (
+        <div
+          className={`flex flex-col
+            ${loading ? "pb-4" : "pb-3"}`}
+        >
+          {loading && <Typing />}
+          {!loading && (
+            <div className="flex flex-col items-center justify-start gap-3 py-1">
+              <button
+                onClick={handleRetry}
+                className="cursor-pointer flex items-center gap-2 px-4 py-3 text-sm opacity-100 text-black dark:text-white bg-red-500/40 rounded-full hover:bg-red-400/100 transition-all"
+                disabled={loading}
+              >
+                <RotateCw className="w-4 h-4" />
+                Try Again
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Edit Mode */}
+          {editMode && (
             <div className="flex flex-col justify-between gap-1">
               <textarea
                 ref={editBox}
@@ -144,9 +152,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   ) {
                     event.preventDefault();
                     handleSave();
-                  } else if (
-                    event.key === "Escape"
-                  ) {
+                  } else if (event.key === "Escape") {
                     event.preventDefault();
                     setEditMode(false);
                   }
@@ -172,26 +178,24 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   Save
                 </button>
               </div>
-            </div> )}
-            {/* Display message content */}
-            {!editMode && (
+            </div>
+          )}
+          {/* Display message content */}
+          {!editMode && (
             <>
-            <MarkdownRenderer
-                loading={loading}
-                renderMode={renderMode}
-            >
+              <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
                 {message.content[0]?.text}
-            </MarkdownRenderer>
-            {/* Bottom panel for message */}
-            <div className="group flex justify-between w-full mt-1 gap-2">
-              <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                {/* Render Mode Selector on the bottom left*/}
-                <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
-                {renderModes.map((mode) => (
-                    <button
-                    key={mode}
-                    onClick={() => !loading && setRenderMode(mode)}
-                    className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
+              </MarkdownRenderer>
+              {/* Bottom panel for message */}
+              <div className="group flex justify-between w-full mt-1 gap-2">
+                <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  {/* Render Mode Selector on the bottom left*/}
+                  <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
+                    {renderModes.map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => !loading && setRenderMode(mode)}
+                        className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
                     ${loading ? "cursor-not-allowed opacity-40" : ""}
                     ${
                       renderMode === mode
@@ -199,34 +203,37 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                         : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                     }
                     `}
-                    disabled={loading}
-                    >
-                    {mode}
-                    </button>
-                  ))}
+                        disabled={loading}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Buttons on the bottom right */}
+                <div className="flex items-center justify-end gap-3">
+                  <EditButton setEditMode={setEditMode} />
+                  <CopyButton message={message} />
                 </div>
               </div>
-              {/* Buttons on the bottom right */}
-              <div className="flex items-center justify-end gap-3">
-              <EditButton setEditMode={setEditMode} />
-              <CopyButton message={message} />
-              </div>
-            </div></>)}
             </>
           )}
+        </>
+      )}
       {/* Attachments Section */}
       {Array.isArray(message?.content) && message?.content.length > 1 && (
-          <div className="flex flex-wrap gap-2 pr-1 pb-2 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+        <div className="flex flex-wrap gap-2 pr-1 pb-2 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
           {message.content.slice(1).map((attachment, i) => (
-              <Attachment
-                  localState={localState}
-                  setLocalState={setLocalState}
-                  attachment={attachment}
-                  index={i}
-                  inHistory={true}
-              />
+            <Attachment
+              key={i}
+              localState={localState}
+              setLocalState={setLocalState}
+              attachment={attachment}
+              index={i}
+              inHistory={true}
+            />
           ))}
-          </div>
+        </div>
       )}
     </div>
   );

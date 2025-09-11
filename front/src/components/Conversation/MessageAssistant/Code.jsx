@@ -4,6 +4,7 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import CodeCopyBtn from "../../Others/CodeCopyBtn";
 
 const highlightCache = new Map();
+const CACHE_LIMIT = 200;
 
 const Code = memo(({ language, children }) => {
   const [hovered, setHovered] = useState(false);
@@ -11,7 +12,9 @@ const Code = memo(({ language, children }) => {
   const handleMouseLeave = useCallback(() => setHovered(false), []);
 
   const codeString = String(children).replace(/\n$/, "");
-  const cacheKey = `${language}-${codeString}`;
+  if (!codeString.trim()) return null;
+
+  const cacheKey = `${language || "text"}-${codeString}`;
 
   const highlighted = useMemo(() => {
     if (highlightCache.has(cacheKey)) {
@@ -33,6 +36,11 @@ const Code = memo(({ language, children }) => {
       </SyntaxHighlighter>
     );
     highlightCache.set(cacheKey, result);
+    if (highlightCache.size > CACHE_LIMIT) {
+      // delete first-in (Map preserves insertion order)
+      const firstKey = highlightCache.keys().next().value;
+      highlightCache.delete(firstKey);
+    }
     return result;
   }, [codeString, language, cacheKey]);
 
