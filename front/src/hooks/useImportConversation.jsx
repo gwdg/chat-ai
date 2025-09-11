@@ -113,7 +113,7 @@ export function useImportConversation() {
     );
   }
 
-  const importConversation = async (data) => {
+  const importConversation = async (data, silent = false) => {
     try {
       // Handle multiple conversations import
       if (Array.isArray(data?.conversations)) {
@@ -134,7 +134,7 @@ export function useImportConversation() {
       ];
   
       let expectUserMessage = true; // switch roles after each message
-      const messages = data?.messages || (Array.isArray(data) ? data : undefined);
+      const messages = data?.messages || data?.conversation || (Array.isArray(data) ? data : undefined);
       if (messages) {
         // Look for system prompt
         const systemMessage = messages.find((msg) => msg.role === "system");
@@ -227,10 +227,9 @@ export function useImportConversation() {
       // Check for system prompt in data settings
       const system_prompt = extractParameter(data, "system_prompt") || extractParameter(data, "systemPrompt");
       if (system_prompt && typeof system_prompt === "string")
-        sanitizedMessages[0].content = system_prompt;
-
+        sanitizedMessages[0].content = extractMessageContent(system_prompt);
       // temperature
-      const temperature = extractParameter(data, "temperature") || extractParameter(data, "temp");
+      const temperature = extractParameter(data, "temperature") || extractParameter(data, "temp") || extractParameter(data, "settings.temperature");
       if (temperature && typeof temperature === "number" && temperature >= 0 && temperature <= 2.0)
         settings.temperature = temperature;
 
@@ -281,7 +280,7 @@ export function useImportConversation() {
         {
           title: data?.title || "Imported Conversation",
           messages: sanitizedMessages,
-          settings: defaultSettings,
+          settings: settings,
         },
       )
 
@@ -289,8 +288,8 @@ export function useImportConversation() {
         throw new Error("Failed to create new conversation");
       }
       console.log("Navigating to new chat");
-      navigate(`/chat/${newId}`, { replace: true });
-      notifySuccess("Chat imported successfully");
+      if (!silent) navigate(`/chat/${newId}`, { replace: true });
+      if (!silent) notifySuccess("Chat imported successfully");
     } catch (error) {
       console.error("Import error:", error);
       notifyError("Failed to import conversation")

@@ -25,8 +25,12 @@ import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
 import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
+import MigrateDataModal from "./Alert/MigrateDataModal";
 import ConversationConflict from "./Chat/ConversationConflict";
+
+import { useDispatch, useStore } from 'react-redux';
 import { useToast } from "../hooks/useToast";
+import { useImportConversation } from "../hooks/useImportConversation";
 
 const ModalContext = createContext();
 
@@ -34,6 +38,11 @@ export function ModalProvider({ children }) {
   const [modalType, setModalType] = useState(null);
   const [modalProps, setModalProps] = useState({});
   const { notifySuccess, notifyError } = useToast();
+
+  // For migration
+  const store = useStore();
+  const dispatch = useDispatch();
+  const importConversation = useImportConversation();
 
   const openModal = (type, props = {}) => {
     setModalType(type);
@@ -125,6 +134,9 @@ export function ModalProvider({ children }) {
         )}
         {modalType === "conversationConflict" && (
             <ConversationConflict isOpen onClose={closeModal} {...modalProps} />
+        )}
+        {modalType === "migrate" && (
+            <MigrateDataModal isOpen onClose={closeModal} store={store} importConversation={importConversation} dispatch={dispatch} {...modalProps} />
         )}
       
     </ModalContext.Provider>

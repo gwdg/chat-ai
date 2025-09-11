@@ -4,7 +4,7 @@ import interfaceSettingsReducer from "./interfaceSettingsSlice";
 import userSettingsReducer from "./userSettingsReducer";
 import versionReducer from "./versionReducer";
 import lastConversationSlice from "./lastConversationSlice";
-
+import { migrationDataReducer } from "./migrationDataReducer";
 
 // Root reducer
 const rootReducer = combineReducers({
@@ -12,6 +12,7 @@ const rootReducer = combineReducers({
   user_settings: userSettingsReducer,
   last_conversation: lastConversationSlice,
   version: versionReducer,
+  migration_data: migrationDataReducer,
 });
 
 export default rootReducer;

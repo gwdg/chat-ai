@@ -7,6 +7,7 @@ import { useDebounce } from "../../hooks/useDebounce";
 export default function SystemPromptContainer({ localState, setLocalState }) {
   const { openModal } = useModal();
   const [systemPromptError, setSystemPromptError] = useState("");
+  const [ignoreChanges, setIgnoreChanges] = useState(false);
   const [value, setValue] = useState(localState.messages[0]?.content[0]?.text || "");
    const { t } = useTranslation();
   // Validate the system prompt is not empty
@@ -20,11 +21,16 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
 
   // UseEffect to listen to indirect changes to system prompt
   useEffect(() => {
-    setValue(localState.messages[0]?.content[0]?.text || "");
+    if (ignoreChanges) {
+      setIgnoreChanges(false); // Ignore once
+    } else {
+      setValue(localState.messages[0]?.content[0]?.text || "");
+    }
   }, [localState.messages[0]?.content[0]]);
 
   // Handle changes to the system instructions/prompt
   const saveSystemPrompt = () => {
+    setIgnoreChanges(true);
     // Update system prompt in local state
     setLocalState((prevState) => ({
       ...prevState,

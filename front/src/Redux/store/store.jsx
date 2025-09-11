@@ -1,13 +1,13 @@
 /* eslint-disable no-unused-vars */
 import { configureStore } from "@reduxjs/toolkit";
-import { persistReducer, persistStore } from "redux-persist";
+import { persistReducer, persistStore, createMigrate } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import rootReducer from "../reducers/index";
 import {
   createStateSyncMiddleware,
   initMessageListener,
 } from "redux-state-sync";
-import { applyMigrations } from "./migrations";
+import { migrations } from "./migrations";
 
 const persistConfig = {
   key: "root",
@@ -17,7 +17,10 @@ const persistConfig = {
     "last_conversation",
     "user_settings",
     "version",
+    "migration_data",
   ],
+  version: 1,
+  migrate: createMigrate(migrations, { debug: true })
 };
 
 const getDefaultState = () => {
@@ -48,9 +51,6 @@ const rootReducerWithReset = (state, action) => {
   if (action.type === "RESET_ALL") {
     // Reset the entire state
     newState = getDefaultState();
-  } else if (action.type === "MIGRATE") {
-    // Apply migrations to the new state
-    newState = applyMigrations(rootReducer(state, action));
   } else {
     newState = rootReducer(state, action);
   }
@@ -110,7 +110,7 @@ initMessageListener(store);
 // Create the persistor object to persist the Redux store
 export const persistor = persistStore(store, null, () => {
   // this will be invoked after rehydration is complete
-  store.dispatch({ type: "MIGRATE" });
+  //store.dispatch({ type: "MIGRATE" });
 });
 
 export default store;

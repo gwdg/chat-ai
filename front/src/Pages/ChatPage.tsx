@@ -14,6 +14,7 @@ import Header from "../components/Header/Header";
 import SettingsWrapper from "../components/SettingsPanel/SettingsWrapper";
 import Conversation from "../components/Conversation/Conversation";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
 
 import { Navigate, useNavigate } from "react-router";

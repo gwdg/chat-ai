@@ -144,6 +144,7 @@ export function useSyncConversation({
   const sharedSettings = searchParams.get("settings");
   const importURL = searchParams.get("import");
   const importConversation = useImportConversation();
+  const migrationData = useSelector(state => state.migration_data);
 
   const { openModal } = useModal();
 
@@ -159,6 +160,11 @@ export function useSyncConversation({
 
   // Effect 1: Try to load conversation on mount
   useEffect(() => {
+    // Open modal for backup
+    if (migrationData && Object.entries(migrationData).length > 0) {
+      openModal("migrate");
+      //return;
+    }
     (async () => {
       const conversation = await loadConversation(navigate, conversationId, lastConversation, userSettings, sharedSettings, importURL, importConversation);
       if (!conversation) return;

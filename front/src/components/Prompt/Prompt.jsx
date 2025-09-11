@@ -19,24 +19,15 @@ export default function Prompt({
 }) { 
   const sendMessage = useSendMessage();
   const [shouldSend, setShouldSend] = useState(false);
+  const [ignoreChanges, setIgnoreChanges] = useState(false);
   const [prompt, setPrompt] = useState(localState.messages[localState.messages.length - 1].content[0]?.text || "");
-
-  // Effect, watch for changes to prompt in localState
-  useEffect(() => {
-    if (shouldSend) {
-      sendMessage({localState, setLocalState});
-      setShouldSend(false);
-    }
-    setPrompt(
-      localState.messages[localState.messages.length - 1]?.content[0]?.text || ""
-    );
-  }, [localState.messages]);
 
   //const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
   const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
   
   // Update partial local state while preserving other values
   const savePrompt = () => {
+    setIgnoreChanges(true);
     setLocalState((prev) => {
       const messages = [...prev.messages]; // shallow copy
       messages[messages.length - 1] = {
@@ -51,6 +42,22 @@ export default function Prompt({
       return { ...prev, messages };
     });
   };
+
+  // Effect, watch for changes to prompt in localState
+  useEffect(() => {
+    if (shouldSend) {
+      sendMessage({localState, setLocalState});
+      setShouldSend(false);
+      setIgnoreChanges(false);
+      setPrompt("");
+    } else if (ignoreChanges) {
+      setIgnoreChanges(false); // Ignored once
+    } else {
+      setPrompt(
+        localState.messages[localState.messages.length - 1]?.content[0]?.text || ""
+      );
+    }
+  }, [localState.messages]);
 
   // Handle changes to the prompt
   const debouncedSave = useDebounce(savePrompt, 300);
