@@ -123,7 +123,7 @@ export async function processContentItems({
   return output;
 }
 
-async function receiveFile(base64Data, mimeType, filename = "file", ext = null) {
+function receiveFile(base64Data, mimeType, filename = "file", ext = null) {
   // Decode base64 data
   const byteCharacters = atob(base64Data);
   const byteNumbers = new Array(byteCharacters.length);
@@ -142,7 +142,7 @@ async function receiveFile(base64Data, mimeType, filename = "file", ext = null) 
 
   // Save file
   // TODO replace id with conversation id
-  const fileId = await saveFile("", file);
+  const fileId = saveFile("", file);
   return fileId;
 }
 
@@ -333,7 +333,6 @@ const sendMessage = async ({
 
             const format = delta.audio?.format || "wav";
             const mimeType = "audio/" + format;
-
             fileId = await receiveFile(base64_data, mimeType, "audio_output");
           } catch (err) {
             console.error("Error receiving audio file:", err);
@@ -362,6 +361,7 @@ const sendMessage = async ({
             }
         }
         if (fileId) {
+          // Attach new file to model output
           currentContent.push({"type": "file", "fileId": fileId})
           setLocalState(prev => {
             if (prev.id !== conversationId) {
@@ -375,27 +375,26 @@ const sendMessage = async ({
             };
             return { ...prev, messages, ignoreConflict: true };
           });
-          continue; // Maybe not needed
         }
         if (delta?.content && typeof delta.content === "string") {
           // Process string input
           message_text += delta.content;
-          info_blocks = web_search_block ? "<think>" + web_search_block + "</think>" : "";
-          currentContent[0].text = info_blocks + message_text;
-          // UI update happens here in the caller
-          setLocalState(prev => {
-            if (prev.id !== conversationId) {
-              return prev;
-            }
-            const messages = [...prev.messages];
-            messages[messages.length - 2] = {
-              role: "assistant",
-              content: currentContent,
-              loading: true,
-            };
-            return { ...prev, messages, ignoreConflict: true };
-          });
         }
+        // UI update
+        info_blocks = web_search_block ? "<think>" + web_search_block + "</think>\n" : "";
+        currentContent[0].text = info_blocks + message_text;
+        setLocalState(prev => {
+          if (prev.id !== conversationId) {
+            return prev;
+          }
+          const messages = [...prev.messages];
+          messages[messages.length - 2] = {
+            role: "assistant",
+            content: currentContent,
+            loading: true,
+          };
+          return { ...prev, messages, ignoreConflict: true };
+        });
       }
       return currentContent;
     }
