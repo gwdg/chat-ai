@@ -41,7 +41,7 @@ export default function MigrateDataModal({
       console.error("Failed to migrate data");
       return;
     }
-    if (!Array.isArray(oldState.conversations.conversations)) {
+    if (!Array.isArray(oldState?.conversations?.conversations)) {
       console.error("Conversations not an array");
       return;
     }

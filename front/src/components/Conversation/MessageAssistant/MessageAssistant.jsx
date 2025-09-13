@@ -182,13 +182,28 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           )}
           {/* Display message content */}
           {!editMode && (
-            <>
+            <div className="flex flex-col gap-4">
               <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
                 {message.content[0]?.text}
               </MarkdownRenderer>
+              {/* Attachments Section */}
+              {Array.isArray(message?.content) && message?.content.length > 1 && (
+                <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+                  {message.content.slice(1).map((attachment, i) => (
+                    <Attachment
+                      key={i}
+                      localState={localState}
+                      setLocalState={setLocalState}
+                      attachment={attachment}
+                      index={i}
+                      inHistory={true}
+                    />
+                  ))}
+                </div>
+              )}
               {/* Bottom panel for message */}
               <div className="group flex justify-between w-full mt-1 gap-2">
-                <div className="flex items-center justify-end mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="flex items-center justify-end mb-2 opacity-40 group-hover:opacity-100 transition-opacity duration-300">
                   {/* Render Mode Selector on the bottom left*/}
                   <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
                     {renderModes.map((mode) => (
@@ -216,25 +231,11 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   <CopyButton message={message} />
                 </div>
               </div>
-            </>
+            </div>
           )}
         </>
       )}
-      {/* Attachments Section */}
-      {Array.isArray(message?.content) && message?.content.length > 1 && (
-        <div className="flex flex-wrap gap-2 pr-1 pb-2 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-          {message.content.slice(1).map((attachment, i) => (
-            <Attachment
-              key={i}
-              localState={localState}
-              setLocalState={setLocalState}
-              attachment={attachment}
-              index={i}
-              inHistory={true}
-            />
-          ))}
-        </div>
-      )}
+      
     </div>
   );
 });

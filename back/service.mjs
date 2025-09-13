@@ -219,6 +219,12 @@ app.post("/chat/completions", async (req, res) => {
           if (tool.type === "web_search_preview") {
             params.tools.push({type: "web_search_preview"});
           }
+          if (tool.type === "image_generation") {
+            params.tools.push({type: "image_generation"});
+          }
+          if (tool.type === "audio_generation") {
+            params.tools.push({type: "audio_generation"});
+          }
         }
       }
     }

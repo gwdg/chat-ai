@@ -123,6 +123,29 @@ export async function processContentItems({
   return output;
 }
 
+async function receiveFile(base64Data, mimeType, filename = "file", ext = null) {
+  // Decode base64 data
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+
+  // Create File object
+  let file;
+  if (ext) {
+    file = new File([byteArray], filename + "." + ext, { type: mimeType });
+  } else {
+    file = new File([byteArray], filename + "." + mimeType.split("/")[1], { type: mimeType });
+  }
+
+  // Save file
+  // TODO replace id with conversation id
+  const fileId = await saveFile("", file);
+  return fileId;
+}
+
 // Build OpenAI standard conversation from localState
 async function buildConversationForAPI(localState) {
   // Determine supported file types from model
@@ -213,8 +236,9 @@ const sendMessage = async ({
       if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
         conversationForAPI.settings.arcana.limit = 3;
       }
-      // Always enable image generation for now
-      conversationForAPI.settings.tools.push({ type: "image_generation" })
+      // Always enable image and audio generation for now
+      conversationForAPI.settings.tools.push({ type: "image_generation" });
+      conversationForAPI.settings.tools.push({ type: "audio_generation" });
     } else {
       delete conversationForAPI.settings.tools;
     }
@@ -259,21 +283,68 @@ const sendMessage = async ({
                 web_search_block += "";
               }
             }
+            if (delta.tool_calls[0]?.function?.name === "arcana.event") {
+              let arg = delta.tool_calls[0].function.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (arg.event === "accessing") {
+                web_search_block += `Reading arcana "${arg.arcana}" \n\n`;
+              } else if (arg.event === "done") {
+                web_search_block += "";// "Arcana retrieval completed.";
+              } else {
+                web_search_block += "";
+              }
+            }
+            if (delta.tool_calls[0]?.function?.name === "image.event") {
+              let arg = delta.tool_calls[0].function.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (arg.event === "image_creation_begin") {
+                web_search_block += `Generating image: "${arg.query}" \n\n`;
+              } else if (arg.event === "done") {
+                web_search_block += "";// "Image generation completed.";
+              } else {
+                web_search_block += "";
+              }
+            }
+            if (delta.tool_calls[0]?.function?.name === "audio.event") {
+              let arg = delta.tool_calls[0].function.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (arg.event === "audio_creation_begin") {
+                web_search_block += `Generating audio: ${arg.query} \n\n`;
+              } else if (arg.event === "done") {
+                web_search_block += "";// "Audio generation completed.";
+              } else {
+                web_search_block += "";
+              }
+            }
             // info_text = info_text + currentContent[0].text;
           } catch (err) {
             console.warn("Didn't understand: ", delta)
           }
         }
-        const chunk = delta?.content;
-        if (chunk) {
-          // Check if file was sent
-          if (typeof chunk !== String) {
-            // Attempt to save file
-            let fileId = "";
+        
+        // Attempt to receive file
+        let fileId = null;
+        if (delta?.audio) {
+          // Process audio output
+          try {
+            console.log("Receiving audio...");
+            const base64_data = delta.audio?.data;
+            const transcript = delta.audio?.transcript;
+
+            const format = delta.audio?.format || "wav";
+            const mimeType = "audio/" + format;
+
+            fileId = await receiveFile(base64_data, mimeType, "audio_output");
+          } catch (err) {
+            console.error("Error receiving audio file:", err);
+          }
+        } else if (delta?.content && typeof delta.content !== String) {
+          // Attempt to save file
             try {
-              if (chunk?.type === "image") {
-                console.log("Receiving file...");
-                const base64_dataURL = chunk?.image_url;
+              if (delta.content?.type === "image") {
+                // Process image input
+                console.log("Receiving image...");
+                const base64_dataURL = delta.content?.image_url;
 
                 // Extract base64 and mime type
                 const matches = base64_dataURL.match(/^data:(.+);base64,(.*)$/);
@@ -283,55 +354,48 @@ const sendMessage = async ({
 
                 const mimeType = matches[1];
                 const base64Data = matches[2];
-                const byteCharacters = atob(base64Data);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                  byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-
-                // Create File object
-                const file = new File([byteArray], "image." + mimeType.split("/")[1], { type: mimeType });
-
-                // Save file (assuming saveFile returns an ID)
-                fileId = await saveFile(localState.messages[localState.messages.length - 2].id, file);
-                currentContent.push({"type": "file", "fileId": fileId})
-                setLocalState(prev => {
-                  if (prev.id !== conversationId) {
-                    return prev;
-                  }
-                  const messages = [...prev.messages];
-                  messages[messages.length - 2] = {
-                    role: "assistant",
-                    content: currentContent,
-                    loading: true,
-                  };
-                  return { ...prev, messages, ignoreConflict: true };
-                });
-                continue
+                fileId = await receiveFile(base64Data, mimeType, "image_output");
               }
             } catch (err) {
               console.error("Error processing image chunk:", err);
               continue;
             }
-          }
-          message_text += chunk;
         }
-        info_blocks = web_search_block ? "<think>" + web_search_block + "</think>" : "";
-        currentContent[0].text = info_blocks + message_text;
-        // UI update happens here in the caller
-        setLocalState(prev => {
-          if (prev.id !== conversationId) {
-            return prev;
-          }
-          const messages = [...prev.messages];
-          messages[messages.length - 2] = {
-            role: "assistant",
-            content: currentContent,
-            loading: true,
-          };
-          return { ...prev, messages, ignoreConflict: true };
-        });
+        if (fileId) {
+          currentContent.push({"type": "file", "fileId": fileId})
+          setLocalState(prev => {
+            if (prev.id !== conversationId) {
+              return prev;
+            }
+            const messages = [...prev.messages];
+            messages[messages.length - 2] = {
+              role: "assistant",
+              content: currentContent,
+              loading: true,
+            };
+            return { ...prev, messages, ignoreConflict: true };
+          });
+          continue; // Maybe not needed
+        }
+        if (delta?.content && typeof delta.content === "string") {
+          // Process string input
+          message_text += delta.content;
+          info_blocks = web_search_block ? "<think>" + web_search_block + "</think>" : "";
+          currentContent[0].text = info_blocks + message_text;
+          // UI update happens here in the caller
+          setLocalState(prev => {
+            if (prev.id !== conversationId) {
+              return prev;
+            }
+            const messages = [...prev.messages];
+            messages[messages.length - 2] = {
+              role: "assistant",
+              content: currentContent,
+              loading: true,
+            };
+            return { ...prev, messages, ignoreConflict: true };
+          });
+        }
       }
       return currentContent;
     }
