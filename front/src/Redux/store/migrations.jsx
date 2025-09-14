@@ -47,7 +47,8 @@ export const migrations = {
     state.migration_data = {
       ...state,
     };
-    state.interface_settings = {};
+    state.interface_settings = {}; // set from defualt value?
+    state.interface_settings.show_tour = true;
     state.user_settings = {};
     if (state?.theme?.isDarkMode) state.interface_settings.dark_mode = true;
     if (state?.advOptions?.isOpen) state.interface_settings.show_settings = true;

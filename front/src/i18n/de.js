@@ -21,6 +21,9 @@ export default {
       record_start: "Aufnehmen (klicken/halten)",
       record_stop: "Stopp (klicken/loslassen)",
       dont_show_again: "Nicht mehr anzeigen",
+      backup_data: "Daten sichern",
+      skip_backup: "Backup überspringen",
+      upgrade_chat_ai: "Chat AI aktualisieren",
     },
     // Sidebar
     sidebar: {
@@ -202,6 +205,15 @@ export default {
     },
     // Tour
     tour: {
+      start_tour: "Tour starten",
+      skip_tour: "Tour überspringen",
+      description: "Klicken Sie auf die Schaltfläche unten, um die geführte Tour zu starten und die neue Benutzeroberfläche zu erkunden.",
+      prompt: "Sie können hier einfach eine Nachricht eingeben, um ein Gespräch mit Chat AI zu beginnen. Sie können Dateien an Ihre Nachricht anhängen; das Modell wird sie verwenden, wenn es den Dateityp verstehen kann.",
+      model: "Hier können Sie das Modell auswählen, mit dem Sie chatten möchten. Jedes Modell hat seine eigenen Fähigkeiten und Einschränkungen.",
+      sidebar: "In der Seitenleiste können Sie Gespräche hinzufügen, exportieren, löschen und zwischen ihnen wechseln. Sie können Gespräche auf Ihr Gerät importieren und exportieren oder eine Persona zum Chatten auswählen.",
+      settings: "Im Einstellungsmenü können Sie den System-Prompt, die Temperatur und den Wert top_p anpassen. Sie können die Speichereinstellungen von Chat AI festlegen und neue GWDG-Tools aktivieren, einschließlich Arcana, Bildgenerierung und Websuche.",
+      profile: "Direkt unter der Schaltfläche für die Einstellungen befindet sich diese Schaltfläche, mit der Sie Ihr Benutzerprofil öffnen können. Dort können Sie Ihre Präferenzen festlegen, Erinnerungen verwalten sowie Ihre Daten exportieren oder löschen.",
+      interface: "In dieser Ecke können Sie das Design und die Sprache von Chat AI ändern.",
       memory: {
         off: "Memory - None: Chat AI erinnert sich an nichts aus früheren Gesprächen, wie zuvor.",
         recall:
@@ -242,6 +254,8 @@ export default {
         "Sie haben Dateien angehängt, die verloren gehen werden. Sind Sie sicher, dass Sie gehen wollen?",
       unprocessed_files:
         "Bitte verarbeiten oder entfernen Sie das beigefügte PDF, um fortzufahren.",
+      migrate_data:
+        "Es sieht so aus, als ob Sie eine ältere Version von Chat AI verwenden. Um fortzufahren, müssen Ihre vorherigen Gespräche und Daten aktualisiert werden. Bitte sichern Sie Ihre Daten zuerst, falls erforderlich, und drücken Sie dann auf 'Aktualisieren', um den Prozess zu starten.",
       // Hallucination warning
       hallucination: {
         note1: "Hinweis: Chatbots sind anfällig für",

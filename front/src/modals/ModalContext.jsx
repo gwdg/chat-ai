@@ -33,6 +33,7 @@ import { useToast } from "../hooks/useToast";
 import { useImportConversation } from "../hooks/useImportConversation";
 import HelpWebSearchModal from "./Help/HelpWebSearchModal";
 import WebSearchDisclaimer from "./Alert/WebSearchDisclaimer";
+import WelcomeModal from "./Help/WelcomeModal";
 
 const ModalContext = createContext();
 
@@ -59,6 +60,10 @@ export function ModalProvider({ children }) {
   return (
     <ModalContext.Provider value={{ openModal, closeModal }}>
         {children}
+        {/* Welcome Tour Modal */}
+        {modalType === "welcome" && (
+            <WelcomeModal isOpen onClose={closeModal} {...modalProps} />
+        )}
         {/* Sidebar Modals */}
         {modalType === "deleteConversation" && (
             <DeleteConversationModal isOpen onClose={closeModal} {...modalProps} />

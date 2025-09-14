@@ -9,6 +9,7 @@ const interfaceSettingsSlice = createSlice({
     warn_clear_history: true,
     // warn_clear_memory: true,
     warn_share_settings: true,
+    show_tour: true,
     count_hallucination: 0,
     count_announcement: 0,
     agree_web_search: false,
@@ -23,20 +24,23 @@ const interfaceSettingsSlice = createSlice({
     closeSidebar: (state) => {
       state.show_sidebar = false;
     },
-    toggleSidebar: (state) => {
-      state.show_sidebar = !state.show_sidebar;
+    toggleSidebar: (state, action) => {
+      state.show_sidebar = action.payload !== undefined ? action.payload : !state.show_sidebar;
     },
     closeSettings: (state) => {
       state.show_settings = false;
     },
-    toggleSettings: (state) => {
-      state.show_settings = !state.show_settings;
+    toggleSettings: (state, action) => {
+      state.show_settings = action.payload !== undefined ? action.payload : !state.show_settings;
     },
     setDarkMode: (state) => {
       state.dark_mode = true;
     },
     setLightMode: (state) => {
       state.dark_mode = false;
+    },
+    closeTour: (state) => {
+      state.show_tour = false;
     },
     closeHallucination: (state) => {
       state.count_hallucination += 1;
@@ -56,9 +60,10 @@ export const selectShowSidebar = (state) => state.interface_settings.show_sideba
 export const selectCountHallucination = (state) => state.interface_settings.count_hallucination;
 export const selectCountAnnouncement = (state) => state.interface_settings.count_announcement;
 export const selectAgreeWebSearch = (state) => state.interface_settings.agree_web_search;
+export const selectShowTour = (state) => state.interface_settings.show_tour;
 export const { 
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
-  closeAnnouncement, closeHallucination, agreeWebSearch,
- } = interfaceSettingsSlice.actions;
+  closeAnnouncement, closeHallucination, agreeWebSearch, closeTour
+} = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

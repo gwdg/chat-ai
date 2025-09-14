@@ -48,7 +48,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
         </div>
 
         {/* Langauge and Theme toggles */}
-        <div className="absolute h-[3vh] right-0 top-0 flex items-center pr-3 gap-2"> 
+        <div className="interface-toggles absolute h-[3vh] right-0 top-0 flex items-center pr-3 gap-2"> 
           <ThemeToggle />
           <LanguageSelector />
         </div>

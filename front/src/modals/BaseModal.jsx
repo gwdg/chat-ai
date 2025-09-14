@@ -67,7 +67,7 @@ export default function BaseModal({
                   </Dialog.Title>
 
                   {/* Close button */}
-                  {!minimal && (
+                  {!minimal && !isForced && (
                   <button
                     onClick={onClose}
                     className="cursor-pointer p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition"

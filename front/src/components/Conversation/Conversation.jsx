@@ -354,7 +354,7 @@ export default function Conversation({
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
       {/* Model selector at top, on tablet and desktop */}
-      <div className="hidden md:block">
+      <div className="model-selector hidden md:block">
         <ModelSelectorWrapper
           localState={localState}
           setLocalState={setLocalState}

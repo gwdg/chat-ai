@@ -1,6 +1,7 @@
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
 import { useState } from "react";
+import { useToast } from "../../hooks/useToast";
 
 export default function MigrateDataModal({ 
   isOpen, 
@@ -15,6 +16,7 @@ export default function MigrateDataModal({
   const [progress, setProgress] = useState(0);   // 0–100
   const [currentIndex, setCurrentIndex] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const { notifyError, notifySuccess } = useToast();
 
   const handleBackup = () => {
     const filename = "chat-ai-backup.json";
@@ -39,15 +41,22 @@ export default function MigrateDataModal({
     const oldState = store?.getState()?.migration_data;
     if (!oldState) {
       console.error("Failed to migrate data");
+      dispatch({ type: 'CLEAR_MIGRATION_DATA' });
+      notifyError("Nothing to migrate");
+      onClose();
       return;
     }
     if (!Array.isArray(oldState?.conversations?.conversations)) {
       console.error("Conversations not an array");
+      dispatch({ type: 'CLEAR_MIGRATION_DATA' });
+      notifyError("Nothing to migrate");
+      onClose();
       return;
     }
 
     try {
-      const conversations = oldState.conversations.conversations;
+      // Reverse for ordering
+      const conversations = [...oldState.conversations.conversations].reverse();
       setTotalCount(conversations.length);
       setMigrating(true);
       setCurrentIndex(0);
@@ -59,7 +68,6 @@ export default function MigrateDataModal({
       for (let i = 0; i < conversations.length; i++) {
         setCurrentIndex(i + 1);
         try {
-          console.log(`Migrating conversation ${conversations[i].id}`);
           if (lastConversationId && conversations[i].id == lastConversationId) {
             lastConversationIndex = i;
             continue;
@@ -82,22 +90,24 @@ export default function MigrateDataModal({
 
     } catch (err) {
       console.log("Failed to migrate data", err);
+      notifyError("Couldn't upgrade: " + err.message);
+      onClose();
     }
-    // Set migration complete
+    // Close the migration popup
     onClose();
   };
 
   return (
     <BaseModal
       isOpen={isOpen}
-      onClose={migrating ? () => {} : onClose} // disable closing while migrating
+      isForced={true} // disable closing while migrating
+      onClose={onClose} 
       titleKey="common.notice"
     >
       <div className="flex flex-col gap-4">
         <div className="pt-0 pb-2">
           <p className="dark:text-white text-black text-justify text-sm">
-            To use the new version of Chat AI, your previous conversations and data need to be upgraded.
-            It is highly recommended to backup your data first. Please press the button below to save your data in a file on your device and initiate the upgrade.
+            <Trans i18nKey="alert.migrate_data" />
           </p>
         </div>
 
@@ -125,14 +135,14 @@ export default function MigrateDataModal({
                   className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
                   onClick={handleBackup}
                 >
-                  Backup Data
+                  <Trans i18nKey="common.backup_data" />
                 </button>
 
                 <button
                   className="text-tertiary dark:text-primary p-3 justify-center items-center md:w-fit w-full min-w-[150px] select-none cursor-pointer"
-                  onClick={handleMigrate}
+                  onClick={() => setBackupComplete(true)}
                 >
-                  Skip Backup
+                  <Trans i18nKey="common.skip_backup" />
                 </button>
               </>
             )}
@@ -151,7 +161,7 @@ export default function MigrateDataModal({
                   select-none cursor-pointer
                 "
               >
-                Upgrade Chat AI
+                <Trans i18nKey="common.upgrade_chat_ai" />
               </button>
             )}
           </div>

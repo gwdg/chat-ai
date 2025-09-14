@@ -35,7 +35,7 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
     <>
       <div className="hidden md:flex relative min-w-[4rem] min-h-0">
         {/**<div className={`hidden h-full md:flex ${showSidebar && isDesktop && "md:hidden"}`}> */}
-        <div className={`h-full absolute
+        <div className={`sidebar-wrapper h-full absolute
                       transition-all duration-300 ease-in-out
                       ${showSidebar && isDesktop ? "w-[13vw] opacity-0 pointer-events-none" : "w-[4rem] opacity-100"}
         `}>

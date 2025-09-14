@@ -31,6 +31,7 @@ const getDefaultState = () => {
       dark_mode: false,
       show_settings: false,
       show_sidebar: true,
+      show_tour: true,
       warn_clear_history: true,
       warn_clear_memory: true,
       warn_clear_settings: true,

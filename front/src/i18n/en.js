@@ -21,6 +21,9 @@ export default {
       record_start: "Record (click/hold)",
       record_stop: "Stop (click/release)",
       dont_show_again: "Don't show this again",
+      backup_data: "Backup Data",
+      skip_backup: "Skip Backup",
+      upgrade_chat_ai: "Upgrade Chat AI",
     },
     // Sidebar
     sidebar: {
@@ -204,6 +207,15 @@ export default {
     },
     // Tour
     tour: {
+      start_tour: "Start Tour",
+      skip_tour: "Skip tour",
+      description: "Click the button below to begin the guided tour and explore the new user interface.",
+      prompt: "You can simply type a message here to start a conversation with Chat AI. You can attach files to your message; the model will use it if it understands the file type.",
+      model: "Here you can select the model to chat with. Each model has its unique capabilities and limitations.",
+      sidebar: "In the sidebar you can add, export, delete, and switch conversations. You can import and export conversations to your device, or choose a Persona to chat with.",
+      settings: "In the settings panel, you can adjust the system prompt, temperature, and top_p. You can specify Chat AI's memory settings and enable new GWDG tools, including arcana, image generation, and web search.",
+      profile: "Just below the settings button, this button will open your user profile, where you can set your preferences, manage memories, and export or clear your data.",
+      interface: "In this corner you can switch the theme and language of Chat AI.",
       memory: {
         off: "Memory - None: Chat AI won't remember anything from previous conversations, like before.",
         recall: "Recall: Chat AI can use relevant memories about you from previous conversations, but won't memorize anything from the current conversation.",
@@ -215,7 +227,7 @@ export default {
       close: "Close",
       last: "Finish",
       next: "Next",
-      skip: "Skip",
+      skip: "Skip Tour",
     },
     // Alerts and warnings
     alert: {
@@ -244,6 +256,8 @@ export default {
       "You have attached files that will be lost. Are you sure you want to leave?",
       unprocessed_files:
         "Please process or remove the attached PDF to continue.",
+      migrate_data:
+        "It looks like you're using an older version of Chat AI. To continue, your previous conversations and data need to be upgraded. Please back up your data first if needed, then press 'Upgrade' to start the process.",
       // Hallucination warning
       hallucination: {
         note1: "Note: Chatbots are prone to",

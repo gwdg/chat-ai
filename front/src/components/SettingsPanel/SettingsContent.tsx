@@ -5,6 +5,8 @@ import { Trans, useTranslation } from "react-i18next";
 import Joyride from "react-joyride-react-19";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useModal } from "../../modals/ModalContext";
+import { useWindowSize } from "../../hooks/useWindowSize";
 
 //Components
 import ArcanaContainer from "./ArcanaContainer";
@@ -21,8 +23,11 @@ import { selectDefaultModel, selectUserSettings } from "../../Redux/reducers/use
 // Hooks
 import { useToast } from "../../hooks/useToast";
 import {
+  closeTour,
   selectShowSettings,
-  toggleSettings
+  selectShowTour,
+  toggleSettings,
+  toggleSidebar
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import WebSearchToggle from "./WebSearchToggle";
 import PartnerContainer from "../Header/PartnerContainer";
@@ -45,116 +50,155 @@ const SettingsPanel = ({
   //Hooks
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const [searchParams] = useSearchParams();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const currentConversationId = useSelector(
-    (state) => state.current_conversation
-  );
   const userSettings = useSelector(selectUserSettings);
   const settings = localState.settings;
+  const migrationData = useSelector(state => state.migration_data);
   const { notifySuccess, notifyError } = useToast();
+  const { openModal } = useModal();
 
   //Local useStates
   const [isOpen, setIsOpen] = useState(false);
   const [direction, setDirection] = useState("down");
 
-  const [processingFiles, setProcessingFiles] = useState(new Set());
   const defaultModel = useSelector(selectDefaultModel);
   const [runTour, setRunTour] = useState(false);
   const [tourStepIndex, setTourStepIndex] = useState(0); // Add this
-  const showSettings = useSelector(selectShowSettings);
+  const { isMobile, isTablet, isDesktop } = useWindowSize();
+
+  const showTour = !isMobile && useSelector(selectShowTour);
 
   const tourSteps = [
+    // {
+    //   target: ".memory-option-off",
+    //   content: t("tour.memory.off"),
+    //   placement: "top",
+    //   disableBeacon: true,
+    // },
+    // {
+    //   target: ".memory-option-recall",
+    //   content: t("tour.memory.recall"),
+    //   placement: "top",
+    //   disableBeacon: true,
+    // },
+    // {
+    //   target: ".memory-option-on",
+    //   content: t("tour.memory.on"),
+    //   placement: "top",
+    //   disableBeacon: true,
+    // },
     {
-      target: ".memory-option-off",
-      content: t("tour.memory.off"),
-      placement: "top",
+      target: ".prompt-area",
+      content: t("tour.prompt"),
+      placement: "bottom",
       disableBeacon: true,
+      styles: {
+        tooltip: { border: "none", boxShadow: "none" },
+        spotlight: { border: "none"},
+      },
     },
     {
-      target: ".memory-option-recall",
-      content: t("tour.memory.recall"),
-      placement: "top",
-      disableBeacon: true,
+      target: ".model-selector",
+      content: t("tour.model"),
+      placement: "bottom",
+      disableBeacon: false,
+      styles: {
+        tooltip: { border: "none", boxShadow: "none" },
+        spotlight: { border: "none"},
+      },
     },
     {
-      target: ".memory-option-on",
-      content: t("tour.memory.on"),
-      placement: "top",
+      target: ".sidebar-wrapper",
+      content: t("tour.sidebar"),
+      placement: "right",
       disableBeacon: true,
+      styles: {
+        tooltip: { border: "none", boxShadow: "none" },
+        spotlight: { border: "none"},
+      },
+    },
+    {
+      target: ".settings-toggle",
+      content: t("tour.settings"),
+      placement: "left",
+      disableBeacon: true,
+      styles: {
+        tooltip: { border: "none", boxShadow: "none" },
+        spotlight: { border: "none"},
+      },
     },
     {
       target: ".user-profile-button",
-      content: t("tour.memory.settings"),
+      content: t("tour.profile"),
+      placement: "left",
+      disableBeacon: true,
+      styles: {
+        tooltip: { border: "none", boxShadow: "none" },
+        spotlight: { border: "none"},
+      },
+    },
+    {
+      target: ".interface-toggles",
+      content: t("tour.interface"),
       placement: "top",
       disableBeacon: true,
+      styles: {
+        tooltip: { border: "none", boxShadow: "none" },
+        spotlight: { border: "none"},
+      },
     },
   ];
 
-  //Refs
-  const hasProcessedSettings = useRef(false);
-  const hasProcessedImport = useRef(false);
-  const hasProcessedArcana = useRef(false);
-  const hasFetchedModels = useRef(false);
+  // Functions
 
-  //Functions
-  // // 3. SIMPLIFIED startTour FUNCTION (no loading states)
-  // const startTour = useCallback(() => {
-  //   if (!showAdvOpt) {
-  //     // If settings panel isn't open, don't start tour yet
-  //     return;
-  //   }
+  // Begin the tour (shouldn't this be useEffect?)
+  useEffect(() => {
+    if (!showTour) return;
+    if (migrationData && Object.entries(migrationData).length > 0) return; // Skip if migration data exists
+    // Start tour after short delay
+    const onRunTour = () => {
+      setRunTour(true);
+    };
+    setTimeout(() => {
+      openModal("welcome", { onRunTour });
+    }, 200);
+  }, [showTour, migrationData]);
 
-  //   // Start tour after zoom transition
-  //   setTimeout(() => {
-  //     setRunTour(true);
-  //   }, 450);
-  // }, [showAdvOpt]);
-
-  // 4. UPDATED handleJoyrideCallback WITH VERSION UPDATE
+  // Handle tour actions
   const handleJoyrideCallback = useCallback(
     (data) => {
       const { action, index, status, type } = data;
-
       if (status === "finished" || status === "skipped") {
-        setRunTour(false);
+        dispatch(closeTour());
         setTourStepIndex(0); // Reset step index
 
         // Update version to 3 after tour completion
-        dispatch({ type: "SET_VERSION", payload: 3 });
+        // dispatch({ type: "SET_VERSION", payload: 3 });
       } else if (type === "step:after") {
         // Update step index and memory setting when navigating
         const newIndex = index + (action === "prev" ? -1 : 1);
-        setTourStepIndex(newIndex);
-
-        // Change memory setting based on current step
-        const memoryValues = [0, 1, 2, 2]; // Off, Recall, On
-        const memoryValue = memoryValues[newIndex];
-
-        if (memoryValue !== undefined) {
-          setLocalState((prev) => ({
-            ...prev,
-            settings: {
-              ...prev.settings,
-              memory: memoryValue,
-            },
-          }));
+        if (newIndex === 0) {
+          dispatch(toggleSidebar(false));
+          dispatch(toggleSettings(false));
+        } else if (newIndex === 1) {
+          dispatch(toggleSidebar(false));
+          dispatch(toggleSettings(false));
+        } else if (newIndex === 2) {
+          dispatch(toggleSidebar(true));
+          dispatch(toggleSettings(false));
+        } else if (newIndex === 3) {
+          dispatch(toggleSidebar(false));
+          dispatch(toggleSettings(true));
+        } else if (newIndex === 4) {
+          dispatch(toggleSidebar(false));
+          dispatch(toggleSettings(false));
+        } else if (newIndex === 5) {
+          dispatch(toggleSidebar(false));
+          dispatch(toggleSettings(false));
         }
+        setTimeout(() => {
+          setTourStepIndex(newIndex);
+        }, 500);
       } else if (type === "step:before") {
-        // Set memory when step starts (including first step)
-        const memoryValues = [0, 1, 2, 2]; // None, Recall, Learn
-        const memoryValue = memoryValues[index];
-
-        if (memoryValue !== undefined) {
-          setLocalState((prev) => ({
-            ...prev,
-            settings: {
-              ...prev.settings,
-              memory: memoryValue,
-            },
-          }));
-        }
       }
     },
     [dispatch, setLocalState]
@@ -189,10 +233,6 @@ const SettingsPanel = ({
         ...defaultSettings,
       },
     }));
-    // TODO look at this
-    // if (systemPromptError) {
-    //   setSystemPromptError("");
-    // }
   };
 
   const dropdownRef = useRef(null);
@@ -280,7 +320,7 @@ const SettingsPanel = ({
           },
         }}
       />
-    <div className="flex relative w-full h-full flex-col items-center text-tertiary ">
+    <div className="settings-toggle flex relative w-full h-full flex-col items-center text-tertiary ">
         {/* Logos and User Profile */}
         <div className="w-full hidden md:flex items-center gap-3 justify-between p-3">
           <button
