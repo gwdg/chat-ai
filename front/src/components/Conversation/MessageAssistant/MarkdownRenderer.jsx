@@ -270,7 +270,6 @@ const useStreamingProcessor = (content, isLoading) => {
       live = temp.slice(afterOpen);
       temp = temp.slice(0, lastOpen); // cut from opening tag so nothing leaks outside
     }
-
     return { main: temp, closed, live };
   }, []);
 

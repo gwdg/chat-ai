@@ -263,8 +263,8 @@ const sendMessage = async ({
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
       let currentContent = [{"type": "text", "text": ""}];
-      let info_blocks = "";
-      let web_search_block = "";
+      let process_block = "";
+      let inThinking = false;
       let message_text = "";
       for await (const delta of chatCompletions(conversationForAPI, timeoutAPI)) {
         if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
@@ -274,49 +274,48 @@ const sendMessage = async ({
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "websearch_begin") {
-                web_search_block += "Searching web for \"" + arg.query + "\"...\n\n";
+                process_block += "Searching web for \"" + arg.query + "\"...\n\n";
               } else if (arg.event === "websearch_done") {
-                web_search_block += "Web search completed. Used " + String(arg.sources) + " relevant sources.";
+                process_block += "Web search completed. Used " + String(arg.sources) + " relevant sources.";
               } else if (arg.event === "websearch_page_cache") {
-                web_search_block += "Reading source: " + String(arg?.url) + "\n\n";
+                process_block += "Reading source: " + String(arg?.url) + "\n\n";
               } else {
-                web_search_block += "";
+                process_block += "";
               }
             }
             if (delta.tool_calls[0]?.function?.name === "arcana.event") {
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "accessing") {
-                web_search_block += `Reading arcana "${arg.arcana}" \n\n`;
+                process_block += `Reading arcana "${arg.arcana}" \n\n`;
               } else if (arg.event === "done") {
-                web_search_block += "";// "Arcana retrieval completed.";
+                process_block += "";// "Arcana retrieval completed.";
               } else {
-                web_search_block += "";
+                process_block += "";
               }
             }
             if (delta.tool_calls[0]?.function?.name === "image.event") {
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "image_creation_begin") {
-                web_search_block += `Generating image: "${arg.query}" \n\n`;
+                process_block += `Generating image: ${arg.query} \n\n`;
               } else if (arg.event === "done") {
-                web_search_block += "";// "Image generation completed.";
+                process_block += "";// "Image generation completed.";
               } else {
-                web_search_block += "";
+                process_block += "";
               }
             }
             if (delta.tool_calls[0]?.function?.name === "audio.event") {
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "audio_creation_begin") {
-                web_search_block += `Generating audio: ${arg.query} \n\n`;
+                process_block += `Generating audio: "${arg.query}" \n\n`;
               } else if (arg.event === "done") {
-                web_search_block += "";// "Audio generation completed.";
+                process_block += "";// "Audio generation completed.";
               } else {
-                web_search_block += "";
+                process_block += "";
               }
             }
-            // info_text = info_text + currentContent[0].text;
           } catch (err) {
             console.warn("Didn't understand: ", delta)
           }
@@ -376,13 +375,24 @@ const sendMessage = async ({
             return { ...prev, messages, ignoreConflict: true };
           });
         }
+        if (process_block) {
+          if (!inThinking) {
+            message_text += "<think>";
+            inThinking = true;
+          }
+          message_text += process_block;
+          process_block = "";
+        }
         if (delta?.content && typeof delta.content === "string") {
+          if (inThinking) {
+            message_text += "</think>";
+            inThinking = false;
+          }
           // Process string input
           message_text += delta.content;
         }
         // UI update
-        info_blocks = web_search_block ? "<think>" + web_search_block + "</think>\n" : "";
-        currentContent[0].text = info_blocks + message_text;
+        currentContent[0].text = message_text;
         setLocalState(prev => {
           if (prev.id !== conversationId) {
             return prev;
@@ -395,6 +405,11 @@ const sendMessage = async ({
           };
           return { ...prev, messages, ignoreConflict: true };
         });
+      }
+      if (inThinking) {
+        message_text += "</think>";
+        inThinking = false;
+        currentContent[0].text = message_text
       }
       return currentContent;
     }

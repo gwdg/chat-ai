@@ -14,6 +14,7 @@ import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
 import WarningExternalModel from "../Header/WarningExternalModel";
 import EmptyConversation from "./EmptyConversation";
 import Motto from "./Motto";
+import ExportButton from "./ExportButton";
 
 export default function Conversation({
   localState,
@@ -478,6 +479,10 @@ export default function Conversation({
             />
 
             <div className="flex items-baseline gap-4">
+              <ExportButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
               <UndoButton
                 localState={localState}
                 setLocalState={setLocalState}

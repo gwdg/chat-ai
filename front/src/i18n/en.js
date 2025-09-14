@@ -4,7 +4,8 @@ export default {
       loading: "Loading...",
       undo: "Undo",
       rename: "Rename",
-      import: "Import",
+      import: "Import Chat",
+      export: "Export Chat",
       clear: "Clear",
       abort: "Abort",
       send: "Send",
@@ -44,7 +45,11 @@ export default {
         attach_media: "Attach Media",
         attachments: "Attachments",
         clear_attachments: "Clear all",
-      }
+      },
+      reasoning: "Reasoning Process",
+      action: "Action",
+      sources: "Sources and References",
+      references: "References",
     },
     // Footer
     footer: {

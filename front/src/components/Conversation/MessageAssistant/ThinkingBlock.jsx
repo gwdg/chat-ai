@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, memo } from "react";
+import { Trans } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -32,7 +33,7 @@ const ThinkingBlock = memo(
         >
           {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           <Brain size={16} className="ml-2 mr-2" />
-          <span className="flex items-center gap-2">Thinking Process</span>
+          <span className="flex items-center gap-2"><Trans i18nKey="conversation.reasoning" /></span>
         </button>
         {isOpen && (
           <div

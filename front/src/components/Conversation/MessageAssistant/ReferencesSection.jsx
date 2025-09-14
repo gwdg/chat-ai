@@ -1,4 +1,5 @@
 import React, { useState, memo, useMemo, useEffect, useCallback } from "react";
+import { Trans } from "react-i18next";
 import {
   ChevronDown,
   ChevronRight,
@@ -255,7 +256,7 @@ const ReferencesSection = memo(function ReferencesSection({
               }`}
             />
             <span className="text-sm font-semibold uppercase tracking-wider">
-              Sources & References
+              <Trans i18nKey="conversation.sources" />
             </span>
             <div
               className={`w-2 h-2 rounded-full ${
@@ -273,7 +274,7 @@ const ReferencesSection = memo(function ReferencesSection({
         <div className="px-6 py-4 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold">References</span>
+              <span className="text-lg font-semibold"><Trans i18nKey="conversation.references" /></span>
               <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full">
                 {visibleCount} of {references.length} source
                 {references.length !== 1 ? "s" : ""}
