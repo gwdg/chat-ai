@@ -56,6 +56,7 @@ export default {
       action: "Aktion",
       sources: "Quellen und Referenzen",
       references: "Referenzen",
+      empty_message: "Ihre Gespräche werden niemals auf unseren Servern gespeichert.",
     },
     // Footer
     footer: {

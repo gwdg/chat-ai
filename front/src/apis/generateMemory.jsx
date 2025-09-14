@@ -11,14 +11,16 @@ export default async function generateMemory(newUserMessage, memories) {
     - Identify any **new** personal detail not already captured in the memory list.
     - Detect if the **new message contradicts or updates** something already stored (e.g., changed preferences, updated projects).
     - Do **not** store paraphrased duplicates of existing memory.
+    - Do **not** store information that would be useless in future conversations.
 
-    Look for personal details such as: name, nickname, pronouns, projects, preferences,
-    interests, dietary habits, location, goals, or any other meaningful context.
+    Look for details such as: name, nickname, pronouns, location,
+    important personal preferences and interests, hobbies and projects,
+    long-term goals, or any other contextual info useful for future conversations.
     Express findings in third person, referring to "the user".
 
     Compare the **meaning**, not just the wording.
 
-    Existing memory list:
+    Currently there are ${memories.length} memories stored. Here they are:
     ${memories.map(({ id, text }, i) => `${i + 1}. ${text}`).join('\n')}
 
     Here is the new user message:  
@@ -99,8 +101,9 @@ export default async function generateMemory(newUserMessage, memories) {
         {
           role: "system",
           content:
-            "You are a helpful assistant. Here is the current memory list:\n" +
-            memories.map((memory) => memory.text).join("\n"),
+            "You are a helpful assistant."
+            // + Here is the current memory list:\n"
+            // + memories.map((memory) => memory.text).join("\n"),
         },
         { role: "user", content: memoryPrompt },
       ],

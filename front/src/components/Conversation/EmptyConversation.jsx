@@ -1,8 +1,6 @@
-import { useTranslation } from "react-i18next";
 import Logo from "../../assets/logos/chat_ai.svg";
 
 export default function EmptyConversation() {
-  const { t } = useTranslation();
 
   return (
     <div className="flex flex-col items-center justify-center w-full p-4 select-none">

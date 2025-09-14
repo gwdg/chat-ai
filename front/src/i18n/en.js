@@ -56,6 +56,7 @@ export default {
       action: "Action",
       sources: "Sources and References",
       references: "References",
+      empty_message: "Your conversations are never stored on our servers",
     },
     // Footer
     footer: {
