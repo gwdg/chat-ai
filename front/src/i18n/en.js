@@ -207,6 +207,7 @@ export default {
     },
     // Tour
     tour: {
+      welcome_message: "Welcome to Chat AI",
       start_tour: "Start Tour",
       skip_tour: "Skip tour",
       description: "Click the button below to begin the guided tour and explore the new user interface.",

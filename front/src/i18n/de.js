@@ -205,6 +205,7 @@ export default {
     },
     // Tour
     tour: {
+      welcome_message: "Willkommen bei Chat AI",
       start_tour: "Tour starten",
       skip_tour: "Tour überspringen",
       description: "Klicken Sie auf die Schaltfläche unten, um die geführte Tour zu starten und die neue Benutzeroberfläche zu erkunden.",

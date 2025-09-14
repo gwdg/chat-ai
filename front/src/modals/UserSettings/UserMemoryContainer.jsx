@@ -26,7 +26,7 @@ export default function UserMemoryContainer({ localState }) {
       </p>
       <div className="w-full flex justify-center">
         <button
-          className="w-full sm:max-w-[240px] px-5 py-3
+          className="w-full sm:max-w-[260px] px-5 py-3
                             bg-blue-700 hover:bg-blue-800
                             text-white font-medium rounded-lg
                             flex items-center justify-center gap-2
