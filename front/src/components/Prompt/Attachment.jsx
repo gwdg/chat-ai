@@ -1,3 +1,4 @@
+import { Trans } from "react-i18next";
 import { useAttachments } from "../../hooks/useAttachments";
 import icon_file_uploaded from "../../assets/icons/file_uploaded.svg";
 import icon_cross from "../../assets/icons/cross.svg";
@@ -22,6 +23,7 @@ export default function Attachment({
   attachment,
   index,
   inHistory = false,
+  inAssistant = false,
 }) {
   const { openModal } = useModal();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -374,7 +376,7 @@ export default function Attachment({
             </div>
           </div>
           {/* Process Needed Warning*/}
-          {(!isFileSupported || fileType === "pdf") && (
+          {!inAssistant && (!isFileSupported || fileType === "pdf") && (
             <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -393,8 +395,8 @@ export default function Attachment({
                 />
               </svg>
               {!isFileSupported
-                ? `Switch model to support ${fileType}`
-                : "Unprocessed file"}
+                ? <Trans i18nKey="conversation.attachment.file_unsupported" values={{ filetype: fileType }} />
+                : <Trans i18nKey="conversation.attachment.unprocessed" />}
             </span>
           )}
         </div>

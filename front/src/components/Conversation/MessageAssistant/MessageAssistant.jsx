@@ -197,6 +197,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                       attachment={attachment}
                       index={i}
                       inHistory={true}
+                      inAssistant={true}
                     />
                   ))}
                 </div>

@@ -298,7 +298,7 @@ const sendMessage = async ({
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "image_creation_begin") {
-                process_block += `Generating image: ${arg.query} \n\n`;
+                process_block += `Generating image: "${arg.query}" \n\n`;
               } else if (arg.event === "done") {
                 process_block += "";// "Image generation completed.";
               } else {

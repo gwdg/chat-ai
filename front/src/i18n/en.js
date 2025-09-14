@@ -46,6 +46,12 @@ export default {
         attachments: "Attachments",
         clear_attachments: "Clear all",
       },
+      attachment: {
+        "image_unsupported": "Switch model to process image",
+        "audio_unsupported": "Switch model to process audio",
+        "file_unsupported": "Switch model to process {{filetype}}",
+        "unprocessed": "Unprocessed file",
+      },
       reasoning: "Reasoning Process",
       action: "Action",
       sources: "Sources and References",

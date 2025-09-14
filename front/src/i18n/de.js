@@ -46,6 +46,12 @@ export default {
         attachments: "Anhänge",
         clear_attachments: "Alle löschen",
       },
+      attachment: {
+        "image_unsupported": "Modell wechseln, um Bilder zu verarbeiten",
+        "audio_unsupported": "Modell wechseln, um Audio zu verarbeiten",
+        "file_unsupported": "Nur mit {{filetype}}-Modell nutzbar",
+        "unprocessed": "Unverarbeitete Datei",
+      },
       reasoning: "Denkprozess",
       action: "Aktion",
       sources: "Quellen und Referenzen",
