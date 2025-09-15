@@ -23,13 +23,11 @@ export function useUpdateModelsData() {
         notifyError("No models available or network error");
         return;
       }
-
-      // TODO handle if current model is offline
       setModelsData(data);
     } catch {
       notifyError("Error fetching models");
     }
-  }, [notifyError, openModal]);
+  }, []);
 
   useEffect(() => {
     updateModelsData();
