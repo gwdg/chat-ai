@@ -203,6 +203,29 @@ const sendMessage = async ({
       const memorySection = `\n\n--- Begin User Memory ---\n${memoryExplanation}\n\n${memoryContext}\n--- End User Memory ---`;
       systemPromptAPI = systemPromptAPI + memorySection;
     }
+    
+    // Handle tools
+    if (conversationForAPI.settings?.enable_tools) {
+      // Inject the current date and time to the system prompt in human-readable format
+      const currentDate = new Date().toLocaleString();
+      systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
+      conversationForAPI.settings.tools = [];
+      if (conversationForAPI.settings?.enable_web_search) {
+        conversationForAPI.settings.tools.push({ type: "web_search_preview" });
+      }
+      // If arcana id exists and isn't empty string ""
+      if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
+        conversationForAPI.settings.arcana.limit = 3;
+      }
+      // Always enable image and audio generation for now
+      conversationForAPI.settings.tools.push({ type: "image_generation" });
+      conversationForAPI.settings.tools.push({ type: "audio_generation" });
+      // conversationForAPI.settings.tools.push({ type: "runRscript" }); // Disabled for now
+    } else {
+      delete conversationForAPI.settings.tools;
+    }
+
+    if (!isArcanaSupported) delete conversationForAPI.settings?.arcana;
 
     // Clean conversation for API call
     conversationForAPI = {
@@ -225,25 +248,6 @@ const sendMessage = async ({
         ...conversationForAPI.messages,
       ]}
     }
-    
-    // Handle tools
-    if (conversationForAPI.settings?.enable_tools) {
-      conversationForAPI.settings.tools = [];
-      if (conversationForAPI.settings?.enable_web_search) {
-        conversationForAPI.settings.tools.push({ type: "web_search_preview" });
-      }
-      // If arcana id exists and isn't empty string ""
-      if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
-        conversationForAPI.settings.arcana.limit = 3;
-      }
-      // Always enable image and audio generation for now
-      conversationForAPI.settings.tools.push({ type: "image_generation" });
-      conversationForAPI.settings.tools.push({ type: "audio_generation" });
-    } else {
-      delete conversationForAPI.settings.tools;
-    }
-
-    if (!isArcanaSupported) delete conversationForAPI.settings?.arcana;
     
     // Pushing message into conversation history
     setLocalState((prev) => ({
@@ -269,16 +273,37 @@ const sendMessage = async ({
       for await (const delta of chatCompletions(conversationForAPI, timeoutAPI)) {
         if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
           try {
+            if (delta.tool_calls[0]?.function?.name === "tools.event") {
+              let arg = delta.tool_calls[0].function.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (arg.event === "error") {
+                process_block += "Cannot use tools with current model: " + String(arg?.msg) + "\n\n";
+              } 
+            }
+            if (delta.tool_calls[0]?.function?.name === "rscript.event") {
+              let arg = delta.tool_calls[0].function.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (arg.event === "preparing_script") {
+                process_block += "Running R Script:\n```r\n" + String(arg?.script) + "\n```\n\n";
+              } 
+              if (arg.event === "error") {
+                process_block += "Cannot use Rscript: " + String(arg?.msg) + "\n\n";
+              } 
+            }
             // Handle web search events
             if (delta.tool_calls[0]?.function?.name === "websearch.event") {
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "websearch_begin") {
-                process_block += "Searching web for \"" + arg.query + "\"...\n\n";
+              if (arg.event === "begin") {
+                process_block += "Searching for \"" + arg.query + "\" on ";
+              } else if (arg.event === "config") {
+                process_block += String(arg?.["search-engine"]) + "\n\n";
               } else if (arg.event === "websearch_done") {
-                process_block += "Web search completed. Used " + String(arg.sources) + " relevant sources.";
-              } else if (arg.event === "websearch_page_cache") {
+                process_block += "Web search completed. Used " + String(arg.selected) + " relevant sources.\n\n";
+              } else if (arg.event === "websearch_page_cache" || arg.event === "fetch") {
                 process_block += "Reading source: " + String(arg?.url) + "\n\n";
+              } else if (arg.event === "error") {
+                process_block += "Websearch Error: " + String(arg?.msg) + "\n\n";
               } else {
                 process_block += "";
               }
