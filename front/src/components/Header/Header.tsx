@@ -19,7 +19,7 @@ function Header({ className, localState, setLocalState, modelsData, userData }) 
       <nav className={`${className} flex top-0 left-0 z-[995] w-full h-14 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800`}>
         <div className="w-full pr-4 pl-2 flex items-center gap-3">
           {/* Left Section */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* Hamburger Menu - Always show on mobile/tablet */}
             <HamburgerMenu />
             {/* Small Logo (Mobile) */}

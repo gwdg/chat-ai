@@ -26,7 +26,7 @@ const ThinkingBlock = memo(
           onClick={() => {
             if (!isStreaming) setIsOpen(!isOpen);
           }}
-          className="cursor-pointer flex items-center w-full p-3 text-xs bg-blue-50 dark:bg-blue-900/30 rounded-t-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
+          className="rounded-lg cursor-pointer flex items-center w-full p-3 text-xs bg-blue-50 dark:bg-blue-900/30 rounded-t-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
           aria-expanded={isOpen}
           aria-controls="thinking-content"
           disabled={isStreaming}

@@ -20,7 +20,7 @@ export default function SidebarDrawer({ localState, setLocalState, handleNewConv
       {/* height is: screenheight-header_size which is h-14 */}
       <div
         id="sidebardrawer"
-        className={`fixed top-0 left-0 pt-4 z-40 h-dvh md:h-dvh transition-transform duration-200
+        className={`fixed top-0 left-0 pt-3 z-40 h-dvh md:h-dvh transition-transform duration-200
           ${showSidebar ? "translate-x-0" : "-translate-x-full"} 
           bg-white dark:bg-bg_secondary_dark shadow-lg`}
       >

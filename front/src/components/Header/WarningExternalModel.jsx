@@ -42,7 +42,7 @@ export default function WarningExternalModel({ className, localState, userData }
           className="absolute right-0 mt-2 p-4 
                         bg-white dark:bg-gray-800 
                         border border-gray-200 dark:border-gray-600 
-                        rounded-lg shadow-xl min-w-80 max-w-96"
+                        rounded-lg shadow-xl min-w-80 max-w-96 z-100"
         >
           <div className="text-yellow-600 dark:text-yellow-400 text-sm leading-relaxed">
             <Trans
@@ -70,7 +70,7 @@ export default function WarningExternalModel({ className, localState, userData }
             </svg>
           </button>
           <div
-            className="absolute -top-1 right-4 w-2 h-2 
+            className="absolute -top-1 right-17.5 md:right-6.5 w-2 h-2 
                           bg-white dark:bg-gray-800 
                           border-l border-t border-gray-200 dark:border-gray-600 
                           transform rotate-45"

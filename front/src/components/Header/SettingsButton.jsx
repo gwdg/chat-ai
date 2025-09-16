@@ -18,14 +18,14 @@ export default function SettingsButton() {
 
     return ( 
         <button
-        className="flex h-[25px] w-[25px] cursor-pointer"
+        className="flex cursor-pointer"
         onClick={() => {
             if (showSidebar) dispatch(toggleSidebar());
             dispatch(toggleSettings());
         }}
         >
         <Settings
-            className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
+            className="cursor-pointer h-7 w-7 text-[#009EE0]"
             alt="settings"
         />
         </button>

@@ -16,7 +16,7 @@ export default function HamburgerMenu() {
       className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors p-2 touch-manipulation cursor-pointer"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      <Menu className="h-5 w-5 text-[#009EE0]" alt="Menu" />
+      <Menu className="h-6 w-6 text-[#009EE0]" alt="Menu" />
     </button>
   );
 }

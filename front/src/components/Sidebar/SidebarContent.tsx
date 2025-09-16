@@ -182,8 +182,8 @@ export default function SidebarContent({
         WebkitTapHighlightColor: "transparent",
       }}
     >
-      {/* Desktop Header with close button */}
-      <div className="flex items-center justify-between p-3 ">
+      {/* Header with close button */}
+      <div className="flex items-center justify-between p-3">
         <span className="px-3 flex items-center">
           <img
             className="h-10 w-auto object-contain"
