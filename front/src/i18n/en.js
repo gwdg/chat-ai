@@ -201,7 +201,7 @@ export default {
       tools:
         "Tools are a new and experimental feature designed to extend the capabilities of Chat AI. They allow the model to perform additional actions or access additional resources in order to provide more useful, accurate, or specialized responses. Current tools include Arcana (for all models) and Web Search (optional), with more tools planned for the future. As this feature is still evolving, functionality and available tools may change over time.",
       web_search:
-        "The web search tool allows the AI to look up the latest information from the internet to improve its responses. When enabled, the AI can generate search queries based on your question, send them to a search engine (such as DuckDuckGo), and use the retrieved results to provide more accurate and up-to-date answers. This is especially useful for topics where current or rapidly changing information is important.",
+        "The web search tool allows the AI to look up the latest information from the internet to improve its responses. When enabled, the AI can generate search queries based on your question and the full conversation history, send them to a search engine (such as DuckDuckGo), and use the retrieved results to provide more accurate and up-to-date answers. This is especially useful for topics where current or rapidly changing information is important.",
       top_p:
         "top_p is a slider from 0 to 1 which adjusts the total population of probabilities considered for the next token. A top_p of 0.1 would mean only the top 10% of cumulative probabilities is considered. Variating top_p has a similar effect on predictability and creativity as temperature.",
     },
@@ -268,7 +268,7 @@ export default {
       // External models
       settings_external: "These settings will not affect external (OpenAI) models.",
       web_search_disclaimer: 
-      `When web search is enabled, the AI may generate search queries based on your message and send them to a search engine (e.g., DuckDuckGo) to retrieve up-to-date information. This helps provide more accurate and current responses.\n\nBy clicking “I Understand,” you agree that your input may be processed in this way and acknowledge that you will not share any confidential, personal, or sensitive information while web search is active.`
+      `When web search is enabled, the AI may generate search queries based on your message and the full conversation history, and send them to a search engine (e.g., DuckDuckGo) to retrieve up-to-date information. This helps provide more accurate and current responses.\n\nBy clicking “I Understand,” you agree that your input may be processed in this way and acknowledge that you will not share any confidential, personal, or sensitive information while web search is active.`
     },
     // Landing page
     landing: {
