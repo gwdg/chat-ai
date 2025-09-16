@@ -2,7 +2,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
 
+import { useDispatch } from "react-redux";
+import {
+  closeTour
+} from "../../Redux/reducers/interfaceSettingsSlice";
+
 export default function WelcomeModal({ isOpen, onClose, onRunTour }) {
+  const dispatch = useDispatch();
+
+  function handleSkipTour() {
+    onClose();
+    dispatch(closeTour());
+  }
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} minimal={true}>
@@ -36,7 +47,7 @@ export default function WelcomeModal({ isOpen, onClose, onRunTour }) {
             {/* Skip Tour Button */}
             <button
                 className="text-tertiary dark:text-primary p-3 justify-center items-center md:w-fit w-full min-w-[150px] select-none cursor-pointer"
-                onClick={onClose}
+                onClick={handleSkipTour}
             >
                 <Trans i18nKey="tour.skip_tour" />
             </button>
