@@ -501,21 +501,26 @@ const sendMessage = async ({
     }
 
     // Generate title if conversation is new
-    conversationForAPI.messages = [
-      ...conversationForAPI.messages,
-      { role: "assistant", content: responseContent },
-      { role: "user", content: "" }
-    ];
-    if (conversationForAPI.messages.length <= 4) {
-      const title = await generateTitle(conversationForAPI.messages);
-      console.log("Generated title is ", title)
-      setLocalState(prev => {
-        if (prev.id !== conversationId) {
-          updateConversationMeta(conversationId, {title})
-          return prev;
-        }
-        return { ...prev, title, flush: true, };
-      });
+    // Change model if defined in config
+    try {
+      conversationForAPI.messages = [
+        ...conversationForAPI.messages,
+        { role: "assistant", content: responseContent },
+        { role: "user", content: "" }
+      ];
+      if (conversationForAPI.messages.length <= 4) {
+        const title = await generateTitle(conversationForAPI.messages);
+        console.log("Generated title is ", title)
+        setLocalState(prev => {
+          if (prev.id !== conversationId) {
+            updateConversationMeta(conversationId, {title})
+            return prev;
+          }
+          return { ...prev, title, flush: true, };
+        });
+      }
+    } catch (error) {
+      console.error("Failed to generate title: ", error);
     }
 
     // Update memory if enabled

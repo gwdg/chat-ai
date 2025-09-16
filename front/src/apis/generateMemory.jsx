@@ -96,7 +96,7 @@ export default async function generateMemory(newUserMessage, memories) {
   
 
     const params = {
-      model: defaultSettings.model.id,
+      model: import.meta.env.VITE_MEMORY_GENERATION_MODEL || defaultSettings.model.id,
       messages: [
         {
           role: "system",

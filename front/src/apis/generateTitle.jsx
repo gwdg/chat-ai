@@ -71,7 +71,7 @@ export default async function generateTitle(messages) {
 
     // Initialize params
     const params = {
-       model: defaultSettings.model.id,
+       model: import.meta.env.VITE_TITLE_GENERATION_MODEL || defaultSettings.model.id,
         messages: [
           { role: "system", content: "You are a helpful assistant." },
           ...processedMessages,
