@@ -68,12 +68,12 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
   }, [searchQuery, modelsData, sortBy]);
 
   // use memo to not rerender on search input
-  const ListElement = memo(({ idx, model, onClick }: { idx: number, model: BaseModelInfo, onClick: () => void }) => {
+  const ListElement = memo(({ idx, model, selected, onClick }: { idx: number, model: BaseModelInfo, selected: boolean, onClick: () => void }) => {
     return (
       <div
         onClick={onClick}
         data-index={idx} data-id={model.id} tabIndex={idx}
-        className="item cursor-pointer my-1 px-2 py-1 hover:bg-slate-100 rounded-2xl border border-slate-200 dark:border-gray-500 bg-white dark:bg-bg_secondary_dark"
+        className={`item cursor-pointer my-1 px-2 py-1 hover:bg-slate-100 rounded-2xl border bg-white dark:bg-bg_secondary_dark ${selected ? "border-blue-500" : "border-slate-200 dark:border-gray-500"}`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -102,7 +102,9 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
         onClick={() => setDropdownOpen(!dropdownOpen)}
         className={`border border-gray-200 dark:border-bg_secondary_dark
                   ${!inHeader && "shadow-md shadow-sm"}  
-                  w-full text-center desktop:w-full rounded-xl bg-white dark:bg-bg_secondary_dark px-3 py-2.5 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30`}>
+                  w-full text-center desktop:w-full rounded-xl bg-white dark:bg-bg_secondary_dark
+                  px-1 py-2.5 lg:px-3
+                  hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30`}>
         <div id="trigger-content" className="flex justify-between">
           {/* Left section - allow to shrink */}
           <div className="flex items-center gap-2 min-w-0">
@@ -183,7 +185,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               <ListElement
                 key={m.id}
                 onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}
-                idx={idx} model={m} />
+                idx={idx} model={m} selected={selectedModel?.id === m.id} />
             ))}
           </div>
         </div>

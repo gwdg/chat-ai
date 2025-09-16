@@ -9,17 +9,19 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   /*
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
+  const { openModal } = useModal();
+  
   const currentModelId = localState?.settings?.model?.id;
-  const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData[0] || null : null;
-  const [initialized, setInitialized] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
+  //const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData[0] || null : null;
 
   const hasExtendedModels = modelsData?.[0]?.description !== undefined;
-  const { openModal } = useModal();
 
   function setModel(newModel: ModelInfo) {
-    if (newModel?.status === "offline")
+    if (newModel?.status === "offline") {
       openModal("serviceOffline");
-    setInitialized(false);
+    }
+    setSelectedModel(newModel);
     setLocalState((prev) => ({
       ...prev,
       settings: {
@@ -31,16 +33,19 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
 
   // currentModelId has changed indirectly
   useEffect(() => {
-    if (!currentModelId) return;
-    if (!initialized) {
-      setInitialized(true);
-      return;
-    } 
+    if(!currentModelId) return;
+    if(modelsData.length === 0) return;
+
     const foundModel = modelsData.find(
       (model) => model.id === currentModelId
     );
-    if (foundModel) setModel(foundModel);
-  }, [currentModelId]);
+    if (foundModel){
+      setModel(foundModel);
+    } else {
+      // fallback to first model
+      setModel(modelsData[0]);
+    }
+  }, [currentModelId, modelsData]);
 
   return (
     <>
