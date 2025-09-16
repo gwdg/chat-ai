@@ -8,7 +8,6 @@ import UndoButton from "./UndoButton";
 import ClearMessagesButton from "./ClearMessagesButton";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
 import HallucinationWarning from "./HallucinationWarning";
-import ModelSelector from "../Header/ModelSelector";
 import Prompt from "../Prompt/Prompt";
 import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
 import WarningExternalModel from "../Header/WarningExternalModel";
