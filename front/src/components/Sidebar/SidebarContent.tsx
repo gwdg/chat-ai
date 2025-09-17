@@ -20,6 +20,7 @@ import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 import { Bot } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
+import AiServicesMenu from "./AiServicesMenu";
 
 export default function SidebarContent({
   localState,
@@ -183,18 +184,11 @@ export default function SidebarContent({
       }}
     >
       {/* Header with close button */}
-      <div className="flex items-center justify-between p-3">
-        <span className="px-3 flex items-center">
-          <img
-            className="h-10 w-auto object-contain"
-            src={Logo}
-            alt="Chat AI Logo"
-          />
-        </span>
-
+      <div className="flex items-center justify-between">
+        <AiServicesMenu />
         <button
           onClick={onClose}
-          className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          className="m-3 cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           title="Close sidebar"
         >
           <ChevronLeft className="w-7 h-7 text-tertiary" />
