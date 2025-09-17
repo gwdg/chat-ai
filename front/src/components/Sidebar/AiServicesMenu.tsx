@@ -18,7 +18,7 @@ const items = [
   },
   {
     name: '',
-    description: 'Text-to-speech conversion',
+    description: 'Speech-to-Text conversion',
     href: 'https://voice-ai.academiccloud.de/',
     icon: (
       <img className="h-8 w-auto object-contain mx-auto" src={VoiceAiLogo} alt="Voice AI Logo" />
