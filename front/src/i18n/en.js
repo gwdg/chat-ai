@@ -70,6 +70,7 @@ export default {
       contact: "Contact Us",
       about: "About",
       copyright: "All Rights Reserved",
+      iso_certified: "ISO 27001 Certified",
     },
     // User Settings Modal
     user_settings: {

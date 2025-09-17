@@ -31,7 +31,6 @@ export default function CollapsibleFooter({ className }: { className?: string })
           />
         </button>
         <div className="absolute h-[3vh] left-0 top-0 flex items-center justify-center pl-3 gap-3">
-          
           {/* Version Display */}
           <VersionDisplay />
           <Link
@@ -42,9 +41,12 @@ export default function CollapsibleFooter({ className }: { className?: string })
             target="_blank"
           >
             <p className="text-center text-blue-600 dark:text-blue-400 hover:underline">
-              <Trans i18nKey="footer.imprint"></Trans>
+              <Trans i18nKey="footer.imprint" />
             </p>
           </Link>
+          <p className="hidden md:block text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-600 dark:text-gray-400">
+            <Trans i18nKey="footer.iso_certified" />
+          </p>
         </div>
 
         {/* Langauge and Theme toggles */}
@@ -80,8 +82,11 @@ export default function CollapsibleFooter({ className }: { className?: string })
               {/* Navigation Links Grid */}
               <NavigationGridLinks />
               <div className="dark:text-white">
-                © 2025 GWDG | <Trans i18nKey="footer.copyright"></Trans>
+                © 2025 GWDG | <Trans i18nKey="footer.copyright" />
               </div>
+              <div className="block md:hidden p-0 justify-center text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-600 dark:text-gray-400">
+                  <Trans i18nKey="footer.iso_certified" />
+                </div>
             </div>
           </div>
         </div>

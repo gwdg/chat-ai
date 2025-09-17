@@ -123,7 +123,7 @@ export async function processContentItems({
   return output;
 }
 
-function receiveFile(base64Data, mimeType, filename = "file", ext = null) {
+function receiveFile(base64Data, mimeType, filename = "file", conversationId = null, ext = null) {
   // Decode base64 data
   const byteCharacters = atob(base64Data);
   const byteNumbers = new Array(byteCharacters.length);
@@ -142,7 +142,7 @@ function receiveFile(base64Data, mimeType, filename = "file", ext = null) {
 
   // Save file
   // TODO replace id with conversation id
-  const fileId = saveFile("", file);
+  const fileId = saveFile(conversationId, file);
   return fileId;
 }
 
@@ -326,6 +326,8 @@ const sendMessage = async ({
                 process_block += `Generating image: "${arg.query}" \n\n`;
               } else if (arg.event === "done") {
                 process_block += "";// "Image generation completed.";
+              } if (arg.event === "error") {
+                process_block += "Image generation failed: " + String(arg?.msg) + "\n\n";
               } else {
                 process_block += "";
               }
@@ -337,6 +339,8 @@ const sendMessage = async ({
                 process_block += `Generating audio: "${arg.query}" \n\n`;
               } else if (arg.event === "done") {
                 process_block += "";// "Audio generation completed.";
+              } if (arg.event === "error") {
+                process_block += "Audio generation failed: " + String(arg?.msg) + "\n\n";
               } else {
                 process_block += "";
               }
@@ -357,7 +361,7 @@ const sendMessage = async ({
 
             const format = delta.audio?.format || "wav";
             const mimeType = "audio/" + format;
-            fileId = await receiveFile(base64_data, mimeType, "audio_output");
+            fileId = await receiveFile(base64_data, mimeType, "audio_output", conversationId);
           } catch (err) {
             console.error("Error receiving audio file:", err);
           }
@@ -377,7 +381,7 @@ const sendMessage = async ({
 
                 const mimeType = matches[1];
                 const base64Data = matches[2];
-                fileId = await receiveFile(base64Data, mimeType, "image_output");
+                fileId = await receiveFile(base64Data, mimeType, "image_output", conversationId);
               }
             } catch (err) {
               console.error("Error processing image chunk:", err);

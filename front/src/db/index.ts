@@ -36,7 +36,7 @@ export class AppDB extends Dexie {
       conversations: 'id, lastModified, createdAt, title',
       messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
       content_items: 'id, messageId, [messageId+idx], idx, type',
-      files_meta: 'id, conversationId, messageId, type, size, name',
+      files_meta: 'id, conversationId, type, size, name',
       files_data: 'id',
     })
   }
@@ -46,7 +46,7 @@ export const db = new AppDB()
 
 // ---------- Utilities ----------
 
-function newId(): string {
+export function newId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID()
   }
@@ -154,9 +154,10 @@ async function hydrateConversation(conversationId: string) {
 export async function createConversation(params: {
   title?: string
   settings: ConversationSettings
-  messages?: MessageInput[]
+  messages?: MessageInput[],
+  id?: string, // for import
 }) {
-  const id = newId()
+  const id = params?.id ?? newId()
   const now = Date.now()
   const title = params.title
   const settings = params.settings

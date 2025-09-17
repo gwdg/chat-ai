@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
-import { createConversation, saveFile } from "../db";
+import { createConversation, newId, saveFile } from "../db";
 import { dataURLtoFile } from "../utils/attachments";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 
@@ -18,6 +18,7 @@ export function useImportConversation() {
   const dispatch = useDispatch();
   const userSettings = useSelector(selectUserSettings);
   const defaultSettings = getDefaultSettings(userSettings);
+  const conversationId = newId();
 
   const extractMessageContent = (message) => {
     let res = [{
@@ -48,7 +49,7 @@ export function useImportConversation() {
         const filename = content?.name || content.image_url?.filename || "image";
         const file = dataURLtoFile(dataURL, filename);
         if (!file) return res; // fallback
-        const fileId = saveFile(null, file);
+        const fileId = saveFile(conversationId, file);
         console.log("Saved new file", fileId)
         return [{
           "type": "file",
@@ -65,7 +66,7 @@ export function useImportConversation() {
         const dataURL = "data:" + mimeType + ";base64," + content.input_audio.data;
         const file = dataURLtoFile(dataURL, filename);
         if (!file) return res; // fallback
-        const fileId = saveFile(null, file);
+        const fileId = saveFile(conversationId, file);
         console.log("Saved new file", fileId)
         return [{
           "type": "file",
@@ -79,7 +80,7 @@ export function useImportConversation() {
         const filename = content?.name || content.file?.filename || "file"; 
         const file = dataURLtoFile(data, filename);
         if (!file) return res; // fallback
-        const fileId = saveFile(null, file);
+        const fileId = saveFile(conversationId, file);
         console.log("Saved new file", fileId)
         return [{
           "type": "file",
@@ -278,6 +279,7 @@ export function useImportConversation() {
       // Create new conversation
       const newId = await createConversation(
         {
+          id: conversationId,
           title: data?.title || "Imported Conversation",
           messages: sanitizedMessages,
           settings: settings,

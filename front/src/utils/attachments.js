@@ -394,7 +394,7 @@ const addAudioAttachment = async ({
 
     // Create file object in the format expected by your system
     const file = new File([wavBlob], fileName, { type: "audio/wav" });
-    const fileId = saveFile(localState.messages[localState.messages.length-1].id, file)
+    const fileId = saveFile(localState.id, file)
     appendAttachments({
         localState,
         setLocalState,
@@ -440,7 +440,7 @@ const pasteAttachments = async ({
                 const ext = img.type.split("/")[1] || "png";
                 const imageName = `clipboard_${timestamp}.${ext}`;
                 const file = new File([img], imageName, { type: img.type });
-                const fileId = saveFile(localState.messages[localState.messages.length-1].id, file)
+                const fileId = saveFile(localState.id, file)
                 newAttachments.push({"type": "file", "fileId": fileId});
             }
             appendAttachments({
