@@ -206,6 +206,24 @@ export default function Conversation({
     [hasOverflow, checkIfAtBottom, updateScrollButtonVisibility]
   );
 
+  // Detect touch drag up on mobile
+  const handleTouchMove = (e) => {
+    if (!containerRef.current) return;
+    const touch = e.touches[0];
+    // Store last touch position
+    if (!handleTouchMove.lastY) {
+      handleTouchMove.lastY = touch.clientY;
+      return;
+    }
+
+    // Swiping down (finger moves down → scroll up in content)
+    if (touch.clientY - handleTouchMove.lastY > 0 && hasOverflow()) {
+      userHasScrolledUp.current = true;
+      isAutoScrolling.current = false;
+    }
+    handleTouchMove.lastY = touch.clientY;
+  };
+
   // Set up MutationObserver to watch for content changes
   useEffect(() => {
     if (!containerRef.current) return;
@@ -301,6 +319,7 @@ export default function Conversation({
 
     container.addEventListener("scroll", handleScroll, options);
     container.addEventListener("wheel", handleWheel, options);
+    container.addEventListener("touchmove", handleTouchMove, { passive: true });
 
     // Initial check
     throttledUpdateScrollButtonVisibility.current();
@@ -308,6 +327,7 @@ export default function Conversation({
     return () => {
       container.removeEventListener("scroll", handleScroll);
       container.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("touchmove", handleTouchMove);
     };
   }, [handleScroll, handleWheel, throttledUpdateScrollButtonVisibility]);
 
