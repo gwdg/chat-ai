@@ -225,7 +225,7 @@ const addAttachments = async ({
     const newAttachments = [];
     for (const file of validFiles) {
         // TODO check if files can be processed
-        const fileId = saveFile(localState.messages[localState.messages.length-1].id, file)
+        const fileId = saveFile(localState.id, file) // save file with conversationId
         newAttachments.push({"type": "file", "fileId": fileId});
     }
 
@@ -237,7 +237,7 @@ const addAttachments = async ({
     });
 
     // Notify success
-    notifySuccess("File(s) attached");
+    notifySuccess(`File${newAttachments.length > 1 ? "s" : ""} attached`);
 
     // e.target.value = "";
     } catch (error) {

@@ -76,7 +76,7 @@ export type FileDataRow = {
 
 export type FileMetaRow = {
   id: string // shared with FileDataRow
-  messageId: string
+  conversationId: string
   name: string
   type: string
   size: number

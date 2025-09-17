@@ -191,6 +191,43 @@ export async function getConversationLastModified(conversationId: string) {
   return convo?.lastModified || 0;
 }
 
+async function cleanUpOrphanFiles(conversationId: string) {
+  // after the sync,
+  // after all content items are inserted, we can check if there are orphan files
+  // (files that are not referenced by any content item in this conversation)
+  // and delete them
+  const messageIds = await db.messages
+    .where('conversationId')
+    .equals(conversationId)
+    .primaryKeys();
+
+  if (messageIds.length === 0) return; // nothing to do
+
+  // find all file ids referenced by content items of this conversation
+  const contentFileItemsOfConversation = await db.content_items
+    .where('messageId')
+    .anyOf(messageIds)
+    .and(ci => ci.type === 'file' && !!ci.fileId)
+    .toArray(); // gets the full objects
+  const fileIds = contentFileItemsOfConversation.map(ci => ci.fileId);
+  if (fileIds.length === 0) return;
+
+  // now check if there are any files in this conversation that are not referenced
+  // by any content item of this conversation
+  const fileMetaOfConversationIds = await db.files_meta
+    .where('conversationId')
+    .equals(conversationId)
+    .and(fm => !fileIds.includes(fm.id!))
+    .primaryKeys();
+    
+  const referencedFileDeleted = await db.files_data
+    .where('id')
+    .anyOf(fileMetaOfConversationIds)
+    .delete();
+
+  await db.files_meta.bulkDelete(fileMetaOfConversationIds);
+}
+
 // Replace the entire content (title/settings/messages) of a conversation in one go.
 export async function updateConversation(
   conversationId: string,
@@ -221,11 +258,11 @@ export async function updateConversation(
   const now = Date.now();
   await db.transaction(
     'rw',
-    db.conversations,
+    [db.conversations,
     db.messages,
     db.content_items,
     db.files_meta,
-    db.files_data,
+    db.files_data],
     async () => {
       const convo = await db.conversations.get(conversationId);
       if (!convo) throw new Error('Conversation not found');
@@ -338,6 +375,7 @@ export async function updateConversation(
           }
         }
       }
+      //await cleanUpOrphanFiles(conversationId);
 
       // Finally update conversation info
       await db.conversations.update(conversationId, {
@@ -459,11 +497,11 @@ export async function updateConversationMeta(
 export async function deleteConversation(conversationId: string) {
   await db.transaction(
     'rw',
-    db.messages,
+    [db.messages,
     db.content_items,
     db.files_meta,
     db.files_data,
-    db.conversations,
+    db.conversations],
     async () => {
       // Delete all files for this conversation (meta + data)
       const fileIds = await db.files_meta
@@ -532,15 +570,15 @@ export function useConversationList() {
 // ---------- Files ----------
 
 // Insert file meta+data; returns the new id
-export function saveFile(messageId: string, file: File): string {
+export function saveFile(conversationId: string, file: File): string {
   const id = newId();
 
-  async function saveFileDB(id: string, file: File, messageId: string) {
+  async function saveFileDB(id: string, file: File, conversationId: string) {
     // Read file data into an ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
     const meta: FileMetaRow = {
       id,
-      messageId,
+      conversationId,
       name: file.name,
       type: file.type || "application/octet-stream",
       size: file.size,
@@ -559,9 +597,10 @@ export function saveFile(messageId: string, file: File): string {
   }
 
   // Fire and forget, but handle errors
-  saveFileDB(id, file, messageId)
+  saveFileDB(id, file, conversationId)
     .catch(err => console.error("Failed to save file:", err));
 
+  //TODO this may be a problem if a file cannot be saved it still returns an id
   return id;
 }
 
