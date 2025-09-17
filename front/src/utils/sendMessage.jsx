@@ -150,9 +150,9 @@ function receiveFile(base64Data, mimeType, filename = "file", conversationId = n
 async function buildConversationForAPI(localState) {
   // Determine supported file types from model
   const model = localState.settings.model;
-  const ignoreAudio = !(model?.input?.includes("audio") || false)
-  const ignoreVideo = !(model?.input?.includes("video") || false)
-  const ignoreImages = !(model?.input?.includes("image") || false)
+  const ignoreAudio = !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));
+  const ignoreVideo = !(localState.settings.enable_tools || (model?.input?.includes("video") || false));
+  const ignoreImages = !(localState.settings.enable_tools || (model?.input?.includes("image") || false));
   // Convert to API standard, ignore unsupported files and system message
   const processedMessages = await Promise.all(
     localState.messages.map(async (message) => {
@@ -217,8 +217,10 @@ const sendMessage = async ({
       if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
         conversationForAPI.settings.arcana.limit = 3;
       }
+
       // Always enable image and audio generation for now
       conversationForAPI.settings.tools.push({ type: "image_generation" });
+      conversationForAPI.settings.tools.push({ type: "image_modify" });
       conversationForAPI.settings.tools.push({ type: "audio_generation" });
       // conversationForAPI.settings.tools.push({ type: "runRscript" }); // Disabled for now
     } else {
@@ -280,6 +282,20 @@ const sendMessage = async ({
                 process_block += "Cannot use tools with current model: " + String(arg?.msg) + "\n\n";
               } 
             }
+            if (delta.tool_calls[0]?.function?.name === "mcp.event") {
+              let arg = delta.tool_calls[0].function.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (arg.event === "call") {
+                process_block += "Calling MCP server: " + String(arg?.server) 
+                + "\n\nfunction: `" 
+                + String(arg?.function) 
+                + "` with args: `"
+                + String(arg?.arguments)
+                + "`\n\n";
+              } else if (arg.event === "result") {
+                process_block += "MCP response received of type `" + String(arg?.type) + "`\n\n";
+              }
+            }
             if (delta.tool_calls[0]?.function?.name === "rscript.event") {
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
@@ -324,6 +340,8 @@ const sendMessage = async ({
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "image_creation_begin") {
                 process_block += `Generating image: "${arg.query}" \n\n`;
+              } else if (arg.event === "image_modify_begin") {
+                process_block += "Modifying image: " + String(arg?.query) + "\n\n";
               } else if (arg.event === "done") {
                 process_block += "";// "Image generation completed.";
               } if (arg.event === "error") {

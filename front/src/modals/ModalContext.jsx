@@ -34,6 +34,7 @@ import { useImportConversation } from "../hooks/useImportConversation";
 import HelpWebSearchModal from "./Help/HelpWebSearchModal";
 import WebSearchDisclaimer from "./Alert/WebSearchDisclaimer";
 import WelcomeModal from "./Help/WelcomeModal";
+import HelpMCPModal from "./Help/HelpMCPModal";
 
 const ModalContext = createContext();
 
@@ -84,6 +85,9 @@ export function ModalProvider({ children }) {
         )}
         {modalType === "helpArcana" && (
             <HelpArcanaModal isOpen onClose={closeModal} {...modalProps} />
+        )}
+        {modalType === "helpMCP" && (
+            <HelpMCPModal isOpen onClose={closeModal} {...modalProps} />
         )}
         {modalType === "helpMemory" && (
             <HelpMemoryModal isOpen onClose={closeModal} {...modalProps} />

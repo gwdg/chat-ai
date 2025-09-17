@@ -189,6 +189,8 @@ export default {
       title: "Help",
       arcana:
       "Arcana is a unique feature of our service that empowers the LLM with specialized knowledge. When you enter a valid Arcana ID and its corresponding key, the LLM gains access to the knowledge contained within that Arcana. This enables the model to generate responses that are more informed and relevant to your needs. Leave the ID empty to use the model without any specialized knowledge.",
+      mcp:
+      "Enter the URL of your MCP (Model Context Protocol) Server (e.g., https://...). The MCP Server is a service that can provide the Chat AI with additional tools, data sources, or processing capabilities beyond its built‑in knowledge. By connecting to your specified MCP Server, the AI can interact with external systems, retrieve up‑to‑date or specialized information, and perform custom tasks according to the capabilities offered by that server.",
       models:
       "Chat AI provides access to a range of state-of-the-art Large Language Models (LLMs), each with distinct capabilities and performance characteristics. This allows you to explore and select the model that best aligns with your research goals and requirements. \
       Larger models typically offer higher-quality responses, but may have longer response times due to their increased complexity. Conversely, smaller models provide faster response times, but may sacrifice some accuracy and depth. With the list of available models, you can balance trade-offs between response quality and speed to suit your specific needs. For more details",
@@ -248,6 +250,10 @@ export default {
         "You are using an external model. Your messages will be processed outside of GWDG, and the custom settings will not be applied. External models can only be used by scientific employees for scientific work, provided that no personal data is entered.",
       arcana_usage:
         "Keep temperature at 0 and top_p at 0.05 for optimal arcana results",
+      web_search_usage:
+        "PRIVACY WARNING: Your chat history may be sent to a search engine (e.g., Google)",
+      mcp_usage:
+        "PRIVACY WARNING: Your data may be sent to external servers.",
       arcana_export:
         "Warning: Exporting Arcana details to a file may compromise your private data, as it can be accessed by others.",
       model_offline:

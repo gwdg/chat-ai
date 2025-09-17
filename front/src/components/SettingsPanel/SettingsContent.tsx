@@ -36,6 +36,7 @@ import { ChevronRight } from "lucide-react";
 
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import { useConversationList } from "../../db";
+import MCPContainer from "./MCPContainer";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -384,6 +385,11 @@ const SettingsPanel = ({
           />
           {/* Arcana box */}
           <ArcanaContainer
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+          {/* MCP box */}
+          <MCPContainer
             localState={localState}
             setLocalState={setLocalState}
           />

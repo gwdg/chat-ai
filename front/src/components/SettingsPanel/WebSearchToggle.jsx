@@ -35,6 +35,7 @@ export default function WebSearchToggle({ localState, setLocalState }) {
 
   return (
     settings?.enable_tools && (
+      <>
       <div className="flex flex-row md:gap-2 gap-2 w-full md:items-center mt-2">
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
           <p className="text-sm">Web Search</p>
@@ -66,6 +67,12 @@ export default function WebSearchToggle({ localState, setLocalState }) {
           )}
         </div>
       </div>
+      {settings?.enable_web_search && (
+          <div className="text-yellow-600 text-xs w-full select-none">
+            <Trans i18nKey="alert.web_search_usage" />
+          </div>
+        )}
+      </>
     )
   );
 }

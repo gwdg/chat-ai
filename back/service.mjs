@@ -171,6 +171,7 @@ app.post("/chat/completions", async (req, res) => {
     stream = true,
   } = req.body;
 
+  const mcp_servers = req.body["mcp-servers"] || null;
   const inference_id = req.headers["inference-id"];
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
@@ -207,12 +208,15 @@ app.post("/chat/completions", async (req, res) => {
     let inference_service = model;
 
     if (arcana && arcana.id !== "") {
-        params.arcana = arcana;
-      }
+      params.arcana = arcana;
+    }
 
     // Handle tools and arcana
     if (enable_tools) {
       inference_service = "saia-openai-gateway";
+      if (mcp_servers && mcp_servers.length > 0) {
+        params["mcp-servers"] = mcp_servers;
+      }
       if (tools && tools.length > 0) {
         params.tools = [];
         for (const tool of tools) {
@@ -221,6 +225,9 @@ app.post("/chat/completions", async (req, res) => {
           }
           if (tool.type === "image_generation") {
             params.tools.push({type: "image_generation"});
+          }
+          if (tool.type === "image_modify") {
+            params.tools.push({type: "image_modify"});
           }
           if (tool.type === "audio_generation") {
             params.tools.push({type: "audio_generation"});

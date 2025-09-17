@@ -22,7 +22,8 @@ async function* chatCompletions (
       // If relative, resolve against current origin
       baseURL = new URL(baseURL, window.location.origin).toString();
     }
-
+    
+    
     // Initialize params
     const params = {
       model: model,
@@ -42,6 +43,10 @@ async function* chatCompletions (
 
     if (conversation.settings?.arcana && conversation.settings.arcana.id !== "") {
       params.arcana = conversation.settings.arcana;
+    }
+
+    if (conversation.settings?.mcp_servers && conversation.settings.mcp_servers.length > 0) {
+      params["mcp-servers"] = [conversation.settings.mcp_servers];
     }
 
     // Define openai object to call backend
