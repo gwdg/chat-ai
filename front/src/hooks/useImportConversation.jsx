@@ -18,9 +18,8 @@ export function useImportConversation() {
   const dispatch = useDispatch();
   const userSettings = useSelector(selectUserSettings);
   const defaultSettings = getDefaultSettings(userSettings);
-  const conversationId = newId();
 
-  const extractMessageContent = (message) => {
+  const extractMessageContent = (message, conversationId = null) => {
     let res = [{
       "type": "text",
       "text": "",
@@ -36,7 +35,7 @@ export function useImportConversation() {
       }
       // if message or content is array
       if (Array.isArray(content)) {
-        res = content.map(item => extractMessageContent(item)[0]);
+        res = content.map(item => extractMessageContent(item, conversationId)[0]);
         if (res[0]?.type !== "text") {
           res.unshift({type: "text", text: ""});
         } 
@@ -115,6 +114,7 @@ export function useImportConversation() {
   }
 
   const importConversation = async (data, silent = false) => {
+    const conversationId = newId();
     try {
       // Handle multiple conversations import
       if (Array.isArray(data?.conversations)) {
@@ -139,7 +139,7 @@ export function useImportConversation() {
       if (messages) {
         // Look for system prompt
         const systemMessage = messages.find((msg) => msg.role === "system");
-        sanitizedMessages[0].content = extractMessageContent(systemMessage);
+        sanitizedMessages[0].content = extractMessageContent(systemMessage, conversationId);
         // Sanitize user + assistant messages
         try {       
           for (let i = 0; i < messages.length; i++) {
@@ -152,7 +152,7 @@ export function useImportConversation() {
             if (message.role === "info") {
               sanitizedMessages.push({
                 "role": "info",
-                "content": extractMessageContent(message),
+                "content": extractMessageContent(message, conversationId),
               });
               continue;
             }
@@ -171,7 +171,7 @@ export function useImportConversation() {
               }
               sanitizedMessages.push({
                 "role": "user",
-                "content": extractMessageContent(message),
+                "content": extractMessageContent(message, conversationId),
               })
               
             } else if (message.role === "assistant") {
@@ -188,7 +188,7 @@ export function useImportConversation() {
               }
               sanitizedMessages.push({
                 "role": "assistant",
-                "content": extractMessageContent(message),
+                "content": extractMessageContent(message, conversationId),
               })
             } else {
               console.warn("Unrecognized role: ", message.role)
@@ -228,7 +228,7 @@ export function useImportConversation() {
       // Check for system prompt in data settings
       const system_prompt = extractParameter(data, "system_prompt") || extractParameter(data, "systemPrompt");
       if (system_prompt && typeof system_prompt === "string")
-        sanitizedMessages[0].content = extractMessageContent(system_prompt);
+        sanitizedMessages[0].content = extractMessageContent(system_prompt, conversationId);
       // temperature
       const temperature = extractParameter(data, "temperature") || extractParameter(data, "temp") || extractParameter(data, "settings.temperature");
       if (temperature && typeof temperature === "number" && temperature >= 0 && temperature <= 2.0)
