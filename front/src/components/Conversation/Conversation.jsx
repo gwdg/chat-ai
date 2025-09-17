@@ -41,23 +41,51 @@ export default function Conversation({
   const hasOverflow = useCallback(() => {
     if (!containerRef.current) return false;
     const { scrollHeight, clientHeight } = containerRef.current;
-    return scrollHeight > clientHeight + 10; // 10px tolerance for rounding
+    return scrollHeight > clientHeight + 10; // tolerance
   }, []);
 
   // Check if user is at bottom of chat
   const checkIfAtBottom = useCallback(() => {
     if (!containerRef.current) return true;
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    const threshold = 50; // Reasonable threshold for detection
+    const threshold = 50;
     return scrollHeight - scrollTop - clientHeight < threshold;
   }, []);
 
-  // Update scroll button visibility
+  // Small custom throttle (runs at most every 100ms)
+  function useThrottledCallback(callback, delay) {
+    const lastCall = React.useRef(0);
+
+    return useCallback((...args) => {
+      const now = Date.now();
+      if (now - lastCall.current >= delay) {
+        lastCall.current = now;
+        callback(...args);
+      }
+    }, [callback, delay]);
+  }
+
+  // updateScrollButtonVisibility with state guards
   const updateScrollButtonVisibility = useCallback(() => {
     const shouldShow = hasOverflow() && !checkIfAtBottom();
-    setShowScrollButton(shouldShow);
-    setIsAtBottom(checkIfAtBottom());
+    const atBottom = checkIfAtBottom();
+
+    setShowScrollButton(prev => (prev !== shouldShow ? shouldShow : prev));
+    setIsAtBottom(prev => (prev !== atBottom ? atBottom : prev));
   }, [hasOverflow, checkIfAtBottom]);
+
+  // Throttled version
+  const throttledUpdateScrollButtonVisibility = useRef();
+  if (!throttledUpdateScrollButtonVisibility.current) {
+    let lastCall = 0;
+    throttledUpdateScrollButtonVisibility.current = (...args) => {
+      const now = Date.now();
+      if (now - lastCall > 100) { // 100 ms interval
+        lastCall = now;
+        updateScrollButtonVisibility(...args);
+      }
+    };
+  }
 
   // Smooth auto-scroll with animation frame
   const performAutoScroll = useCallback(() => {
@@ -72,7 +100,7 @@ export default function Conversation({
     if (Math.abs(distance) < 5) {
       container.scrollTop = container.scrollHeight;
       isAutoScrolling.current = false;
-      setShowScrollButton(false);
+      setShowScrollButton(prev => prev ? false : prev); // only update if needed
       return;
     }
 
@@ -91,9 +119,9 @@ export default function Conversation({
         scrollAnimationFrame.current = requestAnimationFrame(smoothScroll);
       } else {
         // Ensure we're absolutely at the bottom
-        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        container.scrollTop = container.scrollHeight;
         isAutoScrolling.current = false;
-        setShowScrollButton(false);
+        setShowScrollButton(prev => prev ? false : prev); // safety
       }
     };
 
@@ -121,10 +149,10 @@ export default function Conversation({
         containerRef.current.scrollTop = containerRef.current.scrollHeight;
         isAutoScrolling.current = false;
         setShowScrollButton(false); // Immediately hide button
-        updateScrollButtonVisibility();
+        throttledUpdateScrollButtonVisibility.current();
       }
     }, 50);
-  }, [updateScrollButtonVisibility]);
+  }, [throttledUpdateScrollButtonVisibility]);
 
   // Handle user scroll events
   const handleScroll = useCallback(
@@ -143,9 +171,9 @@ export default function Conversation({
         }
       }
 
-      updateScrollButtonVisibility();
+      throttledUpdateScrollButtonVisibility.current();
     },
-    [checkIfAtBottom, hasOverflow, updateScrollButtonVisibility]
+    [checkIfAtBottom, hasOverflow, throttledUpdateScrollButtonVisibility]
   );
 
   // Handle wheel events for better scroll detection
@@ -215,7 +243,7 @@ export default function Conversation({
 
       // Update button visibility after DOM settles
       requestAnimationFrame(() => {
-        updateScrollButtonVisibility();
+        throttledUpdateScrollButtonVisibility.current();
       });
     });
 
@@ -235,7 +263,7 @@ export default function Conversation({
         cancelAnimationFrame(scrollAnimationFrame.current);
       }
     };
-  }, [performAutoScroll, updateScrollButtonVisibility]);
+  }, [performAutoScroll, throttledUpdateScrollButtonVisibility]);
 
   // Set up ResizeObserver to handle container resize
   useEffect(() => {
@@ -246,7 +274,7 @@ export default function Conversation({
     }
 
     resizeObserver.current = new ResizeObserver(() => {
-      updateScrollButtonVisibility();
+      throttledUpdateScrollButtonVisibility.current();
 
       // If at bottom and container resized, maintain bottom position
       if (!userHasScrolledUp.current && containerRef.current) {
@@ -261,7 +289,7 @@ export default function Conversation({
         resizeObserver.current.disconnect();
       }
     };
-  }, [updateScrollButtonVisibility]);
+  }, [throttledUpdateScrollButtonVisibility]);
 
   // Set up scroll and wheel event listeners
   useEffect(() => {
@@ -275,13 +303,13 @@ export default function Conversation({
     container.addEventListener("wheel", handleWheel, options);
 
     // Initial check
-    updateScrollButtonVisibility();
+    throttledUpdateScrollButtonVisibility.current();
 
     return () => {
       container.removeEventListener("scroll", handleScroll);
       container.removeEventListener("wheel", handleWheel);
     };
-  }, [handleScroll, handleWheel, updateScrollButtonVisibility]);
+  }, [handleScroll, handleWheel, throttledUpdateScrollButtonVisibility]);
 
   // Reset state when conversation becomes empty
   useEffect(() => {
@@ -334,7 +362,7 @@ export default function Conversation({
         if (containerRef.current) {
           containerRef.current.scrollTop = containerRef.current.scrollHeight;
           userHasScrolledUp.current = false;
-          updateScrollButtonVisibility();
+          throttledUpdateScrollButtonVisibility.current();
         }
       }, 100);
     }
@@ -342,7 +370,7 @@ export default function Conversation({
     localState?.messages,
     checkIfAtBottom,
     performAutoScroll,
-    updateScrollButtonVisibility,
+    throttledUpdateScrollButtonVisibility,
   ]);
 
   return (
