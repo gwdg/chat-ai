@@ -37,6 +37,38 @@ export default function Conversation({
   const contentObserver = useRef(null);
   const resizeObserver = useRef(null);
 
+  // New ref to track whether user clicked scrollbar
+  const userIsDraggingScrollbar = useRef(false);
+
+  // Listen for pointer down — triggers also on scrollbar track/thumb
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handlePointerDown = (e) => {
+      // Only consider "vertical scrollbar clicks"
+      if (e.target === container) {
+        const { offsetWidth, clientWidth } = container;
+        // If mouse was inside the scrollbar gutter
+        if (e.offsetX > clientWidth) {
+          userIsDraggingScrollbar.current = true;
+        }
+      }
+    };
+
+    const handlePointerUp = () => {
+      userIsDraggingScrollbar.current = false;
+    };
+
+    container.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("mouseup", handlePointerUp);
+
+    return () => {
+      container.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("mouseup", handlePointerUp);
+    };
+  }, []);
+
   // Check if container has actual overflow
   const hasOverflow = useCallback(() => {
     if (!containerRef.current) return false;
@@ -156,19 +188,22 @@ export default function Conversation({
 
   // Handle user scroll events
   const handleScroll = useCallback(
-    (e) => {
+    () => {
       if (!containerRef.current) return;
 
-      const container = containerRef.current;
       const isNearBottom = checkIfAtBottom();
 
-      // Detect user scroll up (not during auto-scroll)
       if (!isAutoScrolling.current) {
         if (!isNearBottom && hasOverflow()) {
           userHasScrolledUp.current = true;
         } else if (isNearBottom) {
           userHasScrolledUp.current = false;
         }
+      } 
+      // If user was dragging or clicking the scrollbar, stop auto-scroll
+      else if (userIsDraggingScrollbar.current) {
+        isAutoScrolling.current = false;
+        userHasScrolledUp.current = true;
       }
 
       throttledUpdateScrollButtonVisibility.current();
