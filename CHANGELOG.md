@@ -1,5 +1,20 @@
 # Changelog 
 
+## Version: v0.9.0 (18.09.2025)
+Highlights:
+- Redesigned UI with the ability to collapse the left and right sidebars for maximum chatting space. Optimized for smoothness and arbitrarily large conversations and attachments.
+- New Model Selector in the top center with the ability to display more models at once. Switched default model to Qwen 3 30B A3B Instruct 2507 for tool support and performance.
+- Audio Input with supported models, such as Qwen 2.5 Omni 7B model
+- Support for GWDG tools to extend models' capabilities (works well with Qwen 3 30B A3B Instruct 2507)
+  - Web search tool with Google
+  - Image generation and modification
+  - Speech generation
+  - Arcana/RAG with any GWDG-local model
+  - Support for external MCP Server
+  - Realtime updates as tools are being used
+- User can now backup all data in a single JSON file with the "Export Data" button in the user settings
+- Small improvements, including better code sanitization to prevent cross-site styling, smoother auto-scrolling, new menu to navigate to other AI services, unified attach button, and more
+
 ## Version: v0.8.1 (03.07.2025)
 Highlights:
 - New "memory" feature: Chat AI can learn and remember relevant details from all conversations
