@@ -24,7 +24,7 @@ export const useToast = () => {
       toast.success(message, {
         className: toastClass,
         toastId: newToastId,
-        autoClose: 1000,
+        autoClose: 5000,
         position: "top-right",
         hideProgressBar: false,
         closeOnClick: true,
@@ -56,7 +56,7 @@ export const useToast = () => {
       toast.error(message, {
         className: toastClass,
         toastId: newToastId,
-        autoClose: 1000,
+        autoClose: 5000,
         position: "top-right",
         hideProgressBar: false,
         closeOnClick: true,
