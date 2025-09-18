@@ -52,7 +52,7 @@ export default function ExportConversationModal({
   }, [conversationId, isOpen, onClose]); // Re-run when conversationId changes
 
   if (!conversation) return null; // Or a loading indicator
-  const isArcanaSupported = conversation.settings?.model?.input?.includes("arcana");
+  const isArcanaSupported = conversation.settings?.model?.input?.includes("arcana") || conversation.settings?.enable_tools;
   const messages = conversation?.messages
   const arcana = conversation?.settings?.arcana
 
