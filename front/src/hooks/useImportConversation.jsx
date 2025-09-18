@@ -258,6 +258,22 @@ export function useImportConversation() {
       // Replace model if we have all information
       if (model?.id && model?.name) settings.model = model;
 
+      // tools
+      const enable_tools = extractParameter(data, "enable_tools")
+      if (typeof enable_tools === "boolean") {
+        settings.enable_tools = enable_tools;
+      }
+      const tools = extractParameter(data, "tools");
+      if (Array.isArray(tools)) {
+        settings.tools = tools;
+      }
+
+      // MCP servers
+      const mcp_servers = extractParameter(data, "mcp_servers") || extractParameter(data, "mcp-servers");
+      if (Array.isArray(mcp_servers) || typeof mcp_servers === "string") {
+        settings.mcp_servers = mcp_servers;
+      }
+
       // memory
       const memory = extractParameter(data, "memory");
       if (memory && typeof memory === "number" && [0, 1, 2].some(v => v == memory))

@@ -275,7 +275,7 @@ export default {
       // External models
       settings_external: "These settings will not affect external (OpenAI) models.",
       web_search_disclaimer: 
-      `When web search is enabled, the AI may generate search queries based on your message and the full conversation history, and send them to a search engine (e.g., DuckDuckGo) to retrieve up-to-date information. This helps provide more accurate and current responses.\n\nBy clicking “I Understand,” you agree that your input may be processed in this way and acknowledge that you will not share any confidential, personal, or sensitive information while web search is active.`
+      `When web search is enabled, the AI may generate search queries based on your message and the full conversation history, and send them to a search engine (e.g., Google) to retrieve up-to-date information. This helps provide more accurate and current responses.\n\nBy clicking “I Understand,” you agree that your input may be processed in this way and acknowledge that you will not share any confidential, personal, or sensitive information while web search is active.`
     },
     // Landing page
     landing: {
