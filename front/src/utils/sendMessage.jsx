@@ -279,7 +279,7 @@ const sendMessage = async ({
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "error") {
-                process_block += "Error using tools: " + String(arg?.msg) + "\n\n";
+                process_block += "Could not use tools: " + String(arg?.msg) + "\n\n";
               } 
             }
             if (delta.tool_calls[0]?.function?.name === "mcp.event") {

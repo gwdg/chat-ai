@@ -65,6 +65,7 @@ async function* chatCompletions (
 
     if (!stream) {
       const result = streamResponse;
+      console.log("Error:", result);
       return result;
     }
 

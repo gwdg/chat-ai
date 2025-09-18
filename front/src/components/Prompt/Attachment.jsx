@@ -36,9 +36,10 @@ export default function Attachment({
   if (!file) return ""; // TODO placeholder file
   const fileType = getFileType(file); // Get readable file type, e.g., "image"
   const model = localState.settings.model;
-  const isAudioSupported = model?.input?.includes("audio") || false;
-  const isVideoSupported = model?.input?.includes("video") || false;
-  const isImageSupported = model?.input?.includes("image") || false;
+
+  const isAudioSupported = (localState.settings.enable_tools || (model?.input?.includes("audio") || false));
+  const isVideoSupported = (localState.settings.enable_tools || (model?.input?.includes("video") || false));
+  const isImageSupported = (localState.settings.enable_tools || (model?.input?.includes("image") || false));
   const isFileSupported = !fileType
     ? false
     : fileType === "image"

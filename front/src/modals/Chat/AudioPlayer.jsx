@@ -218,12 +218,7 @@ export default function AudioPlayer({ file, dataURL }) {
           </div>
 
           {/* Right side (Total time + Speed + Volume) */}
-          <div className="flex items-center space-x-3 text-xs leading-none">
-            {/* Total duration */}
-            <div className="text-gray-800 dark:text-gray-100">
-              {formatTime(duration)}
-            </div>
-
+          <div className="flex items-center gap-x-5 text-xs leading-none">
             {/* Speed menu */}
             <div className="relative flex items-center">
               <button
@@ -242,7 +237,7 @@ export default function AudioPlayer({ file, dataURL }) {
                     <div
                       key={rate}
                       onClick={() => changeSpeed(rate)}
-                      className={`px-3 py-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                      className={`py-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
                         playbackRate === rate
                           ? "font-semibold text-blue-600 dark:text-blue-400"
                           : "text-gray-800 dark:text-gray-100"
@@ -267,7 +262,7 @@ export default function AudioPlayer({ file, dataURL }) {
                 <VolumeIcon />
               </button>
               {showVolumeSlider && (
-                <div className="absolute right-0 bottom-full mb-2 px-2 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg flex flex-col items-center">
+                <div className="absolute right-0 bottom-full mb-2 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg flex flex-col items-center">
                   <input
                     type="range"
                     min="0"
@@ -284,6 +279,10 @@ export default function AudioPlayer({ file, dataURL }) {
                   />
                 </div>
               )}
+            </div>
+            {/* Total duration */}
+            <div className="text-gray-800 dark:text-gray-100">
+              {formatTime(duration - currentTime)}
             </div>
           </div>
         </div>
