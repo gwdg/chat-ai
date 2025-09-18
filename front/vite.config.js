@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from '@tailwindcss/vite'
 import fs from "fs";
 import path from "path";
 
@@ -34,9 +35,18 @@ try {
     } else if (key == "userDataPath") {
       process.env["VITE_USERDATA_ENDPOINT"] = value;
       console.log("User data path:", value);
-    } else if (key == "defaultSettings") {
+    } else if (key == "default") {
       process.env["VITE_DEFAULT_SETTINGS"] = JSON.stringify(value);
       console.log("Default settings:", JSON.stringify(value));
+    } else if (key == "titleGenerationModel") {
+      process.env["VITE_TITLE_GENERATION_MODEL"] = value;
+      console.log("Title generation model:", value);
+    } else if (key == "memoryGenerationModel") {
+      process.env["VITE_MEMORY_GENERATION_MODEL"] = value;
+      console.log("Memory generation model:", value);
+    } else if (key == "announcement") {
+      process.env["VITE_ANNOUNCEMENT"] = value;
+      console.log("Announcement:", value);
     }
   }
 } catch (error) {
@@ -46,7 +56,10 @@ try {
 
 // Export the Vite config
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    tailwindcss()
+  ],
   base: "/",
   server: {
     port: port,

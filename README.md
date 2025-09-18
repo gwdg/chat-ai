@@ -103,7 +103,10 @@ The `front` service uses the following configurable attributes in `front.json`:
 - `backendPath`: Path to `back` service, used for sending messages and processing PDF files, e.g. `http://localhost:8081/` or `/backend`
 - `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure
 - `userDataPath`: (Optional) Path to get user data. Simply set to `<backendPath>/user` if unsure
-- `defaultSettings`: Default settings for new conversations, including default `model`, `modelName`, `top_p`, and `temperature`. This default model will also be used for title generation and memory updates.
+- `default`: Default settings for new conversations, including default `model` with `model.id` and `model.name`, as well as `top_p` and `temperature`.
+- `titleGenerationModel`: Model ID for title generation
+- `memoryGenerationModel`: Model ID for memory generation and updates
+- `announcement`: Text to be displayed in the announcement bar at the top of the window
 
 The `back` service listens to requests from `front` and interacts with an OpenAI-compatible API endpoint to produce responses. It uses the following configurable attributes in `back.json`:
 - `port`: Port number to listen on. Default: 8081
@@ -113,12 +116,12 @@ The `back` service listens to requests from `front` and interacts with an OpenAI
 
 If you wish to avoid using different ports for the `front` and `back` services, you must set up a reverse proxy or virtual host to route paths such as `/models` and `/backend` to the backend service listening on its own distinguished port. This can be done with popular server software such as Apache or Nginx.
 
-Also, if you wish to customize the list of available models, you must create a path that returns an OpenAI-style JSON response containing the model ids and names, and set the `modelsPath` in `front.json` accordingly. If configured correctly, your custom list will be displayed in the dropdown menu in the interface instead of what you get from your API provider.
+If you wish to customize the list of available models, you must create a path that returns an OpenAI-style JSON response containing the model ids and names, and set the `modelsPath` in `front.json` accordingly. If configured correctly, your custom list will be displayed in the dropdown menu in the interface, instead of the list from your API provider.
 
 ## Acknowledgements
-We thank Priyeshkumar Chikhaliya <p.chikhaliya@stud.uni-goettingen.de> for the design and implementation of the web interface.
+We thank all contributors for the design and implementation of the web interface.
 
-We thank all colleagues and partners involved in this project.
+We thank the Chat AI community, and all colleagues and partners involved in this project.
 
 ## Citation
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="800"
+    height="800"
+    viewBox="-8 0 32 32"
+  >
+    <g id="Page-1" fill="none" fillRule="evenodd" stroke="none" strokeWidth="1">
+      <g id="Icon-Set-Filled" fill="#009EE0" transform="translate(-214 -153)">
+        <path
+          id="attachment"
+          d="M228 157v20a6 6 0 0 1-12 0v-18a4 4 0 0 1 8 0v18a2 2 0 0 1-4 0v-16h-2v16a4 4 0 0 0 8 0v-18a6 6 0 0 0-12 0v19c.493 3.945 3.921 7 8 7s7.507-3.055 8-7v-21z"
+        ></path>
+      </g>
+    </g>
+  </svg>

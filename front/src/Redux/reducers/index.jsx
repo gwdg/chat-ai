@@ -1,26 +1,18 @@
 // index.jsx
 import { combineReducers } from "redux";
-import themeReducer from "./themeReducer";
-import alertReducer from "./alertReducer";
-import anncAlertReducer from "./anncAlertReducer";
-import advOptionReducer from "./advancedOptionsReducer";
-import conversationsReducer from "./conversationsSlice";
-import defaultModelReducer from "./defaultModelSlice";
+import interfaceSettingsReducer from "./interfaceSettingsSlice";
+import userSettingsReducer from "./userSettingsReducer";
 import versionReducer from "./versionReducer";
-import userMemoryReducer from "./userMemorySlice";
-import timeoutReducer from "./timeoutReducer";
+import lastConversationSlice from "./lastConversationSlice";
+import { migrationDataReducer } from "./migrationDataReducer";
 
 // Root reducer
 const rootReducer = combineReducers({
-  theme: themeReducer,
-  count: alertReducer,
-  anncCount: anncAlertReducer,
-  conversations: conversationsReducer,
-  advOptions: advOptionReducer,
-  defaultModel: defaultModelReducer,
+  interface_settings: interfaceSettingsReducer,
+  user_settings: userSettingsReducer,
+  last_conversation: lastConversationSlice,
   version: versionReducer,
-  userMemory: userMemoryReducer,
-  timeout: timeoutReducer,
+  migration_data: migrationDataReducer,
 });
 
 export default rootReducer;

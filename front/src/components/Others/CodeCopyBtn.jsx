@@ -1,7 +1,6 @@
 // Importing necessary assets and hooks from React
 import { useState, useEffect } from "react";
-import copy from "../../assets/icon_copy.svg";
-import check from "../../assets/check.svg";
+import { Copy, Check } from "lucide-react";
 
 // CodeCopyBtn component definition
 export default function CodeCopyBtn({ children, hovered }) {
@@ -38,12 +37,11 @@ export default function CodeCopyBtn({ children, hovered }) {
       } flex justify-end items-center absolute top-2 right-2 transition-opacity duration-300`}
     >
       {copied ? (
-        <img src={check} alt="copy" className="h-[20px] w-[20px]" />
+        <Check className="h-[15px] w-[15px] text-green-500" alt="copy" />
       ) : (
-        <img
-          src={copy}
+        <Copy
+          className="h-[15px] w-[15px] cursor-pointer text-[#009EE0]"
           alt="copy"
-          className="h-[20px] w-[20px] cursor-pointer"
           onClick={() => {
             const textToCopy = extractTextFromReactNode(children);
             navigator.clipboard.writeText(textToCopy);

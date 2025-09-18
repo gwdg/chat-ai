@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+
+    // Gradual adoption toggles:
+    "allowJs": true,          // keep .js/.jsx working
+    "checkJs": false,         // JS unchecked by default (opt-in per file)
+    "noEmit": true,           // let Vite handle emitting
+    "isolatedModules": true,  // matches Vite/ESBuild
+    "skipLibCheck": true,
+    "strict": false           // start loose; tighten later
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
