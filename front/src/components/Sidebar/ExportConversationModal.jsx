@@ -52,7 +52,7 @@ export default function ExportConversationModal({
   }, [conversationId, isOpen, onClose]); // Re-run when conversationId changes
 
   if (!conversation) return null; // Or a loading indicator
-  const isArcanaSupported = conversation.settings?.model?.input?.includes("arcana");
+  const isArcanaSupported = conversation.settings?.model?.input?.includes("arcana") || conversation.settings?.enable_tools;
   const messages = conversation?.messages
   const arcana = conversation?.settings?.arcana
 
@@ -120,6 +120,8 @@ export default function ExportConversationModal({
     let settings = {}
     if (conversation?.title) settings.title = conversation.title;
     if (conversation?.settings?.temperature) settings.temperature = conversation.settings.temperature;
+    if (conversation?.settings?.enable_tools) settings.enable_tools = conversation.settings.enable_tools;
+    if (conversation?.settings?.mcp_servers) settings.mcp_servers = conversation.settings.mcp_servers;
     if (conversation?.settings?.top_p) settings.top_p = conversation.settings.top_p;
     if (exportArcana && isArcanaSupported && conversation?.settings?.arcana?.id) {
       settings.arcana = conversation.settings.arcana;

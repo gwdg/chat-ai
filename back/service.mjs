@@ -205,6 +205,7 @@ app.post("/chat/completions", async (req, res) => {
       timeout: timeout,
     }
 
+    const isExternalModel = model.startsWith("openai-") && !model.startsWith("gpt-oss-120b");
     let inference_service = model;
 
     if (arcana && arcana.id !== "") {
@@ -212,7 +213,7 @@ app.post("/chat/completions", async (req, res) => {
     }
 
     // Handle tools and arcana
-    if (enable_tools) {
+    if (enable_tools && !isExternalModel) {
       inference_service = "saia-openai-gateway";
       if (mcp_servers && mcp_servers.length > 0) {
         params["mcp-servers"] = mcp_servers;
@@ -247,7 +248,7 @@ app.post("/chat/completions", async (req, res) => {
     // Get chat completion response
     const response = await openai.chat.completions.create(
       params, {
-        headers: {"inference-service": inference_service}
+        headers: {"inference-service": inference_service, "inference-portal": serviceName, "inference-id": inference_id}
       }
     ).asResponse();
     
@@ -278,7 +279,7 @@ app.post("/chat/completions", async (req, res) => {
 
     nodeStream.pipe(res);
   } catch (err) {
-    console.error(err);
+    // console.error(err); // For debugging
     try {
       return res
         .status(500)

@@ -12,7 +12,7 @@ export default function AnnouncementBar() {
   if (!announcement || announcement === "") return;
 
   useEffect(() => {
-    setShowAnnouncement(closeCount < 5);
+    setShowAnnouncement(!closeCount || closeCount < 5);
   }, []);
 
   const handleClose = () => {
