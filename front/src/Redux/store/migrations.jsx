@@ -71,15 +71,11 @@ export const migrations = {
     return state;
   },
   2: (state) => {
-    // if the persist version is lower than 4 then this migration will be executed
-    // this has nothing to do with the state.version!!
-    
-    console.log("Redux: Migrating to version 2 from ", state.version);
-
+    console.log("Running migration to v2");
     // Populate missing settings with initial state values
-    return {
-      ...state,
-      version: 2,
+    const newState = {
+      last_conversation: state.last_conversation,
+      //migration_data: state.migration_data || {},
       interface_settings: {
         ...interfaceSettingsInitialState,
         ...state.interface_settings,
@@ -89,7 +85,7 @@ export const migrations = {
         ...state.user_settings,
       },
     };
-
+    return newState;
   },  
   // Future migrations here (e.g., 2: (state) => {...})
 };

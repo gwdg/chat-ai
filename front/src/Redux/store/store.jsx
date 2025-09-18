@@ -28,7 +28,6 @@ const persistConfig = {
 
 const getDefaultState = () => {
   return {
-    version: persistConfig.version,
     last_conversation: null,
     interface_settings: interfaceSettingsInitialState,
     // Conditionally preserve memories
