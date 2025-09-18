@@ -3,7 +3,7 @@ import { Fragment } from 'react'
 import Logo from '../../assets/logos/chat_ai.svg'
 import LogoSmall from '../../assets/logos/chat_ai_small.ico'
 import ImageAiLogo from '../../assets/logos/image-ai.svg'
-import VoiceAiLogo from '../../assets/logos/voice-ai.png'
+import VoiceAiLogo from '../../assets/logos/voice-ai.svg'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronRight } from '@fortawesome/free-solid-svg-icons'
 
