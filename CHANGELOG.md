@@ -3,8 +3,8 @@
 ## Version: v0.9.0 (18.09.2025)
 Highlights:
 - Redesigned UI with the ability to collapse the left and right sidebars for maximum chatting space. Optimized for smoothness and arbitrarily large conversations and attachments.
-- New Model Selector in the top center with the ability to display more models at once. Switched default model to Qwen 3 30B A3B Instruct 2507 for tool support and performance.
-- Audio Input with supported models, such as Qwen 2.5 Omni 7B model
+- New model selector in the top center with the ability to display more models at once. Switched default model to Qwen 3 30B A3B Instruct 2507 for tool support and performance.
+- Audio input with supported models, such as Qwen 2.5 Omni 7B model
 - Support for GWDG tools to extend models' capabilities (works well with Qwen 3 30B A3B Instruct 2507)
   - Web search tool with Google
   - Image generation and modification
