@@ -1,7 +1,7 @@
 // userMemorySlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
-const initialState = {
+export const userSettingsInitialState = {
   memories: [],
   // model: "", // TODO load from file
   timeout: 300000,
@@ -9,7 +9,7 @@ const initialState = {
 
 const userSettingsSlice = createSlice({
   name: "user_settings",
-  initialState,
+  initialState: userSettingsInitialState,
   reducers: {
     // Add new memory
     addMemory: (state, action) => {

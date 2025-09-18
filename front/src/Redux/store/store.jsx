@@ -9,6 +9,9 @@ import {
 } from "redux-state-sync";
 import { migrations } from "./migrations";
 
+import { interfaceSettingsInitialState } from "../reducers/interfaceSettingsSlice";
+import { userSettingsInitialState } from "../reducers/userSettingsReducer";
+
 const persistConfig = {
   key: "root",
   storage,
@@ -19,30 +22,17 @@ const persistConfig = {
     "version",
     "migration_data",
   ],
-  version: 1,
+  version: 2, // this is the redux persist target version
   migrate: createMigrate(migrations, { debug: true })
 };
 
 const getDefaultState = () => {
   return {
-    version: 4,
+    version: persistConfig.version,
     last_conversation: null,
-    interface_settings: {
-      dark_mode: false,
-      show_settings: false,
-      show_sidebar: true,
-      show_tour: true,
-      warn_clear_history: true,
-      warn_clear_memory: true,
-      warn_clear_settings: true,
-      count_hallucination: 0,
-      count_announcement: 0,
-    },
+    interface_settings: interfaceSettingsInitialState,
     // Conditionally preserve memories
-    user_settings: {
-      memories: [],
-      timeout: 300000,
-    },
+    user_settings: userSettingsInitialState,
   };
 };
 

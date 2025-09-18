@@ -1,22 +1,30 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+export const interfaceSettingsInitialState = {
+  dark_mode: false, 
+  show_sidebar: true,
+  show_settings: false,
+  // warn_clear_history: true,
+  // warn_clear_memory: true,
+  // warn_share_settings: true,
+  show_tour: true,
+  count_hallucination: 0,
+  count_announcement: 0,
+  agree_web_search: false,
+};
+
 const interfaceSettingsSlice = createSlice({
   name: "interface_settings",
-  initialState: {
-    dark_mode: false,
-    show_sidebar: true,
-    show_settings: false,
-    warn_clear_history: true,
-    // warn_clear_memory: true,
-    warn_share_settings: true,
-    show_tour: true,
-    count_hallucination: 0,
-    count_announcement: 0,
-    agree_web_search: false,
-  },
+  initialState: interfaceSettingsInitialState,
   reducers: {
     toggleTheme: (state) => {
       state.dark_mode = !state.dark_mode;
+    },
+    setDarkMode: (state) => {
+      state.dark_mode = true;
+    },
+    setLightMode: (state) => {
+      state.dark_mode = false;
     },
     openSidebar: (state) => {
       state.show_sidebar = true;
@@ -32,12 +40,6 @@ const interfaceSettingsSlice = createSlice({
     },
     toggleSettings: (state, action) => {
       state.show_settings = action.payload !== undefined ? action.payload : !state.show_settings;
-    },
-    setDarkMode: (state) => {
-      state.dark_mode = true;
-    },
-    setLightMode: (state) => {
-      state.dark_mode = false;
     },
     closeTour: (state) => {
       state.show_tour = false;

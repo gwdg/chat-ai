@@ -1,5 +1,8 @@
 import { getDefaultSettings } from "../../utils/conversationUtils";
 
+import { interfaceSettingsInitialState } from "../reducers/interfaceSettingsSlice";
+import { userSettingsInitialState } from "../reducers/userSettingsReducer";
+
 // Migration functions for different versions
 export const migrations = {
   // Version 1
@@ -67,5 +70,26 @@ export const migrations = {
     
     return state;
   },
+  2: (state) => {
+    // if the persist version is lower than 4 then this migration will be executed
+    // this has nothing to do with the state.version!!
+    
+    console.log("Redux: Migrating to version 2 from ", state.version);
+
+    // Populate missing settings with initial state values
+    return {
+      ...state,
+      version: 2,
+      interface_settings: {
+        ...interfaceSettingsInitialState,
+        ...state.interface_settings,
+      },
+      user_settings: {
+        ...userSettingsInitialState,
+        ...state.user_settings,
+      },
+    };
+
+  },  
   // Future migrations here (e.g., 2: (state) => {...})
 };
