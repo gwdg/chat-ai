@@ -30,27 +30,24 @@ export default function ShareSettingsModal({
       titleKey="common.notice"
     >
       {/* Intro Text */}
-      <div className="pt-0 pb-2">
-        <p className="dark:text-white text-black text-justify text-sm">
-          <Trans i18nKey="share_settings.description" />
-        </p>
-      </div>
+      <p className="dark:text-white text-black text-justify text-sm">
+        <Trans i18nKey="share_settings.description" />
+      </p>
 
-      {/* Arcana Export Option */}
-      {localState?.settings?.arcana?.id && (
-        <div className="flex flex-col gap-1">
-          {/* Warning when sharing arcana */}
-          {shareArcana && ( 
-              <div>
-              <p className="text-red-600 text-sm">
-                <Trans i18nKey="share_settings.warn_arcana" />
-              </p>
-              </div>
-            )}
-          {/* Action Buttons */}
-          <div className="flex flex-col md:flex-row gap-2 justify-between w-full mt-4">
-            {/* Include arcana details checkbox */}
+      {/* Warning when sharing arcana */}
+      {shareArcana && ( 
+        <p className="bg-red-600/50 rounded-lg p-2 mt-2 text-white text-sm">
+          <Trans i18nKey="share_settings.warn_arcana" />
+        </p> 
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex flex-col md:flex-row gap-2 justify-between items-center w-full mt-2">
+        {/* Arcana Export Option */}
+        <div>
+          {localState?.settings?.arcana?.id && (
             <div className="flex items-center gap-3">
+              {/* Include arcana details checkbox */}
               <input
                 type="checkbox"
                 id="exportArcana"
@@ -68,16 +65,18 @@ export default function ShareSettingsModal({
                 <Trans i18nKey="export_conversation.export_arcana" />
               </label>
             </div>
-            {/* Share settings button */}
-            <button
-              className="text-white p-3 bg-green-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
-              onClick={() => handleShareSettings(shareArcana)}
-            >
-              <Trans i18nKey="common.share" />
-            </button>
-          </div>
+          )}
         </div>
-      )}
+        {/* Share settings button */}
+        <button
+          className="text-white p-3 bg-green-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
+          onClick={() => handleShareSettings(shareArcana)}
+        >
+          <Trans i18nKey="common.share" />
+        </button>
+      </div>
+      
+      
     </BaseModal>
   );
 }
