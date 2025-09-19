@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+import OpenAI from "openai";
 import { useSelector } from "react-redux";
 import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/userSettingsReducer";
 import { chatCompletions } from "../apis/chatCompletions";
@@ -466,8 +467,16 @@ const sendMessage = async ({
       // Get chat completion response
       responseContent = await getChatChunk(conversationId);
     } catch (error) {
-      notifyError(String(error))
-      console.error("Error:", error);
+      if (error instanceof OpenAI.APIError) {
+        // Handle API errors
+        const errorType = error?.type || error?.status || "Error";
+        const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
+        notifyError(`${errorMsg.toString()} (${errorType})`);
+      } else {
+        const msg = error?.message || `Error ${error?.status}` || "An unknown error occurred";
+        notifyError(`Error: ${msg.toString()}`);
+      }
+      console.error(error);
     } finally {
       // Set loading to false
       setLocalState(prev => {

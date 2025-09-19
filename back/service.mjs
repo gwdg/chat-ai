@@ -279,11 +279,13 @@ app.post("/chat/completions", async (req, res) => {
 
     nodeStream.pipe(res);
   } catch (err) {
-    // console.error(err); // For debugging
     try {
+      // Return proper HTTP error response with message
       return res
-        .status(500)
-        .json({ error: "An internal server error occurred" });
+        .status(err?.status || 500)
+        .json({
+          error: err?.error || "An internal server error occurred",
+         });
     } catch (err) {
       return;
     }
