@@ -11,14 +11,14 @@ const ThinkingBlock = memo(
     const [isOpen, setIsOpen] = useState(autoExpand);
     const contentRef = useRef(null);
 
-    useEffect(() => {
-      if (autoExpand && contentRef.current) {
-        contentRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
-    }, [autoExpand]);
+    // useEffect(() => {
+    //   if (autoExpand && contentRef.current) {
+    //     contentRef.current.scrollIntoView({
+    //       behavior: "smooth",
+    //       block: "start",
+    //     });
+    //   }
+    // }, [autoExpand]);
 
     return (
       <div className="my-4 rounded-lg border border-tertiary">
