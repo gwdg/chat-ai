@@ -387,73 +387,71 @@ const useStreamingProcessor = (content, isLoading) => {
   };
 };
 
-/* -------------------------------------------------------
- * ✅ SafeMarkdown with knobs for KaTeX and raw HTML
- * ------------------------------------------------------- */
 export const SafeMarkdown = ({
   children: markdownContent,
   components,
   enableKatex = true,
-  allowRawHtml = true,
 }) => {
   if (!markdownContent || typeof markdownContent !== "string") return null;
 
-  const preClean = (text) =>
-    text
-      .replace(/\[\[([^\|\]]+)\|([^\]]+)\]\]/g, "[$2]($1)")
-      .replace(/^\s*={2,6}\s*(.*?)\s*={2,6}\s*$/gm, (m, t) => {
-        const eqs = (m.match(/=/g) || []).length / 2;
-        const level = Math.min(6, Math.max(1, 7 - eqs));
-        return `${"#".repeat(level)} ${t}`;
-      })
-      .replace(/^\s*undefined\s*$/gm, "")
-      .replace(/,\s*\[object Object\]\s*,?/g, " ")
-      .replace(/\[object Object\]/g, "")
-      .replace(/(^|,)\s*,+/g, "$1");
+  // const preClean = (text) =>
+  //   text
+  //     .replace(/\[\[([^\|\]]+)\|([^\]]+)\]\]/g, "[$2]($1)")
+  //     .replace(/^\s*={2,6}\s*(.*?)\s*={2,6}\s*$/gm, (m, t) => {
+  //       const eqs = (m.match(/=/g) || []).length / 2;
+  //       const level = Math.min(6, Math.max(1, 7 - eqs));
+  //       return `${"#".repeat(level)} ${t}`;
+  //     })
+  //     .replace(/^\s*undefined\s*$/gm, "")
+  //     .replace(/,\s*\[object Object\]\s*,?/g, " ")
+  //     .replace(/\[object Object\]/g, "")
+  //     .replace(/(^|,)\s*,+/g, "$1");
 
   try {
     const cleanContent = useMemo(() => {
-      return DOMPurify.sanitize(preClean(markdownContent), {
-        FORBID_TAGS: [
-          "script",
-          "style",
-          "link",
-          "meta",
-          "title",
-          "head",
-          "html",
-          "body",
-          "object",
-          "embed",
-          "form",
-          "input",
-          "button",
-          "textarea",
-          "select",
-          "option",
-          "iframe",
-          "frame",
-          "frameset",
-          "base",
-        ],
-        FORBID_ATTR: [
-          "style",
-          "onerror",
-          "onload",
-          "onclick",
-          "onmouseover",
-          "onfocus",
-          "onblur",
-          "onchange",
-          "onsubmit",
-          "onkeydown",
-          "onkeyup",
-          "onmousedown",
-          "onmouseup",
-          "onmousemove",
-          "onmouseout",
-          "onmouseover",
-        ],
+      return DOMPurify.sanitize(markdownContent, {
+        // FORBID_TAGS: [
+        //   "script",
+        //   "style",
+        //   "link",
+        //   "meta",
+        //   "title",
+        //   "head",
+        //   "html",
+        //   "body",
+        //   "object",
+        //   "embed",
+        //   "form",
+        //   "input",
+        //   "button",
+        //   "textarea",
+        //   "select",
+        //   "option",
+        //   "iframe",
+        //   "frame",
+        //   "frameset",
+        //   "base",
+        // ],
+        // FORBID_ATTR: [
+        //   "style",
+        //   "onerror",
+        //   "onload",
+        //   "onclick",
+        //   "onmouseover",
+        //   "onfocus",
+        //   "onblur",
+        //   "onchange",
+        //   "onsubmit",
+        //   "onkeydown",
+        //   "onkeyup",
+        //   "onmousedown",
+        //   "onmouseup",
+        //   "onmousemove",
+        //   "onmouseout",
+        //   "onmouseover",
+        // ],
+        ALLOWED_TAGS: ['p','pre','code','strong','em','ul','li','ol','a','blockquote','h1','h2','h3','h4'],
+        ALLOWED_ATTR: ['href','title','class'],
         ALLOW_DATA_ATTR: false,
         ALLOW_UNKNOWN_PROTOCOLS: false,
         SANITIZE_DOM: true,
@@ -466,7 +464,7 @@ export const SafeMarkdown = ({
     if (enableKatex) remarkPlugins.push(remarkMath);
 
     const rehypePlugins = [];
-    if (allowRawHtml) rehypePlugins.push(rehypeRaw);
+    // if (allowRawHtml) rehypePlugins.push(rehypeRaw);
     if (enableKatex)
       rehypePlugins.push([
         rehypeKatex,
@@ -480,12 +478,11 @@ export const SafeMarkdown = ({
 
     return (
       <ReactMarkdown
+        children={markdownContent}
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
-        components={components || rendererComponents}
-      >
-        {cleanContent}
-      </ReactMarkdown>
+        components = {components || rendererComponents}
+      />
     );
   } catch (err) {
     console.error("Error rendering markdown:", err);
@@ -639,10 +636,17 @@ const MarkdownRenderer = memo(
         case "LaTeX":
           return (
             <SafeMarkdown
-              enableKatex
-              allowRawHtml
+              enableKatex={true}
               components={{
-                ...rendererComponents,
+                // ...rendererComponents,
+                // Remove markdown rendering for components
+                h1: ({ children }) => <>{children}</>,
+                h2: ({ children }) => <>{children}</>,
+                h3: ({ children }) => <>{children}</>,
+                p: ({ children }) => <>{children}</>,
+                strong: ({ children }) => <>{children}</>,
+                em: ({ children }) => <>{children}</>,
+                a: ({ children }) => <>{children}</>, // remove links
                 math: ({ value }) => (
                   <div className="my-4 text-center p-4 bg-green-50 dark:bg-green-900/20 rounded border-2 border-green-200 dark:border-green-700">
                     <span className="katex-display">{value}</span>
@@ -664,7 +668,6 @@ const MarkdownRenderer = memo(
           return (
             <SafeMarkdown
               enableKatex={false}
-              allowRawHtml={false}
               components={rendererComponents}
             >
               {contentToRender}
@@ -672,11 +675,10 @@ const MarkdownRenderer = memo(
           );
 
         default:
-          // Default = Markdown + KaTeX + raw HTML (sanitized)
+          // Default = Markdown + KaTeX + sanitized HTML
           return (
             <SafeMarkdown
-              enableKatex
-              allowRawHtml
+              enableKatex={true}
               components={rendererComponents}
             >
               {preprocessLaTeX(contentToRender)}
