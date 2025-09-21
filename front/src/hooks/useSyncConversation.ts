@@ -3,10 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getConversation, updateConversation, listConversationMetas } from "../db";
 
-import {
-  selectCurrentConversationId,
-} from "../Redux/reducers/conversationsSlice";
-
 import type { ConversationRow } from "../db/dbTypes";
 
 import { setLastConversation, selectLastConversation } from "../Redux/reducers/lastConversationSlice.jsx";
@@ -22,7 +18,8 @@ function validateConversationId(conversationId: string): boolean {
   return validateUUID(conversationId) && versionUUID(conversationId) === 4;
 }
 
-async function loadConversation(navigate, conversationId, lastConversationId, userSettings = {}, sharedSettings = null, importURL = null, importConversation = null): Promise<ConversationRow | undefined> {
+async function loadConversation(navigate, conversationId, lastConversationId, userSettings = {}, sharedSettings = null, importURL = null, importConversation = null, searchParams = null): Promise<ConversationRow | undefined> {
+  // Handle import URL
   if (importURL) {
     try {
         const response = await fetch(importURL);
@@ -30,13 +27,13 @@ async function loadConversation(navigate, conversationId, lastConversationId, us
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        await importConversation(data);
+        await importConversation(data); // Import and navigate to new conversationId
     } catch (error) {
         console.error("Failed to import from URL:", error);
     }
     return;
   }
-  // conversationId in URL, try to use it
+  // If conversationId in URL, try to use it
   if (conversationId) {
     // Check if Id is valid UUID
     if(!validateConversationId(conversationId)) {
@@ -45,7 +42,7 @@ async function loadConversation(navigate, conversationId, lastConversationId, us
       return undefined
     }
 
-    // if conversationId provided try to load from dexie
+    // if valid UUID, try to load from dexie
     try {
       const conversation = await getConversation(conversationId);
       if (!conversation) {
@@ -60,43 +57,62 @@ async function loadConversation(navigate, conversationId, lastConversationId, us
     }
   }
 
-  // No conversationId in URL, must determine automatically
+  // No conversationId in URL, must navigate automatically
+
+  // Try using last conversation from Redux
+  let targetConversationId = null;
   if (lastConversationId) {
-    // if lastConversationId exists in redux, try to load from dexie with that
+    // if lastConversationId exists in redux, try to load from dexie
     try {
       const conversation = await getConversation(lastConversationId);
-      if (!conversation) {
-        console.log("Conversation ", lastConversationId, " not found");
-        navigate(`/notfound`);
-        return undefined
-      }
-      console.log("Loaded last conversation, ", conversation.id);
-      return conversation;
+      if (!conversation) console.log("Last conversation ", lastConversationId, " not found");
+      else targetConversationId = lastConversationId;
     } catch (error) {
       // on error try further
     }
   }
 
-  // if the two above failed try to load last modified conversation or create new
-  const lastConversationMeta = await getLastModifiedConversationMeta();
-  if (lastConversationMeta !== undefined) {
-    console.log("Loading most recent conversation: ", lastConversationMeta?.id);
-    if (sharedSettings) {
-      navigate(`/chat/${lastConversationMeta?.id}?settings=${sharedSettings}`);
-      return undefined;
+  // If above fails, try using last modified conversation 
+  if (!targetConversationId) {
+    const lastConversationMeta = await getLastModifiedConversationMeta();
+    if (lastConversationMeta !== undefined && lastConversationMeta?.id) {
+      try {
+        const conversation = await getConversation(lastConversationMeta.id);
+        if (!conversation) console.log("Most recent conversation ", lastConversationMeta.id, " not found");
+        else targetConversationId = lastConversationMeta.id;
+      } catch (error) {
+        // on error try further
+      }
     }
-    navigate(`/chat/${lastConversationMeta?.id}`);
-    return undefined
-  } else {
-    // if above fails create a new conversation
-    const newConversationId = await createConversation(getDefaultConversation(userSettings));
-    if (sharedSettings) {
-      navigate(`/chat/${newConversationId}?settings=${sharedSettings}`);
-      return undefined;
-    }
-    navigate(`/chat/${newConversationId}`);
-    return undefined
   }
+
+  // if above fails, try creating a new conversation
+  if (!targetConversationId) {
+    try {
+      const newConversationId = await createConversation(getDefaultConversation(userSettings));
+      targetConversationId = newConversationId
+    } catch (error) {
+      // on error try further
+    }
+  }
+
+  // If target conversation found, navigate and retain params
+  if (targetConversationId) {
+    console.log("Navigating to ", targetConversationId)
+    let targetPath = `/chat/${targetConversationId}`;
+    if (sharedSettings) targetPath += `?settings=${sharedSettings}`;
+    else if (searchParams && searchParams.toString()) {
+        // Preserve existing search parameters
+        targetPath += `?${searchParams.toString()}`;
+    }
+    navigate(targetPath);
+    return null;
+  }
+
+  // If everything fails
+  navigate("/notfound");
+  console.error("Could not load any conversation");
+  return null;
 }
 
 function decodeSettings(base64Settings) {
@@ -139,7 +155,7 @@ export function useSyncConversation({
   importURL: string | null,
 }) {
   const navigate = useNavigate();
-  const lastConversation = useSelector(selectLastConversation);
+  const lastConversationId = useSelector(selectLastConversation);
   const [searchParams, setSearchParams] = useSearchParams();
   const sharedSettings = searchParams.get("settings");
   const importURL = searchParams.get("import");
@@ -166,7 +182,7 @@ export function useSyncConversation({
       //return;
     }
     (async () => {
-      const conversation = await loadConversation(navigate, conversationId, lastConversation, userSettings, sharedSettings, importURL, importConversation);
+      const conversation = await loadConversation(navigate, conversationId, lastConversationId, userSettings, sharedSettings, importURL, importConversation, searchParams);
       if (!conversation) return;
       lastModified.current[conversationId] = conversation?.lastModified || 0;
       if (sharedSettings) {
@@ -186,6 +202,24 @@ export function useSyncConversation({
         setSearchParams();
         setLocalState( updatedConversation );
         return;
+      }
+      if (searchParams?.size > 0) {
+        const arcanaParam = searchParams.get("arcana");
+        const modelParam = searchParams.get("model");
+        if (arcanaParam || modelParam) {
+          const extraSettings = {
+            ...(arcanaParam && { arcana: {id: arcanaParam} }),
+            ...(modelParam && { model: { id: modelParam } })
+          };
+          const updatedConversation = {
+            ...conversation,
+            settings: {...conversation.settings, ...extraSettings}
+          }
+          console.log("Setting new conversation settings")
+          setSearchParams();
+          setLocalState( updatedConversation );
+          return;
+        }
       }
       setLocalState(conversation);
     })();
@@ -266,7 +300,7 @@ export function useSyncConversation({
       if (lastModified.current[currentConversation] === lastModifiedDB) return; // No changes
       // Changes detected, load from DB
       setInitialized(false);
-      const conversation = await loadConversation(navigate, conversationId, lastConversation, userSettings);
+      const conversation = await loadConversation(navigate, conversationId, lastConversationId, userSettings);
       if (!conversation) return;
       lastModified.current[currentConversation] = conversation?.lastModified || 0;
       setLocalState(conversation);

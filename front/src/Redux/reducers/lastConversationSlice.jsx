@@ -14,4 +14,4 @@ const lastConversationSlice = createSlice({
 
 export const { setLastConversation } = lastConversationSlice.actions
 export default lastConversationSlice.reducer;
-export const selectLastConversation = (state) => state.lastConversation;
+export const selectLastConversation = (state) => state?.last_conversation || null;
