@@ -33,6 +33,7 @@ async function loadConversation(navigate, conversationId, lastConversationId, us
     }
     return;
   }
+
   // If conversationId in URL, try to use it
   if (conversationId) {
     // Check if Id is valid UUID
@@ -57,38 +58,43 @@ async function loadConversation(navigate, conversationId, lastConversationId, us
     }
   }
 
-  // No conversationId in URL, must navigate automatically
-
-  // Try using last conversation from Redux
+  // No conversationId in URL, must navigate
   let targetConversationId = null;
-  if (lastConversationId) {
-    // if lastConversationId exists in redux, try to load from dexie
-    try {
-      const conversation = await getConversation(lastConversationId);
-      if (!conversation) console.log("Last conversation ", lastConversationId, " not found");
-      else targetConversationId = lastConversationId;
-    } catch (error) {
-      // on error try further
-    }
-  }
-
-  // If above fails, try using last modified conversation 
-  if (!targetConversationId) {
-    const lastConversationMeta = await getLastModifiedConversationMeta();
-    if (lastConversationMeta !== undefined && lastConversationMeta?.id) {
+  
+  // If no settings are in the URL -> reload earlier conversation
+  if (!(sharedSettings || searchParams?.toString())) {
+    // Attempt to reuse earlier conversation
+    if (lastConversationId) {
+      // if lastConversationId exists in redux, try to load from dexie
       try {
-        const conversation = await getConversation(lastConversationMeta.id);
-        if (!conversation) console.log("Most recent conversation ", lastConversationMeta.id, " not found");
-        else targetConversationId = lastConversationMeta.id;
+        const conversation = await getConversation(lastConversationId);
+        if (!conversation) console.log("Last conversation ", lastConversationId, " not found");
+        else targetConversationId = lastConversationId;
       } catch (error) {
         // on error try further
       }
     }
+    // If not working, try using last modified conversation 
+    if (!targetConversationId) {
+      const lastConversationMeta = await getLastModifiedConversationMeta();
+      if (lastConversationMeta !== undefined && lastConversationMeta?.id) {
+        try {
+          const conversation = await getConversation(lastConversationMeta.id);
+          if (!conversation) console.log("Most recent conversation ", lastConversationMeta.id, " not found");
+          else targetConversationId = lastConversationMeta.id;
+        } catch (error) {
+          // on error try further
+        }
+      }
+    }
+  } else {
+    console.log("Found search params or settings")
   }
 
-  // if above fails, try creating a new conversation
+  // If URL in settings or no earlier conversation, create a new conversation
   if (!targetConversationId) {
     try {
+      console.log("No target conversation, creating new one")
       const newConversationId = await createConversation(getDefaultConversation(userSettings));
       targetConversationId = newConversationId
     } catch (error) {
@@ -96,7 +102,7 @@ async function loadConversation(navigate, conversationId, lastConversationId, us
     }
   }
 
-  // If target conversation found, navigate and retain params
+  // If succesfull, navigate to new conversation and retain params
   if (targetConversationId) {
     console.log("Navigating to ", targetConversationId)
     let targetPath = `/chat/${targetConversationId}`;
@@ -109,7 +115,7 @@ async function loadConversation(navigate, conversationId, lastConversationId, us
     return null;
   }
 
-  // If everything fails
+  // If everything fails, go to not found
   navigate("/notfound");
   console.error("Could not load any conversation");
   return null;
@@ -118,11 +124,11 @@ async function loadConversation(navigate, conversationId, lastConversationId, us
 function decodeSettings(base64Settings) {
   let settings;
   try{
-    // Step 1: Base64 decode
+    // Base64 decode
     const jsonString = atob(base64Settings);
-    // Step 2: Parse into object
+    // Parse into object
     settings = JSON.parse(jsonString);
-    // Step 3: Recursively URL-decode all string values
+    // Recursively URL-decode all string values
     function decodeURIComponentDeep(obj) {
       if (typeof obj === 'string') {
         return decodeURIComponent(obj);
@@ -146,7 +152,7 @@ function decodeSettings(base64Settings) {
 export function useSyncConversation({
   localState,
   setLocalState,
-  conversationId, // this is a valid uuid, validated in ChatPage, from the url
+  conversationId,
 }: {
   localState: any;
   setLocalState: (state: any) => void;
@@ -183,9 +189,10 @@ export function useSyncConversation({
     }
     (async () => {
       const conversation = await loadConversation(navigate, conversationId, lastConversationId, userSettings, sharedSettings, importURL, importConversation, searchParams);
-      if (!conversation) return;
+      if (!conversation) return; // will navigate to a valid conversation soon
       lastModified.current[conversationId] = conversation?.lastModified || 0;
       if (sharedSettings) {
+        // Decode and set settings from base64 string in URL
         const decodedSettings = decodeSettings(sharedSettings);
         const system_prompt = decodedSettings?.system_prompt || decodedSettings?.systemPrompt ||
           conversation?.messages?.content[0] || "";
@@ -204,22 +211,19 @@ export function useSyncConversation({
         return;
       }
       if (searchParams?.size > 0) {
+        // Set settings from query params in URL
         const arcanaParam = searchParams.get("arcana");
         const modelParam = searchParams.get("model");
-        if (arcanaParam || modelParam) {
-          const extraSettings = {
-            ...(arcanaParam && { arcana: {id: arcanaParam} }),
-            ...(modelParam && { model: { id: modelParam } })
-          };
-          const updatedConversation = {
-            ...conversation,
-            settings: {...conversation.settings, ...extraSettings}
-          }
-          console.log("Setting new conversation settings")
-          setSearchParams();
-          setLocalState( updatedConversation );
-          return;
+        let extraSettings = {};
+        if (arcanaParam) { extraSettings.arcana = { id: arcanaParam }; };
+        if (modelParam) { extraSettings.model = { id: modelParam }; };
+        const updatedConversation = {
+          ...conversation,
+          settings: {...conversation.settings, ...extraSettings}
         }
+        setSearchParams();
+        setLocalState( updatedConversation );
+        return;
       }
       setLocalState(conversation);
     })();
