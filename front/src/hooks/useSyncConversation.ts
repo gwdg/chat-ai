@@ -198,6 +198,7 @@ export function useSyncConversation({
           conversation?.messages?.content[0] || "";
         delete decodedSettings?.system_prompt;
         delete decodedSettings?.systemPrompt;
+        console.log(decodedSettings)
         const updatedConversation = {
           ...conversation,
           messages: [
