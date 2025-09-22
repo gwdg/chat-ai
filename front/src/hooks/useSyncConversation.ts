@@ -214,9 +214,12 @@ export function useSyncConversation({
         // Set settings from query params in URL
         const arcanaParam = searchParams.get("arcana");
         const modelParam = searchParams.get("model");
+        const enableToolsParam = searchParams.get("enable_tools")
+        
         let extraSettings = {};
         if (arcanaParam) { extraSettings.arcana = { id: arcanaParam }; };
         if (modelParam) { extraSettings.model = { id: modelParam }; };
+        if (enableToolsParam) { extraSettings.enable_tools = enableToolsParam; };
         const updatedConversation = {
           ...conversation,
           settings: {...conversation.settings, ...extraSettings}
