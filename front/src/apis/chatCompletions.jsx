@@ -71,6 +71,14 @@ async function* chatCompletions (
 
     let answer = ""
     for await (const chunk of streamResponse) {
+      if (chunk?.object == "error") {
+        console.log(chunk)
+          const err = new Error(chunk?.message || "Unknown error");
+          err.type = chunk?.type;
+          err.status = chunk?.status || chunk?.code;
+          err.code = chunk?.code || chunk?.status;
+          throw err;
+      }
       try {
         answer += chunk.choices[0].delta?.content || ""
         yield (chunk.choices[0].delta)

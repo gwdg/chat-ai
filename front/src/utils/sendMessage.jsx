@@ -467,15 +467,10 @@ const sendMessage = async ({
       // Get chat completion response
       responseContent = await getChatChunk(conversationId);
     } catch (error) {
-      if (error instanceof OpenAI.APIError) {
-        // Handle API errors
-        const errorType = error?.type || error?.status || "Error";
-        const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
-        notifyError(`${errorMsg.toString()} (${errorType})`);
-      } else {
-        const msg = error?.message || `Error ${error?.status}` || "An unknown error occurred";
-        notifyError(`Error: ${msg.toString()}`);
-      }
+      const errorType = error?.type || "Error";
+      const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
+      const errorStatus = error?.status ? `(${error.status})` : "";
+      notifyError(`${errorType}: ${errorMsg.toString()} ${errorStatus}`);
       console.error(error);
     } finally {
       // Set loading to false

@@ -3,12 +3,12 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import fetch from "node-fetch";          
-import OpenAI from "openai";
 import fileUpload from "express-fileupload";
 import FormData from "form-data";
 import fs from "fs";
 import path from "path";
 import { Readable } from "stream"; // Node's stream module
+import OpenAI from "openai";
 
 const app = express();
 
@@ -178,6 +178,8 @@ app.post("/chat/completions", async (req, res) => {
   }
 
   const validatedTimeout = Math.min(Math.max(timeout, 5000), 900000);
+  let inference_service;
+  let params;
 
   try {
     // // Create a single timeout that applies to the entire request
@@ -195,7 +197,7 @@ app.post("/chat/completions", async (req, res) => {
     //   }, validatedTimeout);
     // });
 
-    const params = {
+    params = {
       model: model,
       messages: messages,
       temperature: temperature,
@@ -206,7 +208,7 @@ app.post("/chat/completions", async (req, res) => {
     }
 
     const isExternalModel = model.startsWith("openai-") && !model.startsWith("gpt-oss-120b");
-    let inference_service = model;
+    inference_service = model;
 
     if (arcana && arcana.id !== "") {
       params.arcana = arcana;
@@ -246,12 +248,14 @@ app.post("/chat/completions", async (req, res) => {
     if (params.arcana || params.model.includes("rag") || params.model.includes("sauerkraut")) delete params.timeout;
 
     // Get chat completion response
-    const response = await openai.chat.completions.create(
-      params, {
-        headers: {"inference-service": inference_service, "inference-portal": serviceName, "inference-id": inference_id}
+     const response = await openai.chat.completions.create(params, {
+        headers: {
+          "inference-service": inference_service,
+          "inference-portal": serviceName,
+          "inference-id": inference_id}
       }
     ).asResponse();
-    
+
     // Pass through headers (optional but recommended)
     res.status(response.status);
     response.headers.forEach((value, key) => {
@@ -280,13 +284,47 @@ app.post("/chat/completions", async (req, res) => {
     nodeStream.pipe(res);
   } catch (err) {
     try {
-      // Return proper HTTP error response with message
-      return res
+      // Well-formed error, return
+      if (err?.status && err?.error) {
+        return res
         .status(err?.status || 500)
         .json({
           error: err?.error || "An internal server error occurred",
          });
+      }
+      // Couldn't extract error message, so try without openai library
+      const response = await fetch(apiEndpoint + "/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${ apiKey ? apiKey : inference_id }`,
+          "Content-Type": "application/json",
+          "inference-service": inference_service,
+          "inference-portal": serviceName,
+          "inference-id": inference_id
+        },
+        body: JSON.stringify(params)
+      });
+      // Extract message and status from HTTP response
+      let msg, status;
+      try {
+        status = response.status;
+        msg = await response.text();
+        msg = JSON.parse(msg);
+        msg = msg?.message || msg;
+        const match = msg.match(/'msg':\s*'([^']*)'/);
+        if (match) {
+          msg = match[1];
+          console.log("Extracted message:", msg);
+        }
+      } catch {}
+      // Return message as best as possible
+      return res
+        .status(status || err?.status || 500)
+        .json({
+          error: msg || "An unknown error occurred",
+        });
     } catch (err) {
+      console.error(err);
       return;
     }
   }
