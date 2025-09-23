@@ -16,6 +16,7 @@ import {
 import { FileWarning } from "lucide-react";
 import { processFile } from "../../apis/processFile";
 import { getFileType } from "../../utils/attachments";
+import { useToast } from "../../hooks/useToast";
 
 export default function Attachment({
   localState,
@@ -30,6 +31,7 @@ export default function Attachment({
 
   const { removeAttachment, clearAttachments, readFileAsBase64 } =
     useAttachments();
+  const { notifySuccess, notifyError } = useToast();
   const file = useFileMeta(attachment.fileId);
   const isImage = file?.type?.startsWith("image/");
   const base64 = useFileBase64(isImage ? attachment.fileId : null);
@@ -63,7 +65,12 @@ export default function Attachment({
     const rawFile = await loadFile(attachment.fileId);
     const response = await processFile(rawFile);
     setIsProcessing(false);
-    if (!response?.content) return; // TODO error toast
+    if (!response?.content) {
+      notifyError("Error processing file");
+      return;
+    } else {
+      notifySuccess("File processed successfully");
+    }
     // Save as markdown file and add to attachments
     const processedFile = new File([response.content], file.name + ".md", {
       type: "text/markdown",

@@ -71,23 +71,28 @@ async function* chatCompletions (
 
     let answer = ""
     for await (const chunk of streamResponse) {
+      if (chunk?.object == "error") {
+        console.log(chunk)
+          const err = new Error(chunk?.message || "Unknown error");
+          err.type = chunk?.type;
+          err.status = chunk?.status || chunk?.code;
+          err.code = chunk?.code || chunk?.status;
+          throw err;
+      }
       try {
         answer += chunk.choices[0].delta?.content || ""
         yield (chunk.choices[0].delta)
         if (chunk?.choices?.[0]?.finish_reason === 'stop') {
-          // res.status(200).end();
           return answer
         }
       }
       catch (err) {
-        // console.error(err);
         console.log("Warning: ", err)
         console.log(chunk)
         // TODO forward exact error
-        //res.status(response.status).send(response.statusText);
+        // res.status(response.status).send(response.statusText);
         // res.status(500).end();
       }
-      //console.log(answer);
     }
 
     // // Handle auth error
@@ -134,11 +139,10 @@ async function* chatCompletions (
     // }
   } catch (error) {
     // Handle AbortError at the top level
-    if (error.name === "AbortError") {
+    if (error?.name === "AbortError") {
       return null;
     }
-    console.error("An error occurred", error);
-    throw error;
+    throw error; // Propagate other errorsrs
   }
 }
 

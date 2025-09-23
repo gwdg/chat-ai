@@ -8,7 +8,7 @@ export default function TemperatureSlider({ localState, setLocalState }) {
   const [isClicked, setIsClicked] = useState(false);
   const { openModal } = useModal();
 
-  const [value, setValue] = useState(localState?.settings?.temperature || 0.5);
+  const [value, setValue] = useState(localState?.settings?.temperature ?? 0.5);
 
   const handleChangeTemp = (newValue) => {
     const numVal = parseFloat(newValue);
@@ -48,7 +48,7 @@ export default function TemperatureSlider({ localState, setLocalState }) {
 
   // UseEffect to listen to indirect changes to temperature
   useEffect(() => {
-    setValue(localState?.settings?.temperature || 0.5);
+    setValue(localState?.settings?.temperature ?? 0.5);
   }, [localState?.settings?.temperature]);
 
   return (

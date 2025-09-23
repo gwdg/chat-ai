@@ -65,11 +65,12 @@ export default {
     footer: {
       imprint: "Impressum",
       terms: "Nutzungsbedingungen",
+      docs: "Doku",
       privacy: "Datenschutz",
       faq: "FAQ",
       contact: "Kontakt",
       about: "Über uns",
-      copyright: "Alle Rechte vorbehalten",
+      copyright: "2025 GWDG © Alle Rechte vorbehalten",
       iso_certified: "ISO 27001 Zertifiziert",
     },
     // User Settings Modal

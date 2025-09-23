@@ -229,10 +229,15 @@ export function useImportConversation() {
       const system_prompt = extractParameter(data, "system_prompt") || extractParameter(data, "systemPrompt");
       if (system_prompt && typeof system_prompt === "string")
         sanitizedMessages[0].content = extractMessageContent(system_prompt, conversationId);
+      
       // temperature
-      const temperature = extractParameter(data, "temperature") || extractParameter(data, "temp") || extractParameter(data, "settings.temperature");
-      if (temperature && typeof temperature === "number" && temperature >= 0 && temperature <= 2.0)
+      const temperature =
+        extractParameter(data, "temperature") ??
+        extractParameter(data, "temp") ??
+        extractParameter(data, "settings.temperature");
+      if (typeof temperature === "number" && temperature >= 0 && temperature <= 2.0) {
         settings.temperature = temperature;
+      }
 
       // top_p
       const top_p = extractParameter(data, "top_p") || extractParameter(data, "topP");
