@@ -3,16 +3,17 @@ import { Trans, useTranslation } from "react-i18next";
 
 export default function NavigationGridLinks() {
     return (
-    <div className="grid md:grid-cols-5 grid-cols-1 justify-between w-full gap-y-2">
-        {/* Privacy and Security Link */}
+    <div className="grid md:grid-cols-5 grid-cols-2 justify-between w-full gap-y-2">
+        {/* Documentation Link */}
         <Link
         to={
-            "https://docs.hpc.gwdg.de/services/chat-ai/data-privacy.de/index.html"
+            "https://docs.hpc.gwdg.de/services/chat-ai/index.html"
         }
         target="_blank"
+        className = "hidden md:block"
         >
         <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
-            <Trans i18nKey="footer.privacy"></Trans>
+            <Trans i18nKey="footer.docs" />
         </p>
         </Link>
 

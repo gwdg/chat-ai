@@ -31,8 +31,22 @@ export default function CollapsibleFooter({ className }: { className?: string })
           />
         </button>
         <div className="absolute h-[3vh] left-0 top-0 flex items-center justify-center pl-3 gap-3">
-          {/* Version Display */}
-          <VersionDisplay />
+          {/* Version Display - Desktop and Tablet */}
+          <div className="hidden md:block flex flex-col md:flex-row justify-center items-center gap-4 dark:text-white text-black w-full md:p-0 py-2">
+            <VersionDisplay />
+          </div>
+          {/* Privacy Policy */}
+          <Link
+          to={
+              "https://docs.hpc.gwdg.de/services/chat-ai/data-privacy.de/index.html"
+          }
+          target="_blank"
+          >
+          <p className="text-center text-blue-600 dark:text-blue-400 hover:underline">
+              <Trans i18nKey="footer.privacy"></Trans>
+          </p>
+          </Link>
+          {/* Imprint */}
           <Link
             className="justify-center"
             to={
@@ -44,13 +58,14 @@ export default function CollapsibleFooter({ className }: { className?: string })
               <Trans i18nKey="footer.imprint" />
             </p>
           </Link>
+          
+        </div>
+
+        {/* Right section */}
+        <div className="interface-toggles absolute h-[3vh] right-0 top-0 flex items-center pr-3 gap-2"> 
           <p className="hidden md:block text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-600 dark:text-gray-400">
             <Trans i18nKey="footer.iso_certified" />
           </p>
-        </div>
-
-        {/* Langauge and Theme toggles */}
-        <div className="interface-toggles absolute h-[3vh] right-0 top-0 flex items-center pr-3 gap-2"> 
           <ThemeToggle />
           <LanguageSelector />
         </div>
@@ -75,18 +90,18 @@ export default function CollapsibleFooter({ className }: { className?: string })
           <div className="flex justify-between w-full">
             {/* Main Section */}
             <div className="flex flex-col gap-3 items-center w-full">
-
               {/* Partner Logo Section (Mobile-Only) */}
               <PartnerLogo className="md:hidden" />
-
               {/* Navigation Links Grid */}
               <NavigationGridLinks />
-              <div className="dark:text-white">
-                © 2025 GWDG | <Trans i18nKey="footer.copyright" />
+              {/* Version Display and ISO certified - Mobile only */}
+              <div className="block md:hidden justify-center text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-600 dark:text-gray-400 gap-x-2">
+                <VersionDisplay />
+                <Trans i18nKey="footer.iso_certified" />
               </div>
-              <div className="block md:hidden p-0 justify-center text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-600 dark:text-gray-400">
-                  <Trans i18nKey="footer.iso_certified" />
-                </div>
+              <div>
+                <Trans i18nKey="footer.copyright"/>
+              </div>
             </div>
           </div>
         </div>
