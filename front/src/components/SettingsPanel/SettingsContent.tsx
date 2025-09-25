@@ -66,7 +66,7 @@ const SettingsPanel = ({
   const [tourStepIndex, setTourStepIndex] = useState(0); // Add this
   const { isMobile, isTablet, isDesktop } = useWindowSize();
 
-  const showTour = !isMobile && useSelector(selectShowTour);
+  const showTour = useSelector(selectShowTour) && !isMobile;
 
   const tourSteps = [
     // {
