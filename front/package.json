@@ -11,6 +11,8 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview --host --no-open"
   },
+  "author": "Gesellschaft für wissenschaftliche Datenverarbeitung mbH Göttingen",
+  "license": "GPL-3.0-only",
   "dependencies": {
     "dompurify": "^3.2.6",
     "@emotion/react": "^11.14.0",
