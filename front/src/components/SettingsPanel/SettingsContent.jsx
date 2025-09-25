@@ -4,9 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Joyride from "react-joyride-react-19";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { useModal } from "../../modals/ModalContext";
 import { useWindowSize } from "../../hooks/useWindowSize";
+import { useModal } from "../../modals/ModalContext";
 
 //Components
 import ArcanaContainer from "./ArcanaContainer";
@@ -14,38 +13,34 @@ import MemorySelector from "./MemorySelector";
 import ShareSettingsButton from "./ShareSettingsButton";
 import SystemPromptContainer from "./SystemPromptContainer";
 import TemperatureSlider from "./TemperatureSlider";
-import ToolsToggle from "./ToolsToggle";
 import TopPSlider from "./TopPSlider";
 
 //Redux
-import { selectDefaultModel, selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
+import {
+  selectDefaultModel,
+  selectUserSettings,
+} from "../../Redux/reducers/userSettingsReducer";
 
 // Hooks
+import { ChevronRight } from "lucide-react";
 import { useToast } from "../../hooks/useToast";
 import {
   closeTour,
-  selectShowSettings,
   selectShowTour,
   toggleSettings,
-  toggleSidebar
+  toggleSidebar,
 } from "../../Redux/reducers/interfaceSettingsSlice";
-import WebSearchToggle from "./WebSearchToggle";
 import PartnerContainer from "../Header/PartnerContainer";
 import UserContainer from "../Header/UserContainer";
-import { ChevronRight } from "lucide-react";
 
-import { getDefaultSettings } from "../../utils/conversationUtils";
 import { useConversationList } from "../../db";
+import { getDefaultSettings } from "../../utils/conversationUtils";
 import MCPContainer from "./MCPContainer";
+import ToolsContainer from "./ToolsContainer";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
-const SettingsPanel = ({
-  localState,
-  setLocalState,
-  userData,
-  modelsData
-}) => {
+const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const conversations = useConversationList();
 
   //Hooks
@@ -53,20 +48,22 @@ const SettingsPanel = ({
   const dispatch = useDispatch();
   const userSettings = useSelector(selectUserSettings);
   const settings = localState.settings;
-  const migrationData = useSelector(state => state.migration_data);
+  const migrationData = useSelector((state) => state.migration_data) || {};
   const { notifySuccess, notifyError } = useToast();
   const { openModal } = useModal();
 
+  const welcomeTimerRef = useRef(null);
   //Local useStates
   const [isOpen, setIsOpen] = useState(false);
   const [direction, setDirection] = useState("down");
-
+  const [tourReady, setTourReady] = useState(false);
   const defaultModel = useSelector(selectDefaultModel);
   const [runTour, setRunTour] = useState(false);
   const [tourStepIndex, setTourStepIndex] = useState(0); // Add this
   const { isMobile, isTablet, isDesktop } = useWindowSize();
 
-  const showTour = !isMobile && useSelector(selectShowTour);
+  const showTourFlag = useSelector(selectShowTour); // always call the hook
+  const showTour = !isMobile && showTourFlag;
 
   const tourSteps = [
     // {
@@ -94,7 +91,7 @@ const SettingsPanel = ({
       disableBeacon: true,
       styles: {
         tooltip: { border: "none", boxShadow: "none" },
-        spotlight: { border: "none"},
+        spotlight: { border: "none" },
       },
     },
     {
@@ -104,7 +101,7 @@ const SettingsPanel = ({
       disableBeacon: false,
       styles: {
         tooltip: { border: "none", boxShadow: "none" },
-        spotlight: { border: "none"},
+        spotlight: { border: "none" },
       },
     },
     {
@@ -114,7 +111,7 @@ const SettingsPanel = ({
       disableBeacon: true,
       styles: {
         tooltip: { border: "none", boxShadow: "none" },
-        spotlight: { border: "none"},
+        spotlight: { border: "none" },
       },
     },
     {
@@ -124,7 +121,7 @@ const SettingsPanel = ({
       disableBeacon: true,
       styles: {
         tooltip: { border: "none", boxShadow: "none" },
-        spotlight: { border: "none"},
+        spotlight: { border: "none" },
       },
     },
     {
@@ -134,7 +131,7 @@ const SettingsPanel = ({
       disableBeacon: true,
       styles: {
         tooltip: { border: "none", boxShadow: "none" },
-        spotlight: { border: "none"},
+        spotlight: { border: "none" },
       },
     },
     {
@@ -144,25 +141,10 @@ const SettingsPanel = ({
       disableBeacon: true,
       styles: {
         tooltip: { border: "none", boxShadow: "none" },
-        spotlight: { border: "none"},
+        spotlight: { border: "none" },
       },
     },
   ];
-
-  // Functions
-
-  // Begin the tour (shouldn't this be useEffect?)
-  useEffect(() => {
-    if (!showTour) return;
-    if (migrationData && Object.entries(migrationData).length > 0) return; // Skip if migration data exists
-    // Start tour after short delay
-    const onRunTour = () => {
-      setRunTour(true);
-    };
-    setTimeout(() => {
-      openModal("welcome", { onRunTour });
-    }, 200);
-  }, [showTour, migrationData]);
 
   // Handle tour actions
   const handleJoyrideCallback = useCallback(
@@ -170,6 +152,7 @@ const SettingsPanel = ({
       const { action, index, status, type } = data;
       if (status === "finished" || status === "skipped") {
         dispatch(closeTour());
+        setRunTour(false);
         setTourStepIndex(0); // Reset step index
 
         // Update version to 3 after tour completion
@@ -213,12 +196,14 @@ const SettingsPanel = ({
     let updatedMessages = localState.messages.map((item) => {
       if (item.role === "system") {
         return {
-          ...item, content: [
+          ...item,
+          content: [
             {
               type: "text",
-              text: defaultSettings?.system_prompt || "You are a helpful assistant"
-            }
-          ]
+              text:
+                defaultSettings?.system_prompt || "You are a helpful assistant",
+            },
+          ],
         };
       } else {
         return item;
@@ -250,78 +235,112 @@ const SettingsPanel = ({
     }
   }, [isOpen]); // Only recalculate when dropdown opens/closes
 
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setTourReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    if (!tourReady) return;
+    if (!showTour) {
+      // if we go back to mobile, cancel pending timer and stop tour
+      if (welcomeTimerRef.current) {
+        clearTimeout(welcomeTimerRef.current);
+        welcomeTimerRef.current = null;
+      }
+      setRunTour(false);
+      return;
+    }
+    if (Object.keys(migrationData).length > 0) return;
+    if (runTour) return; // already running
+
+    const onRunTour = () => setRunTour(true);
+    welcomeTimerRef.current = setTimeout(() => {
+      openModal("welcome", { onRunTour });
+    }, 200);
+
+    return () => {
+      if (welcomeTimerRef.current) {
+        clearTimeout(welcomeTimerRef.current);
+        welcomeTimerRef.current = null;
+      }
+    };
+  }, [showTour, migrationData, openModal, runTour, tourReady]);
+
+  const targetsReady =
+    typeof window !== "undefined" &&
+    Array.isArray(tourSteps) &&
+    tourSteps.every((s) => s?.target && document.querySelector(s.target));
+
   return (
     <>
-      <Joyride
-        steps={tourSteps}
-        run={runTour}
-        continuous={true}
-        showProgress={true}
-        showSkipButton={true}
-        disableOverlay={false}
-        disableOverlayClose={true}
-        disableScrolling={true}
-        callback={handleJoyrideCallback}
-        locale={{
-          back: t("tour.back"),
-          close: t("tour.close"),
-          last: t("tour.last"),
-          next: t("tour.next"),
-          skip: t("tour.skip"),
-        }}
-        styles={{
-          options: {
-            primaryColor: "#009EE0",
-            zIndex: 20000,
-          },
-          overlay: {
-            backgroundColor: "rgba(0, 0, 0, 0.75)", // Dark overlay to hide zoom
-            mixBlendMode: "normal",
-          },
-          spotlight: {
-            borderRadius: 8,
-            border: "2px solid #009EE0",
-            backgroundColor: "transparent",
-          },
-          tooltip: {
-            borderRadius: 12,
-            fontSize: 16,
-            fontFamily: "inherit",
-            padding: 20,
-            boxShadow: "0 10px 25px rgba(0, 0, 0, 0.3)",
-            backgroundColor: "var(--tooltip-bg, #ffffff)",
-            color: "var(--tooltip-text, #333333)",
-          },
-          tooltipContent: {
-            padding: 0,
-          },
-          buttonNext: {
-            backgroundColor: "#009EE0",
-            fontSize: 14,
-            fontWeight: 600,
-            padding: "10px 20px",
-            borderRadius: 8,
-            border: "none",
-          },
-          buttonBack: {
-            color: "#6b7280",
-            fontSize: 14,
-            padding: "10px 16px",
-            marginRight: 12,
-            border: "1px solid #d1d5db",
-            borderRadius: 8,
-            backgroundColor: "transparent",
-          },
-          buttonSkip: {
-            color: "#6b7280",
-            fontSize: 14,
-            padding: "10px 16px",
-            backgroundColor: "transparent",
-            border: "none",
-          },
-        }}
-      />
-    <div className="settings-toggle flex relative w-full h-full flex-col items-center text-tertiary ">
+      {showTour && tourReady && targetsReady && (
+        <Joyride
+          steps={tourSteps}
+          run={runTour}
+          continuous
+          showProgress
+          showSkipButton
+          disableOverlay={false}
+          disableOverlayClose
+          disableScrolling
+          callback={handleJoyrideCallback}
+          locale={{
+            back: t("tour.back"),
+            close: t("tour.close"),
+            last: t("tour.last"),
+            next: t("tour.next"),
+            skip: t("tour.skip"),
+          }}
+          styles={{
+            options: { primaryColor: "#009EE0", zIndex: 20000 },
+            overlay: {
+              backgroundColor: "rgba(0,0,0,0.75)",
+              mixBlendMode: "normal",
+            },
+            spotlight: {
+              borderRadius: 8,
+              border: "2px solid #009EE0",
+              backgroundColor: "transparent",
+            },
+            tooltip: {
+              borderRadius: 12,
+              fontSize: 16,
+              fontFamily: "inherit",
+              padding: 20,
+              boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
+              backgroundColor: "var(--tooltip-bg, #ffffff)",
+              color: "var(--tooltip-text, #333333)",
+            },
+            tooltipContent: { padding: 0 },
+            buttonNext: {
+              backgroundColor: "#009EE0",
+              fontSize: 14,
+              fontWeight: 600,
+              padding: "10px 20px",
+              borderRadius: 8,
+              border: "none",
+            },
+            buttonBack: {
+              color: "#6b7280",
+              fontSize: 14,
+              padding: "10px 16px",
+              marginRight: 12,
+              border: "1px solid #d1d5db",
+              borderRadius: 8,
+              backgroundColor: "transparent",
+            },
+            buttonSkip: {
+              color: "#6b7280",
+              fontSize: 14,
+              padding: "10px 16px",
+              backgroundColor: "transparent",
+              border: "none",
+            },
+          }}
+        />
+      )}
+      <div className="settings-toggle flex relative w-full h-full flex-col items-center text-tertiary ">
         {/* Logos and User Profile */}
         <div className="w-full hidden md:flex items-center gap-3 justify-between p-3">
           <button
@@ -352,10 +371,10 @@ const SettingsPanel = ({
         <div className="flex flex-col gap-3 p-2 lg:p-4 h-full w-full">
           {/* User profile */}
           <div className="flex flex-row">
-          {/* Warning for external models */}
-          {localState.settings?.model?.name
-            ?.toLowerCase()
-            .includes("external") ? (
+            {/* Warning for external models */}
+            {localState.settings?.model?.name
+              ?.toLowerCase()
+              .includes("external") ? (
               <div className="text-yellow-600 text-sm mb-3 select-none">
                 <Trans
                   i18nKey={
@@ -365,21 +384,26 @@ const SettingsPanel = ({
                   }
                 />
               </div>
-            ) : (<div className="flex flex-grow md:hidden h-full py-1 text-lg text-primary"><b>Settings</b></div>)}
-          <span className="md:hidden px-1">
-            <UserContainer
-              localState={localState}
-              userData={userData}
-              modelsData={modelsData}
-            />
-          </span>
+            ) : (
+              <div className="flex flex-grow md:hidden h-full py-1 text-lg text-primary">
+                <b>Settings</b>
+              </div>
+            )}
+            <span className="md:hidden px-1">
+              <UserContainer
+                localState={localState}
+                userData={userData}
+                modelsData={modelsData}
+              />
+            </span>
           </div>
           {/* Use Tools – checkbox */}
-          <ToolsToggle
+          {/* <ToolsToggle localState={localState} setLocalState={setLocalState} />
+          <WebSearchToggle
             localState={localState}
             setLocalState={setLocalState}
-          />
-          <WebSearchToggle
+          /> */}
+          <ToolsContainer
             localState={localState}
             setLocalState={setLocalState}
           />
@@ -389,20 +413,14 @@ const SettingsPanel = ({
             setLocalState={setLocalState}
           />
           {/* MCP box */}
-          <MCPContainer
-            localState={localState}
-            setLocalState={setLocalState}
-          />
+          <MCPContainer localState={localState} setLocalState={setLocalState} />
           {/* temperature Slider */}
           <TemperatureSlider
             localState={localState}
             setLocalState={setLocalState}
           />
           {/* top_p Slider */}
-          <TopPSlider
-            localState={localState}
-            setLocalState={setLocalState}
-          />
+          <TopPSlider localState={localState} setLocalState={setLocalState} />
           {/* Memory Selector */}
           <MemorySelector
             localState={localState}
