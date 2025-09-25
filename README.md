@@ -118,6 +118,29 @@ If you wish to avoid using different ports for the `front` and `back` services, 
 
 If you wish to customize the list of available models, you must create a path that returns an OpenAI-style JSON response containing the model ids and names, and set the `modelsPath` in `front.json` accordingly. If configured correctly, your custom list will be displayed in the dropdown menu in the interface, instead of the list from your API provider.
 
+## Development
+You can use docker as local development setup. Alternatively, you can run Chat AI directly for which you nee `nodejs` installed.
+
+To start the backend, run:
+```bash
+cd back
+# install dependencies
+npm i
+# then run with
+npm run start
+```
+
+Similarly, for the frontend:
+```bash
+cd front
+# install dependencies
+npm i
+# then run with
+npm run dev
+```
+
+[See CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute to this project.
+
 ## Acknowledgements
 We thank all contributors for the design and implementation of the web interface.
 
