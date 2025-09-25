@@ -13,7 +13,8 @@ import OpenAI from "openai";
 const app = express();
 
 // Path to the external config file
-const configPath = path.resolve("/run/secrets/back");
+const CONFIG_LOCATION = process.env.CONFIG_LOCATION || "../secrets/back.json";
+const configPath = path.resolve(CONFIG_LOCATION);
 
 // Default configuration if config file is missing or invalid
 let port = 8081;
