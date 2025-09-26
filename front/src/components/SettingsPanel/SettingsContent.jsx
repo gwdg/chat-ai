@@ -48,6 +48,10 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const dispatch = useDispatch();
   const userSettings = useSelector(selectUserSettings);
   const settings = localState.settings;
+  const tools = settings?.tools || {};
+  const showArcanaBox = !!settings?.enable_tools && !!tools.arcana;
+  const showMCPBox = !!settings?.enable_tools && !!tools.mcp;
+
   const migrationData = useSelector((state) => state.migration_data) || {};
   const { notifySuccess, notifyError } = useToast();
   const { openModal } = useModal();
@@ -407,13 +411,20 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             localState={localState}
             setLocalState={setLocalState}
           />
-          {/* Arcana box */}
-          <ArcanaContainer
-            localState={localState}
-            setLocalState={setLocalState}
-          />
-          {/* MCP box */}
-          <MCPContainer localState={localState} setLocalState={setLocalState} />
+          {/* Arcana box (only when enabled AND has an ID) */}
+          {showArcanaBox && (
+            <ArcanaContainer
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          )}
+          {/* MCP box (only when enabled AND has a value) */}
+          {showMCPBox && (
+            <MCPContainer
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          )}
           {/* temperature Slider */}
           <TemperatureSlider
             localState={localState}

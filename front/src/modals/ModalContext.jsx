@@ -28,13 +28,15 @@ import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
 import MigrateDataModal from "./Alert/MigrateDataModal";
 import ConversationConflict from "./Chat/ConversationConflict";
 
-import { useDispatch, useStore } from 'react-redux';
+import { useDispatch, useStore } from "react-redux";
 import { useToast } from "../hooks/useToast";
 import { useImportConversation } from "../hooks/useImportConversation";
 import HelpWebSearchModal from "./Help/HelpWebSearchModal";
 import WebSearchDisclaimer from "./Alert/WebSearchDisclaimer";
 import WelcomeModal from "./Help/WelcomeModal";
 import HelpMCPModal from "./Help/HelpMCPModal";
+import ConfigureArcanaModal from "./UserSettings/ConfigureArcanaModal";
+import ConfigureMCPModal from "./UserSettings/ConfigureMCPModal";
 
 const ModalContext = createContext();
 
@@ -50,7 +52,7 @@ export function ModalProvider({ children }) {
 
   const openModal = (type, props = {}) => {
     setModalType(type);
-    setModalProps( {...props, notifySuccess} );
+    setModalProps({ ...props, notifySuccess });
   };
 
   const closeModal = () => {
@@ -60,102 +62,114 @@ export function ModalProvider({ children }) {
 
   return (
     <ModalContext.Provider value={{ openModal, closeModal }}>
-        {children}
-        {/* Welcome Tour Modal */}
-        {modalType === "welcome" && (
-            <WelcomeModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {/* Sidebar Modals */}
-        {modalType === "deleteConversation" && (
-            <DeleteConversationModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "renameConversation" && (
-            <RenameConversationModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "importPersona" && (
-            <ImportPersonaModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {/* Setting Panel Modals */}
-        {modalType === "shareSettings" && (
-            <ShareSettingsModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {/* Help Modals */}
-        {modalType === "helpModels" && (
-            <HelpModelsModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "helpArcana" && (
-            <HelpArcanaModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "helpMCP" && (
-            <HelpMCPModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "helpMemory" && (
-            <HelpMemoryModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "helpSystemPrompt" && (
-            <HelpSystemPromptModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "helpTemperature" && (
-            <HelpTemperatureModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "helpTopP" && (
-            <HelpTopPModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "helpTools" && (
-            <HelpToolsModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "helpWebSearch" && (
-            <HelpWebSearchModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {/* User Settings Modals*/}
-        {modalType === "userSettings" && (
-            <UserSettingsModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "userMemory" && (
-            <UserMemoryModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "clearCache" && (
-            <ClearCacheModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "clearMemory" && (
-            <ClearMemoryModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {/* Error Modals */}
-        {modalType === "errorBadRequest" && (
-            <ErrorBadRequestModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "errorSessionExpired" && (
-            <ErrorSessionExpiredModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "clearMessages" && (
-            <ClearMessagesModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {/* General Modals */}
-        {modalType === "exportConversation" && (
-            <ExportConversationModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "preview" && (
-            <PreviewModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "unsentFiles" && (
-            <UnsentFilesModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "unprocessedFiles" && (
-            <UnprocessedFilesModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "serviceOffline" && (
-            <ServiceOfflineModal isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "conversationConflict" && (
-            <ConversationConflict isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "disclaimerWebSearch" && (
-            <WebSearchDisclaimer isOpen onClose={closeModal} {...modalProps} />
-        )}
-        {modalType === "migrate" && (
-            <MigrateDataModal isOpen onClose={closeModal} store={store} importConversation={importConversation} dispatch={dispatch} {...modalProps} />
-        )}
-      
+      {children}
+      {/* Welcome Tour Modal */}
+      {modalType === "welcome" && (
+        <WelcomeModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {/* Sidebar Modals */}
+      {modalType === "deleteConversation" && (
+        <DeleteConversationModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "renameConversation" && (
+        <RenameConversationModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "importPersona" && (
+        <ImportPersonaModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {/* Setting Panel Modals */}
+      {modalType === "shareSettings" && (
+        <ShareSettingsModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {/* Help Modals */}
+      {modalType === "helpModels" && (
+        <HelpModelsModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "helpArcana" && (
+        <HelpArcanaModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "helpMCP" && (
+        <HelpMCPModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "helpMemory" && (
+        <HelpMemoryModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "helpSystemPrompt" && (
+        <HelpSystemPromptModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "helpTemperature" && (
+        <HelpTemperatureModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "helpTopP" && (
+        <HelpTopPModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "helpTools" && (
+        <HelpToolsModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "helpWebSearch" && (
+        <HelpWebSearchModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {/* User Settings Modals*/}
+      {modalType === "userSettings" && (
+        <UserSettingsModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "userMemory" && (
+        <UserMemoryModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "clearCache" && (
+        <ClearCacheModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "clearMemory" && (
+        <ClearMemoryModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {/* Error Modals */}
+      {modalType === "errorBadRequest" && (
+        <ErrorBadRequestModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "errorSessionExpired" && (
+        <ErrorSessionExpiredModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "clearMessages" && (
+        <ClearMessagesModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {/* General Modals */}
+      {modalType === "exportConversation" && (
+        <ExportConversationModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "preview" && (
+        <PreviewModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "unsentFiles" && (
+        <UnsentFilesModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "unprocessedFiles" && (
+        <UnprocessedFilesModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "serviceOffline" && (
+        <ServiceOfflineModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "conversationConflict" && (
+        <ConversationConflict isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "disclaimerWebSearch" && (
+        <WebSearchDisclaimer isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "migrate" && (
+        <MigrateDataModal
+          isOpen
+          onClose={closeModal}
+          store={store}
+          importConversation={importConversation}
+          dispatch={dispatch}
+          {...modalProps}
+        />
+      )}
+      {modalType === "configureArcana" && (
+        <ConfigureArcanaModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "configureMCP" && (
+        <ConfigureMCPModal isOpen onClose={closeModal} {...modalProps} />
+      )}
     </ModalContext.Provider>
   );
 }
@@ -163,4 +177,3 @@ export function ModalProvider({ children }) {
 export function useModal() {
   return useContext(ModalContext);
 }
-

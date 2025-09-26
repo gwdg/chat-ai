@@ -16,7 +16,7 @@ export default function ToolTile({
 }) {
   const isDisabled = !enabledGlobally;
 
-  // Compact sizes you can tweak centrally
+  // Compact, consistent sizes (kept small as requested)
   const tileSize =
     size === "sm"
       ? "aspect-square w-[56px] sm:w-[60px] md:w-[64px] lg:w-[68px]"

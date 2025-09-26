@@ -13,12 +13,11 @@ import {
   Image as ImageIcon,
   Wand2,
   AudioLines,
+  Book, // Arcana
+  Server, // MCP
 } from "lucide-react";
 import ToolTile from "./ToolTile";
 
-/**
- * Manages state, disclaimer, persistence & layout for the tool toggles.
- */
 export default function ToolsContainer({ localState, setLocalState }) {
   const { openModal } = useModal();
   const dispatch = useDispatch();
@@ -28,6 +27,10 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools;
 
+  // Central: read helper values
+  const arcanaValue = settings?.arcana?.id || "";
+  const mcpValue = settings?.mcp_servers || "";
+
   // Tool list
   const TOOL_DEFS = useMemo(
     () => [
@@ -35,11 +38,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
       { key: "image_generation", Icon: ImageIcon, label: "Image Generation" },
       { key: "image_modification", Icon: Wand2, label: "Image Modification" },
       { key: "audio_generation", Icon: AudioLines, label: "Audio Generation" },
+      { key: "arcana", Icon: Book, label: "Arcana" },
+      { key: "mcp", Icon: Server, label: "MCP" },
     ],
     []
   );
 
-  // Generic toggle for non-web-search tools
+  // Generic toggle for non-web-search tools (and not arcana/mcp)
   const toggleTool = (toolKey, nextValue) => {
     setLocalState((prev) => ({
       ...prev,
@@ -81,6 +86,54 @@ export default function ToolsContainer({ localState, setLocalState }) {
     toggleWebSearch(nextValue);
   };
 
+  // Open Arcana config modal
+  const openArcanaModal = (initial = "") => {
+    openModal("configureArcana", {
+      initialValue: initial,
+      onSave: (val) => {
+        setLocalState((prev) => ({
+          ...prev,
+          settings: {
+            ...prev.settings,
+            arcana: { ...(prev.settings?.arcana || {}), id: val },
+          },
+          flush: true,
+        }));
+      },
+    });
+  };
+
+  // Open MCP config modal
+  const openMCPModal = (initial = "") => {
+    openModal("configureMCP", {
+      initialValue: initial,
+      onSave: (val) => {
+        setLocalState((prev) => ({
+          ...prev,
+          settings: {
+            ...prev.settings,
+            mcp_servers: val,
+          },
+          flush: true,
+        }));
+      },
+    });
+  };
+
+  const handleToggleArcana = (nextValue) => {
+    toggleTool("arcana", nextValue);
+    if (nextValue && !arcanaValue) {
+      openArcanaModal("");
+    }
+  };
+
+  const handleToggleMCP = (nextValue) => {
+    toggleTool("mcp", nextValue);
+    if (nextValue && !mcpValue) {
+      openMCPModal("");
+    }
+  };
+
   return (
     <div className="w-full space-y-3">
       {/* Header */}
@@ -104,8 +157,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
                 const nextEnabled = e.target.checked;
                 const prevTools = prev.settings?.tools || {};
 
-                // Turning OFF: preserve per-tool states; only master flag flips
                 if (!nextEnabled) {
+                  // OFF: only master flag flips; keep per-tool states as-is
                   return {
                     ...prev,
                     settings: {
@@ -116,8 +169,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
                   };
                 }
 
-                // Turning ON: restore previous tool states if they exist;
-                // else initialize defaults (all ON except web_search unless already agreed).
+                // ON: restore previous or set sensible defaults
                 const isFirstTime = Object.keys(prevTools).length === 0;
                 const initialWeb = isFirstTime
                   ? !!agreedWebSearch
@@ -131,6 +183,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
                 const initialAudio = isFirstTime
                   ? true
                   : !!prevTools.audio_generation;
+                const initialArcana = isFirstTime ? false : !!prevTools.arcana;
+                const initialMCP = isFirstTime ? false : !!prevTools.mcp;
 
                 return {
                   ...prev,
@@ -144,6 +198,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
                       image_generation: initialImgGen,
                       image_modification: initialImgMod,
                       audio_generation: initialAudio,
+                      arcana: initialArcana,
+                      mcp: initialMCP,
                     },
                   },
                   flush: true,
@@ -173,7 +229,19 @@ export default function ToolsContainer({ localState, setLocalState }) {
           const onToggle =
             key === "web_search"
               ? (next) => handleToggleWebSearch(next)
+              : key === "arcana"
+              ? (next) => handleToggleArcana(next)
+              : key === "mcp"
+              ? (next) => handleToggleMCP(next)
               : (next) => toggleTool(key, next);
+
+          // dynamic tiny caption under the tile
+          let caption = label;
+          if (key === "arcana" && active && arcanaValue) {
+            caption = `Arcana`;
+          } else if (key === "mcp" && active && mcpValue) {
+            caption = `MCP`;
+          }
 
           return (
             <div key={key} className="w-full flex flex-col items-center">
@@ -183,10 +251,10 @@ export default function ToolsContainer({ localState, setLocalState }) {
                 onToggle={onToggle}
                 Icon={Icon}
                 label={label}
-                size="sm" // << choose "sm" | "md" | "lg"
+                size="sm"
               />
-              <span className="mt-1 text-center text-[11px] sm:text-xs leading-tight text-gray-600 dark:text-gray-300 min-h-[1.4rem] px-1">
-                {label}
+              <span className="mt-1 text-center text-[11px] sm:text-xs leading-tight text-gray-600 dark:text-gray-300 min-h-[1.4rem] px-1 line-clamp-2">
+                {caption}
               </span>
             </div>
           );
