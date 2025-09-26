@@ -1,6 +1,12 @@
+// components/settings/ToolsContainer.jsx
 import React, { useMemo } from "react";
 import { Trans } from "react-i18next";
 import { useModal } from "../../modals/ModalContext";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  selectAgreeWebSearch,
+  agreeWebSearch,
+} from "../../Redux/reducers/interfaceSettingsSlice";
 import {
   HelpCircle,
   Globe,
@@ -8,93 +14,21 @@ import {
   Wand2,
   AudioLines,
 } from "lucide-react";
+import ToolTile from "./ToolTile";
 
-function ToolTile({ enabledGlobally, active, onToggle, Icon, label }) {
-  const isDisabled = !enabledGlobally;
-
-  return (
-    <button
-      type="button"
-      onClick={() => !isDisabled && onToggle(!active)}
-      title={label}
-      aria-label={label}
-      aria-pressed={active}
-      aria-disabled={isDisabled}
-      className={[
-        "group relative isolate rounded-2xl border",
-        "flex items-center justify-center",
-        "h-14 w-14 md:h-16 md:w-16",
-        "transition-all duration-150",
-        // --- states ---
-        isDisabled
-          ? [
-              "cursor-not-allowed opacity-60",
-              "border-gray-200 text-gray-400",
-              "dark:border-gray-700 dark:text-gray-500",
-              "bg-gray-50 dark:bg-gray-800/40",
-            ].join(" ")
-          : active
-          ? [
-              "cursor-pointer ring-2",
-              "border-emerald-600 ring-emerald-500 bg-emerald-50",
-              "text-emerald-800",
-              "dark:border-emerald-500/70 dark:ring-emerald-400",
-              "dark:bg-emerald-900/20 dark:text-emerald-200",
-            ].join(" ")
-          : [
-              "cursor-pointer",
-              "border-gray-200 bg-white text-gray-700",
-              "hover:shadow-sm hover:-translate-y-0.5 hover:ring-2 hover:ring-emerald-200",
-              "dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200",
-              "dark:hover:ring-emerald-500/30",
-            ].join(" "),
-      ].join(" ")}
-    >
-      {/* subtle background dot grid (light/dark aware) */}
-      <span
-        aria-hidden
-        className={[
-          "pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity",
-          "group-hover:opacity-100",
-          "bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.05)_1px,transparent_0)]",
-          "bg-[length:10px_10px]",
-          // dark theme dots
-          "dark:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)]",
-          active ? "opacity-100" : "",
-        ].join(" ")}
-      />
-
-      <Icon
-        className={[
-          "relative h-6 w-6 md:h-7 md:w-7 transition-transform",
-          isDisabled ? "" : active ? "scale-105" : "group-hover:scale-105",
-        ].join(" ")}
-      />
-
-      {/* tiny status dot at bottom */}
-      <span
-        aria-hidden
-        className={[
-          "absolute bottom-1.5 h-1.5 w-1.5 rounded-full",
-          isDisabled
-            ? "bg-gray-300 dark:bg-gray-600"
-            : active
-            ? "bg-emerald-600 dark:bg-emerald-400"
-            : "bg-gray-200 group-hover:bg-emerald-300",
-          "dark:group-hover:bg-emerald-400/70",
-        ].join(" ")}
-      />
-    </button>
-  );
-}
-
-
-function ToolsContainer({ localState, setLocalState }) {
+/**
+ * Manages state, disclaimer, persistence & layout for the tool toggles.
+ */
+export default function ToolsContainer({ localState, setLocalState }) {
   const { openModal } = useModal();
+  const dispatch = useDispatch();
+  const agreedWebSearch = useSelector(selectAgreeWebSearch);
+
   const settings = localState?.settings || {};
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools;
 
+  // Tool list
   const TOOL_DEFS = useMemo(
     () => [
       { key: "web_search", Icon: Globe, label: "Web Search" },
@@ -105,6 +39,7 @@ function ToolsContainer({ localState, setLocalState }) {
     []
   );
 
+  // Generic toggle for non-web-search tools
   const toggleTool = (toolKey, nextValue) => {
     setLocalState((prev) => ({
       ...prev,
@@ -116,6 +51,36 @@ function ToolsContainer({ localState, setLocalState }) {
     }));
   };
 
+  // Keep old flag + new tools.web_search in sync
+  const toggleWebSearch = (nextValue) => {
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        enable_web_search: nextValue, // legacy support
+        tools: {
+          ...prev.settings?.tools,
+          web_search: nextValue,
+        },
+      },
+      flush: true,
+    }));
+  };
+
+  // First-time disclaimer logic for Web Search
+  const handleToggleWebSearch = (nextValue) => {
+    if (nextValue && !agreedWebSearch) {
+      openModal("disclaimerWebSearch", {
+        onAgree: () => {
+          toggleWebSearch(true);
+          dispatch(agreeWebSearch());
+        },
+      });
+      return;
+    }
+    toggleWebSearch(nextValue);
+  };
+
   return (
     <div className="w-full space-y-3">
       {/* Header */}
@@ -123,7 +88,7 @@ function ToolsContainer({ localState, setLocalState }) {
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
           <p className="text-sm font-medium">GWDG Tools</p>
           <HelpCircle
-            className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
+            className="h-[16px] w-[16px] cursor-pointer text-sky-600 dark:text-sky-400"
             alt="help"
             onClick={() => openModal("helpTools")}
           />
@@ -135,11 +100,55 @@ function ToolsContainer({ localState, setLocalState }) {
             type="checkbox"
             checked={toolsEnabled}
             onChange={(e) =>
-              setLocalState((prev) => ({
-                ...prev,
-                settings: { ...prev.settings, enable_tools: e.target.checked },
-                flush: true,
-              }))
+              setLocalState((prev) => {
+                const nextEnabled = e.target.checked;
+                const prevTools = prev.settings?.tools || {};
+
+                // Turning OFF: preserve per-tool states; only master flag flips
+                if (!nextEnabled) {
+                  return {
+                    ...prev,
+                    settings: {
+                      ...prev.settings,
+                      enable_tools: false,
+                    },
+                    flush: true,
+                  };
+                }
+
+                // Turning ON: restore previous tool states if they exist;
+                // else initialize defaults (all ON except web_search unless already agreed).
+                const isFirstTime = Object.keys(prevTools).length === 0;
+                const initialWeb = isFirstTime
+                  ? !!agreedWebSearch
+                  : !!prevTools.web_search;
+                const initialImgGen = isFirstTime
+                  ? true
+                  : !!prevTools.image_generation;
+                const initialImgMod = isFirstTime
+                  ? true
+                  : !!prevTools.image_modification;
+                const initialAudio = isFirstTime
+                  ? true
+                  : !!prevTools.audio_generation;
+
+                return {
+                  ...prev,
+                  settings: {
+                    ...prev.settings,
+                    enable_tools: true,
+                    enable_web_search: initialWeb, // legacy sync
+                    tools: {
+                      ...prevTools,
+                      web_search: initialWeb,
+                      image_generation: initialImgGen,
+                      image_modification: initialImgMod,
+                      audio_generation: initialAudio,
+                    },
+                  },
+                  flush: true,
+                };
+              })
             }
             className="h-4 w-4 text-tertiary bg-gray-200 border-gray-300 rounded focus:ring-tertiary focus:ring-2"
           />
@@ -157,21 +166,32 @@ function ToolsContainer({ localState, setLocalState }) {
         </div>
       </div>
 
-      {/* Icon grid – auto-fit, wraps as needed */}
-      <div className="grid gap-2 place-items-center grid-cols-[repeat(auto-fit,minmax(3.5rem,1fr))] sm:grid-cols-[repeat(auto-fit,minmax(4rem,1fr))]">
-        {TOOL_DEFS.map(({ key, Icon, label }) => (
-          <ToolTile
-            key={key}
-            enabledGlobally={toolsEnabled}
-            active={!!toolsState[key]}
-            onToggle={(next) => toggleTool(key, next)}
-            Icon={Icon}
-            label={label}
-          />
-        ))}
+      {/* Icon grid – auto-fill, tidy at any width */}
+      <div className="grid gap-3 sm:gap-4 place-items-center grid-cols-[repeat(auto-fill,minmax(6.2rem,1fr))]">
+        {TOOL_DEFS.map(({ key, Icon, label }) => {
+          const active = !!toolsState[key];
+          const onToggle =
+            key === "web_search"
+              ? (next) => handleToggleWebSearch(next)
+              : (next) => toggleTool(key, next);
+
+          return (
+            <div key={key} className="w-full flex flex-col items-center">
+              <ToolTile
+                enabledGlobally={toolsEnabled}
+                active={active}
+                onToggle={onToggle}
+                Icon={Icon}
+                label={label}
+                size="sm" // << choose "sm" | "md" | "lg"
+              />
+              <span className="mt-1 text-center text-[11px] sm:text-xs leading-tight text-gray-600 dark:text-gray-300 min-h-[1.4rem] px-1">
+                {label}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
-
-export default ToolsContainer;
