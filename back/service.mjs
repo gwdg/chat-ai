@@ -227,6 +227,9 @@ app.post("/chat/completions", async (req, res) => {
           if (tool.type === "web_search_preview") {
             params.tools.push({type: "web_search_preview"});
           }
+          if (tool.type === "fetch_url") {
+            params.tools.push({type: "fetch_url"});
+          }
           if (tool.type === "image_generation") {
             params.tools.push({type: "image_generation"});
           }
