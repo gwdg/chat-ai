@@ -214,6 +214,16 @@ export default function Conversation({
     // After the smooth jump completes, bottom state/arrow will settle via handlers
   }, [scrollToBottom]);
 
+  const snapBottomBurst = useCallback(() => {
+    if (!autoFollow || !containerRef.current) return;
+    scrollToBottom("auto");
+    requestAnimationFrame(() => {
+      if (autoFollow && containerRef.current) {
+        scrollToBottom("auto");
+      }
+    });
+  }, [autoFollow, scrollToBottom]);
+
   return (
     <div
       className={`w-full md:max-w-[85vw] xl:max-w-[1300px]
