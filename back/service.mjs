@@ -247,15 +247,22 @@ app.post("/chat/completions", async (req, res) => {
 
     // Temporary workaround as middleware doesn't support timeout yet
     if (params.arcana || params.model.includes("rag") || params.model.includes("sauerkraut")) delete params.timeout;
+    
+    // Build headers object
+    const headers = {
+      "inference-service": inference_service,
+      "inference-portal": serviceName,
+    };
+
+    // Add inference-id only if it's not null/undefined
+    if (inference_id) {
+      headers["inference-id"] = inference_id;
+    }
 
     // Get chat completion response
-     const response = await openai.chat.completions.create(params, {
-        headers: {
-          "inference-service": inference_service,
-          "inference-portal": serviceName,
-          "inference-id": inference_id}
-      }
-    ).asResponse();
+    const response = await openai.chat.completions.create(params, {
+        headers
+    }).asResponse();
 
     // Pass through headers (optional but recommended)
     res.status(response.status);
