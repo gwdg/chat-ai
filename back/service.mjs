@@ -19,8 +19,10 @@ const configPath = path.resolve(CONFIG_LOCATION);
 // Default configuration if config file is missing or invalid
 let port = 8081;
 let apiEndpoint = "https://chat-ai.academiccloud.de/v1";
+let endpoints = [];
 let apiKey = "";
 let serviceName = "Chat AI Dev";
+let modelEndpoints = {};
 
 // Load configuration
 try {
@@ -33,9 +35,19 @@ try {
       "Invalid port in back.json. Falling back to default port 8081."
     );
   }
-  apiEndpoint = config.apiEndpoint;
-  apiKey = config.apiKey;
-  serviceName = config.serviceName;
+  apiEndpoint = config?.apiEndpoint;
+  apiKey = config?.apiKey;
+  endpoints = config?.endpoints || [];
+  if (!Array.isArray(endpoints) || endpoints.length === 0) {
+      endpoints = [
+        {
+          baseURL: apiEndpoint,
+          apiKey
+        }
+      ];
+  }
+  console.log("Endpoints: ", endpoints)
+  serviceName = config?.serviceName || serviceName;
 } catch (error) {
   console.error("Failed to read back.json. Using default values.", error);
 }
@@ -68,7 +80,7 @@ app.use(cors());
 
 // Function to process file with docling
 async function processFile(file, inference_id) {
-  const url = apiEndpoint + "/documents/convert";
+  const url = endpoints[0].baseURL + "/documents/convert";
   const formData = new FormData();
   formData.append("document", file.data, {
     filename: file.name,
@@ -126,15 +138,45 @@ app.post("/documents", async (req, res) => {
 
 // Get list of models
 app.get("/models", async (req, res) => {
+
+  const results = await Promise.all(endpoints.map(async (endpoint) => {
+        try {
+            const url = `${endpoint.baseURL}/models`;
+            const headers = {
+                Accept: "application/json",
+                Authorization: `Bearer ${endpoint.apiKey}`,
+                "inference-portal": serviceName,
+            };
+            const response = await fetch(url, { method: "GET", headers });
+            if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+            const data = await response.json();
+            return { endpoint, data };
+        } catch (error) {
+            console.error(`Error fetching from ${endpoint}: ${error}`);
+            return { endpoint, error: "Failed to fetch models." };
+        }
+    }));
+  
   try {
-    const url = apiEndpoint + "/models";
-    const headers = {
-      Accept: "application/json",
-      Authorization: "Bearer " + apiKey,
-      "inference-portal": "Chat AI",
-    };
-    const response = await fetch(url, { method: "GET", headers });
-    res.status(200).json(await response.json());
+    let combinedResults = { data: [] };
+
+    results.forEach((result, index) => {
+        if (result.data && Array.isArray(result.data?.data)) {
+          result.data.data.forEach(modelEntry => {
+                if (!Object.hasOwn(modelEntry, 'status')) {
+                    modelEntry.status = 'ready';
+                }
+                if (!Object.hasOwn(modelEntry, 'demand')) {
+                    modelEntry.demand = 0;
+                }
+                combinedResults.data.push(modelEntry);
+                if (Object.hasOwn(modelEntry, 'id')) {
+                    modelEndpoints[modelEntry.id] = index;
+                }
+            });
+        }
+    });
+    res.status(200).json(combinedResults);
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch models." });
@@ -181,6 +223,11 @@ app.post("/chat/completions", async (req, res) => {
   const validatedTimeout = Math.min(Math.max(timeout, 5000), 900000);
   let inference_service;
   let params;
+  
+  let endpointIndex;
+  try  {
+    endpointIndex = modelEndpoints[model] || 0;
+  } catch {endpointIndex = 0}
 
   try {
     // // Create a single timeout that applies to the entire request
@@ -245,8 +292,11 @@ app.post("/chat/completions", async (req, res) => {
         }
       }
     }
-    
-    const openai = new OpenAI({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id});
+
+    const openai = new OpenAI({
+      baseURL : endpoints[endpointIndex].baseURL,
+      apiKey: endpoints[endpointIndex].apiKey ? endpoints[endpointIndex].apiKey : inference_id
+    });
 
     // Temporary workaround as middleware doesn't support timeout yet
     if (params.arcana || params.model.includes("rag") || params.model.includes("sauerkraut")) delete params.timeout;
@@ -304,7 +354,7 @@ app.post("/chat/completions", async (req, res) => {
          });
       }
       // Couldn't extract error message, so try without openai library
-      const response = await fetch(apiEndpoint + "/chat/completions", {
+      const response = await fetch(endpoints[endpointIndex] + "/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${ apiKey ? apiKey : inference_id }`,
