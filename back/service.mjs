@@ -208,7 +208,7 @@ app.post("/chat/completions", async (req, res) => {
       timeout: timeout,
     }
 
-    const isExternalModel = model.startsWith("openai-") && !model.startsWith("gpt-oss-120b");
+    const isExternalModel = model.startsWith("openai-") && !model.startsWith("openai-gpt-oss");
     inference_service = model;
 
     if (arcana && arcana.id !== "") {
