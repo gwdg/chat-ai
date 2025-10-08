@@ -136,10 +136,9 @@ app.post("/documents", async (req, res) => {
   }
 });
 
-// Get list of models
-app.get("/models", async (req, res) => {
-
-  const results = await Promise.all(endpoints.map(async (endpoint) => {
+// Fetch and store the models from all endpoints
+async function fetchModels() {
+    const results = await Promise.all(endpoints.map(async (endpoint) => {
         try {
             const url = `${endpoint.baseURL}/models`;
             const headers = {
@@ -152,17 +151,16 @@ app.get("/models", async (req, res) => {
             const data = await response.json();
             return { endpoint, data };
         } catch (error) {
-            console.error(`Error fetching from ${endpoint}: ${error}`);
+            console.error(`Error fetching from ${endpoint.baseURL}: ${error}`);
             return { endpoint, error: "Failed to fetch models." };
         }
     }));
-  
-  try {
+
     let combinedResults = { data: [] };
 
     results.forEach((result, index) => {
         if (result.data && Array.isArray(result.data?.data)) {
-          result.data.data.forEach(modelEntry => {
+            result.data.data.forEach(modelEntry => {
                 if (!Object.hasOwn(modelEntry, 'status')) {
                     modelEntry.status = 'ready';
                 }
@@ -176,12 +174,30 @@ app.get("/models", async (req, res) => {
             });
         }
     });
-    res.status(200).json(combinedResults);
-  } catch (error) {
-    console.error(`Error: ${error}`);
-    res.status(500).json({ error: "Failed to fetch models." });
-  }
+
+    return combinedResults;
+}
+
+// Update models list on request
+app.get("/models", async (req, res) => {
+    try {
+        const combinedResults = await fetchModels();
+        res.status(200).json(combinedResults);
+    } catch (error) {
+        console.error(`Error: ${error}`);
+        res.status(500).json({ error: "Failed to fetch models." });
+    }
 });
+
+// Load models at startup
+(async () => {
+    try {
+        const startupModels = await fetchModels();
+        console.log("Models fetched at startup:", startupModels);
+    } catch (error) {
+        console.error("Initial model fetch failed:", error);
+    }
+})();
 
 // Get placeholder user data
 app.get("/user", async (req, res) => {

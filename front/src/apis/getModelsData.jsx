@@ -12,6 +12,8 @@ export async function getModelsData() {
     const enrichedModelsData = modelsData.map((model) => ({
       ...model,
       name: model.name || model.id,
+      input: model.input || ["text"],
+      output: model.output || ["text"],
     }));
     return enrichedModelsData;
   } catch (error) {
