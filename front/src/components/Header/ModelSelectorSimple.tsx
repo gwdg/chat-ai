@@ -83,11 +83,11 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             <span className="font-medium">{model.name}</span>
           </div>
           <div className="ml-2 flex items-center gap-1 text-tertiary">
-            {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
-            {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
-            {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
-            {model.input.includes("arcana") && <Tooltip text={"Arcana Input"}><FontAwesomeIcon icon={faBookOpen} /></Tooltip>}
-            {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+            {model.input?.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
+            {model.input?.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
+            {model.input?.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
+            {model.input?.includes("arcana") && <Tooltip text={"Arcana Input"}><FontAwesomeIcon icon={faBookOpen} /></Tooltip>}
+            {model.output?.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
           </div>
         </div>
       </div>

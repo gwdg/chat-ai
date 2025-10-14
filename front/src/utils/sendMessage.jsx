@@ -68,7 +68,7 @@ export async function processContentItems({
         const dataUrl = await readFileAsBase64(file);
         output.push({
           type: "video_url",
-          video_url: { url: dataURL }
+          video_url: { url: dataUrl }
         });
       }
       else if (fileType === "audio") {
