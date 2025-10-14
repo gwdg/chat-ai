@@ -5,14 +5,15 @@ import fs from "fs";
 import path from "path";
 
 const ASSET_URL = process.env.ASSET_URL || "";
+const CONFIG_LOCATION = process.env.CONFIG_LOCATION || "../secrets/front.json";
 
 // Default port if config file is missing or invalid
 let port = 8080;
 
 try {
   // Read and parse the JSON file
-  const config = JSON.parse(fs.readFileSync("/run/secrets/front", "utf8"));
-  console.log("Config loaded from /run/secrets/front:", config);
+  const config = JSON.parse(fs.readFileSync(CONFIG_LOCATION, "utf8"));
+  console.log(`Config loaded from ${CONFIG_LOCATION}:`, config);
 
   // Extract the port from the config (ensure it's a valid number)
   if (typeof config.port === "number" && config.port > 0) {

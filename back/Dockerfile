@@ -1,6 +1,9 @@
 # We are using the node base image
 FROM node:latest
 
+# Configure config location
+ENV CONFIG_LOCATION=/run/secrets/back
+
 # Create a directory for your application
 WORKDIR /usr/src/app
 

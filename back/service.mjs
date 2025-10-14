@@ -13,7 +13,8 @@ import OpenAI from "openai";
 const app = express();
 
 // Path to the external config file
-const configPath = path.resolve("/run/secrets/back");
+const CONFIG_LOCATION = process.env.CONFIG_LOCATION || "../secrets/back.json";
+const configPath = path.resolve(CONFIG_LOCATION);
 
 // Default configuration if config file is missing or invalid
 let port = 8081;
@@ -207,7 +208,7 @@ app.post("/chat/completions", async (req, res) => {
       timeout: timeout,
     }
 
-    const isExternalModel = model.startsWith("openai-") && !model.startsWith("gpt-oss-120b");
+    const isExternalModel = model.startsWith("openai-") && !model.startsWith("openai-gpt-oss");
     inference_service = model;
 
     if (arcana && arcana.id !== "") {
@@ -225,6 +226,9 @@ app.post("/chat/completions", async (req, res) => {
         for (const tool of tools) {
           if (tool.type === "web_search_preview") {
             params.tools.push({type: "web_search_preview"});
+          }
+          if (tool.type === "fetch_url") {
+            params.tools.push({type: "fetch_url"});
           }
           if (tool.type === "image_generation") {
             params.tools.push({type: "image_generation"});
@@ -246,15 +250,22 @@ app.post("/chat/completions", async (req, res) => {
 
     // Temporary workaround as middleware doesn't support timeout yet
     if (params.arcana || params.model.includes("rag") || params.model.includes("sauerkraut")) delete params.timeout;
+    
+    // Build headers object
+    const headers = {
+      "inference-service": inference_service,
+      "inference-portal": serviceName,
+    };
+
+    // Add inference-id only if it's not null/undefined
+    if (inference_id) {
+      headers["inference-id"] = inference_id;
+    }
 
     // Get chat completion response
-     const response = await openai.chat.completions.create(params, {
-        headers: {
-          "inference-service": inference_service,
-          "inference-portal": serviceName,
-          "inference-id": inference_id}
-      }
-    ).asResponse();
+    const response = await openai.chat.completions.create(params, {
+        headers
+    }).asResponse();
 
     // Pass through headers (optional but recommended)
     res.status(response.status);

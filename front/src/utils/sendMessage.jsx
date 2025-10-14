@@ -68,7 +68,7 @@ export async function processContentItems({
         const dataUrl = await readFileAsBase64(file);
         output.push({
           type: "video_url",
-          video_url: { url: dataURL }
+          video_url: { url: dataUrl }
         });
       }
       else if (fileType === "audio") {
@@ -213,6 +213,7 @@ const sendMessage = async ({
       conversationForAPI.settings.tools = [];
       if (conversationForAPI.settings?.enable_web_search) {
         conversationForAPI.settings.tools.push({ type: "web_search_preview" });
+        conversationForAPI.settings.tools.push({ type: "fetch_url" });
       }
       // If arcana id exists and isn't empty string ""
       if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {

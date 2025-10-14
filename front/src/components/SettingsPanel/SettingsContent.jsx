@@ -66,8 +66,8 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const [tourStepIndex, setTourStepIndex] = useState(0); // Add this
   const { isMobile, isTablet, isDesktop } = useWindowSize();
 
-  const showTourFlag = useSelector(selectShowTour); // always call the hook
-  const showTour = !isMobile && showTourFlag;
+  const showTourSelected = useSelector(selectShowTour);
+  const showTour = !isMobile && showTourSelected;
 
   const tourSteps = [
     // {
