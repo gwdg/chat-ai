@@ -1,6 +1,6 @@
 // components/settings/ToolsContainer.jsx
 import React, { useMemo } from "react";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useModal } from "../../modals/ModalContext";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -51,6 +51,7 @@ function MiniToolButton({ active, disabled, onClick, Icon, label }) {
 }
 
 export default function ToolsContainer({ localState, setLocalState }) {
+  const { t } = useTranslation();
   const { openModal } = useModal();
   const dispatch = useDispatch();
   const agreedWebSearch = useSelector(selectAgreeWebSearch);
@@ -59,32 +60,43 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools;
 
-  // Tool list
+  // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
     () => [
-      { key: "web_search", Icon: Globe, label: "Web Search" },
-      { key: "image_generation", Icon: ImageIcon, label: "Image Generation" },
-      { key: "image_modification", Icon: Wand2, label: "Image Modification" },
-      { key: "audio_generation", Icon: AudioLines, label: "Audio Generation" },
+      { key: "web_search", Icon: Globe, label: t("settings.label_web_search") },
+      {
+        key: "image_generation",
+        Icon: ImageIcon,
+        label: t("settings.label_image_generation"),
+      },
+      {
+        key: "image_modification",
+        Icon: Wand2,
+        label: t("settings.label_image_modification"),
+      },
+      {
+        key: "audio_generation",
+        Icon: AudioLines,
+        label: t("settings.label_audio_generation"),
+      },
       {
         key: "arcana",
         Icon: ({ className = "", ...rest }) => (
           <FontAwesomeIcon
             icon={faBookOpen}
-            // FA scales with font-size → use responsive Tailwind text-classes
             className={[
               "leading-none",
-              "text-[18px] md:text-[22px] lg:text-[26px]", // sm → md → lg
-              className, // keep whatever MiniToolButton passes
+              "text-[18px] md:text-[22px] lg:text-[26px]",
+              className,
             ].join(" ")}
             {...rest}
           />
         ),
-        label: "Arcana",
+        label: t("settings.label_arcana"),
       },
-      { key: "mcp", Icon: Server, label: "MCP Server" },
+      { key: "mcp", Icon: Server, label: t("settings.label_mcp_server") },
     ],
-    []
+    [t]
   );
 
   // Simple setter for per-tool flags
@@ -139,7 +151,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
       {/* Header */}
       <div className="flex flex-row md:gap-4 gap-3 w-full md:items-center">
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
-          <p className="text-sm font-medium">GWDG Tools</p>
+          <p className="text-sm font-medium">{t("settings.tools_title")}</p>
           <HelpCircle
             className="h-[16px] w-[16px] cursor-pointer text-gray-500 dark:text-gray-400"
             alt="help"
@@ -161,6 +173,11 @@ export default function ToolsContainer({ localState, setLocalState }) {
               "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer",
               toolsEnabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600",
             ].join(" ")}
+            aria-label={
+              toolsEnabled
+                ? t("settings.tools_enabled")
+                : t("settings.tools_disabled")
+            }
           >
             <span
               className={[
@@ -172,11 +189,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
 
           {toolsEnabled ? (
             <span className="text-sm font-medium text-green-700 dark:text-green-300">
-              Tools enabled
+              <Trans i18nKey="settings.tools_enabled">Tools are enabled</Trans>
             </span>
           ) : (
             <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-              Tools disabled
+              <Trans i18nKey="settings.tools_disabled">
+                Tools are disabled
+              </Trans>
             </span>
           )}
         </div>
