@@ -43,7 +43,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
             type="text"
             value={settings?.arcana?.id}
             onChange={handleArcanaChange()}
-            placeholder="id"
+            placeholder="Arcana id"
             className="dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-lg shadow-lg dark:shadow-dark w-full max-h-[40px]"
           />
 

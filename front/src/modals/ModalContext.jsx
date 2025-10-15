@@ -35,8 +35,6 @@ import HelpWebSearchModal from "./Help/HelpWebSearchModal";
 import WebSearchDisclaimer from "./Alert/WebSearchDisclaimer";
 import WelcomeModal from "./Help/WelcomeModal";
 import HelpMCPModal from "./Help/HelpMCPModal";
-import ConfigureArcanaModal from "./UserSettings/ConfigureArcanaModal";
-import ConfigureMCPModal from "./UserSettings/ConfigureMCPModal";
 
 const ModalContext = createContext();
 
@@ -163,12 +161,6 @@ export function ModalProvider({ children }) {
           dispatch={dispatch}
           {...modalProps}
         />
-      )}
-      {modalType === "configureArcana" && (
-        <ConfigureArcanaModal isOpen onClose={closeModal} {...modalProps} />
-      )}
-      {modalType === "configureMCP" && (
-        <ConfigureMCPModal isOpen onClose={closeModal} {...modalProps} />
       )}
     </ModalContext.Provider>
   );

@@ -16,7 +16,37 @@ import {
   Book, // Arcana
   Server, // MCP
 } from "lucide-react";
-import ToolTile from "./ToolTile";
+
+/**
+ * A compact, dot-free, pill-like toggle button.
+ */
+function MiniToolButton({ active, disabled, onClick, Icon, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        "group w-full select-none",
+        "rounded-xl border text-sm",
+        "px-3 py-2 md:px-3.5 md:py-2.5",
+        "flex items-center justify-center gap-2",
+        "transition-all",
+        disabled
+          ? "opacity-50 cursor-not-allowed"
+          : active
+          ? "border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-700 cursor-pointer"
+          : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50 dark:bg-bg_secondary_dark dark:text-gray-100 dark:border-border_dark dark:hover:bg-gray-800 cursor-pointer",
+        // subtle shadow only when active
+        active ? "shadow-sm" : "shadow-none",
+      ].join(" ")}
+      title={label}
+    >
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="leading-none">{label}</span>
+    </button>
+  );
+}
 
 export default function ToolsContainer({ localState, setLocalState }) {
   const { openModal } = useModal();
@@ -26,10 +56,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const settings = localState?.settings || {};
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools;
-
-  // Central: read helper values
-  const arcanaValue = settings?.arcana?.id || "";
-  const mcpValue = settings?.mcp_servers || "";
 
   // Tool list
   const TOOL_DEFS = useMemo(
@@ -44,7 +70,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
     []
   );
 
-  // Generic toggle for non-web-search tools (and not arcana/mcp)
+  // Simple setter for per-tool flags
   const toggleTool = (toolKey, nextValue) => {
     setLocalState((prev) => ({
       ...prev,
@@ -56,23 +82,20 @@ export default function ToolsContainer({ localState, setLocalState }) {
     }));
   };
 
-  // Keep old flag + new tools.web_search in sync
+  // Keep legacy web_search flag in sync
   const toggleWebSearch = (nextValue) => {
     setLocalState((prev) => ({
       ...prev,
       settings: {
         ...prev.settings,
         enable_web_search: nextValue, // legacy support
-        tools: {
-          ...prev.settings?.tools,
-          web_search: nextValue,
-        },
+        tools: { ...prev.settings?.tools, web_search: nextValue },
       },
       flush: true,
     }));
   };
 
-  // First-time disclaimer logic for Web Search
+  // First-time disclaimer for Web Search only (keep)
   const handleToggleWebSearch = (nextValue) => {
     if (nextValue && !agreedWebSearch) {
       openModal("disclaimerWebSearch", {
@@ -86,52 +109,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
     toggleWebSearch(nextValue);
   };
 
-  // Open Arcana config modal
-  const openArcanaModal = (initial = "") => {
-    openModal("configureArcana", {
-      initialValue: initial,
-      onSave: (val) => {
-        setLocalState((prev) => ({
-          ...prev,
-          settings: {
-            ...prev.settings,
-            arcana: { ...(prev.settings?.arcana || {}), id: val },
-          },
-          flush: true,
-        }));
-      },
-    });
-  };
-
-  // Open MCP config modal
-  const openMCPModal = (initial = "") => {
-    openModal("configureMCP", {
-      initialValue: initial,
-      onSave: (val) => {
-        setLocalState((prev) => ({
-          ...prev,
-          settings: {
-            ...prev.settings,
-            mcp_servers: val,
-          },
-          flush: true,
-        }));
-      },
-    });
-  };
-
+  // ⛔️ Removed popups: just toggle Arcana/MCP on/off.
   const handleToggleArcana = (nextValue) => {
     toggleTool("arcana", nextValue);
-    if (nextValue && !arcanaValue) {
-      openArcanaModal("");
-    }
   };
 
   const handleToggleMCP = (nextValue) => {
     toggleTool("mcp", nextValue);
-    if (nextValue && !mcpValue) {
-      openMCPModal("");
-    }
   };
 
   return (
@@ -147,116 +131,73 @@ export default function ToolsContainer({ localState, setLocalState }) {
           />
         </div>
 
-        <div className="w-full flex items-center gap-2">
-          <input
-            id="use-gwdg-tools"
-            type="checkbox"
-            checked={toolsEnabled}
-            onChange={(e) =>
-              setLocalState((prev) => {
-                const nextEnabled = e.target.checked;
-                const prevTools = prev.settings?.tools || {};
-
-                if (!nextEnabled) {
-                  // OFF: only master flag flips; keep per-tool states as-is
-                  return {
-                    ...prev,
-                    settings: {
-                      ...prev.settings,
-                      enable_tools: false,
-                    },
-                    flush: true,
-                  };
-                }
-
-                // ON: restore previous or set sensible defaults
-                const isFirstTime = Object.keys(prevTools).length === 0;
-                const initialWeb = isFirstTime
-                  ? !!agreedWebSearch
-                  : !!prevTools.web_search;
-                const initialImgGen = isFirstTime
-                  ? true
-                  : !!prevTools.image_generation;
-                const initialImgMod = isFirstTime
-                  ? true
-                  : !!prevTools.image_modification;
-                const initialAudio = isFirstTime
-                  ? true
-                  : !!prevTools.audio_generation;
-                const initialArcana = isFirstTime ? false : !!prevTools.arcana;
-                const initialMCP = isFirstTime ? false : !!prevTools.mcp;
-
-                return {
-                  ...prev,
-                  settings: {
-                    ...prev.settings,
-                    enable_tools: true,
-                    enable_web_search: initialWeb, // legacy sync
-                    tools: {
-                      ...prevTools,
-                      web_search: initialWeb,
-                      image_generation: initialImgGen,
-                      image_modification: initialImgMod,
-                      audio_generation: initialAudio,
-                      arcana: initialArcana,
-                      mcp: initialMCP,
-                    },
-                  },
-                  flush: true,
-                };
-              })
+        <div className="w-full flex items-center gap-3 select-none">
+          <button
+            type="button"
+            onClick={() =>
+              setLocalState((prev) => ({
+                ...prev,
+                settings: {
+                  ...prev.settings,
+                  enable_tools: !toolsEnabled,
+                },
+                flush: true,
+              }))
             }
-            className="h-4 w-4 text-tertiary bg-gray-200 border-gray-300 rounded focus:ring-tertiary focus:ring-2"
-          />
-          {!toolsEnabled ? (
-            <span className="text-sm text-gray-600 dark:text-gray-300">
-              <Trans i18nKey="settings.tools_disabled">
-                Tools are disabled
-              </Trans>
+            className={[
+              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer",
+              toolsEnabled ? "bg-sky-500" : "bg-gray-300 dark:bg-gray-600",
+            ].join(" ")}
+          >
+            <span
+              className={[
+                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                toolsEnabled ? "translate-x-6" : "translate-x-1",
+              ].join(" ")}
+            />
+          </button>
+
+          {toolsEnabled ? (
+            <span className="text-sm font-medium text-sky-700 dark:text-sky-300">
+              Tools enabled
             </span>
           ) : (
-            <span className="text-sm text-green-600 dark:text-green-300">
-              <Trans i18nKey="settings.tools_enabled">Tools are enabled</Trans>
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+              Tools disabled
             </span>
           )}
         </div>
       </div>
 
-      {/* Icon grid – auto-fill, tidy at any width */}
-      <div className="grid gap-3 sm:gap-4 place-items-center grid-cols-[repeat(auto-fill,minmax(6.2rem,1fr))]">
+      {/* Compact, responsive, dot-free grid */}
+      <div
+        className={[
+          "grid gap-2.5 sm:gap-3",
+          // auto-fill min width ~7.25rem so tiles stay small
+          "grid-cols-[repeat(auto-fill,minmax(7.25rem,1fr))]",
+        ].join(" ")}
+      >
         {TOOL_DEFS.map(({ key, Icon, label }) => {
           const active = !!toolsState[key];
+
           const onToggle =
             key === "web_search"
-              ? (next) => handleToggleWebSearch(next)
+              ? () => handleToggleWebSearch(!active)
               : key === "arcana"
-              ? (next) => handleToggleArcana(next)
+              ? () => handleToggleArcana(!active)
               : key === "mcp"
-              ? (next) => handleToggleMCP(next)
-              : (next) => toggleTool(key, next);
-
-          // dynamic tiny caption under the tile
-          let caption = label;
-          if (key === "arcana" && active && arcanaValue) {
-            caption = `Arcana`;
-          } else if (key === "mcp" && active && mcpValue) {
-            caption = `MCP`;
-          }
+              ? () => handleToggleMCP(!active)
+              : () => toggleTool(key, !active);
 
           return (
-            <div key={key} className="w-full flex flex-col items-center">
-              <ToolTile
-                enabledGlobally={toolsEnabled}
-                active={active}
-                onToggle={onToggle}
-                Icon={Icon}
-                label={label}
-                size="sm"
-              />
-              <span className="mt-1 text-center text-[11px] sm:text-xs leading-tight text-gray-600 dark:text-gray-300 min-h-[1.4rem] px-1 line-clamp-2">
-                {caption}
-              </span>
-            </div>
+            <MiniToolButton
+              key={key}
+              active={active}
+              disabled={!toolsEnabled}
+              onClick={onToggle}
+              Icon={Icon}
+              label={label}
+            />
           );
         })}
       </div>

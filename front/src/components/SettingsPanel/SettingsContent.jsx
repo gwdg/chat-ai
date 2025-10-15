@@ -355,7 +355,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             <ChevronRight className="w-7 h-7 text-tertiary" />
           </button>
           {/* Partner logos */}
-          <div className="flex gap-2 px-5 hidden md:flex">
+          <div className="gap-2 px-5 hidden md:flex">
             <PartnerContainer />
           </div>
           <div className="flex items-center gap-2">
