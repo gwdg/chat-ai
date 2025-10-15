@@ -13,9 +13,10 @@ import {
   Image as ImageIcon,
   Wand2,
   AudioLines,
-  Book, // Arcana
   Server, // MCP
 } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 
 /**
  * A compact, dot-free, pill-like toggle button.
@@ -28,22 +29,23 @@ function MiniToolButton({ active, disabled, onClick, Icon, label }) {
       disabled={disabled}
       className={[
         "group w-full select-none",
-        "rounded-xl border text-sm",
+        "rounded-xl border text-sm font-medium",
         "px-3 py-2 md:px-3.5 md:py-2.5",
-        "flex items-center justify-center gap-2",
+        "flex flex-col items-center justify-center gap-2",
         "transition-all",
         disabled
           ? "opacity-50 cursor-not-allowed"
           : active
-          ? "border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-700 cursor-pointer"
+          ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-200 dark:border-green-700 cursor-pointer"
           : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50 dark:bg-bg_secondary_dark dark:text-gray-100 dark:border-border_dark dark:hover:bg-gray-800 cursor-pointer",
-        // subtle shadow only when active
         active ? "shadow-sm" : "shadow-none",
       ].join(" ")}
       title={label}
     >
-      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="leading-none">{label}</span>
+      <Icon className="h-6 w-6 md:h-7 md:w-7 shrink-0" aria-hidden="true" />
+      <span className="leading-none text-xs sm:text-sm text-center">
+        {label}
+      </span>
     </button>
   );
 }
@@ -64,8 +66,23 @@ export default function ToolsContainer({ localState, setLocalState }) {
       { key: "image_generation", Icon: ImageIcon, label: "Image Generation" },
       { key: "image_modification", Icon: Wand2, label: "Image Modification" },
       { key: "audio_generation", Icon: AudioLines, label: "Audio Generation" },
-      { key: "arcana", Icon: Book, label: "Arcana" },
-      { key: "mcp", Icon: Server, label: "MCP" },
+      {
+        key: "arcana",
+        Icon: ({ className = "", ...rest }) => (
+          <FontAwesomeIcon
+            icon={faBookOpen}
+            // FA scales with font-size → use responsive Tailwind text-classes
+            className={[
+              "leading-none",
+              "text-[18px] md:text-[22px] lg:text-[26px]", // sm → md → lg
+              className, // keep whatever MiniToolButton passes
+            ].join(" ")}
+            {...rest}
+          />
+        ),
+        label: "Arcana",
+      },
+      { key: "mcp", Icon: Server, label: "MCP Server" },
     ],
     []
   );
@@ -95,7 +112,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
     }));
   };
 
-  // First-time disclaimer for Web Search only (keep)
+  // First-time disclaimer for Web Search only
   const handleToggleWebSearch = (nextValue) => {
     if (nextValue && !agreedWebSearch) {
       openModal("disclaimerWebSearch", {
@@ -109,11 +126,10 @@ export default function ToolsContainer({ localState, setLocalState }) {
     toggleWebSearch(nextValue);
   };
 
-  // ⛔️ Removed popups: just toggle Arcana/MCP on/off.
+  // Arcana/MCP toggles (no popups anymore)
   const handleToggleArcana = (nextValue) => {
     toggleTool("arcana", nextValue);
   };
-
   const handleToggleMCP = (nextValue) => {
     toggleTool("mcp", nextValue);
   };
@@ -125,7 +141,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
           <p className="text-sm font-medium">GWDG Tools</p>
           <HelpCircle
-            className="h-[16px] w-[16px] cursor-pointer text-sky-600 dark:text-sky-400"
+            className="h-[16px] w-[16px] cursor-pointer text-gray-500 dark:text-gray-400"
             alt="help"
             onClick={() => openModal("helpTools")}
           />
@@ -137,16 +153,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
             onClick={() =>
               setLocalState((prev) => ({
                 ...prev,
-                settings: {
-                  ...prev.settings,
-                  enable_tools: !toolsEnabled,
-                },
+                settings: { ...prev.settings, enable_tools: !toolsEnabled },
                 flush: true,
               }))
             }
             className={[
               "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer",
-              toolsEnabled ? "bg-sky-500" : "bg-gray-300 dark:bg-gray-600",
+              toolsEnabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600",
             ].join(" ")}
           >
             <span
@@ -158,7 +171,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
           </button>
 
           {toolsEnabled ? (
-            <span className="text-sm font-medium text-sky-700 dark:text-sky-300">
+            <span className="text-sm font-medium text-green-700 dark:text-green-300">
               Tools enabled
             </span>
           ) : (
@@ -169,17 +182,15 @@ export default function ToolsContainer({ localState, setLocalState }) {
         </div>
       </div>
 
-      {/* Compact, responsive, dot-free grid */}
+      {/* Compact, responsive grid */}
       <div
         className={[
           "grid gap-2.5 sm:gap-3",
-          // auto-fill min width ~7.25rem so tiles stay small
           "grid-cols-[repeat(auto-fill,minmax(7.25rem,1fr))]",
         ].join(" ")}
       >
         {TOOL_DEFS.map(({ key, Icon, label }) => {
           const active = !!toolsState[key];
-
           const onToggle =
             key === "web_search"
               ? () => handleToggleWebSearch(!active)
