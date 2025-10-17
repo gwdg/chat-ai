@@ -223,7 +223,7 @@ const sendMessage = async ({
       if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
         conversationForAPI.settings.arcana.limit = 3;
       }
-
+      conversationForAPI.settings.tools.push({ type: "audio_transcription" });
       // Always enable image and audio generation for now
       // conversationForAPI.settings.tools.push({ type: "image_generation" });
       // conversationForAPI.settings.tools.push({ type: "image_modify" });
@@ -365,6 +365,19 @@ const sendMessage = async ({
                 process_block += "";// "Audio generation completed.";
               } if (arg.event === "error") {
                 process_block += "Audio generation failed: " + String(arg?.msg) + "\n\n";
+              } else {
+                process_block += "";
+              }
+            }
+            if (delta.tool_calls[0]?.function?.name === "audio_transcription.event") {
+              let arg = delta.tool_calls[0].function.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (arg.event === "begin") {
+                process_block += `Transcribing audio: `;
+              } else if (arg.event === "done") {
+                process_block += arg.transcription + "\n\n";// "Audio transcription completed.";
+              } if (arg.event === "error") {
+                process_block += "Audio transcription failed: " + String(arg?.msg) + "\n\n";
               } else {
                 process_block += "";
               }
