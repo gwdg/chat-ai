@@ -18,9 +18,6 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 
-/**
- * A compact, dot-free, pill-like toggle button.
- */
 function MiniToolButton({ active, disabled, onClick, Icon, label }) {
   return (
     <button
@@ -43,7 +40,7 @@ function MiniToolButton({ active, disabled, onClick, Icon, label }) {
       title={label}
     >
       <Icon className="h-6 w-6 md:h-7 md:w-7 shrink-0" aria-hidden="true" />
-      <span className="leading-none text-xs sm:text-sm text-center">
+      <span className="leading-none text-xs text-center">
         {label}
       </span>
     </button>
@@ -94,7 +91,10 @@ export default function ToolsContainer({ localState, setLocalState }) {
         ),
         label: t("settings.label_arcana"),
       },
-      { key: "mcp", Icon: Server, label: t("settings.label_mcp_server") },
+      { key: "mcp",
+        Icon: Server,
+        label: t("settings.label_mcp_server")
+      },
     ],
     [t]
   );
@@ -111,34 +111,23 @@ export default function ToolsContainer({ localState, setLocalState }) {
     }));
   };
 
-  // Keep legacy web_search flag in sync
-  const toggleWebSearch = (nextValue) => {
-    setLocalState((prev) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        enable_web_search: nextValue, // legacy support
-        tools: { ...prev.settings?.tools, web_search: nextValue },
-      },
-      flush: true,
-    }));
-  };
-
   // First-time disclaimer for Web Search only
   const handleToggleWebSearch = (nextValue) => {
     if (nextValue && !agreedWebSearch) {
       openModal("disclaimerWebSearch", {
         onAgree: () => {
-          toggleWebSearch(true);
+          toggleTool("web_search", true);
+          toggleTool("fetch_url", true);
           dispatch(agreeWebSearch());
         },
       });
       return;
     }
-    toggleWebSearch(nextValue);
+    toggleTool("web_search", nextValue);
+    toggleTool("fetch_url", nextValue);
   };
 
-  // Arcana/MCP toggles (no popups anymore)
+  // Arcana/MCP toggles
   const handleToggleArcana = (nextValue) => {
     toggleTool("arcana", nextValue);
   };
@@ -193,9 +182,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
             </span>
           ) : (
             <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-              <Trans i18nKey="settings.tools_disabled">
-                Tools are disabled
-              </Trans>
+              <Trans i18nKey="settings.tools_disabled">Tools are disabled</Trans>
             </span>
           )}
         </div>
@@ -213,10 +200,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
           const onToggle =
             key === "web_search"
               ? () => handleToggleWebSearch(!active)
-              : key === "arcana"
-              ? () => handleToggleArcana(!active)
-              : key === "mcp"
-              ? () => handleToggleMCP(!active)
               : () => toggleTool(key, !active);
 
           return (
