@@ -31,7 +31,7 @@ export default function MicButton({
     : false;
 
     const model = localState.settings.model;
-    const isAudioSupported = (model?.input?.includes("audio") || false)
+    const isAudioSupported = (model?.input?.includes("audio") || localState?.settings?.enable_tools)
 
     const handleAudioClick = () => {
         if (loading) return;

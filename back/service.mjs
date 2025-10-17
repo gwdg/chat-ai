@@ -239,6 +239,9 @@ app.post("/chat/completions", async (req, res) => {
           if (tool.type === "audio_generation") {
             params.tools.push({type: "audio_generation"});
           }
+          if (tool.type === "audio_transcription") {
+            params.tools.push({type: "audio_transcription"});
+          }
           if (tool.type === "runRscript") {
             params.tools.push({type: "runRscript"});
           }
