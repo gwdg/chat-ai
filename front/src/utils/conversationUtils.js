@@ -21,6 +21,14 @@ export const getDefaultSettings = (userSettings = {}) => {
     top_p: 0.5,
     memory: 0,
     enable_tools: false,
+    tools: {
+      "web_search": false,
+      "image_generation": true,
+      "image_modification": true,
+      "audio_generation": true,
+      "arcana": true,
+      "mcp": false,
+    },
     enable_web_search: false,
     arcana: {id: "",},
   };

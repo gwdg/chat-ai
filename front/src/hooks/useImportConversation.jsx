@@ -270,7 +270,20 @@ export function useImportConversation() {
       }
       const tools = extractParameter(data, "tools");
       if (Array.isArray(tools)) {
-        settings.tools = tools;
+        const allFalse = Object.fromEntries(
+          Object.keys(settings.tools || {}).map(key => [key, false])
+        );
+        settings.tools = {
+          ...allFalse,
+          ...Object.fromEntries(tools
+            .filter(t => t.type !== "web_search" && t.type !== "fetch_url")
+            .map(t => [t.type, true]))
+        };
+        // TODO check if web search can be added
+      } else if (tools && typeof tools === "object") {
+        tools['web_search'] = false;
+        tools['fecth_url'] = false;
+        settings.tools = tools
       }
 
       // MCP servers

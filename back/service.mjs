@@ -224,7 +224,7 @@ app.post("/chat/completions", async (req, res) => {
       if (tools && tools.length > 0) {
         params.tools = [];
         for (const tool of tools) {
-          if (tool.type === "web_search_preview") {
+          if (tool.type === "web_search_preview" || tool.type === "web_search") {
             params.tools.push({type: "web_search_preview"});
           }
           if (tool.type === "fetch_url") {
@@ -233,7 +233,7 @@ app.post("/chat/completions", async (req, res) => {
           if (tool.type === "image_generation") {
             params.tools.push({type: "image_generation"});
           }
-          if (tool.type === "image_modify") {
+          if (tool.type === "image_modify" || tool.type === "image_modification") {
             params.tools.push({type: "image_modify"});
           }
           if (tool.type === "audio_generation") {
