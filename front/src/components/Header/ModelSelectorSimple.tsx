@@ -1,19 +1,20 @@
 
-import { useState, useMemo, useEffect, useRef, memo } from "react";
-import Tooltip from "../Others/Tooltip";
-import { useUpdateModelsData } from "../../hooks/useUpdateModelsData";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useSelector } from "react-redux";
 import {
-  faChevronDown, faMagnifyingGlass, faBrain, faImage, faVideo,
-  faMicrophone,
   faArrowUpAZ,
-  faBookOpen
-} from '@fortawesome/free-solid-svg-icons'
-import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
-import DemandIndicator from "./DemandIndicator";
-import type { BaseModelInfo } from "../../types/models";
+  faBookOpen,
+  faBrain,
+  faChevronDown,
+  faImage,
+  faMagnifyingGlass,
+  faMicrophone,
+  faVideo
+} from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import type { BaseModelInfo } from "../../types/models";
+import Tooltip from "../Others/Tooltip";
+import DemandIndicator from "./DemandIndicator";
 
 const sortOptions = [
   { value: "name-asc", label: "Name (A→Z)" },

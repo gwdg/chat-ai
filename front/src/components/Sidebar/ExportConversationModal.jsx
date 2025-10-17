@@ -123,6 +123,9 @@ export default function ExportConversationModal({
     if (conversation?.settings?.enable_tools) settings.enable_tools = conversation.settings.enable_tools;
     if (conversation?.settings?.mcp_servers) settings.mcp_servers = conversation.settings.mcp_servers;
     if (conversation?.settings?.top_p) settings.top_p = conversation.settings.top_p;
+    if (conversation?.settings?.tools) settings.tools = Object.keys(conversation.settings.tools)
+        .filter(t => conversation.settings.tools[t] === true)
+        .map(t => ({ type: t }));
     if (exportArcana && isArcanaSupported && conversation?.settings?.arcana?.id) {
       settings.arcana = conversation.settings.arcana;
     }

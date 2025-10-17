@@ -210,20 +210,24 @@ const sendMessage = async ({
       // Inject the current date and time to the system prompt in human-readable format
       const currentDate = new Date().toLocaleString();
       systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
-      conversationForAPI.settings.tools = [];
-      if (conversationForAPI.settings?.enable_web_search) {
-        conversationForAPI.settings.tools.push({ type: "web_search_preview" });
-        conversationForAPI.settings.tools.push({ type: "fetch_url" });
-      }
+      // Convert tools dictionary to OpenAI-compatible tools list
+      conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
+                .filter(([_, enabled]) => enabled)
+                .map(([toolKey]) => ({ type: toolKey }));
+      console.log(conversationForAPI.settings.tools);
+      // if (conversationForAPI.settings?.enable_web_search) {
+      //   conversationForAPI.settings.tools.push({ type: "web_search" });
+      //   conversationForAPI.settings.tools.push({ type: "fetch_url" });
+      // }
       // If arcana id exists and isn't empty string ""
       if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
         conversationForAPI.settings.arcana.limit = 3;
       }
 
       // Always enable image and audio generation for now
-      conversationForAPI.settings.tools.push({ type: "image_generation" });
-      conversationForAPI.settings.tools.push({ type: "image_modify" });
-      conversationForAPI.settings.tools.push({ type: "audio_generation" });
+      // conversationForAPI.settings.tools.push({ type: "image_generation" });
+      // conversationForAPI.settings.tools.push({ type: "image_modify" });
+      // conversationForAPI.settings.tools.push({ type: "audio_generation" });
       // conversationForAPI.settings.tools.push({ type: "runRscript" }); // Disabled for now
     } else {
       delete conversationForAPI.settings.tools;
