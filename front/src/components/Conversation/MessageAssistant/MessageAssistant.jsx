@@ -6,6 +6,7 @@ import Attachment from "../../Prompt/Attachment";
 import EditButton from "./EditButton";
 import { RotateCw } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
+import MetaBox from "./MetaBox";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -20,7 +21,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const loading = message?.loading || false;
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
-  const renderModes = ["Default", "Markdown", "LaTeX", "Plain Text"];
+  const renderModes = ["Default", "Markdown", "LaTeX", "Plaintext"];
 
   const sendMessage = useSendMessage();
 
@@ -204,7 +205,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               )}
               {/* Bottom panel for message */}
               <div className="group flex justify-between w-full mt-1 gap-2">
-                <div className="flex items-center justify-end mb-2 opacity-40 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="flex items-center justify-end mb-2 opacity-30 group-hover:opacity-100 transition-opacity duration-300">
                   {/* Render Mode Selector on the bottom left*/}
                   <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
                     {renderModes.map((mode) => (
@@ -212,7 +213,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                         key={mode}
                         onClick={() => !loading && setRenderMode(mode)}
                         className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
-                    ${loading ? "cursor-not-allowed opacity-40" : ""}
+                    ${loading ? "cursor-not-allowed opacity-20" : ""}
                     ${
                       renderMode === mode
                         ? "bg-tertiary text-white"
@@ -226,8 +227,13 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     ))}
                   </div>
                 </div>
+
                 {/* Buttons on the bottom right */}
-                <div className="flex items-center justify-end gap-3">
+                <div className="flex items-center justify-end gap-3 overflow-hidden">
+                  { /* Show message metadata */
+                  message?.meta && (
+                    <MetaBox meta={message.meta} /> 
+                  )}
                   <EditButton setEditMode={setEditMode} />
                   <CopyButton message={message} />
                 </div>

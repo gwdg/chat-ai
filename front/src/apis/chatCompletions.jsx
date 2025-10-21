@@ -70,6 +70,7 @@ async function* chatCompletions (
     }
 
     let answer = ""
+    let completed = false
     for await (const chunk of streamResponse) {
       if (chunk?.object == "error") {
         console.log(chunk)
@@ -80,10 +81,20 @@ async function* chatCompletions (
           throw err;
       }
       try {
-        answer += chunk.choices[0].delta?.content || ""
-        yield (chunk.choices[0].delta)
+        if (!completed) {
+          answer += chunk.choices[0].delta?.content || ""
+          // yield (chunk.choices[0].delta)
+          yield chunk
+        } else {
+          yield chunk;
+          return {
+            answer, 
+            usage: chunk?.usage || null
+          };
+        }
         if (chunk?.choices?.[0]?.finish_reason === 'stop') {
-          return answer
+          completed = true
+          // return answer
         }
       }
       catch (err) {

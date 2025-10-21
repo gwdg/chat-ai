@@ -275,10 +275,13 @@ const sendMessage = async ({
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
       let currentContent = [{"type": "text", "text": ""}];
+      let usage = null;
       let process_block = "";
       let inThinking = false;
       let message_text = "";
-      for await (const delta of chatCompletions(conversationForAPI, timeoutAPI)) {
+      for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
+        const delta = chunk?.choices[0]?.delta;
+        if (chunk?.usage) usage = chunk.usage;
         if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
           try {
             if (delta.tool_calls[0]?.function?.name === "tools.event") {
@@ -477,13 +480,25 @@ const sendMessage = async ({
         inThinking = false;
         currentContent[0].text = message_text
       }
-      return currentContent;
+      return {
+        answer: currentContent,
+        usage
+      }
     }
 
     let responseContent = "";
+    let usage = null;
+    let chatChunk = null;
+    let meta = undefined;
     try {
       // Get chat completion response
-      responseContent = await getChatChunk(conversationId);
+      chatChunk = await getChatChunk(conversationId);
+      responseContent = chatChunk?.answer || ""
+      usage = chatChunk?.usage;
+      meta = {
+        model: localState.settings.model?.name || localState.settings.model?.id || "",
+        usage
+      };
     } catch (error) {
       const errorType = error?.type || "Error";
       const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
@@ -496,7 +511,7 @@ const sendMessage = async ({
         if (prev.id !== conversationId) {
           // Handle save when conversation is not activ, ideally save directly into DB (TODO)
           const messages = [...localState.messages,
-            { role: "assistant", content: responseContent, loading: false },
+            { role: "assistant", content: responseContent, loading: false, meta },
             { role: "user", content: [{ type: "text", text: "" }] },
           ];
           updateConversation(
@@ -511,6 +526,7 @@ const sendMessage = async ({
           role: "assistant",
           content: responseContent,
           loading: false,
+          meta
         };
         return { ...prev, messages, flush: true };
       });

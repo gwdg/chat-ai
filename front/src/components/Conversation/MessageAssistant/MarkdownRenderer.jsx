@@ -626,7 +626,7 @@ const MarkdownRenderer = memo(
       const contentToRender = mainContent.trim();
 
       switch (renderMode) {
-        case "Plain Text":
+        case "Plaintext":
           return (
             <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto">
               {contentToRender}
