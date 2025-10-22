@@ -72,7 +72,7 @@ export default function SidebarRail({localState, setLocalState, userData, models
               modelsData={modelsData}
             />
 
-            <WarningExternalModel className="" localState={localState} userData={userData}  />
+            <WarningExternalModel localState={localState} userData={userData} />
           </div>
           {/** 
           <div id="placeholder" className="group flex-1 w-full hover:bg-light_hover dark:hover:bg-dark_hover cursor-pointer grid place-items-center"

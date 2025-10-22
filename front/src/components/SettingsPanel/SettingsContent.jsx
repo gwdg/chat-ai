@@ -32,6 +32,7 @@ import {
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import PartnerContainer from "../Header/PartnerContainer";
 import UserContainer from "../Header/UserContainer";
+import {DataSafetyText} from "../Header/WarningExternalModel";
 
 import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
@@ -375,24 +376,9 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
         <div className="flex flex-col gap-3 p-2 lg:p-4 h-full w-full">
           {/* User profile */}
           <div className="flex flex-row">
-            {/* Warning for external models */}
-            {localState.settings?.model?.name
-              ?.toLowerCase()
-              .includes("external") ? (
-              <div className="text-yellow-600 text-sm mb-3 select-none">
-                <Trans
-                  i18nKey={
-                    userData?.org == "MPG"
-                      ? "alert.external_model_mpg"
-                      : "alert.external_model"
-                  }
-                />
-              </div>
-            ) : (
-              <div className="flex flex-grow md:hidden h-full py-1 text-lg text-primary">
+            <div className="flex flex-grow md:hidden h-full py-1 text-lg text-primary">
                 <b>Settings</b>
-              </div>
-            )}
+            </div>
             <span className="md:hidden px-1">
               <UserContainer
                 localState={localState}
@@ -401,6 +387,8 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
               />
             </span>
           </div>
+          {/* Warning for external models */}
+          <DataSafetyText localState={localState} userData={userData} />
           {/* Use Tools – checkbox */}
           {/* <ToolsToggle localState={localState} setLocalState={setLocalState} />
           <WebSearchToggle
