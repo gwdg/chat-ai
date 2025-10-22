@@ -32,7 +32,6 @@ async function* chatCompletions (
       top_p: conversation.settings.top_p,
       stream: stream,
       stream_options: {include_usage: true },
-      timeout: timeout,
     };
 
     // Handle tools
