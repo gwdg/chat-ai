@@ -15,18 +15,17 @@ export function DataSafetyText({ localState, userData }) {
   if(isSafe) return null;
   return (
     <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-600 rounded-md text-yellow-800 dark:text-yellow-300">
-  <div className="flex items-center gap-2 p-2 text-sm text-yellow-700 dark:text-yellow-300 select-none">
-    <TriangleAlert className="w-7 h-7 shrink-0 text-yellow-600 dark:text-yellow-400" />
-    <Trans
-      i18nKey={
-        userData?.org === "MPG"
-          ? "alert.external_model_mpg"
-          : "alert.data_security_warning"
-      }
-    />
-  </div>
-</div>
-
+      <div className="flex items-center gap-2 p-2 text-sm text-yellow-700 dark:text-yellow-300 select-none">
+        <TriangleAlert className="w-7 h-7 shrink-0 text-yellow-600 dark:text-yellow-400" />
+        <Trans
+        i18nKey={
+            userData?.org === "MPG"
+            ? "alert.data_security_warning_mpg"
+            : "alert.data_security_warning"
+        }
+        />
+      </div>
+    </div>
   );
 }
 
@@ -65,11 +64,7 @@ export default function WarningExternalModel({ localState, userData }) {
         >
           <div className="text-green-600 dark:text-green-400 text-sm leading-relaxed">
             <Trans
-              i18nKey={
-                userData?.org == "MPG"
-                  ? "alert.external_model_mpg"
-                  : "alert.data_security_notice"
-              }
+              i18nKey={"alert.data_security_notice"}
             />
           </div>
           <button
@@ -128,8 +123,8 @@ export default function WarningExternalModel({ localState, userData }) {
           <div className="text-yellow-600 dark:text-yellow-400 text-sm leading-relaxed">
             <Trans
               i18nKey={
-                userData?.org == "MPG"
-                  ? "alert.external_model_mpg"
+                userData?.org === "MPG"
+                  ? "alert.data_security_warning_mpg"
                   : "alert.data_security_warning"
               }
             />

@@ -259,10 +259,11 @@ export default {
     no: "Nein, geh zurück",
     yes: "Ja, alles löschen",
     system_prompt_empty: "System-Prompt ist leer. Modell reagiert evtl. nicht.",
-    external_model:
-      "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die benutzerdefinierte Einstellungen werden nicht angewendet.",
-    external_model_mpg:
-      "Sie verwenden ein externes Modell. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und die benutzerdefinierte Einstellungen werden nicht angewendet. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
+    data_security_warning: 
+      "Sie verwenden ein externes Modell oder externe Funktionen. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und Ihre benutzerdefinierten Einstellungen werden nicht angewendet. Die Eingabe vertraulicher oder personenbezogener Daten ist zu unterlassen.",
+    data_security_warning_mpg:
+      "Sie verwenden ein externes Modell oder externe Funktionen. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und Ihre benutzerdefinierten Einstellungen werden nicht angewendet. Die Eingabe vertraulicher oder personenbezogener Daten ist zu unterlassen. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
+    data_security_notice: "Ihre Daten werden sicher innerhalb unserer Server verarbeitet. Es werden keine Informationen außerhalb der GWDG übertragen.",
     arcana_usage:
       "Halten Sie Temperatur auf 0 und top_p auf 0.05 für optimale Arcana-Ergebnisse",
     web_search_usage:
