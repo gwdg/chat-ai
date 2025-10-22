@@ -61,7 +61,7 @@ export default function WarningExternalModel({ localState, userData }) {
           className="absolute right-0 mt-2 p-4 
                         bg-white dark:bg-gray-800 
                         border border-gray-200 dark:border-gray-600 
-                        rounded-lg shadow-xl min-w-80 max-w-96 z-100"
+                        rounded-lg shadow-xl min-w-80 max-w-96 z-20"
         >
           <div className="text-green-600 dark:text-green-400 text-sm leading-relaxed">
             <Trans
@@ -123,7 +123,7 @@ export default function WarningExternalModel({ localState, userData }) {
           className="absolute right-0 mt-2 p-4 
                         bg-white dark:bg-gray-800 
                         border border-gray-200 dark:border-gray-600 
-                        rounded-lg shadow-xl min-w-80 max-w-96 z-100"
+                        rounded-lg shadow-xl min-w-80 max-w-96 z-20"
         >
           <div className="text-yellow-600 dark:text-yellow-400 text-sm leading-relaxed">
             <Trans
