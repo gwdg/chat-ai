@@ -5,7 +5,7 @@ import { selectShowSidebar, toggleSidebar, closeSidebar } from "../../Redux/redu
 import { useWindowSize } from "../../hooks/useWindowSize";
 
 import SidebarPanel from "./SidebarPanel";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import SidebarDrawer from "./SidebarDrawer";
 import { createConversation } from "../../db";
 import { getDefaultConversation } from "../../utils/conversationUtils";
@@ -26,10 +26,34 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
     }
   }, [isDesktop, dispatch]);
 
-  async function handleNewConversation() {
+  const handleNewConversation = useCallback(async () => {
     const newId = await createConversation(getDefaultConversation(userSettings));
     navigate(`/chat/${newId}`);
-  };
+  }, [userSettings, navigate]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || !event.shiftKey) {
+        return;
+      }
+
+      if (event.key.toLowerCase() !== "o") {
+        return;
+      }
+
+      event.preventDefault();
+
+      handleNewConversation().catch((error) => {
+        console.error("Failed to start new conversation from shortcut", error);
+      });
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleNewConversation]);
 
   return (
     <>
