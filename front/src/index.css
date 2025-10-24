@@ -2,15 +2,25 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+/* ──────────────────────────────────────────────────────────
+   Theme + base
+   ────────────────────────────────────────────────────────── */
+/* Light mode (default) */
 :root {
-  --primaryBackgroundColor: white;
-  --primaryTextColor: black;
-  --scrollBarColorDark: #434343;
-  --scrollBarColorLight: #ebebeb;
+  /* … keep your other vars … */
+  --scroll-thumb: #9ca3af; /* Tailwind gray-400 */
+  --scroll-track: transparent;
 
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+  scrollbar-width: thin;
+}
+
+/* Dark mode */
+.dark {
+  --scroll-thumb: #6b7280; /* Tailwind gray-500 (neutral on dark) */
+  --scroll-track: #1f2937; /* Tailwind gray-800 (subtle track) */
+
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
 }
 
 html,
@@ -19,30 +29,27 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  /* Do NOT hide page overflow globally. Let containers manage it. */
+  overflow: visible;
 }
 
 #root {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
+/* Remove global scrollbar hiding */
 .body {
-  overflow-y: hidden !important;
-  scrollbar-width: none; /* Hides scrollbar in Firefox */
+  /* leaving class in case it's referenced elsewhere, but not hiding scroll */
+  overflow-y: visible !important;
 }
 
-html {
-  scrollbar-width: none; /* Hides scrollbar in Firefox */
-}
-
-/* Joyride tooltip theme variables */
+/* Keep Joyride tooltip theme variables */
 :root {
   --tooltip-bg: #ffffff;
   --tooltip-text: #333333;
 }
-
 [class*="dark"] {
   --tooltip-bg: #1f2937;
   --tooltip-text: #f9fafb;
@@ -52,72 +59,54 @@ html {
 body {
   transition: zoom 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
-/* Common scrollbar styling */
+
+/* ──────────────────────────────────────────────────────────
+   Global scrollbar styling (WebKit/Chromium/Safari/Edge)
+   Applies to ALL scrollable elements (no class needed)
+   ────────────────────────────────────────────────────────── */
 *::-webkit-scrollbar {
-  /* width: 6px; 
-  height: 6px;  */
+  width: 2px;
+  height: 2px;
 }
 
-/* Track styling */
 *::-webkit-scrollbar-track {
-  /* background: transparent; */
+  background: transparent;
 }
 
-/* Thumb styling for light mode */
-.lightScrollbar::-webkit-scrollbar-thumb {
-  background-color: var(--scrollBarColorLight); /* Light mode thumb color */
-  border-radius: 50px; /* Fully rounded ends */
-  border: 2px solid transparent; /* Creates a rounded appearance */
-  background-clip: padding-box; /* Ensures rounded appearance */
+*::-webkit-scrollbar-thumb {
+  background-color: var(--tertiary);
+  border-radius: 2px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
 }
 
-/* Thumb styling for dark mode */
-.darkScrollbar::-webkit-scrollbar-thumb {
-  background-color: var(--scrollBarColorDark); /* Dark mode thumb color */
-  border-radius: 50px; /* Fully rounded ends */
-  border: 2px solid transparent; /* Creates a rounded appearance */
-  background-clip: padding-box; /* Ensures rounded appearance */
-}
-
-/* Thumb hover effect */
 *::-webkit-scrollbar-thumb:hover {
-  background-color: #888; /* Slightly darken on hover */
+  filter: brightness(0.9);
 }
 
 /* Remove scrollbar buttons */
 *::-webkit-scrollbar-button {
-  display: none; /* Explicitly hide scrollbar buttons */
-  width: 0; /* Ensure buttons do not take up space */
-  height: 0; /* Ensure buttons do not take up space */
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-/* Corner fix for consistent styling */
+/* Corner */
 *::-webkit-scrollbar-corner {
-  background: transparent; /* Ensure corner area matches the rest of the scrollbar */
+  background: transparent;
 }
 
-/* Firefox specific scrollbar styling for light and dark modes */
-.light .lightScrollbar {
-  scrollbar-color: var(--scrollBarColorLight) transparent; /* Light mode color */
-  scrollbar-width: thin; /* Slim scrollbar */
-}
-
-.dark .darkScrollbar {
-  scrollbar-color: var(--scrollBarColorDark) transparent; /* Dark mode color */
-  scrollbar-width: thin; /* Slim scrollbar */
-}
-
-/* footer animation */
+/* ──────────────────────────────────────────────────────────
+   Footer animation
+   ────────────────────────────────────────────────────────── */
 .footer {
   transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-
 .footer-visible {
   transform: translateY(0);
   opacity: 1;
 }
-
 .footer-hidden {
   transform: translateY(100%);
   opacity: 0;
@@ -133,98 +122,72 @@ body {
     opacity: 0;
   }
 }
-
 .slide-out-right {
   animation: slideOutRight 0.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) both;
 }
 
-/* customStyles.css */
+/* ──────────────────────────────────────────────────────────
+   Code / markdown tweaks
+   ────────────────────────────────────────────────────────── */
 .custom-syntax-highlighter {
   margin: 0px !important;
   background: inherit !important;
 }
 
-/* style.css - Updated with smaller text sizes */
 .react-markdown-output h1 {
-  font-size: 24px; /* Reduced from 30px */
+  font-size: 24px;
   font-weight: bold;
 }
-
 .react-markdown-output h2 {
-  font-size: 20px; /* Reduced from 26px */
+  font-size: 20px;
   font-weight: bold;
 }
-
 .react-markdown-output h3 {
-  font-size: 18px; /* Reduced from 22px */
+  font-size: 18px;
   font-weight: bold;
 }
-
 .react-markdown-output p {
   margin: 0.5em 0;
-  font-size: 14px; /* Added smaller font size */
+  font-size: 14px;
 }
-
 .react-markdown-output ol {
   list-style: number;
   padding: 0;
   margin: 0;
-  padding-left: 20px; /* Add 20px of padding to the left */
-  font-size: 14px; /* Added smaller font size */
+  padding-left: 20px;
+  font-size: 14px;
 }
-
 .react-markdown-output ul {
   list-style: inherit;
   padding: 0;
   margin: 0;
-  padding-left: 20px; /* Add 20px of padding to the left */
-  font-size: 14px; /* Added smaller font size */
+  padding-left: 20px;
+  font-size: 14px;
 }
-
 .react-markdown-output li {
   margin-bottom: 10px;
-  font-size: 14px; /* Added smaller font size */
+  font-size: 14px;
 }
 
-.react-markdown-output.light pre {
-  code {
-    background-color: #fff;
-    color: black !important;
-    font-size: 14px !important; /* Reduced from 16px */
-    width: 100%;
-    /* white-space: pre-wrap; */
-    display: inline-block;
-    overflow-x: auto;
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
-  }
-  code::-webkit-scrollbar {
-    display: none;
-  }
+/* Code blocks: allow horizontal scrolling; do NOT hide scrollbars */
+.react-markdown-output.light pre code,
+.react-markdown-output.dark pre code {
+  background-color: inherit;
+  color: inherit !important;
+  font-size: 14px !important;
+  width: 100%;
+  display: inline-block;
+  overflow-x: auto; /* let scrollbar show if needed */
+  -ms-overflow-style: auto;
+  scrollbar-width: thin; /* Firefox respects global but we ensure thin here */
 }
 
-.react-markdown-output.dark pre {
-  code {
-    background-color: #000;
-    color: #fff !important;
-    font-size: 14px !important; /* Reduced from 16px */
-    width: 100%;
-    display: inline-block;
-    overflow-x: auto;
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
-  }
-  code::-webkit-scrollbar {
-    display: none;
-  }
-}
 .react-markdown-output.light pre {
   background-color: #fff;
   color: black;
   overflow-x: auto;
   border-radius: 8px;
 }
-
 .react-markdown-output.dark pre {
   background-color: #000;
   color: #fff;
@@ -232,22 +195,20 @@ body {
   border-radius: 8px;
 }
 
+/* SVG stroke by theme containers (if used) */
 .light-theme svg path {
   stroke: #000;
 }
-
 .dark-theme svg path {
   stroke: #fff;
 }
 
-/* For light theme */
+/* Toasts */
 .light-toast {
   background: #ffffff;
   color: #000000;
   font-size: 14px;
 }
-
-/* For dark theme */
 .dark-toast {
   background: #2b2b2b;
   color: #ffffff;
@@ -261,11 +222,11 @@ body {
 }
 
 .code {
-  /* white-space: pre-wrap; */
   overflow: hidden;
   word-break: break-word;
 }
 
+/* Typing dots */
 .typing {
   width: 5em;
   height: 2em;
@@ -273,7 +234,6 @@ body {
   padding: 10px;
   margin-left: 5px;
 }
-
 .typing__dot {
   float: left;
   width: 8px;
@@ -283,15 +243,12 @@ body {
   opacity: 0;
   animation: loadingFade 1s infinite;
 }
-
 .typing__dot:nth-child(1) {
   animation-delay: 0s;
 }
-
 .typing__dot:nth-child(2) {
   animation-delay: 0.2s;
 }
-
 .typing__dot:nth-child(3) {
   animation-delay: 0.4s;
 }
@@ -308,7 +265,7 @@ body {
   }
 }
 
-/* Container for tick marks */
+/* Slider + ticks */
 .tick-marks-container {
   display: flex;
   justify-content: space-between;
@@ -321,30 +278,24 @@ body {
   background-color: #009ee0;
   height: 2px;
 }
-
 .tick-mark {
-  height: 8px; /* Adjust height if needed */
-  width: 1px; /* Adjust width if needed */
-  background-color: #009ee0; /* Use your color variable or value */
+  height: 8px;
+  width: 1px;
+  background-color: #009ee0;
   align-self: center;
 }
 
-/* Slider Input */
 .slider-input {
-  width: calc(
-    100% + 16px
-  ); /* Adjust width to accommodate thumb going outside bounds */
+  width: calc(100% + 16px);
   height: 2px;
   appearance: none;
   background: transparent;
   position: absolute;
   top: 50%;
-  left: -8px; /* Offset by half the thumb width to align thumb center with track */
+  left: -8px;
   transform: translateY(-50%);
   cursor: pointer;
 }
-
-/* Thumb styling */
 .slider-input::-webkit-slider-thumb {
   appearance: none;
   width: 16px;
@@ -353,39 +304,35 @@ body {
   border-radius: 50%;
   border: none;
 }
-
 .slider-input::-moz-range-thumb {
   width: 16px;
   height: 16px;
   background-color: #009ee0;
   border-radius: 50%;
-  margin-top: -7px; /* Offset thumb to align vertically */
+  margin-top: -7px;
   border: none;
 }
-
 .slider-input::-ms-thumb {
   width: 16px;
   height: 16px;
   background-color: #009ee0;
   border-radius: 50%;
-  margin-top: -7px; /* Offset thumb to align vertically */
+  margin-top: -7px;
   border: none;
 }
-
-/* Tooltip Display */
 .slider-tooltip {
   position: absolute;
-  top: -40px; /* Adjust this value to place the tooltip right above the thumb */
+  top: -40px;
   width: 32px;
-  color: #009ee0; /* Customize if needed */
-  background-color: var(--tooltip-bg-color, white); /* Customize if needed */
+  color: #009ee0;
+  background-color: var(--tooltip-bg-color, white);
   text-align: center;
-  padding: 4px; /* Adjust padding as needed */
-  border-radius: 4px; /* Adjust border-radius as needed */
-  font-size: 14px; /* Adjust font-size as needed */
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
-/* Mobile devices styles (devices less than 768px) */
+/* Toastify containers */
 @media only screen and (max-width: 768px) {
   .Toastify__toast-container {
     right: 0px;
@@ -393,52 +340,38 @@ body {
     top: 0px;
   }
 }
-
-/* Desktop and tablet styles (devices greater than or equal to 768px) */
 @media only screen and (min-width: 768px) {
   .Toastify__toast-container {
     right: 0px;
     top: 0px;
   }
 }
-
-/* Make sure toasts are visible */
 .Toastify__toast-container {
   z-index: 9999;
 }
 
+/* Math blocks */
 .custom-syntax-highlighter {
   background: transparent !important;
 }
-
 .math-inline {
   padding: 0 0.25rem;
 }
-
 .math-display {
   display: block;
   margin: 1rem 0;
   overflow-x: auto;
 }
 
+/* Utilities */
 .scroll-smooth {
   scroll-behavior: smooth;
 }
-
 .transition-all {
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
 }
-
-.hide-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
-.hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
-}
-
 @keyframes pulse-subtle {
   0%,
   100% {
@@ -448,7 +381,6 @@ body {
     opacity: 0.8;
   }
 }
-
 .animate-pulse-subtle {
   animation: pulse-subtle 2s ease-in-out infinite;
 }
