@@ -11,6 +11,7 @@ import {
   HelpCircle,
   Globe,
   Image as ImageIcon,
+  Video,
   Wand2,
   AudioLines,
   Server, // MCP
@@ -75,6 +76,11 @@ export default function ToolsContainer({ localState, setLocalState }) {
         key: "audio_generation",
         Icon: AudioLines,
         label: t("settings.label_audio_generation"),
+      },
+      {
+        key: "video_generation",
+        Icon: Video,
+        label: t("settings.label_video_generation"),
       },
       {
         key: "arcana",

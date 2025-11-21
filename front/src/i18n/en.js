@@ -44,6 +44,7 @@ export default {
     label_image_generation: "Image Generation",
     label_image_modification: "Image Modification",
     label_audio_generation: "Audio Generation",
+    label_video_generation: "Video Generation",
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",
     placeholder_arcana_id: "Arcana id",
