@@ -39,8 +39,9 @@ import LanguageSelector from "../Footer/LanguageSelector";
 import ThemeToggle from "../Header/ThemeToggle";
 import UserContainer from "../Header/UserContainer";
 import WarningExternalModel from "../Header/WarningExternalModel";
+import VideoQueueRailButton from "./VideoQueueRailButton";
 
-export default function SidebarRail({localState, setLocalState, userData, modelsData, onOpen }: { localState: any; setLocalState: any; userData: any; modelsData: any; onOpen: () => void }) {
+export default function SidebarRail({localState, setLocalState, userData, modelsData, onOpen, videoQueue, videoToolEnabled, onOpenVideoQueue }: { localState: any; setLocalState: any; userData: any; modelsData: any; onOpen: () => void; videoQueue: any; videoToolEnabled: boolean; onOpenVideoQueue: () => void }) {
 
   const { isTouch } = useWindowSize();
   return (
@@ -73,6 +74,7 @@ export default function SidebarRail({localState, setLocalState, userData, models
             />
 
             <WarningExternalModel localState={localState} userData={userData} />
+            <VideoQueueRailButton videoQueue={videoQueue} enabled={videoToolEnabled} onOpen={onOpenVideoQueue} />
           </div>
           {/** 
           <div id="placeholder" className="group flex-1 w-full hover:bg-light_hover dark:hover:bg-dark_hover cursor-pointer grid place-items-center"

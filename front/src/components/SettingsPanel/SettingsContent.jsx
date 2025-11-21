@@ -38,10 +38,11 @@ import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import MCPContainer from "./MCPContainer";
 import ToolsContainer from "./ToolsContainer";
+import VideoQueuePreview from "./VideoQueuePreview";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
-const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
+const SettingsPanel = ({ localState, setLocalState, userData, modelsData, videoQueue, videoToolEnabled }) => {
   const conversations = useConversationList();
 
   //Hooks
@@ -52,6 +53,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const tools = settings?.tools || {};
   const showArcanaBox = !!settings?.enable_tools && !!tools.arcana;
   const showMCPBox = !!settings?.enable_tools && !!tools.mcp;
+  const showVideoQueue = !!videoToolEnabled;
 
   const migrationData = useSelector((state) => state.migration_data) || {};
   const { notifySuccess, notifyError } = useToast();
@@ -400,6 +402,12 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             localState={localState}
             setLocalState={setLocalState}
           />
+          {showVideoQueue && (
+            <VideoQueuePreview
+              jobs={videoQueue?.jobs || []}
+              onDownload={() => {}}
+            />
+          )}
           {/* Arcana box (only when enabled AND has an ID) */}
           {showArcanaBox && (
             <ArcanaContainer

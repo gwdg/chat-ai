@@ -1,9 +1,8 @@
 import { useDispatch, useSelector } from "react-redux";
-import SettingsPanel from "./SettingsPanel";
 import { selectShowSettings, toggleSettings } from "../../Redux/reducers/interfaceSettingsSlice";
 import SettingsContent from "./SettingsContent";
 
-export default function SettingsDrawer({ localState, setLocalState, userData, modelsData }) {
+export default function SettingsDrawer({ localState, setLocalState, userData, modelsData, videoQueue, videoToolEnabled }) {
   
   const dispatch = useDispatch();
   const showSettings = useSelector(selectShowSettings);
@@ -25,7 +24,14 @@ export default function SettingsDrawer({ localState, setLocalState, userData, mo
           ${showSettings ? "translate-x-0" : "translate-x-full"} 
           bg-white dark:bg-bg_secondary_dark shadow-lg `}
       >
-        <SettingsContent localState={localState} setLocalState={setLocalState}  userData={userData} modelsData={modelsData} />
+        <SettingsContent
+          localState={localState}
+          setLocalState={setLocalState}
+          userData={userData}
+          modelsData={modelsData}
+          videoQueue={videoQueue}
+          videoToolEnabled={videoToolEnabled}
+        />
       </div>
     </>
   );
