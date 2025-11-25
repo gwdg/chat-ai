@@ -350,8 +350,6 @@ const useStreamingProcessor = (content, isLoading) => {
 
       if (processedIndexRef.current < content.length) {
         animationFrameRef.current = requestAnimationFrame(processNextChunk);
-      } else {
-        setIsStreaming(false);
       }
     };
 
@@ -696,7 +694,8 @@ const MarkdownRenderer = memo(
             <ThinkingBlock
               key={`thinking-${index}`}
               autoExpand={
-                isLoading || isStreaming || index === thinkingBlocks.length - 1
+                (isLoading || isStreaming) &&
+                index === thinkingBlocks.length - 1
               }
               isStreaming={isStreaming && index === thinkingBlocks.length - 1}
             >
