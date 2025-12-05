@@ -1,24 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getConversation, updateConversation, listConversationMetas } from "../db";
+import { getConversation, updateConversation } from "../db";
 
-import type { ConversationRow } from "../db/dbTypes";
+import type { HydratedConversation } from "../db/dbTypes";
 
-import { setLastConversation, selectLastConversation } from "../Redux/reducers/lastConversationSlice.jsx";
+import { selectLastConversation } from "../Redux/reducers/lastConversationSlice.jsx";
 
-import { getConversationMeta, getLastModifiedConversationMeta, createConversation } from "../db/index";
+import { createConversation, getConversationMeta, getLastModifiedConversationMeta } from "../db/index";
 
 import { validate as validateUUID, version as versionUUID } from "uuid";
 import { useModal } from "../modals/ModalContext";
-import { getDefaultConversation } from "../utils/conversationUtils";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
+import { getDefaultConversation } from "../utils/conversationUtils";
 import { useImportConversation } from "./useImportConversation";
 function validateConversationId(conversationId: string): boolean {
   return validateUUID(conversationId) && versionUUID(conversationId) === 4;
 }
 
-async function loadConversation(navigate, conversationId, lastConversationId, userSettings = {}, sharedSettings = null, importURL = null, importConversation = null, searchParams = null): Promise<ConversationRow | undefined> {
+async function loadConversation(navigate, conversationId, lastConversationId, userSettings = {}, sharedSettings = null, importURL = null, importConversation = null, searchParams = null): Promise<HydratedConversation | undefined> {
   // Handle import URL
   if (importURL) {
     try {
@@ -179,6 +179,9 @@ export function useSyncConversation({
   const timeoutIds = useRef({});
   const lastModified = useRef({});
   const delay = 600;
+  const latestStateRef = useRef(localState);
+  const saveInFlight = useRef(false);
+  const needsRetry = useRef(false);
 
   // Effect 1: Try to load conversation on mount
   useEffect(() => {
@@ -235,6 +238,7 @@ export function useSyncConversation({
 
   // Effect 2: Debounced auto-save into IndexedDB
   useEffect(() => {
+    latestStateRef.current = localState;
     if(!initialized) {
       if (localState?.id === conversationId) {
         setInitialized(true); // Initialized for next change
@@ -244,10 +248,6 @@ export function useSyncConversation({
     const currentConversation = localState?.id;
     // Check if want to write immediately
     const flushChanges = localState?.flush || false;
-    if (localState?.flush) {
-        // console.log("Flushing to DB....")
-        delete localState.flush
-    }
     // console.log("localState changed", localState);
     if (!isActive) return; // Only auto-save when tab active
     if (!currentConversation) return;
@@ -256,28 +256,69 @@ export function useSyncConversation({
     if (timeoutIds.current[currentConversation]) {
       clearTimeout(timeoutIds.current[currentConversation]);
     }
-    // Schedule a save after `delay` ms
-    timeoutIds.current[currentConversation] = setTimeout(async () => {
-      let ignoreConflict = false;
-      if (localState?.ignoreConflict) {
-          ignoreConflict = true;
-          delete localState.ignoreConflict;
-      }
-      const newLastModified = await updateConversation(
-        currentConversation,
-        { ...localState, lastModified: lastModified.current[currentConversation] }
-      )
-      if (newLastModified === -1) { // Conflict detected
-        if (ignoreConflict) return;
-        console.log("Conflict for conversation ", currentConversation);
-        openModal("conversationConflict", {localState, setLocalState, setUnsavedChanges});
+    const performSave = async () => {
+      if (saveInFlight.current) {
+        needsRetry.current = true;
+        delete timeoutIds.current[currentConversation];
         return;
       }
-      console.log("Conversation auto-saved");
-      setUnsavedChanges(false);
-      lastModified.current[currentConversation] = newLastModified;
+
+      saveInFlight.current = true;
+      needsRetry.current = false;
+
+      const snapshot = { ...latestStateRef.current };
+      let ignoreConflict = false;
+      if (snapshot?.ignoreConflict) {
+        ignoreConflict = true;
+        delete snapshot.ignoreConflict;
+      }
+      if (snapshot?.flush) {
+        delete snapshot.flush;
+      }
+
+      let lastModifiedForSave = lastModified.current[currentConversation];
+      if (lastModifiedForSave == null) {
+        const meta = await getConversationMeta(currentConversation);
+        lastModifiedForSave = meta?.lastModified ?? 0;
+        lastModified.current[currentConversation] = lastModifiedForSave;
+      }
+
+      const newLastModified = await updateConversation(
+        currentConversation,
+        { ...snapshot, lastModified: lastModifiedForSave }
+      );
+
+      const pendingSaveRequested = needsRetry.current;
+
+      saveInFlight.current = false;
       delete timeoutIds.current[currentConversation];
-    }, (flushChanges ? 0 : delay));
+
+      if (newLastModified === -1) { // Conflict detected
+        needsRetry.current = false;
+        if (!ignoreConflict) {
+          console.log("Conflict for conversation ", currentConversation);
+          openModal("conversationConflict", { localState: snapshot, setLocalState, setUnsavedChanges });
+        }
+        return;
+      }
+
+      // Save successful
+      lastModified.current[currentConversation] = newLastModified;
+
+      if (pendingSaveRequested) {
+        needsRetry.current = false;
+        setTimeout(performSave, 0);
+      } else {
+        console.log("Conversation auto-saved");
+        setUnsavedChanges(false);
+      }
+    };
+
+    // Schedule a save after `delay` ms
+    timeoutIds.current[currentConversation] = setTimeout(
+      performSave,
+      flushChanges ? 0 : delay
+    );
   }, [localState, delay]);
 
   // Effect 3: Listen for tab visibility changes
