@@ -33,8 +33,8 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
 
   return (
     <>
-      <div className="hidden md:flex relative min-w-[4rem]">
-        <div className={`h-full absolute  right-0
+      <div className="hidden md:flex relative min-w-[4rem] min-h-0 h-full">
+        <div className={`h-full min-h-0 absolute  right-0
                       transition-all duration-200 ease-in-out
                       ${showSettings && isDesktop ? "w-[30rem] opacity-0 pointer-events-none" : "w-[4rem] opacity-100"}
         `}>
@@ -50,7 +50,7 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
           />
         </div>
         {(isDesktop) && (
-          <div className={`h-full 
+          <div className={`h-full min-h-0
                         transition-all duration-200 ease-in-out overflow-hidden
           ${showSettings ? "opacity-100 w-[30rem]" : "w-[4rem] opacity-0 pointer-events-none"}`}>
             <SettingsPanel

@@ -23,7 +23,7 @@ export default function SettingsPanel({
       className="bg-white dark:bg-bg_secondary_dark
               rounded-xl shadow-md dark:shadow-dark
               overflow-hidden
-              w-[30rem] min-w-[15rem] h-full"
+              w-[30rem] min-w-[15rem] h-full min-h-0 flex flex-col"
     >
       <SettingsContent
         localState={localState}

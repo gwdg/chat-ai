@@ -347,7 +347,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData, videoQ
           }}
         />
       )}
-      <div className="settings-toggle flex relative w-full h-full flex-col items-center text-tertiary min-w-0 max-h-[100vh] xl:max-h-[96vh]">
+      <div className="settings-toggle flex relative w-full h-full flex-col items-center text-tertiary min-w-0 min-h-0 max-h-full">
         {/* Logos and User Profile */}
         <div className="w-full hidden md:flex items-center gap-3 justify-between p-3">
           <button
@@ -388,7 +388,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData, videoQ
             </span>
         </div>
         {/* Settings Panel */}
-        <div className="flex flex-col gap-3 pt-1 p-2 lg:pt-1 lg:p-4 h-full w-full overflow-y-auto">
+        <div className="flex flex-col gap-3 pt-1 p-2 lg:pt-1 lg:p-4 h-full w-full min-h-0 overflow-y-auto">
           
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
