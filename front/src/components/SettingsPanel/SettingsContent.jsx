@@ -38,6 +38,7 @@ import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import MCPContainer from "./MCPContainer";
 import ToolsContainer from "./ToolsContainer";
+import VideoList from "./VideoList";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -52,6 +53,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const tools = settings?.tools || {};
   const showArcanaBox = !!settings?.enable_tools && !!tools.arcana;
   const showMCPBox = !!settings?.enable_tools && !!tools.mcp;
+  const showVideoList = !!tools.video_generation;
 
   const migrationData = useSelector((state) => state.migration_data) || {};
   const { notifySuccess, notifyError } = useToast();
@@ -345,7 +347,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
           }}
         />
       )}
-      <div className="settings-toggle flex relative w-full h-full flex-col items-center text-tertiary min-w-0 max-h-[100vh] xl:max-h-[96vh]">
+      <div className="settings-toggle flex relative w-full h-full flex-col items-center text-tertiary min-w-0 min-h-0 max-h-full">
         {/* Logos and User Profile */}
         <div className="w-full hidden md:flex items-center gap-3 justify-between p-3">
           <button
@@ -386,7 +388,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             </span>
         </div>
         {/* Settings Panel */}
-        <div className="flex flex-col gap-3 pt-1 p-2 lg:pt-1 lg:p-4 h-full w-full overflow-y-auto">
+        <div className="flex flex-col gap-3 pt-1 p-2 lg:pt-1 lg:p-4 h-full w-full min-h-0 overflow-y-auto">
           
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
@@ -400,6 +402,12 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             localState={localState}
             setLocalState={setLocalState}
           />
+          {showVideoList && (
+            <VideoList
+              jobs={[]}
+              onDownload={() => {}}
+            />
+          )}
           {/* Arcana box (only when enabled AND has an ID) */}
           {showArcanaBox && (
             <ArcanaContainer

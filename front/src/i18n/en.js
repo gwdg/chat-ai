@@ -44,10 +44,28 @@ export default {
     label_image_generation: "Image Generation",
     label_image_modification: "Image Modification",
     label_audio_generation: "Audio Generation",
+    label_video_generation: "Video Generation",
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",
     placeholder_arcana_id: "Arcana id",
     placeholder_mcp_id: "Server id",
+    video_queue_title: "Video generation queue",
+    video_queue_subtitle: "List of video generation tasks.",
+    video_queue_job_label: "Video request #{{count}}",
+    video_queue_status_queued: "Queued",
+    video_queue_status_processing: "Processing",
+    video_queue_status_ready: "Ready",
+    video_queue_status_failed: "Failed",
+    video_queue_delete: "Delete",
+    video_queue_eta: "ETA ~{{seconds}}s",
+    video_queue_eta_done: "Completed just now",
+    video_queue_download: "Download",
+    video_queue_empty: "No video requests in the queue yet.",
+    video_queue_badge_label: "Video queue",
+    video_queue_badge_tooltip_processing: "{{processing}} processing • {{ready}} ready",
+    video_queue_badge_tooltip_ready: "{{ready}} ready to download",
+    video_queue_modal_title: "Video generation queue",
+    video_queue_modal_subtitle: "{{processing}} processing • {{ready}} ready to download",
   },
 
   // Conversation
@@ -230,7 +248,7 @@ export default {
     sidebar:
       "In the sidebar you can add, export, delete, and switch conversations. You can import and export conversations to your device, or choose a Persona to chat with.",
     settings:
-      "In the settings panel, you can adjust the system prompt, temperature, and top_p. You can specify Chat AI's memory settings and enable new GWDG tools, including arcana, image generation, and web search.",
+      "In the settings panel, you can adjust the system prompt, temperature, and top_p. You can specify Chat AI's memory settings, enable and select GWDG tools, including arcana, image generation, web search, and more! Some tools may be available only to certain users.",
     profile:
       "Just below the settings button, this button will open your user profile, where you can set your preferences, manage memories, and export or clear your data.",
     interface:

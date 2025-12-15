@@ -12,14 +12,15 @@ export type ModelSpec = {
 }
 
 export type ConversationSettings = {
-  model: ModelSpec
+  model: ModelSpec | string
   temperature: number
   top_p: number
   memory: number
   enable_tools: boolean
   enable_web_search: boolean
-  tools: any[]
+  tools: Record<string, any>
   arcana: Record<string, any>
+  [k: string]: any
 }
 
 export type ConversationRow = {
@@ -29,6 +30,10 @@ export type ConversationRow = {
   lastModified: number
   settings: ConversationSettings
   messageCount: number
+}
+
+export type HydratedConversation = ConversationRow & {
+  messages: any[]
 }
 
 export type MessageRow = {

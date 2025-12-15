@@ -16,7 +16,12 @@ export const getDefaultSettings = (userSettings = {}) => {
 
   // Default settings if not in envSettings or userSettings
   const defaultSettings = {
-    model: "",
+    model: {
+      id: "",
+      name: "",
+      input: [],
+      output: [],
+    },
     temperature: 0.5,
     top_p: 0.5,
     memory: 0,
@@ -45,6 +50,7 @@ export const getDefaultSettings = (userSettings = {}) => {
 
 export const getDefaultConversation = (userSettings = {}) => {
   const settings = getDefaultSettings(userSettings);
+  const now = Date.now();
   return {
     id: uuidv4(),
     title: "Untitled Conversation",
@@ -68,8 +74,8 @@ export const getDefaultConversation = (userSettings = {}) => {
       }
     ],
     settings: settings,
-    createdAt: new Date().toISOString(),
-    lastModified: new Date().toISOString(),
+    createdAt: now,
+    lastModified: now,
   };
 };
 

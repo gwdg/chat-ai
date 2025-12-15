@@ -40,7 +40,7 @@ import ThemeToggle from "../Header/ThemeToggle";
 import UserContainer from "../Header/UserContainer";
 import WarningExternalModel from "../Header/WarningExternalModel";
 
-export default function SidebarRail({localState, setLocalState, userData, modelsData, onOpen }: { localState: any; setLocalState: any; userData: any; modelsData: any; onOpen: () => void }) {
+export default function SidebarRail({localState, setLocalState, userData, modelsData, onOpen}: { localState: any; setLocalState: any; userData: any; modelsData: any; onOpen: () => void }) {
 
   const { isTouch } = useWindowSize();
   return (

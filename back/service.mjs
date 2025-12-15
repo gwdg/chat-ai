@@ -174,6 +174,7 @@ app.post("/chat/completions", async (req, res) => {
 
   const mcp_servers = req.body["mcp-servers"] || null;
   const inference_id = req.headers["inference-id"];
+  const uid = req.headers["oidc_claim_uid"];
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
   }
@@ -218,6 +219,7 @@ app.post("/chat/completions", async (req, res) => {
     // Handle tools and arcana
     if (enable_tools && !isExternalModel) {
       inference_service = "saia-openai-gateway";
+      params["runToolsOnServer"] = true;
       if (mcp_servers && mcp_servers.length > 0) {
         params["mcp-servers"] = mcp_servers;
       }
@@ -232,6 +234,9 @@ app.post("/chat/completions", async (req, res) => {
           }
           if (tool.type === "image_generation") {
             params.tools.push({type: "image_generation"});
+          }
+          if (tool.type === "video_generation") {
+            params.tools.push({type: "video_create"});
           }
           if (tool.type === "image_modify" || tool.type === "image_modification") {
             params.tools.push({type: "image_modify"});
@@ -258,6 +263,7 @@ app.post("/chat/completions", async (req, res) => {
     const headers = {
       "inference-service": inference_service,
       "inference-portal": serviceName,
+      "user": uid
     };
 
     // Add inference-id only if it's not null/undefined

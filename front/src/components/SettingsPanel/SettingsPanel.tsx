@@ -1,9 +1,20 @@
-import { useDispatch } from "react-redux";
-
-import { toggleSettings, toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 import SettingsContent from "./SettingsContent";
 
-export default function SettingsPanel({ localState, setLocalState, userData, modelsData }: { localState: any, setLocalState: any, userData: any, modelsData: any }) {
+export default function SettingsPanel({
+  localState,
+  setLocalState,
+  userData,
+  modelsData,
+  videoQueue,
+  videoToolEnabled,
+}: {
+  localState: any,
+  setLocalState: any,
+  userData: any,
+  modelsData: any,
+  videoQueue: any,
+  videoToolEnabled: boolean
+}) {
   /*
   Small Container for the Desktop Extended Sidebar
   */
@@ -12,9 +23,16 @@ export default function SettingsPanel({ localState, setLocalState, userData, mod
       className="bg-white dark:bg-bg_secondary_dark
               rounded-xl shadow-md dark:shadow-dark
               overflow-hidden
-              w-[30rem] min-w-[15rem] h-full"
+              w-[30rem] min-w-[15rem] h-full min-h-0 flex flex-col"
     >
-      <SettingsContent localState={localState} setLocalState={setLocalState} userData={userData} modelsData={modelsData} />
+      <SettingsContent
+        localState={localState}
+        setLocalState={setLocalState}
+        userData={userData}
+        modelsData={modelsData}
+        videoQueue={videoQueue}
+        videoToolEnabled={videoToolEnabled}
+      />
     </div>
   );
 }

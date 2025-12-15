@@ -44,10 +44,28 @@ export default {
     label_image_generation: "Bildgenerierung",
     label_image_modification: "Bildbearbeitung",
     label_audio_generation: "Audiogenerierung",
+    label_video_generation: "Videogenerierung",
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",
     placeholder_arcana_id: "Arcana-ID",
     placeholder_mcp_id: "Server-ID",
+    video_queue_title: "Videogenerierungs-Warteschlange",
+    video_queue_subtitle: "Liste der Video-Generation Aufgaben",
+    video_queue_job_label: "Videoanfrage #{{count}}",
+    video_queue_status_queued: "Warteschlange",
+    video_queue_status_processing: "In Bearbeitung",
+    video_queue_status_ready: "Fertig",
+    video_queue_status_failed: "Fehlgeschlagen",
+    video_queue_delete: "Löschen",
+    video_queue_eta: "ETA ~{{seconds}}s",
+    video_queue_eta_done: "Gerade abgeschlossen",
+    video_queue_download: "Download",
+    video_queue_empty: "Noch keine Videoanfragen in der Warteschlange.",
+    video_queue_badge_label: "Video-Warteschlange",
+    video_queue_badge_tooltip_processing: "{{processing}} in Arbeit • {{ready}} fertig",
+    video_queue_badge_tooltip_ready: "{{ready}} bereit zum Download",
+    video_queue_modal_title: "Videogenerierungs-Warteschlange",
+    video_queue_modal_subtitle: "{{processing}} in Arbeit • {{ready}} fertig zum Download",
   },
 
   // Conversation
@@ -229,7 +247,7 @@ export default {
     sidebar:
       "In der Seitenleiste können Sie Gespräche hinzufügen, exportieren, löschen und zwischen ihnen wechseln. Sie können Gespräche auf Ihr Gerät importieren und exportieren oder eine Persona zum Chatten auswählen.",
     settings:
-      "Im Einstellungsmenü können Sie den System-Prompt, die Temperatur und den Wert top_p anpassen. Sie können die Speichereinstellungen von Chat AI festlegen und neue GWDG-Tools aktivieren, einschließlich Arcana, Bildgenerierung und Websuche.",
+      "Im Einstellungsbereich können Sie den System‑Prompt, die Temperatur und top_p anpassen. Zudem können Sie die Speichereinstellungen der Chat‑KI festlegen sowie GWDG-Tools aktivieren und auswählen, darunter Arcana, Bildgenerierung, Websuche und mehr. Einige Werkzeuge sind möglicherweise nur für bestimmte Nutzer verfügbar.",
     profile:
       "Direkt unter der Schaltfläche für die Einstellungen befindet sich diese Schaltfläche, mit der Sie Ihr Benutzerprofil öffnen können. Dort können Sie Ihre Präferenzen festlegen, Erinnerungen verwalten sowie Ihre Daten exportieren oder löschen.",
     interface:

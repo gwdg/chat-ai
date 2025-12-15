@@ -8,23 +8,30 @@ import { rendererComponents } from "./MarkdownRenderer";
 
 const ThinkingBlock = memo(
   ({ children, autoExpand = false, isStreaming = false }) => {
-    const [isOpen, setIsOpen] = useState(autoExpand);
+    const [isOpen, setIsOpen] = useState(autoExpand && isStreaming);
+    const [autoOpened, setAutoOpened] = useState(autoExpand && isStreaming);
     const contentRef = useRef(null);
 
-    // useEffect(() => {
-    //   if (autoExpand && contentRef.current) {
-    //     contentRef.current.scrollIntoView({
-    //       behavior: "smooth",
-    //       block: "start",
-    //     });
-    //   }
-    // }, [autoExpand]);
+    // Auto-open while the model is still "thinking", then collapse once done unless
+    // the user has explicitly toggled it.
+    useEffect(() => {
+      if (autoExpand && isStreaming) {
+        setIsOpen(true);
+        setAutoOpened(true);
+      } else if (!isStreaming && autoOpened) {
+        setIsOpen(false);
+        setAutoOpened(false);
+      }
+    }, [autoExpand, isStreaming, autoOpened]);
 
     return (
       <div className="my-4 rounded-lg border border-tertiary">
         <button
           onClick={() => {
-            if (!isStreaming) setIsOpen(!isOpen);
+            if (!isStreaming) {
+              setIsOpen(!isOpen);
+              setAutoOpened(false);
+            }
           }}
           className="rounded-lg cursor-pointer flex items-center w-full p-3 text-xs bg-blue-50 dark:bg-blue-900/30 rounded-t-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
           aria-expanded={isOpen}

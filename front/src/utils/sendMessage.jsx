@@ -124,7 +124,7 @@ export async function processContentItems({
   return output;
 }
 
-function receiveFile(base64Data, mimeType, filename = "file", conversationId = null, ext = null) {
+function receiveFile(base64Data, mimeType, filename = null, conversationId = null, ext = null) {
   // Decode base64 data
   const byteCharacters = atob(base64Data);
   const byteNumbers = new Array(byteCharacters.length);
@@ -135,10 +135,14 @@ function receiveFile(base64Data, mimeType, filename = "file", conversationId = n
 
   // Create File object
   let file;
-  if (ext) {
-    file = new File([byteArray], filename + "." + ext, { type: mimeType });
+
+  if (filename) {
+    file = new File([byteArray], filename, { type: mimeType });
+  }
+  else if (ext) {
+    file = new File([byteArray], "file." + ext, { type: mimeType });
   } else {
-    file = new File([byteArray], filename + "." + mimeType.split("/")[1], { type: mimeType });
+    file = new File([byteArray], "file." + mimeType.split("/")[1], { type: mimeType });
   }
 
   // Save file
@@ -359,6 +363,17 @@ const sendMessage = async ({
                 process_block += "";
               }
             }
+            if (delta.tool_calls[0]?.function?.name === "video.event") {
+              let arg = delta.tool_calls[0].function.arguments;
+              if (typeof arg === "string") arg = JSON.parse(arg);
+              if (arg.event === "begin") {
+                process_block += `Generating video: "${arg.query}" \n\n`;
+              } if (arg.event === "error") {
+                process_block += "Video generation failed: " + String(arg?.msg) + "\n\n";
+              } else {
+                process_block += "";
+              }
+            }
             if (delta.tool_calls[0]?.function?.name === "audio.event") {
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
@@ -400,8 +415,9 @@ const sendMessage = async ({
             const transcript = delta.audio?.transcript;
 
             const format = delta.audio?.format || "wav";
-            const mimeType = "audio/" + format;
-            fileId = await receiveFile(base64_data, mimeType, "audio_output", conversationId);
+            const filename = delta.audio?.filename || `output.${format}`;
+            const mimeType = format === "mp3" ? "audio/mpeg" : `audio/${format}`;
+            fileId = await receiveFile(base64_data, mimeType, filename, conversationId, format);
           } catch (err) {
             console.error("Error receiving audio file:", err);
           }
