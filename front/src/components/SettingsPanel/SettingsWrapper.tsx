@@ -5,8 +5,6 @@ import { useWindowSize } from "../../hooks/useWindowSize";
 import { useEffect, useState } from "react";
 import SettingsDrawer from "./SettingsDrawer";
 import SettingsPanel from "./SettingsPanel";
-import { useVideoQueueDemo } from "../../hooks/useVideoQueueDemo";
-import VideoQueueModal from "../../modals/Tools/VideoQueueModal";
 
 export default function SettingsWrapper({ localState, setLocalState, userData, modelsData }) {
   /** This Component decides which form of settings to show. Rail, Extended or Drawer on Mobile */
@@ -14,15 +12,6 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
 
   const showSettings = useSelector(selectShowSettings);
   const { isMobile, isTablet, isDesktop } = useWindowSize();
-  const videoToolEnabled = !!localState?.settings?.enable_tools && !!localState?.settings?.tools?.video_generation;
-  const videoQueue = useVideoQueueDemo(videoToolEnabled);
-  const [showVideoQueueModal, setShowVideoQueueModal] = useState(false);
-
-  useEffect(() => {
-    if (!videoToolEnabled && showVideoQueueModal) {
-      setShowVideoQueueModal(false);
-    }
-  }, [videoToolEnabled, showVideoQueueModal]);
 
   useEffect(() => {
     if (!isDesktop) {
@@ -44,9 +33,6 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
             setLocalState={setLocalState}
             userData={userData}
             modelsData={modelsData}
-            videoQueue={videoQueue}
-            videoToolEnabled={videoToolEnabled}
-            onOpenVideoQueue={() => setShowVideoQueueModal(true)}
           />
         </div>
         {(isDesktop) && (
@@ -58,8 +44,6 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
               setLocalState={setLocalState}
               userData={userData}
               modelsData={modelsData}
-              videoQueue={videoQueue}
-              videoToolEnabled={videoToolEnabled}
             />
           </div>
         )}
@@ -70,15 +54,8 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
           setLocalState={setLocalState}
           userData={userData}
           modelsData={modelsData}
-          videoQueue={videoQueue}
-          videoToolEnabled={videoToolEnabled}
         />
       )}
-      <VideoQueueModal
-        isOpen={showVideoQueueModal}
-        onClose={() => setShowVideoQueueModal(false)}
-        videoQueue={videoQueue}
-      />
     </>
   );
 }

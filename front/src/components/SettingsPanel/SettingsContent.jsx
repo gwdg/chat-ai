@@ -38,11 +38,11 @@ import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import MCPContainer from "./MCPContainer";
 import ToolsContainer from "./ToolsContainer";
-import VideoQueuePreview from "./VideoQueuePreview";
+import VideoList from "./VideoList";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
-const SettingsPanel = ({ localState, setLocalState, userData, modelsData, videoQueue, videoToolEnabled }) => {
+const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const conversations = useConversationList();
 
   //Hooks
@@ -53,7 +53,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData, videoQ
   const tools = settings?.tools || {};
   const showArcanaBox = !!settings?.enable_tools && !!tools.arcana;
   const showMCPBox = !!settings?.enable_tools && !!tools.mcp;
-  const showVideoQueue = !!videoToolEnabled;
+  const showVideoList = !!tools.video_generation;
 
   const migrationData = useSelector((state) => state.migration_data) || {};
   const { notifySuccess, notifyError } = useToast();
@@ -402,9 +402,9 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData, videoQ
             localState={localState}
             setLocalState={setLocalState}
           />
-          {showVideoQueue && (
-            <VideoQueuePreview
-              jobs={videoQueue?.jobs || []}
+          {showVideoList && (
+            <VideoList
+              jobs={[]}
               onDownload={() => {}}
             />
           )}

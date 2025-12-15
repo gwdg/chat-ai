@@ -50,10 +50,13 @@ export default {
     placeholder_arcana_id: "Arcana id",
     placeholder_mcp_id: "Server id",
     video_queue_title: "Video generation queue",
-    video_queue_subtitle: "Simulated running tasks until the queue API is ready.",
+    video_queue_subtitle: "List of video generation tasks.",
     video_queue_job_label: "Video request #{{count}}",
+    video_queue_status_queued: "Queued",
     video_queue_status_processing: "Processing",
     video_queue_status_ready: "Ready",
+    video_queue_status_failed: "Failed",
+    video_queue_delete: "Delete",
     video_queue_eta: "ETA ~{{seconds}}s",
     video_queue_eta_done: "Completed just now",
     video_queue_download: "Download",
@@ -245,7 +248,7 @@ export default {
     sidebar:
       "In the sidebar you can add, export, delete, and switch conversations. You can import and export conversations to your device, or choose a Persona to chat with.",
     settings:
-      "In the settings panel, you can adjust the system prompt, temperature, and top_p. You can specify Chat AI's memory settings and enable new GWDG tools, including arcana, image generation, and web search.",
+      "In the settings panel, you can adjust the system prompt, temperature, and top_p. You can specify Chat AI's memory settings, enable and select GWDG tools, including arcana, image generation, web search, and more! Some tools may be available only to certain users.",
     profile:
       "Just below the settings button, this button will open your user profile, where you can set your preferences, manage memories, and export or clear your data.",
     interface:
