@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
 
+import packageJson from "../../../package.json";
 import { useDispatch } from "react-redux";
 import {
   closeTour
@@ -20,7 +21,7 @@ export default function WelcomeModal({ isOpen, onClose, onRunTour }) {
         <div className="flex flex-col gap-4">
             <div className="pt-0 pb-2">
             <p className="dark:text-white text-black text-justify justify-center text-2xl">
-                <Trans i18nKey="tour.welcome_message" /> v0.9
+                <Trans i18nKey="tour.welcome_message" /> {packageJson.version}
             </p>
             </div>
         <p className="dark:text-white text-black text-sm">

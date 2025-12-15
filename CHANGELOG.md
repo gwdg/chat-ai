@@ -1,6 +1,6 @@
 # Changelog 
 
-## Version: v0.9.0 (15.12.2025)
+## Version: v0.9.1 (15.12.2025)
 Highlights:
 - Storing and denoting model name as well as token usage for each message
 - Redesigned tools menu with support for additional tools
