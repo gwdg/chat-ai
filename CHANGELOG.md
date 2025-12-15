@@ -1,5 +1,12 @@
 # Changelog 
 
+## Version: v0.9.0 (15.12.2025)
+Highlights:
+- Storing and denoting model name as well as token usage for each message
+- Redesigned tools menu with support for additional tools
+- Added UI indicator for private vs. non-private mode when using external models and services
+- Bug fixes and improvements to localizations and usability
+
 ## Version: v0.9.0 (18.09.2025)
 Highlights:
 - Redesigned UI with the ability to collapse the left and right sidebars for maximum chatting space. Optimized for smoothness and arbitrarily large conversations and attachments.
