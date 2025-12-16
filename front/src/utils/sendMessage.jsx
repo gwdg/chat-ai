@@ -196,7 +196,7 @@ const sendMessage = async ({
   const conversationId = localState.id
 
   try {
-    const isArcanaSupported = (localState.settings.model?.input?.includes("arcana") || localState.settings?.enable_tools)   
+    const isArcanaSupported = localState.settings.model?.input?.includes("arcana") || (localState.settings?.enable_tools && !!localState.settings.tools.arcana)   
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState);
     // Prepare system prompt
