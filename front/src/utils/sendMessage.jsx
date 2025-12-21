@@ -517,20 +517,6 @@ const sendMessage = async ({
         model: localState.settings.model?.name || localState.settings.model?.id || "",
         usage
       };
-
-      // Update choices
-      if(localState.settings.choiceProposer == 1){
-        try {       
-          const response = await generateChoiceProposal(
-            responseContent
-            // put here whole history
-          );
-          choicesProposed = response;
-        } catch (error) {
-          console.error("Failed to generate choices: ", error.name, error.message);
-          notifyError("Failed to generate choices.");
-        }
-      }
     } catch (error) {
       const errorType = error?.type || "Error";
       const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
@@ -538,10 +524,30 @@ const sendMessage = async ({
       notifyError(`${errorType}: ${errorMsg.toString()} ${errorStatus}`);
       console.error(error);
     } finally {
+      // Update choices
+      if(localState.settings.choiceProposer == 1){
+        const content = localState.messages.map((message) => {
+          if (Array.isArray(message.content)){
+            return message.role + ": " + message.content[0].text;
+          }
+        });
+        content.push(responseContent[0].text)
+        try {
+          const response = await generateChoiceProposal(
+            content.join("\n")
+            // put here more history
+          );
+          choicesProposed = response;
+        } catch (error) {
+          console.error("Failed to generate choices: ", error.name, error.message);
+          notifyError("Failed to generate choices.");
+        }
+      }
+
       // Set loading to false
       setLocalState(prev => {
         if (prev.id !== conversationId) {
-          // Handle save when conversation is not activ, ideally save directly into DB (TODO)
+          // Handle save when conversation is not active, ideally save directly into DB (TODO)
           const messages = [...localState.messages,
             { role: "assistant", content: responseContent, loading: false, meta },
             { role: "user", content: [{ type: "text", text: "" }] },

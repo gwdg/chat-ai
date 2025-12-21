@@ -1,13 +1,13 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
 import OpenAI from "openai";
 
-export default async function generateChoiceProposal(newUserMessage) {
+export default async function generateChoiceProposal(history) {
   const defaultSettings = getDefaultSettings();
   const prompt = `
-    Proposal a set of potential follow up prompts the user may issue.
+    Propose a set of follow up prompts the user may issue based on the conversation history.
 
-    Here is the new user message:  
-    "${newUserMessage}"
+    Here is the conversation history:
+    "${history}"
 
     Respond in the following JSON formats with **no extra text**:
     {
