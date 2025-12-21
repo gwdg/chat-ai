@@ -25,7 +25,7 @@ export default function PromptTextArea({
   const [isDragging, setIsDragging] = useState(false);
   const { notifySuccess, notifyError } = useToast();
   const { addAttachments, pasteAttachments } = useAttachments();
-
+  
   // Prompt is actually the last message's first content
   const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
 
@@ -75,6 +75,28 @@ export default function PromptTextArea({
       >
         Drop Here
       </span>
+    { localState.choices.length > 0 &&
+    <div className="group flex justify-between w-full answer-choice">
+      <div className="flex items-center justify-end opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+        {/* Render Selector on the bottom left*/}
+          {localState.choices.map((choice) => (
+            <button
+              key={choice}
+              onClick={(event) => {
+                setPrompt(choice);
+                event.preventDefault(); 
+                /* FIXME, not working with single click, yet probably due to setting prompt externally */
+                handleSend(event);
+               }
+              }
+              className="px-2 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              {choice}
+            </button>
+          ))}
+        </div>
+      </div>    
+      }
       {/* Actual text area */}
       <textarea
           autoFocus
