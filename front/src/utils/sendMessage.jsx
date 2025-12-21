@@ -592,7 +592,6 @@ const sendMessage = async ({
 
     if(responseJSON?.tool_calls?.length > 0){
       console.log(responseJSON);
-      responseJSON.content[0].text="do you want to call";
       return;
     }
 

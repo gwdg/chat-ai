@@ -102,6 +102,24 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     });
   };
 
+  if(message?.tool_calls){
+    return  (
+    <div
+      key={message_index}
+      ref={assistantMessage}
+      className="text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 
+          rounded-2xl bg-bg_chat dark:bg-bg_chat_dark
+         px-3 pt-3 bg-bg_chat dark:bg-bg_chat_dark">
+    <div className="flex flex-col gap-4">
+        { message.tool_calls.map((func) => 
+          {
+            return (<div>{func.function.name} {func.arguments}</div>);
+          })
+        }
+    </div>
+    </div>);
+  }
+
   const content = message?.content?.[0]?.text ?? "";
   const isContentEmpty = !content.trim();
   return (
