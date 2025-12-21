@@ -59,6 +59,10 @@ export default function PromptTextArea({
     });
   };
 
+  if (! localState.hasOwnProperty("choices")){
+    localState.choices = [];
+  }
+
   return (
     <div
     className="drag-drop-container relative"

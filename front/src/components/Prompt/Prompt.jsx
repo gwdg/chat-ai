@@ -25,13 +25,6 @@ export default function Prompt({
   //const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
   const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
 
-  if (localState.settings.choiceProposer == 1){
-    localState.choices = ["blabla", "bla"];
-  }else{
-    localState.choices = [];
-  }
-  
-  
   // Update partial local state while preserving other values
   const savePrompt = () => {
     setIgnoreChanges(true);

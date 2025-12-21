@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/userSettingsReducer";
 import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
+import generateChoiceProposal from "../apis/generateChoiceProposal";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
@@ -506,6 +507,7 @@ const sendMessage = async ({
     let usage = null;
     let chatChunk = null;
     let meta = undefined;
+    let choicesProposed = [];
     try {
       // Get chat completion response
       chatChunk = await getChatChunk(conversationId);
@@ -515,6 +517,20 @@ const sendMessage = async ({
         model: localState.settings.model?.name || localState.settings.model?.id || "",
         usage
       };
+
+      // Update choices
+      if(localState.settings.choiceProposer == 1){
+        try {       
+          const response = await generateChoiceProposal(
+            responseContent
+            // put here whole history
+          );
+          choicesProposed = response;
+        } catch (error) {
+          console.error("Failed to generate choices: ", error.name, error.message);
+          notifyError("Failed to generate choices.");
+        }
+      }
     } catch (error) {
       const errorType = error?.type || "Error";
       const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
@@ -537,6 +553,7 @@ const sendMessage = async ({
           );
           return prev;
         }
+        const choices = choicesProposed;
         const messages = [...prev.messages];
         messages[messages.length - 2] = {
           role: "assistant",
@@ -544,7 +561,7 @@ const sendMessage = async ({
           loading: false,
           meta
         };
-        return { ...prev, messages, flush: true };
+        return { ...prev, messages, choices, flush: true };
       });
     }
 
