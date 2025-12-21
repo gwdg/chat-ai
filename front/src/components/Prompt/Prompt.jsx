@@ -24,7 +24,7 @@ export default function Prompt({
 
   //const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
   const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
-  
+
   // Update partial local state while preserving other values
   const savePrompt = () => {
     setIgnoreChanges(true);

@@ -10,6 +10,7 @@ import { useModal } from "../../modals/ModalContext";
 //Components
 import ArcanaContainer from "./ArcanaContainer";
 import MemorySelector from "./MemorySelector";
+import ChoiceProposer from "./ChoiceProposer";
 import ShareSettingsButton from "./ShareSettingsButton";
 import SystemPromptContainer from "./SystemPromptContainer";
 import TemperatureSlider from "./TemperatureSlider";
@@ -431,6 +432,10 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
           <TopPSlider localState={localState} setLocalState={setLocalState} />
           {/* Memory Selector */}
           <MemorySelector
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+          <ChoiceProposer
             localState={localState}
             setLocalState={setLocalState}
           />
