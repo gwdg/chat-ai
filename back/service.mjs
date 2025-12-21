@@ -219,7 +219,7 @@ app.post("/chat/completions", async (req, res) => {
     // Handle tools and arcana
     if (enable_tools && !isExternalModel) {
       inference_service = "saia-openai-gateway";
-      params["runToolsOnServer"] = true;
+      //params["runToolsOnServer"] = true;
       if (mcp_servers && mcp_servers.length > 0) {
         params["mcp-servers"] = mcp_servers;
       }

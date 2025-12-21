@@ -84,6 +84,7 @@ export default {
       unprocessed: "Unverarbeitete Datei",
     },
     reasoning: "Denkprozess",
+    toolUsage: "Werkzeuginformation",
     action: "Aktion",
     sources: "Quellen und Referenzen",
     references: "Referenzen",

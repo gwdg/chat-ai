@@ -81,7 +81,7 @@ async function* chatCompletions (
       }
       try {
         if (!completed) {
-          answer += chunk.choices[0].delta?.content || ""
+          answer += chunk.choices[0]?.delta?.content || ""
           // yield (chunk.choices[0].delta)
           yield chunk
         } else {

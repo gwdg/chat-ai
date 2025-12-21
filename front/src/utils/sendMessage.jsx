@@ -218,7 +218,7 @@ const sendMessage = async ({
       conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
                 .filter(([_, enabled]) => enabled)
                 .map(([toolKey]) => ({ type: toolKey }));
-      console.log(conversationForAPI.settings.tools);
+      //console.log(conversationForAPI.settings.tools);
       // if (conversationForAPI.settings?.enable_web_search) {
       //   conversationForAPI.settings.tools.push({ type: "web_search" });
       //   conversationForAPI.settings.tools.push({ type: "fetch_url" });
@@ -283,10 +283,29 @@ const sendMessage = async ({
       let process_block = "";
       let inThinking = false;
       let message_text = "";
+      let tool_call = [];
+      let last_arguments = [];
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
+        const reason = chunk?.choices[0]?.finish_reason;
+        if(reason == "tool_calls"){
+          tool_call[tool_call.length -1].arguments = last_arguments.join("");
+          continue;
+        }        
         const delta = chunk?.choices[0]?.delta;
         if (chunk?.usage) usage = chunk.usage;
-        if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
+        if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {          
+          if(delta.tool_calls[0]?.id){            
+            if(tool_call.length > 0){
+              tool_call[tool_call.length -1].arguments = last_arguments.join("");
+              last_arguments = [];
+            }
+            tool_call.push({"function": delta.tool_calls[0].function, 
+              "id": delta.tool_calls[0].id, 
+              "arguments" : ""});
+          }else{
+            last_arguments.push(delta.tool_calls[0].function.arguments);
+          }
+          
           try {
             if (delta.tool_calls[0]?.function?.name === "tools.event") {
               let arg = delta.tool_calls[0].function.arguments;
@@ -498,23 +517,32 @@ const sendMessage = async ({
       }
       return {
         answer: currentContent,
+        tool_calls: tool_call,
         usage
       }
     }
 
-    let responseContent = "";
     let usage = null;
     let chatChunk = null;
     let meta = undefined;
+    let responseJSON = {role: "assistant", loading: false};
     try {
       // Get chat completion response
       chatChunk = await getChatChunk(conversationId);
-      responseContent = chatChunk?.answer || ""
+      //console.log(chatChunk);
       usage = chatChunk?.usage;
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",
         usage
       };
+      let responseContent = chatChunk?.answer
+      if(responseContent){
+        responseJSON["content"] = responseContent;
+      }
+      if(chatChunk.tool_calls.length > 0){
+        responseJSON["tool_calls"] = chatChunk.tool_calls;
+      }
+      responseJSON["meta"] = meta;
     } catch (error) {
       const errorType = error?.type || "Error";
       const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
@@ -525,9 +553,9 @@ const sendMessage = async ({
       // Set loading to false
       setLocalState(prev => {
         if (prev.id !== conversationId) {
-          // Handle save when conversation is not activ, ideally save directly into DB (TODO)
+          // Handle save when conversation is not active, ideally save directly into DB (TODO)
           const messages = [...localState.messages,
-            { role: "assistant", content: responseContent, loading: false, meta },
+            responseJSON,
             { role: "user", content: [{ type: "text", text: "" }] },
           ];
           updateConversation(
@@ -538,12 +566,7 @@ const sendMessage = async ({
           return prev;
         }
         const messages = [...prev.messages];
-        messages[messages.length - 2] = {
-          role: "assistant",
-          content: responseContent,
-          loading: false,
-          meta
-        };
+        messages[messages.length - 2] = responseJSON;
         return { ...prev, messages, flush: true };
       });
     }
@@ -560,12 +583,18 @@ const sendMessage = async ({
     // }
     
     // If not successful don't continue
-    if (!responseContent) {
+    //if (!responseJSON) {
       // TODO clean up localState
-      return;
-    }
+      //return;
+    //}
 
     delete conversationForAPI.settings?.arcana;
+
+    if(responseJSON?.tool_calls?.length > 0){
+      console.log(responseJSON);
+      responseJSON.content[0].text="do you want to call";
+      return;
+    }
 
     // Keep last message sent by user for possible memory update
     let newUserMessage = undefined;
@@ -581,7 +610,7 @@ const sendMessage = async ({
     try {
       conversationForAPI.messages = [
         ...conversationForAPI.messages,
-        { role: "assistant", content: responseContent },
+        responseJSON,
         { role: "user", content: "" }
       ];
       if (conversationForAPI.messages.length <= 4) {
