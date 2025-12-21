@@ -526,16 +526,17 @@ const sendMessage = async ({
     } finally {
       // Update choices
       if(localState.settings.choiceProposer == 1){
-        const content = localState.messages.map((message) => {
+        try {
+          const content = localState.messages.map((message) => {
           if (Array.isArray(message.content)){
             return message.role + ": " + message.content[0].text;
           }
-        });
-        content.push(responseContent[0].text)
-        try {
+          });
+          content.push("assistant: " + responseContent[0].text)
+          console.log(content.join("\n\n"))
+
           const response = await generateChoiceProposal(
-            content.join("\n")
-            // put here more history
+            content.join("\n\n")
           );
           choicesProposed = response;
         } catch (error) {

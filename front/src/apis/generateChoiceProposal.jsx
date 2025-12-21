@@ -3,16 +3,16 @@ import OpenAI from "openai";
 
 export default async function generateChoiceProposal(history) {
   const defaultSettings = getDefaultSettings();
-  const prompt = `
-    Propose a set of follow up prompts the user may issue based on the conversation history.
-
-    Here is the conversation history:
-    "${history}"
+  const system = `
+    Propose a set of sensible follow up prompts the user may submit based on the conversation history.
 
     Respond in the following JSON formats with **no extra text**:
     {
       "proposals": ["prompt 1", "prompt 2", ...]
     }
+
+    I will input the conversation history including original system prompt, and input from user and assistant roles.
+    If the last message asks to provide a choice, include these options as favorite answer choices.
     `;
 
 
@@ -51,14 +51,13 @@ export default async function generateChoiceProposal(history) {
   
 
     const params = {
-      model: import.meta.env.VITE_MEMORY_GENERATION_MODEL || defaultSettings.model.id,
+      model: import.meta.env.VITE_PROPOSAL_GENERATION_MODEL || defaultSettings.model.id,
       messages: [
         {
           role: "system",
-          content:
-            "You are a helpful assistant."
+          content: system
         },
-        { role: "user", content: prompt },
+        { role: "user", content: history },
       ],
       temperature: 0,
       top_p: 1,
@@ -69,7 +68,7 @@ export default async function generateChoiceProposal(history) {
     const response = await openai.chat.completions.create(params);
     if (!response) throw new Error(response.statusText);
     const proposals = JSON.parse(response?.choices[0]?.message?.content)["proposals"] || []
-    return proposals;
+    return proposals.sort();
   } catch (error) {
     // Handle AbortError specifically
     if (error.name === "AbortError") {
