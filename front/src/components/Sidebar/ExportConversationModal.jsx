@@ -74,11 +74,15 @@ export default function ExportConversationModal({
     if (!Array.isArray(messages)) return processedMessages;
     let expectUser = true;
     for (let i = 0; i < messages.length; i++) {
+      let msg = messages[i];
       if (!messages[i]?.content) continue;
       const role = messages[i]?.role;
       if (!["system", "user", "assistant", "info"].includes(role)) continue;
       const content = messages[i].content;
       let processedMessage = {"role": role};
+      if (msg?.feedback){
+        processedMessage.feedback = msg.feedback;
+      }
       if (typeof content === "string") processedMessage.content = content;
       else if (Array.isArray(content)) {
         if (content.length === 0) continue; // Invalid message

@@ -13,7 +13,8 @@ import type {
   ConversationSettings,
   MessageInput,
   MessageRole,
-  ContentItemInput
+  ContentItemInput,
+  FeedbackRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -139,7 +140,8 @@ async function hydrateConversation(conversationId: string) {
     createdAt: m.createdAt,
     updatedAt: m.updatedAt,
     meta: m.meta,
-    content: contentByMessage.get(m.id) || []
+    content: contentByMessage.get(m.id) || [],
+    feedback: m.feedback
   }))
 
   return {
@@ -162,7 +164,6 @@ export async function createConversation(params: {
   const title = params.title
   const settings = params.settings
   const messages = params.messages
-
   await db.transaction('rw', db.conversations, db.messages, db.content_items, db.files_meta, db.files_data, async () => {
     await db.conversations.add({
       id,
@@ -243,6 +244,7 @@ export async function updateConversation(
       createdAt?: number
       updatedAt?: number
       meta?: any
+      feedback?: FeedbackRow
     }>,
     lastModified?: number,
   },
@@ -276,7 +278,8 @@ export async function updateConversation(
         content: m.content ?? [],
         createdAt: m.createdAt ?? now,
         updatedAt: m.updatedAt,
-        meta: m.meta
+        meta: m.meta,
+        feedback: m.feedback ?? {}
       }));
 
       
@@ -319,7 +322,8 @@ export async function updateConversation(
           role: m.role,
           createdAt: m.createdAt,
           updatedAt: now,
-          meta: m.meta
+          meta: m.meta,
+          feedback : m.feedback
         };
         await db.messages.put(msgRow);
 
