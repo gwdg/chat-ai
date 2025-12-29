@@ -26,6 +26,11 @@ export default {
     skip_backup: "Backup überspringen",
     upgrade_chat_ai: "Chat AI aktualisieren",
   },
+  feedback:{
+    thumbsup:"The response is good.",
+    thumbsdown: "The response is not so good.",
+    send: "Send a detailed feedback describing your observation."
+  },
   // Sidebar
   sidebar: {
     new_conversation: "Neues Gespräch",

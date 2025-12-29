@@ -7,6 +7,7 @@ import EditButton from "./EditButton";
 import { RotateCw } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
 import MetaBox from "./MetaBox";
+import FeedbackButtons from "./FeedbackButtons";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -16,12 +17,16 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   //Refs
   const assistantMessage = useRef(null);
   const editBox = useRef(null);
+  const feedbackBox = useRef(null);
   const textareaRefs = useRef([]);
   const message = localState.messages[message_index];
   const loading = message?.loading || false;
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
   const renderModes = ["Default", "Markdown", "LaTeX", "Plaintext"];
+
+  const isfeedbackModeEnabled = import.meta.env.VITE_FEEDBACK_MODE || false;
+  
   const sendMessage = useSendMessage();
 
   //Functions
@@ -35,9 +40,38 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
       editBox.current.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
     }
   };
+  
+  const sendFeedbackFunc = async (ratingInt, commentStr, expectedStr) => {
+    // Remove messages after current index
+    let newState;
+    setLocalState((prev) => {
+      const newMessages = [...prev.messages];
+      const newMessagesWithFB = [...prev.messages];
+      newMessages.splice(message_index + 1);
 
+      newMessages[newMessages.length-1].feedback = {
+        rating : ratingInt,
+        comment: commentStr,
+        result : expectedStr
+      };
+      console.log("sending feedback");
+      console.log(newMessages[newMessages.length-1].feedback);
+
+      newMessagesWithFB[newMessages.length-1].feedback = newMessages[newMessages.length-1].feedback;
+      newState = { ...prev, messages: newMessages }
+      sendMessage({localState: newState});
+      return { ...prev, messages: newMessagesWithFB };
+    });
+  };
+
+  const [feedbackMode, setFeedbackMode] = useState(false);  
+  const [feedbackText, setFeedbackText] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [editedText, setEditedText] = useState("");
+  let submitFeedbackCallback;
+  const injectFeedbackCallback = (cb) =>{
+    submitFeedbackCallback = cb;
+  };
   // Function to adjust textarea height for specific index
   const adjustHeightRefs = () => {
     // if (textareaRefs.current[index]) {
@@ -57,6 +91,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
         !assistantMessage.current.contains(event.target)
       )
         setEditMode(false); // Exit edit mode
+        setFeedbackMode(false);
     }
     document.addEventListener("dblclick", handleClickOutside);
     return () => {
@@ -67,6 +102,10 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   useEffect(() => {
     setEditedText(message?.content[0]?.text || "");
   }, [editMode]);
+
+  useEffect(() => {
+    setFeedbackText(message?.feedback?.comment || "");
+  }, [feedbackMode]);
 
   useEffect(() => {
     // Use requestAnimationFrame for smoother height adjustments
@@ -86,6 +125,13 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
       return { ...prev, messages: newMessages, flush: true };
     });
     setEditMode(false);
+  };
+
+  // Function to handle saving edited message
+  const handleSaveFB = () => {    
+    const msg = localState.messages[message_index];
+    setFeedbackMode(false);    
+    sendFeedbackFunc(msg.feedback?.rating, feedbackText, msg?.feedback?.result);
   };
 
   // Function to handle resending a previous message
@@ -180,8 +226,54 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               </div>
             </div>
           )}
+
+          {feedbackMode && (
+            <div className="flex flex-col justify-between gap-1">
+
+              <div>WARNING: Your feedback will be sent to the server.</div>
+              
+              <textarea
+                ref={feedbackBox}
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    feedbackBox.current.value?.trim() !== ""
+                  ) {
+                    event.preventDefault();
+                    handleSaveFB();
+                  } else if (event.key === "Escape") {
+                    event.preventDefault();
+                    setFeedbackMode(false);
+                  }
+                }}
+                className="p-2 outline-none rounded-sm w-full text-sm dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-y-auto"
+                placeholder="Provide feedback..."
+                style={{
+                  minHeight: `${MIN_HEIGHT}px`,
+                  maxHeight: `${MAX_HEIGHT}px`,
+                }}
+              />
+              <div className="flex gap-4 justify-end w-full gap-2 pt-1 pb-2 px-2">
+                <button
+                  onClick={() => setFeedbackMode(false)}
+                  className="text-sm text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleSaveFB()}
+                  className="text-md text-primary border dark:text-tertiary rounded-full px-3 py-1 cursor-pointer"
+                >
+                  Save & Send FB
+                </button>
+              </div>
+            </div>
+          )}          
           {/* Display message content */}
-          {!editMode && (
+          {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
               <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
                 {message.content[0]?.text}
@@ -227,6 +319,16 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   </div>
                 </div>
 
+                {isfeedbackModeEnabled && ! feedbackMode && (
+                  <FeedbackButtons
+                    localState={localState}
+                    setLocalState={setLocalState}
+                    message_index={message_index}
+                    setFeedbackMode={setFeedbackMode} 
+                    sendFeedbackFunc={sendFeedbackFunc}
+                  />
+                )}
+                
                 {/* Buttons on the bottom right */}
                 <div className="flex items-center justify-end gap-3 overflow-hidden">
                   { /* Show message metadata */

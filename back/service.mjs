@@ -170,6 +170,7 @@ app.post("/chat/completions", async (req, res) => {
     enable_tools = null,
     tools = null,
     stream = true,
+    feedback = null
   } = req.body;
 
   const mcp_servers = req.body["mcp-servers"] || null;
@@ -214,6 +215,10 @@ app.post("/chat/completions", async (req, res) => {
 
     if (arcana && arcana.id !== "") {
       params.arcana = arcana;
+    }
+
+    if (feedback){
+      params.feedback = feedback;
     }
 
     // Handle tools and arcana
@@ -298,7 +303,6 @@ app.post("/chat/completions", async (req, res) => {
         res.end(); // gracefully end if already streaming
       }
     });
-
     nodeStream.on('end', () => {
       // Ensure the connection is closed properly
       if (!res.writableEnded) {

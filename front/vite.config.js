@@ -51,6 +51,9 @@ try {
     } else if (key == "announcement") {
       process.env["VITE_ANNOUNCEMENT"] = value;
       console.log("Announcement:", value);
+    } else if (key == "feedbackMode"){
+      process.env["VITE_FEEDBACK_MODE"] = value;
+      console.log("Feedback Mode:", value);
     }
   }
 } catch (error) {

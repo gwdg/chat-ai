@@ -44,6 +44,7 @@ export type MessageRow = {
   createdAt: number
   updatedAt?: number
   meta?: any // e.g. model
+  feedback?: FeedbackRow
 }
 
 export type MessageInput = {
@@ -54,6 +55,13 @@ export type MessageInput = {
   createdAt?: number
   updatedAt?: number
   meta?: any
+  feedback?: FeedbackRow
+}
+
+export type FeedbackRow = {
+  rating?: number
+  comment?: string
+  result?: string
 }
 
 export type ContentItemRow = {

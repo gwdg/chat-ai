@@ -44,6 +44,10 @@ async function* chatCompletions (
       params.arcana = conversation.settings.arcana;
     }
 
+    if (conversation.settings?.feedback) {
+      params.feedback = conversation.settings.feedback;
+    }
+
     if (conversation.settings?.mcp_servers && conversation.settings.mcp_servers.length > 0) {
       params["mcp-servers"] = [conversation.settings.mcp_servers];
     }
@@ -71,6 +75,7 @@ async function* chatCompletions (
     let answer = ""
     let completed = false
     for await (const chunk of streamResponse) {
+      //console.log(chunk);
       if (chunk?.object == "error") {
         console.log(chunk)
           const err = new Error(chunk?.message || "Unknown error");

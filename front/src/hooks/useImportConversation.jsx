@@ -33,6 +33,7 @@ export function useImportConversation() {
         res[0].text = content;
         return res;
       }
+
       // if message or content is array
       if (Array.isArray(content)) {
         res = content.map(item => extractMessageContent(item, conversationId)[0]);
@@ -190,10 +191,14 @@ export function useImportConversation() {
                 "role": "assistant",
                 "content": extractMessageContent(message, conversationId),
               })
+
+              if (message?.feedback){
+                sanitizedMessages[sanitizedMessages.length-1].feedback = message.feedback;
+              }
             } else {
               console.warn("Unrecognized role: ", message.role)
               continue;
-            }
+            }           
             expectUserMessage = !expectUserMessage;
           }
         } catch (err) {
