@@ -6,6 +6,7 @@ export default {
     rename: "Umbenennen",
     import: "Chat importieren",
     export: "Chat exportieren",
+    summarize: "Den bestehenden Chat zusammenfassen und ersetzen.",
     clear: "Löschen",
     abort: "Abbrechen",
     send: "Senden",

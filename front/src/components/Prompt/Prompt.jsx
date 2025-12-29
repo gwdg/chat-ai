@@ -20,11 +20,16 @@ export default function Prompt({
   const sendMessage = useSendMessage();
   const [shouldSend, setShouldSend] = useState(false);
   const [ignoreChanges, setIgnoreChanges] = useState(false);
-  const [prompt, setPrompt] = useState(localState.messages[localState.messages.length - 1].content[0]?.text || "");
+  const lastMessage = localState.messages[localState.messages.length - 1];
+  if (lastMessage?.content == undefined){
+    // return to a valid conversation
+    localState.messages = [{"content" : [{"text" : ""}]}];
+  }
+  const [prompt, setPrompt] = useState(lastMessage?.content[0]?.text || "");
 
   //const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
-  const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
-
+  const attachments = lastMessage.content.slice(1);
+  
   // Update partial local state while preserving other values
   const savePrompt = () => {
     setIgnoreChanges(true);
@@ -54,7 +59,7 @@ export default function Prompt({
       setIgnoreChanges(false); // Ignored once
     } else {
       setPrompt(
-        localState.messages[localState.messages.length - 1]?.content[0]?.text || ""
+        lastMessage?.content[0]?.text || ""
       );
     }
   }, [localState.messages]);

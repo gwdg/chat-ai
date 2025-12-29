@@ -6,6 +6,7 @@ export default {
     rename: "Rename",
     import: "Import Chat",
     export: "Export Chat",
+    summarize: "Summarize conversation up to that point and replace it.",
     clear: "Clear",
     abort: "Abort",
     send: "Send",
