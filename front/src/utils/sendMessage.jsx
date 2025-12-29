@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/userSettingsReducer";
 import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
+import generateChoiceProposal from "../apis/generateChoiceProposal";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
@@ -506,6 +507,7 @@ const sendMessage = async ({
     let usage = null;
     let chatChunk = null;
     let meta = undefined;
+    let choicesProposed = [];
     try {
       // Get chat completion response
       chatChunk = await getChatChunk(conversationId);
@@ -522,10 +524,31 @@ const sendMessage = async ({
       notifyError(`${errorType}: ${errorMsg.toString()} ${errorStatus}`);
       console.error(error);
     } finally {
+      // Update choices
+      if(localState.settings.choiceProposer == 1){
+        try {
+          const content = localState.messages.map((message) => {
+          if (Array.isArray(message.content)){
+            return message.role + ": " + message.content[0].text;
+          }
+          });
+          content.push("assistant: " + responseContent[0].text)
+          console.log(content.join("\n\n"))
+
+          const response = await generateChoiceProposal(
+            content.join("\n\n")
+          );
+          choicesProposed = response;
+        } catch (error) {
+          console.error("Failed to generate choices: ", error.name, error.message);
+          notifyError("Failed to generate choices.");
+        }
+      }
+
       // Set loading to false
       setLocalState(prev => {
         if (prev.id !== conversationId) {
-          // Handle save when conversation is not activ, ideally save directly into DB (TODO)
+          // Handle save when conversation is not active, ideally save directly into DB (TODO)
           const messages = [...localState.messages,
             { role: "assistant", content: responseContent, loading: false, meta },
             { role: "user", content: [{ type: "text", text: "" }] },
@@ -537,6 +560,7 @@ const sendMessage = async ({
           );
           return prev;
         }
+        const choices = choicesProposed;
         const messages = [...prev.messages];
         messages[messages.length - 2] = {
           role: "assistant",
@@ -544,7 +568,7 @@ const sendMessage = async ({
           loading: false,
           meta
         };
-        return { ...prev, messages, flush: true };
+        return { ...prev, messages, choices, flush: true };
       });
     }
 

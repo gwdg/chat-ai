@@ -22,7 +22,6 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
   const renderModes = ["Default", "Markdown", "LaTeX", "Plaintext"];
-
   const sendMessage = useSendMessage();
 
   //Functions
