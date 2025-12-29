@@ -9,6 +9,7 @@ import HelpArcanaModal from "./Help/HelpArcanaModal";
 import HelpTemperatureModal from "./Help/HelpTemperatureModal";
 import HelpTopPModal from "./Help/HelpTopPModal";
 import HelpMemoryModal from "./Help/HelpMemoryModal";
+import HelpChoiceProposer from "./Help/HelpChoiceProposer";
 import UserSettingsModal from "./UserSettings/UserSettingsModal";
 import UserMemoryModal from "./UserSettings/UserMemoryModal";
 import ShareSettingsModal from "./Chat/ShareSettingsModal";
@@ -92,6 +93,9 @@ export function ModalProvider({ children }) {
       {modalType === "helpMemory" && (
         <HelpMemoryModal isOpen onClose={closeModal} {...modalProps} />
       )}
+      {modalType === "helpChoiceProposer" && (
+        <HelpChoiceProposer isOpen onClose={closeModal} {...modalProps} />
+      )}      
       {modalType === "helpSystemPrompt" && (
         <HelpSystemPromptModal isOpen onClose={closeModal} {...modalProps} />
       )}

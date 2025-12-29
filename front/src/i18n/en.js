@@ -6,6 +6,7 @@ export default {
     rename: "Rename",
     import: "Import Chat",
     export: "Export Chat",
+    summarize: "Summarize conversation up to that point and replace it.",
     clear: "Clear",
     abort: "Abort",
     send: "Send",
@@ -219,6 +220,7 @@ export default {
   // Help modals
   help: {
     title: "Help",
+    choiceproposer: "FIXME CHOICE",
     arcana:
       "Arcana is a unique feature of our service that empowers the LLM with specialized knowledge. When you enter a valid Arcana ID and its corresponding key, the LLM gains access to the knowledge contained within that Arcana. This enables the model to generate responses that are more informed and relevant to your needs. Leave the ID empty to use the model without any specialized knowledge.",
     mcp: "Enter the URL of your MCP (Model Context Protocol) Server (e.g., https://...). The MCP Server is a service that can provide the Chat AI with additional tools, data sources, or processing capabilities beyond its built‑in knowledge. By connecting to your specified MCP Server, the AI can interact with external systems, retrieve up‑to‑date or specialized information, and perform custom tasks according to the capabilities offered by that server.",

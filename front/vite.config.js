@@ -45,6 +45,9 @@ try {
     } else if (key == "memoryGenerationModel") {
       process.env["VITE_MEMORY_GENERATION_MODEL"] = value;
       console.log("Memory generation model:", value);
+    } else if (key == "proposalGenerationModel") {
+      process.env["VITE_PROPOSAL_GENERATION_MODEL"] = value;
+      console.log("Proposal generation model:", value);
     } else if (key == "announcement") {
       process.env["VITE_ANNOUNCEMENT"] = value;
       console.log("Announcement:", value);

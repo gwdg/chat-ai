@@ -13,6 +13,7 @@ import MessageAssistant from "./MessageAssistant/MessageAssistant";
 import MessageUser from "./MessageUser/MessageUser";
 import Motto from "./Motto";
 import UndoButton from "./UndoButton";
+import SummaryButton from "./SummaryButton";
 
 export default function Conversation({
   localState,
@@ -340,6 +341,13 @@ export default function Conversation({
               localState={localState}
               setLocalState={setLocalState}
             />
+            <div className="flex items-baseline gap-4">
+              {/* Summary button */}
+              <SummaryButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+              />
+            </div>
             <div className="flex items-baseline gap-4">
               <ExportButton
                 localState={localState}
