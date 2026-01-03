@@ -17,6 +17,8 @@ import {
   toggleSidebar,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 
+import { useTranslation } from "react-i18next";
+
 import ChatAiLogo from "../../assets/logos/chat_ai.svg";
 import ChatAiLogoMini from "../../assets/logos/chat_ai_small.ico";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,10 +33,15 @@ import { Bot, ChevronRight, Download, Edit, Plus, Sidebar, SquarePen } from "luc
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
 import { useModal } from "../../modals/ModalContext";
+import ShortcutTooltip from "./ShortcutTooltip";
 
 export default function SidebarRail({ localState, onOpen, handleNewConversation }: { localState: any, onOpen: () => void, handleNewConversation: () => void }) {
 
   const { openModal } = useModal();
+  const { t } = useTranslation();
+  const newConversationLabel = t("sidebar.new_conversation");
+  const newConversationShortcut = t("sidebar.shortcut_new_conversation");
+  const newConversationAria = `${newConversationLabel} ${newConversationShortcut}`;
 
   const handleRenameConversation = () => {
     openModal("renameConversation", {
@@ -70,67 +77,82 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
           />
 
           {/* Chevron Button */}
-          <button
-            onClick={() => onOpen?.()}
-            className="absolute h-10 w-10 inset-0 grid place-items-center rounded-xl transition duration-200 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
-            title="Expand"
-          >
-            <ChevronRight className="w-10 h-10 text-tertiary" />
-          </button>
+          <ShortcutTooltip label={t("sidebar.expand") }>
+            <button
+              onClick={() => onOpen?.()}
+              className="absolute h-10 w-10 inset-0 grid place-items-center rounded-xl transition duration-200 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
+              aria-label={t("sidebar.expand")}
+            >
+              <ChevronRight className="w-10 h-10 text-tertiary" />
+            </button>
+          </ShortcutTooltip>
         </div>
 
         {/** Actions */}
         <div className="mt-4 flex flex-col gap-3 items-center">
 
           {/* New chat */}
-          <button
-            onClick={handleNewConversation}
-            className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl flex items-center justify-center`}
-            title="New chat"
+          <ShortcutTooltip
+            label={newConversationLabel}
+            shortcut={newConversationShortcut}
           >
-            <Plus className="w-5 h-5 text-tertiary" />
-          </button>
+            <button
+              onClick={handleNewConversation}
+              className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl flex items-center justify-center`}
+              aria-label={newConversationAria}
+            >
+              <Plus className="w-5 h-5 text-tertiary" />
+            </button>
+          </ShortcutTooltip>
 
           {/* Rename current conversation */}
-          <button
-            onClick={handleRenameConversation}
-            className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
-            title={`Rename: ${currentConversationTitle}`}
+          <ShortcutTooltip
+            label={t("sidebar.rename_tooltip", { title: currentConversationTitle })}
           >
-            <Edit className="w-5 h-5 text-tertiary" />
-          </button>
+            <button
+              onClick={handleRenameConversation}
+              className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+              aria-label={t("sidebar.rename_tooltip", { title: currentConversationTitle })}
+            >
+              <Edit className="w-5 h-5 text-tertiary" />
+            </button>
+          </ShortcutTooltip>
 
 
         </div>
         <div id="placeholder" className="group flex-1 w-full hover:bg-gray-100/50 dark:hover:bg-dark_hover cursor-pointer grid place-items-center"
           onClick={() => onOpen?.()}
         >
-          <button
-            className={`
+          <ShortcutTooltip label={t("sidebar.expand") }>
+            <button
+              className={`
                 translate-y-[-10vh]
                 h-10 w-10 inset-0 grid place-items-center rounded-xl
                 transition duration-200 opacity-0 
                 group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-dark_hover cursor-pointer
                 ${true || isTouch ? "opacity-100" : "opacity-0"}`}
-            title="Expand"
-          >
-            <FontAwesomeIcon size="xl" className=" text-tertiary" icon={faChevronRight} />
-          </button>
+              aria-label={t("sidebar.expand")}
+            >
+              <FontAwesomeIcon size="xl" className=" text-tertiary" icon={faChevronRight} />
+            </button>
+          </ShortcutTooltip>
         </div>
         <div className="mb-2 flex flex-col items-center justify-between gap-3 border-t border-tertiary pt-3">
           {/* Import Conversation button */}
           <ImportConversationButton variant="icon" />
 
           {/* Import persona from Github */}
-          <button
-            onClick={() => {
-              openModal("importPersona");
-            }}
-            className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
-            title="Chat with Persona"
-          >
-            <Bot className="w-6 h-6 text-tertiary" />
-          </button>
+          <ShortcutTooltip label={t("sidebar.import_persona") }>
+            <button
+              onClick={() => {
+                openModal("importPersona");
+              }}
+              className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+              aria-label={t("sidebar.import_persona")}
+            >
+              <Bot className="w-6 h-6 text-tertiary" />
+            </button>
+          </ShortcutTooltip>
         </div>
       </div>
 

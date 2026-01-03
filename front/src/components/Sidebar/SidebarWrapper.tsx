@@ -26,10 +26,22 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
     }
   }, [isDesktop, dispatch]);
 
+  const focusPromptInput = useCallback(() => {
+    requestAnimationFrame(() => {
+      const textarea = document.querySelector<HTMLTextAreaElement>("textarea[name='prompt']");
+      if (textarea) {
+        textarea.focus();
+        const valueLength = textarea.value.length;
+        textarea.setSelectionRange(valueLength, valueLength);
+      }
+    });
+  }, []);
+
   const handleNewConversation = useCallback(async () => {
     const newId = await createConversation(getDefaultConversation(userSettings));
     navigate(`/chat/${newId}`);
-  }, [userSettings, navigate]);
+    focusPromptInput();
+  }, [userSettings, navigate, focusPromptInput]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

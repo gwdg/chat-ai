@@ -12,7 +12,7 @@ export default function NavigationGridLinks() {
         target="_blank"
         className = "hidden md:block"
         >
-        <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
+        <p className="text-base text-center h-full text-secondary dark:text-purple-200 md:border-r-secondary md:border-r">
             <Trans i18nKey="footer.docs" />
         </p>
         </Link>
@@ -24,7 +24,7 @@ export default function NavigationGridLinks() {
         }
         target="_blank"
         >
-        <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
+        <p className="text-base text-center h-full text-secondary dark:text-purple-200 md:border-r-secondary md:border-r">
             <Trans i18nKey="footer.terms"></Trans>
         </p>
         </Link>
@@ -34,14 +34,14 @@ export default function NavigationGridLinks() {
         to={"https://docs.hpc.gwdg.de/services/chat-ai/faq/index.html"}
         target="_blank"
         >
-        <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
+        <p className="text-base text-center h-full text-secondary dark:text-purple-200 md:border-r-secondary md:border-r">
             <Trans i18nKey="footer.faq"></Trans>
         </p>
         </Link>
 
         {/* Contact and Feedback Link */}
         <Link to={"https://gwdg.de/about-us/contact/"} target="_blank">
-        <p className="text-base text-center h-full text-secondary md:border-r-secondary md:border-r">
+        <p className="text-base text-center h-full text-secondary dark:text-purple-200 md:border-r-secondary md:border-r">
             <Trans i18nKey="footer.contact"></Trans>
         </p>
         </Link>
@@ -53,7 +53,7 @@ export default function NavigationGridLinks() {
         }
         target="_blank"
         >
-        <p className="text-base text-center h-full text-secondary">
+        <p className="text-base text-center h-full text-secondary dark:text-purple-200">
             <Trans i18nKey="footer.about"></Trans>
         </p>
         </Link>

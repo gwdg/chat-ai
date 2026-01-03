@@ -13,6 +13,7 @@ import ThemeToggle from "../Header/ThemeToggle";
 
 export default function CollapsibleFooter({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
+  const currentYear = new Date().getFullYear();
 
   return (
     <footer className={`bg-white rounded-xl dark:bg-bg_secondary_dark text-sm ${className}`}>
@@ -63,7 +64,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
 
         {/* Right section */}
         <div className="interface-toggles absolute h-[3vh] right-0 top-0 flex items-center pr-3 gap-2"> 
-          <p className="hidden md:block text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-600 dark:text-gray-400">
+          <p className="hidden md:block text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-700 dark:text-purple-100">
             <Trans i18nKey="footer.iso_certified" />
           </p>
           <ThemeToggle />
@@ -86,7 +87,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
         `}
       >
         {/* Optional fade on content appear */}
-        <div className={`px-4 pb-2 pt-2 transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0"}`}>
+        <div className={`px-4 pb-2 pt-2 transition-opacity duration-200 text-gray-700 dark:text-purple-100 ${open ? "opacity-100" : "opacity-0"}`}>
           <div className="flex justify-between w-full">
             {/* Main Section */}
             <div className="flex flex-col gap-3 items-center w-full">
@@ -95,12 +96,12 @@ export default function CollapsibleFooter({ className }: { className?: string })
               {/* Navigation Links Grid */}
               <NavigationGridLinks />
               {/* Version Display and ISO certified - Mobile only */}
-              <div className="block md:hidden justify-center text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-600 dark:text-gray-400 gap-x-2">
+              <div className="block md:hidden justify-center text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-700 dark:text-purple-100 gap-x-2">
                 <VersionDisplay />
                 <Trans i18nKey="footer.iso_certified" />
               </div>
-              <div>
-                <Trans i18nKey="footer.copyright"/>
+              <div className="text-center">
+                <Trans i18nKey="footer.copyright" values={{ year: currentYear }} />
               </div>
             </div>
           </div>
@@ -109,4 +110,3 @@ export default function CollapsibleFooter({ className }: { className?: string })
     </footer>
   );
 }
-

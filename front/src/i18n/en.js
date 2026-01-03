@@ -29,6 +29,11 @@ export default {
   sidebar: {
     new_conversation: "New Conversation",
     import_persona: "Chat with Persona",
+    expand: "Expand",
+    extend: "Expand",
+    open_sidebar: "Open sidebar",
+    rename_tooltip: "Rename: {{title}}",
+    shortcut_new_conversation: "Ctrl + Shift + O",
   },
   // Settings panel
   settings: {
@@ -36,6 +41,7 @@ export default {
     tools_disabled: "Tools are disabled",
     web_search_enabled: "Web search is enabled",
     web_search_disabled: "Web search is disabled",
+    close_panel: "Close Settings",
     system_prompt_placeholder: "Enter the system prompt here",
     reset_default: "Reset default",
     default: "Default",

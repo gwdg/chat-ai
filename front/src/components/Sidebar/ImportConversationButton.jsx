@@ -3,6 +3,7 @@ import { useRef } from "react";
 import { useImportConversation } from "../../hooks/useImportConversation";
 import { Upload } from "lucide-react";
 import { useToast } from "../../hooks/useToast";
+import ShortcutTooltip from "./ShortcutTooltip";
 
 
 export default function ImportConversationButton({
@@ -75,14 +76,17 @@ export default function ImportConversationButton({
           onChange={handleFilesChangeJSON}
           className="hidden"
         />
-        <button
-          className={`cursor-pointer p-1.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center `}
-          onClick={handleClickJSON}
-          disabled={loading}
-          title={t("common.import")}
+        <ShortcutTooltip label={t("common.import")}
         >
-          <Upload className="w-5 h-5 text-[#009EE0]" />
-        </button>
+          <button
+            className={`cursor-pointer p-1.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center `}
+            onClick={handleClickJSON}
+            disabled={loading}
+            aria-label={t("common.import")}
+          >
+            <Upload className="w-5 h-5 text-[#009EE0]" />
+          </button>
+        </ShortcutTooltip>
       </>
     );
   }

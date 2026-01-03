@@ -29,6 +29,11 @@ export default {
   sidebar: {
     new_conversation: "Neues Gespräch",
     import_persona: "Mit Persona chatten",
+    expand: "Ausklappen",
+    extend: "Ausklappen",
+    open_sidebar: "Seitenleiste öffnen",
+    rename_tooltip: "Umbenennen: {{title}}",
+    shortcut_new_conversation: "Strg + Shift + O",
   },
   // Settings panel
   settings: {
@@ -36,6 +41,7 @@ export default {
     tools_disabled: "Werkzeuge sind deaktiviert",
     web_search_enabled: "Websuche ist erlaubt",
     web_search_disabled: "Websuche ist deaktiviert",
+    close_panel: "Einstellungen schließen",
     system_prompt_placeholder: "System-Prompt hier eingeben",
     reset_default: "Standard zurücksetzen",
     default: "Standard",
