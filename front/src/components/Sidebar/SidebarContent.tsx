@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Trans } from "react-i18next";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
 
@@ -7,13 +7,13 @@ import {
   ChevronLeft,
   Download,
   Edit,
+  FolderInput,
+  FolderPlus,
   MoreVertical,
   Trash2,
 } from "lucide-react";
-import { useConversationList } from "../../db";
+import { useConversationList, useFolderList } from "../../db";
 import { useModal } from "../../modals/ModalContext";
-
-import Logo from "../../assets/logos/chat_ai.svg";
 
 import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 
@@ -22,6 +22,8 @@ import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
 import AiServicesMenu from "./AiServicesMenu";
 
+const ALL_FOLDERS = "__all__";
+
 export default function SidebarContent({
   localState,
   setLocalState,
@@ -29,35 +31,169 @@ export default function SidebarContent({
 }: {
   localState: any;
   setLocalState: (state: any) => void;
-  handleNewConversation: () => void;
+  handleNewConversation: (folderId?: string | null) => Promise<void>;
 }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { openModal } = useModal();
+  const { t } = useTranslation();
   const currentConversationId = localState?.id;
 
+  const { isDesktop, isTouch } = useWindowSize();
+  const conversations = useConversationList() || [];
+  const folders = useFolderList() || [];
+  const folderMap = useMemo(
+    () => new Map(folders.map((folder) => [folder.id, folder.name])),
+    [folders]
+  );
+  const [activeFolderId, setActiveFolderId] = useState<string>(ALL_FOLDERS);
   // have an own state of selected Conversation id to update the ui smoothly
   const [selectedConversationId, setSelectedConversationId] = useState(
     currentConversationId
   );
+  const [hoveredId, setHoveredId] = useState(null);
+
   useEffect(() => {
     if (localState?.id) {
       setSelectedConversationId(currentConversationId);
     }
-  }, [localState]);
+  }, [localState, currentConversationId]);
 
-  const [hoveredId, setHoveredId] = useState(null);
-  const { isMobile, isTablet, isDesktop, isTouch } = useWindowSize();
-  const conversations = useConversationList();
+  useEffect(() => {
+    if (activeFolderId === ALL_FOLDERS) {
+      return;
+    }
+    const exists = folders.some((folder) => folder.id === activeFolderId);
+    if (!exists) {
+      setActiveFolderId(ALL_FOLDERS);
+    }
+  }, [activeFolderId, folders]);
 
   const [activeMenu, setActiveMenu] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const menuRef = useRef(null);
   const menuButtonRefs = useRef({}); // Add refs for menu buttons
 
+  const folderCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    counts.set(ALL_FOLDERS, conversations.length);
+    folders.forEach((folder) => counts.set(folder.id, 0));
+    conversations.forEach((conv) => {
+      if (!conv.folderId) return;
+      const key = conv.folderId;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return counts;
+  }, [conversations, folders]);
+
+  const visibleConversations = useMemo(() => {
+    if (activeFolderId === ALL_FOLDERS) return conversations;
+    return conversations.filter((conv) => conv.folderId === activeFolderId);
+  }, [conversations, activeFolderId]);
+
   function onClose() {
     dispatch(toggleSidebar());
   }
+
+  const handleFolderSelection = (folderId: string) => {
+    setActiveFolderId(folderId);
+  };
+
+  const handleCreateFolder = () => {
+    openModal("createFolder");
+  };
+
+  const handleRenameFolder = (folder: { id: string; name: string }) => {
+    openModal("renameFolder", {
+      folderId: folder.id,
+      initialName: folder.name,
+    });
+  };
+
+  const handleDeleteFolder = (folder: { id: string; name: string }) => {
+    openModal("deleteFolder", {
+      folderId: folder.id,
+      folderName: folder.name,
+    });
+  };
+
+  const handleMoveConversation = (conv) => {
+    if (!conv) return;
+    openModal("moveConversation", {
+      conversationId: conv.id,
+      conversationTitle: conv.title || "Untitled Conversation",
+      currentFolderId: conv.folderId ?? null,
+      folders,
+      localState,
+      setLocalState,
+    });
+  };
+
+  const getFolderDisplayName = (folderId?: string | null) => {
+    if (!folderId) return t("folders.uncategorized");
+    return folderMap.get(folderId) || t("folders.uncategorized");
+  };
+
+  const renderFolderRow = (option: {
+    id: string
+    label: string
+    countKey: string
+    canEdit?: boolean
+    folder?: { id: string; name: string }
+  }) => {
+    const isActive = activeFolderId === option.id;
+    const count = folderCounts.get(option.countKey) ?? 0;
+    return (
+      <div
+        key={option.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => handleFolderSelection(option.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleFolderSelection(option.id);
+          }
+        }}
+        className={`group flex items-center gap-2 rounded-2xl px-3 py-2 text-xs transition ${
+          isActive
+            ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
+            : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40"
+        }`}
+      >
+        <div className="flex-1 flex items-center justify-between text-left select-none">
+          <span className="truncate">{option.label}</span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-2">
+            {count}
+          </span>
+        </div>
+        {option.canEdit && option.folder && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRenameFolder(option.folder);
+              }}
+              className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteFolder(option.folder);
+              }}
+              className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const handleSelectConversation = (id) => {
     if (id === currentConversationId) return;
@@ -69,11 +205,19 @@ export default function SidebarContent({
   };
 
   const onNewConversation = () => {
-    handleNewConversation();
-    //update index to newest in list for smoother ui. Don't wait for dexie to sync
-    if (conversations[0]?.id) {
-      setSelectedConversationId(currentConversationId);
-    }
+    const targetFolder =
+      activeFolderId === ALL_FOLDERS
+        ? null
+        : activeFolderId;
+    handleNewConversation(targetFolder)
+      .then(() => {
+        if (conversations[0]?.id) {
+          setSelectedConversationId(currentConversationId);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to start new conversation", error);
+      });
   };
 
   const handleTitleDoubleClick = (e, conv) => {
@@ -224,6 +368,37 @@ export default function SidebarContent({
         </button>
       </div>
 
+      {/* Folder Filters */}
+      <div className="flex flex-col gap-2 mx-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <span>{t("folders.title")}</span>
+          <button
+            type="button"
+            onClick={handleCreateFolder}
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition"
+            aria-label={t("folders.create_button")}
+          >
+            <FolderPlus className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex flex-col gap-1">
+          {renderFolderRow({
+            id: ALL_FOLDERS,
+            label: t("folders.all"),
+            countKey: ALL_FOLDERS,
+          })}
+          {folders.map((folder) =>
+            renderFolderRow({
+              id: folder.id,
+              label: folder.name,
+              countKey: folder.id,
+              canEdit: true,
+              folder,
+            })
+          )}
+        </div>
+      </div>
+
       {/* Conversations List */}
       <div
         className="flex-1 mx-3 overflow-hidden h-full overflow-y-auto overscroll-behavior-contain space-y-1 pb-3"
@@ -231,7 +406,7 @@ export default function SidebarContent({
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {conversations.map((conv) => {
+        {visibleConversations.map((conv) => {
           const id = conv.id;
           if (!conv) return null;
           const isActive = id === selectedConversationId;
@@ -264,6 +439,11 @@ export default function SidebarContent({
                   <div className="truncate text-xs font-medium leading-relaxed cursor-pointer">
                     {conv.title || "Untitled Conversation"}
                   </div>
+                  {activeFolderId === ALL_FOLDERS && (
+                    <div className="text-[10px] text-gray-400 dark:text-gray-500">
+                      {getFolderDisplayName(conv.folderId)}
+                    </div>
+                  )}
                 </div>
 
                 {/* Action buttons 
@@ -406,6 +586,21 @@ export default function SidebarContent({
               <Edit className="w-3.5 h-3.5" />
               <Trans i18nKey="common.rename" />
               {/* TODO use Translation */}
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const conv = conversations.find((c) => c.id === activeMenu);
+                if (conv) {
+                  handleMoveConversation(conv);
+                  closeMenu();
+                }
+              }}
+              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <FolderInput className="w-3.5 h-3.5" />
+              <Trans i18nKey="folders.move_action" />
             </button>
 
             <button

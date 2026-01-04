@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from "react-redux";
 import SidebarContent from "./SidebarContent";
 import { selectShowSidebar, toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 
-export default function SidebarDrawer({ localState, setLocalState, handleNewConversation }: { localState: any, setLocalState: (state: any) => void, handleNewConversation: () => void }) {
+export default function SidebarDrawer({ localState, setLocalState, handleNewConversation }: { localState: any, setLocalState: (state: any) => void, handleNewConversation: (folderId?: string | null) => Promise<void> }) {
 
   const dispatch = useDispatch();
   const showSidebar = useSelector(selectShowSidebar);

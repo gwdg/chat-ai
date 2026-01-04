@@ -43,7 +43,12 @@ function CollapsedSidebar({
           shortcut={newConversationShortcut}
         >
           <button
-            onClick={handleNewConversation}
+            onClick={() => {
+              if (!handleNewConversation) return;
+              handleNewConversation().catch((error) => {
+                console.error("Failed to start new conversation", error);
+              });
+            }}
             className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
             aria-label={newConversationAria}
           >

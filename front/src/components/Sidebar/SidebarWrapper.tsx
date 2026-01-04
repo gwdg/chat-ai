@@ -37,8 +37,9 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
     });
   }, []);
 
-  const handleNewConversation = useCallback(async () => {
-    const newId = await createConversation(getDefaultConversation(userSettings));
+  const handleNewConversation = useCallback(async (folderId: string | null = null) => {
+    const newConversation = getDefaultConversation(userSettings, folderId ?? null);
+    const newId = await createConversation(newConversation);
     navigate(`/chat/${newId}`);
     focusPromptInput();
   }, [userSettings, navigate, focusPromptInput]);

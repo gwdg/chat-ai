@@ -28,7 +28,8 @@ export default function DeleteConversationModal({
     if (conversations.length === 1) {
       console.log("Only one conversation, creating a new one.");
       
-      const newConversationId = await createConversation(getDefaultConversation(userSettings));
+      const folderId = conversations[currentIndex]?.folderId || null;
+      const newConversationId = await createConversation(getDefaultConversation(userSettings, folderId));
       console.log("Created new conversation with id:", newConversationId);
       navigate(`/chat/${newConversationId}`);
       // const action = dispatch(addConversation());

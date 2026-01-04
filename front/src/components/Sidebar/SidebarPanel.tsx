@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from "react-redux";
 import SidebarContent from "./SidebarContent";
 import { selectShowSidebar, toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 
-export default function SidebarPanel({ localState, setLocalState, handleNewConversation }: { localState: any, setLocalState: (state: any) => void, handleNewConversation: () => void }) {
+export default function SidebarPanel({ localState, setLocalState, handleNewConversation }: { localState: any, setLocalState: (state: any) => void, handleNewConversation: (folderId?: string | null) => Promise<void> }) {
   /*
   Small Container for the Desktop Extended Sidebar
   */

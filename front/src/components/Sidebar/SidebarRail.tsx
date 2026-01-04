@@ -35,7 +35,7 @@ import ImportConversationButton from "./ImportConversationButton";
 import { useModal } from "../../modals/ModalContext";
 import ShortcutTooltip from "./ShortcutTooltip";
 
-export default function SidebarRail({ localState, onOpen, handleNewConversation }: { localState: any, onOpen: () => void, handleNewConversation: () => void }) {
+export default function SidebarRail({ localState, onOpen, handleNewConversation }: { localState: any, onOpen: () => void, handleNewConversation: (folderId?: string | null) => Promise<void> }) {
 
   const { openModal } = useModal();
   const { t } = useTranslation();
@@ -97,7 +97,11 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
             shortcut={newConversationShortcut}
           >
             <button
-              onClick={handleNewConversation}
+              onClick={() => {
+                handleNewConversation().catch((error) => {
+                  console.error("Failed to start new conversation", error);
+                });
+              }}
               className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl flex items-center justify-center`}
               aria-label={newConversationAria}
             >
