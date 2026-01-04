@@ -82,6 +82,10 @@ export default function PromptTextArea({
           className="p-5 transition-opacity duration-300 ease-in-out outline-none text-base rounded-t-2xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto"
           value={prompt}
           name="prompt"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          data-1p-ignore="true"
           placeholder={t("conversation.prompt.placeholder")}
           style={{
           minHeight: `${MIN_HEIGHT}px`,

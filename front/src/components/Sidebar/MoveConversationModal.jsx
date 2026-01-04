@@ -98,7 +98,7 @@ export default function MoveConversationModal({
       titleKey="folders.move_title"
       maxWidth="max-w-lg"
     >
-      <div className="space-y-4 text-sm">
+      <div className="space-y-4 text-sm text-gray-800 dark:text-gray-100">
         <p className="text-gray-700 dark:text-gray-200">
           <Trans
             i18nKey="folders.move_description"
