@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import BaseModal from "../../modals/BaseModal";
 import { createFolder, renameFolder } from "../../db";
@@ -14,11 +14,18 @@ export default function FolderEditorModal({
   const { t } = useTranslation();
   const [name, setName] = useState(initialName || "");
   const [error, setError] = useState("");
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
       setName(initialName || "");
       setError("");
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      });
     }
   }, [initialName, isOpen]);
 
@@ -60,7 +67,12 @@ export default function FolderEditorModal({
             <Trans i18nKey="folders.name_label" />
           </label>
           <input
+            ref={inputRef}
             type="text"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
             value={name}
             onChange={(e) => {
               setName(e.target.value);

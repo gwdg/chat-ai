@@ -417,6 +417,10 @@ export default function SidebarContent({
           <div className="relative">
             <input
               type="text"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("folders.search_placeholder")}
