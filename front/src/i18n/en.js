@@ -45,6 +45,7 @@ export default {
     search_label: "Search",
     search_placeholder: "Search chats by title",
     search_no_results: 'No matches for "{{query}}"',
+    clear_search: "Clear search",
     create_title: "Create Folder",
     rename_title: "Rename Folder",
     delete_title: "Delete Folder",

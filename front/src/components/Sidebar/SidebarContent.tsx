@@ -177,7 +177,8 @@ export default function SidebarContent({
     folder?: { id: string; name: string }
   }) => {
     const isActive = activeFolderId === option.id;
-    const count = folderCounts.get(option.countKey) ?? 0;
+    const rawCount = folderCounts.get(option.countKey) ?? 0;
+    const displayCount = rawCount > 99 ? "99+" : rawCount;
     return (
       <div
         key={option.id}
@@ -199,7 +200,7 @@ export default function SidebarContent({
         <div className="flex-1 flex items-center justify-between text-left select-none pointer-events-none">
           <span className="truncate">{option.label}</span>
           <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-2">
-            {count}
+            {displayCount}
           </span>
         </div>
         {option.canEdit && option.folder && (
@@ -409,13 +410,25 @@ export default function SidebarContent({
           <label className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
             <Trans i18nKey="folders.search_label" />
           </label>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t("folders.search_placeholder")}
-            className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-xs text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-tertiary/40"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t("folders.search_placeholder")}
+              className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-xs text-black dark:text-white pr-7 focus:outline-none focus:ring-2 focus:ring-tertiary/40"
+            />
+            {searchQuery.length > 0 && (
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                aria-label={t("folders.clear_search")}
+                onClick={() => setSearchQuery("")}
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
           <span>{t("folders.title")}</span>

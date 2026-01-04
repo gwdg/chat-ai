@@ -45,6 +45,7 @@ export default {
     search_label: "Suche",
     search_placeholder: "Chats nach Titel durchsuchen",
     search_no_results: 'Keine Treffer für "{{query}}"',
+    clear_search: "Suche löschen",
     create_title: "Ordner erstellen",
     rename_title: "Ordner umbenennen",
     delete_title: "Ordner löschen",

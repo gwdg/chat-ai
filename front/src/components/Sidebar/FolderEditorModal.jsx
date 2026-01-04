@@ -40,6 +40,13 @@ export default function FolderEditorModal({
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -59,6 +66,7 @@ export default function FolderEditorModal({
               setName(e.target.value);
               if (error) setError("");
             }}
+            onKeyDown={handleKeyDown}
             className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-bg_dark px-3 py-2 text-sm text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-tertiary/40"
             placeholder={t("folders.name_placeholder")}
           />
