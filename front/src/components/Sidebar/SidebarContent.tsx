@@ -199,7 +199,7 @@ export default function SidebarContent({
       >
         <div className="flex-1 flex items-center justify-between text-left select-none pointer-events-none">
           <span className="truncate">{option.label}</span>
-          <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-2">
+          <span className="ml-2 text-[11px] font-semibold text-gray-500 dark:text-gray-200">
             {displayCount}
           </span>
         </div>
