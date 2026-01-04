@@ -23,6 +23,8 @@ export default function ShortcutTooltip({
   const [coords, setCoords] = useState({ left: 0, top: 0 });
   const [isClient, setIsClient] = useState(false);
   const delayRef = useRef<number | null>(null);
+  const suppressHoverRef = useRef(false);
+  const pointerRestoreHandlerRef = useRef<((event: PointerEvent) => void) | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -79,7 +81,8 @@ export default function ShortcutTooltip({
         )
       : null;
 
-  const showTooltip = () => {
+  const showTooltip = useCallback(() => {
+    if (suppressHoverRef.current) return;
     if (enterDelay > 0) {
       delayRef.current = window.setTimeout(() => {
         setVisible(true);
@@ -88,19 +91,60 @@ export default function ShortcutTooltip({
     } else {
       setVisible(true);
     }
-  };
+  }, [enterDelay]);
 
-  const hideTooltip = () => {
+  const hideTooltip = useCallback(() => {
     if (delayRef.current) {
       clearTimeout(delayRef.current);
       delayRef.current = null;
     }
     setVisible(false);
-  };
+  }, []);
 
   useEffect(() => () => {
     if (delayRef.current) {
       clearTimeout(delayRef.current);
+    }
+  }, []);
+
+  const startPointerRestoreListener = useCallback(() => {
+    if (!isClient || pointerRestoreHandlerRef.current) return;
+    const handler = () => {
+      suppressHoverRef.current = false;
+      if (pointerRestoreHandlerRef.current) {
+        window.removeEventListener("pointermove", pointerRestoreHandlerRef.current, true);
+        pointerRestoreHandlerRef.current = null;
+      }
+    };
+    pointerRestoreHandlerRef.current = handler;
+    window.addEventListener("pointermove", handler, true);
+  }, [isClient]);
+
+  const handleWindowInactive = useCallback(() => {
+    suppressHoverRef.current = true;
+    hideTooltip();
+    startPointerRestoreListener();
+  }, [hideTooltip, startPointerRestoreListener]);
+
+  useEffect(() => {
+    if (!isClient) return;
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        handleWindowInactive();
+      }
+    };
+    window.addEventListener("blur", handleWindowInactive);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("blur", handleWindowInactive);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isClient, handleWindowInactive]);
+
+  useEffect(() => () => {
+    if (pointerRestoreHandlerRef.current) {
+      window.removeEventListener("pointermove", pointerRestoreHandlerRef.current, true);
+      pointerRestoreHandlerRef.current = null;
     }
   }, []);
 
