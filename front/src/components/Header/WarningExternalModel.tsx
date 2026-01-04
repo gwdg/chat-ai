@@ -52,9 +52,14 @@ export default function WarningExternalModel({ localState, userData }) {
   }, [isSafe]);
 
   const [showTextBox, setShowTextBox] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
+  const isPopoverVisible = showTextBox || isHovering;
 
   return isSafe ? (
-    <div>
+    <div
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
       <button
         onClick={() => setShowTextBox(!showTextBox)}
         className="flex items-center h-10 w-10 gap-2 px-2 py-2 relative
@@ -68,7 +73,7 @@ export default function WarningExternalModel({ localState, userData }) {
         {/* <Trans i18nKey="alert.title" /> */}
       </button>
 
-      {showTextBox && (
+      {isPopoverVisible && (
         <div
           className="absolute right-0 mt-2 p-4 
                         bg-white dark:bg-gray-800 
@@ -106,7 +111,10 @@ export default function WarningExternalModel({ localState, userData }) {
       )}
     </div>
   ) : (
-    <div>
+    <div
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
       <button
         onClick={() => setShowTextBox(!showTextBox)}
         className="flex items-center h-10 w-10 gap-2 px-2 py-2 relative
@@ -126,7 +134,7 @@ export default function WarningExternalModel({ localState, userData }) {
         {/* <Trans i18nKey="alert.title" /> */}
       </button>
 
-      {showTextBox && (
+      {isPopoverVisible && (
         <div
           className="absolute right-0 mt-2 p-4 
                         bg-white dark:bg-gray-800 
