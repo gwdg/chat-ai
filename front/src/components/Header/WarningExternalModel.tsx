@@ -3,11 +3,24 @@ import { useEffect, useState } from "react";
 import { Lock, TriangleAlert } from "lucide-react";
 
 function isSafeSettings(localState) {
-  const isExternalModel = !!localState?.settings?.model?.name?.toLowerCase().includes("external");
-  const webSearchEnabled = !!localState?.settings?.tools?.web_search;
-  const MCPEnabled = !!localState?.settings?.tools?.mcp;
+  const modelName = localState?.settings?.model?.name;
+  const isExternalModel =
+    typeof modelName === "string" &&
+    modelName.toLowerCase().includes("external");
 
-  return !(isExternalModel || webSearchEnabled || MCPEnabled)
+  const toolsEnabled = !!localState?.settings?.enable_tools;
+  const tools = localState?.settings?.tools || {};
+
+  // Web search should only trigger warnings when the toolset is active
+  const webSearchEnabled =
+    toolsEnabled &&
+    (localState?.settings?.enable_web_search ||
+      !!tools.web_search ||
+      !!tools.fetch_url);
+
+  const mcpEnabled = toolsEnabled && !!tools.mcp;
+
+  return !(isExternalModel || webSearchEnabled || mcpEnabled);
 }
 
 export function DataSafetyText({ localState, userData }) {
@@ -156,4 +169,3 @@ export default function WarningExternalModel({ localState, userData }) {
     </div>
   )
 };
-
