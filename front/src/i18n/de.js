@@ -34,6 +34,7 @@ export default {
     expand: "Ausklappen",
     extend: "Ausklappen",
     open_sidebar: "Seitenleiste öffnen",
+    close_sidebar: "Seitenleiste schließen",
     rename_tooltip: "Umbenennen: {{title}}",
     shortcut_new_conversation: "Strg + Shift + O",
   },

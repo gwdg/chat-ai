@@ -21,6 +21,7 @@ import { Bot } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
 import AiServicesMenu from "./AiServicesMenu";
+import ShortcutTooltip from "./ShortcutTooltip";
 
 const ALL_FOLDERS = "__all__";
 
@@ -364,15 +365,18 @@ export default function SidebarContent({
       }}
     >
       {/* Header with close button */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-3 pt-3 pb-2 gap-2">
         <AiServicesMenu />
-        <button
-          onClick={onClose}
-          className="m-3 cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          title="Close sidebar"
-        >
-          <ChevronLeft className="w-7 h-7 text-tertiary" />
-        </button>
+        <ShortcutTooltip label={t("sidebar.close_sidebar")} position="left" enterDelay={150}>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("sidebar.close_sidebar")}
+            className="cursor-pointer p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-200 flex items-center justify-center text-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        </ShortcutTooltip>
       </div>
 
       {/* New Chat Button */}
