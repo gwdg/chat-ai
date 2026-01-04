@@ -1,5 +1,5 @@
 import { useRef, useState, Fragment, useEffect } from "react";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -21,6 +21,7 @@ import ImportConversationButton from "./ImportConversationButton";
 function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) {
   const { openModal } = useModal();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [hoveredId, setHoveredId] = useState(null);
   const [activeMenu, setActiveMenu] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -30,6 +31,8 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
   const defaultSettings = useRef(getDefaultSettings);
   const menuRef = useRef(null);
   const menuButtonRefs = useRef({}); // Add refs for menu buttons
+  const newConversationLabel = t("sidebar.new_conversation");
+  const newConversationShortcut = t("sidebar.shortcut_new_conversation");
 
   const handleSelectConversation = (id) => {
     if (lockConversation || id === currentConversationId) return;
@@ -166,8 +169,13 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            <span className="truncate">
-              <Trans i18nKey="sidebar.new_conversation" />
+            <span className="flex flex-col items-start leading-tight">
+              <span className="truncate">
+                <Trans i18nKey="sidebar.new_conversation" />
+              </span>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                {newConversationShortcut}
+              </span>
             </span>
           </button>
         </div>

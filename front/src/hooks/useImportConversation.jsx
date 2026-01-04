@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
-import { createConversation, newId, saveFile } from "../db";
+import { createConversation, ensureFolder, getFolder, newId, saveFile } from "../db";
 import { dataURLtoFile } from "../utils/attachments";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 
@@ -223,7 +223,7 @@ export function useImportConversation() {
         })
       }
       // Populate settings from data
-      let settings = defaultSettings;
+      let settings = { ...defaultSettings };
 
       // Check for system prompt in data settings
       const system_prompt = extractParameter(data, "system_prompt") || extractParameter(data, "systemPrompt");
@@ -310,6 +310,31 @@ export function useImportConversation() {
       // Replace arcana if exists
       if (arcana?.id) settings.arcana = arcana;
 
+      // Determine folder assignment
+      let folderId = null;
+      const folderRef =
+        extractParameter(data, "folderId") ||
+        extractParameter(data, "folder_id") ||
+        extractParameter(data, "folder");
+      if (typeof folderRef === "string") {
+        const existing = await getFolder(folderRef);
+        folderId = existing?.id ?? null;
+      } else if (folderRef?.id) {
+        const existing = await getFolder(folderRef.id);
+        folderId = existing?.id ?? null;
+      }
+      if (!folderId && typeof folderRef?.name === "string") {
+        folderId = await ensureFolder(folderRef.name);
+      }
+      if (!folderId) {
+        const folderName =
+          extractParameter(data, "folderName") ||
+          extractParameter(data, "folder_name");
+        if (typeof folderName === "string") {
+          folderId = await ensureFolder(folderName);
+        }
+      }
+
       // Create new conversation
       const newId = await createConversation(
         {
@@ -317,6 +342,7 @@ export function useImportConversation() {
           title: data?.title || "Imported Conversation",
           messages: sanitizedMessages,
           settings: settings,
+          folderId: folderId ?? null,
         },
       )
 

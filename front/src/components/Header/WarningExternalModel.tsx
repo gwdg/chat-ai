@@ -3,11 +3,24 @@ import { useEffect, useState } from "react";
 import { Lock, TriangleAlert } from "lucide-react";
 
 function isSafeSettings(localState) {
-  const isExternalModel = !!localState?.settings?.model?.name?.toLowerCase().includes("external");
-  const webSearchEnabled = !!localState?.settings?.tools?.web_search;
-  const MCPEnabled = !!localState?.settings?.tools?.mcp;
+  const modelName = localState?.settings?.model?.name;
+  const isExternalModel =
+    typeof modelName === "string" &&
+    modelName.toLowerCase().includes("external");
 
-  return !(isExternalModel || webSearchEnabled || MCPEnabled)
+  const toolsEnabled = !!localState?.settings?.enable_tools;
+  const tools = localState?.settings?.tools || {};
+
+  // Web search should only trigger warnings when the toolset is active
+  const webSearchEnabled =
+    toolsEnabled &&
+    (localState?.settings?.enable_web_search ||
+      !!tools.web_search ||
+      !!tools.fetch_url);
+
+  const mcpEnabled = toolsEnabled && !!tools.mcp;
+
+  return !(isExternalModel || webSearchEnabled || mcpEnabled);
 }
 
 export function DataSafetyText({ localState, userData }) {
@@ -36,14 +49,43 @@ export default function WarningExternalModel({ localState, userData }) {
 
   useEffect(() => {
     setShowTextBox(true);
+    setSuppressHoverTooltip(false);
   }, [isSafe]);
 
   const [showTextBox, setShowTextBox] = useState(true);
+  const [isHovering, setIsHovering] = useState(false);
+  const [suppressHoverTooltip, setSuppressHoverTooltip] = useState(false);
+  const isPopoverVisible = showTextBox || (isHovering && !suppressHoverTooltip);
+
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
+    if (suppressHoverTooltip) {
+      setSuppressHoverTooltip(false);
+    }
+  };
+
+  const handleCloseTooltip = () => {
+    setShowTextBox(false);
+    setSuppressHoverTooltip(true);
+  };
+
+  const handleToggleButton = () => {
+    setSuppressHoverTooltip(false);
+    setShowTextBox((prev) => !prev);
+  };
 
   return isSafe ? (
-    <div>
+    <div
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <button
-        onClick={() => setShowTextBox(!showTextBox)}
+        onClick={handleToggleButton}
+        onFocus={() => setSuppressHoverTooltip(false)}
         className="flex items-center h-10 w-10 gap-2 px-2 py-2 relative
                   bg-green-100 hover:bg-green-200
                   dark:bg-green-900/30 dark:hover:bg-green-900/50
@@ -55,7 +97,7 @@ export default function WarningExternalModel({ localState, userData }) {
         {/* <Trans i18nKey="alert.title" /> */}
       </button>
 
-      {showTextBox && (
+      {isPopoverVisible && (
         <div
           className="absolute right-0 mt-2 p-4 
                         bg-white dark:bg-gray-800 
@@ -68,7 +110,7 @@ export default function WarningExternalModel({ localState, userData }) {
             />
           </div>
           <button
-            onClick={() => setShowTextBox(false)}
+            onClick={handleCloseTooltip}
             className="absolute top-2 right-2 
                        text-gray-500 hover:text-gray-700 
                        dark:text-gray-400 dark:hover:text-white 
@@ -93,9 +135,13 @@ export default function WarningExternalModel({ localState, userData }) {
       )}
     </div>
   ) : (
-    <div>
+    <div
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <button
-        onClick={() => setShowTextBox(!showTextBox)}
+        onClick={handleToggleButton}
+        onFocus={() => setSuppressHoverTooltip(false)}
         className="flex items-center h-10 w-10 gap-2 px-2 py-2 relative
                    bg-yellow-100 hover:bg-yellow-200 
                    dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 
@@ -113,7 +159,7 @@ export default function WarningExternalModel({ localState, userData }) {
         {/* <Trans i18nKey="alert.title" /> */}
       </button>
 
-      {showTextBox && (
+      {isPopoverVisible && (
         <div
           className="absolute right-0 mt-2 p-4 
                         bg-white dark:bg-gray-800 
@@ -130,7 +176,7 @@ export default function WarningExternalModel({ localState, userData }) {
             />
           </div>
           <button
-            onClick={() => setShowTextBox(false)}
+            onClick={handleCloseTooltip}
             className="absolute top-2 right-2 
                        text-gray-500 hover:text-gray-700 
                        dark:text-gray-400 dark:hover:text-white 
@@ -156,4 +202,3 @@ export default function WarningExternalModel({ localState, userData }) {
     </div>
   )
 };
-

@@ -13,7 +13,8 @@ import type {
   ConversationSettings,
   MessageInput,
   MessageRole,
-  ContentItemInput
+  ContentItemInput,
+  FolderRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -24,6 +25,7 @@ export class AppDB extends Dexie {
   content_items!: Table<ContentItemRow, string>
   files_meta!: Table<FileMetaRow, string>
   files_data!: Table<FileDataRow, string>
+  folders!: Table<FolderRow, string>
 
   constructor() {
     super('app-conversations-db')
@@ -39,6 +41,21 @@ export class AppDB extends Dexie {
       files_meta: 'id, conversationId, type, size, name',
       files_data: 'id',
     })
+
+    this.version(3).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt'
+    }).upgrade(async tx => {
+      await tx.table('conversations').toCollection().modify((conv: any) => {
+        if (typeof conv.folderId === 'undefined') {
+          conv.folderId = null;
+        }
+      });
+    });
   }
 }
 
@@ -156,12 +173,14 @@ export async function createConversation(params: {
   settings: ConversationSettings
   messages?: MessageInput[],
   id?: string, // for import
+  folderId?: string | null
 }) {
   const id = params?.id ?? newId()
   const now = Date.now()
   const title = params.title
   const settings = params.settings
-  const messages = params.messages
+  const messages = params.messages ?? []
+  const folderId = params.folderId ?? null
 
   await db.transaction('rw', db.conversations, db.messages, db.content_items, db.files_meta, db.files_data, async () => {
     await db.conversations.add({
@@ -171,10 +190,11 @@ export async function createConversation(params: {
       lastModified: now,
       settings,
       messageCount: 0,
+      folderId,
     })
 
     if (messages.length > 0) {
-      await updateConversation(id, { title, settings, messages }, true)
+      await updateConversation(id, { title, settings, messages, folderId }, true)
     }
   })
 
@@ -245,6 +265,7 @@ export async function updateConversation(
       meta?: any
     }>,
     lastModified?: number,
+    folderId?: string | null,
   },
   force: boolean = false,
 ) {
@@ -379,11 +400,15 @@ export async function updateConversation(
       //await cleanUpOrphanFiles(conversationId);
 
       // Finally update conversation info
-      await db.conversations.update(conversationId, {
+      const convoUpdates: Partial<ConversationRow> = {
         title: data.title ?? convo.title,
         settings: data.settings ?? convo.settings,
         lastModified: now
-      });
+      };
+      if ('folderId' in data) {
+        convoUpdates.folderId = data.folderId ?? null;
+      }
+      await db.conversations.update(conversationId, convoUpdates);
     }
   );
   return now;
@@ -479,7 +504,7 @@ export async function getConversationMeta(conversationId: string): Promise<Conve
 
 // Get list of conversation Metas
 export async function listConversationMetas(): Promise<
-  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'messageCount'>>
+  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'messageCount' | 'folderId'>>
 > {
   return db.conversations.orderBy('id').toArray()
 }
@@ -487,10 +512,13 @@ export async function listConversationMetas(): Promise<
 // Rename conversation or update settings
 export async function updateConversationMeta(
   conversationId: string,
-  updates: Partial<Pick<ConversationRow, 'title' | 'settings'>>,
+  updates: Partial<Pick<ConversationRow, 'title' | 'settings' | 'folderId'>>,
 ) {
-  //const now = Date.now();
-  await db.conversations.update(conversationId, { ...updates })
+  const payload: Partial<ConversationRow> = { ...updates };
+  if ('folderId' in updates && typeof updates.folderId === 'undefined') {
+    payload.folderId = null;
+  }
+  await db.conversations.update(conversationId, payload)
   return 0;
 }
 
@@ -566,6 +594,86 @@ export function useConversationList() {
   [] as ConversationRow[]
   )
   return list
+}
+
+// ---------- Folders ----------
+
+export async function listFolders(): Promise<FolderRow[]> {
+  return db.folders.orderBy('createdAt').toArray();
+}
+
+export async function getFolder(folderId: string): Promise<FolderRow | undefined> {
+  if (!folderId) return undefined;
+  return db.folders.get(folderId);
+}
+
+export async function getFolderByName(name: string): Promise<FolderRow | undefined> {
+  if (!name?.trim()) return undefined;
+  return db.folders.where('name').equals(name.trim()).first();
+}
+
+export async function createFolder(name: string): Promise<string> {
+  const trimmed = name?.trim();
+  if (!trimmed) {
+    throw new Error('Folder name is required');
+  }
+  const id = newId();
+  const now = Date.now();
+  await db.folders.add({
+    id,
+    name: trimmed,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return id;
+}
+
+export async function renameFolder(folderId: string, name: string) {
+  const trimmed = name?.trim();
+  if (!trimmed) {
+    throw new Error('Folder name is required');
+  }
+  await db.folders.update(folderId, {
+    name: trimmed,
+    updatedAt: Date.now(),
+  });
+}
+
+export async function deleteFolder(folderId: string) {
+  await db.transaction('rw', [db.conversations, db.folders], async () => {
+    await db.conversations
+      .where('folderId')
+      .equals(folderId)
+      .modify((conv: any) => {
+        conv.folderId = null;
+      });
+    await db.folders.delete(folderId);
+  });
+}
+
+export async function assignConversationToFolder(conversationId: string, folderId: string | null) {
+  await db.conversations.update(conversationId, {
+    folderId: folderId ?? null,
+    lastModified: Date.now(),
+  });
+}
+
+export async function ensureFolder(name: string): Promise<string | null> {
+  const trimmed = name?.trim();
+  if (!trimmed) return null;
+  const existing = await getFolderByName(trimmed);
+  if (existing) return existing.id;
+  return createFolder(trimmed);
+}
+
+export function useFolderList() {
+  return useLiveQuery(
+    async () => {
+      return await db.folders.orderBy('createdAt').toArray();
+    },
+    [],
+    [] as FolderRow[],
+  );
 }
 
 // ---------- Files ----------

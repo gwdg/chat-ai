@@ -30,6 +30,7 @@ export type ConversationRow = {
   lastModified: number
   settings: ConversationSettings
   messageCount: number
+  folderId?: string | null
 }
 
 export type HydratedConversation = ConversationRow & {
@@ -101,4 +102,11 @@ export type HydratedMessage = {
   updatedAt?: number
   meta?: any // e.g. model
   content: ContentItemRow[]
+}
+
+export type FolderRow = {
+  id: string
+  name: string
+  createdAt: number
+  updatedAt: number
 }

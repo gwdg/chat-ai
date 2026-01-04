@@ -19,6 +19,9 @@ import DeleteConversationModal from "../components/Sidebar/DeleteConversationMod
 import RenameConversationModal from "../components/Sidebar/RenameConversationModal";
 import ExportConversationModal from "../components/Sidebar/ExportConversationModal";
 import ImportPersonaModal from "../components/Sidebar/ImportPersonaModal";
+import FolderEditorModal from "../components/Sidebar/FolderEditorModal";
+import DeleteFolderModal from "../components/Sidebar/DeleteFolderModal";
+import MoveConversationModal from "../components/Sidebar/MoveConversationModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
 import ClearMessagesModal from "./Alert/ClearMessagesModal";
 import PreviewModal from "./Chat/PreviewModal";
@@ -74,6 +77,25 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "importPersona" && (
         <ImportPersonaModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "createFolder" && (
+        <FolderEditorModal
+          mode="create"
+          isOpen
+          onClose={closeModal}
+          {...modalProps}
+        />
+      )}
+      {modalType === "renameFolder" && (
+        <FolderEditorModal
+          mode="rename"
+          isOpen
+          onClose={closeModal}
+          {...modalProps}
+        />
+      )}
+      {modalType === "deleteFolder" && (
+        <DeleteFolderModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {/* Setting Panel Modals */}
       {modalType === "shareSettings" && (
@@ -133,6 +155,9 @@ export function ModalProvider({ children }) {
       {/* General Modals */}
       {modalType === "exportConversation" && (
         <ExportConversationModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "moveConversation" && (
+        <MoveConversationModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "preview" && (
         <PreviewModal isOpen onClose={closeModal} {...modalProps} />

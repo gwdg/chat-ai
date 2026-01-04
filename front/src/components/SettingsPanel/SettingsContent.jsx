@@ -39,6 +39,7 @@ import { getDefaultSettings } from "../../utils/conversationUtils";
 import MCPContainer from "./MCPContainer";
 import ToolsContainer from "./ToolsContainer";
 import VideoList from "./VideoList";
+import ShortcutTooltip from "../Sidebar/ShortcutTooltip";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -350,13 +351,18 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
       <div className="settings-toggle flex relative w-full h-full flex-col items-center text-tertiary min-w-0 min-h-0 max-h-full">
         {/* Logos and User Profile */}
         <div className="w-full hidden md:flex items-center gap-3 justify-between p-3">
-          <button
-            onClick={() => dispatch(toggleSettings())}
-            className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="Close Settings"
+          <ShortcutTooltip label={t("settings.close_panel")}
+            position="left"
+            enterDelay={120}
           >
-            <ChevronRight className="w-7 h-7 text-tertiary" />
-          </button>
+            <button
+              onClick={() => dispatch(toggleSettings())}
+              className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label={t("settings.close_panel")}
+            >
+              <ChevronRight className="w-7 h-7 text-tertiary" />
+            </button>
+          </ShortcutTooltip>
           {/* Partner logos */}
           <div className="gap-2 px-5 hidden md:flex">
             <PartnerContainer />
