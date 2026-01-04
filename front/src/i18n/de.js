@@ -132,7 +132,7 @@ export default {
     faq: "FAQ",
     contact: "Kontakt",
     about: "Über uns",
-    copyright: "2025 GWDG © Alle Rechte vorbehalten",
+    copyright: "{{year}} GWDG © Alle Rechte vorbehalten",
     iso_certified: "ISO 27001 Zertifiziert",
   },
   // User Settings Modal
