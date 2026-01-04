@@ -42,6 +42,9 @@ export default {
     all: "All chats",
     uncategorized: "Unsorted",
     create_button: "New folder",
+    search_label: "Search",
+    search_placeholder: "Search chats by title",
+    search_no_results: 'No matches for "{{query}}"',
     create_title: "Create Folder",
     rename_title: "Rename Folder",
     delete_title: "Delete Folder",
@@ -116,6 +119,7 @@ export default {
     sources: "Sources and References",
     references: "References",
     empty_message: "Your conversations are never stored on our servers",
+    untitled: "Untitled Conversation",
   },
   // Footer
   footer: {

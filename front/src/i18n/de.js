@@ -42,6 +42,9 @@ export default {
     all: "Alle Chats",
     uncategorized: "Ohne Ordner",
     create_button: "Neuer Ordner",
+    search_label: "Suche",
+    search_placeholder: "Chats nach Titel durchsuchen",
+    search_no_results: 'Keine Treffer für "{{query}}"',
     create_title: "Ordner erstellen",
     rename_title: "Ordner umbenennen",
     delete_title: "Ordner löschen",
@@ -117,6 +120,7 @@ export default {
     references: "Referenzen",
     empty_message:
       "Ihre Gespräche werden niemals auf unseren Servern gespeichert.",
+    untitled: "Unbenannte Unterhaltung",
   },
   // Footer
   footer: {

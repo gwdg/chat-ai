@@ -59,6 +59,10 @@ export default function SidebarContent({
     }
   }, [localState, currentConversationId]);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const hasSearch = normalizedSearch.length > 0;
+
   useEffect(() => {
     if (activeFolderId === ALL_FOLDERS) {
       return;
@@ -86,10 +90,20 @@ export default function SidebarContent({
     return counts;
   }, [conversations, folders]);
 
-  const visibleConversations = useMemo(() => {
+  const filteredByFolder = useMemo(() => {
     if (activeFolderId === ALL_FOLDERS) return conversations;
     return conversations.filter((conv) => conv.folderId === activeFolderId);
   }, [conversations, activeFolderId]);
+
+  const visibleConversations = useMemo(() => {
+    if (!hasSearch) return filteredByFolder;
+    return filteredByFolder.filter((conv) => {
+      const title = conv.title || t("conversation.untitled", { defaultValue: "Untitled Conversation" });
+      return title.toLowerCase().includes(normalizedSearch);
+    });
+  }, [filteredByFolder, hasSearch, normalizedSearch, t]);
+
+  const noSearchResults = hasSearch && visibleConversations.length === 0;
 
   function onClose() {
     dispatch(toggleSidebar());
@@ -134,6 +148,27 @@ export default function SidebarContent({
     return folderMap.get(folderId) || t("folders.uncategorized");
   };
 
+  const highlightText = (text?: string | null) => {
+    const value = text || t("conversation.untitled", { defaultValue: "Untitled Conversation" });
+    if (!hasSearch) return value;
+    const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(${escapeRegExp(normalizedSearch)})`, "ig");
+    const parts = value.split(regex);
+    return parts.map((part, index) => {
+      if (part.toLowerCase() === normalizedSearch) {
+        return (
+          <mark
+            key={`highlight-${index}`}
+            className="bg-yellow-200 dark:bg-yellow-600/60 text-black dark:text-white px-0.5 rounded-sm"
+          >
+            {part}
+          </mark>
+        );
+      }
+      return <span key={`text-${index}`}>{part}</span>;
+    });
+  };
+
   const renderFolderRow = (option: {
     id: string
     label: string
@@ -155,13 +190,13 @@ export default function SidebarContent({
             handleFolderSelection(option.id);
           }
         }}
-        className={`group flex items-center gap-2 rounded-2xl px-3 py-2 text-xs transition ${
+        className={`group flex items-center gap-2 rounded-2xl px-3 py-2 text-xs transition cursor-pointer ${
           isActive
             ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
             : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40"
         }`}
       >
-        <div className="flex-1 flex items-center justify-between text-left select-none">
+        <div className="flex-1 flex items-center justify-between text-left select-none pointer-events-none">
           <span className="truncate">{option.label}</span>
           <span className="text-[10px] text-gray-400 dark:text-gray-500 ml-2">
             {count}
@@ -369,7 +404,19 @@ export default function SidebarContent({
       </div>
 
       {/* Folder Filters */}
-      <div className="flex flex-col gap-2 mx-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+      <div className="flex flex-col gap-3 mx-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <Trans i18nKey="folders.search_label" />
+          </label>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t("folders.search_placeholder")}
+            className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-xs text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-tertiary/40"
+          />
+        </div>
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
           <span>{t("folders.title")}</span>
           <button
@@ -406,6 +453,11 @@ export default function SidebarContent({
           WebkitOverflowScrolling: "touch",
         }}
       >
+        {noSearchResults && (
+          <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-4">
+            <Trans i18nKey="folders.search_no_results" values={{ query: searchQuery }} />
+          </div>
+        )}
         {visibleConversations.map((conv) => {
           const id = conv.id;
           if (!conv) return null;
@@ -437,13 +489,9 @@ export default function SidebarContent({
                   style={{ cursor: isDesktop ? "text" : "pointer" }}
                 >
                   <div className="truncate text-xs font-medium leading-relaxed cursor-pointer">
-                    {conv.title || "Untitled Conversation"}
+                    {highlightText(conv.title)}
                   </div>
-                  {activeFolderId === ALL_FOLDERS && (
-                    <div className="text-[10px] text-gray-400 dark:text-gray-500">
-                      {getFolderDisplayName(conv.folderId)}
-                    </div>
-                  )}
+                  {/* Removed folder label under "All chats" */}
                 </div>
 
                 {/* Action buttons 
