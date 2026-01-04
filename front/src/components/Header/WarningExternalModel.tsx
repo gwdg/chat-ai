@@ -49,19 +49,43 @@ export default function WarningExternalModel({ localState, userData }) {
 
   useEffect(() => {
     setShowTextBox(true);
+    setSuppressHoverTooltip(false);
   }, [isSafe]);
 
   const [showTextBox, setShowTextBox] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
-  const isPopoverVisible = showTextBox || isHovering;
+  const [suppressHoverTooltip, setSuppressHoverTooltip] = useState(false);
+  const isPopoverVisible = showTextBox || (isHovering && !suppressHoverTooltip);
+
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
+    if (suppressHoverTooltip) {
+      setSuppressHoverTooltip(false);
+    }
+  };
+
+  const handleCloseTooltip = () => {
+    setShowTextBox(false);
+    setSuppressHoverTooltip(true);
+  };
+
+  const handleToggleButton = () => {
+    setSuppressHoverTooltip(false);
+    setShowTextBox((prev) => !prev);
+  };
 
   return isSafe ? (
     <div
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <button
-        onClick={() => setShowTextBox(!showTextBox)}
+        onClick={handleToggleButton}
+        onFocus={() => setSuppressHoverTooltip(false)}
         className="flex items-center h-10 w-10 gap-2 px-2 py-2 relative
                   bg-green-100 hover:bg-green-200
                   dark:bg-green-900/30 dark:hover:bg-green-900/50
@@ -86,7 +110,7 @@ export default function WarningExternalModel({ localState, userData }) {
             />
           </div>
           <button
-            onClick={() => setShowTextBox(false)}
+            onClick={handleCloseTooltip}
             className="absolute top-2 right-2 
                        text-gray-500 hover:text-gray-700 
                        dark:text-gray-400 dark:hover:text-white 
@@ -112,11 +136,12 @@ export default function WarningExternalModel({ localState, userData }) {
     </div>
   ) : (
     <div
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <button
-        onClick={() => setShowTextBox(!showTextBox)}
+        onClick={handleToggleButton}
+        onFocus={() => setSuppressHoverTooltip(false)}
         className="flex items-center h-10 w-10 gap-2 px-2 py-2 relative
                    bg-yellow-100 hover:bg-yellow-200 
                    dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 
@@ -151,7 +176,7 @@ export default function WarningExternalModel({ localState, userData }) {
             />
           </div>
           <button
-            onClick={() => setShowTextBox(false)}
+            onClick={handleCloseTooltip}
             className="absolute top-2 right-2 
                        text-gray-500 hover:text-gray-700 
                        dark:text-gray-400 dark:hover:text-white 
