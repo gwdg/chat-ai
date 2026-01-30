@@ -44,10 +44,11 @@ const AudioSettingsContainer = ({ localState, setLocalState }) => {
   const settings = localState?.settings || {};
   const model = typeof settings.model === "object" && settings.model !== null ? settings.model : {};
   const audioSettings = settings.audio || {};
-  const autoLabel = t("settings.audio_option_auto");
+  const autoLabelRaw = t("settings.audio_option_auto");
+  const autoLabel = autoLabelRaw && autoLabelRaw.trim().length > 0 ? autoLabelRaw : "Auto";
 
-  const voiceValue = audioSettings.voice ?? AUTO_VALUE;
-  const languageValue = audioSettings.language ?? AUTO_VALUE;
+  const voiceValue = audioSettings.voice || AUTO_VALUE;
+  const languageValue = audioSettings.language || AUTO_VALUE;
 
   const modelAudio = model.audio || {};
   const voiceOptions = buildOptions(
@@ -76,7 +77,7 @@ const AudioSettingsContainer = ({ localState, setLocalState }) => {
   };
 
   const selectClassName =
-    "dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-lg shadow-lg dark:shadow-dark w-full max-h-[40px] cursor-pointer";
+    "dark:text-white text-black bg-white dark:bg-bg_secondary_dark border dark:border-border_dark outline-none rounded-lg shadow-lg dark:shadow-dark w-full h-10 px-4 text-sm cursor-pointer";
 
   return (
     <div className="flex flex-col gap-3 w-full">
