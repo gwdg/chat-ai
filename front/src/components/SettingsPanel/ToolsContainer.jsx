@@ -19,7 +19,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 
-function MiniToolButton({ active, disabled, onClick, Icon, label }) {
+function MiniToolButton({ active, disabled, onClick, Icon, label, lang }) {
   return (
     <button
       type="button"
@@ -29,7 +29,8 @@ function MiniToolButton({ active, disabled, onClick, Icon, label }) {
         "group w-full select-none",
         "rounded-xl border text-sm font-medium",
         "px-3 py-2 md:px-3.5 md:py-2.5",
-        "flex flex-col items-center justify-center gap-2",
+        "flex flex-col items-center justify-center gap-1.5",
+        "min-h-[6rem] sm:min-h-[6.25rem]",
         "transition-all",
         disabled
           ? "opacity-50 cursor-not-allowed"
@@ -41,7 +42,11 @@ function MiniToolButton({ active, disabled, onClick, Icon, label }) {
       title={label}
     >
       <Icon className="h-6 w-6 md:h-7 md:w-7 shrink-0" aria-hidden="true" />
-      <span className="leading-none text-xs text-center">
+      <span
+        className="text-xs sm:text-[13px] md:text-sm text-center leading-tight break-words whitespace-normal min-h-[2.5rem] hyphens-auto"
+        lang={lang}
+        style={{ hyphens: "auto" }}
+      >
         {label}
       </span>
     </button>
@@ -49,10 +54,11 @@ function MiniToolButton({ active, disabled, onClick, Icon, label }) {
 }
 
 export default function ToolsContainer({ localState, setLocalState }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { openModal } = useModal();
   const dispatch = useDispatch();
   const agreedWebSearch = useSelector(selectAgreeWebSearch);
+  const labelLang = i18n?.resolvedLanguage || i18n?.language || "en";
 
   const settings = localState?.settings || {};
   const toolsState = settings.tools || {};
@@ -216,6 +222,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
               onClick={onToggle}
               Icon={Icon}
               label={label}
+              lang={labelLang}
             />
           );
         })}

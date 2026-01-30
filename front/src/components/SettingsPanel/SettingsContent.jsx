@@ -9,6 +9,7 @@ import { useModal } from "../../modals/ModalContext";
 
 //Components
 import ArcanaContainer from "./ArcanaContainer";
+import AudioSettingsContainer from "./AudioSettingsContainer";
 import MemorySelector from "./MemorySelector";
 import ChoiceProposer from "./ChoiceProposer";
 import ShareSettingsButton from "./ShareSettingsButton";
@@ -57,6 +58,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const choicesModule = import.meta.env.VITE_MODULE_CHOICES  === "true";
   const showArcanaBox = !!settings?.enable_tools && !!tools.arcana;
   const showMCPBox = !!settings?.enable_tools && !!tools.mcp;
+  const showAudioSettings = toolsModule && !!settings?.enable_tools && !!tools.audio_generation;
   const showVideoList = !!tools.video_generation;
 
   const migrationData = useSelector((state) => state.migration_data) || {};
@@ -412,6 +414,12 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
               setLocalState={setLocalState}
             />
           }
+          {showAudioSettings && (
+            <AudioSettingsContainer
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          )}
           {showVideoList && (
             <VideoList
               jobs={[]}
