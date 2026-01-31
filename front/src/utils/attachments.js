@@ -363,7 +363,7 @@ const addAudioAttachment = async ({
         notifyError(
         `Audio file too large: ${fileName}. Maximum supported size is 25MB.`
         );
-        return;
+        return false;
     }
 
     let wavBlob;
@@ -402,8 +402,10 @@ const addAudioAttachment = async ({
     });
 
     notifySuccess("Audio recorded and converted to WAV successfully");
+    return true;
     } catch (error) {
     notifyError(`Error processing recorded audio: ${error.message}`);
+    return false;
     }
 };
 

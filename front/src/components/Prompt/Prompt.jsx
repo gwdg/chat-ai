@@ -115,12 +115,16 @@ export default function Prompt({
 
   const handleSpeechAudio = async ({ audioBlob, type }) => {
     previousAttachmentCountRef.current = attachments.length;
-    await addAudioAttachment({
+    const didAttach = await addAudioAttachment({
       localState,
       setLocalState,
       audioBlob,
       type,
     });
+    if (!didAttach) {
+      setSpeechPendingSend(false);
+      return;
+    }
     setSpeechPendingSend(true);
   };
   

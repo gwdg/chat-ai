@@ -61,7 +61,7 @@ export function useAttachments() {
     audioBlob,
     type
   }) => {
-    await addAudioAttachment({
+    return await addAudioAttachment({
       localState,
       setLocalState,
       notifyError,
