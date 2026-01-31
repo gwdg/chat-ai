@@ -11,6 +11,8 @@ import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
+const audioInstruction = "If the user provided audio, treat it as the full request. First transcribe it. Then respond with spoken audio output (use audio generation) and include a concise text transcript. Do not ask for clarification unless the audio is completely inaudible.";
+const audioUserInstruction = "Transcribe the audio. Then respond with spoken audio output and a concise text transcript.";
 
 // Convert content items to standard OpenAI API
 export async function processContentItems({
@@ -215,6 +217,36 @@ const sendMessage = async ({
       systemPromptAPI = systemPromptAPI + memorySection;
     }
     
+    const modelSupportsAudioOutput = localState.settings.model?.output?.includes("audio") || false;
+    const audioToolsEnabled = !!localState.settings?.enable_tools && !!localState.settings?.tools?.audio_generation;
+    const hasAudioInput = conversationForAPI.messages.some(
+      (message) =>
+        Array.isArray(message?.content) &&
+        message.content.some((item) => item?.type === "input_audio")
+    );
+
+    const shouldGuideAudio = audioToolsEnabled && hasAudioInput;
+
+    if (shouldGuideAudio) {
+      systemPromptAPI = `${systemPromptAPI}\n\n--- Audio Response ---\n${audioInstruction}`.trim();
+      conversationForAPI = {
+        ...conversationForAPI,
+        messages: conversationForAPI.messages.map((message) => {
+          if (message?.role !== "user" || !Array.isArray(message?.content)) return message;
+          const hasAudio = message.content.some((item) => item?.type === "input_audio");
+          if (!hasAudio) return message;
+          const hasText = message.content.some(
+            (item) => item?.type === "text" && typeof item.text === "string" && item.text.trim().length > 0
+          );
+          if (hasText) return message;
+          return {
+            ...message,
+            content: [{ type: "text", text: audioUserInstruction }, ...message.content],
+          };
+        }),
+      };
+    }
+
     // Handle tools
     if (toolsModule && conversationForAPI.settings?.enable_tools) {
       // Inject the current date and time to the system prompt in human-readable format
