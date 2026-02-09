@@ -143,22 +143,42 @@ export default function SpeechModePanel({
   }, []);
 
   return (
-    <div className="px-5 py-6 sm:py-8 min-h-[240px] sm:min-h-[320px] flex flex-col speech-mode-surface">
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-medium text-tertiary">
+    <div className="speech-mode-surface w-full h-full min-h-[360px] sm:min-h-[440px] flex flex-col text-white select-none">
+      <div className="flex items-center justify-between px-6 pt-6">
+        <div className="text-[11px] sm:text-xs font-medium tracking-[0.16em] uppercase text-white/70">
           {t("conversation.speech_mode_title")}
         </div>
         <button
           type="button"
           onClick={handleClose}
-          className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="cursor-pointer h-9 w-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 transition"
           aria-label={t("conversation.speech_mode_close")}
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-5">
+      <div className="relative flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-8">
+        <div
+          className={`speech-curves ${isRecording ? "is-recording" : ""}`}
+          aria-hidden="true"
+        >
+          <svg
+            className="speech-curves-layer"
+            viewBox="0 0 1200 200"
+            preserveAspectRatio="none"
+          >
+            <path d="M0,120 C150,40 350,200 540,120 C720,40 900,200 1200,120 L1200,200 L0,200 Z" />
+          </svg>
+          <svg
+            className="speech-curves-layer speech-curves-layer--alt"
+            viewBox="0 0 1200 200"
+            preserveAspectRatio="none"
+          >
+            <path d="M0,140 C220,80 420,220 640,140 C860,80 1040,220 1200,140 L1200,200 L0,200 Z" />
+          </svg>
+        </div>
+
         <div
           className={`speech-wave ${isRecording ? "is-recording" : ""}`}
           aria-hidden="true"
@@ -174,7 +194,7 @@ export default function SpeechModePanel({
           <span className="speech-wave-bar" />
         </div>
 
-        <div className="text-sm text-gray-500 dark:text-gray-300">
+        <div className="text-sm sm:text-base text-white/80">
           {isRecording
             ? t("conversation.speech_mode_listening")
             : hasError
@@ -186,7 +206,7 @@ export default function SpeechModePanel({
           type="button"
           onClick={isRecording ? handleStopAndSend : startRecording}
           className={[
-            "px-5 py-2.5 rounded-full text-sm font-medium shadow-lg",
+            "cursor-pointer px-6 py-3 rounded-full text-sm sm:text-base font-semibold",
             isRecording
               ? "bg-red-500 text-white hover:bg-red-600"
               : "bg-tertiary text-white hover:bg-[#008ac2]",

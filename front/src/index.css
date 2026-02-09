@@ -211,12 +211,71 @@ body {
 }
 
 .speech-mode-surface {
-  background: radial-gradient(120% 120% at 50% 0%, rgba(0, 158, 224, 0.12) 0%, rgba(0, 158, 224, 0) 55%);
-  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .dark .speech-mode-surface {
-  background: radial-gradient(120% 120% at 50% 0%, rgba(0, 158, 224, 0.18) 0%, rgba(0, 158, 224, 0) 60%);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.speech-curves {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: -16%;
+  height: 60%;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.speech-curves svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.speech-curves-layer path {
+  fill: rgba(0, 158, 224, 0.18);
+}
+
+.speech-curves-layer--alt path {
+  fill: rgba(125, 211, 252, 0.35);
+}
+
+.dark .speech-curves-layer path {
+  fill: rgba(0, 158, 224, 0.28);
+}
+
+.dark .speech-curves-layer--alt path {
+  fill: rgba(125, 211, 252, 0.22);
+}
+
+@keyframes speech-curves-float {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-2%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.speech-curves.is-recording {
+  animation: speech-curves-float 6s ease-in-out infinite;
+}
+
+.speech-curves.is-recording .speech-curves-layer--alt {
+  animation: speech-curves-float 4s ease-in-out infinite reverse;
 }
 
 .speech-wave {
@@ -224,9 +283,10 @@ body {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 520px;
-  height: 96px;
+  max-width: 640px;
+  height: 120px;
   position: relative;
+  z-index: 1;
 }
 
 .speech-wave::before {
@@ -235,13 +295,13 @@ body {
   inset: 0;
   border-radius: 9999px;
   background: radial-gradient(60% 60% at 50% 50%, rgba(0, 158, 224, 0.25), rgba(0, 158, 224, 0));
-  filter: blur(18px);
-  opacity: 0.7;
+  filter: blur(20px);
+  opacity: 0.8;
   pointer-events: none;
 }
 
 .speech-wave-bar {
-  width: 8px;
+  width: 10px;
   height: 100%;
   border-radius: 9999px;
   background: linear-gradient(180deg, #7dd3fc 0%, #009ee0 100%);

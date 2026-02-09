@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import AbortButton from "./AbortButton";
@@ -15,7 +16,6 @@ import SpeechModePanel from "./SpeechModePanel";
 import { useSendMessage } from "../../hooks/useSendMessage";
 import { useDebounce } from "../../hooks/useDebounce";
 import { useAttachments } from "../../hooks/useAttachments";
-import Tooltip from "../Others/Tooltip";
 import { AudioWaveform } from "lucide-react";
 
 export default function Prompt({
@@ -29,6 +29,7 @@ export default function Prompt({
   const [ignoreChanges, setIgnoreChanges] = useState(false);
   const [speechModeOpen, setSpeechModeOpen] = useState(false);
   const [speechPendingSend, setSpeechPendingSend] = useState(false);
+  const [portalRoot, setPortalRoot] = useState(null);
   const previousAttachmentCountRef = useRef(0);
   const lastMessage = localState.messages[localState.messages.length - 1];
   if (lastMessage?.content == undefined){
@@ -88,6 +89,15 @@ export default function Prompt({
   }, [speechEnabled, speechModeOpen]);
 
   useEffect(() => {
+    if (!speechModeOpen) {
+      setPortalRoot(null);
+      return;
+    }
+    if (typeof document === "undefined") return;
+    setPortalRoot(document.getElementById("conversation-shell"));
+  }, [speechModeOpen]);
+
+  useEffect(() => {
     if (!speechPendingSend) return;
     if (attachments.length <= previousAttachmentCountRef.current) return;
     const fakeEvent = { preventDefault: () => {} };
@@ -130,6 +140,18 @@ export default function Prompt({
   
   return (
     <div className="prompt-area overflow-x-hidden w-full flex flex-shrink-0 flex-col bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-center sm:overflow-y-auto rounded-2xl shadow-bottom dark:shadow-darkBottom">
+        {speechModeOpen && portalRoot &&
+          createPortal(
+            <div className="absolute inset-0 z-50 bg-slate-950/70 dark:bg-black/70 backdrop-blur-sm">
+              <SpeechModePanel
+                onClose={() => setSpeechModeOpen(false)}
+                onAudioCaptured={handleSpeechAudio}
+                autoStart
+              />
+            </div>,
+            portalRoot
+          )
+        }
         {/* Attachments Container */}
         {!speechModeOpen && (
           <AttachmentsContainer
@@ -139,31 +161,38 @@ export default function Prompt({
         )}
         <div className={`flex flex-col gap-4 w-full relative select-none rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark`} >
           {/* Prompt Text Area */}
-          {speechModeOpen ? (
-            <SpeechModePanel
-              onClose={() => setSpeechModeOpen(false)}
-              onAudioCaptured={handleSpeechAudio}
-              autoStart
-            />
-          ) : (
-            <PromptTextArea
-              localState={localState}
-              setLocalState={setLocalState}
-              handleSend={handleSend}
-              handleChange={handleChange}
-              prompt={prompt}
-            />
-          )}
+          <PromptTextArea
+            localState={localState}
+            setLocalState={setLocalState}
+            handleSend={handleSend}
+            handleChange={handleChange}
+            prompt={prompt}
+          />
           {/* Buttons Section */}
           {!speechModeOpen && (
-            <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
+            <div className="px-3 py-2 w-full h-fit grid grid-cols-[auto_1fr_auto] items-center gap-3 bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
               {/* Clear Button on the left  */}
-              <ClearButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
+              <div className="flex items-center">
+                <ClearButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+              </div>
+              <div className="flex justify-center">
+                {speechEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setSpeechModeOpen(true)}
+                    className="cursor-pointer h-9 sm:h-10 px-4 sm:px-5 rounded-full bg-tertiary text-white text-xs sm:text-sm font-semibold shadow-lg hover:bg-[#008ac2] transition-all duration-200 flex items-center justify-center gap-2"
+                    aria-label={t("conversation.speech_mode_button")}
+                  >
+                    <AudioWaveform className="h-4 w-4 sm:h-5 sm:w-5" />
+                    {t("conversation.speech_mode_button")}
+                  </button>
+                )}
+              </div>
               {/* Buttons on the right */}
-              <div className="flex gap-4 w-full justify-end items-center">
+              <div className="flex flex-wrap gap-3 justify-end items-center">
                 {/* Settings Button */}
                 {/* <SettingsButton /> */}
                 {/* Attach Button */}
@@ -181,22 +210,6 @@ export default function Prompt({
                   localState={localState}
                   setLocalState={setLocalState}
                 />
-                {speechEnabled && (
-                  <Tooltip text={speechModeOpen ? t("conversation.speech_mode_close") : t("conversation.speech_mode_button")}>
-                    <button
-                      type="button"
-                      onClick={() => setSpeechModeOpen((prev) => !prev)}
-                      className={`h-[30px] w-[30px] flex items-center justify-center rounded-full transition-all duration-200 ${
-                        speechModeOpen
-                          ? "bg-tertiary text-white"
-                          : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
-                      }`}
-                      aria-label={t("conversation.speech_mode_button")}
-                    >
-                      <AudioWaveform className="h-4 w-4" />
-                    </button>
-                  </Tooltip>
-                )}
                 {/* Abort button (when loading) */}
                 <AbortButton
                   localState={localState}
