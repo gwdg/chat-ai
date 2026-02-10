@@ -11,8 +11,6 @@ import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
-const audioInstruction = "If the user provided audio, treat it as the full request. First transcribe it. Then respond with spoken audio output (use audio generation) and include a concise text transcript. Do not ask for clarification unless the audio is completely inaudible.";
-const audioUserInstruction = "Transcribe the audio. Then respond with spoken audio output and a concise text transcript.";
 
 // Convert content items to standard OpenAI API
 export async function processContentItems({
@@ -26,10 +24,14 @@ export async function processContentItems({
   const output = [];
   for (const item of items) {
     if (item.type === 'text') {
-      if (item.text && items.length === 1) {
-        return item.text
+      const textValue = typeof item.text === "string" ? item.text : "";
+      if (!textValue.trim() && items.length > 1) {
+        continue;
       }
-      output.push(item)
+      if (textValue && items.length === 1) {
+        return textValue
+      }
+      output.push({ ...item, text: textValue })
       continue;
     }
 
@@ -155,20 +157,48 @@ function receiveFile(base64Data, mimeType, filename = null, conversationId = nul
 }
 
 // Build OpenAI standard conversation from localState
-async function buildConversationForAPI(localState) {
+async function buildConversationForAPI(localState, overrides = {}) {
+  const {
+    modelOverride,
+    forceAudioInput = false,
+    forceIgnoreAudio = false,
+    forceIgnoreVideo = false,
+    forceIgnoreImages = false,
+  } = overrides;
   // Determine supported file types from model
-  const model = localState.settings.model;
-  const ignoreAudio = !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));
-  const ignoreVideo = !(localState.settings.enable_tools || (model?.input?.includes("video") || false));
-  const ignoreImages = !(localState.settings.enable_tools || (model?.input?.includes("image") || false));
+  const model = modelOverride ?? localState.settings.model;
+  const ignoreAudio = forceIgnoreAudio
+    ? true
+    : !(localState.settings.enable_tools || forceAudioInput || (model?.input?.includes("audio") || false));
+  const ignoreVideo = forceIgnoreVideo
+    ? true
+    : !(localState.settings.enable_tools || (model?.input?.includes("video") || false));
+  const ignoreImages = forceIgnoreImages
+    ? true
+    : !(localState.settings.enable_tools || (model?.input?.includes("image") || false));
   // Convert to API standard, ignore unsupported files and system message
   const processedMessages = await Promise.all(
     localState.messages.map(async (message) => {
       if (Array.isArray(message.content)) {
+        const itemsForApi = [...message.content];
+        const hasNonEmptyText = itemsForApi.some(
+          (item) => item?.type === "text" && typeof item?.text === "string" && item.text.trim().length > 0
+        );
+        if (!hasNonEmptyText) {
+          const hiddenSpeechText =
+            message?.role === "assistant"
+              ? message?.meta?.speechAssistantText
+              : message?.role === "user"
+                ? message?.meta?.speechTranscript
+                : "";
+          if (typeof hiddenSpeechText === "string" && hiddenSpeechText.trim()) {
+            itemsForApi.unshift({ type: "text", text: hiddenSpeechText.trim() });
+          }
+        }
         return {
           role: message.role,
           content: await processContentItems({
-            items: message.content,
+            items: itemsForApi,
             ignoreImages,
             ignoreAudio,
             ignoreVideo,
@@ -182,7 +212,10 @@ async function buildConversationForAPI(localState) {
   return {
     ...localState,
     messages: processedMessages,
-    settings: {...localState.settings},
+    settings: {
+      ...localState.settings,
+      ...(modelOverride ? { model: modelOverride } : {}),
+    },
   };
 }
 
@@ -195,8 +228,24 @@ const sendMessage = async ({
   notifySuccess,
   dispatch,
   timeout,
+  options = {},
 }) => {
   const conversationId = localState.id
+  const {
+    modelOverride,
+    forceEnableTools,
+    toolsOverride,
+    forceToolsModule = false,
+    includeAudioTranscription = true,
+    systemPromptAddon,
+    forceAudioInput = false,
+    forceIgnoreAudio = false,
+    skipArcanaMcp = false,
+    hideAssistantTextInUi = false,
+    persistAssistantSpeechText = false,
+    suppressErrorToast = false,
+    skipPostProcessing = false,
+  } = options || {};
 
   try {
     const isArcanaSupported = localState.settings.model?.input?.includes("arcana") || (localState.settings?.enable_tools && !!localState.settings.tools.arcana)   
@@ -206,7 +255,11 @@ const sendMessage = async ({
     const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
 
     let finalConversationForState; // For local state updates
-    let conversationForAPI = await buildConversationForAPI(localState);
+    let conversationForAPI = await buildConversationForAPI(localState, {
+      modelOverride,
+      forceAudioInput,
+      forceIgnoreAudio,
+    });
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content[0].text
@@ -216,58 +269,49 @@ const sendMessage = async ({
       const memorySection = `\n\n--- Begin User Memory ---\n${memoryExplanation}\n\n${memoryContext}\n--- End User Memory ---`;
       systemPromptAPI = systemPromptAPI + memorySection;
     }
-    
-    const modelSupportsAudioOutput = localState.settings.model?.output?.includes("audio") || false;
-    const audioToolsEnabled = !!localState.settings?.enable_tools && !!localState.settings?.tools?.audio_generation;
-    const hasAudioInput = conversationForAPI.messages.some(
-      (message) =>
-        Array.isArray(message?.content) &&
-        message.content.some((item) => item?.type === "input_audio")
-    );
-
-    const shouldGuideAudio = audioToolsEnabled && hasAudioInput;
-
-    if (shouldGuideAudio) {
-      systemPromptAPI = `${systemPromptAPI}\n\n--- Audio Response ---\n${audioInstruction}`.trim();
-      conversationForAPI = {
-        ...conversationForAPI,
-        messages: conversationForAPI.messages.map((message) => {
-          if (message?.role !== "user" || !Array.isArray(message?.content)) return message;
-          const hasAudio = message.content.some((item) => item?.type === "input_audio");
-          if (!hasAudio) return message;
-          const hasText = message.content.some(
-            (item) => item?.type === "text" && typeof item.text === "string" && item.text.trim().length > 0
-          );
-          if (hasText) return message;
-          return {
-            ...message,
-            content: [{ type: "text", text: audioUserInstruction }, ...message.content],
-          };
-        }),
-      };
+    if (systemPromptAddon) {
+      systemPromptAPI = `${systemPromptAPI}\n\n${systemPromptAddon}`.trim();
     }
-
+    
     // Handle tools
-    if (toolsModule && conversationForAPI.settings?.enable_tools) {
+    const toolsEnabled =
+      typeof forceEnableTools === "boolean"
+        ? forceEnableTools
+        : conversationForAPI.settings?.enable_tools;
+    if (typeof toolsEnabled === "boolean") {
+      conversationForAPI.settings.enable_tools = toolsEnabled;
+    }
+    if ((toolsModule || forceToolsModule) && toolsEnabled) {
       // Inject the current date and time to the system prompt in human-readable format
       const currentDate = new Date().toLocaleString();
       systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
       // Convert tools dictionary to OpenAI-compatible tools list
-      conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
-                .filter(([_, enabled]) => enabled)
-                .map(([toolKey]) => ({ type: toolKey }));
+      conversationForAPI.settings.tools = toolsOverride ?? Object.entries(localState.settings.tools)
+        .filter(([_, enabled]) => enabled)
+        .map(([toolKey]) => ({ type: toolKey }));
       if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
         conversationForAPI.settings.arcana.limit = 3;
       }
-      // Always inject audio_transcription tool for now
-      conversationForAPI.settings.tools.push({ type: "audio_transcription" });
+      // Inject audio_transcription tool when enabled
+      if (includeAudioTranscription) {
+        const hasTranscription = conversationForAPI.settings.tools?.some(
+          (tool) => tool?.type === "audio_transcription"
+        );
+        if (!hasTranscription) {
+          conversationForAPI.settings.tools.push({ type: "audio_transcription" });
+        }
+      }
     } else {
       delete conversationForAPI.settings.tools;
     }
 
-    // Remove MCP and arcana if not enabled
-    if (!localState.settings?.enable_tools || !localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
-    if (!localState.settings?.enable_tools || !localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
+    // Remove MCP and arcana if not enabled or explicitly skipped
+    if (skipArcanaMcp || !localState.settings?.enable_tools || !localState.settings.tools.mcp) {
+      delete conversationForAPI.settings.mcp_servers;
+    }
+    if (skipArcanaMcp || !localState.settings?.enable_tools || !localState.settings.tools.arcana) {
+      delete conversationForAPI.settings.arcana;
+    }
       
     // Clean conversation for API call
     conversationForAPI = {
@@ -318,7 +362,7 @@ const sendMessage = async ({
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)){
         console.log(chunk);
       }
-      return;
+      return { assistantText: "" };
     }
     // Pushing message into conversation history
     setLocalState((prev) => ({
@@ -534,7 +578,7 @@ const sendMessage = async ({
           message_text += delta.content;
         }
         // UI update
-        currentContent[0].text = message_text;
+        currentContent[0].text = hideAssistantTextInUi ? "" : message_text;
         setLocalState(prev => {
           if (prev.id !== conversationId) {
             return prev;
@@ -551,15 +595,17 @@ const sendMessage = async ({
       if (inThinking) {
         message_text += "</think>";
         inThinking = false;
-        currentContent[0].text = message_text
+        currentContent[0].text = hideAssistantTextInUi ? "" : message_text;
       }
       return {
         answer: currentContent,
-        usage
+        usage,
+        rawText: message_text,
       }
     }
 
     let responseContent = "";
+    let assistantText = "";
     let usage = null;
     let chatChunk = null;
     let meta = undefined;
@@ -568,27 +614,38 @@ const sendMessage = async ({
       // Get chat completion response
       chatChunk = await getChatChunk(conversationId);
       responseContent = chatChunk?.answer || ""
+      assistantText = typeof chatChunk?.rawText === "string" ? chatChunk.rawText : "";
       usage = chatChunk?.usage;
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",
         usage
       };
+      if (persistAssistantSpeechText) {
+        meta = {
+          ...meta,
+          speechAssistantText: assistantText || responseContent?.[0]?.text || "",
+        };
+      }
     } catch (error) {
       const errorType = error?.type || "Error";
       const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
       const errorStatus = error?.status ? `(${error.status})` : "";
-      notifyError(`${errorType}: ${errorMsg.toString()} ${errorStatus}`);
+      if (!suppressErrorToast) {
+        notifyError(`${errorType}: ${errorMsg.toString()} ${errorStatus}`);
+      }
       console.error(error);
     } finally {
       // Update choices
-      if(choicesModule && localState.settings.choiceProposer == 1){
+      if(!skipPostProcessing && choicesModule && localState.settings.choiceProposer == 1){
         try {
           const content = localState.messages.map((message) => {
           if (Array.isArray(message.content)){
             return message.role + ": " + message.content[0].text;
           }
           });
-          content.push("assistant: " + responseContent[0].text)
+          const assistantTextForChoices =
+            assistantText || responseContent?.[0]?.text || "";
+          content.push("assistant: " + assistantTextForChoices)
           console.log(content.join("\n\n"))
 
           const response = await generateChoiceProposal(
@@ -597,7 +654,9 @@ const sendMessage = async ({
           choicesProposed = response;
         } catch (error) {
           console.error("Failed to generate choices: ", error.name, error.message);
-          notifyError("Failed to generate choices.");
+          if (!suppressErrorToast) {
+            notifyError("Failed to generate choices.");
+          }
         }
       }
 
@@ -658,62 +717,85 @@ const sendMessage = async ({
 
     // Generate title if conversation is new
     // Change model if defined in config
-    try {
-      conversationForAPI.messages = [
-        ...conversationForAPI.messages,
-        { role: "assistant", content: responseContent },
-        { role: "user", content: "" }
-      ];
-      if (conversationForAPI.messages.length <= 4) {
-        const title = await generateTitle(conversationForAPI.messages);
-        console.log("Generated title is ", title)
-        setLocalState(prev => {
-          if (prev.id !== conversationId) {
-            updateConversationMeta(conversationId, {title})
-            return prev;
-          }
-          return { ...prev, title, flush: true, };
-        });
+    if (!skipPostProcessing) {
+      try {
+        const assistantContentForProcessing = [
+          {
+            type: "text",
+            text: assistantText || responseContent?.[0]?.text || "",
+          },
+        ];
+        conversationForAPI.messages = [
+          ...conversationForAPI.messages,
+          { role: "assistant", content: assistantContentForProcessing },
+          { role: "user", content: "" }
+        ];
+        if (conversationForAPI.messages.length <= 4) {
+          const title = await generateTitle(conversationForAPI.messages);
+          console.log("Generated title is ", title)
+          setLocalState(prev => {
+            if (prev.id !== conversationId) {
+              updateConversationMeta(conversationId, {title})
+              return prev;
+            }
+            return { ...prev, title, flush: true, };
+          });
+        }
+      } catch (error) {
+        console.error("Failed to generate title: ", error);
       }
-    } catch (error) {
-      console.error("Failed to generate title: ", error);
     }
 
     // Update memory if enabled
-    try {
-      if (localState.settings?.memory == 2 && newUserMessage) {
-        const memoryResponse = await generateMemory(
-          newUserMessage,
-          memories
-        );
-        const cleanedResponse = memoryResponse.replace(/,(\s*[}$])/g, "$1");
-        const jsonResponse = JSON.parse(cleanedResponse);
-        if (jsonResponse.store) {
-          const memoryText = jsonResponse.memory_sentence.trim();
-          if (jsonResponse.replace) {
-            const line_number = jsonResponse.line_number - 1;
-            dispatch(editMemory({ index: line_number, text: memoryText }));
-          } else {
-            dispatch(addMemory({ text: memoryText }));
+    if (!skipPostProcessing) {
+      try {
+        if (localState.settings?.memory == 2 && newUserMessage) {
+          const memoryResponse = await generateMemory(
+            newUserMessage,
+            memories
+          );
+          const cleanedResponse = memoryResponse.replace(/,(\s*[}$])/g, "$1");
+          const jsonResponse = JSON.parse(cleanedResponse);
+          if (jsonResponse.store) {
+            const memoryText = jsonResponse.memory_sentence.trim();
+            if (jsonResponse.replace) {
+              const line_number = jsonResponse.line_number - 1;
+              dispatch(editMemory({ index: line_number, text: memoryText }));
+            } else {
+              dispatch(addMemory({ text: memoryText }));
+            }
+            notifySuccess("Memory updated successfully.");
           }
-          notifySuccess("Memory updated successfully.");
+        }
+      } catch (error) {
+        console.error("Failed to update memory: ", error.name, error.message);
+        if (!suppressErrorToast) {
+          notifyError("Failed to update memory.");
         }
       }
-    } catch (error) {
-      console.error("Failed to update memory: ", error.name, error.message);
-      notifyError("Failed to update memory.");
     }
 
+    return {
+      assistantText: assistantText || responseContent?.[0]?.text || "",
+      responseContent,
+    };
   } catch (error) {
     // ‌Handle Errors
     if (error.name === "AbortError") {
-      notifyError("Request aborted.");
+      if (!suppressErrorToast) {
+        notifyError("Request aborted.");
+      }
     } else if (error.message) {
       console.log(error)
-      notifyError(error.message);
+      if (!suppressErrorToast) {
+        notifyError(error.message);
+      }
     } else {
-      notifyError("An unknown error occurred");
+      if (!suppressErrorToast) {
+        notifyError("An unknown error occurred");
+      }
     }
+    return null;
   }
 };
 

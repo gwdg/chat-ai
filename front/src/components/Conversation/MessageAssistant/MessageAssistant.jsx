@@ -258,7 +258,15 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   ]);
 
   const content = message?.content?.[0]?.text ?? "";
+  const hasAttachments =
+    Array.isArray(message?.content) &&
+    message.content.some((item, index) => index > 0 && item?.type === "file");
+  const hasHiddenSpeechText =
+    typeof message?.meta?.speechAssistantText === "string" &&
+    message.meta.speechAssistantText.trim().length > 0;
   const isContentEmpty = !content.trim();
+  const isRetryState =
+    isContentEmpty && !loading && !hasAttachments && !hasHiddenSpeechText;
   return (
     <div
       key={message_index}
@@ -267,12 +275,12 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           rounded-2xl bg-bg_chat dark:bg-bg_chat_dark
           ${editMode ? "px-1 pt-1" : "px-3 pt-3"}
           ${
-            isContentEmpty && !loading
+            isRetryState
               ? "bg-bg_chat/50 dark:bg-bg_chat_dark/50 pt-0"
               : " bg-bg_chat dark:bg-bg_chat_dark"
           }`}
     >
-      {isContentEmpty ? (
+      {isRetryState ? (
         <div
           className={`flex flex-col
             ${loading ? "pb-4" : "pb-3"}`}
@@ -385,9 +393,11 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                {message.content[0]?.text}
-              </MarkdownRenderer>
+              {!isContentEmpty && (
+                <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+                  {message.content[0]?.text}
+                </MarkdownRenderer>
+              )}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">

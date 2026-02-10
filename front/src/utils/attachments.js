@@ -346,7 +346,6 @@ const addAudioAttachment = async ({
     localState,
     setLocalState,
     notifyError,
-    notifySuccess,
     audioBlob,
     type,
     saveFile,
@@ -401,7 +400,6 @@ const addAudioAttachment = async ({
         newAttachments: [{"type": "file", "fileId": fileId}]
     });
 
-    notifySuccess("Audio recorded and converted to WAV successfully");
     return true;
     } catch (error) {
     notifyError(`Error processing recorded audio: ${error.message}`);

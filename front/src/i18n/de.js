@@ -140,7 +140,13 @@ export default {
     speech_mode_close: "Sprachmodus schließen",
     speech_mode_ready: "Tippen, um zu sprechen",
     speech_mode_listening: "Höre zu...",
+    speech_mode_processing: "Verarbeitung läuft...",
+    speech_mode_thinking: "Denke nach...",
+    speech_mode_playing: "Audio wird abgespielt...",
+    speech_mode_repeat: "Ich habe das nicht verstanden. Bitte wiederholen.",
+    speech_mode_repeat_voice: "Ich habe das nicht verstanden. Bitte wiederholen.",
     speech_mode_stop_send: "Stopp & senden",
+    speech_mode_stop: "Stopp",
     speech_mode_start: "Aufnahme starten",
     speech_mode_error: "Mikrofon nicht verfügbar",
     attachment: {

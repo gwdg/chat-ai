@@ -140,7 +140,13 @@ export default {
     speech_mode_close: "Close speech mode",
     speech_mode_ready: "Tap to start speaking",
     speech_mode_listening: "Listening...",
+    speech_mode_processing: "Processing...",
+    speech_mode_thinking: "Thinking...",
+    speech_mode_playing: "Playing audio...",
+    speech_mode_repeat: "Didn't catch that. Please repeat.",
+    speech_mode_repeat_voice: "I didn't catch that. Please repeat.",
     speech_mode_stop_send: "Stop & send",
+    speech_mode_stop: "Stop",
     speech_mode_start: "Start recording",
     speech_mode_error: "Microphone unavailable",
     attachment: {

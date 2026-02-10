@@ -3,54 +3,63 @@ import OpenAI from "openai";
 // Controller for handling API request cancellation
 let controller = new AbortController();
 
+function resolveBaseUrl() {
+  let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
+  try {
+    // If absolute, parse directly
+    baseURL = new URL(baseURL).toString();
+  } catch {
+    // If relative, resolve against current origin
+    baseURL = new URL(baseURL, window.location.origin).toString();
+  }
+  return baseURL;
+}
+
+function buildChatParams(conversation, stream = true) {
+  const model = typeof conversation.settings.model === "string"
+    ? conversation.settings.model
+    : conversation.settings.model?.id; // TODO fall back to defaultModel
+
+  const params = {
+    model: model,
+    messages: conversation.messages,
+    temperature: conversation.settings.temperature,
+    top_p: conversation.settings.top_p,
+    stream: stream,
+  };
+
+  if (stream) {
+    params.stream_options = { include_usage: true };
+  }
+
+  // Handle tools
+  if (conversation.settings?.enable_tools) {
+    params.enable_tools = true;
+    params.tools = conversation?.settings?.tools || [];
+  }
+
+  if (conversation.settings?.arcana && conversation.settings.arcana.id !== "") {
+    params.arcana = conversation.settings.arcana;
+  }
+
+  if (conversation.settings?.feedback) {
+    params.feedback = conversation.settings.feedback;
+  }
+
+  if (conversation.settings?.mcp_servers && conversation.settings.mcp_servers.length > 0) {
+    params["mcp-servers"] = [conversation.settings.mcp_servers];
+  }
+  return params;
+}
+
 async function* chatCompletions (
   conversation,
   timeout = 30000,
   stream = true,
 ) {
   try {
-    const model = typeof conversation.settings.model === 'string'
-      ? conversation.settings.model
-      : conversation.settings.model?.id; // TODO fall back to defaultModel
-
-    // Define base URL from config
-    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
-    try {
-      // If absolute, parse directly
-      baseURL = new URL(baseURL).toString();
-    } catch {
-      // If relative, resolve against current origin
-      baseURL = new URL(baseURL, window.location.origin).toString();
-    }
-    
-    
-    // Initialize params
-    const params = {
-      model: model,
-      messages: conversation.messages,
-      temperature: conversation.settings.temperature,
-      top_p: conversation.settings.top_p,
-      stream: stream,
-      stream_options: {include_usage: true },
-    };
-
-    // Handle tools
-    if (conversation.settings?.enable_tools) {
-      params.enable_tools = true;
-      params.tools = conversation?.settings?.tools || [];
-    }
-
-    if (conversation.settings?.arcana && conversation.settings.arcana.id !== "") {
-      params.arcana = conversation.settings.arcana;
-    }
-
-    if (conversation.settings?.feedback) {
-      params.feedback = conversation.settings.feedback;
-    }
-
-    if (conversation.settings?.mcp_servers && conversation.settings.mcp_servers.length > 0) {
-      params["mcp-servers"] = [conversation.settings.mcp_servers];
-    }
+    const baseURL = resolveBaseUrl();
+    const params = buildChatParams(conversation, stream);
 
     // Define openai object to call backend
     const openai = new OpenAI({
@@ -161,6 +170,23 @@ async function* chatCompletions (
   }
 }
 
+async function chatCompletionOnce(
+  conversation,
+  timeout = 30000,
+) {
+  const baseURL = resolveBaseUrl();
+  const params = buildChatParams(conversation, false);
+  const openai = new OpenAI({
+    baseURL: baseURL,
+    apiKey: null,
+    dangerouslyAllowBrowser: true,
+    timeout: timeout,
+  });
+  return await openai.chat.completions.create(params, {
+    signal: controller.signal,
+  });
+}
+
 function abortRequest() {
   if (controller) {
     controller.abort(); // stops the stream/fetch
@@ -168,4 +194,4 @@ function abortRequest() {
   controller = new AbortController();
 }
 
-export { chatCompletions, abortRequest };
+export { chatCompletions, chatCompletionOnce, abortRequest };
