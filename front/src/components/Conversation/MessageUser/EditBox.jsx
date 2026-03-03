@@ -1,12 +1,12 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 
 import { X, Send } from "lucide-react";
 
 import { useSendMessage } from "../../../hooks/useSendMessage";
 
 // Constants
-const MAX_HEIGHT = 200;
-const MIN_HEIGHT = 56;
+const MAX_HEIGHT = 420;
+const MIN_HEIGHT = 140;
 
 export default function EditBox({
   localState,
@@ -18,6 +18,19 @@ export default function EditBox({
   const sendMessage = useSendMessage();
 
   const editBox = useRef(null);
+
+  const adjustHeight = useCallback(() => {
+    if (!editBox.current) return;
+
+    editBox.current.style.height = "auto";
+    const scrollHeight = editBox.current.scrollHeight;
+    const newHeight = Math.min(Math.max(scrollHeight, MIN_HEIGHT), MAX_HEIGHT);
+    editBox.current.style.height = `${newHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    requestAnimationFrame(() => adjustHeight());
+  }, [message_index, adjustHeight]);
 
   // Function to handle saving edited message
   const handleSave = (doSplice = false) => {
@@ -49,12 +62,13 @@ export default function EditBox({
     <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-2.5 flex flex-col gap-1.5">
       <textarea
         ref={editBox}
-        className="p-1.5 outline-none text-sm rounded-xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+        className="p-1.5 outline-none text-sm rounded-xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-y-auto"
         defaultValue={message.content[0]?.text}
         style={{
           minHeight: `${MIN_HEIGHT}px`,
           maxHeight: `${MAX_HEIGHT}px`,
         }}
+        onInput={adjustHeight}
         onKeyDown={(event) => {
           if (
             event.key === "Enter" &&
