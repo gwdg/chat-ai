@@ -119,3 +119,13 @@ export type FolderRow = {
   createdAt: number
   updatedAt: number
 }
+
+export type CustomPersonaRow = {
+  id: string
+  title: string
+  createdAt: number
+  updatedAt: number
+  sourceConversationId: string
+  sourceConversationTitle?: string
+  payload: any
+}

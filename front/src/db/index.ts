@@ -15,7 +15,8 @@ import type {
   MessageRole,
   ContentItemInput,
   FolderRow,
-  FeedbackRow
+  FeedbackRow,
+  CustomPersonaRow,
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -27,6 +28,7 @@ export class AppDB extends Dexie {
   files_meta!: Table<FileMetaRow, string>
   files_data!: Table<FileDataRow, string>
   folders!: Table<FolderRow, string>
+  custom_personas!: Table<CustomPersonaRow, string>
 
   constructor() {
     super('app-conversations-db')
@@ -71,6 +73,16 @@ export class AppDB extends Dexie {
           conv.hasFirstPrompt = true;
         }
       });
+    });
+
+    this.version(5).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      custom_personas: 'id, title, createdAt, updatedAt, sourceConversationId'
     });
   }
 }
@@ -724,6 +736,136 @@ export function useFolderList() {
     },
     [],
     [] as FolderRow[],
+  );
+}
+
+// ---------- Custom Personas ----------
+
+function normalizePersonaContent(content: any): Array<{ type: 'text', text: string }> {
+  if (typeof content === 'string') {
+    return [{ type: 'text', text: content }];
+  }
+
+  if (Array.isArray(content)) {
+    const textItems = content
+      .map((item) => {
+        if (!item) return null;
+        if (typeof item === 'string') return { type: 'text' as const, text: item };
+        if (typeof item?.text === 'string') return { type: 'text' as const, text: item.text };
+        return null;
+      })
+      .filter(Boolean) as Array<{ type: 'text', text: string }>;
+
+    return textItems.length > 0 ? textItems : [{ type: 'text', text: '' }];
+  }
+
+  if (typeof content?.text === 'string') {
+    return [{ type: 'text', text: content.text }];
+  }
+
+  return [{ type: 'text', text: '' }];
+}
+
+function buildCustomPersonaPayload(conversation: any) {
+  const allowedRoles = new Set(['system', 'user', 'assistant', 'info']);
+  const sourceMessages = Array.isArray(conversation?.messages)
+    ? conversation.messages
+    : [];
+
+  const messages = sourceMessages
+    .filter((message) => allowedRoles.has(message?.role))
+    .map((message) => ({
+      role: message.role,
+      content: normalizePersonaContent(message.content),
+      ...(message?.meta ? { meta: message.meta } : {}),
+      ...(message?.feedback ? { feedback: message.feedback } : {}),
+    }));
+
+  if (!messages.some((message) => message?.role === 'system')) {
+    messages.unshift({
+      role: 'system',
+      content: [{ type: 'text', text: 'You are a helpful assistant.' }],
+    });
+  }
+
+  return {
+    title: conversation?.title || 'Custom Persona',
+    settings: conversation?.settings ? JSON.parse(JSON.stringify(conversation.settings)) : {},
+    messages,
+    sourceConversationId: conversation?.id || null,
+    sourceConversationTitle: conversation?.title || null,
+    folderId: conversation?.folderId ?? null,
+  };
+}
+
+export async function createOrUpdateCustomPersonaFromConversation(
+  conversationId: string,
+  conversationSnapshot?: any,
+): Promise<CustomPersonaRow> {
+  const conversation = conversationSnapshot ?? await getConversation(conversationId);
+  if (!conversation) {
+    throw new Error('Conversation not found');
+  }
+
+  const payload = buildCustomPersonaPayload(conversation);
+  const now = Date.now();
+  const existing = await db.custom_personas
+    .where('sourceConversationId')
+    .equals(conversationId)
+    .first();
+
+  if (existing) {
+    const updated: CustomPersonaRow = {
+      ...existing,
+      title: payload.title || existing.title,
+      updatedAt: now,
+      sourceConversationTitle: payload.sourceConversationTitle || existing.sourceConversationTitle,
+      payload,
+    };
+    await db.custom_personas.put(updated);
+    return updated;
+  }
+
+  const created: CustomPersonaRow = {
+    id: newId(),
+    title: payload.title,
+    createdAt: now,
+    updatedAt: now,
+    sourceConversationId: conversationId,
+    sourceConversationTitle: payload.sourceConversationTitle || undefined,
+    payload,
+  };
+  await db.custom_personas.add(created);
+  return created;
+}
+
+export async function deleteCustomPersona(personaId: string) {
+  await db.custom_personas.delete(personaId);
+}
+
+export async function renameCustomPersonaTitle(personaId: string, title: string) {
+  const trimmed = title?.trim();
+  if (!trimmed) {
+    throw new Error('Custom persona title is required');
+  }
+
+  await db.custom_personas.update(personaId, {
+    title: trimmed,
+    updatedAt: Date.now(),
+  });
+}
+
+export async function listCustomPersonas(): Promise<CustomPersonaRow[]> {
+  return db.custom_personas.orderBy('updatedAt').reverse().toArray();
+}
+
+export function useCustomPersonaList() {
+  return useLiveQuery(
+    async () => {
+      return await db.custom_personas.orderBy('updatedAt').reverse().toArray();
+    },
+    [],
+    [] as CustomPersonaRow[],
   );
 }
 

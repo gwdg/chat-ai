@@ -17,7 +17,12 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { assignConversationToFolder, useConversationList, useFolderList } from "../../db";
+import {
+  assignConversationToFolder,
+  createOrUpdateCustomPersonaFromConversation,
+  useConversationList,
+  useFolderList,
+} from "../../db";
 import { useModal } from "../../modals/ModalContext";
 
 import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
@@ -44,7 +49,7 @@ export default function SidebarContent({
   const dispatch = useDispatch();
   const { openModal } = useModal();
   const { t } = useTranslation();
-  const { notifyError } = useToast();
+  const { notifyError, notifySuccess } = useToast();
   const currentConversationId = localState?.id;
 
   const { isDesktop, isTouch } = useWindowSize();
@@ -216,6 +221,40 @@ export default function SidebarContent({
       setLocalState,
     });
   };
+
+  const handleCreateCustomPersona = useCallback(async (conversationId: string) => {
+    const convMeta = conversations.find((conv) => conv.id === conversationId);
+    if (!convMeta) return;
+
+    try {
+      const snapshot =
+        localState?.id === conversationId
+          ? {
+              id: localState.id,
+              title: localState.title || convMeta.title,
+              settings: localState.settings || convMeta.settings,
+              messages: Array.isArray(localState.messages) ? localState.messages : [],
+              folderId:
+                typeof localState.folderId === "undefined"
+                  ? (convMeta.folderId ?? null)
+                  : localState.folderId,
+            }
+          : undefined;
+
+      const savedPersona = await createOrUpdateCustomPersonaFromConversation(
+        conversationId,
+        snapshot
+      );
+      notifySuccess(
+        t("persona.customPersonaSaved", {
+          title: savedPersona.title || convMeta.title || t("conversation.untitled"),
+        })
+      );
+    } catch (error) {
+      console.error("Failed to create custom persona", error);
+      notifyError(t("persona.customPersonaSaveError"));
+    }
+  }, [conversations, localState, notifyError, notifySuccess, t]);
 
   const getFolderDisplayName = (folderId?: string | null) => {
     if (!folderId) return t("folders.uncategorized");
@@ -776,6 +815,18 @@ export default function SidebarContent({
               <Edit className="w-3.5 h-3.5" />
               <Trans i18nKey="common.rename" />
               {/* TODO use Translation */}
+            </button>
+
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                await handleCreateCustomPersona(activeMenu);
+                closeMenu();
+              }}
+              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <Trans i18nKey="persona.createFromConversation" />
             </button>
 
             <button

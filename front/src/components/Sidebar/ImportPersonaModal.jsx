@@ -5,13 +5,19 @@ import { useImportConversation } from "../../hooks/useImportConversation";
 import i18n from "../../i18n";
 import { useToast } from "../../hooks/useToast";
 import {
+  deleteCustomPersona,
+  renameCustomPersonaTitle,
+  useCustomPersonaList,
+} from "../../db";
+import {
   Folder,
   FolderOpen,
-  FileJson,
   Bot,
-  ChevronRight,
-  X,
+  Check,
   Menu,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 
 export default function ImportPersonaModal({
@@ -31,9 +37,13 @@ export default function ImportPersonaModal({
   const [error, setError] = useState(null);
   const [folderStructure, setFolderStructure] = useState({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [editingPersonaId, setEditingPersonaId] = useState(null);
+  const [editingPersonaTitle, setEditingPersonaTitle] = useState("");
+  const [pendingDeletePersona, setPendingDeletePersona] = useState(null);
 
   const { notifySuccess, notifyError } = useToast();
   const importConversation = useImportConversation();
+  const customPersonas = useCustomPersonaList() || [];
 
   // Fetch root contents and organize into folders and files
   const fetchRootContents = async () => {
@@ -194,6 +204,9 @@ export default function ImportPersonaModal({
       setFolderStructure({});
       setError(null);
       setSidebarOpen(false);
+      setEditingPersonaId(null);
+      setEditingPersonaTitle("");
+      setPendingDeletePersona(null);
     }
   }, [isOpen]);
 
@@ -281,6 +294,79 @@ export default function ImportPersonaModal({
     }
   };
 
+  const handleLocalPersonaImport = async (persona) => {
+    if (!persona?.payload) return;
+    try {
+      setLoading(true);
+      await importConversation(persona.payload);
+      onClose();
+    } catch (err) {
+      console.error("Local persona import error:", err);
+      onError
+        ? onError(i18n.t("persona.customPersonaImportError"))
+        : notifyError(i18n.t("persona.customPersonaImportError"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startRenameCustomPersona = (persona) => {
+    if (!persona?.id) return;
+    setEditingPersonaId(persona.id);
+    setEditingPersonaTitle(persona.title || "");
+  };
+
+  const cancelRenameCustomPersona = () => {
+    setEditingPersonaId(null);
+    setEditingPersonaTitle("");
+  };
+
+  const saveRenameCustomPersona = async (personaId) => {
+    const trimmed = editingPersonaTitle.trim();
+    if (!trimmed) {
+      notifyError(i18n.t("persona.customPersonaRenameRequired"));
+      return;
+    }
+
+    try {
+      await renameCustomPersonaTitle(personaId, trimmed);
+      notifySuccess(
+        i18n.t("persona.customPersonaRenameSuccess", {
+          title: trimmed,
+        })
+      );
+      cancelRenameCustomPersona();
+    } catch (err) {
+      console.error("Custom persona rename error:", err);
+      notifyError(i18n.t("persona.customPersonaRenameError"));
+    }
+  };
+
+  const openDeleteCustomPersona = (persona) => {
+    if (!persona?.id) return;
+    setPendingDeletePersona(persona);
+  };
+
+  const closeDeleteCustomPersona = () => {
+    setPendingDeletePersona(null);
+  };
+
+  const confirmDeleteCustomPersona = async () => {
+    if (!pendingDeletePersona?.id) return;
+
+    try {
+      await deleteCustomPersona(pendingDeletePersona.id);
+      if (editingPersonaId === pendingDeletePersona.id) {
+        cancelRenameCustomPersona();
+      }
+      closeDeleteCustomPersona();
+      notifySuccess(i18n.t("persona.customPersonaDeleteSuccess"));
+    } catch (err) {
+      console.error("Custom persona delete error:", err);
+      notifyError(i18n.t("persona.customPersonaDeleteError"));
+    }
+  };
+
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 B";
     const k = 1024;
@@ -358,6 +444,7 @@ export default function ImportPersonaModal({
   };
 
   return (
+    <>
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
@@ -440,6 +527,126 @@ export default function ImportPersonaModal({
                   {rootContents.files.map(renderSidebarFile)}
                 </div>
               )}
+
+              <div className="mt-4">
+                <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
+                  <Trans i18nKey="persona.customPersonas" />
+                </h3>
+                {customPersonas.length === 0 ? (
+                  <p className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <Trans i18nKey="persona.customPersonaEmpty" />
+                  </p>
+                ) : (
+                  customPersonas.map((persona) => {
+                    const isEditing = editingPersonaId === persona.id;
+                    return (
+                      <div
+                        key={persona.id}
+                        onClick={() => {
+                          if (isEditing) return;
+                          handleLocalPersonaImport(persona);
+                        }}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded transition-colors group ${
+                          isEditing
+                            ? "bg-blue-50 dark:bg-blue-900/20"
+                            : "hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+                        }`}
+                      >
+                        <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+
+                        <div className="min-w-0 flex-1">
+                          {isEditing ? (
+                            <input
+                              value={editingPersonaTitle}
+                              onChange={(event) => setEditingPersonaTitle(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  saveRenameCustomPersona(persona.id);
+                                } else if (event.key === "Escape") {
+                                  event.preventDefault();
+                                  cancelRenameCustomPersona();
+                                }
+                              }}
+                              className="w-full text-xs px-2 py-1 rounded border border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              autoFocus
+                            />
+                          ) : (
+                            <>
+                              <p className="text-xs text-gray-700 dark:text-gray-300 truncate">
+                                {persona.title}
+                              </p>
+                              {persona.sourceConversationTitle && (
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                                  {persona.sourceConversationTitle}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
+                          {isEditing ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  saveRenameCustomPersona(persona.id);
+                                }}
+                                className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-900/40 text-green-600 dark:text-green-400 transition"
+                                title={i18n.t("common.save")}
+                                aria-label={i18n.t("common.save")}
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  cancelRenameCustomPersona();
+                                }}
+                                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition"
+                                title={i18n.t("common.cancel")}
+                                aria-label={i18n.t("common.cancel")}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  startRenameCustomPersona(persona);
+                                }}
+                                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition"
+                                title={i18n.t("common.rename")}
+                                aria-label={i18n.t("common.rename")}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openDeleteCustomPersona(persona);
+                                }}
+                                className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition"
+                                title={i18n.t("common.delete")}
+                                aria-label={i18n.t("common.delete")}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -492,5 +699,41 @@ export default function ImportPersonaModal({
         </div>
       </div>
     </BaseModal>
+    <BaseModal
+      isOpen={Boolean(pendingDeletePersona)}
+      onClose={closeDeleteCustomPersona}
+      titleKey="persona.customPersonaDeleteTitle"
+      maxWidth="max-w-md"
+    >
+      <div className="space-y-4 text-sm">
+        <p className="text-gray-700 dark:text-gray-200">
+          <Trans
+            i18nKey="persona.customPersonaDeleteConfirm"
+            values={{
+              title:
+                pendingDeletePersona?.title ||
+                i18n.t("conversation.untitled", {
+                  defaultValue: "Untitled Conversation",
+                }),
+            }}
+          />
+        </p>
+        <div className="flex flex-col md:flex-row gap-2 justify-end">
+          <button
+            className="cursor-pointer px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            onClick={closeDeleteCustomPersona}
+          >
+            <Trans i18nKey="common.cancel" />
+          </button>
+          <button
+            className="cursor-pointer px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition shadow"
+            onClick={confirmDeleteCustomPersona}
+          >
+            <Trans i18nKey="common.delete" />
+          </button>
+        </div>
+      </div>
+    </BaseModal>
+    </>
   );
 }
