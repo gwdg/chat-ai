@@ -22,11 +22,11 @@ export default function AbortButton({
     };
 
     return loading && (
-         <Tooltip text={t("common.abort")}>
+        <Tooltip text={t("common.abort")}>
             {/* Abort Button */}
-            <button className="h-[30px] w-[30px] cursor-pointer">
+            <button className="h-[30px] w-[30px] mobile:h-[24px] mobile:w-[24px] cursor-pointer">
             <img
-                className="cursor-pointer h-[30px] w-[30px]"
+                className="cursor-pointer h-[30px] w-[30px] mobile:h-[24px] mobile:w-[24px]"
                 src={icon_stop}
                 alt="abort"
                 onClick={handleAbort}

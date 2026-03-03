@@ -1035,18 +1035,58 @@ export default function Prompt({
             setLocalState={setLocalState}
           />
         )}
-        <div className={`flex flex-col gap-4 w-full relative select-none rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark`} >
-          {/* Prompt Text Area */}
-          <PromptTextArea
-            localState={localState}
-            setLocalState={setLocalState}
-            handleSend={handleSend}
-            handleChange={handleChange}
-            prompt={prompt}
-          />
-          {/* Buttons Section */}
+        <div className={`flex flex-col gap-4 mobile:gap-2 w-full relative select-none rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark`} >
+          <div className="relative">
+            {/* Prompt Text Area */}
+            <PromptTextArea
+              localState={localState}
+              setLocalState={setLocalState}
+              handleSend={handleSend}
+              handleChange={handleChange}
+              prompt={prompt}
+            />
+            {/* Mobile Floating Controls */}
+            {!speechModeOpen && (
+              <div className="hidden mobile:flex absolute right-2.5 bottom-2.5 z-20 items-center gap-1.5 rounded-full border border-gray-200/90 dark:border-gray-700/90 bg-white/95 dark:bg-bg_secondary_dark/95 backdrop-blur-sm px-2 py-1.5 shadow-md">
+                <ClearButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+                {speechEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setSpeechModeOpen(true)}
+                    className="cursor-pointer h-7 w-7 rounded-full bg-tertiary text-white shadow hover:bg-[#008ac2] transition-all duration-200 flex items-center justify-center"
+                    aria-label={t("conversation.speech_mode_button")}
+                    title={t("conversation.speech_mode_button")}
+                  >
+                    <AudioWaveform className="h-4 w-4" />
+                  </button>
+                )}
+                <AttachButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+                <MicButton 
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+                <AbortButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+                <SendButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                  handleSend={handleSend}
+                  prompt={prompt}
+                />
+              </div>
+            )}
+          </div>
+          {/* Desktop / Tablet Buttons Section */}
           {!speechModeOpen && (
-            <div className="px-3 py-2 w-full h-fit grid grid-cols-[auto_1fr_auto] items-center gap-3 bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
+            <div className="mobile:hidden px-3 py-2 w-full h-fit grid grid-cols-[auto_1fr_auto] items-center gap-3 bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
               {/* Clear Button on the left  */}
               <div className="flex items-center">
                 <ClearButton

@@ -1,5 +1,5 @@
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useToast } from "../../hooks/useToast";
@@ -8,6 +8,8 @@ import { useAttachments } from "../../hooks/useAttachments";
 
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
+const MOBILE_MAX_HEIGHT = 120;
+const MOBILE_MIN_HEIGHT = 44;
 
 export default function PromptTextArea({
     localState,
@@ -19,6 +21,10 @@ export default function PromptTextArea({
   const { t } = useTranslation();
   const textareaRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 800px)").matches
+  );
   const { notifySuccess, notifyError } = useToast();
   const { addAttachments, pasteAttachments } = useAttachments();
   
@@ -29,13 +35,39 @@ export default function PromptTextArea({
     : [];
   const choices = Array.isArray(localState?.choices) ? localState.choices : [];
 
-  const adjustHeight = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "56px";
-      const scrollHeight = textareaRef.current.scrollHeight;
-      textareaRef.current.style.height = `${Math.min(scrollHeight, 200)}px`;
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia("(max-width: 800px)");
+    const onMediaChange = (event) => setIsMobileViewport(event.matches);
+    setIsMobileViewport(mediaQuery.matches);
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", onMediaChange);
+    } else if (typeof mediaQuery.addListener === "function") {
+      mediaQuery.addListener(onMediaChange);
     }
-  };
+    return () => {
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", onMediaChange);
+      } else if (typeof mediaQuery.removeListener === "function") {
+        mediaQuery.removeListener(onMediaChange);
+      }
+    };
+  }, []);
+
+  const minHeight = isMobileViewport ? MOBILE_MIN_HEIGHT : MIN_HEIGHT;
+  const maxHeight = isMobileViewport ? MOBILE_MAX_HEIGHT : MAX_HEIGHT;
+
+  const adjustHeight = useCallback(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = `${minHeight}px`;
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    }
+  }, [maxHeight, minHeight]);
+
+  useEffect(() => {
+    requestAnimationFrame(() => adjustHeight());
+  }, [prompt, adjustHeight, isMobileViewport]);
 
   // Handle file drop events for images and videos
   const handleDrop = async (e) => {
@@ -109,7 +141,8 @@ export default function PromptTextArea({
       <textarea
           autoFocus
           ref={textareaRef}
-          className={`p-5 transition-opacity duration-300 ease-in-out outline-none text-base w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto ${
+          rows={1}
+          className={`p-5 mobile:px-3 mobile:py-2.5 mobile:pr-36 mobile:pb-10 mobile:text-[15px] transition-opacity duration-300 ease-in-out outline-none text-base w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto ${
             choices.length > 0 ? "" : "rounded-t-2xl"
           }`}
           value={prompt}
@@ -120,8 +153,8 @@ export default function PromptTextArea({
           data-1p-ignore="true"
           placeholder={t("conversation.prompt.placeholder")}
           style={{
-          minHeight: `${MIN_HEIGHT}px`,
-          maxHeight: `${MAX_HEIGHT}px`,
+          minHeight: `${minHeight}px`,
+          maxHeight: `${maxHeight}px`,
           opacity: isDragging ? 0.5 : 1
           }}
           onChange={(e) => {

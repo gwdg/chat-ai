@@ -36,12 +36,12 @@ export default function ClearButton({
     return (prompt?.trim() !== "" ? (
         <Tooltip text={t("common.clear")}>
             <button
-                className="h-[30px] w-[30px] cursor-pointer"
+                className="h-[30px] w-[30px] mobile:h-[24px] mobile:w-[24px] cursor-pointer"
                 onClick={handleClear}
                 disabled={loading}
             >
                 <img
-                className="cursor-pointer h-[25px] w-[25px]"
+                className="cursor-pointer h-[25px] w-[25px] mobile:h-[20px] mobile:w-[20px]"
                 src={icon_cross_sm}
                 alt="clear"
                 />

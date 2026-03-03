@@ -18,7 +18,7 @@ export default function SendButton({localState, setLocalState, handleSend, promp
     return !loading && (prompt !== "" || attachments.length > 0) &&  (
          <Tooltip text={t("common.send")}>
             <Send
-                className="cursor-pointer h-[28px] w-[28px] text-[#009EE0]"
+                className="cursor-pointer h-[28px] w-[28px] mobile:h-[22px] mobile:w-[22px] text-[#009EE0]"
                 alt="send"
                 onClick={handleSend}
                 disabled={loading}

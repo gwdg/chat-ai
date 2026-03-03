@@ -54,7 +54,7 @@ export default function AttachButton({
                     className="hidden"
                 />
                 <Paperclip
-                    className="cursor-pointer flex h-[25px] w-[25px] text-[#009EE0]"
+                    className="cursor-pointer flex h-[25px] w-[25px] mobile:h-[20px] mobile:w-[20px] text-[#009EE0]"
                     onClick={handleClick}
                     disabled={loading}
                     alt="upload"

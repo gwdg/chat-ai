@@ -212,7 +212,7 @@ export default function MicButton({
             }
             >
             <button
-                className={`h-[30px] w-[30px] cursor-pointer transition-all duration-200 flex items-center justify-center rounded-full ${
+                className={`h-[30px] w-[30px] mobile:h-[24px] mobile:w-[24px] cursor-pointer transition-all duration-200 flex items-center justify-center rounded-full ${
                 isRecording
                     ? "bg-red-500 border-2 border-red-600 animate-pulse"
                     : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
@@ -228,11 +228,11 @@ export default function MicButton({
             >
                 {isRecording ? (
                 // Stop icon when recording
-                <div className="w-3 h-3 bg-white rounded-sm"></div>
+                <div className="w-3 h-3 mobile:w-2.5 mobile:h-2.5 bg-white rounded-sm"></div>
                 ) : (
                 // Microphone icon when not recording
                 <img
-                    className="h-[18px] w-[18px]"
+                    className="h-[18px] w-[18px] mobile:h-[14px] mobile:w-[14px]"
                     src={icon_mic}
                     alt="microphone"
                 />
