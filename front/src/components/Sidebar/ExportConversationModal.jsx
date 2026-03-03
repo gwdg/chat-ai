@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
 import { Trans } from "react-i18next";
+import { renderToStaticMarkup } from "react-dom/server";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import katexStyles from "katex/dist/katex.min.css?inline";
 import BaseModal from "../../modals/BaseModal";
 import icon_file_json from "../../assets/icons/file_json.svg";
 import icon_file_pdf from "../../assets/icons/file_pdf.svg";
 import icon_file_text from "../../assets/icons/file_text.svg";
 import { getConversation, loadFile, loadFileMeta } from "../../db";
 import { useToast } from "../../hooks/useToast";
-import { jsPDF } from "jspdf";
-import Logo from "../../assets/logos/chat_ai.png"
 import { processContentItems } from "../../utils/sendMessage";
 
 export default function ExportConversationModal({
@@ -24,6 +27,7 @@ export default function ExportConversationModal({
   const [exportFiles, setExportFiles] = useState(false);
   const [containsFiles, setContainsFiles] = useState(true); // TODO set dynamically
   const [conversation, setConversation] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const { notifyError, notifySuccess } = useToast();
 
@@ -61,8 +65,8 @@ export default function ExportConversationModal({
     typeof mcpServers === "string"
       ? mcpServers.trim().length > 0
       : Array.isArray(mcpServers)
-      ? mcpServers.length > 0
-      : false;
+        ? mcpServers.length > 0
+        : false;
 
   // Function to generate timestamped filename for exports
   const generateFileName = (extension) => {
@@ -87,8 +91,8 @@ export default function ExportConversationModal({
       const role = messages[i]?.role;
       if (!["system", "user", "assistant", "info"].includes(role)) continue;
       const content = messages[i].content;
-      let processedMessage = {"role": role};
-      if (msg?.feedback){
+      let processedMessage = { "role": role };
+      if (msg?.feedback) {
         processedMessage.feedback = msg.feedback;
       }
       if (typeof content === "string") processedMessage.content = content;
@@ -109,16 +113,16 @@ export default function ExportConversationModal({
       }
 
       // Check if empty user prompt at the end
-      if (i === messages.length-1 
-        && processedMessage.role === "user" 
+      if (i === messages.length - 1
+        && processedMessage.role === "user"
         && processedMessage.content === "")
-          continue;
+        continue;
 
       // Handle user-assistant not switching roles
       if (role === "assistant" && expectUser)
-        processedMessages.push({"role": "user", "content": ""})
+        processedMessages.push({ "role": "user", "content": "" })
       else if (role === "user" && !expectUser)
-        processedMessages.push({"role": "assistant", "content": ""})
+        processedMessages.push({ "role": "assistant", "content": "" })
 
       processedMessages.push(processedMessage);
       if (role === "user") expectUser = false;
@@ -126,7 +130,7 @@ export default function ExportConversationModal({
     }
     return processedMessages;
   }
-  
+
   // Function to process settings into export format
   const processSettings = () => {
     let settings = {}
@@ -136,8 +140,8 @@ export default function ExportConversationModal({
     if (exportMcpServers && hasMcpServers) settings.mcp_servers = conversation.settings.mcp_servers;
     if (conversation?.settings?.top_p) settings.top_p = conversation.settings.top_p;
     if (conversation?.settings?.tools) settings.tools = Object.keys(conversation.settings.tools)
-        .filter(t => conversation.settings.tools[t] === true)
-        .map(t => ({ type: t }));
+      .filter(t => conversation.settings.tools[t] === true)
+      .map(t => ({ type: t }));
     if (exportArcana && isArcanaSupported && conversation?.settings?.arcana?.id) {
       settings.arcana = conversation.settings.arcana;
     }
@@ -187,23 +191,18 @@ export default function ExportConversationModal({
           ? settings.mcp_servers.join(", ")
           : settings?.mcp_servers;
         const additionalText =
-        `\n\nConversation settings\ntitle: ${
-          conversation.title
-        }\nmodel-name: ${
-          settings?.["model-name"]
-        }\nmodel: ${
-          settings?.model
-        }\ntemperature: ${
-          settings?.temperature
-        }\ntop_p: ${
-          settings?.top_p
-        }\n${exportArcana && isArcanaSupported && settings?.arcana?.id
+          `\n\nConversation settings\ntitle: ${conversation.title
+          }\nmodel-name: ${settings?.["model-name"]
+          }\nmodel: ${settings?.model
+          }\ntemperature: ${settings?.temperature
+          }\ntop_p: ${settings?.top_p
+          }\n${exportArcana && isArcanaSupported && settings?.arcana?.id
             ? `Arcana ID: ${settings.arcana.id}`
             : ""
-        }${exportMcpServers && hasMcpServers && mcpServersText
+          }${exportMcpServers && hasMcpServers && mcpServersText
             ? `\nMCP server: ${mcpServersText}`
             : ""
-        }`;
+          }`;
         textContent += additionalText;
       }
 
@@ -225,7 +224,7 @@ export default function ExportConversationModal({
     try {
       // Process Messages
       let processedMessages = await processMessages(conversation.messages);
-      let exportData = {messages: processedMessages};
+      let exportData = { messages: processedMessages };
 
       // Add settings if enabled
       if (exportSettings) {
@@ -250,276 +249,376 @@ export default function ExportConversationModal({
     }
   };
 
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const renderMarkdownToPrintableHtml = (markdownText) => {
+    try {
+      return renderToStaticMarkup(
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm, remarkMath]}
+          rehypePlugins={[
+            [
+              rehypeKatex,
+              {
+                output: "htmlAndMathml",
+                throwOnError: false,
+                strict: false,
+                trust: false,
+              },
+            ],
+          ]}
+        >
+          {markdownText}
+        </ReactMarkdown>
+      );
+    } catch (error) {
+      return `<div class="pdf-export-pre" dir="auto">${escapeHtml(markdownText)}</div>`;
+    }
+  };
+
+  const buildPrintableMessageHtml = (content) => {
+    if (typeof content !== "string") {
+      return `<div class="pdf-export-pre" dir="auto">${escapeHtml("Content unavailable")}</div>`;
+    }
+
+    return `<div class="pdf-export-markdown" dir="auto">${renderMarkdownToPrintableHtml(content)}</div>`;
+  };
+
+  const buildPrintableExportHtml = ({ processedMessages, processedSettings, fileTitle }) => {
+    const settingsLines = [];
+
+    if (exportSettings && processedSettings) {
+      settingsLines.push(`title: ${conversation?.title ?? ""}`);
+      settingsLines.push(`model: ${processedSettings?.model ?? ""}`);
+      settingsLines.push(`model name: ${processedSettings?.["model-name"] ?? ""}`);
+      settingsLines.push(`temperature: ${processedSettings?.temperature ?? ""}`);
+      settingsLines.push(`top_p: ${processedSettings?.top_p ?? ""}`);
+
+      if (exportArcana && isArcanaSupported && processedSettings?.arcana?.id) {
+        settingsLines.push(`Arcana ID ${processedSettings.arcana.id}`);
+      }
+
+      if (exportMcpServers && hasMcpServers && processedSettings?.mcp_servers) {
+        const mcpServersText = Array.isArray(processedSettings.mcp_servers)
+          ? processedSettings.mcp_servers.join(", ")
+          : processedSettings.mcp_servers;
+        settingsLines.push(`MCP server: ${mcpServersText}`);
+      }
+    }
+
+    const messagesHtml = processedMessages
+      .map((entry) => {
+        let contentHtml = "";
+
+        if (typeof entry.content === "string") {
+          contentHtml = buildPrintableMessageHtml(entry.content);
+        } else if (Array.isArray(entry.content) && exportFiles) {
+          contentHtml = entry.content
+            .map((item) => {
+              if (item?.type === "text") {
+                return buildPrintableMessageHtml(item.text || "");
+              }
+
+              if (item?.type === "image_url") {
+                if (item?.image_url?.url?.startsWith("data:image")) {
+                  return `<div class="pdf-export-image-wrap"><img class="pdf-export-image" src="${item.image_url.url}" alt="Embedded image" /></div>`;
+                }
+                return `<div class="pdf-export-pre" dir="auto">${escapeHtml("[Invalid image format]")}</div>`;
+              }
+
+              return "";
+            })
+            .join("");
+        } else {
+          contentHtml = `<div class="pdf-export-pre" dir="auto">${escapeHtml("Content unavailable")}</div>`;
+        }
+
+        return `
+          <section class="pdf-export-message" dir="auto">
+            <div class="pdf-export-role">${escapeHtml(entry.role)}:</div>
+            ${contentHtml}
+          </section>
+        `;
+      })
+      .join("");
+
+    const settingsHtml =
+      exportSettings && processedSettings
+        ? `
+          <section class="pdf-export-settings" dir="auto">
+            <div class="pdf-export-settings-title">Conversation settings</div>
+            <div class="pdf-export-pre">${escapeHtml(settingsLines.join("\n"))}</div>
+          </section>
+        `
+        : "";
+
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(fileTitle)}</title>
+    <style>
+      @page { margin: 14mm 12mm 16mm 12mm; }
+      ${katexStyles}
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: #fff; color: #111827; }
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .pdf-export-root { max-width: 820px; margin: 0 auto; padding: 0 0 8px; }
+      .pdf-export-header {
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .pdf-export-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      .pdf-export-date {
+        font-size: 11px;
+        color: #6b7280;
+      }
+      .pdf-export-message {
+        margin-bottom: 12px;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #fff;
+        page-break-inside: auto;
+        break-inside: auto;
+      }
+      .pdf-export-role {
+        font-weight: 600;
+        font-size: 12px;
+        color: #0066cc;
+        margin-bottom: 6px;
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+      .pdf-export-pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      .pdf-export-markdown {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      .pdf-export-markdown > *:first-child { margin-top: 0; }
+      .pdf-export-markdown > *:last-child { margin-bottom: 0; }
+      .pdf-export-markdown p { margin: 0 0 8px; white-space: pre-wrap; }
+      .pdf-export-markdown ul,
+      .pdf-export-markdown ol { margin: 0 0 8px 20px; padding: 0; }
+      .pdf-export-markdown li { margin: 0 0 4px; }
+      .pdf-export-markdown h1,
+      .pdf-export-markdown h2,
+      .pdf-export-markdown h3,
+      .pdf-export-markdown h4,
+      .pdf-export-markdown h5,
+      .pdf-export-markdown h6 {
+        margin: 10px 0 6px;
+        line-height: 1.3;
+      }
+      .pdf-export-markdown code {
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+        padding: 0 3px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+      }
+      .pdf-export-markdown pre {
+        margin: 0 0 8px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 10px;
+      }
+      .pdf-export-markdown pre code {
+        border: 0;
+        padding: 0;
+        background: transparent;
+      }
+      .pdf-export-code-label {
+        font-size: 11px;
+        color: #6b7280;
+        margin: 4px 0;
+      }
+      .pdf-export-code {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 10px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+      }
+      .pdf-export-image-wrap { margin-top: 8px; }
+      .pdf-export-image {
+        max-width: 220px;
+        max-height: 220px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+      }
+      .pdf-export-settings {
+        margin-top: 16px;
+        padding-top: 10px;
+        border-top: 1px solid #e5e7eb;
+      }
+      .pdf-export-settings-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="pdf-export-root" dir="auto">
+      <header class="pdf-export-header">
+        <div class="pdf-export-title">${escapeHtml(conversation?.title || "Chat AI Conversation")}</div>
+        <div class="pdf-export-date">${escapeHtml(new Date().toLocaleString())}</div>
+      </header>
+      ${messagesHtml}
+      ${settingsHtml}
+    </div>
+  </body>
+</html>`;
+  };
+
+  const exportPDFWithBrowserPrint = async ({ processedMessages, processedSettings }) => {
+    const fileName = generateFileName("pdf");
+    const fileTitle = fileName.replace(/\.pdf$/i, "");
+    const printableHtml = buildPrintableExportHtml({ processedMessages, processedSettings, fileTitle });
+
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "1px";
+    iframe.style.height = "1px";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
+    iframe.style.border = "0";
+
+    document.body.appendChild(iframe);
+
+    try {
+      const printDoc = iframe.contentDocument;
+      const printWindow = iframe.contentWindow;
+      if (!printDoc || !printWindow) {
+        throw new Error("Failed to create print frame");
+      }
+
+      printDoc.open();
+      printDoc.write(printableHtml);
+      printDoc.close();
+
+      if (printDoc.fonts?.ready) {
+        await printDoc.fonts.ready;
+      }
+
+      const imageElements = Array.from(printDoc.images || []);
+      await Promise.all(
+        imageElements.map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) {
+                if (typeof img.decode === "function") {
+                  img.decode().catch(() => null).finally(resolve);
+                  return;
+                }
+                resolve();
+                return;
+              }
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            })
+        )
+      );
+
+      await new Promise((resolve) =>
+        printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(resolve))
+      );
+
+      const cleanup = () => {
+        iframe.remove();
+      };
+
+      const cleanupTimeout = window.setTimeout(cleanup, 60_000);
+      const afterPrintHandler = () => {
+        window.clearTimeout(cleanupTimeout);
+        cleanup();
+      };
+
+      printWindow.addEventListener("afterprint", afterPrintHandler, { once: true });
+      printWindow.focus();
+      printWindow.print();
+
+    } catch (error) {
+      iframe.remove();
+      throw error;
+    }
+  };
+
   // Export conversation as PDF
   const exportPDF = async () => {
     try {
-      // Initialize PDF document
-      const doc = new jsPDF();
-      doc.setProperties({
-        title: conversation?.title || "Chat AI Conversation", // TODO Replace with actual title
-        subject: "History",
-        author: "Chat AI",
-        keywords: "AI-Generated",
-        creator: "GWDG",
-      });
-      doc.setFont("helvetica");
-
-      // Define colors for PDF elements
-      const COLORS = {
-        DEFAULT: [0, 0, 0],
-        HEADER_DATE: [150, 150, 150],
-        ROLE: [0, 102, 204],
-      };
-
-      // Set up page dimensions and margins
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
-      const margin = 15;
-      const contentWidth = pageWidth - 2 * margin;
-      const lineHeight = 7;
-      let y = margin;
-      const headerHeight = 25;
-
-      // Add header to each page
-      const addHeader = (isFirstPage) => {
-        y = margin;
-        // TODO fix logo
-        if (isFirstPage) {
-          doc.addImage(Logo, "PNG", margin, margin, 20, 8);
-        }
-        const date = new Date().toLocaleDateString();
-        doc.setFontSize(10);
-        doc.setTextColor(...COLORS.HEADER_DATE);
-        doc.text(date, pageWidth - margin - 5, margin + 8, { align: "right" });
-        doc.line(margin, headerHeight, pageWidth - margin, headerHeight);
-        y = headerHeight + 10;
-      };
-
-      // Add page numbers to all pages
-      const addPageNumbers = () => {
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          doc.setPage(i);
-          doc.setFontSize(10);
-          doc.setTextColor(...COLORS.DEFAULT);
-          doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, {
-            align: "center",
-          });
-        }
-      };
-
-      // Reset text styling to default
-      const resetTextStyle = () => {
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(...COLORS.DEFAULT);
-      };
-
-      // Add new page if content would overflow
-      const addNewPageIfNeeded = (spaceNeeded) => {
-        if (y + spaceNeeded > pageHeight - margin) {
-          doc.addPage();
-          addHeader(false);
-          resetTextStyle();
-        }
-      };
-
-      // Initialize first page
-      addHeader(true);
-      resetTextStyle();
-
-      // Process Messages
       let processedMessages = await processMessages();
-
-      // Convert messages to formatted text
-      // let textContent = processedMessages
-      //   .map((msg) => {
-      //     let contentString = `${msg.role.toUpperCase()}: `;
-
-      //     if (Array.isArray(msg.content)) {
-      //       msg.content.forEach((item) => {
-      //         if (item.type === "text") {
-      //           contentString += `${item.text}\n`;
-      //         } else if (item.type === "image_url") {
-      //           if (exportFiles) {
-      //             contentString += "[Image]\n";
-      //           }
-      //         }
-      //       });
-      //     } else {
-      //       contentString += msg.content;
-      //     }
-
-      //     return contentString;
-      //   })
-      //   .join("\n\n");
-
-      // Process each message in conversation
-      for (const entry of processedMessages) {
-        addNewPageIfNeeded(lineHeight * 2);
-
-        // Add role label
-        doc.setFontSize(10);
-        doc.setTextColor(...COLORS.ROLE);
-        doc.text(`${entry.role}:`, margin, y);
-        y += lineHeight;
-
-        resetTextStyle();
-
-        // Handle different content types
-        if (typeof entry.content === "string") {
-          // Handle code blocks and regular text
-          if (entry.content.includes("```")) {
-            const parts = entry.content.split(/(```[\s\S]+?```)/);
-            for (const part of parts) {
-              if (part.startsWith("```")) {
-                const [, language, code] =
-                  part.match(/```(\w+)?\n([\s\S]+?)```/) || [];
-                if (code) {
-                  const codeLines = code?.trim().split("\n");
-                  addNewPageIfNeeded(lineHeight * (codeLines.length + 2));
-
-                  doc.text(language || "Code:", margin, y);
-                  y += lineHeight * 0.5;
-
-                  // Add gray background for code blocks
-                  doc.setFillColor(240, 240, 240);
-                  doc.rect(
-                    margin,
-                    y,
-                    contentWidth,
-                    lineHeight * codeLines.length,
-                    "F"
-                  );
-
-                  // Add code content with monospace font
-                  doc.setFont("Courier", "normal");
-                  codeLines.forEach((line, index) => {
-                    doc.text(line, margin + 5, y + 5 + index * lineHeight);
-                  });
-                  y += lineHeight * (codeLines.length + 0.5);
-                  resetTextStyle();
-                }
-              } else {
-                // Handle regular text with word wrapping
-                const lines = doc.splitTextToSize(part, contentWidth);
-                lines.forEach((line) => {
-                  addNewPageIfNeeded(lineHeight);
-                  doc.text(line, margin, y);
-                  y += lineHeight;
-                });
-              }
-            }
-          } else {
-            // Handle regular text without code blocks
-            const lines = doc.splitTextToSize(entry.content, contentWidth);
-            lines.forEach((line) => {
-              addNewPageIfNeeded(lineHeight);
-              doc.text(line, margin, y);
-              y += lineHeight;
-            });
-          }
-        } else if (
-          Array.isArray(entry.content) &&
-          exportFiles
-        ) {
-          // Handle mixed content (text and images)
-          entry.content.forEach((item) => {
-            if (item.type === "text") {
-              // Handle text content
-              const lines = doc.splitTextToSize(item.text, contentWidth);
-              lines.forEach((line) => {
-                addNewPageIfNeeded(lineHeight);
-                doc.text(line, margin, y);
-                y += lineHeight;
-              });
-            } else if (item.type === "image_url") {
-              // Handle image content
-              addNewPageIfNeeded(lineHeight + 60);
-              if (item.image_url.url.startsWith("data:image")) {
-                doc.addImage(item.image_url.url, "JPEG", margin, y, 50, 50);
-                y += 60;
-              } else {
-                doc.text("[Invalid image format]", margin, y);
-                y += lineHeight;
-              }
-            }
-          });
-        } else {
-          // Handle unavailable content
-          addNewPageIfNeeded(lineHeight);
-          doc.text("Content unavailable", margin, y);
-          y += lineHeight;
-        }
-
-        y += lineHeight; // Add spacing between messages
-      }
-
-      // Add settings section if enabled
-      if (exportSettings) {
-        let settings = processSettings();
-        addNewPageIfNeeded(
-          lineHeight *
-            (6 +
-              (exportArcana && isArcanaSupported && settings?.arcana?.id ? 1 : 0) +
-              (exportMcpServers && hasMcpServers && settings?.mcp_servers ? 1 : 0))
-        );
-        y += lineHeight * 2;
-
-        resetTextStyle();
-        doc.text("Conversation settings", margin, y);
-        y += lineHeight;
-        doc.text(`title: ${conversation?.title}`, margin, y);
-        y += lineHeight;
-        doc.text(`model: ${settings?.model}`, margin, y);
-        y += lineHeight;
-        doc.text(`model name: ${settings?.["model-name"]}`, margin, y);
-        y += lineHeight;
-        doc.text(`temperature: ${settings?.temperature}`, margin, y);
-        y += lineHeight;
-        doc.text(`top_p: ${settings?.top_p}`, margin, y);
-        y += lineHeight;
-
-        // Add Arcana settings if enabled
-        if (exportArcana && isArcanaSupported && settings?.arcana?.id) {
-          doc.text(`Arcana ID ${settings?.arcana?.id}`, margin, y);
-          y += lineHeight;
-        }
-
-        if (exportMcpServers && hasMcpServers && settings?.mcp_servers) {
-          const mcpServersText = Array.isArray(settings.mcp_servers)
-            ? settings.mcp_servers.join(", ")
-            : settings.mcp_servers;
-          doc.text(`MCP server: ${mcpServersText}`, margin, y);
-          y += lineHeight;
-        }
-      }
-
-      // Add page numbers and save the PDF
-      addPageNumbers();
-      doc.save(generateFileName("pdf"));
+      const processedSettings = exportSettings ? processSettings() : null;
+      await exportPDFWithBrowserPrint({ processedMessages, processedSettings });
     } catch (error) {
       console.log(error)
-      notifyError("An error occurred while exporting to JSON");
+      notifyError("An error occurred while exporting to PDF");
     }
   };
 
   // Handle Format Change
   const handleFormatChange = (format) => {
+    if (isExporting) return;
     setExportFormat(format);
   };
 
   // Handle export
   const handleExport = async () => {
-    await refreshConversation();
-    if (exportFormat === "json") {
-      await exportJSON();
-    } else if (exportFormat === "pdf") {
-      await exportPDF();
-    } else if (exportFormat === "text") {
-      await exportTextFile();
+    if (isExporting) return;
+
+    setIsExporting(true);
+    try {
+      await refreshConversation();
+      if (exportFormat === "json") {
+        await exportJSON();
+      } else if (exportFormat === "pdf") {
+        await exportPDF();
+      } else if (exportFormat === "text") {
+        await exportTextFile();
+      }
+      onClose();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsExporting(false);
     }
-    onClose();
   };
 
   const exportOptions = [
@@ -544,38 +643,60 @@ export default function ExportConversationModal({
     setExportMcpServers(event.target.checked);
   };
 
+  const handleModalClose = () => {
+    if (isExporting) return;
+    onClose();
+  };
+
   return (
     <BaseModal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleModalClose}
       titleKey="export_conversation.title"
       maxWidth="max-w-md"
     >
-      <div className="flex flex-col gap-4">
+      <div
+        className={`flex flex-col gap-4 ${isExporting ? "opacity-90" : ""}`}
+        aria-busy={isExporting}
+      >
         {/* Export format options */}
         {exportOptions.map((option) => (
           <div
             key={option.id}
             className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-all duration-200
-              ${
-                exportFormat === option.id
-                  ? "border-tertiary bg-gray-100 dark:bg-gray-800"
-                  : "border-gray-300 dark:border-gray-600"
-              }`}
-            onClick={() => handleFormatChange(option.id)}
+              ${exportFormat === option.id
+                ? "border-tertiary bg-gray-100 dark:bg-gray-800"
+                : "border-gray-300 dark:border-gray-600"
+              }
+              ${isExporting ? "opacity-70 cursor-not-allowed" : ""}`}
+            onClick={() => {
+              if (!isExporting) {
+                handleFormatChange(option.id);
+              }
+            }}
           >
             <img src={option.icon} alt={option.id} className="h-8 w-8" />
             <label
-              className={`text-sm ${
-                exportFormat === option.id
+              className={`text-sm ${exportFormat === option.id
                   ? "text-tertiary"
                   : "text-black dark:text-white"
-              }`}
+                }`}
             >
               <Trans i18nKey={option.label} />
             </label>
           </div>
         ))}
+
+        {exportFormat === "pdf" && (
+          <div className="rounded-lg border border-gray-300 dark:border-gray-600 p-3 flex flex-col gap-3">
+            <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
+              PDF export
+            </div>
+            <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+              A browser print dialog will open. Set destination to "Save as PDF", then click Save.
+            </p>
+          </div>
+        )}
 
         {/* Arcana Export Option */}
         {arcana?.id && isArcanaSupported && exportSettings ? (
@@ -591,10 +712,9 @@ export default function ExportConversationModal({
                 id="exportArcana"
                 checked={exportArcana}
                 onChange={toggleExportArcana}
-                className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
-                  !arcana.id ? "bg-gray-400 cursor-not-allowed" : ""
-                }`}
-                disabled={!arcana?.id || !isArcanaSupported}
+                className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${!arcana.id ? "bg-gray-400 cursor-not-allowed" : ""
+                  }`}
+                disabled={!arcana?.id || !isArcanaSupported || isExporting}
               />
               <label
                 htmlFor="exportArcana"
@@ -621,6 +741,7 @@ export default function ExportConversationModal({
                 checked={exportMcpServers}
                 onChange={toggleExportMcpServers}
                 className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+                disabled={isExporting}
               />
               <label
                 htmlFor="exportMcpServers"
@@ -640,6 +761,7 @@ export default function ExportConversationModal({
             checked={exportSettings}
             onChange={toggleExportSettings}
             className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+            disabled={isExporting}
           />
           <label
             htmlFor="exportSettings"
@@ -656,10 +778,9 @@ export default function ExportConversationModal({
             id="exportFiles"
             checked={exportFiles}
             onChange={toggleExportFiles}
-            className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
-              !containsFiles ? "bg-gray-400 cursor-not-allowed" : ""
-            }`}
-            disabled={!containsFiles}
+            className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${!containsFiles ? "bg-gray-400 cursor-not-allowed" : ""
+              }`}
+            disabled={!containsFiles || isExporting}
           />
           <label
             htmlFor="exportFiles"
@@ -674,9 +795,22 @@ export default function ExportConversationModal({
           <button
             onClick={handleExport}
             type="button"
-            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none text-sm cursor-pointer"
+            disabled={isExporting}
+            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none text-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 inline-flex"
           >
-            <Trans i18nKey="export_conversation.export" />
+            {isExporting ? (
+              <span className="mx-auto inline-flex items-center gap-2">
+                <span
+                  className="h-4 w-4 rounded-full border-2 border-white/80 border-t-transparent animate-spin"
+                  aria-hidden="true"
+                />
+                <span>Exporting...</span>
+              </span>
+            ) : exportFormat === "pdf" ? (
+              <span>Open Save as PDF</span>
+            ) : (
+              <Trans i18nKey="export_conversation.export" />
+            )}
           </button>
         </div>
       </div>
