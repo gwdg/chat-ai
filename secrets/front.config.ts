@@ -40,6 +40,7 @@ export interface FrontOverrides {
         hideFooter?: boolean;
         hideImportConversationButton?: boolean;
         hideImportPersonaButton?: boolean;
+        hideSettings?: boolean;
     };
     features?: {
     };

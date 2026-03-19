@@ -30,6 +30,7 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const { isMobile } = useWindowSize();
   const hideFooter = config.overrides?.ui?.hideFooter;
+  const hideSettings = config.overrides?.ui?.hideSettings;
 
   const [localState, setLocalState] = useState(() => getDefaultConversation());
 
@@ -90,12 +91,14 @@ export default function ChatPage() {
           modelsData={modelsData}
         />
 
-        <SettingsWrapper
-          localState={localState}
-          setLocalState={setLocalState}
-          userData={userData}
-          modelsData={modelsData}
-        />
+        {!hideSettings && (
+          <SettingsWrapper
+            localState={localState}
+            setLocalState={setLocalState}
+            userData={userData}
+            modelsData={modelsData}
+          />
+        )}
 
         {!hideFooter && (
           <CollapsibleFooter

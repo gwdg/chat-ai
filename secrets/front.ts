@@ -41,7 +41,9 @@ const config: FrontConfig = {
         "ui": {
             "hideFooter": true,
             "hideImportConversationButton": true,
-            "hideImportPersonaButton": true,        },
+            "hideImportPersonaButton": true,
+            "hideSettings": true,
+        },
         "features": {
         },
         "models": {
