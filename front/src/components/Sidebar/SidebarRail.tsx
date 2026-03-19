@@ -158,23 +158,27 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
             </button>
           </ShortcutTooltip>
         </div>
-        <div className="mb-2 flex flex-col items-center justify-between gap-3 border-t border-tertiary pt-3">
-          {/* Import Conversation button */}
-          <ImportConversationButton variant="icon" />
+        {!(config.overrides?.ui?.hideImportConversationButton && config.overrides?.ui?.hideImportPersonaButton) && (
+          <div className="mb-2 flex flex-col items-center justify-between gap-3 border-t border-tertiary pt-3">
+            {/* Import Conversation button */}
+            {!config.overrides?.ui?.hideImportConversationButton && <ImportConversationButton variant="icon" />}
 
-          {/* Import persona from Github */}
-          <ShortcutTooltip label={t("sidebar.import_persona") }>
-            <button
-              onClick={() => {
-                openModal("importPersona");
-              }}
-              className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
-              aria-label={t("sidebar.import_persona")}
-            >
-              <Bot className="w-6 h-6 text-tertiary" />
-            </button>
-          </ShortcutTooltip>
-        </div>
+            {/* Import persona from Github */}
+            {!config.overrides?.ui?.hideImportPersonaButton && (
+              <ShortcutTooltip label={t("sidebar.import_persona") }>
+                <button
+                  onClick={() => {
+                    openModal("importPersona");
+                  }}
+                  className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+                  aria-label={t("sidebar.import_persona")}
+                >
+                  <Bot className="w-6 h-6 text-tertiary" />
+                </button>
+              </ShortcutTooltip>
+            )}
+          </div>
+        )}
       </div>
 
     </div>

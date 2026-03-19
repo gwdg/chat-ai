@@ -17,6 +17,7 @@ import { useConversationList } from "../../db";
 import { useModal } from "../../modals/ModalContext";
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import ImportConversationButton from "./ImportConversationButton";
+import config from "../../config";
 
 function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) {
   const { openModal } = useModal();
@@ -259,29 +260,35 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
         </div>
 
         {/* Bottom section */}
-        <div className="flex flex-col gap-4 m-3 border-t border-gray-200 dark:border-gray-500 pt-3">
-          {/* Import Conversation button */}
-          <ImportConversationButton
-            localState={localState}
-            setLocalState={setLocalState}
-            variant="button"
-          />
-          {/* Import Persona button */}
-          <button
-            onClick={() => {
-              openModal("importPersona");
-            }}
-            className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
-            style={{
-              WebkitTapHighlightColor: "transparent",
-              minHeight: "44px",
-            }}
-          >
-            <span className="truncate">
-              <Trans i18nKey="sidebar.import_persona" />
-            </span>
-          </button>
-        </div>
+        {!(config.overrides?.ui?.hideImportConversationButton && config.overrides?.ui?.hideImportPersonaButton) && (
+          <div className="flex flex-col gap-4 m-3 border-t border-gray-200 dark:border-gray-500 pt-3">
+            {/* Import Conversation button */}
+            {!config.overrides?.ui?.hideImportConversationButton && (
+              <ImportConversationButton
+                localState={localState}
+                setLocalState={setLocalState}
+                variant="button"
+              />
+            )}
+            {/* Import Persona button */}
+            {!config.overrides?.ui?.hideImportPersonaButton && (
+              <button
+                onClick={() => {
+                  openModal("importPersona");
+                }}
+                className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
+                style={{
+                  WebkitTapHighlightColor: "transparent",
+                  minHeight: "44px",
+                }}
+              >
+                <span className="truncate">
+                  <Trans i18nKey="sidebar.import_persona" />
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* MENU RENDERED OUTSIDE - PORTAL STYLE */}
