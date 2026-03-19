@@ -1,9 +1,9 @@
-import { MODELS_ENDPOINT } from "../config";
+import config from "../config";
 
 // Gets available models data from the server
 export async function getModelsData() {
   try {
-    const response = await fetch(MODELS_ENDPOINT);
+    const response = await fetch(config.modelsPath ?? "");
     // If failed, return response with error
     if (!response.ok) {
       return response;

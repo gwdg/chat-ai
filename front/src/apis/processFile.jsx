@@ -1,4 +1,4 @@
-import { BACKEND_ENDPOINT } from "../config";
+import config from "../config";
 
 // PDF processing function
 export const processFile = async (file) => {
@@ -7,7 +7,7 @@ export const processFile = async (file) => {
     formData.append("document", file);
 
     const response = await fetch(
-      BACKEND_ENDPOINT + "/documents",
+      (config.backendPath ?? "") + "/documents",
       {
         method: "POST",
         body: formData,

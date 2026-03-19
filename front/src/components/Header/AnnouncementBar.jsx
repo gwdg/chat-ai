@@ -3,13 +3,13 @@ import { useSelector, useDispatch } from "react-redux";
 import { Trans } from "react-i18next";
 import { X } from "lucide-react";
 import { closeAnnouncement, selectCountAnnouncement } from "../../Redux/reducers/interfaceSettingsSlice";
-import { ANNOUNCEMENT } from "../../config";
+import config from "../../config";
 
 export default function AnnouncementBar() {
   const dispatch = useDispatch();
   const closeCount = useSelector(selectCountAnnouncement);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
-  const announcement = ANNOUNCEMENT;
+  const announcement = config.announcement;
   if (!announcement || announcement === "") return;
 
   useEffect(() => {

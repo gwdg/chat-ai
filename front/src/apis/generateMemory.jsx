@@ -1,6 +1,6 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
 import OpenAI from "openai";
-import { BACKEND_ENDPOINT, MEMORY_GENERATION_MODEL } from "../config";
+import config from "../config";
 
 export default async function generateMemory(newUserMessage, memories) {
   const defaultSettings = getDefaultSettings();

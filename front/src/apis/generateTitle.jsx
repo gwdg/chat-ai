@@ -1,6 +1,6 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
 import OpenAI from "openai";
-import { BACKEND_ENDPOINT, TITLE_GENERATION_MODEL } from "../config";
+import config from "../config";
 
 export default async function generateTitle(messages) {
   const defaultSettings = getDefaultSettings();
@@ -53,7 +53,7 @@ export default async function generateTitle(messages) {
 
   try {
     // Define base URL from config
-    let baseURL = BACKEND_ENDPOINT;
+    let baseURL = config.backendPath ?? "";
     try {
       // If absolute, parse directly
       baseURL = new URL(baseURL).toString();
@@ -72,7 +72,7 @@ export default async function generateTitle(messages) {
 
     // Initialize params
     const params = {
-      model: TITLE_GENERATION_MODEL || defaultSettings.model.id,
+      model: config.titleGenerationModel || defaultSettings.model.id,
         messages: [
           { role: "system", content: "You are a helpful assistant." },
           ...processedMessages,

@@ -12,7 +12,7 @@ import { createConversation, newId, saveFile, loadFile } from "../../../db";
 import { useToast } from "../../../hooks/useToast";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
-import { MODULE_FEEDBACK } from "../../../config";
+import config from "../../../config";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -34,7 +34,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useToast();
   const [forking, setForking] = useState(false);
-  const feedbackModule = MODULE_FEEDBACK;
+  const feedbackModule = config.modules?.feedback;
 
   //Functions
   const adjustHeight = () => {

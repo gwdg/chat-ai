@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { BACKEND_ENDPOINT } from "../config";
+import config from "../config";
 
 // Controller for handling API request cancellation
 let controller = new AbortController();
@@ -15,7 +15,7 @@ async function* chatCompletions (
       : conversation.settings.model?.id; // TODO fall back to defaultModel
 
     // Define base URL from config
-    let baseURL = BACKEND_ENDPOINT;
+    let baseURL = config.backendPath ?? "";
     try {
       // If absolute, parse directly
       baseURL = new URL(baseURL).toString();

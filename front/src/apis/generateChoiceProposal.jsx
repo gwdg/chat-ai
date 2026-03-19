@@ -1,6 +1,6 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
 import OpenAI from "openai";
-import { BACKEND_ENDPOINT, PROPOSAL_GENERATION_MODEL } from "../config";
+import config from "../config";
 
 export default async function generateChoiceProposal(history) {
   const defaultSettings = getDefaultSettings();
@@ -34,7 +34,7 @@ export default async function generateChoiceProposal(history) {
 
   try {
     // Define base URL from config
-    let baseURL = BACKEND_ENDPOINT;
+    let baseURL = config.backendPath ?? "";
     try {
       // If absolute, parse directly
       baseURL = new URL(baseURL).toString();
@@ -53,7 +53,7 @@ export default async function generateChoiceProposal(history) {
   
 
     const params = {
-      model: PROPOSAL_GENERATION_MODEL || defaultSettings.model.id,
+      model: config.proposalGenerationModel || defaultSettings.model.id,
       messages: [
         {
           role: "system",
