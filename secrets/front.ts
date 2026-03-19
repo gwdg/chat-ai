@@ -1,6 +1,6 @@
 import type { FrontConfig } from "./front.config";
 
-export const config: FrontConfig = {
+const config: FrontConfig = {
     "mode": "prod",
     "port": 7220,
     "backendPath": "/api",
@@ -36,5 +36,17 @@ export const config: FrontConfig = {
         },
 
     },
-    "announcement": ""
+    "announcement": "",
+    "overrides": {
+        "ui": {
+            "hideFooter": true,
+            "hideImportConversationButton": true,
+            "hideImportPersonaButton": true,        },
+        "features": {
+        },
+        "models": {
+        },
+        "branding": "mpg",
+    },
 }
+export default config;

@@ -6,7 +6,6 @@ import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 import SettingsWrapper from "../SettingsPanel/SettingsWrapper";
 import SettingsButton from "./SettingsButton";
 import ModelSelectorWrapper from "./ModelSelectorWrapper";
-import ModelSelector from "./ModelSelector";
 import WarningExternalModel from "./WarningExternalModel";
 import AnnouncementBar from "./AnnouncementBar";
 
@@ -45,10 +44,7 @@ function Header({ className, localState, setLocalState, modelsData, userData }) 
             {/* External Model Warning */}
             <WarningExternalModel localState={localState} userData={userData} />
             {/* Settings Button */}
-            <SettingsButton
-              localState={localState}
-              setLocalState={setLocalState}
-             />
+            <SettingsButton />
           </div>
         </div>
       </nav>

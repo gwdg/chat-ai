@@ -14,7 +14,7 @@ const resolvedPath = path.resolve(viteConfigDir, CONFIG_LOCATION);
 if(CONFIG_LOCATION.endsWith(".ts") || CONFIG_LOCATION.endsWith(".js")) {
   console.log(`Loading config from ${CONFIG_LOCATION} as a module...`);
   // Load config from .ts or .js file using dynamic import
-  config = await import(resolvedPath);
+  config = (await import(resolvedPath)).default;
 } else {
   console.warn(`CONFIG_LOCATION ${CONFIG_LOCATION} does not end with .ts or .js. Defaulting to JSON parsing.`);
   // Load config as JSON by default

@@ -20,6 +20,8 @@ import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
 import { Navigate, useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
 
+import config from "../config";
+
 export default function ChatPage() {
   const params = useParams();
  
@@ -27,6 +29,7 @@ export default function ChatPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isMobile } = useWindowSize();
+  const hideFooter = config.overrides?.ui?.hideFooter;
 
   const [localState, setLocalState] = useState(() => getDefaultConversation());
 
@@ -34,6 +37,7 @@ export default function ChatPage() {
   const userData = useUpdateUserData();
 
   // Sync localState conversation with IndexedDB
+  // @ts-ignore
   useSyncConversation({
     localState,
     setLocalState,
@@ -63,14 +67,14 @@ export default function ChatPage() {
 
       {/* Middle content exactly fills leftover space */}
       <div
-        className="
+        className={`
           grid
-          grid-cols-1 grid-rows-[1fr_auto]
-          md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
+          grid-cols-1 ${hideFooter ? 'grid-rows-[1fr]' : 'grid-rows-[1fr_auto]'}
+          md:grid-cols-[auto_1fr_auto] ${hideFooter ? 'md:grid-rows-[1fr]' : 'md:grid-rows-[1fr_auto]'}
           md:gap-x-2 gap-y-1 md:pt-1
           bg-gray-100 dark:bg-bg_dark
           overflow-hidden
-        "
+        `}
       >
         <SidebarWrapper
           localState={localState}
@@ -93,9 +97,11 @@ export default function ChatPage() {
           modelsData={modelsData}
         />
 
-        <CollapsibleFooter
-          className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-4"
-        />
+        {!hideFooter && (
+          <CollapsibleFooter
+            className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-4"
+          />
+        )}
       </div>
     </div>
   );

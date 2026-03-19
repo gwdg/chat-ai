@@ -35,6 +35,19 @@ export interface FrontDefaultSettings {
   tools: FrontDefaultToolsConfig;
 }
 
+export interface FrontOverrides {
+    ui?: {
+        hideFooter?: boolean;
+        hideImportConversationButton?: boolean;
+        hideImportPersonaButton?: boolean;
+    };
+    features?: {
+    };
+    models?: {
+    };
+    branding?: "gwdg" | "mpg";
+}
+
 export interface FrontConfig {
   mode: FrontMode;
   port: number;
@@ -47,4 +60,5 @@ export interface FrontConfig {
   modules: FrontModulesConfig;
   default: FrontDefaultSettings;
   announcement: string;
+  overrides?: FrontOverrides;
 }
