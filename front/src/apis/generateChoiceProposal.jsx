@@ -1,5 +1,6 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
 import OpenAI from "openai";
+import { BACKEND_ENDPOINT, PROPOSAL_GENERATION_MODEL } from "../config";
 
 export default async function generateChoiceProposal(history) {
   const defaultSettings = getDefaultSettings();
@@ -33,7 +34,7 @@ export default async function generateChoiceProposal(history) {
 
   try {
     // Define base URL from config
-    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
+    let baseURL = BACKEND_ENDPOINT;
     try {
       // If absolute, parse directly
       baseURL = new URL(baseURL).toString();
@@ -52,7 +53,7 @@ export default async function generateChoiceProposal(history) {
   
 
     const params = {
-      model: import.meta.env.VITE_PROPOSAL_GENERATION_MODEL || defaultSettings.model.id,
+      model: PROPOSAL_GENERATION_MODEL || defaultSettings.model.id,
       messages: [
         {
           role: "system",

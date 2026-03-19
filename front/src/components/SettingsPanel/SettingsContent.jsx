@@ -41,6 +41,7 @@ import MCPContainer from "./MCPContainer";
 import ToolsContainer from "./ToolsContainer";
 import VideoList from "./VideoList";
 import ShortcutTooltip from "../Sidebar/ShortcutTooltip";
+import { MODULE_CHOICES, MODULE_TOOLS } from "../../config";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -53,8 +54,8 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const userSettings = useSelector(selectUserSettings);
   const settings = localState.settings;
   const tools = settings?.tools || {};
-  const toolsModule = import.meta.env.VITE_MODULE_TOOLS  === "true";
-  const choicesModule = import.meta.env.VITE_MODULE_CHOICES  === "true";
+  const toolsModule = MODULE_TOOLS;
+  const choicesModule = MODULE_CHOICES;
   const showArcanaBox = !!settings?.enable_tools && !!tools.arcana;
   const showMCPBox = !!settings?.enable_tools && !!tools.mcp;
   const showVideoList = !!tools.video_generation;

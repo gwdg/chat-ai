@@ -1,7 +1,9 @@
+import { MODELS_ENDPOINT } from "../config";
+
 // Gets available models data from the server
 export async function getModelsData() {
   try {
-    const response = await fetch(import.meta.env.VITE_MODELS_ENDPOINT);
+    const response = await fetch(MODELS_ENDPOINT);
     // If failed, return response with error
     if (!response.ok) {
       return response;

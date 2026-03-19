@@ -2,70 +2,46 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from '@tailwindcss/vite'
 import fs from "fs";
-import path from "path";
+/** @typedef {import("../secrets/front.config").FrontConfig} FrontConfig */
+const CONFIG_LOCATION = process.env.CONFIG_LOCATION || "../secrets/front.ts";
 
-const ASSET_URL = process.env.ASSET_URL || "";
-const CONFIG_LOCATION = process.env.CONFIG_LOCATION || "../secrets/front.json";
+function loadTsConfigObject(filePath) {
+  const source = fs.readFileSync(filePath, "utf8");
+  const configMatch = source.match(/export\s+const\s+config(?:\s*:\s*[\w<>,\[\]\s.|&?]+)?\s*=\s*({[\s\S]*})\s*;?\s*$/);
 
-// Default port if config file is missing or invalid
-let port = 8080;
+  if (!configMatch) {
+    throw new Error(`Could not find 'export const config = { ... }' in ${filePath}`);
+  }
 
+  return Function(`"use strict"; return (${configMatch[1]});`)();
+}
+
+let config;
 try {
-  // Read and parse the JSON file
-  const config = JSON.parse(fs.readFileSync(CONFIG_LOCATION, "utf8"));
+  /** @type {FrontConfig} */
+  config = loadTsConfigObject(CONFIG_LOCATION);
   console.log(`Config loaded from ${CONFIG_LOCATION}:`, config);
-
-  // Extract the port from the config (ensure it's a valid number)
-  if (typeof config.port === "number" && config.port > 0) {
-    port = config.port;
-    console.log("Port:", port);
-  } else {
-    console.warn(
-      "Invalid port in config.json. Falling back to default port 8080."
-    );
-  }
-
-  // Inject VITE_ variables into the environment
-  for (const [key, value] of Object.entries(config)) {
-    if (key == "modelsPath") {
-      process.env["VITE_MODELS_ENDPOINT"] = value;
-      console.log("Models path:", value);
-    } else if (key == "backendPath") {
-      process.env["VITE_BACKEND_ENDPOINT"] = value;
-      console.log("Backend path:", value);
-    } else if (key == "userDataPath") {
-      process.env["VITE_USERDATA_ENDPOINT"] = value;
-      console.log("User data path:", value);
-    } else if (key == "default") {
-      process.env["VITE_DEFAULT_SETTINGS"] = JSON.stringify(value);
-      console.log("Default settings:", JSON.stringify(value));
-    } else if (key == "titleGenerationModel") {
-      process.env["VITE_TITLE_GENERATION_MODEL"] = value;
-      console.log("Title generation model:", value);
-    } else if (key == "memoryGenerationModel") {
-      process.env["VITE_MEMORY_GENERATION_MODEL"] = value;
-      console.log("Memory generation model:", value);
-    } else if (key == "proposalGenerationModel") {
-      process.env["VITE_PROPOSAL_GENERATION_MODEL"] = value;
-      console.log("Proposal generation model:", value);
-    } else if (key == "announcement") {
-      process.env["VITE_ANNOUNCEMENT"] = value;
-      console.log("Announcement:", value);
-    } else if (key == "modules"){
-      console.log("Modules:", JSON.stringify(value));
-      try {
-        process.env["VITE_MODULE_TOOLS"] = value?.tools || false;
-        process.env["VITE_MODULE_FEEDBACK"] = value?.feedback  || false;
-        process.env["VITE_MODULE_CHOICES"] = value?.choices  || false;
-      } catch (e) {
-        console.log("Error while parsing modules: ", e)
-      }
-    }
-  }
 } catch (error) {
-  console.error("Failed to load config.json:", error);
+  console.error("Failed to load TypeScript config:", error);
   process.exit(1);
 }
+
+const port = typeof config.port === "number" && config.port > 0 ? config.port : 8080;
+const modules = config.modules || {};
+
+const defineEnv = {
+  __MODELS_ENDPOINT__: JSON.stringify(config.modelsPath ?? ""),
+  __BACKEND_ENDPOINT__: JSON.stringify(config.backendPath ?? ""),
+  __USERDATA_ENDPOINT__: JSON.stringify(config.userDataPath ?? ""),
+  __DEFAULT_SETTINGS__: JSON.stringify(config.default ?? {}),
+  __TITLE_GENERATION_MODEL__: JSON.stringify(config.titleGenerationModel ?? ""),
+  __MEMORY_GENERATION_MODEL__: JSON.stringify(config.memoryGenerationModel ?? ""),
+  __PROPOSAL_GENERATION_MODEL__: JSON.stringify(config.proposalGenerationModel ?? ""),
+  __ANNOUNCEMENT__: JSON.stringify(config.announcement ?? ""),
+  __MODULE_TOOLS__: JSON.stringify(Boolean(modules.tools || false)),
+  __MODULE_FEEDBACK__: JSON.stringify(Boolean(modules.feedback || false)),
+  __MODULE_CHOICES__: JSON.stringify(Boolean(modules.choices || false)),
+};
 
 // Export the Vite config
 export default defineConfig({
@@ -73,6 +49,7 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
+  define: defineEnv,
   base: "/",
   server: {
     port: port,

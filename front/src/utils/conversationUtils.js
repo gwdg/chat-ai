@@ -2,13 +2,14 @@ import { v4 as uuidv4 } from "uuid";
 import { useSelector } from "react-redux";
 import { getConversation, getFolder, listConversationMetas } from "../db";
 import { processContentItems } from "./sendMessage";
+import { DEFAULT_SETTINGS } from "../config";
 
 export const getDefaultSettings = (userSettings = {}) => {
   // Get environment settings
   let envSettings = {};
-  if (import.meta.env.VITE_DEFAULT_SETTINGS) {
+  if (DEFAULT_SETTINGS) {
     try {
-      envSettings = JSON.parse(import.meta.env.VITE_DEFAULT_SETTINGS);
+      envSettings = DEFAULT_SETTINGS;
     } catch (e) {
       envSettings = {};
     }

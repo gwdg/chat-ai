@@ -1,5 +1,6 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
 import OpenAI from "openai";
+import { BACKEND_ENDPOINT, MEMORY_GENERATION_MODEL } from "../config";
 
 export default async function generateMemory(newUserMessage, memories) {
   const defaultSettings = getDefaultSettings();
@@ -77,7 +78,7 @@ export default async function generateMemory(newUserMessage, memories) {
 
   try {
     // Define base URL from config
-    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
+    let baseURL = BACKEND_ENDPOINT;
     try {
       // If absolute, parse directly
       baseURL = new URL(baseURL).toString();
@@ -96,7 +97,7 @@ export default async function generateMemory(newUserMessage, memories) {
   
 
     const params = {
-      model: import.meta.env.VITE_MEMORY_GENERATION_MODEL || defaultSettings.model.id,
+      model: MEMORY_GENERATION_MODEL || defaultSettings.model.id,
       messages: [
         {
           role: "system",

@@ -1,12 +1,13 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
 import OpenAI from "openai";
+import { BACKEND_ENDPOINT } from "../config";
 
 // Tests if a specific model is available and responsive
 export async function checkService(model) {
   const defaultSettings = getDefaultSettings();
 
   try {
-    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
+    let baseURL = BACKEND_ENDPOINT;
     try {
       // If absolute, parse directly
       baseURL = new URL(baseURL).toString();
