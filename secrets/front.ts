@@ -43,6 +43,8 @@ const config: FrontConfig = {
             "hideImportConversationButton": true,
             "hideImportPersonaButton": true,
             "hideSettings": true,
+            "hideModelSelector": true,
+            "showModelSelectorInChatArea": true,
         },
         "features": {
         },

@@ -41,6 +41,8 @@ export interface FrontOverrides {
         hideImportConversationButton?: boolean;
         hideImportPersonaButton?: boolean;
         hideSettings?: boolean;
+        hideModelSelector?: boolean;
+        showModelSelectorInChatArea?: boolean;
     };
     features?: {
     };

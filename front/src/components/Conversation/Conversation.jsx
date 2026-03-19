@@ -15,6 +15,8 @@ import Motto from "./Motto";
 import UndoButton from "./UndoButton";
 import SummaryButton from "./SummaryButton";
 
+import config from "../../config";
+
 export default function Conversation({
   localState,
   setLocalState,
@@ -223,13 +225,15 @@ export default function Conversation({
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
       {/* Model selector at top, on tablet and desktop */}
-      <div className="model-selector hidden md:block">
-        <ModelSelectorWrapper
-          localState={localState}
-          setLocalState={setLocalState}
-          modelsData={modelsData}
-        />
-      </div>
+      {config?.overrides?.ui?.hideModelSelector !== true && (
+        <div className="model-selector hidden md:block">
+          <ModelSelectorWrapper
+            localState={localState}
+            setLocalState={setLocalState}
+            modelsData={modelsData}
+          />
+        </div>
+      )}
 
       {/* Empty conversation */}
       <div
@@ -238,10 +242,9 @@ export default function Conversation({
       >
         <div
           className={`transition-all duration-500 ease-in-out p-10  
-            ${
-              emptyConversation
-                ? "scale-100 opacity-80"
-                : "scale-90 opacity-0 pointer-events-none"
+            ${emptyConversation
+              ? "scale-100 opacity-80"
+              : "scale-90 opacity-0 pointer-events-none"
             }`}
         >
           {emptyConversation && (
@@ -255,10 +258,9 @@ export default function Conversation({
         className={`flex flex-col relative w-full rounded-xl
           bg-white dark:bg-bg_secondary_dark shadow-md dark:shadow-dark
           transition-opacity duration-500 ease-in-out 
-          ${
-            localState.messages.length <= 2
-              ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden"
-              : "scale-100 opacity-100 flex-1 min-h-0"
+          ${localState.messages.length <= 2
+            ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden"
+            : "scale-100 opacity-100 flex-1 min-h-0"
           }`}
       >
         {/* Hallucination Warning */}
@@ -345,9 +347,9 @@ export default function Conversation({
               />
               {/* Summary button */}
               <SummaryButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
+                localState={localState}
+                setLocalState={setLocalState}
+              />
             </div>
             <div className="flex items-baseline gap-3">
               {/* Export button */}
@@ -366,7 +368,7 @@ export default function Conversation({
       </div>
 
       {/* Prompt */}
-      <Prompt localState={localState} setLocalState={setLocalState} />
+      <Prompt localState={localState} setLocalState={setLocalState} modelsData={modelsData} />
       {emptyConversation && <Motto />}
     </div>
   );
