@@ -230,6 +230,9 @@ app.post("/chat/completions", async (req, res) => {
       }
       if (tools && tools.length > 0) {
         params.tools = [];
+        // for testing
+        params.tools.push({type: "create_test_form"});
+
         for (const tool of tools) {
           if (tool.type === "web_search_preview" || tool.type === "web_search") {
             params.tools.push({type: "web_search_preview"});
