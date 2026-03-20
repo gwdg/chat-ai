@@ -12,12 +12,17 @@ import { createConversation, newId, saveFile, loadFile } from "../../../db";
 import { useToast } from "../../../hooks/useToast";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
+import StructuredToolResponse from "../../StructuredToolResponses/StructuredToolResponse";
+import { validateStructuredResponse } from "../../../utils/structuredToolValidation";
+import { setActiveResponse } from "../../../Redux/reducers/structuredToolResponsesSlice";
+import { useDispatch } from "react-redux";
 
 // Constants
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
 export default React.memo(({ localState, setLocalState, message_index }) => {
+  const dispatch = useDispatch();
   //Refs
   const assistantMessage = useRef(null);
   const editBox = useRef(null);
@@ -34,6 +39,50 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const { notifySuccess, notifyError } = useToast();
   const [forking, setForking] = useState(false);
   const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
+  
+  const isStructuredToolResponse = (content) => {
+    if (!content || typeof content !== 'string') return false;
+    
+    try {
+      const parsed = JSON.parse(content);
+      return parsed.type === 'structured_tool_response' && 
+             validateStructuredResponse(parsed).valid;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleStructuredResponseSubmit = async (updatedResponse) => {
+    const responseId = `${message_index}-${Date.now()}`;
+    
+    dispatch(setActiveResponse({
+      id: responseId,
+      response: updatedResponse
+    }));
+    
+    const prompt = JSON.stringify({
+      type: "structured_tool_update",
+      tool_id: updatedResponse.tool_id,
+      user_choices: updatedResponse.data.values,
+      previous_response: updatedResponse
+    });
+
+    setLocalState((prev) => {
+      const newMessages = [...prev.messages];
+      newMessages[message_index].loading = true;
+      return { ...prev, messages: newMessages };
+    });
+
+    await sendMessage({ 
+      message: prompt,
+      localState: localState,
+      setLocalState
+    });
+  };
+
+  const handleStructuredResponseCancel = () => {
+    console.log('Structured response cancelled by user');
+  };
 
   //Functions
   const adjustHeight = () => {
@@ -385,9 +434,20 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                {message.content[0]?.text}
-              </MarkdownRenderer>
+              {isStructuredToolResponse(message.content[0]?.text) ? (
+                <StructuredToolResponse
+                  response={{
+                    id: `${message_index}`,
+                    ...JSON.parse(message.content[0]?.text)
+                  }}
+                  onSubmit={handleStructuredResponseSubmit}
+                  onCancel={handleStructuredResponseCancel}
+                />
+              ) : (
+                <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+                  {message.content[0]?.text}
+                </MarkdownRenderer>
+              )}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
