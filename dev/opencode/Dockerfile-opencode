@@ -5,7 +5,7 @@ ARG GID=1000
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
-    git curl sudo
+    git curl nodejs
 
 RUN groupadd -g $GID -o opencode
 RUN userdel -f ubuntu
