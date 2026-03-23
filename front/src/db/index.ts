@@ -82,7 +82,7 @@ export class AppDB extends Dexie {
       files_meta: 'id, conversationId, type, size, name',
       files_data: 'id',
       folders: 'id, name, createdAt',
-      structured_tool_data: 'id, messageId, toolId'
+      structured_tool_data: 'id, messageId, toolId, [messageId+toolId]'
     });
   }
 }

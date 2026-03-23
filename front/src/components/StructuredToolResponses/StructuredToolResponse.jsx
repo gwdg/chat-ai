@@ -17,7 +17,7 @@ import { validateForm, sanitizeFormData, initializeFormValues } from '../../util
 import { updateFormData, removeActiveResponse, addToHistory, setLoading } from '../../Redux/reducers/structuredToolResponsesSlice';
 import { FIELD_TYPES, RESPONSE_STATUS } from '../../constants/structuredToolResponses';
 import { getStructuredToolData, updateStructuredToolData } from '../../db';
-import { Edit2, Save, X } from 'lucide-react';
+import { Edit2 } from 'lucide-react';
 
 export default function StructuredToolResponse({ response, onSubmit, onCancel, messageIndex, onChange, onEdit }) {
   const dispatch = useDispatch();
@@ -45,9 +45,21 @@ export default function StructuredToolResponse({ response, onSubmit, onCancel, m
 
   const [formData, setFormData] = useState(() => {
     try {
-      if (initialValues && typeof initialValues === 'object') return initialValues;
-      if (schema && typeof schema === 'object') return initializeFormValues(schema);
-      return {};
+      // Initialize with default values from schema
+      const defaultValues = schema && typeof schema === 'object' 
+        ? initializeFormValues(schema) 
+        : {};
+      
+      // If there are initial values (from saved data or API), merge them with defaults
+      // Note: initialValues override defaults, but if initialValues is missing a field, the default is used
+      if (initialValues && typeof initialValues === 'object' && Object.keys(initialValues).length > 0) {
+        return {
+          ...defaultValues,
+          ...initialValues
+        };
+      }
+      
+      return defaultValues;
     } catch (error) {
       console.error("Error initializing form data:", error);
       return {};
@@ -60,7 +72,17 @@ export default function StructuredToolResponse({ response, onSubmit, onCancel, m
     if (messageId && toolId) {
       getStructuredToolData(messageId, toolId).then(data => {
         if (data && typeof data === 'object') {
-          const loadedData = { ...data };
+          // Get default values from schema
+          const defaultValues = schema && typeof schema === 'object' 
+            ? initializeFormValues(schema) 
+            : {};
+          
+          // Merge loaded data with defaults (defaults take precedence for missing fields)
+          const loadedData = {
+            ...defaultValues,
+            ...data
+          };
+          
           setFormData(loadedData);
           setCachedFormData(loadedData);
         }
@@ -68,7 +90,7 @@ export default function StructuredToolResponse({ response, onSubmit, onCancel, m
         console.error('Error loading structured tool data from IndexedDB:', error);
       });
     }
-  }, [messageId, toolId]);
+  }, [messageId, toolId, schema]);
   
   useEffect(() => {
     if (JSON.stringify(formData) !== JSON.stringify(cachedFormData)) {
@@ -312,6 +334,9 @@ export default function StructuredToolResponse({ response, onSubmit, onCancel, m
           onChange(key, sanitizedData[key]);
         });
       }
+      
+      // Lock the form after saving
+      setIsEditMode(false);
 
       return true;
 
@@ -328,10 +353,9 @@ export default function StructuredToolResponse({ response, onSubmit, onCancel, m
   };
 
   const handleSubmit = async () => {
-    if (hasUnsavedChanges) {
-      const saved = await handleSaveChanges();
-      if (!saved) return;
-    }
+    // Always save before submitting, even if no unsaved changes changed
+    const saved = await handleSaveChanges();
+    if (!saved) return;
     
     const sanitizedData = sanitizeFormData(formData);
 
@@ -415,26 +439,7 @@ export default function StructuredToolResponse({ response, onSubmit, onCancel, m
             </h3>
           )}
         </div>
-        {isEditMode ? (
-          <div className="flex gap-2">
-            <button
-              onClick={handleCancelEdit}
-              disabled={submitting}
-              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-            >
-              <X className="w-4 h-4" />
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveChanges}
-              disabled={submitting || !hasUnsavedChanges}
-              className="px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-            >
-              <Save className="w-4 h-4" />
-              Save
-            </button>
-          </div>
-        ) : (
+        {!isEditMode && (
           <button
             onClick={handleEditClick}
             disabled={submitting}
@@ -491,31 +496,34 @@ export default function StructuredToolResponse({ response, onSubmit, onCancel, m
         </div>
       )}
 
-      {hasUnsavedChanges && isEditMode && (
-        <div className="mt-4 px-3 py-2 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500">
-          <p className="text-sm text-yellow-800 dark:text-yellow-200">
-            You have unsaved changes. Click "Save" to persist them before submitting.
-          </p>
-        </div>
-      )}
-
       <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || response.status === RESPONSE_STATUS.ERROR || hasUnsavedChanges}
-          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
-          title={hasUnsavedChanges ? "Please save your changes first" : ""}
-        >
-          {submitting ? 'Processing...' : (schema.submit_text || 'Submit')}
-        </button>
+        {!isEditMode ? (
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || response.status === RESPONSE_STATUS.ERROR}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            {submitting ? 'Processing...' : (schema.submit_text || 'Submit')}
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={handleSaveChanges}
+              disabled={submitting}
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-green-600 dark:hover:bg-green-700 dark:disabled:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              {submitting ? 'Saving...' : 'Save'}
+            </button>
 
-        <button
-          onClick={handleCancel}
-          disabled={submitting}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors"
-        >
-          {schema.cancel_text || 'Cancel'}
-        </button>
+            <button
+              onClick={handleCancelEdit}
+              disabled={submitting}
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors"
+            >
+              Cancel
+            </button>
+          </>
+        )}
 
         {getProgressInfo()}
       </div>
