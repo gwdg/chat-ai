@@ -15,17 +15,27 @@ export function useUpdateModelsData() {
 
       if (data instanceof Response) {
         if (data.status === 401) openModal("errorSessionExpired");
-        else notifyError(`Failed to fetch models: ${data.status} ${data.statusText}`);
+        else if (data.status === 404) {
+          console.warn("Models endpoint not configured or not found");
+          setModelsData([]);
+        } else {
+          notifyError(`Failed to fetch models: ${data.status} ${data.statusText}`);
+        }
         return;
       }
 
-      if (Array.isArray(data) && data.length === 0) {
-        notifyError("No models available or network error");
-        return;
+      if (Array.isArray(data)) {
+        if (data.length === 0) {
+          console.warn("No models available from API");
+        }
+        setModelsData(data);
+      } else {
+        console.error("Unexpected data type:", typeof data);
+        setModelsData([]);
       }
-      setModelsData(data);
-    } catch {
-      notifyError("Error fetching models");
+    } catch (error) {
+      console.error("Error in updateModelsData:", error);
+      setModelsData([]);
     }
   }, []);
 

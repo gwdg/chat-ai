@@ -113,6 +113,15 @@ export type HydratedMessage = {
   content: ContentItemRow[]
 }
 
+// Table: structured_tool_data
+export type StructuredToolDataRow = {
+  id: string
+  messageId: string
+  toolId: string
+  data: string // JSON serialized structured tool response object
+  lastModified: number
+}
+
 export type FolderRow = {
   id: string
   name: string

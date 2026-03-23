@@ -1,11 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { validateStructuredResponse, initializeFormValues } from '../../utils/structuredToolValidation';
+import { saveStructuredToolData, getStructuredToolData } from '../../db';
 
 const initialState = {
   activeResponses: {},
   history: [],
   loading: {},
-  errors: {}
+  errors: {},
+  savedFormValues: {}
 };
 
 const structuredToolResponsesSlice = createSlice({
@@ -86,6 +88,39 @@ const structuredToolResponsesSlice = createSlice({
       delete state.errors[id];
     },
 
+    saveFormValues: (state, action) => {
+      const { messageId, toolId, values } = action.payload;
+      if (!state.savedFormValues) state.savedFormValues = {};
+      
+      const key = `${messageId}_${toolId}`;
+      state.savedFormValues[key] = {
+        values,
+        timestamp: new Date().toISOString()
+      };
+      
+      saveStructuredToolData(messageId, toolId, values);
+    },
+
+    loadFormValues: (state, action) => {
+      const { messageId, toolId } = action.payload;
+      
+      getStructuredToolData(messageId, toolId).then(data => {
+        if (data) {
+          const key = `${messageId}_${toolId}`;
+          if (!state.savedFormValues) state.savedFormValues = {};
+          state.savedFormValues[key] = {
+            values: data,
+            timestamp: new Date().toISOString()
+          };
+        }
+      }).catch(error => {
+        console.error('Error loading structured tool data:', error);
+      });
+      
+      const key = `${messageId}_${toolId}`;
+      return state.savedFormValues?.[key]?.values || null;
+    },
+
     resetAll: () => initialState
   }
 });
@@ -100,22 +135,30 @@ export const {
   setLoading,
   setError,
   clearError,
+  saveFormValues,
+  loadFormValues,
   resetAll
 } = structuredToolResponsesSlice.actions;
 
 export default structuredToolResponsesSlice.reducer;
 
 export const selectActiveResponse = (id) => (state) => 
-  state.structuredToolResponses?.activeResponses?.[id];
+  state?.structuredToolResponses?.activeResponses?.[id];
 
 export const selectAllActiveResponses = (state) => 
-  state.structuredToolResponses?.activeResponses || {};
+  state?.structuredToolResponses?.activeResponses || {};
 
 export const selectIsLoading = (id) => (state) => 
-  state.structuredToolResponses?.loading?.[id] || false;
+  state?.structuredToolResponses?.loading?.[id] || false;
 
 export const selectError = (id) => (state) => 
-  state.structuredToolResponses?.errors?.[id];
+  state?.structuredToolResponses?.errors?.[id];
 
 export const selectHistory = (state) => 
-  state.structuredToolResponses?.history || [];
+  state?.structuredToolResponses?.history || [];
+
+export const selectSavedFormValues = (messageId, toolId) => (state) => {
+  if (!state) return null;
+  const key = `${messageId}_${toolId}`;
+  return state.structuredToolResponses?.savedFormValues?.[key]?.values || null;
+};

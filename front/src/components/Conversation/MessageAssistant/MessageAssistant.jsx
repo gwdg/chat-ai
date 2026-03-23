@@ -8,7 +8,7 @@ import { RotateCw, GitFork } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
 import MetaBox from "./MetaBox";
 import { useNavigate } from "react-router";
-import { createConversation, newId, saveFile, loadFile } from "../../../db";
+import { createConversation, newId, saveFile, loadFile, saveStructuredToolData } from "../../../db";
 import { useToast } from "../../../hooks/useToast";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
@@ -60,28 +60,88 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
       response: updatedResponse
     }));
     
-    const prompt = JSON.stringify({
-      type: "structured_tool_update",
-      tool_id: updatedResponse.tool_id,
-      user_choices: updatedResponse.data.values,
-      previous_response: updatedResponse
-    });
+    const mcpToolCall = {
+      id: `call_${Date.now()}`,
+      type: "function",
+      function: {
+        name: updatedResponse.tool_id,
+        arguments: JSON.stringify(updatedResponse.data.values)
+      }
+    };
+
+    // Update the response with locked: true
+    const updatedResponseWithLock = {
+      ...updatedResponse,
+      locked: true
+    };
 
     setLocalState((prev) => {
       const newMessages = [...prev.messages];
+      // Update the form message with locked state
+      newMessages[message_index].content[0].text = JSON.stringify(updatedResponseWithLock);
       newMessages[message_index].loading = true;
-      return { ...prev, messages: newMessages };
+      return { 
+        ...prev, 
+        messages: newMessages,
+        flush: true
+      };
     });
 
     await sendMessage({ 
-      message: prompt,
+      mcpToolCall: mcpToolCall,
       localState: localState,
-      setLocalState
+      setLocalState,
+      expectingToolResponse: true
     });
+  };
+
+  const handleStructuredResponseChange = (field, value) => {
+    const response = JSON.parse(message?.content[0]?.text || '{}');
+    if (response.data && response.data.values) {
+      response.data.values[field] = value;
+      
+      setLocalState((prev) => {
+        const newMessages = [...prev.messages];
+        newMessages[message_index].content[0].text = JSON.stringify(response);
+        return { 
+          ...prev, 
+          messages: newMessages
+        };
+      });
+    }
+  };
+
+  const handleStructuredResponseSave = async () => {
+    const response = JSON.parse(message?.content[0]?.text || '{}');
+    if (response.data && response.data.values) {
+      await saveStructuredToolData(message.id, response.data?.metadata?.tool_id || response.tool_id, response.data.values);
+      
+      setLocalState((prev) => {
+        const newMessages = [...prev.messages];
+        newMessages[message_index].content[0].text = JSON.stringify(response);
+        return { 
+          ...prev, 
+          messages: newMessages,
+          flush: true
+        };
+      });
+    }
   };
 
   const handleStructuredResponseCancel = () => {
     console.log('Structured response cancelled by user');
+  };
+
+  const handleStructuredResponseEdit = (unlockedResponse) => {
+    setLocalState((prev) => {
+      const newMessages = [...prev.messages];
+      newMessages[message_index].content[0].text = JSON.stringify(unlockedResponse);
+      return { 
+        ...prev, 
+        messages: newMessages,
+        flush: true
+      };
+    });
   };
 
   //Functions
@@ -155,8 +215,9 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   }, [setEditMode]);
 
   useEffect(() => {
-    setEditedText(message?.content[0]?.text || "");
-  }, [editMode]);
+    const text = Array.isArray(message?.content) && message.content[0]?.text ? message.content[0].text : "";
+    setEditedText(text);
+  }, [editMode, message]);
 
   useEffect(() => {
     setFeedbackText(message?.feedback?.comment || "");
@@ -434,18 +495,21 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              {isStructuredToolResponse(message.content[0]?.text) ? (
+              {isStructuredToolResponse(message?.content?.[0]?.text) ? (
                 <StructuredToolResponse
                   response={{
                     id: `${message_index}`,
                     ...JSON.parse(message.content[0]?.text)
                   }}
+                  messageIndex={message_index}
+                  onChange={handleStructuredResponseChange}
                   onSubmit={handleStructuredResponseSubmit}
                   onCancel={handleStructuredResponseCancel}
+                  onEdit={handleStructuredResponseEdit}
                 />
               ) : (
                 <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                  {message.content[0]?.text}
+                  {message?.content?.[0]?.text || ""}
                 </MarkdownRenderer>
               )}
               {/* Attachments Section */}

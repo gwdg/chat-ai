@@ -12,7 +12,7 @@ export function useSendMessage() {
   const memories = useSelector(selectAllMemories);
 
   // Make this async
-  return async ({localState, setLocalState}) => {
+  return async ({localState, setLocalState, message, mcpToolCall, expectingToolResponse}) => {
     await sendMessage({
       localState,
       setLocalState,
@@ -22,6 +22,9 @@ export function useSendMessage() {
       notifyError,
       notifySuccess,
       timeout,
+      message,
+      mcpToolCall,
+      expectingToolResponse,
     });
   };
 }

@@ -153,15 +153,32 @@ function receiveFile(base64Data, mimeType, filename = null, conversationId = nul
 }
 
 // Build OpenAI standard conversation from localState
-async function buildConversationForAPI(localState) {
+async function buildConversationForAPI(localState, isMCPToolCall = false) {
   // Determine supported file types from model
   const model = localState.settings.model;
   const ignoreAudio = !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));
   const ignoreVideo = !(localState.settings.enable_tools || (model?.input?.includes("video") || false));
   const ignoreImages = !(localState.settings.enable_tools || (model?.input?.includes("image") || false));
+  
   // Convert to API standard, ignore unsupported files and system message
   const processedMessages = await Promise.all(
     localState.messages.map(async (message) => {
+      // Skip structured_tool_response assistant messages when sending MCP tool calls
+      // This prevents the double-sending of form data
+      if (isMCPToolCall && message.role === 'assistant') {
+        try {
+          const content = Array.isArray(message.content) ? message.content[0]?.text : message.content;
+          if (typeof content === 'string') {
+            const parsed = JSON.parse(content);
+            if (parsed.type === 'structured_tool_response') {
+              return null; // Skip this message
+            }
+          }
+        } catch (e) {
+          // Not a JSON, keep the message
+        }
+      }
+      
       if (Array.isArray(message.content)) {
         return {
           role: message.role,
@@ -176,10 +193,14 @@ async function buildConversationForAPI(localState) {
       return message;
     })
   );
+  
+  // Filter out null messages (skipped structured_tool_response)
+  const filteredMessages = processedMessages.filter(m => m !== null);
+  
   // Return full standard conversation
   return {
     ...localState,
-    messages: processedMessages,
+    messages: filteredMessages,
     settings: {...localState.settings},
   };
 }
@@ -194,6 +215,7 @@ const sendMessage = async ({
   dispatch,
   timeout,
   message,
+  mcpToolCall,
   expectingToolResponse,
 }) => {
   const conversationId = localState.id
@@ -206,7 +228,7 @@ const sendMessage = async ({
     const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
 
     let finalConversationForState; // For local state updates
-    let conversationForAPI = await buildConversationForAPI(localState);
+    let conversationForAPI = await buildConversationForAPI(localState, !!mcpToolCall);
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content[0].text
@@ -293,7 +315,23 @@ const sendMessage = async ({
     
     let newMessagesToAdd = [];
     
-    if (message && expectingToolResponse) {
+    if (mcpToolCall && expectingToolResponse) {
+      // Add user message containing the MCP tool call
+      newMessagesToAdd.push({
+        role: "user",
+        content: "",
+        tool_calls: [mcpToolCall],
+        metadata: { isMCPToolCall: true }
+      });
+      // Add placeholder for tool response (will come from assistant)
+      newMessagesToAdd.push({
+        role: "assistant",
+        tool_call_id: mcpToolCall.id,
+        content: null,
+        loading: true,
+        metadata: { isToolResponse: true }
+      });
+    } else if (message && expectingToolResponse) {
       newMessagesToAdd.push(
         { role: "user", content: [{ type: "text", text: message }] },
         { role: "assistant", content: [{ type: "text", text: ""}], loading: true, metadata: { isToolResponse: true } }

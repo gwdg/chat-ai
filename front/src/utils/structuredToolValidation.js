@@ -41,6 +41,10 @@ export function validateStructuredResponse(response) {
     errors.push('Invalid schema');
   }
 
+  if (response.locked !== undefined && typeof response.locked !== 'boolean') {
+    errors.push('Invalid locked value - must be boolean');
+  }
+
   return {
     valid: errors.length === 0,
     errors
