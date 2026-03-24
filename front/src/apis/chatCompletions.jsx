@@ -1,13 +1,21 @@
 import OpenAI from "openai";
+import { merge, mergeWith } from 'lodash';
 
 // Controller for handling API request cancellation
 let controller = new AbortController();
+
+function mergeStr(objValue, srcValue) {
+  if (typeof objValue === 'string' && typeof srcValue === 'string') {
+    return objValue + srcValue;
+  }
+}
 
 async function* chatCompletions (
   conversation,
   timeout = 30000,
   stream = true,
 ) {
+  let choices = [] // unify choices delta
   try {
     const model = typeof conversation.settings.model === 'string'
       ? conversation.settings.model
@@ -72,10 +80,8 @@ async function* chatCompletions (
       return result;
     }
 
-    let answer = ""
     let completed = false
     for await (const chunk of streamResponse) {
-      //console.log(chunk);
       if (chunk?.object == "error") {
         console.log(chunk)
           const err = new Error(chunk?.message || "Unknown error");
@@ -86,14 +92,31 @@ async function* chatCompletions (
       }
       try {
         if (!completed) {
-          answer += chunk.choices[0].delta?.content || ""
-          // yield (chunk.choices[0].delta)
+          if (chunk.choices.length > 0){
+            for (let c=0; c < chunk.choices.length; c++){
+              if (!("delta" in chunk.choices[c])){
+                continue;
+              }
+              let choice = chunk.choices[c].delta
+              if (c in choices){
+                choices[c] = mergeWith(choices[c], choice, mergeStr);
+              }else{
+                choices[c] = choice;
+              }
+            }
+          }
+
           yield chunk
         } else {
           yield chunk;
+          
+          yield {
+            result: choices,
+            usage: chunk?.usage || null            
+          };
           return {
-            answer, 
-            usage: chunk?.usage || null
+            result: choices,
+            usage: chunk?.usage || null            
           };
         }
         if (chunk?.choices?.[0]?.finish_reason === 'stop') {
@@ -109,49 +132,6 @@ async function* chatCompletions (
         // res.status(500).end();
       }
     }
-
-    // // Handle auth error
-    // if (response.status === 401) {
-    //   //setShowModalSession(true);
-    //   return 401;
-    // }
-
-    // // Handle request size error
-    // if (response.status === 413) {
-    //   // setShowBadRequest(true);
-    //   return 413;
-    // }
-
-    // if (!response.ok) {
-    //   throw new Error(response.statusText || "Error: " + response.status);
-    // }
-
-    // const reader = response.body.getReader();
-    // const decoder = new TextDecoder();
-    // let currentResponse = "";
-    // let streamComplete = false;
-
-    // try {
-    //   // Stream and process response chunks
-    //   while (!streamComplete) {
-    //     const { value, done } = await reader.read();
-    //     if (done) {
-    //       streamComplete = true;
-    //       break;
-    //     }
-    //     const decodedChunk = decoder.decode(value, { stream: true });
-    //     yield decodedChunk
-    //     currentResponse += decodedChunk;
-    //   }
-    //   return currentResponse;
-    // } catch (error) {
-    //   // Handle AbortError specifically during streaming
-    //   if (error.name === "AbortError") {
-    //     console.log("Request aborted by user")
-    //     return currentResponse;
-    //   }
-    //   throw error;
-    // }
   } catch (error) {
     // Handle AbortError at the top level
     if (error?.name === "AbortError") {
@@ -159,6 +139,14 @@ async function* chatCompletions (
     }
     throw error; // Propagate other errorsrs
   }
+  yield {
+    result: choices,
+    usage: null            
+  };
+  return {
+    result: choices,
+    usage: null            
+  };
 }
 
 function abortRequest() {

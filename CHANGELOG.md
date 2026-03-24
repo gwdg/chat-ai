@@ -1,5 +1,27 @@
 # Changelog 
 
+## Version: v0.10.0 (20.03.2026)
+Highlights:
+- **New Feature: Structured Tool Responses** - Tools can now return JSON schemas that render as interactive UI forms
+- **Complete JSON-to-UI generation** supporting 13+ field types including all basic and advanced components
+- Full support for nested objects and arrays with collapsible, editable structures
+- Dynamic component system with 8 built-in patterns (badge, toggle, rating, card, timeline, list, keyvalue, custom)
+- Field types: text, number, select, radio, checkbox, textarea, slider, multiselect, date, color picker, nested, array, dynamic
+- Custom field registration system for specialized UI components
+- Built-in field validation with comprehensive constraints (min, max, step, pattern, length)
+- Multi-step workflow support with progress tracking
+- Form layouts: vertical, horizontal, grid
+- Automatic detection and rendering of structured responses in chat (case-insensitive field type matching)
+- Bidirectional communication: tools → UI → user → tools
+- Comprehensive validation utilities and error handling
+- Redux state management for structured responses
+- Tool developers guide and examples provided
+- **Enhanced UI test tool** at `/test-structured-responses` with 7 example forms (http://localhost:8080/test-structured-responses)
+- Pre-built test scenarios demonstrating all capabilities
+- Custom JSON testing with real-time validation
+- New flexible form examples: customer survey, task management, complex configuration
+- Updated documentation for advanced JSON-to-UI generation
+
 ## Version: v0.9.2 (22.01.2026)
 Highlights:
 - Added folders and search for organizing and finding conversations

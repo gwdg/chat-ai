@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import Typing from "./Typing";
 import CopyButton from "./CopyButton";
@@ -8,16 +8,68 @@ import { RotateCw, GitFork } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
 import MetaBox from "./MetaBox";
 import { useNavigate } from "react-router";
-import { createConversation, newId, saveFile, loadFile } from "../../../db";
+import { createConversation, newId, saveFile, loadFile, saveStructuredToolData } from "../../../db";
 import { useToast } from "../../../hooks/useToast";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
+import StructuredToolResponse from "../../StructuredToolResponses/StructuredToolResponse";
+import { validateStructuredResponse } from "../../../utils/structuredToolValidation";
+import { setActiveResponse } from "../../../Redux/reducers/structuredToolResponsesSlice";
+import { useDispatch } from "react-redux";
 
 // Constants
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
+// Helper function to detect structured tool responses (defined outside component)
+const isStructuredToolResponse = (content) => {
+  if (!content || typeof content !== 'string') return null;
+  
+  try {
+    // Check if it's a markdown code block with structured_form
+    const structuredFormRegex = /```structured_form\s*([\s\S]*?)\s*```/;
+    const match = content.match(structuredFormRegex);
+    
+    if (match) {
+      // Parse the JSON inside the code block
+      const formConfig = JSON.parse(match[1]);
+      
+      // Transform the structured_form format to structured_tool_response format
+      return {
+        type: 'structured_tool_response',
+        version: '1.0',
+        tool_id: 'structured_form',
+        status: 'in_progress',
+        data: {
+          schema: {
+            title: formConfig.title || '',
+            description: formConfig.description || '',
+            fields: formConfig.fields || [],
+            submit_text: formConfig.submit_text || 'Submit',
+            cancel_text: formConfig.cancel_text || 'Cancel',
+            layout: formConfig.layout || 'vertical'
+          },
+          values: formConfig.values || {},
+          metadata: {}
+        }
+      };
+    }
+    
+    // Legacy format: direct structured_tool_response JSON
+    const parsed = JSON.parse(content);
+    if (parsed.type === 'structured_tool_response' && 
+        validateStructuredResponse(parsed).valid) {
+      return parsed;
+    }
+    
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 export default React.memo(({ localState, setLocalState, message_index }) => {
+  const dispatch = useDispatch();
   //Refs
   const assistantMessage = useRef(null);
   const editBox = useRef(null);
@@ -26,14 +78,119 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const message = localState.messages[message_index];
   const loading = message?.loading || false;
   const [renderMode, setRenderMode] = useState("Default");
+  const structuredResponse = useMemo(() => {
+    if (!message?.content?.[0]?.text) return null;
+    return isStructuredToolResponse(message.content[0].text);
+  }, [message?.content?.[0]?.text]);
   // Define render modes with better styling
   const renderModes = ["Default", "Markdown", "LaTeX", "Plaintext"];
   
   const sendMessage = useSendMessage();
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useToast();
-  const [forking, setForking] = useState(false);
+const [forking, setForking] = useState(false);
   const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
+  
+  const handleStructuredResponseSubmit = async (updatedResponse) => {
+    const responseId = `${message_index}-${Date.now()}`;
+    
+    dispatch(setActiveResponse({
+      id: responseId,
+      response: updatedResponse
+    }));
+    
+    const mcpToolCall = {
+      id: `call_${Date.now()}`,
+      type: "function",
+      function: {
+        name: updatedResponse.tool_id,
+        arguments: JSON.stringify(updatedResponse.data.values)
+      }
+    };
+
+    // Update the message with locked state
+    if (structuredResponse) {
+      // For markdown format, keep the original markdown but update a marker
+      setLocalState((prev) => {
+        const newMessages = [...prev.messages];
+        // Don't modify the markdown content, just set loading state
+        newMessages[message_index].loading = true;
+        return { 
+          ...prev, 
+          messages: newMessages,
+          flush: true
+        };
+      });
+    } else {
+      // Legacy format: update JSON content
+      const updatedResponseWithLock = {
+        ...updatedResponse,
+        locked: true
+      };
+      setLocalState((prev) => {
+        const newMessages = [...prev.messages];
+        newMessages[message_index].content[0].text = JSON.stringify(updatedResponseWithLock);
+        newMessages[message_index].loading = true;
+        return { 
+          ...prev, 
+          messages: newMessages,
+          flush: true
+        };
+      });
+    }
+
+    await sendMessage({ 
+      mcpToolCall: mcpToolCall,
+      localState: localState,
+      setLocalState,
+      expectingToolResponse: true
+    });
+  };
+
+  const handleStructuredResponseChange = (field, value) => {
+    // Don't update message content for new markdown format
+    // The form values are persisted to IndexedDB separately
+    if (structuredResponse) {
+      // For markdown format, we don't update the message content
+      // Values are stored in IndexedDB via StructuredToolResponse component
+      return;
+    }
+    
+    // Legacy format: update message content
+    const response = JSON.parse(message?.content[0]?.text || '{}');
+    if (response.data && response.data.values) {
+      response.data.values[field] = value;
+      
+      setLocalState((prev) => {
+        const newMessages = [...prev.messages];
+        newMessages[message_index].content[0].text = JSON.stringify(response);
+        return { 
+          ...prev, 
+          messages: newMessages
+        };
+      });
+    }
+  };
+
+  const handleStructuredResponseCancel = () => {
+    console.log('Structured response cancelled by user');
+  };
+  
+  const handleStructuredResponseEdit = (unlockedResponse) => {
+    // For markdown format, lock/unlock doesn't apply
+    // The form has its own edit mode
+    if (structuredResponse) return;
+    
+    setLocalState((prev) => {
+      const newMessages = [...prev.messages];
+      newMessages[message_index].content[0].text = JSON.stringify(unlockedResponse);
+      return { 
+        ...prev, 
+        messages: newMessages,
+        flush: true
+      };
+    });
+  };
 
   //Functions
   const adjustHeight = () => {
@@ -106,8 +263,9 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   }, [setEditMode]);
 
   useEffect(() => {
-    setEditedText(message?.content[0]?.text || "");
-  }, [editMode]);
+    const text = Array.isArray(message?.content) && message.content[0]?.text ? message.content[0].text : "";
+    setEditedText(text);
+  }, [editMode, message]);
 
   useEffect(() => {
     setFeedbackText(message?.feedback?.comment || "");
@@ -382,12 +540,33 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               </div>
             </div>
           )}          
-          {/* Display message content */}
-          {!editMode && !feedbackMode && (
-            <div className="flex flex-col gap-4">
-              <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                {message.content[0]?.text}
-              </MarkdownRenderer>
+{/* Display message content */}
+           {!editMode && !feedbackMode && (
+             <div className="flex flex-col gap-4">
+               {structuredResponse ? (
+                 <StructuredToolResponse
+                   response={{
+                     id: `${message_index}`,
+                     ...structuredResponse,
+                     data: {
+                       ...structuredResponse.data,
+                       metadata: {
+                         ...structuredResponse.data.metadata,
+                         messageId: message.id
+                       }
+                     }
+                   }}
+                   messageIndex={message_index}
+                   onChange={handleStructuredResponseChange}
+                   onSubmit={handleStructuredResponseSubmit}
+                   onCancel={handleStructuredResponseCancel}
+                   onEdit={handleStructuredResponseEdit}
+                 />
+               ) : (
+                 <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+                   {message?.content?.[0]?.text || ""}
+                 </MarkdownRenderer>
+               )}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
@@ -404,52 +583,59 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   ))}
                 </div>
               )}
-              {/* Bottom panel for message */}
-              <div className="group flex justify-between w-full mt-1 gap-2">
-                <div className="flex items-center justify-end mb-2 opacity-30 group-hover:opacity-100 transition-opacity duration-300">
-                  {/* Render Mode Selector on the bottom left*/}
-                  <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
-                    {renderModes.map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => !loading && setRenderMode(mode)}
-                        className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
-                    ${loading ? "cursor-not-allowed opacity-20" : ""}
-                    ${
-                      renderMode === mode
-                        ? "bg-tertiary text-white"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }
-                    `}
-                        disabled={loading}
-                      >
-                        {mode}
-                      </button>
-                    ))}
+{/* Bottom panel for message */}
+                <div className="group flex justify-between w-full mt-1 gap-2">
+                  <div className="flex items-center justify-end mb-2 opacity-30 group-hover:opacity-100 transition-opacity duration-300">
+                    {/* Render Mode Selector on the bottom left - only show for non-structured messages */}
+                    {!structuredResponse && (
+                      <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
+                        {renderModes.map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => !loading && setRenderMode(mode)}
+                            className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
+                        ${loading ? "cursor-not-allowed opacity-20" : ""}
+                        ${
+                          renderMode === mode
+                            ? "bg-tertiary text-white"
+                            : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        }
+                        `}
+                            disabled={loading}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {feedbackModule && (
-                  <FeedbackButtons
-                    localState={localState}
-                    setLocalState={setLocalState}
-                    message_index={message_index}
-                    setFeedbackMode={setFeedbackMode} 
-                    sendFeedbackFunc={sendFeedbackFunc}
-                  />
-                )}
-                
-                {/* Buttons on the bottom right */}
-                <div className="flex items-center justify-end gap-3 overflow-hidden">
-                  { /* Show message metadata */
-                  message?.meta && (
-                    <MetaBox meta={message.meta} /> 
-                  )}
-                  <EditButton setEditMode={setEditMode} />
-                  <ForkButton handleForkConversation={handleForkConversation} />
-                  <CopyButton message={message} />
-                </div>
-              </div>
+                 {feedbackModule && (
+                   <FeedbackButtons
+                     localState={localState}
+                     setLocalState={setLocalState}
+                     message_index={message_index}
+                     setFeedbackMode={setFeedbackMode} 
+                     sendFeedbackFunc={sendFeedbackFunc}
+                   />
+                 )}
+                 
+{/* Buttons on the bottom right - show model/meta and fork/edit for all messages, hide copy for structured forms */}
+                 <div className="flex items-center justify-end gap-3 overflow-hidden">
+                   {/* Show message metadata (model name, etc.) for ALL messages */}
+                   {message?.meta && (
+                     <MetaBox meta={message.meta} />
+                   )}
+                   {/* Fork button is useful for forms too - allows branching conversation */}
+                   <ForkButton handleForkConversation={handleForkConversation} />
+                   {/* Edit button allows editing the message content/structure */}
+                   <EditButton setEditMode={setEditMode} />
+                   {/* Only show Copy for non-structured messages */}
+                   {!structuredResponse && (
+                     <CopyButton message={message} />
+                   )}
+                 </div>
+               </div>
             </div>
           )}
         </>

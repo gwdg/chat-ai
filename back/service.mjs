@@ -224,12 +224,16 @@ app.post("/chat/completions", async (req, res) => {
     // Handle tools and arcana
     if (enable_tools && !isExternalModel) {
       inference_service = "saia-openai-gateway";
-      params["runToolsOnServer"] = true;
+      // params["runToolsOnServer"] = true;
+      // params["runToolsOnServer"] = true;
       if (mcp_servers && mcp_servers.length > 0) {
         params["mcp-servers"] = mcp_servers;
       }
       if (tools && tools.length > 0) {
         params.tools = [];
+        // for testing
+        params.tools.push({type: "create_test_form"});
+
         for (const tool of tools) {
           if (tool.type === "web_search_preview" || tool.type === "web_search") {
             params.tools.push({type: "web_search_preview"});

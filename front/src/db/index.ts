@@ -15,7 +15,8 @@ import type {
   MessageRole,
   ContentItemInput,
   FolderRow,
-  FeedbackRow
+  FeedbackRow,
+  StructuredToolDataRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -27,6 +28,7 @@ export class AppDB extends Dexie {
   files_meta!: Table<FileMetaRow, string>
   files_data!: Table<FileDataRow, string>
   folders!: Table<FolderRow, string>
+  structured_tool_data!: Table<StructuredToolDataRow, string>
 
   constructor() {
     super('app-conversations-db')
@@ -71,6 +73,16 @@ export class AppDB extends Dexie {
           conv.hasFirstPrompt = true;
         }
       });
+    });
+
+    this.version(5).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      structured_tool_data: 'id, messageId, toolId, [messageId+toolId]'
     });
   }
 }
@@ -223,7 +235,7 @@ export async function createConversation(params: {
   const folderId = params.folderId ?? null
   const hasFirstPrompt = params.hasFirstPrompt ?? conversationHasPrompt(messages);
 
-  await db.transaction('rw', db.conversations, db.messages, db.content_items, db.files_meta, db.files_data, async () => {
+  await db.transaction('rw', [db.conversations, db.messages, db.content_items, db.files_meta, db.files_data, db.structured_tool_data], async () => {
     await db.conversations.add({
       id,
       title,
@@ -328,7 +340,8 @@ export async function updateConversation(
     db.messages,
     db.content_items,
     db.files_meta,
-    db.files_data],
+    db.files_data,
+    db.structured_tool_data],
     async () => {
       const convo = await db.conversations.get(conversationId);
       if (!convo) throw new Error('Conversation not found');
@@ -951,4 +964,75 @@ export function useFileContent(fileId: string, encoding: string = "utf-8") {
   }, [fileId, encoding]);
 
   return content;
+}
+
+// ---------- Structured Tool Data Operations ----------
+
+export function saveStructuredToolData(messageId: string, toolId: string, responseData: any): Promise<string> {
+  const id = newId();
+  const now = Date.now();
+  
+  return db.structured_tool_data.add({
+    id,
+    messageId,
+    toolId,
+    data: JSON.stringify(responseData),
+    lastModified: now
+  });
+}
+
+export async function getStructuredToolData(messageId: string, toolId: string): Promise<any | null> {
+  const row = await db.structured_tool_data
+    .where('[messageId+toolId]')
+    .equals([messageId, toolId])
+    .first();
+  
+  if (!row) return null;
+  
+  try {
+    return JSON.parse(row.data);
+  } catch (error) {
+    console.error('Error deserializing structured tool data:', error);
+    return null;
+  }
+}
+
+export async function getAllStructuredToolDataForMessage(messageId: string): Promise<Array<{ toolId: string, data: any }> | null> {
+  const rows = await db.structured_tool_data
+    .where('messageId')
+    .equals(messageId)
+    .toArray();
+  
+  if (!rows || rows.length === 0) return null;
+  
+  return rows.map(row => ({
+    toolId: row.toolId,
+    data: JSON.parse(row.data)
+  }));
+}
+
+export function updateStructuredToolData(messageId: string, toolId: string, responseData: any): Promise<number> {
+  const now = Date.now();
+  
+  return db.structured_tool_data
+    .where('[messageId+toolId]')
+    .equals([messageId, toolId])
+    .modify({
+      data: JSON.stringify(responseData),
+      lastModified: now
+    });
+}
+
+export async function deleteStructuredToolData(messageId: string, toolId?: string): Promise<number> {
+  if (toolId) {
+    return db.structured_tool_data
+      .where('[messageId+toolId]')
+      .equals([messageId, toolId])
+      .delete();
+  } else {
+    return db.structured_tool_data
+      .where('messageId')
+      .equals(messageId)
+      .delete();
+  }
 }

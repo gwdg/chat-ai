@@ -37,6 +37,11 @@ export const rendererComponents = {
       return <MermaidDiagram content={content} />;
     }
 
+    if (match && match[1] === "structured_form") {
+      // Return null for structured_form - it will be handled by the parent component
+      return null;
+    }
+
     return <Code language={match ? match[1] : null}>{content}</Code>;
   },
 

@@ -153,15 +153,32 @@ function receiveFile(base64Data, mimeType, filename = null, conversationId = nul
 }
 
 // Build OpenAI standard conversation from localState
-async function buildConversationForAPI(localState) {
+async function buildConversationForAPI(localState, isMCPToolCall = false) {
   // Determine supported file types from model
   const model = localState.settings.model;
   const ignoreAudio = !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));
   const ignoreVideo = !(localState.settings.enable_tools || (model?.input?.includes("video") || false));
   const ignoreImages = !(localState.settings.enable_tools || (model?.input?.includes("image") || false));
+  
   // Convert to API standard, ignore unsupported files and system message
   const processedMessages = await Promise.all(
     localState.messages.map(async (message) => {
+      // Skip structured_tool_response assistant messages when sending MCP tool calls
+      // This prevents the double-sending of form data
+      if (isMCPToolCall && message.role === 'assistant') {
+        try {
+          const content = Array.isArray(message.content) ? message.content[0]?.text : message.content;
+          if (typeof content === 'string') {
+            const parsed = JSON.parse(content);
+            if (parsed.type === 'structured_tool_response') {
+              return null; // Skip this message
+            }
+          }
+        } catch (e) {
+          // Not a JSON, keep the message
+        }
+      }
+      
       if (Array.isArray(message.content)) {
         return {
           role: message.role,
@@ -176,10 +193,14 @@ async function buildConversationForAPI(localState) {
       return message;
     })
   );
+  
+  // Filter out null messages (skipped structured_tool_response)
+  const filteredMessages = processedMessages.filter(m => m !== null);
+  
   // Return full standard conversation
   return {
     ...localState,
-    messages: processedMessages,
+    messages: filteredMessages,
     settings: {...localState.settings},
   };
 }
@@ -193,6 +214,9 @@ const sendMessage = async ({
   notifySuccess,
   dispatch,
   timeout,
+  message,
+  mcpToolCall,
+  expectingToolResponse,
 }) => {
   const conversationId = localState.id
 
@@ -204,7 +228,7 @@ const sendMessage = async ({
     const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
 
     let finalConversationForState; // For local state updates
-    let conversationForAPI = await buildConversationForAPI(localState);
+    let conversationForAPI = await buildConversationForAPI(localState, !!mcpToolCall);
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content[0].text
@@ -232,7 +256,21 @@ const sendMessage = async ({
     } else {
       delete conversationForAPI.settings.tools;
     }
-
+    
+    for (let i = 0; i < localState.messages.length; i++) {
+      const msg = localState.messages[i];
+      console.log(`\nMessage ${i} [${msg.role}]:`, {
+        hasContent: !!msg.content,
+        isArray: Array.isArray(msg.content),
+        contentSummary: Array.isArray(msg.content)
+          ? msg.content.map(c => c.type).join(', ')
+          : typeof msg.content === 'string'
+          ? msg.content.substring(0, 100) + (msg.content.length > 100 ? '...' : '')
+          : msg.content,
+        metadata: msg.metadata
+      });
+    }
+        
     // Remove MCP and arcana if not enabled
     if (!localState.settings?.enable_tools || !localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
     if (!localState.settings?.enable_tools || !localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
@@ -258,7 +296,6 @@ const sendMessage = async ({
         ...conversationForAPI.messages,
       ]}
     }
-
     // Ensure timeout value is within valid range
     const timeoutAPI = (timeout >= 5000 && timeout <= 900000) ? timeout : 300000;
     
@@ -288,27 +325,76 @@ const sendMessage = async ({
       }
       return;
     }
+    
+    let newMessagesToAdd = [];
+    
+    if (mcpToolCall && expectingToolResponse) {
+      // Add user message containing the MCP tool call
+      newMessagesToAdd.push({
+        role: "user",
+        content: "",
+        tool_calls: [mcpToolCall],
+        metadata: { isMCPToolCall: true }
+      });
+      // Add placeholder for tool response (will come from assistant)
+      newMessagesToAdd.push({
+        role: "assistant",
+        tool_call_id: mcpToolCall.id,
+        content: null,
+        loading: true,
+        metadata: { isToolResponse: true }
+      });
+    } else if (message && expectingToolResponse) {
+      newMessagesToAdd.push(
+        { role: "user", content: [{ type: "text", text: message }] },
+        { role: "assistant", content: [{ type: "text", text: ""}], loading: true, metadata: { isToolResponse: true } }
+      );
+    } else {
+      newMessagesToAdd.push(
+        { role: "assistant", content: [{ type: "text", text: ""}], loading: true }
+      );
+    }
+    
+    newMessagesToAdd.push({ role: "user", content: [{ type: "text", text: "" }] });
+    
+    console.log('Adding new messages to state:', {
+      count: newMessagesToAdd.length,
+      types: newMessagesToAdd.map(m => `${m.role}${m.metadata ? '+' : ''}`)
+    });
     // Pushing message into conversation history
     setLocalState((prev) => ({
       ...prev,
-      // Add two new placeholder messages
       messages: [
         ...prev.messages,
-        { role: "assistant", content: [{ type: "text", text: ""}], loading: true },
-        { role: "user", content: [{ type: "text", text: "" }] },
+        ...newMessagesToAdd,
       ],
       hasFirstPrompt: true,
       flush: true // Save to DB immediately
     }));
 
-    // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
+      let toolResponseContent = [{"type": "text", "text": ""}];
       let currentContent = [{"type": "text", "text": ""}];
       let usage = null;
       let process_block = "";
       let inThinking = false;
       let message_text = "";
-      for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
+      let toolResponseMessageIndex = -1;
+      let toolResponseComplete = false;
+      
+      // Initialize tool response tracking if expecting
+      if (expectingToolResponse) {
+        toolResponseMessageIndex = localState.messages.length - 2;
+      }
+      
+      let chunkCount = 0;
+      for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {        
+        if ("result" in chunk){
+          // end of stream, the actual result is now contained
+          console.log("Aggregated data from chunks!")
+          console.log(chunk.result)
+          break; 
+        }
         const delta = chunk?.choices[0]?.delta;
         if (chunk?.usage) usage = chunk.usage;
         if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
@@ -317,7 +403,7 @@ const sendMessage = async ({
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "error") {
-                process_block += "Could not use tools: " + String(arg?.msg) + "\n\n";
+                process_block += "Could not use tools: " + String(arg?.msg) + "\\n\\n";
               } 
             }
             if (delta.tool_calls[0]?.function?.name === "mcp.event") {
@@ -325,39 +411,38 @@ const sendMessage = async ({
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "call") {
                 process_block += "Calling MCP server: " + String(arg?.server) 
-                + "\n\nfunction: `" 
+                + "\\n\\nfunction: `" 
                 + String(arg?.function) 
                 + "` with args: `"
                 + String(arg?.arguments)
-                + "`\n\n";
+                + "`\\n\\n";
               } else if (arg.event === "result") {
-                process_block += "MCP response received of type `" + String(arg?.type) + "`\n\n";
+                process_block += "MCP response received of type `" + String(arg?.type) + "`\\n\\n";
               }
             }
             if (delta.tool_calls[0]?.function?.name === "rscript.event") {
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "preparing_script") {
-                process_block += "Running R Script:\n```r\n" + String(arg?.script) + "\n```\n\n";
+                process_block += "Running R Script:\\n```r\\n" + String(arg?.script) + "\\n```\\n\\n";
               } 
               if (arg.event === "error") {
-                process_block += "Cannot use Rscript: " + String(arg?.msg) + "\n\n";
+                process_block += "Cannot use Rscript: " + String(arg?.msg) + "\\n\\n";
               } 
             }
-            // Handle web search events
             if (delta.tool_calls[0]?.function?.name === "websearch.event") {
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "begin") {
-                process_block += "Searching for \"" + arg.query + "\" on ";
+                process_block += "Searching for \"" + arg.query + "\\ on ";
               } else if (arg.event === "config") {
-                process_block += String(arg?.["search-engine"]) + "\n\n";
+                process_block += String(arg?.["search-engine"]) + "\\n\\n";
               } else if (arg.event === "websearch_done") {
-                process_block += "Web search completed. Used " + String(arg.selected) + " relevant sources.\n\n";
+                process_block += "Web search completed. Used " + String(arg.selected) + " relevant sources.\\n\\n";
               } else if (arg.event === "websearch_page_cache" || arg.event === "fetch") {
-                process_block += "Reading source: " + String(arg?.url) + "\n\n";
+                process_block += "Reading source: " + String(arg?.url) + "\\n\\n";
               } else if (arg.event === "error") {
-                process_block += "Websearch Error: " + String(arg?.msg) + "\n\n";
+                process_block += "Websearch Error: " + String(arg?.msg) + "\\n\\n";
               } else {
                 process_block += "";
               }
@@ -366,9 +451,9 @@ const sendMessage = async ({
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "accessing") {
-                process_block += `Reading arcana "${arg.arcana}" \n\n`;
+                process_block += `Reading arcana "${arg.arcana}" \\n\\n`;
               } else if (arg.event === "done") {
-                process_block += "";// "Arcana retrieval completed.";
+                process_block += "";
               } else {
                 process_block += "";
               }
@@ -377,13 +462,13 @@ const sendMessage = async ({
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "image_creation_begin") {
-                process_block += `Generating image: "${arg.query}" \n\n`;
+                process_block += `Generating image: "${arg.query}" \\n\\n`;
               } else if (arg.event === "image_modify_begin") {
-                process_block += "Modifying image: " + String(arg?.query) + "\n\n";
+                process_block += "Modifying image: " + String(arg?.query) + "\\n\\n";
               } else if (arg.event === "done") {
-                process_block += "";// "Image generation completed.";
+                process_block += "";
               } if (arg.event === "error") {
-                process_block += "Image generation failed: " + String(arg?.msg) + "\n\n";
+                process_block += "Image generation failed: " + String(arg?.msg) + "\\n\\n";
               } else {
                 process_block += "";
               }
@@ -392,9 +477,9 @@ const sendMessage = async ({
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "begin") {
-                process_block += `Generating video: "${arg.query}" \n\n`;
+                process_block += `Generating video: "${arg.query}" \\n\\n`;
               } if (arg.event === "error") {
-                process_block += "Video generation failed: " + String(arg?.msg) + "\n\n";
+                process_block += "Video generation failed: " + String(arg?.msg) + "\\n\\n";
               } else {
                 process_block += "";
               }
@@ -403,11 +488,11 @@ const sendMessage = async ({
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);
               if (arg.event === "audio_creation_begin") {
-                process_block += `Generating audio: "${arg.query}" \n\n`;
+                process_block += `Generating audio: "${arg.query}" \\n\\n`;
               } else if (arg.event === "done") {
-                process_block += "";// "Audio generation completed.";
+                process_block += "";
               } if (arg.event === "error") {
-                process_block += "Audio generation failed: " + String(arg?.msg) + "\n\n";
+                process_block += "Audio generation failed: " + String(arg?.msg) + "\\n\\n";
               } else {
                 process_block += "";
               }
@@ -418,27 +503,25 @@ const sendMessage = async ({
               if (arg.event === "begin") {
                 process_block += `Transcribing audio: `;
               } else if (arg.event === "done") {
-                process_block += arg.transcription + "\n\n";// "Audio transcription completed.";
+                process_block += arg.transcription + "\\n\\n";
               } if (arg.event === "error") {
-                process_block += "Audio transcription failed: " + String(arg?.msg) + "\n\n";
+                process_block += "Audio transcription failed: " + String(arg?.msg) + "\\n\\n";
               } else {
                 process_block += "";
               }
             }
           } catch (err) {
-            console.warn("Didn't understand: ", delta)
+            console.warn("Didn\'t understand: ", delta)
           }
         }
         
         // Attempt to receive file
         let fileId = null;
         if (delta?.audio) {
-          // Process audio output
           try {
             console.log("Receiving audio...");
             const base64_data = delta.audio?.data;
             const transcript = delta.audio?.transcript;
-
             const format = delta.audio?.format || "wav";
             const filename = delta.audio?.filename || `output.${format}`;
             const mimeType = format === "mp3" ? "audio/mpeg" : `audio/${format}`;
@@ -447,86 +530,148 @@ const sendMessage = async ({
             console.error("Error receiving audio file:", err);
           }
         } else if (delta?.content && typeof delta.content !== String) {
-          // Attempt to save file
-            try {
-              if (delta.content?.type === "image") {
-                // Process image input
-                console.log("Receiving image...");
-                const base64_dataURL = delta.content?.image_url;
-
-                // Extract base64 and mime type
-                const matches = base64_dataURL.match(/^data:(.+);base64,(.*)$/);
-                if (!matches) {
-                  throw new Error("Invalid base64 image data");
-                }
-
-                const mimeType = matches[1];
-                const base64Data = matches[2];
-                fileId = await receiveFile(base64Data, mimeType, "image_output", conversationId);
+          try {
+            if (delta.content?.type === "image") {
+              console.log("Receiving image...");
+              const base64_dataURL = delta.content?.image_url;
+              const matches = base64_dataURL.match(/^data:(.+);base64,(.*)$/);
+              if (!matches) {
+                throw new Error("Invalid base64 image data");
               }
-            } catch (err) {
-              console.error("Error processing image chunk:", err);
-              continue;
+              const mimeType = matches[1];
+              const base64Data = matches[2];
+              fileId = await receiveFile(base64Data, mimeType, "image_output", conversationId);
             }
+          } catch (err) {
+            console.error("Error processing image chunk:", err);
+            continue;
+          }
         }
-        if (fileId) {
-          // Attach new file to model output
-          currentContent.push({"type": "file", "fileId": fileId})
+        
+        // Check if we're transitioning from tool response to AI response
+        if (expectingToolResponse && !toolResponseComplete && delta?.content && typeof delta.content === "string") {
+          toolResponseComplete = true;
+          
+          // Finalize the tool response message
           setLocalState(prev => {
             if (prev.id !== conversationId) {
               return prev;
             }
             const messages = [...prev.messages];
-            messages[messages.length - 2] = {
+            const idx = messages.length - 2;
+            if (idx >= 0 && messages[idx]?.metadata?.isToolResponse) {
+              messages[idx] = {
+                role: "assistant",
+                content: toolResponseContent,
+                loading: false,
+                metadata: { isToolResponse: true }
+              };
+            }
+            return { ...prev, messages, ignoreConflict: true };
+          });
+          
+          // Add new assistant message for AI response
+          setLocalState(prev => {
+            if (prev.id !== conversationId) {
+              return prev;
+            }
+            const messages = [...prev.messages];
+            const emptyUserMsgIndex = messages.findIndex(m => m.role === "user" && m.content[0]?.text === "");
+            if (emptyUserMsgIndex === -1) {
+              messages.push({ role: "assistant", content: [{ type: "text", text: "" }], loading: true });
+            } else {
+              messages.splice(emptyUserMsgIndex, 0, { role: "assistant", content: [{ type: "text", text: "" }], loading: true });
+            }
+            return { ...prev, messages, ignoreConflict: true };
+          });
+        }
+        
+        if (fileId) {
+          const targetContent = !toolResponseComplete && expectingToolResponse ? toolResponseContent : currentContent;
+          targetContent.push({"type": "file", "fileId": fileId});
+          setLocalState(prev => {
+            if (prev.id !== conversationId) {
+              return prev;
+            }
+            const messages = [...prev.messages];
+            const idx = expectingToolResponse && !toolResponseComplete ? messages.length - (toolResponseComplete ? 2 : 2) : messages.length - 2;
+            messages[idx] = {
               role: "assistant",
-              content: currentContent,
-              loading: true,
+              content: targetContent,
+              loading: !toolResponseComplete,
             };
             return { ...prev, messages, ignoreConflict: true };
           });
         }
+        
         if (process_block) {
           if (!inThinking) {
-            message_text += "<think>";
+            message_text += "</think>";
             inThinking = true;
           }
           message_text += process_block;
           process_block = "";
         }
+        
         if (delta?.content && typeof delta.content === "string") {
           if (inThinking) {
             message_text += "</think>";
             inThinking = false;
           }
-          // Process string input
           message_text += delta.content;
         }
+        
         // UI update
-        currentContent[0].text = message_text;
+        const targetContent = !toolResponseComplete && expectingToolResponse ? toolResponseContent : currentContent;
+        targetContent[0].text = message_text;
+        
         setLocalState(prev => {
           if (prev.id !== conversationId) {
             return prev;
           }
           const messages = [...prev.messages];
-          messages[messages.length - 2] = {
-            role: "assistant",
-            content: currentContent,
-            loading: true,
-          };
+          const idx = expectingToolResponse && !toolResponseComplete ? toolResponseMessageIndex : messages.length - 2;
+          if (idx >= 0 && idx < messages.length) {
+            messages[idx] = {
+              role: "assistant",
+              content: targetContent,
+              loading: !toolResponseComplete && expectingToolResponse,
+            };
+          }
           return { ...prev, messages, ignoreConflict: true };
         });
       }
+      
       if (inThinking) {
         message_text += "</think>";
         inThinking = false;
-        currentContent[0].text = message_text
       }
+      
+      // If we never got to complete the tool response (no regular content), finalize it now
+      if (expectingToolResponse && !toolResponseComplete) {
+        setLocalState(prev => {
+          if (prev.id !== conversationId) {
+            return prev;
+          }
+          const messages = [...prev.messages];
+          const idx = messages.findIndex(m => m?.metadata?.isToolResponse);
+          if (idx >= 0) {
+            messages[idx] = {
+              role: "assistant",
+              content: toolResponseContent,
+              loading: false,
+              metadata: { isToolResponse: true }
+            };
+          }
+          return { ...prev, messages, ignoreConflict: true };
+        });
+      }
+      
       return {
         answer: currentContent,
         usage
       }
     }
-
     let responseContent = "";
     let usage = null;
     let chatChunk = null;
@@ -535,7 +680,8 @@ const sendMessage = async ({
     try {
       // Get chat completion response
       chatChunk = await getChatChunk(conversationId);
-      responseContent = chatChunk?.answer || ""
+      console.log(chatChunk)
+      responseContent = chatChunk?.answer || ""      
       usage = chatChunk?.usage;
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",

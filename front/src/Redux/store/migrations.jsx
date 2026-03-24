@@ -63,6 +63,14 @@ export const migrations = {
     delete state.defaultModel;
     delete state.userMemory;
     delete state.timeout;
+    // Initialize structuredToolResponses
+    state.structuredToolResponses = {
+      activeResponses: {},
+      history: [],
+      loading: {},
+      errors: {},
+      savedFormValues: {}
+    };
     console.log("Requires safe migration of conversation");
     
     return state;
@@ -70,6 +78,13 @@ export const migrations = {
   2: (state) => {
     state.interface_settings = {};
     state.interface_settings.show_tour = true;
+    state.structuredToolResponses = state.structuredToolResponses || {
+      activeResponses: {},
+      history: [],
+      loading: {},
+      errors: {},
+      savedFormValues: {}
+    };
     console.log("Migrating to 2 really")
   }
   // Future migrations here (e.g., 3: (state) => {...})
