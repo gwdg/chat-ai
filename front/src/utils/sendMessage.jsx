@@ -256,7 +256,21 @@ const sendMessage = async ({
     } else {
       delete conversationForAPI.settings.tools;
     }
-
+    
+    for (let i = 0; i < localState.messages.length; i++) {
+      const msg = localState.messages[i];
+      console.log(`\nMessage ${i} [${msg.role}]:`, {
+        hasContent: !!msg.content,
+        isArray: Array.isArray(msg.content),
+        contentSummary: Array.isArray(msg.content)
+          ? msg.content.map(c => c.type).join(', ')
+          : typeof msg.content === 'string'
+          ? msg.content.substring(0, 100) + (msg.content.length > 100 ? '...' : '')
+          : msg.content,
+        metadata: msg.metadata
+      });
+    }
+        
     // Remove MCP and arcana if not enabled
     if (!localState.settings?.enable_tools || !localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
     if (!localState.settings?.enable_tools || !localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
@@ -282,7 +296,6 @@ const sendMessage = async ({
         ...conversationForAPI.messages,
       ]}
     }
-
     // Ensure timeout value is within valid range
     const timeoutAPI = (timeout >= 5000 && timeout <= 900000) ? timeout : 300000;
     
@@ -344,6 +357,10 @@ const sendMessage = async ({
     
     newMessagesToAdd.push({ role: "user", content: [{ type: "text", text: "" }] });
     
+    console.log('Adding new messages to state:', {
+      count: newMessagesToAdd.length,
+      types: newMessagesToAdd.map(m => `${m.role}${m.metadata ? '+' : ''}`)
+    });
     // Pushing message into conversation history
     setLocalState((prev) => ({
       ...prev,
@@ -355,7 +372,6 @@ const sendMessage = async ({
       flush: true // Save to DB immediately
     }));
 
-// Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
       let toolResponseContent = [{"type": "text", "text": ""}];
       let currentContent = [{"type": "text", "text": ""}];
@@ -371,7 +387,14 @@ const sendMessage = async ({
         toolResponseMessageIndex = localState.messages.length - 2;
       }
       
-      for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
+      let chunkCount = 0;
+      for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {        
+        if ("result" in chunk){
+          // end of stream, the actual result is now contained
+          console.log("Aggregated data from chunks!")
+          console.log(chunk.result)
+          break; 
+        }
         const delta = chunk?.choices[0]?.delta;
         if (chunk?.usage) usage = chunk.usage;
         if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
@@ -657,7 +680,8 @@ const sendMessage = async ({
     try {
       // Get chat completion response
       chatChunk = await getChatChunk(conversationId);
-      responseContent = chatChunk?.answer || ""
+      console.log(chatChunk)
+      responseContent = chatChunk?.answer || ""      
       usage = chatChunk?.usage;
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",
