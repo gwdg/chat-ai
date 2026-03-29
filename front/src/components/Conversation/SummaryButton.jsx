@@ -39,14 +39,26 @@ export default function SummaryButton({
       }));
 
       // Save original system prompt to restore on success
-      const originalSystemPrompt = messagesCopy[0].content[0].text;
+      const firstMsg = messagesCopy[0];
+      const originalSystemPrompt = Array.isArray(firstMsg?.content)
+        ? firstMsg.content[0]?.text
+        : firstMsg?.content;
 
       // Replace system prompt with summarization instruction
-      messagesCopy[0].content[0].text =
-        "You are a helpful assistant that tries to summarize our conversation into a crisp summary. Include all details needed to summarize the conversation accurately. You will not do ANYTHING else except summarizing our conversation, do not include boilerplate.";
+      const summarizePrompt = "You are a helpful assistant that tries to summarize our conversation into a crisp summary. Include all details needed to summarize the conversation accurately. You will not do ANYTHING else except summarizing our conversation, do not include boilerplate.";
+      if (Array.isArray(firstMsg?.content) && firstMsg.content[0]) {
+        firstMsg.content[0].text = summarizePrompt;
+      } else {
+        firstMsg.content = summarizePrompt;
+      }
 
       // Replace last user message with summarization request
-      messagesCopy[messagesCopy.length - 1].content[0].text = "Summarize our conversation now.";
+      const lastMsg = messagesCopy[messagesCopy.length - 1];
+      if (Array.isArray(lastMsg?.content) && lastMsg.content[0]) {
+        lastMsg.content[0].text = "Summarize our conversation now.";
+      } else {
+        lastMsg.content = "Summarize our conversation now.";
+      }
 
       // Build API-ready payload (processes file attachments to base64 etc.)
       const summaryLocalState = { ...localState, messages: messagesCopy };

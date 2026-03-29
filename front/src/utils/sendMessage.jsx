@@ -284,7 +284,7 @@ const sendMessage = async ({
       // send the message WITHOUT changing the UI with any response
       // TODO handle errors and print them to the user
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)){
-        console.log(chunk);
+        // no-op: fire and forget streaming without UI update
       }
       return;
     }
@@ -451,12 +451,12 @@ const sendMessage = async ({
           } catch (err) {
             console.error("Error receiving audio file:", err);
           }
-        } else if (delta?.content && typeof delta.content !== String) {
+        } else if (delta?.content && typeof delta.content !== "string") {
           // Attempt to save file
             try {
               if (delta.content?.type === "image") {
                 // Process image input
-                console.log("Receiving image...");
+                // Receiving image file
                 const base64_dataURL = delta.content?.image_url;
 
                 // Extract base64 and mime type
@@ -562,8 +562,6 @@ const sendMessage = async ({
           }
           });
           content.push("assistant: " + responseContent[0].text)
-          console.log(content.join("\n\n"))
-
           const response = await generateChoiceProposal(
             content.join("\n\n")
           );
@@ -626,7 +624,7 @@ const sendMessage = async ({
       newUserMessage = conversationForAPI.messages.at(-1).content;
       if (Array.isArray(newUserMessage)) newUserMessage = newUserMessage[0].text;
     } catch (error) {
-      console.log("Warning: couldn't find new user message. Memory will not be updated");
+      console.warn("Couldn't find new user message. Memory will not be updated.");
     }
 
     // Generate title if conversation is new
@@ -639,7 +637,6 @@ const sendMessage = async ({
       ];
       if (conversationForAPI.messages.length <= 4) {
         const title = await generateTitle(conversationForAPI.messages);
-        console.log("Generated title is ", title)
         setLocalState(prev => {
           if (prev.id !== conversationId) {
             updateConversationMeta(conversationId, {title})
@@ -682,7 +679,7 @@ const sendMessage = async ({
     if (error.name === "AbortError") {
       notifyError("Request aborted.");
     } else if (error.message) {
-      console.log(error)
+      console.error(error);
       notifyError(error.message);
     } else {
       notifyError("An unknown error occurred");

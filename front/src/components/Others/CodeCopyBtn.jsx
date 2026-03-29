@@ -16,9 +16,9 @@ export default function CodeCopyBtn({ children, hovered }) {
 
   // Helper function to recursively extract text from React nodes
   function extractTextFromReactNode(node) {
-    if (typeof node === "string") {
-      return node;
-    }
+    if (node == null) return "";
+    if (typeof node === "string") return node;
+    if (typeof node === "number") return String(node);
     if (Array.isArray(node)) {
       return node.map(extractTextFromReactNode).join("");
     }
@@ -42,7 +42,7 @@ export default function CodeCopyBtn({ children, hovered }) {
           alt="copy"
           onClick={() => {
             const textToCopy = extractTextFromReactNode(children);
-            navigator.clipboard.writeText(textToCopy);
+            navigator.clipboard.writeText(textToCopy).catch(() => {});
             setCopied(true);
           }}
         />

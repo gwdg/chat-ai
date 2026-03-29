@@ -4,7 +4,6 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
-import DOMPurify from "dompurify";
 
 import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
@@ -172,6 +171,7 @@ export const rendererComponents = {
 const preprocessLaTeX = (content) => {
   if (!content) return "";
 
+  // 1. Protect code blocks from any transformation
   const codeBlocks = [];
   let processedContent = content.replace(
     /(```[\s\S]*?```|`[^`\n]+`)/g,
@@ -181,6 +181,10 @@ const preprocessLaTeX = (content) => {
     }
   );
 
+  // 2. Protect escaped dollar signs (\$) so they aren't double-escaped
+  processedContent = processedContent.replace(/\\\$/g, "<<ESCAPED_DOLLAR>>");
+
+  // 3. Extract LaTeX expressions
   const latexExpressions = [];
   processedContent = processedContent.replace(
     /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g,
@@ -190,24 +194,31 @@ const preprocessLaTeX = (content) => {
     }
   );
 
+  // 4. Escape bare dollar signs before digits (e.g. $100)
   processedContent = processedContent.replace(/\$(?=\d)/g, "\\$");
 
+  // 5. Restore LaTeX expressions
   processedContent = processedContent.replace(/<<LATEX_(\d+)>>/g, (_, i) => {
     return latexExpressions[parseInt(i)];
   });
 
+  // 6. Convert LaTeX delimiters BEFORE restoring code blocks
+  processedContent = processedContent
+    .replace(/\\\[/g, "$$")
+    .replace(/\\\]/g, "$$")
+    .replace(/\\\(/g, "$")
+    .replace(/\\\)/g, "$");
+
+  // 7. Restore escaped dollar signs
+  processedContent = processedContent.replace(/<<ESCAPED_DOLLAR>>/g, "\\$");
+
+  // 8. Restore code blocks (after delimiter conversion to avoid corruption)
   processedContent = processedContent.replace(
     /<<CODE_BLOCK_(\d+)>>/g,
     (_, i) => {
       return codeBlocks[parseInt(i)];
     }
   );
-
-  processedContent = processedContent
-    .replace(/\\\[/g, "$$")
-    .replace(/\\\]/g, "$$")
-    .replace(/\\\(/g, "$")
-    .replace(/\\\)/g, "$");
 
   return processedContent;
 };
@@ -392,77 +403,11 @@ export const SafeMarkdown = ({
 }) => {
   if (!markdownContent || typeof markdownContent !== "string") return null;
 
-  // const preClean = (text) =>
-  //   text
-  //     .replace(/\[\[([^\|\]]+)\|([^\]]+)\]\]/g, "[$2]($1)")
-  //     .replace(/^\s*={2,6}\s*(.*?)\s*={2,6}\s*$/gm, (m, t) => {
-  //       const eqs = (m.match(/=/g) || []).length / 2;
-  //       const level = Math.min(6, Math.max(1, 7 - eqs));
-  //       return `${"#".repeat(level)} ${t}`;
-  //     })
-  //     .replace(/^\s*undefined\s*$/gm, "")
-  //     .replace(/,\s*\[object Object\]\s*,?/g, " ")
-  //     .replace(/\[object Object\]/g, "")
-  //     .replace(/(^|,)\s*,+/g, "$1");
-
   try {
-    const cleanContent = useMemo(() => {
-      return DOMPurify.sanitize(markdownContent, {
-        // FORBID_TAGS: [
-        //   "script",
-        //   "style",
-        //   "link",
-        //   "meta",
-        //   "title",
-        //   "head",
-        //   "html",
-        //   "body",
-        //   "object",
-        //   "embed",
-        //   "form",
-        //   "input",
-        //   "button",
-        //   "textarea",
-        //   "select",
-        //   "option",
-        //   "iframe",
-        //   "frame",
-        //   "frameset",
-        //   "base",
-        // ],
-        // FORBID_ATTR: [
-        //   "style",
-        //   "onerror",
-        //   "onload",
-        //   "onclick",
-        //   "onmouseover",
-        //   "onfocus",
-        //   "onblur",
-        //   "onchange",
-        //   "onsubmit",
-        //   "onkeydown",
-        //   "onkeyup",
-        //   "onmousedown",
-        //   "onmouseup",
-        //   "onmousemove",
-        //   "onmouseout",
-        //   "onmouseover",
-        // ],
-        ALLOWED_TAGS: ['p','pre','code','strong','em','ul','li','ol','a','blockquote','h1','h2','h3','h4'],
-        ALLOWED_ATTR: ['href','title','class'],
-        ALLOW_DATA_ATTR: false,
-        ALLOW_UNKNOWN_PROTOCOLS: false,
-        SANITIZE_DOM: true,
-        KEEP_CONTENT: true,
-        ALLOWED_URI_REGEXP:
-          /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-      });
-    }, [markdownContent]);
     const remarkPlugins = [remarkGfm];
     if (enableKatex) remarkPlugins.push(remarkMath);
 
-    const rehypePlugins = [];
-    // if (allowRawHtml) rehypePlugins.push(rehypeRaw);
+    const rehypePlugins = [rehypeRaw];
     if (enableKatex)
       rehypePlugins.push([
         rehypeKatex,
@@ -506,6 +451,14 @@ const MarkdownRenderer = memo(
         justify-content: center !important;
         text-align: center !important;
         margin: 1em 0 !important;
+      }
+      .katex-error {
+        color: inherit !important;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.875em;
+        background: rgba(128, 128, 128, 0.15);
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
       }
     `;
       document.head.appendChild(style);
@@ -588,7 +541,7 @@ const MarkdownRenderer = memo(
       // Find the start of the "References:" line itself
       const afterDashes = main.slice(splitIndex);
       const refsHeaderIdx = afterDashes.search(/\n\s*References\s*:\s*\n/i);
-      if (refsHeaderIdx === -1) return { mai, refs: "" };
+      if (refsHeaderIdx === -1) return { main, refs: "" };
 
       const processedMain = main.slice(0, splitIndex).trim();
       const refs = afterDashes.slice(refsHeaderIdx + 1).trim(); // start from "References:" line

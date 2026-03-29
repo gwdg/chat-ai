@@ -25,11 +25,11 @@ const Code = memo(({ language, children }) => {
   const handleMouseLeave = useCallback(() => setHovered(false), []);
 
   const codeString = String(children).replace(/\n$/, "");
-  if (!codeString.trim()) return null;
 
   const cacheKey = `${language || "text"}-${codeString}`;
 
   const highlighted = useMemo(() => {
+    if (!codeString.trim()) return null;
     if (highlightCache.has(cacheKey)) {
       return highlightCache.get(cacheKey);
     }
@@ -95,6 +95,8 @@ const Code = memo(({ language, children }) => {
       if (rafId != null) cancelAnimationFrame(rafId);
     };
   }, []);
+
+  if (!highlighted) return null;
 
   return (
     <div
