@@ -311,6 +311,11 @@ const sendMessage = async ({
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
         const delta = chunk?.choices[0]?.delta;
         if (chunk?.usage) usage = chunk.usage;
+        // Check if reasoning exists
+        if (delta?.reasoning) {
+          process_block += delta.reasoning;
+        }
+        // Check if tool calls exist
         if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
           try {
             if (delta.tool_calls[0]?.function?.name === "tools.event") {
