@@ -9,6 +9,9 @@ export default {
     import: "Chat importieren",
     export: "Chat exportieren",
     summarize: "Zusammenfassen und ersetzen",
+    summarizing: "Zusammenfassen...",
+    summarize_success: "Unterhaltung erfolgreich zusammengefasst.",
+    summarize_error: "Zusammenfassung fehlgeschlagen. Ihre Unterhaltung ist unverändert.",
     clear: "Löschen",
     abort: "Abbrechen",
     send: "Senden",
@@ -16,6 +19,7 @@ export default {
     share: "Teilen",
     delete: "Löschen",
     cancel: "Abbrechen",
+    close: "Schließen",
     allow: "Erlauben",
     disallow: "Nicht erlauben",
     refresh: "Aktualisieren",
@@ -327,6 +331,8 @@ export default {
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
     summarize_replace:
       "Dies ersetzt den aktuellen Chatverlauf durch eine Zusammenfassung. Die bisherigen Nachrichten werden aus dieser Unterhaltung entfernt. Fortfahren?",
+    summarize_in_progress:
+      "Ihre Unterhaltung wird zusammengefasst. Bitte warten Sie, während die Zusammenfassung erstellt wird.",
     no: "Nein, geh zurück",
     yes: "Ja, alles löschen",
     system_prompt_empty: "System-Prompt ist leer. Modell reagiert evtl. nicht.",

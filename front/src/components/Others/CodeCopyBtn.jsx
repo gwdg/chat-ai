@@ -1,8 +1,6 @@
-// Importing necessary assets and hooks from React
 import { useState, useEffect } from "react";
 import { Copy, Check } from "lucide-react";
 
-// CodeCopyBtn component definition
 export default function CodeCopyBtn({ children, hovered }) {
   const [copied, setCopied] = useState(false);
 
@@ -34,7 +32,7 @@ export default function CodeCopyBtn({ children, hovered }) {
     <div
       className={`${
         hovered ? "opacity-100 " : "opacity-0"
-      } flex justify-end items-center absolute top-2 right-2 transition-opacity duration-300`}
+      } flex items-center transition-opacity duration-300`}
     >
       {copied ? (
         <Check className="h-[15px] w-[15px] text-green-500" alt="copy" />

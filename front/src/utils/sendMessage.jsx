@@ -153,7 +153,7 @@ function receiveFile(base64Data, mimeType, filename = null, conversationId = nul
 }
 
 // Build OpenAI standard conversation from localState
-async function buildConversationForAPI(localState) {
+export async function buildConversationForAPI(localState) {
   // Determine supported file types from model
   const model = localState.settings.model;
   const ignoreAudio = !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));

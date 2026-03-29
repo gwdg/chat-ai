@@ -9,6 +9,9 @@ export default {
     import: "Import Chat",
     export: "Export Chat",
     summarize: "Summarize and Replace",
+    summarizing: "Summarizing...",
+    summarize_success: "Conversation summarized successfully.",
+    summarize_error: "Summarization failed. Your conversation is unchanged.",
     clear: "Clear",
     abort: "Abort",
     send: "Send",
@@ -16,6 +19,7 @@ export default {
     share: "Share",
     delete: "Delete",
     cancel: "Cancel",
+    close: "Close",
     allow: "Allow",
     disallow: "Disallow",
     refresh: "Refresh",
@@ -329,6 +333,8 @@ export default {
       "Are you sure you want to erase all messages in this conversation?",
     summarize_replace:
       "This will replace your current chat history with a summary. Your existing messages will be removed from this conversation. Continue?",
+    summarize_in_progress:
+      "Your conversation is being summarized. Please wait while the summary is generated.",
     no: "No, go back",
     yes: "Yes, clear everything",
     system_prompt_empty: "System prompt is empty. Model may not respond.",

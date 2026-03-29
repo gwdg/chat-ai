@@ -500,7 +500,7 @@ export default function ExportConversationModal({
       doc.save(generateFileName("pdf"));
     } catch (error) {
       console.log(error)
-      notifyError("An error occurred while exporting to JSON");
+      notifyError("An error occurred while exporting to PDF");
     }
   };
 
