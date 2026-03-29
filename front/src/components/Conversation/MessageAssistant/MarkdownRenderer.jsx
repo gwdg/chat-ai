@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
+
 
 import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
@@ -407,7 +407,7 @@ export const SafeMarkdown = ({
     const remarkPlugins = [remarkGfm];
     if (enableKatex) remarkPlugins.push(remarkMath);
 
-    const rehypePlugins = [rehypeRaw];
+    const rehypePlugins = [];
     if (enableKatex)
       rehypePlugins.push([
         rehypeKatex,
