@@ -331,9 +331,9 @@ export default {
     yes: "Ja, alles löschen",
     system_prompt_empty: "System-Prompt ist leer. Modell reagiert evtl. nicht.",
     data_security_warning: 
-      "Sie verwenden ein externes Modell oder externe Funktionen. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und Ihre benutzerdefinierten Einstellungen werden nicht angewendet. Die Eingabe vertraulicher oder personenbezogener Daten ist zu unterlassen.",
+      "Sie verwenden ein externes Modell oder externe Funktionen. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und Ihre benutzerdefinierten Einstellungen werden nicht angewendet und GWDG-Tools stehen nicht zur Verfügung. Die Eingabe vertraulicher oder personenbezogener Daten ist zu unterlassen.",
     data_security_warning_mpg:
-      "Sie verwenden ein externes Modell oder externe Funktionen. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und Ihre benutzerdefinierten Einstellungen werden nicht angewendet. Die Eingabe vertraulicher oder personenbezogener Daten ist zu unterlassen. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
+      "Sie verwenden ein externes Modell oder externe Funktionen. Ihre Nachrichten werden außerhalb der GWDG verarbeitet, und Ihre benutzerdefinierten Einstellungen werden nicht angewendet und GWDG-Tools stehen nicht zur Verfügung. Die Eingabe vertraulicher oder personenbezogener Daten ist zu unterlassen. Externe Modelle sind nur nutzbar für wissenschaftliche Beschäftigte für wissenschaftliche Arbeiten, sofern keine personenbezogenen Daten eingegeben werden.",
     data_security_notice: "Ihre Daten werden sicher innerhalb unserer Server verarbeitet. Es werden keine Informationen außerhalb der GWDG übertragen.",
     arcana_usage:
       "Halten Sie Temperatur auf 0 und top_p auf 0.05 für optimale Arcana-Ergebnisse",

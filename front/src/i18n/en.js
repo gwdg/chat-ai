@@ -334,9 +334,9 @@ export default {
     system_prompt_empty: "System prompt is empty. Model may not respond.",
     data_security_notice: "Your data will be processed securely within our servers. No information will be transmitted outside of the GWDG.",
     data_security_warning: 
-      "You are using an external model or external features. Your messages will be processed outside of GWDG, and your custom settings will not be applied. Please refrain from entering confidential or personal data.",
+      "You are using an external model or external features. Your messages will be processed outside of GWDG, and your custom settings will not be applied, and GWDG-Tools are not available. Please refrain from entering confidential or personal data.",
     data_security_warning_mpg:
-      "You are using an external model or external features. Your messages will be processed outside of GWDG, and your custom settings will not be applied. Please refrain from entering confidential or personal data. External models can only be used by scientific employees for scientific work, provided that no personal data is entered.",
+      "You are using an external model or external features. Your messages will be processed outside of GWDG, and your custom settings will not be applied, and GWDG-Tools are not available. Please refrain from entering confidential or personal data. External models can only be used by scientific employees for scientific work, provided that no personal data is entered.",
     arcana_usage:
       "Keep temperature at 0 and top_p at 0.05 for optimal arcana results",
     arcana_create_collection_prefix:
