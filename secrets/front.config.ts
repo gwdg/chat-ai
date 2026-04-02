@@ -47,6 +47,8 @@ export interface FrontOverrides {
     features?: {
     };
     models?: {
+        whitelist?: string[]; // Exclude all models except these from the UI (e.g. model selector)
+        blacklist?: string[]; // Hide these models from the UI (e.g. model selector)
     };
     branding?: "gwdg" | "mpg";
 }

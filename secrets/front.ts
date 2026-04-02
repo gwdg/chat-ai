@@ -49,6 +49,7 @@ const config: FrontConfig = {
         "features": {
         },
         "models": {
+            "whitelist": ["qwen3-30b-a3b-thinking-2507", "qwen3-30b-a3b-instruct-2507", "qwen3-omni-30b-a3b-instruct"]
         },
         "branding": "mpg",
     },

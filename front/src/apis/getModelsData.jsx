@@ -15,6 +15,12 @@ export async function getModelsData() {
       ...model,
       name: model.name || model.id,
     }));
+    if (config.overrides?.models?.whitelist) {
+      enrichedModelsData = enrichedModelsData.filter(model => config.overrides.models.whitelist.includes(model.id));
+    }
+    if (config.overrides?.models?.blacklist) {
+      enrichedModelsData = enrichedModelsData.filter(model => !config.overrides.models.blacklist.includes(model.id));
+    }
     return enrichedModelsData;
   } catch (error) {
     console.error("Failed to load models data", error);
