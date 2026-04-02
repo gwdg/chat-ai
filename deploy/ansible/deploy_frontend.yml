@@ -8,9 +8,9 @@
     builds_root: "{{ deploy_root }}/builds"
     current_symlink: "{{ deploy_root }}/current"
     keep_releases: 5
-    frontend_secret_path: /srv/secrets/frontend.json
     build_workspace: "{{ builds_root }}/{{ release_id }}"
     frontend_source_dir: "{{ build_workspace }}/front"
+    frontend_secret_path: "/srv/secrets/front.ts"
     release_path: "{{ releases_root }}/{{ release_id }}"
     prune_start_index: "{{ (keep_releases | int) + 1 }}"
 
@@ -40,7 +40,7 @@
         update_cache: true
       when: ansible_os_family == "Debian"
 
-    - name: Add NodeSource apt key for Node.js 20
+    - name: Add NodeSource apt key for Node.js 25
       ansible.builtin.shell: |
         set -e
         install -m 0755 -d /etc/apt/keyrings
@@ -50,14 +50,14 @@
         creates: /etc/apt/keyrings/nodesource.gpg
       when: ansible_os_family == "Debian"
 
-    - name: Add NodeSource repository for Node.js 20
+    - name: Add NodeSource repository for Node.js 25
       ansible.builtin.apt_repository:
-        repo: "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main"
+        repo: "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_25.x nodistro main"
         filename: nodesource
         state: present
       when: ansible_os_family == "Debian"
 
-    - name: Install Node.js 20 on Debian/Ubuntu
+    - name: Install Node.js 25 on Debian/Ubuntu
       ansible.builtin.apt:
         name:
           - nodejs
