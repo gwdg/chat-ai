@@ -1,0 +1,224 @@
+---
+- name: Build and deploy frontend and backend
+  hosts: all
+  become: true
+  vars:
+    # Build variables
+    builds_root: /srv/builds
+    build_workspace: "{{ builds_root }}/{{ release_id }}"
+    frontend_source_dir: "{{ build_workspace }}/front"
+    backend_source_dir: "{{ build_workspace }}/back"
+    
+    # Symlinks
+    frontend_current_symlink: /srv/frontend-current
+    backend_current_symlink: /srv/backend-current
+    
+    # Secrets
+    frontend_secret_path: "/srv/secrets/front.ts"
+    backend_secret_path: "/srv/secrets/back.json"
+    
+    # General variables
+    backend_service_name: chat-ai-backend
+    keep_releases: 5
+    prune_start_index: "{{ (keep_releases | int) + 1 }}"
+
+  pre_tasks:
+    - name: Ensure required variables are present
+      ansible.builtin.assert:
+        that:
+          - git_repo_url is defined
+          - git_repo_url | length > 0
+          - git_ref is defined
+          - git_ref | length > 0
+        fail_msg: "Set git_repo_url and git_ref when running the playbook"
+
+    - name: Set default release_id if not provided
+      ansible.builtin.set_fact:
+        release_id: "{{ ansible_date_time.epoch }}"
+      when: release_id is not defined
+
+    - name: Install prerequisite packages on Debian/Ubuntu
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - git
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Add NodeSource apt key for Node.js 25
+      ansible.builtin.shell: |
+        set -e
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+        chmod a+r /etc/apt/keyrings/nodesource.gpg
+      args:
+        creates: /etc/apt/keyrings/nodesource.gpg
+      when: ansible_os_family == "Debian"
+
+    - name: Add NodeSource repository for Node.js 25
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_25.x nodistro main"
+        filename: nodesource
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Node.js 25 on Debian/Ubuntu
+      ansible.builtin.apt:
+        name:
+          - nodejs
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure frontend config exists on server
+      ansible.builtin.stat:
+        path: "{{ frontend_secret_path }}"
+      register: frontend_secret
+
+    - name: Fail if frontend config is missing
+      ansible.builtin.assert:
+        that:
+          - frontend_secret.stat.exists
+        fail_msg: "Expected real frontend config at {{ frontend_secret_path }}"
+
+    - name: Ensure backend config exists on server
+      ansible.builtin.stat:
+        path: "{{ backend_secret_path }}"
+      register: backend_secret
+
+    - name: Fail if backend config is missing
+      ansible.builtin.assert:
+        that:
+          - backend_secret.stat.exists
+        fail_msg: "Expected real backend config at {{ backend_secret_path }}"
+
+  tasks:
+    - name: Ensure builds directory exists
+      ansible.builtin.file:
+        path: "{{ builds_root }}"
+        state: directory
+        mode: "0755"
+
+    - name: Checkout repository for this release
+      ansible.builtin.git:
+        repo: "{{ git_repo_url }}"
+        dest: "{{ build_workspace }}"
+        version: "{{ git_ref }}"
+        force: true
+
+    - name: Ensure secrets directory exists in workspace
+      ansible.builtin.file:
+        path: "{{ build_workspace }}/secrets"
+        state: directory
+        mode: "0755"
+
+    - name: Copy real frontend config into build workspace
+      ansible.builtin.copy:
+        src: "{{ frontend_secret_path }}"
+        dest: "{{ build_workspace }}/secrets/front.ts"
+        remote_src: true
+        mode: "0600"
+
+    - name: Copy real backend config into build workspace
+      ansible.builtin.copy:
+        src: "{{ backend_secret_path }}"
+        dest: "{{ build_workspace }}/secrets/back.json"
+        remote_src: true
+        mode: "0600"
+
+    # Frontend build
+    - name: Install frontend dependencies
+      ansible.builtin.command: npm install
+      args:
+        chdir: "{{ frontend_source_dir }}"
+
+    - name: Build frontend with real config
+      ansible.builtin.command: npm run build
+      args:
+        chdir: "{{ frontend_source_dir }}"
+
+    # Backend build (npm install for dependencies)
+    - name: Install backend dependencies
+      ansible.builtin.command: npm install
+      args:
+        chdir: "{{ backend_source_dir }}"
+
+    # Prepare backend release directory
+    - name: Ensure backend build directory exists
+      ansible.builtin.file:
+        path: "{{ backend_source_dir }}/dist"
+        state: directory
+        mode: "0755"
+
+    - name: Create backend distribution with necessary files
+      ansible.builtin.shell: |
+        cp "{{ backend_source_dir }}/service.mjs" "{{ backend_source_dir }}/dist/"
+        cp "{{ backend_source_dir }}/package.json" "{{ backend_source_dir }}/dist/"
+        cp "{{ backend_source_dir }}/package-lock.json" "{{ backend_source_dir }}/dist/" 2>/dev/null || true
+        cp -r "{{ backend_source_dir }}/node_modules" "{{ backend_source_dir }}/dist/" || true
+
+    - name: Create backend config symlink in dist directory
+      ansible.builtin.file:
+        src: "{{ backend_secret_path }}"
+        dest: "{{ backend_source_dir }}/dist/back.json"
+        state: link
+        force: true
+
+    # Atomic symlink switches
+    - name: Atomically switch frontend current symlink
+      ansible.builtin.shell: |
+        ln -sfn "{{ frontend_source_dir }}/dist" "{{ builds_root }}/.frontend_tmp"
+        mv -Tf "{{ builds_root }}/.frontend_tmp" "{{ frontend_current_symlink }}"
+
+    - name: Atomically switch backend current symlink
+      ansible.builtin.shell: |
+        ln -sfn "{{ backend_source_dir }}/dist" "{{ builds_root }}/.backend_tmp"
+        mv -Tf "{{ builds_root }}/.backend_tmp" "{{ backend_current_symlink }}"
+
+    # Backend service management
+    - name: Create backend systemd service file
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Chat AI Backend Service
+          After=network.target
+          
+          [Service]
+          Type=simple
+          User=www-data
+          WorkingDirectory={{ backend_current_symlink }}
+          ExecStart=/usr/bin/node {{ backend_current_symlink }}/service.mjs
+          Restart=always
+          RestartSec=10
+          StandardOutput=journal
+          StandardError=journal
+          SyslogIdentifier=chat-ai-backend
+          Environment="NODE_ENV=production"
+          Environment="CONFIG_LOCATION={{ backend_secret_path }}"
+          
+          [Install]
+          WantedBy=multi-user.target
+        dest: "/etc/systemd/system/{{ backend_service_name }}.service"
+        mode: "0644"
+      notify: Restart backend service
+
+    - name: Enable backend service
+      ansible.builtin.systemd:
+        name: "{{ backend_service_name }}"
+        enabled: true
+        daemon_reload: true
+
+    # Cleanup old builds
+    - name: Prune old builds and keep latest
+      ansible.builtin.shell: |
+        ls -1dt {{ builds_root }}/* 2>/dev/null | tail -n +{{ prune_start_index }} | xargs -r rm -rf
+
+  handlers:
+    - name: Restart backend service
+      ansible.builtin.systemd:
+        name: "{{ backend_service_name }}"
+        state: restarted
+        daemon_reload: true

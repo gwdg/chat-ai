@@ -200,9 +200,9 @@ const sendMessage = async ({
   try {
     const isArcanaSupported = localState.settings.model?.input?.includes("arcana") || (localState.settings?.enable_tools && !!localState.settings.tools.arcana)   
 
-    const feedbackModule = MODULE_FEEDBACK;
-    const toolsModule = MODULE_TOOLS;
-    const choicesModule = MODULE_CHOICES;
+    const feedbackModule = config.modules?.feedback;
+    const toolsModule = config.modules?.tools;
+    const choicesModule = config.modules?.choices;
 
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState);

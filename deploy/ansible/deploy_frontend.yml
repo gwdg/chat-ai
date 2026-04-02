@@ -139,3 +139,7 @@
     - name: Prune old releases and keep latest
       ansible.builtin.shell: |
         ls -1dt {{ releases_root }}/* 2>/dev/null | tail -n +{{ prune_start_index }} | xargs -r rm -rf
+
+    - name: Prune old builds and keep latest
+      ansible.builtin.shell: |
+        ls -1dt {{ builds_root }}/* 2>/dev/null | tail -n +{{ prune_start_index }} | xargs -r rm -rf
