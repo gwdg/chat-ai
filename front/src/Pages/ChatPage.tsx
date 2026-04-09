@@ -16,6 +16,7 @@ import Conversation from "../components/Conversation/Conversation";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
+import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 
 import { Navigate, useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
@@ -27,8 +28,9 @@ export default function ChatPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isMobile } = useWindowSize();
+  const userSettings = useSelector(selectUserSettings);
 
-  const [localState, setLocalState] = useState(() => getDefaultConversation());
+  const [localState, setLocalState] = useState(() => getDefaultConversation(userSettings));
 
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
