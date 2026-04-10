@@ -1,9 +1,10 @@
 // userMemorySlice.js
 import { createSlice } from "@reduxjs/toolkit";
+import config from "../../config";
 
 const initialState = {
   memories: [],
-  // model: "", // TODO load from file
+  model: config.default.model,
   timeout: 300000,
 };
 

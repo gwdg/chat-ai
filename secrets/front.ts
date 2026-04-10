@@ -34,11 +34,12 @@ const config: FrontConfig = {
             "arcana": true,
             "mcp": false
         },
-
+        "arcana": undefined,
     },
     "announcement": "",
     "overrides": {
         "ui": {
+            "show_tour": false,
             "hideFooter": true,
             "hideImportConversationButton": true,
             "hideImportPersonaButton": true,

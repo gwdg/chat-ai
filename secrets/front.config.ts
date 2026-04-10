@@ -33,6 +33,7 @@ export interface FrontDefaultSettings {
   temperature: number;
   enable_tools: boolean;
   tools: FrontDefaultToolsConfig;
+  arcana?: {id: string};
 }
 
 export interface FrontOverrides {
@@ -43,6 +44,7 @@ export interface FrontOverrides {
         hideSettings?: boolean;
         hideModelSelector?: boolean;
         showModelSelectorInChatArea?: boolean;
+        show_tour: boolean;
     };
     features?: {
     };

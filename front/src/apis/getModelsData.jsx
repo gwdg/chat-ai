@@ -15,6 +15,7 @@ export async function getModelsData() {
       ...model,
       name: model.name || model.id,
     }));
+    console.info(`Apply model filters: whitelist=${config.overrides?.models?.whitelist}, blacklist=${config.overrides?.models?.blacklist} on models:`, enrichedModelsData);
     if (config.overrides?.models?.whitelist) {
       enrichedModelsData = enrichedModelsData.filter(model => config.overrides.models.whitelist.includes(model.id));
     }
