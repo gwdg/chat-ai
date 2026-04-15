@@ -41,8 +41,13 @@ import MCPContainer from "./MCPContainer";
 import ToolsContainer from "./ToolsContainer";
 import VideoList from "./VideoList";
 import ShortcutTooltip from "../Sidebar/ShortcutTooltip";
+import transcribeAudio from "../../apis/audioTranscription";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
+const TEST_AUDIO_URL = new URL(
+  "../../assets/audio/test/test.mp3",
+  import.meta.url,
+).href;
 
 const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const conversations = useConversationList();
@@ -71,6 +76,9 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const defaultModel = useSelector(selectDefaultModel);
   const [runTour, setRunTour] = useState(false);
   const [tourStepIndex, setTourStepIndex] = useState(0); // Add this
+  const [isTranscribingTestAudio, setIsTranscribingTestAudio] = useState(false);
+  const [testAudioTranscript, setTestAudioTranscript] = useState("");
+  const [testAudioError, setTestAudioError] = useState("");
   const { isMobile, isTablet, isDesktop } = useWindowSize();
 
   const showTourSelected = useSelector(selectShowTour);
@@ -283,6 +291,37 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
     Array.isArray(tourSteps) &&
     tourSteps.every((s) => s?.target && document.querySelector(s.target));
 
+  const handleTranscribeTestAudio = async () => {
+    setIsTranscribingTestAudio(true);
+    setTestAudioError("");
+    setTestAudioTranscript("");
+
+    try {
+      const response = await fetch(TEST_AUDIO_URL);
+      if (!response.ok) {
+        throw new Error(`Failed to load test audio: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      const audioFile = new File([audioBlob], "test.mp3", {
+        type: audioBlob.type || "audio/mpeg",
+      });
+      const transcript = await transcribeAudio(audioFile);
+
+      if (!transcript) {
+        setTestAudioError("Audio transcription did not return any text.");
+        return;
+      }
+
+      setTestAudioTranscript(transcript);
+    } catch (error) {
+      console.error("Test audio transcription failed:", error);
+      setTestAudioError("Failed to transcribe the test audio.");
+    } finally {
+      setIsTranscribingTestAudio(false);
+    }
+  };
+
   return (
     <>
       {showTour && tourReady && targetsReady && (
@@ -454,6 +493,34 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             localState={localState}
             setLocalState={setLocalState}
           />
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleTranscribeTestAudio}
+              disabled={isTranscribingTestAudio}
+              className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isTranscribingTestAudio
+                ? "Transcribing Test Audio..."
+                : "Transcribe Test Audio"}
+            </button>
+            <audio controls src={TEST_AUDIO_URL} className="w-full max-w-md" />
+            {testAudioError ? (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {testAudioError}
+              </p>
+            ) : null}
+            {testAudioTranscript ? (
+              <div className="flex flex-col gap-2 rounded-lg border border-gray-200 dark:border-border_dark p-3">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Test Audio Transcript
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {testAudioTranscript}
+                </p>
+              </div>
+            ) : null}
+          </div>
           <div className="flex flex-wrap md:justify-end gap-2 md:gap-4 items-center w-full">
             {/* Share Settings Button */}
             <ShareSettingsButton
