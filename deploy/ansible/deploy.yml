@@ -211,6 +211,15 @@
         enabled: true
         daemon_reload: true
 
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Restart backend service if it exists
+      ansible.builtin.systemd:
+        name: "{{ backend_service_name }}"
+        state: restarted
+      when: (backend_service_name ~ '.service') in ansible_facts.services
+
     # Cleanup old builds
     - name: Prune old builds and keep latest
       ansible.builtin.shell: |
