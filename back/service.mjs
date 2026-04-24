@@ -128,11 +128,18 @@ app.post("/documents", async (req, res) => {
 app.get("/models", async (req, res) => {
   try {
     const url = apiEndpoint + "/models";
+    const inference_id = req.headers["inference-id"];
     const headers = {
       Accept: "application/json",
       Authorization: "Bearer " + apiKey,
-      "inference-portal": "Chat AI",
+      "inference-portal": serviceName,
     };
+    if (apiKey) {
+      headers.Authorization = "Bearer " + apiKey;
+    } else {
+      // Only add inference-id header if apiKey is empty or non-existent
+      headers.Authorization = "Bearer " + inference_id;
+    }
     const response = await fetch(url, { method: "GET", headers });
     res.status(200).json(await response.json());
   } catch (error) {
@@ -154,7 +161,7 @@ app.get("/user", async (req, res) => {
     });
   } catch (error) {
     console.error(`Error: ${error}`);
-    res.status(500).json({ error: "Failed to fetch models." });
+    res.status(500).json({ error: "Failed to fetch user info." });
   }
 });
 
