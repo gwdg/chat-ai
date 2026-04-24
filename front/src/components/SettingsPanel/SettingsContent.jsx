@@ -402,11 +402,6 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
           {/* Use Tools – checkbox */}
-          {/* <ToolsToggle localState={localState} setLocalState={setLocalState} />
-          <WebSearchToggle
-            localState={localState}
-            setLocalState={setLocalState}
-          /> */}
           {toolsModule && <ToolsContainer
               localState={localState}
               setLocalState={setLocalState}
