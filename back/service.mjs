@@ -170,11 +170,18 @@ app.post("/audio/speech", async (req, res) => {
   // Simply forward the request and return response
   try {
     const url = apiEndpoint + "/audio/speech";
+    const inference_id = req.headers["inference-id"];
     const headers = {
       "Content-Type": "application/json",
       Authorization: "Bearer " + apiKey,
       "inference-portal": serviceName,
     };
+    if (apiKey) {
+      headers.Authorization = "Bearer " + apiKey;
+    } else {
+      // Only add inference-id header if apiKey is empty or non-existent
+      headers.Authorization = "Bearer " + inference_id;
+    }
     const response = await fetch(url, {
       method: "POST",
       headers,
