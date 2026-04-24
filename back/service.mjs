@@ -158,6 +158,35 @@ app.get("/user", async (req, res) => {
   }
 });
 
+// Speech generation endpoint
+app.post("/audio/speech", async (req, res) => {
+  // Simply forward the request and return response
+  try {
+    const url = apiEndpoint + "/audio/speech";
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + apiKey,
+      "inference-portal": serviceName,
+    };
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(req.body),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Speech generation failed:", response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.status(200).send(Buffer.from(arrayBuffer));
+  } catch (error) {
+    console.error("Error in speech generation endpoint:", error);
+    res.status(500).json({ error: "Failed to generate speech." });
+  }
+});
+
 // Chat Completions API
 app.post("/chat/completions", async (req, res) => {
   const {
