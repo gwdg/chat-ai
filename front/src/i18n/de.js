@@ -156,6 +156,11 @@ export default {
       title: "Standardmodell",
       current: "Aktuell: {{currentModel}}",
       description: "Wählen Sie das Standardmodell für neue Gespräche aus.",
+      search_placeholder: "Nach Modellname, ID oder Fähigkeit suchen",
+      available_count_one: "{{count}} Modell verfügbar",
+      available_count_other: "{{count}} Modelle verfügbar",
+      current_badge: "Aktuell",
+      no_results: "Keine Modelle für \"{{query}}\" gefunden.",
     },
     timeout: {
       title: "Wartezeit für Antworten",

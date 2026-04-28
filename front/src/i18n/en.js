@@ -155,6 +155,11 @@ export default {
       title: "Default Model",
       current: "Current: {{currentModel}}",
       description: "Select the default model for new conversations.",
+      search_placeholder: "Search by model name, id, or capability",
+      available_count_one: "{{count}} model available",
+      available_count_other: "{{count}} models available",
+      current_badge: "Current",
+      no_results: "No models match \"{{query}}\".",
     },
     timeout: {
       title: "Request Timeout",
