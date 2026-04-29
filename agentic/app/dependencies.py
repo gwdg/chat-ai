@@ -15,6 +15,7 @@ from app.clients.vault import VaultClient
 from app.config import Settings, get_settings
 from app.services.job_monitor import JobMonitor
 from app.services.secret_cache import SecretCache
+from app.services.sse_hub import SseHub
 
 
 def get_bearer_token(authorization: Optional[str] = Header(default=None)) -> str:
@@ -104,3 +105,21 @@ async def get_secret_cache(
         cache = SecretCache(settings, vault)
         request.app.state.secret_cache = cache
     return cache
+
+
+async def get_sse_hub(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> SseHub:
+    """Return the app-scoped SseHub, creating it lazily on first use.
+
+    The reaper task is started here on first access so unit tests can
+    create an app and run a single request without spinning up the
+    background loop until they actually subscribe.
+    """
+    hub: Optional[SseHub] = getattr(request.app.state, "sse_hub", None)
+    if hub is None:
+        hub = SseHub(settings)
+        request.app.state.sse_hub = hub
+        await hub.start()
+    return hub

@@ -15,8 +15,11 @@ This package currently implements:
 - **Task 1.5**: Vault Secret Retrieval (`GET /api/secrets/{secret_type}`,
   mock-mode supported, async KV-v2 client, in-process TTL cache,
   410 Gone for expired leases)
+- **Task 1.6**: SSE Streaming (`GET /api/sse/{session_id}`,
+  `POST /api/sse/{session_id}/events`, broadcast hub, 15s heartbeat,
+  per-session 100 msg/s rate limit with 429, idle-session reaper)
 
-Subsequent tasks add SSE streaming and X-User auth middleware.
+Subsequent tasks add the X-User auth middleware.
 
 ## Layout
 
@@ -111,6 +114,11 @@ All settings are loaded from environment variables prefixed with
 | `AGENTIC_VAULT_RETRY_BACKOFF_S` | `0.25` | Exponential backoff base |
 | `AGENTIC_VAULT_CACHE_TTL_S` | `60` | In-process cache TTL per `(user_id, secret_type)` entry |
 | `AGENTIC_VAULT_MOCK_MODE` | `false` | Return synthetic secrets without contacting Vault. Sentinel users `expired@…` → 410, `missing@…` → 404. |
+| `AGENTIC_SSE_HEARTBEAT_INTERVAL_S` | `15` | Cadence of `: keepalive` SSE comments |
+| `AGENTIC_SSE_SUBSCRIBER_QUEUE_SIZE` | `256` | Per-subscriber queue depth; slow consumers are dropped (with a structured warning) once full |
+| `AGENTIC_SSE_PUBLISH_RATE_PER_SESSION` | `100` | Sliding-window publish rate limit per session (msg/s). Exceeded → 429 |
+| `AGENTIC_SSE_SESSION_IDLE_TIMEOUT_S` | `300` | Empty rooms with no recent publishes are evicted by the reaper after this long |
+| `AGENTIC_SSE_REAPER_INTERVAL_S` | `30` | Cadence of the idle-session reaper |
 
 In production, set `AGENTIC_ENVIRONMENT=production` and explicitly pin
 `AGENTIC_CORS_ALLOW_ORIGINS` to the deployed Node.js backend origin.
@@ -272,6 +280,56 @@ absence / TTL fields are emitted. Repeated reads are served from a
 60-second in-process TTL cache (configurable via
 `AGENTIC_VAULT_CACHE_TTL_S`).
 
+### `GET /api/sse/{session_id}`  &nbsp;·&nbsp;  `POST /api/sse/{session_id}/events`
+
+Server-Sent Events surface for streaming agent actions / results /
+errors back to the browser in real time.
+
+**Subscribe (browser side):**
+
+```bash
+curl -N -H "X-User: alice@gwdg" http://localhost:8001/api/sse/sess-001
+# : connected
+#
+# event: action
+# id: evt-1
+# data: {"type":"web_search","message":"Searching..."}
+#
+# : keepalive
+```
+
+The first chunk is always a `: connected` comment, then each event
+follows the SSE wire format. A `: keepalive` comment is emitted every
+`AGENTIC_SSE_HEARTBEAT_INTERVAL_S` seconds so HTTP proxies do not idle-
+close the connection. Multiple subscribers may join the same
+`session_id` (broadcast); reconnecting with the same id rejoins the
+existing room.
+
+**Publish (agent side, runs inside the Apptainer container):**
+
+```bash
+curl -X POST http://localhost:8001/api/sse/sess-001/events \
+  -H "X-User: alice@gwdg" -H "Content-Type: application/json" \
+  -d '{"event":"action","data":{"type":"web_search","message":"Searching..."},"id":"evt-1"}'
+# {"session_id":"sess-001","delivered_to":1,"queued":true}
+```
+
+`event` must be one of `action`, `result`, `error`, `message`. `data`
+is an arbitrary JSON object. `id` is optional but recommended for
+client-side `Last-Event-ID` reconnection bookkeeping.
+
+**Errors**
+
+| Status | When |
+|---|---|
+| 401 | missing `X-User` |
+| 422 | unknown `event` |
+| 429 | publish rate limit exceeded (`AGENTIC_SSE_PUBLISH_RATE_PER_SESSION` over 1s sliding window). Carries `Retry-After: 1` |
+
+Slow subscribers are dropped (per-event) once their bounded queue is
+full so a stuck client cannot back-pressure the publisher. A structured
+`sse_publish_dropped_slow_subscriber` warning is emitted for each drop.
+
 ### Local end-to-end test without HPC
 
 ```bash
@@ -357,5 +415,5 @@ The test suite covers Tasks 1.1, 1.2, and 1.3 acceptance criteria:
 | 1.3 Slurm Job Monitoring | done (mock-mode walks state machine) |
 | 1.4 Slurm Job Cancellation | done (ownership + grace period) |
 | 1.5 Vault Secret Retrieval | done (mock-mode, KV-v2, 60s TTL cache) |
-| 1.6 SSE Streaming | next |
-| 1.7 X-User Auth Middleware | pending |
+| 1.6 SSE Streaming | done (broadcast, heartbeat, 100 msg/s rate limit, idle reaper) |
+| 1.7 X-User Auth Middleware | next |

@@ -110,6 +110,37 @@ class Settings(BaseSettings):
     # for VM-only dev before Vault integration is wired up.
     vault_mock_mode: bool = Field(default=False)
 
+    # --- SSE -----------------------------------------------------------------
+    sse_heartbeat_interval_s: float = Field(
+        default=15.0,
+        gt=0,
+        description="Cadence of SSE keepalive comments. Detects dead "
+        "connections without polluting the event stream.",
+    )
+    sse_subscriber_queue_size: int = Field(
+        default=256,
+        ge=2,
+        description="Per-subscriber bounded queue. Slow consumers are "
+        "dropped (rather than back-pressuring publishers) once full.",
+    )
+    sse_publish_rate_per_session: int = Field(
+        default=100,
+        ge=1,
+        description="Max publishes per session per second (Task 1.6 "
+        "acceptance criterion). Excess returns 429.",
+    )
+    sse_session_idle_timeout_s: float = Field(
+        default=300.0,
+        gt=0,
+        description="Sessions with no subscribers and no publishes for "
+        "this many seconds are evicted by the background reaper.",
+    )
+    sse_reaper_interval_s: float = Field(
+        default=30.0,
+        gt=0,
+        description="How often the idle-session reaper runs.",
+    )
+
     @field_validator("cors_allow_origins", mode="before")
     @classmethod
     def _split_csv(cls, v):
