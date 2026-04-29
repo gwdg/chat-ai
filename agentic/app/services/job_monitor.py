@@ -31,7 +31,7 @@ from typing import Dict, Optional
 
 from app.clients.slurm import SlurmClient, SlurmError, SlurmNotFoundError
 from app.config import Settings
-from app.models.job import JobState, JobStatusResponse
+from app.models.job import CancelReason, JobState, JobStatusResponse
 
 log = logging.getLogger("agentic.monitor")
 
@@ -41,10 +41,23 @@ class _Tracked:
     job_id: str
     owner: str
     bearer_token: str
+    registered_at: float
     status: Optional[JobStatusResponse] = None
     fetched_at: float = 0.0
     error: Optional[str] = None
     task: Optional[asyncio.Task] = field(default=None, repr=False)
+
+
+class JobOwnershipError(Exception):
+    """Raised when a caller tries to cancel a job they do not own."""
+
+
+class JobAlreadyTerminalError(Exception):
+    """Raised when cancellation is requested for a job in a terminal state."""
+
+    def __init__(self, state: JobState) -> None:
+        super().__init__(f"job already terminal: {state.value}")
+        self.state = state
 
 
 class JobMonitor:
@@ -60,7 +73,12 @@ class JobMonitor:
         async with self._lock:
             if job_id in self._jobs:
                 return
-            tracked = _Tracked(job_id=job_id, owner=owner, bearer_token=bearer_token)
+            tracked = _Tracked(
+                job_id=job_id,
+                owner=owner,
+                bearer_token=bearer_token,
+                registered_at=time.monotonic(),
+            )
             tracked.task = asyncio.create_task(
                 self._poll_loop(tracked),
                 name=f"job-monitor:{job_id}",
@@ -80,6 +98,93 @@ class JobMonitor:
                 pass
         if tracked:
             log.info("monitor_cancel", extra={"job_id": job_id})
+
+    async def cancel_with_ownership(
+        self,
+        job_id: str,
+        *,
+        owner: str,
+        bearer_token: str,
+        reason: CancelReason,
+    ) -> JobStatusResponse:
+        """Cancel a job after verifying the caller owns it.
+
+        Behaviour matches the Task 1.4 acceptance criteria:
+
+        * tracked & owned by ``owner`` → call ``scancel`` (with grace period
+          for very-recently-submitted jobs), stop polling, return CANCELLED
+        * tracked but owned by someone else → ``JobOwnershipError``
+        * tracked and already terminal → ``JobAlreadyTerminalError``
+        * untracked → fall through to a one-shot scancel, treating any
+          slurmrestd 404 as ``SlurmNotFoundError``
+        """
+        tracked = self._jobs.get(job_id)
+        if tracked is None:
+            await self._client.cancel_job(job_id, bearer_token=bearer_token)
+            log.info(
+                "cancel_untracked",
+                extra={"job_id": job_id, "owner": owner, "reason": reason.value},
+            )
+            return JobStatusResponse(job_id=job_id, status=JobState.CANCELLED)
+
+        if tracked.owner != owner:
+            log.warning(
+                "cancel_forbidden",
+                extra={
+                    "job_id": job_id,
+                    "owner": tracked.owner,
+                    "requested_by": owner,
+                },
+            )
+            raise JobOwnershipError(
+                f"{owner} cannot cancel job owned by {tracked.owner}"
+            )
+
+        if tracked.status is not None and tracked.status.status.is_terminal:
+            raise JobAlreadyTerminalError(tracked.status.status)
+
+        # Grace period: if the job is freshly submitted and still queued, give
+        # Slurm a chance to start it cleanly before issuing scancel. We never
+        # block longer than slurm_cancel_grace_period_s.
+        elapsed = time.monotonic() - tracked.registered_at
+        grace = self._settings.slurm_cancel_grace_period_s
+        if grace > 0 and elapsed < grace:
+            wait_for = grace - elapsed
+            log.info(
+                "cancel_grace_wait",
+                extra={
+                    "job_id": job_id,
+                    "wait_s": round(wait_for, 3),
+                    "reason": reason.value,
+                },
+            )
+            await asyncio.sleep(wait_for)
+
+        await self._client.cancel_job(job_id, bearer_token=tracked.bearer_token)
+
+        # Stop the background poller; keep last-known status so subsequent
+        # GETs return CANCELLED rather than 404.
+        if tracked.task and not tracked.task.done():
+            tracked.task.cancel()
+            try:
+                await tracked.task
+            except (asyncio.CancelledError, Exception):  # noqa: BLE001
+                pass
+            tracked.task = None
+
+        cancelled = JobStatusResponse(
+            job_id=job_id,
+            status=JobState.CANCELLED,
+            start_time=(tracked.status.start_time if tracked.status else None),
+        )
+        tracked.status = cancelled
+        tracked.fetched_at = time.monotonic()
+
+        log.info(
+            "cancel_ok",
+            extra={"job_id": job_id, "owner": owner, "reason": reason.value},
+        )
+        return cancelled
 
     async def aclose(self) -> None:
         """Cancel every poll loop. Called from the FastAPI lifespan shutdown."""

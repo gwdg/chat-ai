@@ -10,9 +10,10 @@ This package currently implements:
 - **Task 1.2**: Slurm Job Submission (`POST /api/jobs`, mock-mode supported)
 - **Task 1.3**: Slurm Job Monitoring (`GET /api/jobs/{job_id}/status`, background
   poller, simplified state vocabulary, 1s cache)
+- **Task 1.4**: Slurm Job Cancellation (`DELETE /api/jobs/{job_id}`, ownership
+  check, grace period, structured cancel reason)
 
-Subsequent tasks add Slurm cancellation, Vault, and SSE streaming
-endpoints.
+Subsequent tasks add Vault and SSE streaming endpoints.
 
 ## Layout
 
@@ -31,7 +32,8 @@ agentic/
 │   │   └── job_monitor.py  # Background poller, status cache, registry
 │   └── routers/
 │       ├── health.py       # GET /health
-│       └── jobs.py         # POST /api/jobs, GET /api/jobs/{id}/status
+│       └── jobs.py         # POST /api/jobs, GET /api/jobs/{id}/status,
+│                           # DELETE /api/jobs/{id}
 ├── tests/
 │   ├── test_health.py
 │   ├── test_jobs.py        # submission paths
@@ -94,7 +96,8 @@ All settings are loaded from environment variables prefixed with
 | `AGENTIC_SLURM_RETRY_BACKOFF_S` | `0.5` | Exponential backoff base |
 | `AGENTIC_SLURM_STATUS_POLL_INTERVAL_S` | `2.0` | Background poll cadence per job |
 | `AGENTIC_SLURM_STATUS_CACHE_TTL_S` | `1.0` | How long a status read is served from cache before re-fetching |
-| `AGENTIC_SLURM_MOCK_MODE` | `false` | Return synthetic `mock-…` job ids without contacting Slurm. **Use this on a dev VM with no HPC access.** Also walks status through `queued → running → succeeded`. |
+| `AGENTIC_SLURM_CANCEL_GRACE_PERIOD_S` | `5.0` | If a queued job is younger than this, wait for it to start before issuing scancel. |
+| `AGENTIC_SLURM_MOCK_MODE` | `false` | Return synthetic `mock-…` job ids without contacting Slurm. **Use this on a dev VM with no HPC access.** Walks status through `queued → running → succeeded` (or stays `cancelled` after a DELETE). |
 
 In production, set `AGENTIC_ENVIRONMENT=production` and explicitly pin
 `AGENTIC_CORS_ALLOW_ORIGINS` to the deployed Node.js backend origin.
@@ -188,6 +191,38 @@ with the token captured at submit time.
 | 404 | job id not tracked **and** slurmrestd reports not-found |
 | 502 | slurmrestd error not mapped above |
 
+### `DELETE /api/jobs/{job_id}?reason=<reason>`
+
+Cancels a tracked Slurm job (`scancel` equivalent). The caller must own
+the job (its `X-User` at submission time must match the current
+`X-User`). The optional `reason` query param is one of:
+
+- `user_stop` (default) — user clicked the Stop button
+- `timeout` — broker-internal inactivity timeout
+- `session_end` — browser disconnected / session closed
+- `admin_cancel` — administrator-initiated termination
+
+If the job is freshly submitted and still queued, the broker waits up
+to `AGENTIC_SLURM_CANCEL_GRACE_PERIOD_S` seconds for Slurm to start it
+cleanly before issuing the cancel.
+
+**Response** (`200 OK`):
+
+```json
+{ "job_id": "12345", "status": "cancelled", "reason": "user_stop" }
+```
+
+**Errors**
+
+| Status | When |
+|---|---|
+| 401 | missing `Authorization` / `X-User` |
+| 403 | `X-User` does not own the job |
+| 404 | job id unknown to broker **and** slurmrestd 404 |
+| 409 | job already in a terminal state (`succeeded`, `failed`, `cancelled`, `timed_out`) |
+| 422 | invalid `reason` |
+| 502 | slurmrestd error |
+
 ### Local end-to-end test without HPC
 
 ```bash
@@ -210,6 +245,17 @@ sleep 1
 curl -sS http://localhost:8001/api/jobs/$JOB/status \
   -H "Authorization: Bearer dev" -H "X-User: alice"
 # {"job_id":"mock-...","status":"succeeded","exit_code":0,...}
+
+# Cancel a separate job
+JOB2=$(curl -sS http://localhost:8001/api/jobs \
+  -H "Authorization: Bearer dev" -H "X-User: alice" \
+  -H "Content-Type: application/json" \
+  -d '{"session_id":"sess-002","container_image":"/cluster/images/agent.sif"}' \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["job_id"])')
+
+curl -sS -X DELETE "http://localhost:8001/api/jobs/$JOB2?reason=user_stop" \
+  -H "Authorization: Bearer dev" -H "X-User: alice"
+# {"job_id":"mock-...","status":"cancelled","reason":"user_stop"}
 ```
 
 ## Logging
@@ -247,6 +293,11 @@ The test suite covers Tasks 1.1, 1.2, and 1.3 acceptance criteria:
 - Background poller actually runs and stops at terminal state
 - Status reads within `cache_ttl_s` of the last fetch are served from
   cache (no re-fetch)
+- `DELETE /api/jobs/{id}` happy path returns
+  `{job_id,status:cancelled,reason}`
+- 403 when caller does not own the job, 409 when already terminal,
+  404 for unknown ids, 502 for slurmrestd errors, 422 for invalid reason
+- Grace period actually delays `scancel` for freshly-submitted jobs
 
 ## Roadmap
 
@@ -255,7 +306,8 @@ The test suite covers Tasks 1.1, 1.2, and 1.3 acceptance criteria:
 | 1.1 FastAPI Setup | done |
 | 1.2 Slurm Job Submission | done (mock-mode supported) |
 | 1.3 Slurm Job Monitoring | done (mock-mode walks state machine) |
-| 1.4 Slurm Job Cancellation | next |
+| 1.4 Slurm Job Cancellation | done (ownership + grace period) |
+| 1.5 Vault Secret Retrieval | next |
 | 1.4 Slurm Job Cancellation | pending |
 | 1.5 Vault Secret Retrieval | pending |
 | 1.6 SSE Streaming | pending |

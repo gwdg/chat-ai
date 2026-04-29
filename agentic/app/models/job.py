@@ -107,3 +107,18 @@ class JobStatusResponse(BaseModel):
     end_time: Optional[str] = None
     exit_code: Optional[int] = None
 
+
+class CancelReason(str, Enum):
+    """Why a cancellation was requested. Recorded in structured logs."""
+
+    USER_STOP = "user_stop"
+    TIMEOUT = "timeout"
+    SESSION_END = "session_end"
+    ADMIN_CANCEL = "admin_cancel"
+
+
+class JobCancellationResponse(BaseModel):
+    job_id: str
+    status: JobState = JobState.CANCELLED
+    reason: CancelReason = CancelReason.USER_STOP
+

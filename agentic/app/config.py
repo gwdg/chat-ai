@@ -60,6 +60,12 @@ class Settings(BaseSettings):
         ge=0,
         description="Age threshold for serving GET /api/jobs/{id}/status from cache.",
     )
+    slurm_cancel_grace_period_s: float = Field(
+        default=5.0,
+        ge=0,
+        description="If a queued job is younger than this many seconds, wait "
+        "for it to start before issuing the cancel.",
+    )
     # If true, return mock job ids without calling slurmrestd. Useful for VM
     # development before HPC integration is available.
     slurm_mock_mode: bool = Field(default=False)

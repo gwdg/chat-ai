@@ -153,6 +153,45 @@ class SlurmClient:
             )
         return SubmitResult(job_id=str(job_id))
 
+    # ------------------------------------------------------------------ cancel
+    async def cancel_job(
+        self,
+        job_id: str,
+        *,
+        bearer_token: str,
+    ) -> None:
+        """Tell slurmrestd to cancel ``job_id`` (equivalent to ``scancel``).
+
+        In mock mode the call simply marks the synthetic job as cancelled
+        for subsequent ``get_job_status`` reads.
+        """
+        if self._settings.slurm_mock_mode:
+            if job_id not in self._mock_status_bucket:
+                raise SlurmNotFoundError(f"unknown mock job {job_id}")
+            # Force any future _mock_status read to return CANCELLED by
+            # poisoning the bucket entry; -1 is the sentinel.
+            self._mock_status_bucket[job_id] = -1
+            log.info(
+                "slurm_cancel_mock",
+                extra={"job_id": job_id},
+            )
+            return
+
+        url = f"/slurm/{self._settings.slurm_api_version}/job/{job_id}"
+        headers = {
+            "Authorization": f"Bearer {bearer_token}",
+            "Accept": "application/json",
+        }
+
+        log.info("slurm_cancel_request", extra={"job_id": job_id, "url": url})
+        response = await self._send_with_retries("DELETE", url, headers, payload=None)
+        body = self._safe_json(response)
+        log.info(
+            "slurm_cancel_response",
+            extra={"job_id": job_id, "status_code": response.status_code},
+        )
+        self._raise_for_status(response, body)
+
     # ------------------------------------------------------------------ status
     async def get_job_status(
         self,
@@ -187,11 +226,19 @@ class SlurmClient:
 
         Unknown IDs raise ``SlurmNotFoundError`` so the broker can faithfully
         return 404 in mock mode (matching real slurmrestd behaviour).
+        Sentinel ``-1`` means "cancelled" (set by ``cancel_job`` in mock mode).
         """
         bucket = self._mock_status_bucket
         if job_id not in bucket:
             raise SlurmNotFoundError(f"unknown mock job {job_id}")
         n = bucket[job_id]
+        if n == -1:
+            return JobStatusResponse(
+                job_id=job_id,
+                status=JobState.CANCELLED,
+                start_time=_now_iso(),
+                end_time=_now_iso(),
+            )
         bucket[job_id] = n + 1
         if n == 0:
             return JobStatusResponse(job_id=job_id, status=JobState.QUEUED)

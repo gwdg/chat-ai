@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.clients.slurm import (
     SlurmClient,
@@ -18,11 +18,17 @@ from app.dependencies import (
     get_user_id,
 )
 from app.models.job import (
+    CancelReason,
+    JobCancellationResponse,
     JobStatusResponse,
     JobSubmissionRequest,
     JobSubmissionResponse,
 )
-from app.services.job_monitor import JobMonitor
+from app.services.job_monitor import (
+    JobAlreadyTerminalError,
+    JobMonitor,
+    JobOwnershipError,
+)
 
 log = logging.getLogger("agentic.jobs")
 
@@ -123,3 +129,47 @@ async def get_job_status(
         },
     )
     return status
+
+
+@router.delete(
+    "/{job_id}",
+    response_model=JobCancellationResponse,
+    responses={
+        401: {"description": "Authentication failed"},
+        403: {"description": "Caller does not own the job"},
+        404: {"description": "Job not found"},
+        409: {"description": "Job already in a terminal state"},
+        502: {"description": "Upstream Slurm error"},
+    },
+)
+async def cancel_job(
+    job_id: str,
+    reason: CancelReason = Query(
+        default=CancelReason.USER_STOP,
+        description="Why the cancellation was requested. Recorded in audit logs.",
+    ),
+    user_id: str = Depends(get_user_id),
+    bearer_token: str = Depends(get_bearer_token),
+    monitor: JobMonitor = Depends(get_job_monitor),
+) -> JobCancellationResponse:
+    log.info(
+        "job_cancel_received",
+        extra={"user_id": user_id, "job_id": job_id, "reason": reason.value},
+    )
+    try:
+        await monitor.cancel_with_ownership(
+            job_id,
+            owner=user_id,
+            bearer_token=bearer_token,
+            reason=reason,
+        )
+    except JobOwnershipError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except JobAlreadyTerminalError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except SlurmNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="job not found") from exc
+    except SlurmError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return JobCancellationResponse(job_id=job_id, reason=reason)
