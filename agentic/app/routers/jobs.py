@@ -95,6 +95,7 @@ async def submit_job(
     "/{job_id}/status",
     response_model=JobStatusResponse,
     responses={
+        403: {"description": "Caller does not own the job"},
         404: {"description": "Job not found"},
         502: {"description": "Upstream Slurm error"},
     },
@@ -106,7 +107,11 @@ async def get_job_status(
     monitor: JobMonitor = Depends(get_job_monitor),
 ) -> JobStatusResponse:
     try:
-        status = await monitor.get_status(job_id, bearer_token=bearer_token)
+        status = await monitor.get_status(
+            job_id, bearer_token=bearer_token, owner=user_id
+        )
+    except JobOwnershipError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except SlurmNotFoundError as exc:
         log.info(
             "job_status_not_found",

@@ -37,7 +37,7 @@ def _build_app(handler: Callable[[httpx.Request], httpx.Response], **overrides):
     return app
 
 
-def _auth(user: str = "alice") -> Dict[str, str]:
+def _auth(user: str = "alice@gwdg") -> Dict[str, str]:
     return {
         "Authorization": "Bearer test-token",
         "X-User": user,
@@ -125,9 +125,9 @@ def test_cancel_forbidden_when_user_not_owner():
     app = _build_app(handler)
     with TestClient(app) as client:
         # Alice owns the job.
-        _submit(client, headers=_auth("alice"))
+        _submit(client, headers=_auth("alice@gwdg"))
         # Bob attempts to cancel.
-        resp = client.delete("/api/jobs/7", headers=_auth("bob"))
+        resp = client.delete("/api/jobs/7", headers=_auth("bob@gwdg"))
     assert resp.status_code == 403
 
 
@@ -199,7 +199,7 @@ def test_cancel_401_on_missing_auth():
     app = _build_app(lambda r: httpx.Response(200, json={"job_id": 1}))
     with TestClient(app) as client:
         _submit(client)
-        resp = client.delete("/api/jobs/1", headers={"X-User": "alice"})
+        resp = client.delete("/api/jobs/1", headers={"X-User": "alice@gwdg"})
     assert resp.status_code == 401
 
 

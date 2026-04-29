@@ -218,8 +218,13 @@ class JobMonitor:
         job_id: str,
         *,
         bearer_token: Optional[str] = None,
+        owner: Optional[str] = None,
     ) -> JobStatusResponse:
         """Return the freshest known status, fetching synchronously if stale.
+
+        When ``owner`` is supplied, callers other than the job's owner
+        get :class:`JobOwnershipError` (Task 1.7 acceptance criterion:
+        a user cannot read another user's job state).
 
         Raises ``SlurmNotFoundError`` for unknown jobs (translates to 404 in
         the router) and ``SlurmError`` subclasses for upstream failures.
@@ -235,6 +240,19 @@ class JobMonitor:
                 job_id, bearer_token=bearer_token
             )
             return status
+
+        if owner is not None and tracked.owner != owner:
+            log.warning(
+                "status_forbidden",
+                extra={
+                    "job_id": job_id,
+                    "owner": tracked.owner,
+                    "requested_by": owner,
+                },
+            )
+            raise JobOwnershipError(
+                f"{owner} cannot read job owned by {tracked.owner}"
+            )
 
         if self.is_fresh(job_id) and tracked.status is not None:
             return tracked.status

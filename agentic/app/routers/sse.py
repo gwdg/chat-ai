@@ -20,7 +20,11 @@ from fastapi.responses import StreamingResponse
 
 from app.dependencies import get_sse_hub, get_user_id
 from app.models.sse import SsePublishRequest, SsePublishResponse
-from app.services.sse_hub import SseHub, SseRateLimitedError
+from app.services.sse_hub import (
+    SseHub,
+    SseOwnershipError,
+    SseRateLimitedError,
+)
 
 
 log = logging.getLogger("agentic.sse_router")
@@ -44,6 +48,7 @@ SSE_HEADERS = {
             "description": "Open SSE stream for the session",
         },
         401: {"description": "Authentication failed"},
+        403: {"description": "Caller does not own this session"},
     },
 )
 async def subscribe(
@@ -55,7 +60,15 @@ async def subscribe(
         "sse_subscribe_received",
         extra={"session_id": session_id, "user_id": user_id},
     )
-    generator = hub.subscribe(session_id)
+    # Eagerly create / validate the room ownership so we can return 403
+    # before opening the streaming response (StreamingResponse does not
+    # let us change the status code mid-stream).
+    try:
+        await hub.touch_room(session_id, user_id=user_id)
+    except SseOwnershipError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    generator = hub.subscribe(session_id, user_id=user_id)
     return StreamingResponse(
         generator,
         media_type="text/event-stream",
@@ -87,7 +100,9 @@ async def publish(
         },
     )
     try:
-        delivered = await hub.publish(session_id, body)
+        delivered = await hub.publish(session_id, body, user_id=user_id)
+    except SseOwnershipError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except SseRateLimitedError as exc:
         log.warning(
             "sse_publish_rate_limited",

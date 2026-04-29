@@ -18,34 +18,49 @@ This package currently implements:
 - **Task 1.6**: SSE Streaming (`GET /api/sse/{session_id}`,
   `POST /api/sse/{session_id}/events`, broadcast hub, 15s heartbeat,
   per-session 100 msg/s rate limit with 429, idle-session reaper)
-
-Subsequent tasks add the X-User auth middleware.
+- **Task 1.7**: X-User Auth Middleware (`<user>@<tenant>` format
+  validation, 30-min session idle timeout, per-user 10 req/s sliding-
+  window rate limit, cross-user 403 for SSE sessions and Slurm jobs)
 
 ## Layout
 
 ```
 agentic/
 ├── app/
-│   ├── main.py             # FastAPI factory, middleware, lifespan
-│   ├── config.py           # Pydantic settings (env-driven)
+│   ├── main.py             # FastAPI factory, CORS, auth middleware, lifespan
+│   ├── config.py           # Pydantic settings (Slurm, Vault, SSE, auth)
 │   ├── logging_config.py   # Structured JSON logging
-│   ├── dependencies.py     # Auth-header parsers, Slurm client + monitor providers
+│   ├── dependencies.py     # Bearer / X-User, Slurm, Vault, SSE hub DI
+│   ├── middleware/
+│   │   └── auth.py         # X-User validation, session TTL, rate limit
 │   ├── clients/
-│   │   └── slurm.py        # Async slurmrestd client (httpx, retries, status)
+│   │   ├── slurm.py        # Async slurmrestd client (httpx, retries)
+│   │   └── vault.py        # Async Vault KV-v2 reads (httpx, retries)
 │   ├── models/
-│   │   └── job.py          # Schemas + Slurm->JobState mapping
+│   │   ├── job.py          # Job schemas + Slurm→JobState mapping
+│   │   ├── secret.py       # Secret types + GET /api/secrets response
+│   │   └── sse.py          # SSE publish/subscribe payloads
 │   ├── services/
-│   │   └── job_monitor.py  # Background poller, status cache, registry
+│   │   ├── job_monitor.py  # Background poller, status cache
+│   │   ├── secret_cache.py # Per-(user,type) TTL cache in front of Vault
+│   │   ├── sse_hub.py      # SSE sessions, broadcast, heartbeat, reaper
+│   │   └── auth.py         # X-User parsing, sliding-window rate limit
 │   └── routers/
 │       ├── health.py       # GET /health
-│       └── jobs.py         # POST /api/jobs, GET /api/jobs/{id}/status,
-│                           # DELETE /api/jobs/{id}
+│       ├── jobs.py         # POST/GET/DELETE /api/jobs…
+│       ├── secrets.py      # GET /api/secrets/{secret_type}
+│       └── sse.py          # GET /api/sse/{session_id}, POST …/events
 ├── tests/
 │   ├── test_health.py
-│   ├── test_jobs.py        # submission paths
-│   └── test_status.py      # monitoring paths (mocks slurmrestd)
+│   ├── test_jobs.py
+│   ├── test_status.py
+│   ├── test_cancel.py
+│   ├── test_secrets.py
+│   ├── test_sse.py
+│   └── test_auth.py
 ├── requirements.txt
 ├── Dockerfile
+├── pytest.ini
 └── README.md
 ```
 
@@ -119,6 +134,12 @@ All settings are loaded from environment variables prefixed with
 | `AGENTIC_SSE_PUBLISH_RATE_PER_SESSION` | `100` | Sliding-window publish rate limit per session (msg/s). Exceeded → 429 |
 | `AGENTIC_SSE_SESSION_IDLE_TIMEOUT_S` | `300` | Empty rooms with no recent publishes are evicted by the reaper after this long |
 | `AGENTIC_SSE_REAPER_INTERVAL_S` | `30` | Cadence of the idle-session reaper |
+| `AGENTIC_AUTH_MIDDLEWARE_ENABLED` | `true` | Install the X-User auth middleware in front of every `/api/*` route |
+| `AGENTIC_AUTH_VALIDATE_FORMAT` | `true` | Reject X-User values that do not match `<user>@<tenant>` (letters / digits / `.`, `-`, `_`, max 64 chars on each side) |
+| `AGENTIC_AUTH_SESSION_TTL_S` | `1800` | Idle-timeout for a per-user session. Subsequent requests after this window return 401. |
+| `AGENTIC_AUTH_RATE_PER_USER` | `10` | Per-user request budget within `AGENTIC_AUTH_RATE_WINDOW_S`. Excess returns 429 with `Retry-After: 1`. |
+| `AGENTIC_AUTH_RATE_WINDOW_S` | `1.0` | Width of the per-user sliding-window rate limit |
+| `AGENTIC_AUTH_SKIP_PATHS` | `/health,/openapi.json,/docs,/redoc,/docs/oauth2-redirect` | Paths that bypass the auth middleware (CSV) |
 
 In production, set `AGENTIC_ENVIRONMENT=production` and explicitly pin
 `AGENTIC_CORS_ALLOW_ORIGINS` to the deployed Node.js backend origin.
@@ -134,7 +155,7 @@ Submits an Apptainer-based agent workspace as a Slurm job.
 | Header | Required | Purpose |
 |---|---|---|
 | `Authorization: Bearer <token>` | yes | OIDC token forwarded to slurmrestd |
-| `X-User: <username>` | yes | User identity from Kong auth stack |
+| `X-User: <user>@<tenant>` | yes | User identity from Kong auth stack |
 
 **Request body**
 

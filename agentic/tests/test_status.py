@@ -52,7 +52,7 @@ def _build_app(handler: Callable[[httpx.Request], httpx.Response], **overrides):
 def _auth() -> Dict[str, str]:
     return {
         "Authorization": "Bearer test-token",
-        "X-User": "alice",
+        "X-User": "alice@gwdg",
         "Content-Type": "application/json",
     }
 

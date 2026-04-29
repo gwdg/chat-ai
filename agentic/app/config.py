@@ -141,6 +141,57 @@ class Settings(BaseSettings):
         description="How often the idle-session reaper runs.",
     )
 
+    # --- Auth (Task 1.7) ----------------------------------------------------
+    auth_middleware_enabled: bool = Field(
+        default=True,
+        description="If True, install the X-User auth middleware that "
+        "validates format, tracks sessions, and rate-limits per user. "
+        "Set to False in tests that exercise individual dependencies.",
+    )
+    auth_validate_format: bool = Field(
+        default=True,
+        description="If True, X-User must match '<user>@<tenant>' "
+        "(letters/digits/dot/hyphen/underscore on each side). When "
+        "False the header is still required but its shape is not "
+        "checked.",
+    )
+    auth_session_ttl_s: float = Field(
+        default=30 * 60,
+        gt=0,
+        description="Idle-timeout for per-user sessions. Subsequent "
+        "requests after this window return 401.",
+    )
+    auth_rate_per_user: int = Field(
+        default=10,
+        ge=1,
+        description="Max requests per user per window. Excess returns "
+        "429 Too Many Requests.",
+    )
+    auth_rate_window_s: float = Field(
+        default=1.0,
+        gt=0,
+        description="Width of the sliding window for the per-user "
+        "rate limit (1 second matches the spec).",
+    )
+    auth_skip_paths: List[str] = Field(
+        default_factory=lambda: [
+            "/health",
+            "/openapi.json",
+            "/docs",
+            "/redoc",
+            "/docs/oauth2-redirect",
+        ],
+        description="HTTP paths the middleware should ignore "
+        "(infrastructure / docs).",
+    )
+
+    @field_validator("auth_skip_paths", mode="before")
+    @classmethod
+    def _split_csv_skip(cls, v):
+        if isinstance(v, str):
+            return [item.strip() for item in v.split(",") if item.strip()]
+        return v
+
     @field_validator("cors_allow_origins", mode="before")
     @classmethod
     def _split_csv(cls, v):

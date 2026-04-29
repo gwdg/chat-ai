@@ -48,7 +48,7 @@ def _build_app(handler: Callable[[httpx.Request], httpx.Response], *, max_retrie
 def _post(app, body=None, *, headers=None) -> httpx.Response:
     base_headers = {
         "Authorization": "Bearer test-token",
-        "X-User": "alice",
+        "X-User": "alice@gwdg",
         "Content-Type": "application/json",
     }
     if headers:

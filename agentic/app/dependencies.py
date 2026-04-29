@@ -38,14 +38,37 @@ def get_bearer_token(authorization: Optional[str] = Header(default=None)) -> str
     return parts[1].strip()
 
 
-def get_user_id(x_user: Optional[str] = Header(default=None, alias="X-User")) -> str:
-    """Extract the X-User header set by the Kong auth stack (FR-002)."""
+def get_user_id(
+    request: Request,
+    x_user: Optional[str] = Header(default=None, alias="X-User"),
+) -> str:
+    """Return the X-User identity set by the Kong auth stack (FR-002).
+
+    When the auth middleware is enabled (Task 1.7) it has already
+    validated the format and populated ``request.state.full_user``. We
+    prefer that pre-validated value to avoid re-parsing the header.
+
+    When the middleware is disabled (e.g. in unit tests that target a
+    single dependency in isolation), fall back to the raw header.
+    """
+    pre_validated = getattr(request.state, "full_user", None)
+    if pre_validated:
+        return str(pre_validated)
     if not x_user or not x_user.strip():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing X-User header",
         )
     return x_user.strip()
+
+
+def get_tenant_id(request: Request) -> str:
+    """Tenant slug extracted from X-User by the auth middleware.
+
+    Returns "" when middleware is disabled or the header has no tenant
+    suffix (kept loose so existing tests with bare ``alice`` still work).
+    """
+    return str(getattr(request.state, "tenant_id", "") or "")
 
 
 async def get_slurm_client(

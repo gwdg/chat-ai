@@ -13,7 +13,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.config import Settings, get_settings
 from app.logging_config import configure_logging
+from app.middleware.auth import AuthMiddleware
 from app.routers import health, jobs, secrets, sse
+from app.services.auth import AuthService
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -61,6 +63,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["*"],
         expose_headers=["X-Request-ID"],
     )
+
+    if settings.auth_middleware_enabled:
+        auth_service = AuthService(
+            validate_format=settings.auth_validate_format,
+            session_ttl_s=settings.auth_session_ttl_s,
+            rate_per_user=settings.auth_rate_per_user,
+            rate_window_s=settings.auth_rate_window_s,
+        )
+        app.state.auth_service = auth_service
+        app.add_middleware(
+            AuthMiddleware,
+            auth_service=auth_service,
+            skip_paths=settings.auth_skip_paths,
+        )
 
     @app.middleware("http")
     async def request_logging(request: Request, call_next):

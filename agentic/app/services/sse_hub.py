@@ -60,6 +60,21 @@ class SseRateLimitedError(Exception):
         self.limit = limit
 
 
+class SseOwnershipError(Exception):
+    """Raised when a caller touches an SSE room they do not own."""
+
+    def __init__(
+        self, session_id: str, *, owner: str, requested_by: str
+    ) -> None:
+        super().__init__(
+            f"sse session '{session_id}' is owned by '{owner}', "
+            f"requested by '{requested_by}'"
+        )
+        self.session_id = session_id
+        self.owner = owner
+        self.requested_by = requested_by
+
+
 @dataclass
 class _Room:
     """Per-session shared state."""
@@ -69,6 +84,9 @@ class _Room:
     publishes_window: Deque[float] = field(default_factory=deque)
     last_activity_ts: float = field(default_factory=time.monotonic)
     total_published: int = 0
+    # First user who interacts with this session_id (subscribe or publish)
+    # owns it for the rest of its life. Cross-user access -> 403.
+    owner: Optional[str] = None
 
 
 # Public-facing record passed across the queue. We keep it small and
@@ -122,22 +140,40 @@ class SseHub:
         room = self._rooms.get(session_id)
         return len(room.subscribers) if room else 0
 
+    def session_owner(self, session_id: str) -> Optional[str]:
+        room = self._rooms.get(session_id)
+        return room.owner if room else None
+
+    async def touch_room(
+        self, session_id: str, *, user_id: Optional[str] = None
+    ) -> None:
+        """Pre-create the room and bind ``user_id`` as its owner.
+
+        Raises :class:`SseOwnershipError` if the room already exists and
+        is owned by someone else. Useful for endpoints that need to
+        refuse a request *before* opening a streaming response.
+        """
+        await self._get_or_create_room(session_id, user_id=user_id)
+
     # ----------------------------------------------------------- publish ----
     async def publish(
         self,
         session_id: str,
         request: SsePublishRequest,
+        *,
+        user_id: Optional[str] = None,
     ) -> int:
         """Broadcast ``request`` to every subscriber of ``session_id``.
 
         Returns the number of subscribers that successfully received
         the frame (i.e. whose queue was not full). Raises
         :class:`SseRateLimitedError` when the per-session 1-second
-        window is full.
+        window is full, or :class:`SseOwnershipError` when ``user_id``
+        is supplied and does not match the session owner.
         """
         import json
 
-        room = await self._get_or_create_room(session_id)
+        room = await self._get_or_create_room(session_id, user_id=user_id)
         self._enforce_rate_limit(room)
 
         frame = _Frame(
@@ -174,7 +210,7 @@ class SseHub:
 
     # --------------------------------------------------------- subscribe ----
     async def subscribe(
-        self, session_id: str
+        self, session_id: str, *, user_id: Optional[str] = None
     ) -> AsyncIterator[bytes]:
         """Async generator yielding wire-format SSE bytes for one client.
 
@@ -182,8 +218,12 @@ class SseHub:
         ``GeneratorExit`` / ``CancelledError``) or the hub is closed.
         It interleaves real frames with periodic ``: keepalive`` comments
         so intermediate proxies do not idle-close the connection.
+
+        When ``user_id`` is supplied and does not match the existing
+        session owner, :class:`SseOwnershipError` is raised before any
+        bytes are yielded.
         """
-        room = await self._get_or_create_room(session_id)
+        room = await self._get_or_create_room(session_id, user_id=user_id)
         queue: asyncio.Queue = asyncio.Queue(
             maxsize=self._settings.sse_subscriber_queue_size
         )
@@ -239,12 +279,41 @@ class SseHub:
         return ("\n".join(parts)).encode("utf-8")
 
     # ---------------------------------------------------------- internals ---
-    async def _get_or_create_room(self, session_id: str) -> _Room:
+    async def _get_or_create_room(
+        self, session_id: str, *, user_id: Optional[str] = None
+    ) -> _Room:
         async with self._lock:
             room = self._rooms.get(session_id)
             if room is None:
-                room = _Room(session_id=session_id)
+                room = _Room(session_id=session_id, owner=user_id)
                 self._rooms[session_id] = room
+                if user_id is not None:
+                    log.info(
+                        "sse_room_owned_by",
+                        extra={"session_id": session_id, "owner": user_id},
+                    )
+                return room
+            if user_id is None:
+                return room
+            if room.owner is None:
+                room.owner = user_id
+                log.info(
+                    "sse_room_owned_by",
+                    extra={"session_id": session_id, "owner": user_id},
+                )
+                return room
+            if room.owner != user_id:
+                log.warning(
+                    "sse_room_ownership_violation",
+                    extra={
+                        "session_id": session_id,
+                        "owner": room.owner,
+                        "requested_by": user_id,
+                    },
+                )
+                raise SseOwnershipError(
+                    session_id, owner=room.owner, requested_by=user_id
+                )
             return room
 
     async def _unsubscribe(
