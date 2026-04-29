@@ -65,10 +65,16 @@ def test_submit_success_returns_job_id_and_forwards_bearer():
     captured: Dict = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
-        captured["url"] = str(request.url)
-        captured["auth"] = request.headers.get("authorization")
-        captured["body"] = json.loads(request.content)
-        return httpx.Response(200, json={"job_id": 12345, "errors": [], "warnings": []})
+        if request.url.path.endswith("/job/submit"):
+            captured["url"] = str(request.url)
+            captured["auth"] = request.headers.get("authorization")
+            captured["body"] = json.loads(request.content)
+            return httpx.Response(
+                200, json={"job_id": 12345, "errors": [], "warnings": []}
+            )
+        # Status polls triggered by the background monitor — irrelevant here.
+        return httpx.Response(200, json={"jobs": [{"job_id": 12345,
+                                                       "job_state": ["PENDING"]}]})
 
     app = _build_app(handler)
     resp = _post(app)
@@ -156,19 +162,22 @@ def test_slurm_unreachable_maps_to_503():
 
 
 def test_retries_on_transient_5xx_then_succeeds():
-    calls = {"n": 0}
+    calls = {"submit": 0}
 
     def handler(request: httpx.Request) -> httpx.Response:
-        calls["n"] += 1
-        if calls["n"] < 3:
-            return httpx.Response(502, json={"errors": ["bad gw"]})
-        return httpx.Response(200, json={"job_id": 99})
+        if request.url.path.endswith("/job/submit"):
+            calls["submit"] += 1
+            if calls["submit"] < 3:
+                return httpx.Response(502, json={"errors": ["bad gw"]})
+            return httpx.Response(200, json={"job_id": 99})
+        return httpx.Response(200, json={"jobs": [{"job_id": 99,
+                                                       "job_state": ["PENDING"]}]})
 
     app = _build_app(handler, max_retries=3)
     resp = _post(app)
     assert resp.status_code == 200
     assert resp.json()["job_id"] == "99"
-    assert calls["n"] == 3
+    assert calls["submit"] == 3
 
 
 def test_application_level_errors_in_200_body_map_to_400():

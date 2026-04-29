@@ -18,12 +18,18 @@ import asyncio
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Dict, Mapping, Optional
 
 import httpx
 
 from app.config import Settings
-from app.models.job import JobSubmissionRequest
+from app.models.job import (
+    JobState,
+    JobStatusResponse,
+    JobSubmissionRequest,
+    map_slurm_state,
+)
 
 log = logging.getLogger("agentic.slurm")
 
@@ -54,6 +60,10 @@ class SlurmUnavailableError(SlurmError):
     http_status = 503
 
 
+class SlurmNotFoundError(SlurmError):
+    http_status = 404
+
+
 @dataclass
 class SubmitResult:
     job_id: str
@@ -73,6 +83,7 @@ class SlurmClient:
             timeout=httpx.Timeout(settings.slurm_request_timeout_s),
         )
         self._owns_client = http_client is None
+        self._mock_status_bucket: Dict[str, int] = {}
 
     async def aclose(self) -> None:
         if self._owns_client:
@@ -92,6 +103,7 @@ class SlurmClient:
         """
         if self._settings.slurm_mock_mode:
             mock_id = f"mock-{uuid.uuid4().hex[:12]}"
+            self._mock_status_bucket[mock_id] = 0  # mark id as known
             log.info(
                 "slurm_submit_mock",
                 extra={"session_id": req.session_id, "job_id": mock_id},
@@ -141,7 +153,103 @@ class SlurmClient:
             )
         return SubmitResult(job_id=str(job_id))
 
+    # ------------------------------------------------------------------ status
+    async def get_job_status(
+        self,
+        job_id: str,
+        *,
+        bearer_token: str,
+    ) -> JobStatusResponse:
+        """Fetch the current status of a Slurm job.
+
+        Mock mode walks a deterministic state machine
+        (``queued`` → ``running`` → ``succeeded``) so the broker can be
+        exercised on a developer VM with no Slurm running.
+        """
+        if self._settings.slurm_mock_mode:
+            return self._mock_status(job_id)
+
+        url = f"/slurm/{self._settings.slurm_api_version}/job/{job_id}"
+        headers = {
+            "Authorization": f"Bearer {bearer_token}",
+            "Accept": "application/json",
+        }
+
+        response = await self._send_with_retries("GET", url, headers, payload=None)
+        body = self._safe_json(response)
+        self._raise_for_status(response, body)
+
+        return self._parse_status(job_id, body)
+
     # ------------------------------------------------------------- internals
+    def _mock_status(self, job_id: str) -> JobStatusResponse:
+        """Cycle a fake job through queued/running/succeeded based on call count.
+
+        Unknown IDs raise ``SlurmNotFoundError`` so the broker can faithfully
+        return 404 in mock mode (matching real slurmrestd behaviour).
+        """
+        bucket = self._mock_status_bucket
+        if job_id not in bucket:
+            raise SlurmNotFoundError(f"unknown mock job {job_id}")
+        n = bucket[job_id]
+        bucket[job_id] = n + 1
+        if n == 0:
+            return JobStatusResponse(job_id=job_id, status=JobState.QUEUED)
+        if n == 1:
+            return JobStatusResponse(
+                job_id=job_id,
+                status=JobState.RUNNING,
+                start_time=_now_iso(),
+            )
+        return JobStatusResponse(
+            job_id=job_id,
+            status=JobState.SUCCEEDED,
+            start_time=_now_iso(),
+            end_time=_now_iso(),
+            exit_code=0,
+        )
+
+    @staticmethod
+    def _parse_status(job_id: str, body: Any) -> JobStatusResponse:
+        if not isinstance(body, dict):
+            raise SlurmError("slurmrestd returned non-object body", detail=body)
+
+        # slurmrestd returns {"jobs": [ {...} ]} for /job/{id}
+        jobs = body.get("jobs")
+        if isinstance(jobs, list) and jobs:
+            job = jobs[0]
+        elif isinstance(body.get("job"), dict):
+            job = body["job"]
+        else:
+            raise SlurmNotFoundError("no job in response", detail=body)
+
+        # job_state can be a string or a list of strings, depending on version.
+        raw_state = job.get("job_state")
+        if isinstance(raw_state, list):
+            raw_state = raw_state[0] if raw_state else None
+        state = map_slurm_state(raw_state)
+
+        exit_code = None
+        ec = job.get("exit_code")
+        if isinstance(ec, dict):
+            # slurmrestd v0.0.40: {"status": ["SUCCESS"],
+            # "return_code": {"set": true, "number": 0}}
+            rc = ec.get("return_code")
+            if isinstance(rc, dict):
+                if rc.get("set"):
+                    exit_code = rc.get("number")
+            elif isinstance(rc, int):
+                exit_code = rc
+        elif isinstance(ec, int):
+            exit_code = ec
+
+        return JobStatusResponse(
+            job_id=job_id,
+            status=state,
+            start_time=_epoch_to_iso(job.get("start_time")),
+            end_time=_epoch_to_iso(job.get("end_time")),
+            exit_code=exit_code,
+        )
     def _build_payload(self, req: JobSubmissionRequest) -> Dict[str, Any]:
         s = self._settings
         env_map: Dict[str, str] = {
@@ -177,16 +285,17 @@ class SlurmClient:
         method: str,
         url: str,
         headers: Mapping[str, str],
-        payload: Mapping[str, Any],
+        payload: Optional[Mapping[str, Any]] = None,
     ) -> httpx.Response:
         s = self._settings
         attempt = 0
         last_exc: Optional[Exception] = None
         while attempt <= s.slurm_max_retries:
             try:
-                response = await self._client.request(
-                    method, url, headers=headers, json=payload
-                )
+                kwargs: Dict[str, Any] = {"headers": headers}
+                if payload is not None:
+                    kwargs["json"] = payload
+                response = await self._client.request(method, url, **kwargs)
             except (httpx.TimeoutException, httpx.TransportError) as exc:
                 last_exc = exc
                 if attempt == s.slurm_max_retries:
@@ -237,7 +346,7 @@ class SlurmClient:
         if sc == 400 or sc == 422:
             raise SlurmBadRequestError("invalid request", detail=body)
         if sc == 404:
-            raise SlurmBadRequestError("slurm endpoint not found", detail=body)
+            raise SlurmNotFoundError("not found", detail=body)
         if 500 <= sc < 600:
             raise SlurmUnavailableError("slurm service unavailable", detail=body)
         raise SlurmError(f"unexpected slurm status {sc}", detail=body)
@@ -254,3 +363,31 @@ class SlurmClient:
         if isinstance(result, dict) and result.get("job_id") is not None:
             return result["job_id"]
         return None
+
+
+# Module-level helpers --------------------------------------------------------
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _epoch_to_iso(value: Any) -> Optional[str]:
+    """Best-effort convert slurm epoch / dict timestamps to ISO-8601.
+
+    slurmrestd timestamps come as ``{"set": true, "number": 1714000000}`` in
+    newer versions, or just an integer, or ``0`` when unset.
+    """
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        if not value.get("set"):
+            return None
+        value = value.get("number")
+    try:
+        epoch = int(value)
+    except (TypeError, ValueError):
+        return None
+    if epoch <= 0:
+        return None
+    return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()

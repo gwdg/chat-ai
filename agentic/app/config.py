@@ -50,6 +50,16 @@ class Settings(BaseSettings):
         ge=0,
         description="Base backoff for exponential retry (0.5, 1, 2, ...).",
     )
+    slurm_status_poll_interval_s: float = Field(
+        default=2.0,
+        gt=0,
+        description="How often the background monitor refreshes job status.",
+    )
+    slurm_status_cache_ttl_s: float = Field(
+        default=1.0,
+        ge=0,
+        description="Age threshold for serving GET /api/jobs/{id}/status from cache.",
+    )
     # If true, return mock job ids without calling slurmrestd. Useful for VM
     # development before HPC integration is available.
     slurm_mock_mode: bool = Field(default=False)

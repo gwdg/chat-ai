@@ -32,6 +32,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             },
         )
         yield
+        monitor = getattr(app.state, "job_monitor", None)
+        if monitor is not None:
+            await monitor.aclose()
         client = getattr(app.state, "slurm_client", None)
         if client is not None:
             await client.aclose()

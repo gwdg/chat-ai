@@ -12,6 +12,7 @@ from fastapi import Depends, Header, HTTPException, Request, status
 
 from app.clients.slurm import SlurmClient
 from app.config import Settings, get_settings
+from app.services.job_monitor import JobMonitor
 
 
 def get_bearer_token(authorization: Optional[str] = Header(default=None)) -> str:
@@ -59,3 +60,16 @@ async def get_slurm_client(
         client = SlurmClient(settings)
         request.app.state.slurm_client = client
     return client
+
+
+async def get_job_monitor(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    slurm: SlurmClient = Depends(get_slurm_client),
+) -> JobMonitor:
+    """Return the app-scoped JobMonitor, creating it lazily on first use."""
+    monitor: Optional[JobMonitor] = getattr(request.app.state, "job_monitor", None)
+    if monitor is None:
+        monitor = JobMonitor(settings, slurm)
+        request.app.state.job_monitor = monitor
+    return monitor
