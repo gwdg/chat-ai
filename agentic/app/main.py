@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.config import Settings, get_settings
 from app.logging_config import configure_logging
-from app.routers import health
+from app.routers import health, jobs
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -25,9 +25,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         log.info(
             "agentic broker starting",
-            extra={"environment": settings.environment, "version": __version__},
+            extra={
+                "environment": settings.environment,
+                "version": __version__,
+                "slurm_mock_mode": settings.slurm_mock_mode,
+            },
         )
         yield
+        client = getattr(app.state, "slurm_client", None)
+        if client is not None:
+            await client.aclose()
         log.info("agentic broker stopping")
 
     app = FastAPI(
@@ -67,6 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return response
 
     app.include_router(health.router)
+    app.include_router(jobs.router)
     return app
 
 

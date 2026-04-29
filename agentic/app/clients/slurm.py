@@ -1,0 +1,256 @@
+"""Async Slurm REST API client (slurmrestd).
+
+Design goals:
+
+* Pluggable via FastAPI dependency injection so tests can inject either an
+  ``httpx.MockTransport`` or a fully fake client.
+* Strict error taxonomy so the HTTP router can map upstream failures to the
+  4xx/5xx codes required by Task 1.2 (401, 403, 400, 503, 502).
+* Mock mode (``settings.slurm_mock_mode=True``) returns a synthetic job id
+  without reaching the network. This lets the broker run end-to-end on a
+  developer VM with no Slurm installed, satisfying the "test without HPC"
+  workflow.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import uuid
+from dataclasses import dataclass
+from typing import Any, Dict, Mapping, Optional
+
+import httpx
+
+from app.config import Settings
+from app.models.job import JobSubmissionRequest
+
+log = logging.getLogger("agentic.slurm")
+
+
+class SlurmError(Exception):
+    """Base class for Slurm client errors mapped to HTTP responses."""
+
+    http_status: int = 502
+
+    def __init__(self, message: str, *, detail: Any = None) -> None:
+        super().__init__(message)
+        self.detail = detail
+
+
+class SlurmAuthError(SlurmError):
+    http_status = 401
+
+
+class SlurmForbiddenError(SlurmError):
+    http_status = 403
+
+
+class SlurmBadRequestError(SlurmError):
+    http_status = 400
+
+
+class SlurmUnavailableError(SlurmError):
+    http_status = 503
+
+
+@dataclass
+class SubmitResult:
+    job_id: str
+
+
+class SlurmClient:
+    """Thin async wrapper around the slurmrestd job-submit endpoint."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        http_client: Optional[httpx.AsyncClient] = None,
+    ) -> None:
+        self._settings = settings
+        self._client = http_client or httpx.AsyncClient(
+            base_url=settings.slurm_base_url,
+            timeout=httpx.Timeout(settings.slurm_request_timeout_s),
+        )
+        self._owns_client = http_client is None
+
+    async def aclose(self) -> None:
+        if self._owns_client:
+            await self._client.aclose()
+
+    # ------------------------------------------------------------------ submit
+    async def submit_job(
+        self,
+        req: JobSubmissionRequest,
+        *,
+        bearer_token: str,
+    ) -> SubmitResult:
+        """Submit a job to slurmrestd and return the job id.
+
+        Raises one of the ``SlurmError`` subclasses on failure; the router
+        translates these to the corresponding HTTP status.
+        """
+        if self._settings.slurm_mock_mode:
+            mock_id = f"mock-{uuid.uuid4().hex[:12]}"
+            log.info(
+                "slurm_submit_mock",
+                extra={"session_id": req.session_id, "job_id": mock_id},
+            )
+            return SubmitResult(job_id=mock_id)
+
+        payload = self._build_payload(req)
+        url = f"/slurm/{self._settings.slurm_api_version}/job/submit"
+        headers = {
+            "Authorization": f"Bearer {bearer_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        log.info(
+            "slurm_submit_request",
+            extra={
+                "url": url,
+                "session_id": req.session_id,
+                "partition": payload["job"]["partition"],
+                "time_limit_minutes": payload["job"]["time_limit"],
+                "memory_mb": payload["job"]["memory_per_node"],
+                "cpus": payload["job"]["cpus_per_task"],
+                "container": payload["job"]["container"],
+            },
+        )
+
+        response = await self._send_with_retries("POST", url, headers, payload)
+        body = self._safe_json(response)
+
+        log.info(
+            "slurm_submit_response",
+            extra={
+                "status_code": response.status_code,
+                "session_id": req.session_id,
+                "errors": body.get("errors") if isinstance(body, dict) else None,
+                "warnings": body.get("warnings") if isinstance(body, dict) else None,
+            },
+        )
+
+        self._raise_for_status(response, body)
+
+        job_id = self._extract_job_id(body)
+        if job_id is None:
+            raise SlurmError(
+                "slurmrestd response missing job_id", detail=body
+            )
+        return SubmitResult(job_id=str(job_id))
+
+    # ------------------------------------------------------------- internals
+    def _build_payload(self, req: JobSubmissionRequest) -> Dict[str, Any]:
+        s = self._settings
+        env_map: Dict[str, str] = {
+            # Force agent egress through the GWDG WWW-Cache proxy (FR-007).
+            "HTTP_PROXY": "http://www-cache.gwdg.de:3128",
+            "HTTPS_PROXY": "http://www-cache.gwdg.de:3128",
+            "NO_PROXY": "localhost,127.0.0.1",
+        }
+        env_map.update(req.environment or {})
+        # slurmrestd expects a list of "KEY=VALUE" strings.
+        environment = [f"{k}={v}" for k, v in env_map.items()]
+
+        job: Dict[str, Any] = {
+            "name": f"agentic-{req.session_id}",
+            "partition": req.partition or s.slurm_default_partition,
+            "time_limit": req.time_limit_minutes or s.slurm_default_time_limit_minutes,
+            "memory_per_node": req.memory_mb or s.slurm_default_memory_mb,
+            "cpus_per_task": req.cpus or s.slurm_default_cpus,
+            "container": req.container_image,
+            "environment": environment,
+            "standard_output": "/dev/null",
+            "standard_error": "/dev/null",
+        }
+        if req.working_directory:
+            job["current_working_directory"] = req.working_directory
+
+        # slurmrestd requires `script` even when running a container. The
+        # container runtime ignores it; we include a no-op for compatibility.
+        return {"job": job, "script": "#!/bin/bash\nexec sleep infinity\n"}
+
+    async def _send_with_retries(
+        self,
+        method: str,
+        url: str,
+        headers: Mapping[str, str],
+        payload: Mapping[str, Any],
+    ) -> httpx.Response:
+        s = self._settings
+        attempt = 0
+        last_exc: Optional[Exception] = None
+        while attempt <= s.slurm_max_retries:
+            try:
+                response = await self._client.request(
+                    method, url, headers=headers, json=payload
+                )
+            except (httpx.TimeoutException, httpx.TransportError) as exc:
+                last_exc = exc
+                if attempt == s.slurm_max_retries:
+                    raise SlurmUnavailableError(
+                        f"slurmrestd unreachable: {exc!s}"
+                    ) from exc
+                await asyncio.sleep(s.slurm_retry_backoff_s * (2 ** attempt))
+                attempt += 1
+                continue
+
+            # Retry transient 5xx but never 4xx; 5xx is mapped to "unavailable".
+            if 500 <= response.status_code < 600 and attempt < s.slurm_max_retries:
+                log.warning(
+                    "slurm_transient_5xx",
+                    extra={"status_code": response.status_code, "attempt": attempt},
+                )
+                await asyncio.sleep(s.slurm_retry_backoff_s * (2 ** attempt))
+                attempt += 1
+                continue
+
+            return response
+
+        # Should be unreachable, but be defensive.
+        assert last_exc is not None
+        raise SlurmUnavailableError(str(last_exc)) from last_exc
+
+    @staticmethod
+    def _safe_json(response: httpx.Response) -> Any:
+        try:
+            return response.json()
+        except ValueError:
+            return {"raw": response.text}
+
+    @staticmethod
+    def _raise_for_status(response: httpx.Response, body: Any) -> None:
+        sc = response.status_code
+        if sc < 400:
+            # Even 200 can carry application-level errors in body["errors"].
+            if isinstance(body, dict) and body.get("errors"):
+                raise SlurmBadRequestError(
+                    "slurmrestd reported errors", detail=body["errors"]
+                )
+            return
+        if sc == 401:
+            raise SlurmAuthError("authentication failed", detail=body)
+        if sc == 403:
+            raise SlurmForbiddenError("authorization failed", detail=body)
+        if sc == 400 or sc == 422:
+            raise SlurmBadRequestError("invalid request", detail=body)
+        if sc == 404:
+            raise SlurmBadRequestError("slurm endpoint not found", detail=body)
+        if 500 <= sc < 600:
+            raise SlurmUnavailableError("slurm service unavailable", detail=body)
+        raise SlurmError(f"unexpected slurm status {sc}", detail=body)
+
+    @staticmethod
+    def _extract_job_id(body: Any) -> Optional[Any]:
+        if not isinstance(body, dict):
+            return None
+        # slurmrestd 0.0.40+: top-level "job_id"
+        if "job_id" in body and body["job_id"] is not None:
+            return body["job_id"]
+        # Older variants: {"result": {"job_id": ...}}
+        result = body.get("result")
+        if isinstance(result, dict) and result.get("job_id") is not None:
+            return result["job_id"]
+        return None

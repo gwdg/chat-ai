@@ -32,6 +32,9 @@ services:
       - AGENTIC_HOST=0.0.0.0
       - AGENTIC_PORT=8001
       - AGENTIC_CORS_ALLOW_ORIGINS=http://localhost:3000,http://localhost:5173
+      # Switch to false (and set AGENTIC_SLURM_BASE_URL) once running on HPC.
+      - AGENTIC_SLURM_MOCK_MODE=true
+      - AGENTIC_SLURM_BASE_URL=http://localhost:6820
     restart: on-failure
 
 secrets:

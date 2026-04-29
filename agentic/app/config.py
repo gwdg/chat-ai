@@ -33,6 +33,27 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"]
     )
 
+    # --- Slurm ---------------------------------------------------------------
+    slurm_base_url: str = Field(
+        default="http://localhost:6820",
+        description="Base URL of slurmrestd, e.g. http://slurmrestd.gwdg.de:6820",
+    )
+    slurm_api_version: str = Field(default="v0.0.40")
+    slurm_default_partition: str = Field(default="grete:interactive")
+    slurm_default_time_limit_minutes: int = Field(default=30, ge=1, le=24 * 60)
+    slurm_default_memory_mb: int = Field(default=16 * 1024, ge=128)
+    slurm_default_cpus: int = Field(default=4, ge=1, le=256)
+    slurm_request_timeout_s: float = Field(default=30.0, gt=0)
+    slurm_max_retries: int = Field(default=3, ge=0, le=10)
+    slurm_retry_backoff_s: float = Field(
+        default=0.5,
+        ge=0,
+        description="Base backoff for exponential retry (0.5, 1, 2, ...).",
+    )
+    # If true, return mock job ids without calling slurmrestd. Useful for VM
+    # development before HPC integration is available.
+    slurm_mock_mode: bool = Field(default=False)
+
     @field_validator("cors_allow_origins", mode="before")
     @classmethod
     def _split_csv(cls, v):
