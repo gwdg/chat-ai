@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import __version__
 from app.config import Settings, get_settings
 from app.logging_config import configure_logging
-from app.routers import health, jobs
+from app.routers import health, jobs, secrets
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -38,6 +38,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         client = getattr(app.state, "slurm_client", None)
         if client is not None:
             await client.aclose()
+        vault = getattr(app.state, "vault_client", None)
+        if vault is not None:
+            await vault.aclose()
         log.info("agentic broker stopping")
 
     app = FastAPI(
@@ -78,6 +81,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(jobs.router)
+    app.include_router(secrets.router)
     return app
 
 

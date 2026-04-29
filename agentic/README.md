@@ -12,8 +12,11 @@ This package currently implements:
   poller, simplified state vocabulary, 1s cache)
 - **Task 1.4**: Slurm Job Cancellation (`DELETE /api/jobs/{job_id}`, ownership
   check, grace period, structured cancel reason)
+- **Task 1.5**: Vault Secret Retrieval (`GET /api/secrets/{secret_type}`,
+  mock-mode supported, async KV-v2 client, in-process TTL cache,
+  410 Gone for expired leases)
 
-Subsequent tasks add Vault and SSE streaming endpoints.
+Subsequent tasks add SSE streaming and X-User auth middleware.
 
 ## Layout
 
@@ -98,6 +101,16 @@ All settings are loaded from environment variables prefixed with
 | `AGENTIC_SLURM_STATUS_CACHE_TTL_S` | `1.0` | How long a status read is served from cache before re-fetching |
 | `AGENTIC_SLURM_CANCEL_GRACE_PERIOD_S` | `5.0` | If a queued job is younger than this, wait for it to start before issuing scancel. |
 | `AGENTIC_SLURM_MOCK_MODE` | `false` | Return synthetic `mock-…` job ids without contacting Slurm. **Use this on a dev VM with no HPC access.** Walks status through `queued → running → succeeded` (or stays `cancelled` after a DELETE). |
+| `AGENTIC_VAULT_BASE_URL` | `http://localhost:8200` | Vault HTTP API base URL |
+| `AGENTIC_VAULT_TOKEN` | *(unset)* | Static token used by the broker. In production, populate from AppRole / Kubernetes auth at boot. |
+| `AGENTIC_VAULT_NAMESPACE` | *(unset)* | Optional Vault Enterprise namespace |
+| `AGENTIC_VAULT_KV_MOUNT` | `kv` | KV-v2 mount path |
+| `AGENTIC_VAULT_PATH_TEMPLATE` | `users/{user_id}/secrets/{secret_type}` | Secret path template. Available substitutions: `{user_id}`, `{tenant_id}`, `{secret_type}`. `tenant_id` is the part of `X-User` after `@` (empty if no `@`). |
+| `AGENTIC_VAULT_REQUEST_TIMEOUT_S` | `10` | Per-call HTTP timeout |
+| `AGENTIC_VAULT_MAX_RETRIES` | `2` | Retries on transport / 5xx |
+| `AGENTIC_VAULT_RETRY_BACKOFF_S` | `0.25` | Exponential backoff base |
+| `AGENTIC_VAULT_CACHE_TTL_S` | `60` | In-process cache TTL per `(user_id, secret_type)` entry |
+| `AGENTIC_VAULT_MOCK_MODE` | `false` | Return synthetic secrets without contacting Vault. Sentinel users `expired@…` → 410, `missing@…` → 404. |
 
 In production, set `AGENTIC_ENVIRONMENT=production` and explicitly pin
 `AGENTIC_CORS_ALLOW_ORIGINS` to the deployed Node.js backend origin.
@@ -223,6 +236,42 @@ cleanly before issuing the cancel.
 | 422 | invalid `reason` |
 | 502 | slurmrestd error |
 
+### `GET /api/secrets/{secret_type}`
+
+Reads a short-lived credential for the authenticated caller from Vault.
+Allowed `secret_type` values: `search_api_key`, `github_pat`,
+`oidc_token`. Anything else is rejected with `422`.
+
+**Headers**: `X-User: <username>` (Bearer token is **not** required —
+the broker uses its own configured Vault token).
+
+**Response** (`200 OK`):
+
+```json
+{
+  "secret_type": "search_api_key",
+  "value": "<credential>",
+  "expires_at": "2026-04-28T17:00:00+00:00"
+}
+```
+
+`expires_at` is `null` when Vault did not advertise a TTL.
+
+**Errors**
+
+| Status | When |
+|---|---|
+| 401 | missing `X-User` |
+| 404 | secret not found in Vault |
+| 410 | secret found but its lease is in the past |
+| 422 | unknown `secret_type` |
+| 502 | Vault unavailable, auth misconfigured, or other Vault error |
+
+The secret value is **never** logged. Only structured presence /
+absence / TTL fields are emitted. Repeated reads are served from a
+60-second in-process TTL cache (configurable via
+`AGENTIC_VAULT_CACHE_TTL_S`).
+
 ### Local end-to-end test without HPC
 
 ```bash
@@ -307,8 +356,6 @@ The test suite covers Tasks 1.1, 1.2, and 1.3 acceptance criteria:
 | 1.2 Slurm Job Submission | done (mock-mode supported) |
 | 1.3 Slurm Job Monitoring | done (mock-mode walks state machine) |
 | 1.4 Slurm Job Cancellation | done (ownership + grace period) |
-| 1.5 Vault Secret Retrieval | next |
-| 1.4 Slurm Job Cancellation | pending |
-| 1.5 Vault Secret Retrieval | pending |
-| 1.6 SSE Streaming | pending |
+| 1.5 Vault Secret Retrieval | done (mock-mode, KV-v2, 60s TTL cache) |
+| 1.6 SSE Streaming | next |
 | 1.7 X-User Auth Middleware | pending |

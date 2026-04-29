@@ -70,6 +70,46 @@ class Settings(BaseSettings):
     # development before HPC integration is available.
     slurm_mock_mode: bool = Field(default=False)
 
+    # --- Vault ---------------------------------------------------------------
+    vault_base_url: str = Field(
+        default="http://localhost:8200",
+        description="Base URL of the HashiCorp Vault HTTP API.",
+    )
+    vault_token: str = Field(
+        default="",
+        description="Static Vault token used by the broker. In production "
+        "this comes from AppRole / Kubernetes auth at boot time; here we "
+        "allow a static value for dev simplicity.",
+    )
+    vault_namespace: str = Field(
+        default="",
+        description="Optional Vault Enterprise namespace (X-Vault-Namespace).",
+    )
+    vault_kv_mount: str = Field(
+        default="kv",
+        description="Mount path of the KV-v2 engine. Used to build "
+        "/v1/<mount>/data/<path> URLs.",
+    )
+    vault_path_template: str = Field(
+        default="users/{user_id}/secrets/{secret_type}",
+        description="Pattern of secret paths inside the KV mount. "
+        "Available substitutions: {user_id}, {secret_type}, {tenant_id}. "
+        "If the X-User header carries a tenant suffix (`alice@gwdg`), "
+        "tenant_id is the part after `@`; otherwise it's empty.",
+    )
+    vault_request_timeout_s: float = Field(default=10.0, gt=0)
+    vault_max_retries: int = Field(default=2, ge=0, le=10)
+    vault_retry_backoff_s: float = Field(default=0.25, ge=0)
+    vault_cache_ttl_s: float = Field(
+        default=60.0,
+        ge=0,
+        description="In-process cache TTL per (user_id, secret_type) entry. "
+        "Reduces Vault QPS by >90% under typical agent workloads.",
+    )
+    # If true, return synthetic secrets without contacting Vault. Useful
+    # for VM-only dev before Vault integration is wired up.
+    vault_mock_mode: bool = Field(default=False)
+
     @field_validator("cors_allow_origins", mode="before")
     @classmethod
     def _split_csv(cls, v):

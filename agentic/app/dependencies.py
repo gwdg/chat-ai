@@ -11,8 +11,10 @@ from typing import Optional
 from fastapi import Depends, Header, HTTPException, Request, status
 
 from app.clients.slurm import SlurmClient
+from app.clients.vault import VaultClient
 from app.config import Settings, get_settings
 from app.services.job_monitor import JobMonitor
+from app.services.secret_cache import SecretCache
 
 
 def get_bearer_token(authorization: Optional[str] = Header(default=None)) -> str:
@@ -73,3 +75,32 @@ async def get_job_monitor(
         monitor = JobMonitor(settings, slurm)
         request.app.state.job_monitor = monitor
     return monitor
+
+
+async def get_vault_client(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+) -> VaultClient:
+    """Return the app-scoped VaultClient, creating it lazily on first use.
+
+    Tests inject their own client by setting ``app.state.vault_client``
+    before calling the API (mirroring the slurm client pattern).
+    """
+    client: Optional[VaultClient] = getattr(request.app.state, "vault_client", None)
+    if client is None:
+        client = VaultClient(settings)
+        request.app.state.vault_client = client
+    return client
+
+
+async def get_secret_cache(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    vault: VaultClient = Depends(get_vault_client),
+) -> SecretCache:
+    """Return the app-scoped SecretCache, creating it lazily on first use."""
+    cache: Optional[SecretCache] = getattr(request.app.state, "secret_cache", None)
+    if cache is None:
+        cache = SecretCache(settings, vault)
+        request.app.state.secret_cache = cache
+    return cache

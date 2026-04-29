@@ -35,6 +35,9 @@ services:
       # Switch to false (and set AGENTIC_SLURM_BASE_URL) once running on HPC.
       - AGENTIC_SLURM_MOCK_MODE=true
       - AGENTIC_SLURM_BASE_URL=http://localhost:6820
+      # Switch to false (and set AGENTIC_VAULT_TOKEN) once Vault is wired up.
+      - AGENTIC_VAULT_MOCK_MODE=true
+      - AGENTIC_VAULT_BASE_URL=http://localhost:8200
     restart: on-failure
 
 secrets:
