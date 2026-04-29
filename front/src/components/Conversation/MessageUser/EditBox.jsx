@@ -58,6 +58,13 @@ export default function EditBox({
     });
   };
 
+  useEffect(() => {
+    if (editBox.current) {
+      editBox.current.style.height = `${MIN_HEIGHT}px`; // reset first
+      editBox.current.style.height = `${Math.min(editBox.current.scrollHeight, MAX_HEIGHT)}px`;
+    }
+  }, []);
+
   return (
     <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-2.5 flex flex-col gap-1.5">
       <textarea
@@ -65,6 +72,7 @@ export default function EditBox({
         className="p-1.5 outline-none text-sm rounded-xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-y-auto"
         defaultValue={message.content[0]?.text}
         style={{
+          resize: `vertical`,
           minHeight: `${MIN_HEIGHT}px`,
           maxHeight: `${MAX_HEIGHT}px`,
         }}

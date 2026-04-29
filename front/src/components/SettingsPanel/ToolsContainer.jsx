@@ -58,11 +58,15 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const { openModal } = useModal();
   const dispatch = useDispatch();
   const agreedWebSearch = useSelector(selectAgreeWebSearch);
-  const labelLang = i18n?.resolvedLanguage || i18n?.language || "en";
-
+  
   const settings = localState?.settings || {};
+  const modelName = settings?.model?.name;
+  const isExternalModel =
+    typeof modelName === "string" &&
+    modelName.toLowerCase().includes("external");
+
   const toolsState = settings.tools || {};
-  const toolsEnabled = !!settings.enable_tools;
+  const toolsEnabled = !!settings.enable_tools && !isExternalModel;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
@@ -170,6 +174,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
                 flush: true,
               }))
             }
+            disabled={isExternalModel}
             className={[
               "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer",
               toolsEnabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600",

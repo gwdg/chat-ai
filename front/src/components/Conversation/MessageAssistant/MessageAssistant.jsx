@@ -12,6 +12,7 @@ import { createConversation, newId, saveFile, loadFile } from "../../../db";
 import { useToast } from "../../../hooks/useToast";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
+import SpeakButton from "./SpeakButton";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -457,6 +458,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   )}
                   <EditButton setEditMode={setEditMode} />
                   <ForkButton handleForkConversation={handleForkConversation} />
+                  <SpeakButton message={message} />
                   <CopyButton message={message} />
                 </div>
               </div>

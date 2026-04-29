@@ -128,11 +128,18 @@ app.post("/documents", async (req, res) => {
 app.get("/models", async (req, res) => {
   try {
     const url = apiEndpoint + "/models";
+    const inference_id = req.headers["inference-id"];
     const headers = {
       Accept: "application/json",
       Authorization: "Bearer " + apiKey,
-      "inference-portal": "Chat AI",
+      "inference-portal": serviceName,
     };
+    if (apiKey) {
+      headers.Authorization = "Bearer " + apiKey;
+    } else {
+      // Only add inference-id header if apiKey is empty or non-existent
+      headers.Authorization = "Bearer " + inference_id;
+    }
     const response = await fetch(url, { method: "GET", headers });
     res.status(200).json(await response.json());
   } catch (error) {
@@ -154,7 +161,43 @@ app.get("/user", async (req, res) => {
     });
   } catch (error) {
     console.error(`Error: ${error}`);
-    res.status(500).json({ error: "Failed to fetch models." });
+    res.status(500).json({ error: "Failed to fetch user info." });
+  }
+});
+
+// Speech generation endpoint
+app.post("/audio/speech", async (req, res) => {
+  // Simply forward the request and return response
+  try {
+    const url = apiEndpoint + "/audio/speech";
+    const inference_id = req.headers["inference-id"];
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + apiKey,
+      "inference-portal": serviceName,
+    };
+    if (apiKey) {
+      headers.Authorization = "Bearer " + apiKey;
+    } else {
+      // Only add inference-id header if apiKey is empty or non-existent
+      headers.Authorization = "Bearer " + inference_id;
+    }
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(req.body),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Speech generation failed:", response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.status(200).send(Buffer.from(arrayBuffer));
+  } catch (error) {
+    console.error("Error in speech generation endpoint:", error);
+    res.status(500).json({ error: "Failed to generate speech." });
   }
 });
 
@@ -210,7 +253,7 @@ app.post("/chat/completions", async (req, res) => {
       timeout: timeout,
     }
 
-    const isExternalModel = model.startsWith("openai-") && !model.startsWith("openai-gpt-oss");
+    const isExternalModel = (model.startsWith("openai-") && !model.startsWith("openai-gpt-oss")) || model.startsWith("claude");
     inference_service = model;
 
     if (arcana && arcana.id !== "") {

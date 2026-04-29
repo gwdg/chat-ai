@@ -588,7 +588,7 @@ const MarkdownRenderer = memo(
       // Find the start of the "References:" line itself
       const afterDashes = main.slice(splitIndex);
       const refsHeaderIdx = afterDashes.search(/\n\s*References\s*:\s*\n/i);
-      if (refsHeaderIdx === -1) return { mai, refs: "" };
+      if (refsHeaderIdx === -1) return { main, refs: "" };
 
       const processedMain = main.slice(0, splitIndex).trim();
       const refs = afterDashes.slice(refsHeaderIdx + 1).trim(); // start from "References:" line
