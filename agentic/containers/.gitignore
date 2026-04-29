@@ -1,0 +1,11 @@
+# Apptainer build artifacts (binaries — live in the GWDG registry, not git)
+*.sif
+*.sif.meta.json
+*.sif.log
+
+# Sandbox builds (writable directories produced by `apptainer build --sandbox`)
+build/
+sandbox-build/
+
+# Build logs
+*.log

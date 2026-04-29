@@ -437,4 +437,27 @@ The test suite covers Tasks 1.1, 1.2, and 1.3 acceptance criteria:
 | 1.4 Slurm Job Cancellation | done (ownership + grace period) |
 | 1.5 Vault Secret Retrieval | done (mock-mode, KV-v2, 60s TTL cache) |
 | 1.6 SSE Streaming | done (broadcast, heartbeat, 100 msg/s rate limit, idle reaper) |
-| 1.7 X-User Auth Middleware | next |
+| 1.7 X-User Auth Middleware | done (format validation, session idle TTL, 10 req/s sliding-window, cross-user 403) |
+| 2.1 Base Apptainer Image | done (recipe + build script + structural tests; .sif build deferred to operator) |
+| 2.2 MCP Server Implementation | next |
+| 2.3 OpenHands Agent Packaging | todo |
+| 2.4 Inner Sandbox (nsjail/bubblewrap) | todo |
+| 2.5 Network Filtering | todo |
+| 2.6 vLLM Integration | todo |
+
+## Phase 2: Container & Sandbox Infrastructure
+
+The Apptainer recipes for the per-session agent runtimes live under
+[`containers/`](containers/). Each agent framework (OpenHands, Goose,
+…) is a derived image that bootstraps from
+[`containers/base/base.sif`](containers/base/) (Task 2.1, ✅) via
+`Bootstrap: localimage`. The base ships Python 3.11, Node 20, Google
+Chrome stable, and the headless-browser runtime libs.
+
+The build is deferred to whoever has cluster / build-host access (the
+dev VM has no `apptainer` binary). The **recipe** is tested here via
+`tests/test_apptainer_base.py` (static parsing — required sections,
+package set, mount-point setup, `%runscript --help` exit 0, no proxy
+hardcode). The **built image** is tested by
+`containers/base/test_image.sh`, which the cluster operator runs on a
+host with apptainer + the resulting `.sif`.

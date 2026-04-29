@@ -1,0 +1,221 @@
+Bootstrap: docker
+From: ubuntu:22.04
+Stage: build
+
+# ---------------------------------------------------------------------------
+# chat-ai base agent image (Task 2.1, feature 001-agentic-layer).
+#
+# This is the foundation image for all agent runtimes (OpenHands, Goose,
+# smolagents, sst/opencode). Derived images bootstrap FROM this one via
+# `Bootstrap: localimage` and add framework-specific code on top.
+#
+# What's installed:
+#   - Python 3.11 (deadsnakes PPA; symlinked at /usr/local/bin/python3)
+#   - Node.js 20 LTS (NodeSource)
+#   - Google Chrome stable (clean .deb, not snap-shimmed chromium-browser)
+#   - jq, git, curl, wget, gnupg, ca-certificates, tini, xz-utils
+#   - Chromium/Chrome runtime libs for true headless operation (no X11)
+#
+# Mount points (created empty here, bound at run time):
+#   /workspace        ephemeral scratch (e.g. --bind $SLURM_TMPDIR:/workspace)
+#   /home/user        per-user storage  (e.g. --bind $HOME:/home/user[:ro])
+#   /tmp              auto-bound by Apptainer
+#
+# Proxy: HTTP_PROXY / HTTPS_PROXY / NO_PROXY are intentionally NOT set.
+# The broker (chat-ai/agentic FastAPI service) plumbs them per-session via
+# APPTAINERENV_HTTPS_PROXY=... at run time.
+#
+# Network isolation: Apptainer's default is host-network-shared. True
+# isolation (`--net --network=none`) is a runtime flag and is enforced by
+# Task 2.5 (Network Filtering), not this recipe.
+#
+# Build is rootful at build time (--fakeroot or --remote). Run time is
+# strictly rootless (no --fakeroot, no --setuid).
+# ---------------------------------------------------------------------------
+
+%files
+    # Intentionally empty. The base image carries no application code.
+    # Agent frameworks (OpenHands etc.) are installed in derived images.
+
+%post
+    set -eux
+    export DEBIAN_FRONTEND=noninteractive
+
+    # ----- 1. Core tooling + headless-browser runtime libs ----------------
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        wget \
+        gnupg \
+        jq \
+        git \
+        xz-utils \
+        tini \
+        software-properties-common \
+        libnss3 \
+        libnspr4 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libdrm2 \
+        libxkbcommon0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxext6 \
+        libxfixes3 \
+        libxrandr2 \
+        libgbm1 \
+        libpango-1.0-0 \
+        libcairo2 \
+        libasound2 \
+        libatspi2.0-0 \
+        libxshmfence1 \
+        libgtk-3-0 \
+        fonts-liberation \
+        fonts-noto-color-emoji
+
+    # ----- 2. Python 3.11 via deadsnakes PPA ------------------------------
+    # Ubuntu 22.04 ships Python 3.10. We need 3.11+ per spec; deadsnakes is
+    # the standard third-party source. We deliberately do NOT replace
+    # /usr/bin/python3 (apt depends on it); instead we symlink into
+    # /usr/local/bin so PATH resolution picks 3.11 by default.
+    add-apt-repository -y ppa:deadsnakes/ppa
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        python3.11 \
+        python3.11-venv \
+        python3.11-dev \
+        python3.11-distutils
+    python3.11 -m ensurepip --upgrade
+    python3.11 -m pip install --no-cache-dir --upgrade pip wheel setuptools
+    ln -sf /usr/bin/python3.11 /usr/local/bin/python3
+    ln -sf /usr/bin/python3.11 /usr/local/bin/python
+
+    # ----- 3. Node.js 20 LTS via NodeSource --------------------------------
+    # Spec says "Node.js 18+". Node 18 reached EOL on 2025-04-30; we ship
+    # the active LTS (20) instead. Distro nodejs on 22.04 is 12.x, useless.
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y --no-install-recommends nodejs
+
+    # ----- 4. Google Chrome stable ----------------------------------------
+    # Ubuntu 22.04's apt `chromium-browser` is a snap stub that does NOT
+    # work in containers. Google Chrome stable is a self-contained .deb.
+    # Spec wording is "Chrome/Chromium" — Chrome satisfies it.
+    cd /tmp
+    curl -fsSL -o google-chrome-stable_current_amd64.deb \
+        https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    apt-get install -y ./google-chrome-stable_current_amd64.deb
+    rm -f google-chrome-stable_current_amd64.deb
+
+    # ----- 5. Cleanup ------------------------------------------------------
+    apt-get purge -y software-properties-common
+    apt-get autoremove -y
+    apt-get clean
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
+
+    # ----- 6. Mount-point stubs -------------------------------------------
+    # /workspace is sticky-writable (1777) so Apptainer's UID-mapped run-
+    # time user can write into it. /home/user is just a fallback when the
+    # caller forgets --bind $HOME:/home/user. Do NOT create users — the
+    # host UID is mapped at run time by Apptainer.
+    mkdir -p /workspace
+    chmod 1777 /workspace
+    mkdir -p /home/user
+
+    # ----- 7. Build metadata stamp ----------------------------------------
+    # build_image.sh sets these via APPTAINERENV_* so they reach %post.
+    : "${BUILD_SHA:=unknown}"
+    : "${BUILD_DATE:=unknown}"
+    cat > /etc/chat-ai-image-info <<EOF
+image=base
+task=2.1
+version=0.1.0
+git_sha=${BUILD_SHA}
+build_date=${BUILD_DATE}
+python=3.11
+node=20
+browser=google-chrome-stable
+EOF
+
+%environment
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
+    export PYTHONDONTWRITEBYTECODE=1
+    export PYTHONUNBUFFERED=1
+    # Proxy is intentionally NOT hardcoded. The broker injects per-session:
+    #   APPTAINERENV_HTTPS_PROXY=http://www-cache.gwdg.de:3128 apptainer run ...
+
+%runscript
+    #!/bin/sh
+    if [ "$#" -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+        cat <<EOF
+chat-ai base agent image (Task 2.1)
+
+Tools:    python3.11, node 20, google-chrome (headless), jq, git, curl
+Mounts:   /workspace (sticky), /home/user, /tmp
+Proxy:    set APPTAINERENV_HTTPS_PROXY before invoking apptainer run
+
+Examples:
+  apptainer run base.sif python3.11 --version
+  apptainer run base.sif node --version
+  apptainer exec --bind \$SLURM_TMPDIR:/workspace \\
+      --bind \$HOME:/home/user:ro base.sif python3.11 my_agent.py
+
+This image is meant to be inherited from. See agentic/containers/README.md
+for derived images (mcp, openhands, sandbox).
+EOF
+        exit 0
+    fi
+    exec "$@"
+
+%startscript
+    # Intentionally empty. Tasks 2.2 (MCP server) and 2.3 (OpenHands)
+    # populate this section in their derived recipes.
+
+%labels
+    org.chat-ai.image base
+    org.chat-ai.task 2.1
+    org.chat-ai.version 0.1.0
+    org.chat-ai.python 3.11
+    org.chat-ai.node 20
+    org.chat-ai.browser google-chrome-stable
+    org.opencontainers.image.title chat-ai-agent-base
+    org.opencontainers.image.description Foundation Apptainer image for chat-ai agent runtimes
+    org.opencontainers.image.source https://github.com/gwdg/chat-ai
+
+%help
+    chat-ai base agent image (Task 2.1, feature 001-agentic-layer).
+
+    Foundation image for agent runtimes. Derived images bootstrap from this
+    via `Bootstrap: localimage` / `From: ../base/base.sif` and add their
+    framework-specific code on top.
+
+    INSIDE THE IMAGE
+        python3.11               /usr/local/bin/python3 -> 3.11
+        node                     20.x LTS
+        google-chrome            stable (headless capable, no X11 needed)
+        jq, git, curl, wget, gnupg, tini, xz-utils
+
+    MOUNT POINTS
+        /workspace               ephemeral scratch (sticky 1777)
+        /home/user               per-user storage (bind --bind $HOME:/home/user)
+        /tmp                     auto-bound by Apptainer
+
+    BUILD (rootful at build time, rootless at run time)
+        ./build_image.sh --fakeroot           # workstation
+        ./build_image.sh --remote             # GWDG login node
+        ./build_image.sh --output ./base.sif --force
+
+    RUN (rootless)
+        apptainer run base.sif --help
+        apptainer exec --bind $(mktemp -d):/workspace base.sif \
+            python3.11 -c 'print("hello")'
+        APPTAINERENV_HTTPS_PROXY=http://www-cache.gwdg.de:3128 \
+            apptainer exec base.sif curl -sSI https://example.com
+
+    VALIDATE
+        ./test_image.sh ./base.sif
+
+    See agentic/containers/base/README.md for full documentation.
