@@ -15,7 +15,7 @@ This document breaks down the implementation plan for the agentic layer into act
 ## PHASE 1: Foundation & Backend Services
 
 ### Task 1.1: FastAPI Application Setup
-**Status:** 🔴 TODO
+**Status:** 🟢 DONE
 **Priority:** HIGH
 **Est. Effort:** 1-2 days
 **Assignee:** TBD
@@ -48,7 +48,7 @@ Create the FastAPI microservice that will serve as the session broker for the ag
 ---
 
 ### Task 1.2: Slurm Integration - Job Submission
-**Status:** 🔴 TODO
+**Status:** 🟢 DONE
 **Priority:** HIGH
 **Est. Effort:** 2-3 days
 **Assignee:** TBD
@@ -94,7 +94,7 @@ Implement Slurm REST API client for submitting containerized workspaces to the H
 ---
 
 ### Task 1.3: Slurm Integration - Job Monitoring
-**Status:** 🔴 TODO
+**Status:** 🟢 DONE
 **Priority:** HIGH
 **Est. Effort:** 2 days
 **Assignee:** TBD
@@ -135,7 +135,7 @@ Implement polling mechanism to monitor Slurm job status and propagate status cha
 ---
 
 ### Task 1.4: Slurm Integration - Job Cancellation
-**Status:** 🔴 TODO
+**Status:** 🟢 DONE
 **Priority:** MEDIUM
 **Est. Effort:** 1-2 days
 **Assignee:** TBD
@@ -173,7 +173,7 @@ Implement endpoint to cancel running Slurm jobs when user stops the agent or ses
 ---
 
 ### Task 1.5: Vault Integration - Secret Retrieval
-**Status:** 🔴 TODO
+**Status:** 🟢 DONE
 **Priority:** HIGH
 **Est. Effort:** 2-3 days
 **Assignee:** TBD
@@ -214,7 +214,7 @@ Implement HashiCorp Vault client for retrieving user-specific secrets (API keys,
 ---
 
 ### Task 1.6: SSE Streaming Infrastructure
-**Status:** 🔴 TODO
+**Status:** 🟢 DONE
 **Priority:** HIGH
 **Est. Effort:** 2-3 days
 **Assignee:** TBD
@@ -257,7 +257,7 @@ Implement Server-Sent Events (SSE) endpoint for streaming agent outputs from the
 ---
 
 ### Task 1.7: User Authentication & Validation
-**Status:** 🔴 TODO
+**Status:** 🟢 DONE
 **Priority:** HIGH
 **Est. Effort:** 2 days
 **Assignee:** TBD
@@ -303,7 +303,7 @@ Implement authentication middleware to validate X-User header from Kong authenti
 ## PHASE 2: Container & Sandbox Infrastructure
 
 ### Task 2.1: Base Apptainer Image
-**Status:** 🔴 TODO
+**Status:** 🟢 DONE
 **Priority:** HIGH
 **Est. Effort:** 2-3 days
 **Assignee:** TBD
@@ -1257,9 +1257,9 @@ Prepare system for production launch by setting up monitoring, runbooks, documen
   - MEDIUM: 7
   - LOW: 4
 - **Tasks by Status:**
-  - 🔴 TODO: 31
+  - 🔴 TODO: 23
   - 🟡 IN PROGRESS: 0
-  - 🟢 DONE: 0
+  - 🟢 DONE: 8
   - 🔵 BLOCKED: 0
 - **Estimated Total Effort:** 100-135 person-days
 
