@@ -304,7 +304,7 @@ export default function Conversation({
                 )}
               </div>
             ))}
-            <div style="min-height: 50vh;"></div>
+            <div style={{minHeight: "50vh"}}></div>
           </div>
 
           {/* Floating scroll-to-bottom button (only when overflow && NOT at bottom) */}
