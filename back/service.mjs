@@ -180,6 +180,11 @@ app.post("/chat/completions", async (req, res) => {
   const mcp_servers = req.body["mcp-servers"] || null;
   const inference_id = req.headers["inference-id"];
   const uid = req.headers["oidc_claim_uid"];
+  console.log("Incoming /chat/completions request", {
+    method: req.method,
+    path: req.path,
+    headers: req.headers,
+  });
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
   }
