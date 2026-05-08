@@ -304,6 +304,7 @@ export default function Conversation({
                 )}
               </div>
             ))}
+            <div class="h-50vh"></div>
           </div>
 
           {/* Floating scroll-to-bottom button (only when overflow && NOT at bottom) */}
