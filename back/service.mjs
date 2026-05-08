@@ -338,6 +338,7 @@ app.post("/chat/completions", async (req, res) => {
           "Content-Type": "application/json",
           "inference-service": inference_service,
           "inference-portal": serviceName,
+          "x-user-email": req.headers['oidc_claim_email'],
           "inference-id": inference_id
         },
         body: JSON.stringify(params)
