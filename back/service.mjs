@@ -282,6 +282,7 @@ app.post("/chat/completions", async (req, res) => {
     const headers = {
       "inference-service": inference_service,
       "inference-portal": serviceName,
+      "x-user-email": req.headers['oidc_claim_email'],
       "user": uid
     };
 
