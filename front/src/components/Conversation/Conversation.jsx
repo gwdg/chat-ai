@@ -40,6 +40,7 @@ export default function Conversation({
   const resizeObserver = useRef(null);
   const programmaticGuardUntil = useRef(0); // ignore our own scrolls for a short window
   const smoothTimer = useRef(null);
+  const prevMsgLengthRef = useRef(0);
 
   // Helpers
   const hasOverflow = useCallback(() => {
@@ -191,6 +192,24 @@ export default function Conversation({
     return () => clearTimeout(t);
   }, [copied]);
 
+  // Re-enable follow and jump to bottom whenever the user sends a message
+  useEffect(() => {
+    const msgs = localState?.messages;
+    if (!msgs) return;
+
+    const prev = prevMsgLengthRef.current;
+    prevMsgLengthRef.current = msgs.length;
+
+    // sendMessage adds 2 messages at once (assistant loading + empty user placeholder)
+    if (msgs.length === prev + 2) {
+      const secondToLast = msgs[msgs.length - 2];
+      if (secondToLast?.role === "assistant" && secondToLast?.loading === true) {
+        setAutoFollow(true);
+        requestAnimationFrame(() => scrollToBottom("auto"));
+      }
+    }
+  }, [localState?.messages, scrollToBottom]);
+
   // Lifecycle nudges: first message / sending while at bottom
   useEffect(() => {
     const msgs = localState?.messages;
@@ -304,7 +323,7 @@ export default function Conversation({
                 )}
               </div>
             ))}
-            <div style={{minHeight: "50vh"}}></div>
+            <div style={{minHeight: "30vh"}}></div>
           </div>
 
           {/* Floating scroll-to-bottom button (only when overflow && NOT at bottom) */}
