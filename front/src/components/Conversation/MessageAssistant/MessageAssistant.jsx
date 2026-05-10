@@ -4,7 +4,7 @@ import Typing from "./Typing";
 import CopyButton from "./CopyButton";
 import Attachment from "../../Prompt/Attachment";
 import EditButton from "./EditButton";
-import { RotateCw, GitFork } from "lucide-react";
+import { RotateCw, GitFork, Loader2 } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
 import MetaBox from "./MetaBox";
 import { useNavigate } from "react-router";
@@ -407,27 +407,31 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               )}
               {/* Bottom panel for message */}
               <div className="group flex justify-between w-full mt-1 gap-2">
-                <div className="flex items-center justify-end mb-2 opacity-30 group-hover:opacity-100 transition-opacity duration-300">
-                  {/* Render Mode Selector on the bottom left*/}
-                  <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
-                    {renderModes.map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => !loading && setRenderMode(mode)}
-                        className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
-                    ${loading ? "cursor-not-allowed opacity-20" : ""}
-                    ${
-                      renderMode === mode
-                        ? "bg-tertiary text-white"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }
-                    `}
-                        disabled={loading}
-                      >
-                        {mode}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex items-center mb-2">
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400 dark:text-gray-500" />
+                  ) : (
+                    <div className="opacity-30 group-hover:opacity-100 transition-opacity duration-300">
+                      {/* Render Mode Selector on the bottom left*/}
+                      <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
+                        {renderModes.map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => setRenderMode(mode)}
+                            className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
+                        ${
+                          renderMode === mode
+                            ? "bg-tertiary text-white"
+                            : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        }
+                        `}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {feedbackModule && (
