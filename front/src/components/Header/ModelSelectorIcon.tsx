@@ -43,7 +43,7 @@ function ModelSelectorIcon({
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState("name-asc");
-    const [buttonPosition, setButtonPosition] = useState({ top: 0, right: 0 });
+    const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0, height: 56 });
     const dropdownRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -53,8 +53,9 @@ function ModelSelectorIcon({
             const rect = buttonRef.current.getBoundingClientRect();
             const dropdownHeight = 400; // Estimated max height
             setButtonPosition({
-                top: Math.max(8, rect.top - .5*dropdownHeight), // Align to top, ensure it doesn't go off-screen
-                right: window.innerWidth - 2.5*rect.right,
+                top: rect.top,
+                left: rect.left,
+                height: rect.height,
             });
         }
     }, [dropdownOpen]);
@@ -134,9 +135,8 @@ function ModelSelectorIcon({
                         shadow-2xl dark:shadow-dark
                     `}
                     style={{
-                        top: inHeader ? '56px' : `${buttonPosition.top}px`,
-                        right: inHeader ? '0' : `${buttonPosition.right}px`,
-                        bottom: 'auto',
+                        top: inHeader ? `${buttonPosition.top+buttonPosition.height}px` : undefined,
+                        bottom: inHeader ? undefined : 0,
                     }}
                 >
                     {/* Header Section */}
@@ -173,23 +173,23 @@ function ModelSelectorIcon({
                                     placeholder="Search models..."
                                     autoComplete="off"
                                     className="w-full rounded-lg border border-slate-200 dark:border-gray-500 
-                           pl-8 pr-3 py-1.5 text-sm
-                           focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30
-                           bg-white dark:bg-bg_secondary_dark
-                           text-slate-700 dark:text-slate-200"
+                        pl-8 pr-3 py-1.5 text-sm
+                        focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30
+                        bg-white dark:bg-bg_secondary_dark
+                        text-slate-700 dark:text-slate-200"
                                 />
                             </div>
 
                             {/* Sort Dropdown */}
                             <Menu as="div" className="relative">
                                 <MenuButton className="
-                  inline-flex items-center justify-between
-                  rounded-lg border border-slate-200 dark:border-gray-500
-                  bg-white dark:bg-bg_secondary_dark px-2.5 py-1.5
-                  text-xs font-medium text-slate-600 dark:text-slate-200
-                  hover:bg-slate-50 dark:hover:bg-slate-700
-                  focus:outline-none focus:ring-2 focus:ring-indigo-500/40
-                  min-w-[80px]
+                inline-flex items-center justify-between
+                rounded-lg border border-slate-200 dark:border-gray-500
+                bg-white dark:bg-bg_secondary_dark px-2.5 py-1.5
+                text-xs font-medium text-slate-600 dark:text-slate-200
+                hover:bg-slate-50 dark:hover:bg-slate-700
+                focus:outline-none focus:ring-2 focus:ring-indigo-500/40
+                min-w-[80px]
                 ">
                                     <span className="hidden sm:inline">
                                         {sortOptions.find((opt) => opt.value === sortBy)?.label || "Sort"}
@@ -201,9 +201,9 @@ function ModelSelectorIcon({
                                 </MenuButton>
 
                                 <MenuItems className="
-                  absolute right-0 mt-2 w-32 origin-top-right
-                  rounded-lg bg-white dark:bg-bg_secondary_dark
-                  shadow-lg ring-1 ring-black/5 focus:outline-none z-50
+                absolute right-0 mt-2 w-32 origin-top-right
+                rounded-lg bg-white dark:bg-bg_secondary_dark
+                shadow-lg ring-1 ring-black/5 focus:outline-none z-50
                 ">
                                     <div className="py-1">
                                         {sortOptions.map((option) => (
@@ -212,9 +212,9 @@ function ModelSelectorIcon({
                                                     <button
                                                         onClick={() => { setSortBy(option.value); close() }}
                                                         className="w-full px-3 py-1.5 text-left text-sm
-                                     text-slate-700 dark:text-slate-200
-                                     hover:bg-slate-100 dark:hover:bg-slate-700
-                                     focus:outline-none"
+                                    text-slate-700 dark:text-slate-200
+                                    hover:bg-slate-100 dark:hover:bg-slate-700
+                                    focus:outline-none"
                                                     >
                                                         {option.label}
                                                     </button>
@@ -253,7 +253,7 @@ function ModelSelectorIcon({
                                             ? "bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700"
                                             : "hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent"
                                         }
-                  `}
+                `}
                                 >
                                     <div className="flex items-center gap-2 min-w-0">
                                         <DemandIndicator demand={model.demand} status={model.status} />
