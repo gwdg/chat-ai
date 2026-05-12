@@ -19,6 +19,7 @@ import { useDebounce } from "../../hooks/useDebounce";
 import { useAttachments } from "../../hooks/useAttachments";
 import { AudioWaveform } from "lucide-react";
 import { abortRequest, chatCompletions, chatCompletionOnce } from "../../apis/chatCompletions";
+import generateAudio from "../../apis/generateAudio";
 import { processContentItems } from "../../utils/sendMessage";
 import { loadFile, loadFileMeta, saveFile } from "../../db";
 import { selectTimeout } from "../../Redux/reducers/userSettingsReducer";
@@ -27,7 +28,7 @@ export default function Prompt({
   localState,
   setLocalState,
 }) { 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const timeout = useSelector(selectTimeout);
   const sendMessage = useSendMessage();
   const { addAudioAttachment } = useAttachments();
@@ -68,6 +69,15 @@ export default function Prompt({
       output: ["text"],
     };
   }, []);
+  const speechModule = useMemo(() => {
+    if (!import.meta.env?.VITE_MODULE_SPEECH) return false;
+    try {
+      return JSON.parse(import.meta.env.VITE_MODULE_SPEECH);
+    } catch (error) {
+      console.error("Failed to parse speech module config:", error);
+      return false;
+    }
+  }, []);
   const speechResponsePrompt = useMemo(
     () =>
       [
@@ -86,16 +96,6 @@ export default function Prompt({
         "Transcribe the user's audio exactly as spoken.",
         "Return only the transcript text. Do not add commentary or formatting.",
         "If a segment is unclear, use [inaudible].",
-      ].join("\n"),
-    []
-  );
-  const speechAudioGenerationPrompt = useMemo(
-    () =>
-      [
-        "You are the speech rendering step of a live voice conversation.",
-        "Generate spoken audio for the exact assistant reply text provided by the user.",
-        "Always use the audio_generation tool for output.",
-        "Do not change wording, tone, or meaning.",
       ].join("\n"),
     []
   );
@@ -265,22 +265,6 @@ export default function Prompt({
     return getAssistantText(fallbackMessage);
   };
 
-  const createAudioFile = (base64Data, format = "wav", filename = null) => {
-    const cleanedBase64 = base64Data.includes(",")
-      ? base64Data.split(",").pop()
-      : base64Data;
-    const byteCharacters = atob(cleanedBase64 || "");
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i += 1) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const normalizedFormat = (format || "wav").toLowerCase();
-    const mimeType = normalizedFormat === "mp3" ? "audio/mpeg" : `audio/${normalizedFormat}`;
-    const safeFilename = filename || `speech-response.${normalizedFormat}`;
-    return new File([byteArray], safeFilename, { type: mimeType });
-  };
-
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const waitForFileMetaReady = async (fileId, maxWaitMs = 12000) => {
@@ -428,61 +412,29 @@ export default function Prompt({
   const generateSpeechAudioForText = async (assistantText) => {
     const text = normalizeSpeechText(assistantText || "");
     if (!text) return null;
+    if (!speechModule?.model || !speechModule?.voice) {
+      console.warn("Speech module config is missing model or voice.");
+      return null;
+    }
     const timeoutAPI =
       timeout >= 5000 && timeout <= 900000 ? Math.min(timeout, 120000) : 90000;
-    const audioGenerationConversation = {
-      messages: [
-        { role: "system", content: speechAudioGenerationPrompt },
-        { role: "user", content: text },
-      ],
-      settings: {
-        model: speechModelInfo.id,
-        temperature: 0,
-        top_p: 1,
-        enable_tools: true,
-        tools: [{ type: "audio_generation" }],
-      },
-    };
-    let audioPayload = null;
+    const language = i18n?.resolvedLanguage || i18n?.language || "en";
+
     try {
-      for await (const chunk of chatCompletions(
-        audioGenerationConversation,
+      const audioFile = await generateAudio(
+        text,
+        speechModule.model,
+        speechModule.voice,
         timeoutAPI,
-        true
-      )) {
-        if (speechStopRequestedRef.current) {
-          return null;
-        }
-        const delta = chunk?.choices?.[0]?.delta;
-        const audioDelta = delta?.audio;
-        if (!audioDelta?.data) continue;
-        const currentData = String(audioDelta.data || "");
-        if (!currentData) continue;
-        if (!audioPayload || currentData.length >= (audioPayload.data?.length || 0)) {
-          audioPayload = {
-            data: currentData,
-            format: audioDelta.format || audioPayload?.format || "wav",
-            filename: audioDelta.filename || audioPayload?.filename || null,
-          };
-        }
-      }
+        language
+      );
+      if (speechStopRequestedRef.current || !audioFile) return null;
+      const conversationId = localStateRef.current?.id || localState.id;
+      return saveFile(conversationId, audioFile);
     } catch (error) {
-      if (error?.name === "AbortError") {
-        return null;
-      }
       console.error("Speech audio generation failed:", error);
       return null;
     }
-    if (!audioPayload?.data) {
-      return null;
-    }
-    const audioFile = createAudioFile(
-      audioPayload.data,
-      audioPayload.format,
-      audioPayload.filename
-    );
-    const conversationId = localStateRef.current?.id || localState.id;
-    return saveFile(conversationId, audioFile);
   };
 
   // Update partial local state while preserving other values
