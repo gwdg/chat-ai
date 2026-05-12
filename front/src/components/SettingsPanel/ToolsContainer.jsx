@@ -58,7 +58,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const { openModal } = useModal();
   const dispatch = useDispatch();
   const agreedWebSearch = useSelector(selectAgreeWebSearch);
-  
+  const labelLang = i18n?.resolvedLanguage || i18n?.language || "en";
+
   const settings = localState?.settings || {};
   const modelName = settings?.model?.name;
   const isExternalModel =

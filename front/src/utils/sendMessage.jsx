@@ -157,7 +157,7 @@ function receiveFile(base64Data, mimeType, filename = null, conversationId = nul
 }
 
 // Build OpenAI standard conversation from localState
-async function buildConversationForAPI(localState, overrides = {}) {
+export async function buildConversationForAPI(localState, overrides = {}) {
   const {
     modelOverride,
     forceAudioInput = false,
