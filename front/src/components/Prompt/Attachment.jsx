@@ -118,7 +118,7 @@ export default function Attachment({
   };
 
   const badge = getFileBadge(file);
-  const canProcess = !inHistory && fileType === "pdf"; // TODO add excel and other supported types
+  const canProcess = !inHistory && (fileType === "pdf" || fileType === "docx"); // TODO add other supported types
 
   const getFileDisplayInfo = (file) => {
     if (canProcess) {
