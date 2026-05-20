@@ -549,9 +549,13 @@ const sendMessage = async ({
     } catch (error) {
       const errorType = error?.type || "Error";
       const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
-      const errorStatus = error?.status ? `(${error.status})` : "";
-      notifyError(`${errorType}: ${errorMsg.toString()} ${errorStatus}`);
+      const errorStatus = error?.status ? `${error.status}` : "";
+      notifyError(`${errorType}: ${errorMsg.toString()} (${errorStatus})`);
       console.error(error);
+      meta = {
+        model: localState.settings.model?.name || localState.settings.model?.id || "",
+        error: `${errorType} ${errorStatus}: ${errorMsg.toString()}`
+      };
     } finally {
       // Update choices
       if(choicesModule && localState.settings.choiceProposer == 1){
