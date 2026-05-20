@@ -3,8 +3,9 @@ import { Trans } from "react-i18next";
 export default function OrgLimitsDisplay({ limits }) {
   const orgLimits = limits?.org;
   if (!orgLimits) return null;
-
-  let monthlyPercent = 100*orgLimits.monthly_usage ?? 0;
+  if (!orgLimits?.monthly_usage_percent) return null;
+  let monthlyPercent = 100*orgLimits.monthly_usage_percent ?? 0;
+  if (isNaN(monthlyPercent)) return null;
   const percentFormatted = monthlyPercent.toFixed(2);
   monthlyPercent =
     monthlyPercent >= 0
