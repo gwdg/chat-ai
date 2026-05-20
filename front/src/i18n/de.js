@@ -152,6 +152,8 @@ export default {
   // User Settings Modal
   user_settings: {
     title: "Benutzereinstellungen",
+    monthly_usage: "Monatliche Nutzung",
+    org_usage: "Nutzung des Organisationsbudgets",
     default_model: {
       title: "Standardmodell",
       current: "Aktuell: {{currentModel}}",
