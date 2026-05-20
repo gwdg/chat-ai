@@ -3,7 +3,6 @@ import { useSelector } from "react-redux";
 
 import { useModal } from "../ModalContext"; 
 import BaseModal from "../BaseModal";
-import DefaultModelSelector from "./DefaultModelSelector";
 import UserInfoContainer from "./UserInfoContainer";
 import TimeoutSetter from "./TimeoutSetter";
 import UserMemoryContainer from "./UserMemoryContainer";
@@ -28,7 +27,6 @@ export default function UserSettingsModal({
   isOpen,
   onClose,
   userData,
-  modelsData,
   localState,
 }) {
   const { openModal } = useModal();
@@ -65,9 +63,6 @@ export default function UserSettingsModal({
       {userData ? <UserInfoContainer userData={userData} /> : <></>}
 
       <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1 min-h-0">
-        {/* Default Model Selector */}
-        {modelsData ? <DefaultModelSelector modelsData={modelsData} /> : <></>}
-
         {/* Timeout Setter */}
         <TimeoutSetter />
 

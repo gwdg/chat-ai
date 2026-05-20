@@ -1,15 +1,18 @@
 
 import { memo, useEffect, useState, useRef } from 'react'
+import { useDispatch } from "react-redux";
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';
 import type { ModelInfo } from '../../types/models';
+import { setDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 
 function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean}) {
   /*
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
   const { openModal } = useModal();
+  const dispatch = useDispatch();
   
   const currentModelId = localState?.settings?.model?.id;
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
@@ -17,11 +20,14 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
 
   const hasExtendedModels = modelsData?.[0]?.description !== undefined;
 
-  function setModel(newModel: ModelInfo) {
+  function setModel(newModel: ModelInfo, persistDefault = true) {
     if (newModel?.status === "offline") {
       openModal("serviceOffline");
     }
     setSelectedModel(newModel);
+    if (persistDefault) {
+      dispatch(setDefaultModel(newModel));
+    }
     setLocalState((prev) => ({
       ...prev,
       settings: {
@@ -40,10 +46,10 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
       (model) => model.id === currentModelId
     );
     if (foundModel){
-      setModel(foundModel);
+      setModel(foundModel, false);
     } else {
       // fallback to first model
-      setModel(modelsData[0]);
+      setModel(modelsData[0], false);
     }
   }, [currentModelId, modelsData]);
 
