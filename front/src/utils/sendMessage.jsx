@@ -154,7 +154,7 @@ function receiveFile(base64Data, mimeType, filename = null, conversationId = nul
 }
 
 // Build OpenAI standard conversation from localState
-async function buildConversationForAPI(localState) {
+export async function buildConversationForAPI(localState) {
   // Determine supported file types from model
   const model = localState.settings.model;
   const ignoreAudio = !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));
@@ -312,6 +312,11 @@ const sendMessage = async ({
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
         const delta = chunk?.choices[0]?.delta;
         if (chunk?.usage) usage = chunk.usage;
+        // Check if reasoning exists
+        if (delta?.reasoning) {
+          process_block += delta.reasoning;
+        }
+        // Check if tool calls exist
         if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
           try {
             if (delta.tool_calls[0]?.function?.name === "tools.event") {
@@ -545,9 +550,13 @@ const sendMessage = async ({
     } catch (error) {
       const errorType = error?.type || "Error";
       const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
-      const errorStatus = error?.status ? `(${error.status})` : "";
-      notifyError(`${errorType}: ${errorMsg.toString()} ${errorStatus}`);
+      const errorStatus = error?.status ? `${error.status}` : "";
+      notifyError(`${errorType}: ${errorMsg.toString()} (${errorStatus})`);
       console.error(error);
+      meta = {
+        model: localState.settings.model?.name || localState.settings.model?.id || "",
+        error: `${errorType} ${errorStatus}: ${errorMsg.toString()}`
+      };
     } finally {
       // Update choices
       if(choicesModule && localState.settings.choiceProposer == 1){

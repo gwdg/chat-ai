@@ -1,4 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
+import UserLimitsDisplay from "./UserLimitsDisplay";
+import OrgLimitsDisplay from "./OrgLimitsDisplay";
 
 export default function UserInfoContainer({ userData }) {
     const handleLogout = () => {
@@ -7,7 +9,8 @@ export default function UserInfoContainer({ userData }) {
     };
     
     return (
-      <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b dark:border-border_dark flex-shrink-0">
+      <div className="flex flex-col p-4 gap-3 justify-between border-b dark:border-border_dark ">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between flex-shrink-0">
         <div className="flex flex-col">
           <span className="font-medium text-sm dark:text-white">
             {(() => {
@@ -45,6 +48,10 @@ export default function UserInfoContainer({ userData }) {
             <Trans i18nKey="user_settings.logout" />
           </p>
         </button>
+        
+      </div>
+      {userData?.limits && <UserLimitsDisplay limits={userData.limits} />}
+      {userData?.limits && <OrgLimitsDisplay limits={userData.limits} />}
       </div>
     );
 }

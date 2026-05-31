@@ -9,7 +9,7 @@ A Seamless Slurm-Native Solution for HPC-Based Services
 </h3>
 
 <p align="center">
-<a href="https://docs.hpc.gwdg.de/services/chat-ai"><b>Documentation</b></a> | <a href="https://www.researchsquare.com/article/rs-6648693/v1"><b>Paper</b></a>
+<a href="https://docs.hpc.gwdg.de/services/chat-ai"><b>Documentation</b></a> | <a href="https://doi.org/10.1007/s11227-026-08508-3"><b>Paper</b></a>
 </p>
 
 This repository contains the stand-alone web interface of Chat AI. The implementation of the remaining components of the complete architecture can be found in two other repos:
@@ -148,20 +148,20 @@ We thank the Chat AI community, and all colleagues and partners involved in this
 
 ## Citation
 
-If you use Chat AI in your research or services, please cite us as follows:
+If you use Chat AI or SAIA in your research or services, please cite us as follows:
 
 ```
-@misc{doosthosseiniSAIASeamlessSlurmNative2025,
-  title = {{{SAIA}}: {{A Seamless Slurm-Native Solution}} for {{HPC-Based Services}}},
-  shorttitle = {{{SAIA}}},
-  author = {Doosthosseini, Ali and Decker, Jonathan and Nolte, Hendrik and Kunkel, Julian},
-  year = {2025},
-  month = jul,
-  publisher = {Research Square},
-  issn = {2693-5015},
-  doi = {10.21203/rs.3.rs-6648693/v1},
-  url = {https://www.researchsquare.com/article/rs-6648693/v1},
-  urldate = {2025-07-29},
-  archiveprefix = {Research Square}
+@article{doosthosseini_saia_2026,
+	title = {{SAIA}: a seamless {Slurm}-native solution for {HPC}-based services},
+	volume = {82},
+	issn = {1573-0484},
+	url = {https://doi.org/10.1007/s11227-026-08508-3},
+	doi = {10.1007/s11227-026-08508-3},
+	number = {7},
+	journal = {The Journal of Supercomputing},
+	author = {Doosthosseini, Ali and Decker, Jonathan and Nolte, Hendrik and Kunkel, Julian},
+	month = may,
+	year = {2026},
+	pages = {403},
 }
 ```

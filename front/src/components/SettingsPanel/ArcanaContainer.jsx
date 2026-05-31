@@ -7,6 +7,10 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const settings = localState.settings;
+  const modelName = settings?.model?.name;
+  const isExternalModel =
+    typeof modelName === "string" &&
+    modelName.toLowerCase().includes("external");
 
   const handleArcanaChange = () => (e) => {
     setLocalState((prev) => ({
@@ -23,8 +27,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
 
   const currentModel = settings.model;
 
-  return settings?.enable_tools ||
-    currentModel?.input?.includes("arcana") ||
+  return (settings?.enable_tools && !isExternalModel) ||
     false ? (
     <>
       <div className="flex gap-4 w-full items-center">

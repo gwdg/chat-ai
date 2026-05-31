@@ -31,34 +31,17 @@ authors:
     orcid: 'https://orcid.org/0000-0002-6915-1179'
 identifiers:
   - type: doi
-    value: 10.21203/rs.3.rs-6648693/v1
+    value: 10.1007/s11227-026-08508-3
   - type: url
-    value: 'https://www.researchsquare.com/article/rs-6648693/v1'
+    value: >-
+      https://link.springer.com/article/10.1007/s11227-026-08508-3
 repository-code: 'https://github.com/gwdg/chat-ai'
 url: 'https://chat-ai.academiccloud.de'
-abstract: >-
-  Recent developments indicate a shift toward web services
-  that employ ever larger AI models, e.g., Large Language
-  Models (LLMs), requiring powerful hardware for inference.
-  High-Performance Computing (HPC) systems are commonly
-  equipped with such hardware for the purpose of large scale
-  computation tasks. However, HPC infrastructure is
-  inherently unsuitable for hosting real-time web services
-  due to network, security and scheduling constraints. While
-  various efforts exist to integrate external scheduling
-  solutions, these often require compromises in terms of
-  security or usability for existing HPC users. In this
-  paper, we present SAIA, a Slurm-native platform consisting
-  of a scheduler and a proxy. The scheduler interacts with
-  Slurm to ensure the availability and scalability of
-  services, while the proxy provides external access, which
-  is secured via confined SSH commands. We have demonstrated
-  SAIA’s applicability by deploying a large-scale LLM web
-  service that has served over 50,000 users.
+abstract: "Recent developments indicate a shift toward web services that employ ever-larger AI models, e.g., large language models (LLMs), requiring powerful and expensive hardware for inference. High-performance computing (HPC) systems are commonly equipped with such hardware for the purpose of large-scale computation tasks. However, HPC infrastructure is inherently unsuitable for hosting real-time web services due to network, security, and scheduling constraints. While various efforts exist to integrate external scheduling solutions, these often require compromises in terms of security or usability for existing HPC users. In this paper, we present SAIA, a Slurm-native platform consisting of a scheduler and a proxy. The scheduler interacts with Slurm to ensure the availability and scalability of services, while the proxy provides external access, which is secured via confined SSH commands. We have demonstrated SAIA’s applicability by deploying a large-scale LLM web service that has served over 100\_000 users."
 keywords:
   - AI
   - HPC
   - Slurm
 license: GPL-3.0
-version: v0.8.1
+version: v0.9.3
 date-released: '2024-02-22'

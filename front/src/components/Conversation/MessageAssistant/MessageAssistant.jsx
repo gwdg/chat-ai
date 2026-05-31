@@ -13,6 +13,7 @@ import { useToast } from "../../../hooks/useToast";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import config from "../../../config";
+import SpeakButton from "./SpeakButton";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -260,6 +261,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
 
   const content = message?.content?.[0]?.text ?? "";
   const isContentEmpty = !content.trim();
+  const errorMessage = message?.meta?.error || "Unknown Error";
   return (
     <div
       key={message_index}
@@ -281,6 +283,9 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {loading && <Typing />}
           {!loading && (
             <div className="flex flex-col items-center justify-start gap-3 py-1">
+              <div className="text-red-500 dark:text-red-400 text-sm font-medium text-center">
+              {errorMessage}
+              </div>
               <button
                 onClick={handleRetry}
                 className="cursor-pointer flex items-center gap-2 px-4 py-3 text-sm opacity-100 text-black dark:text-white bg-red-500/40 rounded-full hover:bg-red-400/100 transition-all"
@@ -452,6 +457,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   )}
                   <EditButton setEditMode={setEditMode} />
                   <ForkButton handleForkConversation={handleForkConversation} />
+                  <SpeakButton message={message} />
                   <CopyButton message={message} />
                 </div>
               </div>
