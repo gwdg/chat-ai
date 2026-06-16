@@ -236,6 +236,7 @@ export default {
     title: "Exportoptionen",
     json: "JSON-Datei",
     pdf: "PDF-Datei",
+    docx: "DOCX-Datei",
     text: "TXT-Datei",
     export: "Exportieren",
     export_settings: "Modell und Optionen einbeziehen",
