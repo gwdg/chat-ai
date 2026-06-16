@@ -236,6 +236,7 @@ export default {
     // File format
     json: "JSON file",
     pdf: "PDF file",
+    docx: "DOCX file",
     text: "TXT file",
     export: "Export",
     export_settings: "Include model and options",
