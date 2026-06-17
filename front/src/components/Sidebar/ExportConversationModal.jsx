@@ -25,6 +25,14 @@ import {
 import Logo from "../../assets/logos/chat_ai.png"
 import { processContentItems } from "../../utils/sendMessage";
 
+// Matches the delimiter that separates an assistant's answer from the raw
+// Arcana/RAG reference snippets appended after it (mirrors
+// MarkdownRenderer's separateContentAndReferences split).
+const ARCANA_REFERENCES_RE = /(^|\n)[-\s]{5,}\n\s*References\s*:\s*\n/i;
+
+// Matches closed <think>...</think> reasoning blocks emitted by reasoning models
+const THINKING_BLOCK_RE = /<think\b[^>]*>[\s\S]*?<\/think>/gi;
+
 export default function ExportConversationModal({
   isOpen,
   onClose,
@@ -34,8 +42,10 @@ export default function ExportConversationModal({
   const [exportFormat, setExportFormat] = useState("json");
   const [exportSettings, setExportSettings] = useState(true);
   const [exportArcana, setExportArcana] = useState(false);
+  const [exportArcanaRag, setExportArcanaRag] = useState(false);
   const [exportMcpServers, setExportMcpServers] = useState(false);
   const [exportFiles, setExportFiles] = useState(false);
+  const [exportThinking, setExportThinking] = useState(false);
   const [containsFiles, setContainsFiles] = useState(true); // TODO set dynamically
   const [conversation, setConversation] = useState(null);
 
@@ -77,6 +87,14 @@ export default function ExportConversationModal({
       : Array.isArray(mcpServers)
       ? mcpServers.length > 0
       : false;
+  const hasArcanaReferences =
+    Array.isArray(messages) &&
+    messages.some(
+      (m) => typeof m?.content === "string" && ARCANA_REFERENCES_RE.test(m.content)
+    );
+  const hasThinking =
+    Array.isArray(messages) &&
+    messages.some((m) => typeof m?.content === "string" && /<think\b/i.test(m.content));
 
   // Function to generate timestamped filename for exports
   const generateFileName = (extension) => {
@@ -91,6 +109,19 @@ export default function ExportConversationModal({
   };
 
   // Function to process messages into export format
+  // Strip reasoning blocks and/or raw Arcana RAG reference snippets from a
+  // message's text content, depending on which export checkboxes are set
+  const filterMessageContent = (text) => {
+    if (typeof text !== "string") return text;
+    let result = text;
+    if (!exportThinking) result = result.replace(THINKING_BLOCK_RE, "");
+    if (!exportArcanaRag) {
+      const m = result.match(ARCANA_REFERENCES_RE);
+      if (m) result = result.slice(0, m.index + (m[1] ? m[1].length : 0));
+    }
+    return result.trim();
+  };
+
   const processMessages = async () => {
     let processedMessages = [];
     if (!Array.isArray(messages)) return processedMessages;
@@ -120,6 +151,17 @@ export default function ExportConversationModal({
           // Ignore files
           processedMessage.content = content[0]?.text || "";
         }
+      }
+
+      // Apply reasoning/Arcana-RAG content filters
+      if (typeof processedMessage.content === "string") {
+        processedMessage.content = filterMessageContent(processedMessage.content);
+      } else if (Array.isArray(processedMessage.content)) {
+        processedMessage.content = processedMessage.content.map((item) =>
+          item?.type === "text"
+            ? { ...item, text: filterMessageContent(item.text) }
+            : item
+        );
       }
 
       // Check if empty user prompt at the end
@@ -770,8 +812,16 @@ export default function ExportConversationModal({
     setExportArcana(event.target.checked);
   };
 
+  const toggleExportArcanaRag = (event) => {
+    setExportArcanaRag(event.target.checked);
+  };
+
   const toggleExportMcpServers = (event) => {
     setExportMcpServers(event.target.checked);
+  };
+
+  const toggleExportThinking = (event) => {
+    setExportThinking(event.target.checked);
   };
 
   return (
@@ -828,6 +878,32 @@ export default function ExportConversationModal({
               />
               <label
                 htmlFor="exportArcana"
+                className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+              >
+                <Trans i18nKey="export_conversation.export_arcana" />
+              </label>
+            </div>
+          </>
+        ) : null}
+
+        {/* Arcana RAG reference snippets Export Option */}
+        {hasArcanaReferences ? (
+          <>
+            {exportArcanaRag && (
+              <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200">
+                <Trans i18nKey="alert.arcana_export" />
+              </p>
+            )}
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="exportArcanaRag"
+                checked={exportArcanaRag}
+                onChange={toggleExportArcanaRag}
+                className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+              />
+              <label
+                htmlFor="exportArcanaRag"
                 className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
               >
                 <Trans i18nKey="export_conversation.export_arcana" />
@@ -898,6 +974,25 @@ export default function ExportConversationModal({
             <Trans i18nKey="export_conversation.export_files" />
           </label>
         </div>
+
+        {/* Export thinking/reasoning blocks checkbox */}
+        {hasThinking ? (
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="exportThinking"
+              checked={exportThinking}
+              onChange={toggleExportThinking}
+              className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+            />
+            <label
+              htmlFor="exportThinking"
+              className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+            >
+              <Trans i18nKey="export_conversation.export_thinking" />
+            </label>
+          </div>
+        ) : null}
 
         {/* Export Button */}
         <div className="flex justify-end w-full">

@@ -243,6 +243,7 @@ export default {
     export_files: "Include files",
     export_arcana: "Include Arcana details",
     export_mcp_servers: "Include MCP server",
+    export_thinking: "Include reasoning process",
   },
   // Rename Conversation Modal
   rename_conversation: {
