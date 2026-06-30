@@ -49,6 +49,7 @@ export default function ShareSettingsButton({ localState }) {
           localState?.settings?.top_p !== null
             ? Number(localState.settings.top_p)
             : null,
+        model_effort: localState?.settings?.model_effort || "medium",
         // tools
         enable_tools: localState?.settings?.enable_tools,
         tools: tools,

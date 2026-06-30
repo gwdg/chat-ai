@@ -24,6 +24,7 @@ export const getDefaultSettings = (userSettings = {}) => {
     },
     temperature: 0.5,
     top_p: 0.5,
+    model_effort: "medium",
     memory: 0,
     enable_tools: false,
     tools: {

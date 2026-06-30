@@ -15,6 +15,7 @@ import ShareSettingsButton from "./ShareSettingsButton";
 import SystemPromptContainer from "./SystemPromptContainer";
 import TemperatureSlider from "./TemperatureSlider";
 import TopPSlider from "./TopPSlider";
+import ModelEffortSelector from "./ModelEffortSelector";
 
 //Redux
 import {
@@ -444,6 +445,11 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
           />
           {/* top_p Slider */}
           <TopPSlider localState={localState} setLocalState={setLocalState} />
+          {/* Model Effort Selector */}
+          <ModelEffortSelector
+            localState={localState}
+            setLocalState={setLocalState}
+          />
           {/* System Prompt */}
           <SystemPromptContainer
             localState={localState}

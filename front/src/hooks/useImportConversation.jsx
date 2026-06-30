@@ -249,6 +249,17 @@ export function useImportConversation() {
       if (top_p && typeof top_p === "number" && top_p > 0 && top_p <= 2.0)
         settings.top_p = top_p;
 
+      // model effort
+      const model_effort =
+        extractParameter(data, "model_effort") ||
+        extractParameter(data, "modelEffort");
+      if (
+        typeof model_effort === "string" &&
+        ["low", "medium", "high"].includes(model_effort.toLowerCase())
+      ) {
+        settings.model_effort = model_effort.toLowerCase();
+      }
+
       // model
       let model = {};
       const model_id = extractParameter(data, "model") || extractParameter(data, "model_api") || extractParameter(data, "model-id");

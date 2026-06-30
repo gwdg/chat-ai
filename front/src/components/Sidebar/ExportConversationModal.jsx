@@ -135,6 +135,7 @@ export default function ExportConversationModal({
     if (conversation?.settings?.enable_tools) settings.enable_tools = conversation.settings.enable_tools;
     if (exportMcpServers && hasMcpServers) settings.mcp_servers = conversation.settings.mcp_servers;
     if (conversation?.settings?.top_p) settings.top_p = conversation.settings.top_p;
+    settings.model_effort = conversation?.settings?.model_effort || "medium";
     if (conversation?.settings?.tools) settings.tools = Object.keys(conversation.settings.tools)
         .filter(t => conversation.settings.tools[t] === true)
         .map(t => ({ type: t }));
@@ -197,6 +198,8 @@ export default function ExportConversationModal({
           settings?.temperature
         }\ntop_p: ${
           settings?.top_p
+        }\nmodel_effort: ${
+          settings?.model_effort
         }\n${exportArcana && isArcanaSupported && settings?.arcana?.id
             ? `Arcana ID: ${settings.arcana.id}`
             : ""
@@ -460,7 +463,7 @@ export default function ExportConversationModal({
         let settings = processSettings();
         addNewPageIfNeeded(
           lineHeight *
-            (6 +
+            (7 +
               (exportArcana && isArcanaSupported && settings?.arcana?.id ? 1 : 0) +
               (exportMcpServers && hasMcpServers && settings?.mcp_servers ? 1 : 0))
         );
@@ -478,6 +481,8 @@ export default function ExportConversationModal({
         doc.text(`temperature: ${settings?.temperature}`, margin, y);
         y += lineHeight;
         doc.text(`top_p: ${settings?.top_p}`, margin, y);
+        y += lineHeight;
+        doc.text(`model_effort: ${settings?.model_effort}`, margin, y);
         y += lineHeight;
 
         // Add Arcana settings if enabled

@@ -53,6 +53,15 @@ function coerceFiniteNumber(value: any): number | undefined {
   return Number.isFinite(num) ? num : undefined;
 }
 
+function coerceModelEffort(value: any): "low" | "medium" | "high" | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.toLowerCase();
+  if (normalized === "low" || normalized === "medium" || normalized === "high") {
+    return normalized;
+  }
+  return undefined;
+}
+
 async function loadConversation(navigate, conversationId, lastConversationId, userSettings = {}, sharedSettings = null, importURL = null, importConversation = null, searchParams = null): Promise<HydratedConversation | undefined> {
   // Handle import URL
   if (importURL) {
@@ -353,6 +362,11 @@ export function useSyncConversation({
 
         const topP = coerceFiniteNumber(decodedSettings?.top_p);
         if (topP !== undefined) nextSettings.top_p = topP;
+
+        const modelEffort = coerceModelEffort(
+          decodedSettings?.model_effort ?? decodedSettings?.modelEffort
+        );
+        if (modelEffort !== undefined) nextSettings.model_effort = modelEffort;
 
         const enableTools = coerceBoolean(decodedSettings?.enable_tools);
         if (enableTools !== undefined) nextSettings.enable_tools = enableTools;
