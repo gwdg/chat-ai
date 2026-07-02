@@ -30,8 +30,11 @@ import { processContentItems } from "../../utils/sendMessage";
 // MarkdownRenderer's separateContentAndReferences split).
 const ARCANA_REFERENCES_RE = /(^|\n)[-\s]{5,}\n\s*References\s*:\s*\n/i;
 
-// Matches closed <think>...</think> reasoning blocks emitted by reasoning models
+// Matches closed <think>...</think> reasoning blocks emitted by reasoning
+// models, in both literal and HTML-escaped (&lt;think&gt;) form (mirrors the
+// two variants MarkdownRenderer's splitThink handles).
 const THINKING_BLOCK_RE = /<think\b[^>]*>[\s\S]*?<\/think>/gi;
+const THINKING_BLOCK_ESCAPED_RE = /&lt;think\b[^&]*&gt;[\s\S]*?&lt;\/think&gt;/gi;
 
 export default function ExportConversationModal({
   isOpen,
@@ -94,7 +97,9 @@ export default function ExportConversationModal({
     );
   const hasThinking =
     Array.isArray(messages) &&
-    messages.some((m) => typeof m?.content === "string" && /<think\b/i.test(m.content));
+    messages.some(
+      (m) => typeof m?.content === "string" && /(?:<|&lt;)think\b/i.test(m.content)
+    );
 
   // Function to generate timestamped filename for exports
   const generateFileName = (extension) => {
@@ -114,7 +119,10 @@ export default function ExportConversationModal({
   const filterMessageContent = (text) => {
     if (typeof text !== "string") return text;
     let result = text;
-    if (!exportThinking) result = result.replace(THINKING_BLOCK_RE, "");
+    if (!exportThinking)
+      result = result
+        .replace(THINKING_BLOCK_RE, "")
+        .replace(THINKING_BLOCK_ESCAPED_RE, "");
     if (!exportArcanaRag) {
       const m = result.match(ARCANA_REFERENCES_RE);
       if (m) result = result.slice(0, m.index + (m[1] ? m[1].length : 0));
@@ -976,23 +984,21 @@ export default function ExportConversationModal({
         </div>
 
         {/* Export thinking/reasoning blocks checkbox */}
-        {hasThinking ? (
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="exportThinking"
-              checked={exportThinking}
-              onChange={toggleExportThinking}
-              className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
-            />
-            <label
-              htmlFor="exportThinking"
-              className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
-            >
-              <Trans i18nKey="export_conversation.export_thinking" />
-            </label>
-          </div>
-        ) : null}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="exportThinking"
+            checked={exportThinking}
+            onChange={toggleExportThinking}
+            className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+          />
+          <label
+            htmlFor="exportThinking"
+            className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+          >
+            <Trans i18nKey="export_conversation.export_thinking" />
+          </label>
+        </div>
 
         {/* Export Button */}
         <div className="flex justify-end w-full">
