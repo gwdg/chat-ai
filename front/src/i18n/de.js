@@ -143,6 +143,7 @@ export default {
     terms: "Nutzungsbedingungen",
     docs: "Doku",
     privacy: "Datenschutz",
+    help: "Hilfe",
     faq: "FAQ",
     contact: "Kontakt",
     about: "Über uns",

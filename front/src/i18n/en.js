@@ -142,6 +142,7 @@ export default {
     terms: "Terms of Use",
     docs: "Documentation",
     privacy: "Privacy",
+    help: "Help",
     faq: "FAQ",
     contact: "Contact Us",
     about: "About",
