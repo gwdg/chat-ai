@@ -12,6 +12,7 @@ import HallucinationWarning from "./HallucinationWarning";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
 import MessageUser from "./MessageUser/MessageUser";
 import Motto from "./Motto";
+import OhbDisclaimer from "./OhbDisclaimer";
 import UndoButton from "./UndoButton";
 import SummaryButton from "./SummaryButton";
 
@@ -389,6 +390,7 @@ export default function Conversation({
 
       {/* Prompt */}
       <Prompt localState={localState} setLocalState={setLocalState} modelsData={modelsData} />
+      {emptyConversation && <OhbDisclaimer />}
       {emptyConversation && <Motto />}
     </div>
   );

@@ -375,6 +375,24 @@ export default {
       note2: "und ihre Antworten sollten nicht als korrekt angesehen werden.",
       note3: "Halluzination",
     },
+    // OHB persistent short banner (replaces the hallucination warning)
+    ohb_banner:
+      "KI-Assistent: Erstinformation — keine verbindliche Auskunft. KI-Chatbots sind Hilfsmittel. Sie ersetzen keine fachliche Expertise oder kritische Prüfung. Antworten können fehlerhaft sein (Halluzinationsgefahr). Prüfen Sie stets die maßgeblichen internen Vorgaben und Rechtsgrundlagen (siehe Referenzen in KI-Antwort). Bei Zweifeln wenden Sie sich an die Fachexpert*innen Ihres MPI oder der Generalverwaltung.",
+    // OHB extensive disclaimer (shown below the input box on every new conversation)
+    ohb_disclaimer: {
+      title:
+        "Wichtiger Hinweis zur Nutzung des KI-Assistenten im Organisationshandbuch (OHB)",
+      s1_title: "1. Zweck",
+      s1: "Dieser KI-Assistent unterstützt die Suche im OHB und dient der ersten Orientierung. Die Antworten werden automatisiert generiert und stellen keine verbindliche Rechtsauskunft dar.",
+      s2_title: "2. Halluzinationsrisiko",
+      s2: "KI-Systeme können fehlerhafte, unvollständige oder veraltete Informationen erzeugen. Dies geschieht, weil die Modelle auf statistischen Mustern und nicht auf verifiziertem Wissen basieren. Die generierten Antworten ersetzen nicht die Lektüre der Primärquellen im OHB — insbesondere der verbindlichen Anweisungen (HS0, HS1 und HS2) sowie der Gesamtbetriebsvereinbarungen (HS1-GBV) — einschließlich der dort referenzierten externen Vorgaben.",
+      s3_title: "3. Vorrang der Fachexpertise",
+      s3: "Bei Zweifeln oder Unklarheiten ist die Expertise durch die im OHB genannten themenverantwortlichen Fachabteilungen der Generalverwaltung bzw. die zuständigen Fachexpertinnen und -experten am jeweiligen MPI einzuholen. Auskünfte des KI-Assistenten sind diesen Fachauskünften gegenüber nachrangig. Übergreifende Fragen zum OHB können an den Stab Compliance (ohb@gv.mpg.de) gerichtet werden. Fragen zur KI-Nutzung richten Sie bitte an das Digital Office (digitalization@gv.mpg.de).",
+      s4_title: "4. Vertraulichkeit",
+      s4_pre: "Die Inhalte des OHB unterliegen der Schutzklasse „intern“. Die Verarbeitung erfolgt im Einklang mit den geltenden Datenschutzregelungen der MPG und der GWDG als Dienstleister von chat-ai ",
+      s4_link: "(Datenschutzerklärung)",
+      s4_post: ".",
+    },
     // External models
     settings_external:
       "Diese Einstellungen wirken sich nicht auf externe (OpenAI) Modelle aus.",

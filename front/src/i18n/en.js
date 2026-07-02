@@ -374,6 +374,24 @@ export default {
       note2: "and their responses should not be considered accurate.",
       note3: "Hallucination",
     },
+    // OHB persistent short banner (replaces the hallucination warning)
+    ohb_banner:
+      "AI assistant: initial guidance only — not a binding statement. AI chatbots are aids. They do not replace professional expertise or critical review. Responses may be incorrect (risk of hallucination). Always check the relevant internal rules and legal bases (see the references in the AI response). If in doubt, contact the subject-matter experts at your MPI or at the General Administration.",
+    // OHB extensive disclaimer (shown below the input box on every new conversation)
+    ohb_disclaimer: {
+      title:
+        "Important information on using the AI assistant in the Organisational Handbook (OHB)",
+      s1_title: "1. Purpose",
+      s1: "This AI assistant helps you search the OHB and serves as an initial orientation. The answers are generated automatically and do not constitute binding legal advice.",
+      s2_title: "2. Risk of hallucination",
+      s2: "AI systems can produce incorrect, incomplete or outdated information. This happens because the models are based on statistical patterns rather than verified knowledge. The generated answers do not replace reading the primary sources in the OHB — in particular the binding instructions (HS0, HS1 and HS2) as well as the general works agreements (HS1-GBV) — including the external requirements referenced there.",
+      s3_title: "3. Precedence of professional expertise",
+      s3: "In case of doubt or ambiguity, expertise must be obtained from the responsible specialist departments of the General Administration named in the OHB, or from the competent subject-matter experts at the respective MPI. Statements by the AI assistant are subordinate to these expert opinions. General questions about the OHB can be directed to the Compliance Office (ohb@gv.mpg.de). Please direct questions about AI use to the Digital Office (digitalization@gv.mpg.de).",
+      s4_title: "4. Confidentiality",
+      s4_pre: "The contents of the OHB are classified as “internal”. Processing takes place in accordance with the applicable data protection regulations of the MPG and of the GWDG as the service provider for chat-ai ",
+      s4_link: "(Privacy Policy)",
+      s4_post: ".",
+    },
     // External models
     settings_external:
       "These settings will not affect external (OpenAI) models.",
