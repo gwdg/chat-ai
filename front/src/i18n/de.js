@@ -331,6 +331,10 @@ export default {
     clear_data: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
+    regenerate_confirm:
+      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Um diese Unterhaltung zu behalten, können Sie in einer Kopie dieses Chats fortfahren.",
+    regenerate_yes: "Regenerieren",
+    regenerate_fork: "Kopie",
     summarize_replace:
       "Dies ersetzt den aktuellen Chatverlauf durch eine Zusammenfassung. Die bisherigen Nachrichten werden aus dieser Unterhaltung entfernt. Fortfahren?",
     summarize_in_progress:

@@ -333,6 +333,10 @@ export default {
       "Caution! Clearing data will erase all your conversations, history, and settings. Are you sure?",
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
+    regenerate_confirm:
+      "Regenerating will delete this response and every message after it, and will apply your current settings. To keep this conversation intact, fork it into a new chat instead.",
+    regenerate_yes: "Regenerate",
+    regenerate_fork: "Fork",
     summarize_replace:
       "This will replace your current chat history with a summary. Your existing messages will be removed from this conversation. Continue?",
     summarize_in_progress:
