@@ -25,6 +25,7 @@ import DeleteFolderModal from "../components/Sidebar/DeleteFolderModal";
 import MoveConversationModal from "../components/Sidebar/MoveConversationModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
 import ClearMessagesModal from "./Alert/ClearMessagesModal";
+import RegenerateConfirmModal from "./Alert/RegenerateConfirmModal";
 import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
@@ -156,6 +157,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "clearMessages" && (
         <ClearMessagesModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "regenerateConfirm" && (
+        <RegenerateConfirmModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {/* General Modals */}
       {modalType === "exportConversation" && (

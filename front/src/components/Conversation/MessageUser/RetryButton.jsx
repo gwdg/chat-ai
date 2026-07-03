@@ -1,6 +1,7 @@
-import { useState, useEffect} from "react";
 import { RotateCw } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
+import { useForkConversation } from "../../../hooks/useForkConversation";
+import { useModal } from "../../../modals/ModalContext";
 
 export default function RetryButton({
   localState,
@@ -8,18 +9,32 @@ export default function RetryButton({
   message_index,
 }) {
   const sendMessage = useSendMessage();
+  const { forkConversation } = useForkConversation(localState);
+  const { openModal } = useModal();
 
-  // Function to handle resending a previous message
-  const handleRetry = async () => {
-    // Remove messages after current index
-    let newState;
-    setLocalState((prev) => {
-      const newMessages = [...prev.messages];
-      newMessages.splice(message_index + 1);
-      newState = { ...prev, messages: newMessages }
-      sendMessage({localState: newState, setLocalState});
-      return { ...prev, messages: newMessages };
-    });
+  // Drop the current response (and everything after this message), then
+  // resend using the conversation's *current* settings.
+  const regenerate = () => {
+    const newMessages = [...localState.messages];
+    newMessages.splice(message_index + 1);
+    const newState = { ...localState, messages: newMessages, flush: true };
+    setLocalState(newState);
+    sendMessage({ localState: newState, setLocalState });
+  };
+
+  // Regenerating is destructive (subsequent messages are lost), so confirm
+  // first unless the user opted out.
+  const handleRetry = () => {
+    if (localState?.dontShow?.regenerate) {
+      regenerate();
+    } else {
+      openModal("regenerateConfirm", {
+        localState,
+        setLocalState,
+        regenerate,
+        forkConversation: () => forkConversation(message_index),
+      });
+    }
   };
 
   return (

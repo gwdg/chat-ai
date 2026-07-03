@@ -6,10 +6,8 @@ import Attachment from "../../Prompt/Attachment";
 import EditButton from "./EditButton";
 import { RotateCw, GitFork, Loader2 } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
+import { useForkConversation } from "../../../hooks/useForkConversation";
 import MetaBox from "./MetaBox";
-import { useNavigate } from "react-router";
-import { createConversation, newId, saveFile, loadFile } from "../../../db";
-import { useToast } from "../../../hooks/useToast";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import config from "../../../config";
@@ -32,9 +30,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const renderModes = ["Default", "Markdown", "LaTeX", "Plaintext"];
   
   const sendMessage = useSendMessage();
-  const navigate = useNavigate();
-  const { notifySuccess, notifyError } = useToast();
-  const [forking, setForking] = useState(false);
+  const { forkConversation } = useForkConversation(localState);
   const feedbackModule = config.modules?.feedback;
 
   //Functions
@@ -155,109 +151,10 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     });
   };
 
-  const cloneMessageContent = useCallback(
-    async (content, targetConversationId) => {
-      const items = Array.isArray(content)
-        ? content
-        : typeof content === "string"
-          ? [{ type: "text", text: content }]
-          : [];
-      const clonedContent = [];
-      for (const item of items) {
-        if (item?.type === "file" && item?.fileId) {
-          try {
-            const file = await loadFile(item.fileId);
-            if (file) {
-              const newFileId = saveFile(targetConversationId, file);
-              clonedContent.push({ type: "file", fileId: newFileId });
-            }
-          } catch (error) {
-            console.warn("Failed to clone attachment", error);
-          }
-          continue;
-        }
-        if (item?.type) {
-          clonedContent.push({ ...item });
-        } else if (item?.text) {
-          clonedContent.push({ type: "text", text: item.text });
-        } else {
-          clonedContent.push({ type: "text", text: "" });
-        }
-      }
-      if (clonedContent.length === 0) {
-        return [{ type: "text", text: "" }];
-      }
-      return clonedContent;
-    },
-    []
+  const handleForkConversation = useCallback(
+    () => forkConversation(message_index),
+    [forkConversation, message_index]
   );
-
-  const handleForkConversation = useCallback(async () => {
-    if (forking) return;
-    try {
-      setForking(true);
-      const sourceMessages = localState?.messages?.slice(0, message_index + 1) || [];
-      if (sourceMessages.length === 0) {
-        notifyError("Keine Nachrichten zum Forken gefunden.");
-        return;
-      }
-
-      const newConversationId = newId();
-      const forkMessages = [];
-      for (const msg of sourceMessages) {
-        if (!msg?.role) continue;
-        const clonedContent = await cloneMessageContent(msg.content, newConversationId);
-        forkMessages.push({
-          role: msg.role,
-          content: clonedContent,
-          meta: msg.meta,
-          createdAt: msg.createdAt,
-          updatedAt: msg.updatedAt,
-        });
-      }
-
-      if (forkMessages[forkMessages.length - 1]?.role !== "user") {
-        forkMessages.push({
-          role: "user",
-          content: [{ type: "text", text: "" }],
-        });
-      }
-
-      const baseTitle = localState?.title?.trim();
-      const forkTitle = baseTitle
-        ? baseTitle.endsWith(" (Fork)") ? baseTitle : `${baseTitle} (Fork)`
-        : "Forked Conversation";
-
-      const settingsClone = JSON.parse(JSON.stringify(localState?.settings || {}));
-
-      await createConversation({
-        id: newConversationId,
-        title: forkTitle,
-        settings: settingsClone,
-        messages: forkMessages,
-        folderId: localState?.folderId ?? null,
-      });
-
-      notifySuccess("Neue Konversation erstellt.");
-      navigate(`/chat/${newConversationId}`);
-    } catch (error) {
-      console.error("Failed to fork conversation", error);
-      notifyError("Konversation konnte nicht geforkt werden.");
-    } finally {
-      setForking(false);
-    }
-  }, [
-    cloneMessageContent,
-    forking,
-    localState?.folderId,
-    localState?.messages,
-    localState?.settings,
-    localState?.title,
-    message_index,
-    navigate,
-    notifyError,
-    notifySuccess,
-  ]);
 
   const content = message?.content?.[0]?.text ?? "";
   const isContentEmpty = !content.trim();
