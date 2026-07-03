@@ -69,6 +69,11 @@ async function* chatCompletions (
 
     if (!stream) {
       const result = streamResponse;
+      // Structured RAG references are now returned as a top-level `references`
+      // field on the completion object (the OpenAI SDK keeps unknown fields).
+      if (result?.references) {
+        console.log("Reference JSON (non-streaming) extracted from result.references:", result.references);
+      }
       console.log("Error:", result);
       return result;
     }
@@ -84,6 +89,11 @@ async function* chatCompletions (
           err.status = chunk?.status || chunk?.code;
           err.code = chunk?.code || chunk?.status;
           throw err;
+      }
+      // Structured RAG references arrive as a top-level `references` field on the
+      // final (stop) chunk — the OpenAI SDK preserves it as chunk.references.
+      if (chunk?.references) {
+        console.log("Reference JSON (streaming) extracted from chunk.references:", chunk.references);
       }
       try {
         if (!completed) {
