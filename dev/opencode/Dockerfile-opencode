@@ -1,0 +1,26 @@
+FROM ubuntu:26.04
+ARG UID=1000
+ARG GID=1000
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    git curl sudo
+
+RUN groupadd -g $GID -o opencode
+RUN userdel -f ubuntu
+RUN useradd -ms /bin/bash -u $UID -g $GID opencode 
+
+USER opencode
+RUN mkdir /home/opencode/code
+RUN curl -fsSL https://opencode.ai/install | bash
+WORKDIR /home/opencode
+
+## copy local permissions over 
+COPY ./opencode.json /home/opencode/.config/opencode/opencode.json
+COPY ./auth.json /home/opencode/.local/share/opencode/auth.json 
+
+USER root
+RUN chown -R opencode:opencode /home/opencode/.config/ /home/opencode/.local/
+
+CMD ["/bin/bash"]
