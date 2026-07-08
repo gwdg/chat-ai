@@ -33,11 +33,25 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
   }, [isVisible, isRendered, index, onRenderComplete]);
 
   const { titleText, contentBody, hasContent, isPartial } = useMemo(() => {
+    const title =
+      reference?.title || `Reference ${reference?.rrefNumber ?? index + 1}`;
+
+    // Structured references already carry the full document text as `body`.
+    if (reference?.body != null) {
+      const body = String(reference.body).trim();
+      return {
+        titleText: title,
+        contentBody: body,
+        hasContent: body.length > 0,
+        isPartial: false,
+      };
+    }
+
     const raw = reference?.content || "";
     const lines = raw.split("\n").filter((l) => l.trim().length > 0);
     const firstLine = lines[0] || "";
 
-    const title =
+    const legacyTitle =
       reference?.title ||
       firstLine.replace(/\s*\[RREF\d+\]\s*/i, "").trim() ||
       `Reference ${reference?.rrefNumber ?? index + 1}`;
@@ -47,7 +61,7 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
       isStreaming && !isComplete && (raw.length < 50 || !raw.includes("\n"));
 
     return {
-      titleText: title,
+      titleText: legacyTitle,
       contentBody: body,
       hasContent: body.length > 0 || partialFlag,
       isPartial: partialFlag,
@@ -93,10 +107,25 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
             {reference?.rrefNumber || index + 1}
           </span>
 
-          <div className="text-sm font-medium truncate flex items-center gap-2 min-w-0">
-            <div className="truncate">
+          <div className="text-sm font-medium flex items-center gap-2 min-w-0">
+            <div className="truncate shrink-0 max-w-full">
               <SafeMarkdown>{titleText}</SafeMarkdown>
             </div>
+
+            {(reference?.sectionTitle || reference?.fachbereich) && (
+              <span className="text-gray-400 dark:text-gray-500 font-normal truncate min-w-0">
+                {"- "}
+                {[reference?.sectionTitle, reference?.fachbereich]
+                  .filter(Boolean)
+                  .join(" / ")}
+              </span>
+            )}
+
+            {reference?.arcanaName && (
+              <span className="shrink-0 text-[10px] font-mono uppercase tracking-wide text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5">
+                {reference.arcanaName}
+              </span>
+            )}
 
             {reference?.url && (
               <a
@@ -168,8 +197,31 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
   );
 });
 
+// Map the structured RAG reference objects returned by the backend onto the
+// shape the reference items expect, exposing the richer metadata fields.
+const normalizeStructuredReferences = (refs) =>
+  (Array.isArray(refs) ? refs : []).map((r, i) => {
+    const frontmatter = r?.frontmatter || {};
+    const fachbereich =
+      r?.frontmatter_meta?.fachbereich || frontmatter?.fachbereich || "";
+    const sectionTitle = Array.isArray(r?.section_path)
+      ? r.section_path.filter(Boolean).join(" › ")
+      : r?.section_path || "";
+    return {
+      number: i,
+      rrefNumber: i + 1,
+      title: frontmatter?.title || r?.filename || `Reference ${i + 1}`,
+      url: r?.url || frontmatter?.url || null,
+      sectionTitle,
+      fachbereich,
+      arcanaName: r?.arcana_name || "",
+      body: r?.text || "",
+    };
+  });
+
 const ReferencesSection = memo(function ReferencesSection({
   content,
+  structuredReferences,
   isLoading,
   isStreaming = false,
 }) {
@@ -179,13 +231,17 @@ const ReferencesSection = memo(function ReferencesSection({
 
   const references = useMemo(() => {
     try {
+      // Prefer the structured references; fall back to the legacy string parse.
+      if (Array.isArray(structuredReferences) && structuredReferences.length > 0) {
+        return normalizeStructuredReferences(structuredReferences);
+      }
       if (!content) return [];
       return parseReferences(content); // returns RAW markdown blocks
     } catch (e) {
       console.error("Error parsing references:", e);
       return [];
     }
-  }, [content]);
+  }, [content, structuredReferences]);
 
   useEffect(() => {
     if (references.length > 0) {
@@ -217,11 +273,10 @@ const ReferencesSection = memo(function ReferencesSection({
       references
         .map((ref) => {
           const t = ref.title || `Reference ${ref.rrefNumber}`;
-          const body = (ref.content || "")
-            .split("\n")
-            .slice(1)
-            .join("\n")
-            .trim();
+          const body =
+            ref.body != null
+              ? String(ref.body).trim()
+              : (ref.content || "").split("\n").slice(1).join("\n").trim();
           return body ? `${t}\n\n${body}` : t;
         })
         .join("\n\n"),

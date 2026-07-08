@@ -288,7 +288,11 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+              <MarkdownRenderer
+                isLoading={loading}
+                renderMode={renderMode}
+                references={message?.meta?.references}
+              >
                 {message.content[0]?.text}
               </MarkdownRenderer>
               {/* Attachments Section */}
