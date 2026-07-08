@@ -107,46 +107,49 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
             {reference?.rrefNumber || index + 1}
           </span>
 
-          <div className="text-sm font-medium flex items-center gap-2 min-w-0">
-            <div className="truncate shrink-0 max-w-full">
-              <SafeMarkdown>{titleText}</SafeMarkdown>
+          <div className="flex flex-col min-w-0 gap-0.5">
+            {/* Row 1: source file name (+ arcana / link) */}
+            <div className="text-sm font-medium flex items-center gap-2 min-w-0">
+              <div className="truncate min-w-0">
+                <SafeMarkdown>{titleText}</SafeMarkdown>
+              </div>
+
+              {reference?.arcanaName && (
+                <span className="shrink-0 text-[10px] font-mono uppercase tracking-wide text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5">
+                  {reference.arcanaName}
+                </span>
+              )}
+
+              {reference?.url && (
+                <a
+                  href={reference.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                  title="Open source"
+                >
+                  <ExternalLink size={16} className="opacity-70" />
+                </a>
+              )}
+
+              {isPartial && isStreaming && (
+                <span className="inline-flex items-center ml-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-blue-600 dark:text-blue-400 ml-1">
+                    loading...
+                  </span>
+                </span>
+              )}
             </div>
 
-            {(reference?.sectionTitle || reference?.fachbereich) && (
-              <span className="text-gray-400 dark:text-gray-500 font-normal truncate min-w-0">
-                {"- "}
-                {[reference?.sectionTitle, reference?.fachbereich]
+            {/* Row 2: Fachbereich · section title, muted */}
+            {(reference?.fachbereich || reference?.sectionTitle) && (
+              <div className="text-xs text-gray-400 dark:text-gray-500 truncate min-w-0">
+                {[reference?.fachbereich, reference?.sectionTitle]
                   .filter(Boolean)
-                  .join(" / ")}
-              </span>
-            )}
-
-            {reference?.arcanaName && (
-              <span className="shrink-0 text-[10px] font-mono uppercase tracking-wide text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5">
-                {reference.arcanaName}
-              </span>
-            )}
-
-            {reference?.url && (
-              <a
-                href={reference.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0"
-                onClick={(e) => e.stopPropagation()}
-                title="Open source"
-              >
-                <ExternalLink size={16} className="opacity-70" />
-              </a>
-            )}
-
-            {isPartial && isStreaming && (
-              <span className="inline-flex items-center ml-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-xs text-blue-600 dark:text-blue-400 ml-1">
-                  loading...
-                </span>
-              </span>
+                  .join(" · ")}
+              </div>
             )}
           </div>
         </div>
@@ -204,9 +207,15 @@ const normalizeStructuredReferences = (refs) =>
     const frontmatter = r?.frontmatter || {};
     const fachbereich =
       r?.frontmatter_meta?.fachbereich || frontmatter?.fachbereich || "";
-    const sectionTitle = Array.isArray(r?.section_path)
-      ? r.section_path.filter(Boolean).join(" › ")
-      : r?.section_path || "";
+    const sectionPath = Array.isArray(r?.section_path)
+      ? r.section_path.filter(Boolean)
+      : r?.section_path
+        ? [r.section_path]
+        : [];
+    // Only show the most specific (last) section element.
+    const sectionTitle = sectionPath.length
+      ? sectionPath[sectionPath.length - 1]
+      : "";
     return {
       number: i,
       rrefNumber: i + 1,

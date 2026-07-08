@@ -706,9 +706,8 @@ const MarkdownRenderer = memo(
           {renderContentByMode()}
         </div>
 
-        {(Array.isArray(references) && references.length > 0) || finalReferences ? (
+        {Array.isArray(references) && references.length > 0 ? (
           <ReferencesSection
-            content={finalReferences}
             structuredReferences={references}
             isLoading={isLoading}
             isStreaming={isStreaming}
