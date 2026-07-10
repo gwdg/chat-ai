@@ -62,7 +62,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
           {/* Help (static PDF) */}
           <Link
             className="justify-center"
-            to={"/OHB-Chatbot.pdf"}
+            to={"/OHB-Chatbot__DE___EN__v1.0.pdf"}
             target="_blank"
           >
             <p className="text-center text-blue-600 dark:text-blue-400 hover:underline">

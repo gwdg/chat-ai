@@ -376,7 +376,7 @@ export default {
     },
     // OHB persistent short banner (replaces the hallucination warning)
     ohb_banner:
-      "AI assistant: initial guidance only — not a binding statement. AI chatbots are aids. They do not replace professional expertise or critical review. Responses may be incorrect (risk of hallucination). Always check the relevant internal rules and legal bases (see the references in the AI response). If in doubt, contact the subject-matter experts at your MPI or at the General Administration.",
+      "AI assistant: initial guidance only — not a binding statement. AI chatbots are aids. They do not replace professional expertise or critical review. Responses may be incorrect (risk of hallucination). Always check the relevant internal rules and legal bases (see the references in the AI response). If in doubt, contact the subject-matter experts at your MPI or at the General Administration. You can reach our helpdesk at support@maxit.mpg.de.",
     // OHB extensive disclaimer (shown below the input box on every new conversation)
     ohb_disclaimer: {
       title:
@@ -386,7 +386,7 @@ export default {
       s2_title: "2. Risk of hallucination",
       s2: "AI systems can produce incorrect, incomplete or outdated information. This happens because the models are based on statistical patterns rather than verified knowledge. The generated answers do not replace reading the primary sources in the OHB — in particular the binding instructions (HS0, HS1 and HS2) as well as the general works agreements (HS1-GBV) — including the external requirements referenced there.",
       s3_title: "3. Precedence of professional expertise",
-      s3: "In case of doubt or ambiguity, expertise must be obtained from the responsible specialist departments of the General Administration named in the OHB, or from the competent subject-matter experts at the respective MPI. Statements by the AI assistant are subordinate to these expert opinions. General questions about the OHB can be directed to the Compliance Office (ohb@gv.mpg.de). Please direct questions about AI use to the Digital Office (digitalization@gv.mpg.de).",
+      s3: "In case of doubt or ambiguity, expertise must be obtained from the responsible specialist departments of the General Administration named in the OHB, or from the competent subject-matter experts at the respective MPI. Please direct general questions about AI to the Digital Office (digitalization@gv.mpg.de); for problems with usage, MaxIT (support@maxit.mpg.de) can help. Cross-cutting questions about the OHB are answered by the Compliance Office (ohb@gv.mpg.de).",
       s4_title: "4. Confidentiality",
       s4_pre: "The contents of the OHB are classified as “internal”. Processing takes place in accordance with the applicable data protection regulations of the MPG and of the GWDG as the service provider for chat-ai ",
       s4_link: "(Privacy Policy)",
