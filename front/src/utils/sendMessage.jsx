@@ -306,12 +306,17 @@ const sendMessage = async ({
     async function getChatChunk(conversationId, messageId = null) {
       let currentContent = [{"type": "text", "text": ""}];
       let usage = null;
+      let references = null;
       let process_block = "";
       let inThinking = false;
       let message_text = "";
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
         const delta = chunk?.choices[0]?.delta;
         if (chunk?.usage) usage = chunk.usage;
+        // Structured RAG references arrive as a top-level `references` field
+        if (Array.isArray(chunk?.references) && chunk.references.length > 0) {
+          references = chunk.references;
+        }
         // Check if reasoning exists
         if (delta?.reasoning) {
           process_block += delta.reasoning;
@@ -529,7 +534,8 @@ const sendMessage = async ({
       }
       return {
         answer: currentContent,
-        usage
+        usage,
+        references
       }
     }
 
@@ -545,7 +551,8 @@ const sendMessage = async ({
       usage = chatChunk?.usage;
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",
-        usage
+        usage,
+        references: chatChunk?.references || undefined
       };
     } catch (error) {
       const errorType = error?.type || "Error";

@@ -496,7 +496,7 @@ export const SafeMarkdown = ({
  * Main MarkdownRenderer
  * -------------------------------------------- */
 const MarkdownRenderer = memo(
-  ({ children, isDarkMode, isLoading, renderMode = "Default" }) => {
+  ({ children, isDarkMode, isLoading, renderMode = "Default", references }) => {
     // KaTeX styling
     useEffect(() => {
       const style = document.createElement("style");
@@ -706,13 +706,13 @@ const MarkdownRenderer = memo(
           {renderContentByMode()}
         </div>
 
-        {finalReferences && (
+        {Array.isArray(references) && references.length > 0 ? (
           <ReferencesSection
-            content={finalReferences}
+            structuredReferences={references}
             isLoading={isLoading}
             isStreaming={isStreaming}
           />
-        )}
+        ) : null}
       </>
     );
   }
