@@ -5,6 +5,7 @@ const initialState = {
   memories: [],
   // model: "", // TODO load from file
   timeout: 300000,
+  reasoning_effort: "medium",
 };
 
 const userSettingsSlice = createSlice({
@@ -52,6 +53,11 @@ const userSettingsSlice = createSlice({
       state.model = action.payload;
     },
 
+    // Reasoning Effort
+    setReasoningEffort: (state, action) => {
+      state.reasoning_effort = action.payload;
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -75,7 +81,7 @@ const userSettingsSlice = createSlice({
 export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
-  setDefaultModel
+  setDefaultModel, setReasoningEffort,
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -83,5 +89,6 @@ export const selectAllMemories = (state) => state.user_settings.memories;
 export const selectMemoryByIndex = (state, index) => state.user_settings.memories[index];
 export const selectTimeout = (state) => state.user_settings.timeout;
 export const selectDefaultModel = (state) => state.user_settings.model;
+export const selectReasoningEffort = (state) => state.user_settings.reasoning_effort ?? "medium";
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;

@@ -93,7 +93,8 @@ export default {
     label_video_generation: "Video Generation",
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",
-    model_effort_label: "Effort",
+    model_effort_label: "Reasoning Effort",
+    model_effort_off: "Off",
     model_effort_low: "Low",
     model_effort_medium: "Medium",
     model_effort_high: "High",
@@ -161,6 +162,15 @@ export default {
       title: "Default Model",
       current: "Current: {{currentModel}}",
       description: "Select the default model for new conversations.",
+    },
+    reasoning_effort: {
+      title: "Reasoning Effort",
+      description:
+        "Control how much time the model spends reasoning before responding. Higher effort produces more thorough answers but takes longer. Turn off to disable extended thinking entirely.",
+      off: "Off",
+      low: "Low",
+      mid: "Medium",
+      high: "High",
     },
     timeout: {
       title: "Request Timeout",
@@ -290,6 +300,8 @@ export default {
       "The web search tool allows the AI to look up the latest information from the internet to improve its responses. When enabled, the AI can generate search queries based on your question and the full conversation history, send them to a search engine (such as Google), and use the retrieved results to provide more accurate and up-to-date answers. This is especially useful for topics where current or rapidly changing information is important.",
     top_p:
       "top_p is a slider from 0 to 1 which adjusts the total population of probabilities considered for the next token. A top_p of 0.1 would mean only the top 10% of cumulative probabilities is considered. Variating top_p has a similar effect on predictability and creativity as temperature.",
+    reasoning_effort:
+      "Reasoning Effort controls how much time the model spends thinking before it responds. \"Off\" disables extended thinking entirely for the fastest possible response. \"Low\" applies minimal reasoning — good for simple or factual questions. \"Medium\" balances quality and speed for most everyday tasks. \"High\" enables thorough, step-by-step reasoning — ideal for complex problems, math, coding, or nuanced analysis. Note: higher effort increases response time.",
   },
   model_selector: {
     docs_hint_text: "Need help deciding which model fits best?",

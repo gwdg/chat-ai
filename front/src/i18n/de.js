@@ -93,7 +93,8 @@ export default {
     label_video_generation: "Videogenerierung",
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",
-    model_effort_label: "Aufwand",
+    model_effort_label: "Denkaufwand",
+    model_effort_off: "Aus",
     model_effort_low: "Niedrig",
     model_effort_medium: "Mittel",
     model_effort_high: "Hoch",
@@ -162,6 +163,15 @@ export default {
       title: "Standardmodell",
       current: "Aktuell: {{currentModel}}",
       description: "Wählen Sie das Standardmodell für neue Gespräche aus.",
+    },
+    reasoning_effort: {
+      title: "Denkaufwand",
+      description:
+        "Bestimmen Sie, wie viel Zeit das Modell vor der Antwort mit dem Denken verbringt. Höherer Aufwand liefert gründlichere Antworten, braucht aber länger. Deaktivieren Sie diese Option, um erweitertes Denken vollständig abzuschalten.",
+      off: "Aus",
+      low: "Niedrig",
+      mid: "Mittel",
+      high: "Hoch",
     },
     timeout: {
       title: "Wartezeit für Antworten",
@@ -289,6 +299,8 @@ export default {
       "Das Websuche-Werkzeug ermöglicht es der KI, aktuelle Informationen aus dem Internet abzurufen, um ihre Antworten zu verbessern. Wenn es aktiviert ist, kann die KI auf Grundlage Ihrer Frage und des gesamten Gesprächsverlaufs Suchanfragen erstellen, diese an eine Suchmaschine (wie z. B. Google) senden und die erhaltenen Ergebnisse nutzen, um genauere und aktuellere Antworten zu geben. Dies ist besonders nützlich bei Themen, bei denen aktuelle oder sich schnell ändernde Informationen wichtig sind.",
     top_p:
       "top_p ist ein Schieberegler von 0 bis 1, der den Gesamtbestand der Wahrscheinlichkeiten anpasst, die für das nächste Token in Betracht gezogen werden. Ein top_p von 0,1 würde bedeuten, dass nur die oberen 10% der kumulativen Wahrscheinlichkeiten berücksichtigt werden. Die Variation von top_p hat einen ähnlichen Effekt auf Vorhersagbarkeit und Kreativität wie die Temperatur.",
+    reasoning_effort:
+      "Der Denkaufwand steuert, wie viel Zeit das Modell vor der Antwort mit dem Denken verbringt. \"Aus\" deaktiviert das erweiterte Denken vollständig für die schnellstmögliche Antwort. \"Niedrig\" wendet minimales Reasoning an – geeignet für einfache oder sachliche Fragen. \"Mittel\" balanciert Qualität und Geschwindigkeit für die meisten alltäglichen Aufgaben. \"Hoch\" aktiviert gründliches, schrittweises Reasoning – ideal für komplexe Probleme, Mathematik, Programmierung oder differenzierte Analysen. Hinweis: Höherer Aufwand erhöht die Antwortzeit.",
   },
   model_selector: {
     docs_hint_text: "Unsicher, welches Modell Sie wählen sollen?",

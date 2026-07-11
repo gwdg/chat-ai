@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import { useModal } from "../ModalContext"; 
 import BaseModal from "../BaseModal";
 import DefaultModelSelector from "./DefaultModelSelector";
+import ReasoningEffortSelector from "./ReasoningEffortSelector";
 import UserInfoContainer from "./UserInfoContainer";
 import TimeoutSetter from "./TimeoutSetter";
 import UserMemoryContainer from "./UserMemoryContainer";
@@ -67,6 +68,9 @@ export default function UserSettingsModal({
       <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1 min-h-0">
         {/* Default Model Selector */}
         {modelsData ? <DefaultModelSelector modelsData={modelsData} /> : <></>}
+
+        {/* Reasoning Effort Selector */}
+        <ReasoningEffortSelector />
 
         {/* Timeout Setter */}
         <TimeoutSetter />

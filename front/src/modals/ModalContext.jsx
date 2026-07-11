@@ -39,6 +39,7 @@ import HelpWebSearchModal from "./Help/HelpWebSearchModal";
 import WebSearchDisclaimer from "./Alert/WebSearchDisclaimer";
 import WelcomeModal from "./Help/WelcomeModal";
 import HelpMCPModal from "./Help/HelpMCPModal";
+import HelpReasoningEffortModal from "./Help/HelpReasoningEffortModal";
 import ImportSettingsDisclaimerModal from "./Alert/ImportSettingsDisclaimerModal";
 
 const ModalContext = createContext();
@@ -133,6 +134,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "helpWebSearch" && (
         <HelpWebSearchModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "helpReasoningEffort" && (
+        <HelpReasoningEffortModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {/* User Settings Modals*/}
       {modalType === "userSettings" && (

@@ -1,41 +1,56 @@
-import { useTranslation } from "react-i18next";
-import { HelpCircle } from "lucide-react";
-import { useModal } from "../../modals/ModalContext";
+import { Trans, useTranslation } from "react-i18next";
+import { useSelector, useDispatch } from "react-redux";
+import { selectReasoningEffort, setReasoningEffort } from "../../Redux/reducers/userSettingsReducer";
+
+// Flip this to false once the model list exposes a `supportsReasoningEffort` key.
+const MODEL_SUPPORTS_REASONING_EFFORT = true;
 
 const EFFORT_OPTIONS = [
-  { value: "off",    labelKey: "settings.model_effort_off",    dotSize: null },
-  { value: "low",    labelKey: "settings.model_effort_low",    dotSize: "h-2.5 w-2.5" },
-  { value: "medium", labelKey: "settings.model_effort_medium", dotSize: "h-[18px] w-[18px]" },
-  { value: "high",   labelKey: "settings.model_effort_high",   dotSize: "h-6 w-6" },
+  {
+    value: "off",
+    labelKey: "user_settings.reasoning_effort.off",
+    dotSize: null,
+  },
+  {
+    value: "low",
+    labelKey: "user_settings.reasoning_effort.low",
+    dotSize: "h-2.5 w-2.5",
+  },
+  {
+    value: "medium",
+    labelKey: "user_settings.reasoning_effort.mid",
+    dotSize: "h-[18px] w-[18px]",
+  },
+  {
+    value: "high",
+    labelKey: "user_settings.reasoning_effort.high",
+    dotSize: "h-6 w-6",
+  },
 ];
 
-export default function ModelEffortSelector({ localState, setLocalState }) {
+export default function ReasoningEffortSelector() {
   const { t } = useTranslation();
-  const { openModal } = useModal();
-  const selectedEffort = localState?.settings?.model_effort || "medium";
+  const dispatch = useDispatch();
+  const selectedEffort = useSelector(selectReasoningEffort);
 
-  const handleChangeEffort = (modelEffort) => {
-    setLocalState((prev) => ({
-      ...prev,
-      settings: {
-        ...prev.settings,
-        model_effort: modelEffort,
-      },
-      flush: true,
-    }));
+  if (!MODEL_SUPPORTS_REASONING_EFFORT) return null;
+
+  const handleSelect = (value) => {
+    dispatch(setReasoningEffort(value));
   };
 
   return (
-    <div className="flex flex-col w-full gap-2">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <p className="text-sm font-medium">{t("settings.model_effort_label")}</p>
-        <HelpCircle
-          className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
-          onClick={() => openModal("helpReasoningEffort")}
-        />
+        <p className="text-sm font-medium dark:text-white">
+          <Trans i18nKey="user_settings.reasoning_effort.title" />
+        </p>
       </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        <Trans i18nKey="user_settings.reasoning_effort.description" />
+      </p>
 
-      <div className="grid grid-cols-4 gap-2 w-full select-none">
+      <div className="grid grid-cols-4 gap-2 select-none">
         {EFFORT_OPTIONS.map(({ value, labelKey, dotSize }) => {
           const isSelected = selectedEffort === value;
           const isOff = value === "off";
@@ -45,7 +60,7 @@ export default function ModelEffortSelector({ localState, setLocalState }) {
               key={value}
               type="button"
               aria-pressed={isSelected}
-              onClick={() => handleChangeEffort(value)}
+              onClick={() => handleSelect(value)}
               className={[
                 "h-[52px] rounded-lg border px-2",
                 "flex flex-col items-center justify-center gap-1.5",
@@ -60,7 +75,9 @@ export default function ModelEffortSelector({ localState, setLocalState }) {
                   <span
                     className={[
                       "h-[3px] w-5 rounded-full transition-colors",
-                      isSelected ? "bg-tertiary" : "bg-gray-300 dark:bg-gray-600",
+                      isSelected
+                        ? "bg-tertiary"
+                        : "bg-gray-300 dark:bg-gray-600",
                     ].join(" ")}
                   />
                 ) : (
