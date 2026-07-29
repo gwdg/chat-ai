@@ -7,6 +7,7 @@ import EditButton from "./EditButton";
 import { RotateCw, GitFork } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
 import { useForkConversation } from "../../../hooks/useForkConversation";
+import { useModal } from "../../../modals/ModalContext";
 import MetaBox from "./MetaBox";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
@@ -30,6 +31,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   
   const sendMessage = useSendMessage();
   const { forkConversation } = useForkConversation(localState);
+  const { confirmAction } = useModal();
   const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
 
   //Functions
@@ -151,8 +153,16 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   };
 
   const handleForkConversation = useCallback(
-    () => forkConversation(message_index),
-    [forkConversation, message_index]
+    () =>
+      confirmAction(
+        {
+          warningKey: "warn_fork",
+          messageKey: "alert.fork_confirm",
+          confirmKey: "alert.fork_yes",
+        },
+        () => forkConversation(message_index)
+      ),
+    [confirmAction, forkConversation, message_index]
   );
 
   const content = message?.content?.[0]?.text ?? "";
