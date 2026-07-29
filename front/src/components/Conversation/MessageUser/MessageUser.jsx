@@ -1,6 +1,7 @@
 import React from "react";
 import { useState, useRef, useEffect } from "react";
 import RetryButton from "./RetryButton";
+import ForkButton from "./ForkButton";
 import EditButton from "./EditButton";
 import EditBox from "./EditBox";
 import MessageTextContainer from "./MessageTextContainer";
@@ -50,6 +51,11 @@ export default React.memo(({
                         <RetryButton
                             localState={localState}
                             setLocalState={setLocalState}
+                            message_index={message_index}
+                        />
+                        {/* Fork button */}
+                        <ForkButton
+                            localState={localState}
                             message_index={message_index}
                         />
                         {/* Edit button */}

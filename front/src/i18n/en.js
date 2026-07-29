@@ -30,6 +30,8 @@ export default {
     record_start: "Record (click/hold)",
     record_stop: "Stop (click/release)",
     dont_show_again: "Don't show this again",
+    regenerate: "Regenerate response",
+    fork: "Continue in a new chat",
     backup_data: "Backup Data",
     skip_backup: "Skip Backup",
     upgrade_chat_ai: "Upgrade Chat AI",
@@ -135,6 +137,9 @@ export default {
     references: "References",
     empty_message: "Your conversations are never stored on our servers",
     untitled: "Untitled Conversation",
+    fork_empty: "No messages found to copy.",
+    fork_created: "New conversation created.",
+    fork_failed: "Conversation could not be copied.",
   },
   // Footer
   footer: {
@@ -407,9 +412,11 @@ export default {
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
     regenerate_confirm:
-      "Regenerating will delete this response and every message after it, and will apply your current settings. To keep this conversation intact, fork it into a new chat instead.",
+      "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone.",
     regenerate_yes: "Regenerate",
-    regenerate_fork: "Fork",
+    fork_confirm:
+      "This copies the conversation up to this message into a new chat. The current conversation stays as it is, so you can try a different answer or different settings without losing anything.",
+    fork_yes: "Create copy",
     summarize_replace:
       "This will replace your current chat history with a summary. Your existing messages will be removed from this conversation. Continue?",
     summarize_in_progress:
