@@ -8,7 +8,7 @@ import {
   agreeWebSearch,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import {
-  HelpCircle,
+  CircleHelp,
   Globe,
   Image as ImageIcon,
   Video,
@@ -152,7 +152,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
       <div className="flex flex-row md:gap-4 gap-3 w-full md:items-center">
         <div className="flex-shrink-0 flex items-center gap-2">
           <p className="text-sm font-medium">{t("settings.tools_title")}</p>
-          <HelpCircle
+          <CircleHelp
             className="h-[16px] w-[16px] cursor-pointer text-gray-500 dark:text-gray-400"
             alt="help"
             onClick={() => openModal("helpTools")}

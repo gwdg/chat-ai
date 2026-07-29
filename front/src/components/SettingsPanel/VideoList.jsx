@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, Clock3, Download, XCircle, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock3, Download, CircleX, Trash2 } from "lucide-react";
 import { Video } from "lucide-react";
 import { useUpdateVideoList } from "../../hooks/useUpdateVideoList";
 import { downloadVideo, deleteVideo } from "../../apis/videoListApi";
@@ -63,14 +63,14 @@ export default function VideoList() {
       case "failed":
         return {
           label: t("settings.video_queue_status_failed"),
-          icon: <XCircle className="h-3.5 w-3.5" />,
+          icon: <CircleX className="h-3.5 w-3.5" />,
           className:
             "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-100",
         };
       case "deleted":
         return {
           label: t("settings.video_queue_status_deleted"),
-          icon: <XCircle className="h-3.5 w-3.5" />,
+          icon: <CircleX className="h-3.5 w-3.5" />,
           className:
             "bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
         };

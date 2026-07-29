@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { HelpCircle } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
 import { useDebounce } from "../../hooks/useDebounce";
 
@@ -63,7 +63,7 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
     <div className="w-full flex flex-col flex-grow gap-4">
       <div className="flex-shrink-0 flex items-center gap-2">
         <p className="text-sm font-medium">System prompt</p>
-        <HelpCircle
+        <CircleHelp
           className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
           alt="help"
           onClick={() => openModal("helpSystemPrompt")}

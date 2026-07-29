@@ -1,6 +1,6 @@
 // components/settings/MCPContainer.jsx
 import { Trans, useTranslation } from "react-i18next";
-import { HelpCircle } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
 
 const MCPContainer = ({ localState, setLocalState }) => {
@@ -20,7 +20,7 @@ const MCPContainer = ({ localState, setLocalState }) => {
       <div className="flex gap-3 w-full items-center">
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
           <p className="text-sm">{t("settings.label_mcp_server")}</p>
-          <HelpCircle
+          <CircleHelp
             className="h-4 w-4 cursor-pointer text-[#009EE0]"
             alt="help"
             onClick={() => openModal("helpMCP")}
