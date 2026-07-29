@@ -193,6 +193,8 @@ const sendMessage = async ({
   notifySuccess,
   dispatch,
   timeout,
+  memoryMode = 0,
+  suggestUserPrompts = false,
 }) => {
   const conversationId = localState.id
 
@@ -209,7 +211,7 @@ const sendMessage = async ({
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content[0].text
       : "";
-    if (localState.settings?.memory != 0 && memories.length > 0) {
+    if (memoryMode !== 0 && memories.length > 0) {
       const memoryContext = memories.map((memory) => memory.text).join("\n");
       const memorySection = `\n\n--- Begin User Memory ---\n${memoryExplanation}\n\n${memoryContext}\n--- End User Memory ---`;
       systemPromptAPI = systemPromptAPI + memorySection;
@@ -558,7 +560,7 @@ const sendMessage = async ({
       };
     } finally {
       // Update choices
-      if(choicesModule && localState.settings.choiceProposer == 1){
+      if (choicesModule && suggestUserPrompts) {
         try {
           const content = localState.messages.map((message) => {
           if (Array.isArray(message.content)){
@@ -658,7 +660,7 @@ const sendMessage = async ({
 
     // Update memory if enabled
     try {
-      if (localState.settings?.memory == 2 && newUserMessage) {
+      if (memoryMode === 2 && newUserMessage) {
         const memoryResponse = await generateMemory(
           newUserMessage,
           memories

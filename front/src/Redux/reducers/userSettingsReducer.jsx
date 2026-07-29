@@ -5,6 +5,8 @@ const initialState = {
   memories: [],
   // model: "", // TODO load from file
   timeout: 300000,
+  memory_mode: 0,
+  suggest_user_prompts: false,
 };
 
 const userSettingsSlice = createSlice({
@@ -52,6 +54,17 @@ const userSettingsSlice = createSlice({
       state.model = action.payload;
     },
 
+    setMemoryMode: (state, action) => {
+      const memoryMode = Number(action.payload);
+      if ([0, 1, 2].includes(memoryMode)) {
+        state.memory_mode = memoryMode;
+      }
+    },
+
+    setSuggestUserPrompts: (state, action) => {
+      state.suggest_user_prompts = Boolean(action.payload);
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -75,7 +88,7 @@ const userSettingsSlice = createSlice({
 export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
-  setDefaultModel
+  setDefaultModel, setMemoryMode, setSuggestUserPrompts
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -83,5 +96,11 @@ export const selectAllMemories = (state) => state.user_settings.memories;
 export const selectMemoryByIndex = (state, index) => state.user_settings.memories[index];
 export const selectTimeout = (state) => state.user_settings.timeout;
 export const selectDefaultModel = (state) => state.user_settings.model;
+export const selectMemoryMode = (state) => {
+  const memoryMode = state.user_settings.memory_mode;
+  return [0, 1, 2].includes(memoryMode) ? memoryMode : 0;
+};
+export const selectSuggestUserPrompts = (state) =>
+  state.user_settings.suggest_user_prompts ?? false;
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;

@@ -13,6 +13,7 @@ const interfaceSettingsSlice = createSlice({
     count_hallucination: 0,
     count_announcement: 0,
     agree_web_search: false,
+    show_usage_in_sidebar: true,
   },
   reducers: {
     toggleTheme: (state) => {
@@ -50,7 +51,10 @@ const interfaceSettingsSlice = createSlice({
     },
     agreeWebSearch: (state) => {
       state.agree_web_search = true;
-    }
+    },
+    setShowUsageInSidebar: (state, action) => {
+      state.show_usage_in_sidebar = Boolean(action.payload);
+    },
   },
 });
 
@@ -61,9 +65,12 @@ export const selectCountHallucination = (state) => state.interface_settings.coun
 export const selectCountAnnouncement = (state) => state.interface_settings.count_announcement;
 export const selectAgreeWebSearch = (state) => state.interface_settings.agree_web_search;
 export const selectShowTour = (state) => state.interface_settings.show_tour;
-export const { 
+export const selectShowUsageInSidebar = (state) =>
+  state.interface_settings.show_usage_in_sidebar ?? true;
+export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
-  closeAnnouncement, closeHallucination, agreeWebSearch, closeTour
+  closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
+  setShowUsageInSidebar
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

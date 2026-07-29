@@ -23,6 +23,7 @@ export default function BaseModal({
   maxWidth = "max-w-md",
   isForced = false,
   minimal = false,
+  contentClassName = "p-5 pt-0 flex flex-col gap-0",
 }) {
 
   return (
@@ -83,7 +84,7 @@ export default function BaseModal({
                 </div>
 
                 {/* Content */}
-                <div className="p-5 pt-0 flex flex-col gap-0">{children}</div>
+                <div className={contentClassName}>{children}</div>
               </Dialog.Panel>
             </Transition.Child>
           </div>

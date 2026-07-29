@@ -1,56 +1,47 @@
+import { Brain, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
+
 import { selectAllMemories } from "../../Redux/reducers/userSettingsReducer";
-import { useSelector, useDispatch } from "react-redux";
 import { useModal } from "../ModalContext";
-import { Trans, useTranslation } from "react-i18next";
 
 export default function UserMemoryContainer({ localState }) {
+  const { t } = useTranslation();
   const memories = useSelector(selectAllMemories);
   const { openModal } = useModal();
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <p className="text-sm font-medium dark:text-white">
-          <Trans
-            i18nKey="user_settings.memory.title"
-            defaultValue="User Memory"
-          />
+    <section className="flex flex-col gap-4">
+      <div>
+        <div className="flex items-center gap-2">
+          <Brain className="h-4 w-4 text-tertiary" aria-hidden="true" />
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+            {t("user_settings.memory.title")}
+          </h3>
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          {t("user_settings.memory.description", { count: memories.length })}
         </p>
       </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-        <Trans
-          i18nKey="user_settings.memory.description"
-          defaultValue="Manage your personal memories..."
-          values={{ count: memories.length }}
+      <button
+        type="button"
+        onClick={() => openModal("userMemory", { localState })}
+        className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:border-gray-700 dark:hover:bg-gray-800/70"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tertiary/10 text-tertiary dark:bg-tertiary/20 dark:text-blue-300">
+          <Brain className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">
+          {t("user_settings.memory.manage")}
+        </span>
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+          {memories.length}
+        </span>
+        <ChevronRight
+          className="h-4 w-4 shrink-0 text-gray-400"
+          aria-hidden="true"
         />
-      </p>
-      <div className="w-full flex justify-center">
-        <button
-          className="w-full sm:max-w-[260px] px-5 py-3
-                            bg-blue-700 hover:bg-blue-800
-                            text-white font-medium rounded-lg
-                            flex items-center justify-center gap-2
-                            shadow-md hover:shadow-lg
-                            active:scale-95 transition-all duration-200 text-sm cursor-pointer"
-          onClick={() => openModal("userMemory", { localState })}
-        >
-          {/* Icon */}
-          <span className="text-base leading-none">🧠</span>
-
-          {/* Label */}
-          <span>
-            <Trans
-              i18nKey="user_settings.memory.manage"
-              defaultValue="Manage Memory"
-            />
-          </span>
-
-          {/* Counter badge */}
-          <span className="text-xs bg-blue-500 px-2 py-0.5 rounded-full font-semibold shadow-inner">
-            {memories.length}
-          </span>
-        </button>
-      </div>
-    </div>
+      </button>
+    </section>
   );
 }
