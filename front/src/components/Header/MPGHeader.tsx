@@ -35,7 +35,7 @@ export default function MPGHeader() {
      </g>
     </svg>
     <div className="flex flex-col">
-        <div className="text-lg font-black">KI-Suche zum Organisationshandbuch</div>
+        <div className="text-lg font-black">KI-Assistent zum Organisationshandbuch</div>
         <div className="text-md font-light">Anweisungen und Arbeitshilfen</div>
     </div>
     </div>
