@@ -4,41 +4,16 @@
  *   \[ ... \]  ->  $$ ... $$
  *   \( ... \)  ->  $  ...  $
  *
- * Why this is a scanner and not a chain of `String.replace` calls
- * ---------------------------------------------------------------
- * The previous implementation masked code blocks with placeholders, restored
- * them, and *then* ran global replacements over the whole string. Two classes
- * of bugs follow from that design:
- *
- *   1. Everything that is restored before the global replacements run gets
- *      rewritten again. That is how `\]` inside a JavaScript regex character
- *      class was destroyed (issue #146).
- *   2. The global replacements also rewrite the *inside* of a math region, and
- *      LaTeX math legitimately contains the byte sequence `\[` - the row
- *      separator `\\[4pt]` is `\\` (line break) followed by `[4pt]` (optional
- *      spacing). Rewriting it produced `\$$4pt]`, which terminates the math
- *      region early and garbles the rest of the block (issue #144).
- *
- * A replace-chain cannot tell those cases apart, because after the first pass
- * the output is fed back in as input. This module therefore walks the source
- * exactly once, left to right, and each region is classified before anything
- * is emitted. Text that is emitted is never looked at again, so no
- * transformation can cascade into another.
- *
- * Regions recognised by the scanner (all emitted verbatim unless noted):
- *   - fenced code blocks (``` and ~~~, 3 or more markers, any info string)
- *   - inline code spans (any number of backticks)
- *   - escape pairs `\x` - in particular `\\`, the LaTeX line break
- *   - display math \[ ... \] and $$ ... $$   (delimiters rewritten, body kept)
- *   - inline math  \( ... \)                 (delimiters rewritten, body kept)
- *
  * Known limitations (documented on purpose):
  *   - Indented (4-space) code blocks are not detected. Distinguishing them
  *     from indented list continuation lines needs a real block parser, and a
  *     false positive would break legitimate math inside list items.
- *   - Single-dollar math (`$x$`) is not parsed as a region, so the currency
- *     guard below still escapes `$` when it is directly followed by a digit.
- *     This matches the previous behaviour.
+ *   - The currency guard still escapes `$` when it is directly followed by a
+ *     digit, so `$5x$` is money and not math. Without that rule "you have $5
+ *     and I have $10" turns into math.
+ *   - A `\( ... \)` region that spans a line break *and* contains a dollar
+ *     sign only after that break can produce an opening `$$` whose line holds
+ *     no other dollar, which `remark-math` then reads as a display block.
  */
 
 /** Index of the `\n` that ends the line containing `from`, or the length. */
@@ -134,6 +109,55 @@ const findDollarBlockEnd = (src, from) => {
   return close === -1 ? -1 : close + 2;
 };
 
+/**
+ * Index of the `$` that closes an inline math region whose body starts at
+ * `from`, or -1. Escape pairs are consumed as a unit, so `\$` is part of the
+ * body and not a delimiter. A blank line ends the paragraph and with it any
+ * chance of a closing delimiter.
+ */
+const findInlineDollarEnd = (src, from) => {
+  let i = from;
+  while (i < src.length) {
+    const char = src[i];
+    if (char === "\\") {
+      i += 2;
+      continue;
+    }
+    if (char === "$") return i;
+    if (char === "\n" && /^[ \t]*\n/.test(src.slice(i + 1))) return -1;
+    i++;
+  }
+  return -1;
+};
+
+/** Length of the longest run of `$` in `body`. */
+const maxDollarRun = (body) => {
+  let longest = 0;
+  for (let i = 0; i < body.length; i++) {
+    if (body[i] !== "$") continue;
+    const run = runLength(body, i, "$");
+    if (run > longest) longest = run;
+    i += run - 1;
+  }
+  return longest;
+};
+
+/**
+ * Wraps a math body in a delimiter run that `remark-math` cannot close early.
+ * `minSize` is 1 for inline and 2 for display math; the run grows past that
+ * only when the body itself contains dollars, so ordinary math keeps the
+ * shortest possible delimiters.
+ */
+const wrapMath = (body, minSize) => {
+  const run = maxDollarRun(body);
+  if (run === 0) {
+    const fence = "$".repeat(minSize);
+    return fence + body + fence;
+  }
+  const fence = "$".repeat(Math.max(minSize, run + 1));
+  return `${fence} ${body} ${fence}`;
+};
+
 export const preprocessLaTeX = (content) => {
   if (!content) return "";
 
@@ -179,10 +203,9 @@ export const preprocessLaTeX = (content) => {
         const bodyStart = i + 2;
         const closeAt = findMathEnd(src, bodyStart, close);
         if (closeAt !== -1) {
-          const delimiter = next === "[" ? "$$" : "$";
           // The body is copied verbatim - `\\[4pt]`, `\left[`, `\{` and every
           // other backslash sequence inside math stays exactly as written.
-          out.push(delimiter, src.slice(bodyStart, closeAt), delimiter);
+          out.push(wrapMath(src.slice(bodyStart, closeAt), next === "[" ? 2 : 1));
           i = closeAt + 2;
           continue;
         }
@@ -223,6 +246,23 @@ export const preprocessLaTeX = (content) => {
       out.push("\\$");
       i += 1;
       continue;
+    }
+
+    // ---- $ ... $ inline math -----------------------------------------------
+    // Recognising the region is what makes `\$` inside it survive: the body is
+    // re-emitted with delimiters that cannot be closed by an escaped dollar.
+    // A region opens only on a non-space character and closes only on one, the
+    // rule TeX-aware markdown flavours use to keep "$ 5" and "5 $" out of math.
+    if (char === "$") {
+      const next = src[i + 1];
+      if (next !== undefined && !/\s/.test(next)) {
+        const closeAt = findInlineDollarEnd(src, i + 1);
+        if (closeAt !== -1 && !/\s/.test(src[closeAt - 1])) {
+          out.push(wrapMath(src.slice(i + 1, closeAt), 1));
+          i = closeAt + 1;
+          continue;
+        }
+      }
     }
 
     out.push(char);

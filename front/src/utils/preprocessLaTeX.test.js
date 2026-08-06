@@ -102,7 +102,65 @@ test("dollar amounts inside code are not escaped", () => {
 });
 
 test("dollar amounts inside math are not escaped", () => {
-  assert.equal(preprocessLaTeX(String.raw`\[12\,000$5\]`), "$$12\\,000$5$$");
+  // The body keeps its dollar, and the delimiters grow past it so that
+  // remark-math cannot close the region on it.
+  assert.equal(preprocessLaTeX(String.raw`\[12\,000$5\]`), "$$ 12\\,000$5 $$");
+});
+
+test("issue #144: an escaped dollar does not close inline math", () => {
+  assert.equal(
+    preprocessLaTeX(String.raw`\(e=5.2\frac{\$}{€}\)`),
+    String.raw`$$ e=5.2\frac{\$}{€} $$`
+  );
+});
+
+test("issue #144: $ ... $ math with an escaped dollar is re-delimited", () => {
+  assert.equal(
+    preprocessLaTeX(String.raw`the price is $p=25.6\$$.`),
+    String.raw`the price is $$ p=25.6\$ $$.`
+  );
+});
+
+test("issue #144: full second report from the user", () => {
+  const input = String.raw`The exchange rate is \(e=5.2\frac{\$}{€}\) , and the price is $p=25.6\$$.`;
+  assert.equal(
+    preprocessLaTeX(input),
+    String.raw`The exchange rate is $$ e=5.2\frac{\$}{€} $$ , and the price is $$ p=25.6\$ $$.`
+  );
+});
+
+test("math without dollars keeps the shortest delimiters", () => {
+  assert.equal(preprocessLaTeX("a $x^2$ b"), "a $x^2$ b");
+  assert.equal(preprocessLaTeX(String.raw`\(x^2\)`), "$x^2$");
+});
+
+test("the delimiter run always outgrows the longest run in the body", () => {
+  // Two escaped dollars are two runs of one, so two delimiters suffice.
+  assert.equal(preprocessLaTeX(String.raw`\(a\$\$b\)`), String.raw`$$ a\$\$b $$`);
+  // A real run of two needs three.
+  assert.equal(preprocessLaTeX(String.raw`\(a$$b\)`), String.raw`$$$ a$$b $$$`);
+});
+
+test("$ ... $ regions are recognised, so their body is left alone", () => {
+  // `\[` inside math is TeX, not a display-math delimiter.
+  assert.equal(
+    preprocessLaTeX(String.raw`$a\\[4pt]b$`),
+    String.raw`$a\\[4pt]b$`
+  );
+});
+
+test("a lone dollar does not open math", () => {
+  assert.equal(preprocessLaTeX("in $ and out"), "in $ and out");
+  assert.equal(preprocessLaTeX("Preis in $US und $EUR"), "Preis in $US und $EUR");
+  assert.equal(preprocessLaTeX("a $x and 5$ b"), "a $x and 5$ b");
+});
+
+test("a dollar region may not cross a blank line", () => {
+  assert.equal(preprocessLaTeX("a $x\n\nb$ c"), "a $x\n\nb$ c");
+});
+
+test("escaped dollars in plain text stay escaped", () => {
+  assert.equal(preprocessLaTeX(String.raw`costs 5\$ today`), String.raw`costs 5\$ today`);
 });
 
 test("an unmatched opening delimiter stays literal", () => {
