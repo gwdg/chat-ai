@@ -4,7 +4,6 @@ import LogoContainer from "./LogoContainer";
 import UserContainer from "./UserContainer";
 import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 import SettingsWrapper from "../SettingsPanel/SettingsWrapper";
-import SettingsButton from "./SettingsButton";
 import ModelSelectorWrapper from "./ModelSelectorWrapper";
 import ModelSelector from "./ModelSelector";
 import WarningExternalModel from "./WarningExternalModel";
@@ -44,11 +43,6 @@ function Header({ className, localState, setLocalState, modelsData, userData }) 
           <div className="flex items-center gap-3">
             {/* External Model Warning */}
             <WarningExternalModel localState={localState} userData={userData} />
-            {/* Settings Button */}
-            <SettingsButton
-              localState={localState}
-              setLocalState={setLocalState}
-             />
           </div>
         </div>
       </nav>

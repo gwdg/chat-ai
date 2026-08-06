@@ -111,7 +111,7 @@ export default function Prompt({
             {/* Buttons on the right */}
             <div className="flex gap-4 w-full justify-end items-center">
               {/* Settings Button */}
-              {/* <SettingsButton /> */}
+              <SettingsButton />
               {/* Attach Button */}
               <AttachButton
                 localState={localState}
