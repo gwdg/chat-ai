@@ -5,6 +5,7 @@ import SendButton from "./SendButton";
 import MicButton from "./MicButton";
 import AttachmentsContainer from "./AttachmentsContainer";
 import SettingsButton from "../Header/SettingsButton";
+import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import ClearButton from "./ClearButton";
@@ -16,7 +17,9 @@ import { useDebounce } from "../../hooks/useDebounce";
 export default function Prompt({
   localState,
   setLocalState,
-}) { 
+  userData,
+  modelsData,
+}) {
   const sendMessage = useSendMessage();
   const [shouldSend, setShouldSend] = useState(false);
   const [ignoreChanges, setIgnoreChanges] = useState(false);
@@ -111,9 +114,19 @@ export default function Prompt({
             {/* Buttons on the right */}
             <div className="flex gap-4 w-full justify-end items-center">
               {/* Settings Button */}
-              <SettingsButton />
+              <SettingsButton
+                localState={localState}
+                setLocalState={setLocalState}
+                userData={userData}
+                modelsData={modelsData}
+              />
               {/* Attach Button */}
               <AttachButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+              {/* Tools Button */}
+              <ToolsButton
                 localState={localState}
                 setLocalState={setLocalState}
               />

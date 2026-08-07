@@ -97,6 +97,7 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
       setLocalState={setLocalState}
       handleNewConversation={handleNewConversation}
       userData={userData}
+      modelsData={modelsData}
     />
   );
 

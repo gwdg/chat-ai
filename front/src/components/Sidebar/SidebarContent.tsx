@@ -29,9 +29,10 @@ import {
   toggleSidebar,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 
-import { Bot } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
+import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
 import ShortcutTooltip from "./ShortcutTooltip";
 import { useToast } from "../../hooks/useToast";
@@ -45,11 +46,13 @@ export default function SidebarContent({
   setLocalState,
   handleNewConversation,
   userData,
+  modelsData,
 }: {
   localState: any;
   setLocalState: (state: any) => void;
   handleNewConversation: (folderId?: string | null) => Promise<void>;
   userData?: any;
+  modelsData?: any;
 }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -597,6 +600,25 @@ export default function SidebarContent({
                 )}
               </div>
             </div>
+
+            <div className="flex flex-col gap-1 pb-3">
+              <ImportConversationButton variant="button" />
+              <button
+                onClick={() => {
+                  openModal("importPersona");
+                }}
+                className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
+                style={{
+                  WebkitTapHighlightColor: "transparent",
+                  minHeight: "44px",
+                }}
+              >
+                <UserRound className="h-5 w-5 flex-shrink-0" />
+                <span className="truncate">
+                  <Trans i18nKey="sidebar.import_persona" />
+                </span>
+              </button>
+            </div>
           </div>
         </div>
         <div
@@ -757,22 +779,11 @@ export default function SidebarContent({
                 <OrgLimitsDisplay limits={userData.limits} variant="sidebar" />
               </div>
             )}
-            <ImportConversationButton variant="button" />
-            <button
-              onClick={() => {
-                openModal("importPersona");
-              }}
-              className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
-              style={{
-                WebkitTapHighlightColor: "transparent",
-                minHeight: "44px",
-              }}
-            >
-              <Bot className="h-5 w-5 flex-shrink-0" />
-              <span className="truncate">
-                <Trans i18nKey="sidebar.import_persona" />
-              </span>
-            </button>
+            <SidebarUserCard
+              localState={localState}
+              userData={userData}
+              modelsData={modelsData}
+            />
           </div>
         </div>
       </div>
