@@ -1,17 +1,22 @@
 import { Fragment } from "react";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
+import { useTranslation } from "react-i18next";
 import { SlidersHorizontal } from "lucide-react";
+import Tooltip from "../Others/Tooltip";
 import SettingsContent from "../SettingsPanel/SettingsContent";
 
 export default function SettingsButton({ localState, setLocalState, userData, modelsData }) {
+    const { t } = useTranslation();
     return (
         <Popover className="settings-toggle relative flex">
-            <PopoverButton className="flex cursor-pointer focus:outline-none">
-                <SlidersHorizontal
-                    className="cursor-pointer h-7 w-7 text-[#009EE0]"
-                    alt="settings"
-                />
-            </PopoverButton>
+            <Tooltip text={t("settings.chat_settings")}>
+                <PopoverButton className="flex cursor-pointer focus:outline-none">
+                    <SlidersHorizontal
+                        className="cursor-pointer h-7 w-7 text-[#009EE0]"
+                        alt="settings"
+                    />
+                </PopoverButton>
+            </Tooltip>
 
             <Transition
                 as={Fragment}

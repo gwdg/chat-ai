@@ -86,6 +86,7 @@ export default {
     reset_default: "Reset default",
     default: "Default",
     tools_title: "GWDG Tools",
+    chat_settings: "Chat settings",
     label_web_search: "Web Search",
     label_image_generation: "Image Generation",
     label_image_modification: "Image Modification",

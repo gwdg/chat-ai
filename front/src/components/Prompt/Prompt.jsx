@@ -106,13 +106,18 @@ export default function Prompt({
           />
           {/* Buttons Section */}
           <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
-            {/* Clear Button on the left  */}
-            <ClearButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
-            {/* Buttons on the right */}
-            <div className="flex gap-4 w-full justify-end items-center">
+            {/* Buttons on the left */}
+            <div className="flex gap-4 items-center">
+              {/* Clear Button */}
+              <ClearButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+              {/* Tools Button */}
+              <ToolsButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
               {/* Settings Button */}
               <SettingsButton
                 localState={localState}
@@ -125,21 +130,19 @@ export default function Prompt({
                 localState={localState}
                 setLocalState={setLocalState}
               />
-              {/* Tools Button */}
-              <ToolsButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
               {/* Attach Media Button */}
               {/* <AttachMediaButton
                 localState={localState}
                 setLocalState={setLocalState}
               /> */}
               {/* Mic Button */}
-              <MicButton 
+              <MicButton
                 localState={localState}
                 setLocalState={setLocalState}
               />
+            </div>
+            {/* Buttons on the right */}
+            <div className="flex gap-4 items-center">
               {/* Abort button (when loading) */}
               <AbortButton
                 localState={localState}

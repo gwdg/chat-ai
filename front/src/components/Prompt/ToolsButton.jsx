@@ -1,20 +1,25 @@
 import { Fragment } from "react";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
+import { useTranslation } from "react-i18next";
 import { Blocks } from "lucide-react";
+import Tooltip from "../Others/Tooltip";
 import ToolsContainer from "../SettingsPanel/ToolsContainer";
 
 export default function ToolsButton({ localState, setLocalState }) {
+    const { t } = useTranslation();
     const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
     if (!toolsModule) return null;
 
     return (
         <Popover className="relative flex">
-            <PopoverButton className="flex cursor-pointer focus:outline-none">
-                <Blocks
-                    className="cursor-pointer h-7 w-7 text-[#009EE0]"
-                    alt="tools"
-                />
-            </PopoverButton>
+            <Tooltip text={t("settings.tools_title")}>
+                <PopoverButton className="flex cursor-pointer focus:outline-none">
+                    <Blocks
+                        className="cursor-pointer h-7 w-7 text-[#009EE0]"
+                        alt="tools"
+                    />
+                </PopoverButton>
+            </Tooltip>
 
             <Transition
                 as={Fragment}
