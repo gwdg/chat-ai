@@ -607,7 +607,7 @@ export default function SidebarContent({
                 onClick={() => {
                   openModal("importPersona");
                 }}
-                className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
+                className={`cursor-pointer w-full hover:bg-gray-50 dark:hover:bg-gray-800/50 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-start gap-2 text-xs font-medium touch-manipulation transition-all duration-100`}
                 style={{
                   WebkitTapHighlightColor: "transparent",
                   minHeight: "44px",

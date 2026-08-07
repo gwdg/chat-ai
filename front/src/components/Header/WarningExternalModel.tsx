@@ -99,10 +99,10 @@ export default function WarningExternalModel({ localState, userData }) {
 
       {isPopoverVisible && (
         <div
-          className="absolute right-0 mt-2 p-4 
-                        bg-white dark:bg-gray-800 
-                        border border-gray-200 dark:border-gray-600 
-                        rounded-lg shadow-xl min-w-80 max-w-96 z-20"
+          className="absolute right-0 bottom-full mb-2 p-4
+                        bg-white dark:bg-gray-800
+                        border border-gray-200 dark:border-gray-600
+                        rounded-lg shadow-xl w-56 max-w-[calc(100vw-2rem)] z-20"
         >
           <div className="text-green-600 dark:text-green-400 text-sm leading-relaxed">
             <Trans
@@ -126,9 +126,9 @@ export default function WarningExternalModel({ localState, userData }) {
             </svg>
           </button>
           <div
-            className="absolute -top-1 right-17.5 md:right-6.5 w-2 h-2 
-                          bg-white dark:bg-gray-800 
-                          border-l border-t border-gray-200 dark:border-gray-600 
+            className="absolute -bottom-1 right-17.5 md:right-6.5 w-2 h-2
+                          bg-white dark:bg-gray-800
+                          border-r border-b border-gray-200 dark:border-gray-600
                           transform rotate-45"
           ></div>
         </div>
@@ -161,10 +161,10 @@ export default function WarningExternalModel({ localState, userData }) {
 
       {isPopoverVisible && (
         <div
-          className="absolute right-0 mt-2 p-4 
-                        bg-white dark:bg-gray-800 
-                        border border-gray-200 dark:border-gray-600 
-                        rounded-lg shadow-xl min-w-80 max-w-96 z-20"
+          className="absolute right-0 bottom-full mb-2 p-4
+                        bg-white dark:bg-gray-800
+                        border border-gray-200 dark:border-gray-600
+                        rounded-lg shadow-xl w-56 max-w-[calc(100vw-2rem)] z-20"
         >
           <div className="text-yellow-600 dark:text-yellow-400 text-sm leading-relaxed">
             <Trans
@@ -192,9 +192,9 @@ export default function WarningExternalModel({ localState, userData }) {
             </svg>
           </button>
           <div
-            className="absolute -top-1 right-17.5 md:right-6.5 w-2 h-2 
-                          bg-white dark:bg-gray-800 
-                          border-l border-t border-gray-200 dark:border-gray-600 
+            className="absolute -bottom-1 right-17.5 md:right-6.5 w-2 h-2
+                          bg-white dark:bg-gray-800
+                          border-r border-b border-gray-200 dark:border-gray-600
                           transform rotate-45"
           ></div>
         </div>

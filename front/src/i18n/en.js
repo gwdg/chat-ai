@@ -41,7 +41,7 @@ export default {
   },
   // Sidebar
   sidebar: {
-    new_conversation: "New Conversation",
+    new_conversation: "New Chat",
     import_persona: "Chat with Persona",
     expand: "Expand",
     extend: "Expand",
