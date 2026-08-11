@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
 import { useImportConversation } from "../../hooks/useImportConversation";
-import { Upload } from "lucide-react";
+import { Upload } from "@carbon/icons-react";
 import { useToast } from "../../hooks/useToast";
 import ShortcutTooltip from "./ShortcutTooltip";
 
@@ -84,7 +84,7 @@ export default function ImportConversationButton({
             disabled={loading}
             aria-label={t("common.import")}
           >
-            <Upload className="w-5 h-5 text-[#009EE0]" />
+            <Upload className="w-5 h-5 text-tertiary" />
           </button>
         </ShortcutTooltip>
       </>

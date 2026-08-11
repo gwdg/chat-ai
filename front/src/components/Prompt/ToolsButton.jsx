@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
-import { Blocks } from "lucide-react";
+import { Tools } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
 import ToolsContainer from "../SettingsPanel/ToolsContainer";
 
@@ -14,10 +14,7 @@ export default function ToolsButton({ localState, setLocalState }) {
         <Popover className="relative flex">
             <Tooltip text={t("settings.tools_title")}>
                 <PopoverButton className="flex cursor-pointer focus:outline-none">
-                    <Blocks
-                        className="cursor-pointer h-7 w-7 text-[#009EE0]"
-                        alt="tools"
-                    />
+                    <Tools className="cursor-pointer h-6 w-6 text-tertiary" />
                 </PopoverButton>
             </Tooltip>
 

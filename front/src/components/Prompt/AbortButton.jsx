@@ -1,9 +1,8 @@
-import icon_stop from "../../assets/icons/stop.svg";
-
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { abortRequest } from "../../apis/chatCompletions";
 import { useToast } from "../../hooks/useToast";
+import { StopFilled } from "@carbon/icons-react";
 
 export default function AbortButton({
     localState,
@@ -24,13 +23,8 @@ export default function AbortButton({
     return loading && (
          <Tooltip text={t("common.abort")}>
             {/* Abort Button */}
-            <button className="h-[30px] w-[30px] cursor-pointer">
-            <img
-                className="cursor-pointer h-[30px] w-[30px]"
-                src={icon_stop}
-                alt="abort"
-                onClick={handleAbort}
-            />
+            <button className="h-7 w-7 cursor-pointer" onClick={handleAbort}>
+            <StopFilled className="cursor-pointer h-7 w-7 text-tertiary" />
             </button>
         </Tooltip>
     );

@@ -1,5 +1,5 @@
 import { useModal } from "../../modals/ModalContext";
-import { User } from "lucide-react";
+import { User } from "@carbon/icons-react";
 
 export default function UserContainer({
   localState,
@@ -44,7 +44,7 @@ export default function UserContainer({
       }
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      <User className="h-full w-full text-[#009EE0]" alt="Profile" />{" "}
+      <User className="h-full w-full text-tertiary" />
     </button>
   );
 }

@@ -6,7 +6,7 @@ import { abortRequest } from "../../apis/chatCompletions";
 import { useToast } from "../../hooks/useToast";
 import { useAttachments } from "../../hooks/useAttachments";
 
-import icon_mic from "../../assets/icons/mic.svg";
+import { Microphone } from "@carbon/icons-react";
 
 export default function MicButton({
     localState,
@@ -231,11 +231,7 @@ export default function MicButton({
                 <div className="w-3 h-3 bg-white rounded-sm"></div>
                 ) : (
                 // Microphone icon when not recording
-                <img
-                    className="h-[18px] w-[18px]"
-                    src={icon_mic}
-                    alt="microphone"
-                />
+                <Microphone className="h-[18px] w-[18px] text-tertiary" />
                 )}
             </button>
             </Tooltip>

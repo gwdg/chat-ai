@@ -1,4 +1,4 @@
-import { Settings } from "lucide-react";
+import { Settings } from "@carbon/icons-react";
 import { useModal } from "../../modals/ModalContext";
 import UserContainer from "../Header/UserContainer";
 import WarningExternalModel from "../Header/WarningExternalModel";
@@ -41,7 +41,7 @@ export default function SidebarUserCard({ localState, userData, modelsData }) {
         className="cursor-pointer h-9 w-9 flex-shrink-0 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         aria-label="User settings"
       >
-        <Settings className="h-5 w-5 text-[#009EE0]" />
+        <Settings className="h-5 w-5 text-tertiary" />
       </button>
     </div>
   );

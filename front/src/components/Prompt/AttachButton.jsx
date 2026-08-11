@@ -4,10 +4,8 @@ import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { abortRequest } from "../../apis/chatCompletions";
 import { useToast } from "../../hooks/useToast";
-import icon_attach from "../../assets/icons/attach.svg";
 import { useAttachments } from "../../hooks/useAttachments";
-//Assets
-import { Paperclip, FilePlus2, CirclePlus } from "lucide-react";
+import { Attachment } from "@carbon/icons-react";
 
 export default function AttachButton({
     localState, 
@@ -53,11 +51,9 @@ export default function AttachButton({
                     onChange={handleFilesChange}
                     className="hidden"
                 />
-                <Paperclip
-                    className="cursor-pointer flex h-[25px] w-[25px] text-[#009EE0]"
+                <Attachment
+                    className="cursor-pointer flex h-6 w-6 text-tertiary"
                     onClick={handleClick}
-                    disabled={loading}
-                    alt="upload"
                 />
             </Tooltip>
         </>

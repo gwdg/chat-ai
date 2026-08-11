@@ -3,8 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useToast } from "../../hooks/useToast";
-import icon_image from "../../assets/icons/image.svg";
-import { Images } from "lucide-react";
+import { Image } from "@carbon/icons-react";
 
 import { useAttachments } from "../../hooks/useAttachments";
 
@@ -73,19 +72,11 @@ export default function AttachMediaButton({
             />
             <Tooltip text={t("conversation.prompt.attach_media")}>
             <button
-                className="h-[25px] w-[25px] cursor-pointer"
+                className="h-6 w-6 cursor-pointer"
                 onClick={() => hiddenFileInputImage.current?.click()}
                 disabled={loading}
             >
-                {/* <img
-                className="cursor-pointer h-[25px] w-[25px]"
-                src={icon_image}
-                alt="attach file"
-                /> */}
-                <Images
-                className="cursor-pointer h-[25px] w-[25px] text-[#009EE0]"
-                alt="attach media"
-                />
+                <Image className="cursor-pointer h-6 w-6 text-tertiary" />
             </button>
             </Tooltip>
         </>
