@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Trans } from "react-i18next";
-import { X } from "lucide-react";
+import { Close } from "@carbon/icons-react";
 import { closeAnnouncement, selectCountAnnouncement } from "../../Redux/reducers/interfaceSettingsSlice";
 
 export default function AnnouncementBar() {
@@ -34,9 +34,8 @@ export default function AnnouncementBar() {
           className="p-0.5 sm:p-1 hover:bg-orange-600 rounded-full transition-colors flex-shrink-0 ml-2 cursor-pointer"
           aria-label="Close announcement"
         >
-          <X
-            className="h-[20px] w-[20px] sm:h-[24px] sm:w-[24px] md:h-[30px] md:w-[30px] cursor-pointer text-[#009EE0]"
-            alt="cross"
+          <Close
+            className="h-[20px] w-[20px] sm:h-[24px] sm:w-[24px] md:h-[30px] md:w-[30px] cursor-pointer text-tertiary"
           />
         </button>
       </div>

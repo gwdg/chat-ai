@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
 import { toggleTheme } from "../../Redux/reducers/interfaceSettingsSlice";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon } from "@carbon/icons-react";
 
 export default function ThemeToggle() {
   const dispatch = useDispatch();
@@ -27,15 +27,9 @@ export default function ThemeToggle() {
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       {isDarkMode ? (
-        <Sun
-          className="h-5 w-5 flex-shrink-0 text-tertiary"
-          alt="Light Mode"
-        />
+        <Sun className="h-5 w-5 flex-shrink-0 text-tertiary" />
       ) : (
-        <Moon
-          className="h-5 w-5 flex-shrink-0 text-tertiary"
-          alt="Dark Mode"
-        />
+        <Moon className="h-5 w-5 flex-shrink-0 text-tertiary" />
       )}
     </button>
   );

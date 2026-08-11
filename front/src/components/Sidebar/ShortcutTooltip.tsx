@@ -61,7 +61,7 @@ export default function ShortcutTooltip({
     isClient && visible
       ? createPortal(
           <div
-            className={`pointer-events-none fixed z-50 whitespace-nowrap rounded-2xl bg-gray-900 px-3 py-1.5 text-[11px] font-medium text-white shadow-lg dark:bg-white dark:text-gray-900 ${
+            className={`pointer-events-none fixed z-50 whitespace-nowrap rounded bg-gray-800 dark:bg-gray-700 px-2 py-1 text-xs text-white border dark:border-border_dark shadow ${
               position === "right"
                 ? "-translate-y-1/2"
                 : position === "left"
@@ -72,7 +72,7 @@ export default function ShortcutTooltip({
           >
             <span>{label}</span>
             {shortcut ? (
-              <span className="ml-2 text-gray-300 dark:text-gray-500">
+              <span className="ml-2 text-gray-400 dark:text-gray-400">
                 {shortcut}
               </span>
             ) : null}

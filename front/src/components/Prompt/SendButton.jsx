@@ -1,10 +1,8 @@
-import icon_send from "../../assets/icons/send.svg";
-
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useToast } from "../../hooks/useToast";
 import { useSendMessage } from "../../hooks/useSendMessage";
-import { Send } from "lucide-react";
+import { Send } from "@carbon/icons-react";
 
 export default function SendButton({localState, setLocalState, handleSend, prompt}) {
     const { t, i18n } = useTranslation();
@@ -18,10 +16,8 @@ export default function SendButton({localState, setLocalState, handleSend, promp
     return !loading && (prompt !== "" || attachments.length > 0) &&  (
          <Tooltip text={t("common.send")}>
             <Send
-                className="cursor-pointer h-[28px] w-[28px] text-[#009EE0]"
-                alt="send"
+                className="cursor-pointer h-7 w-7 text-tertiary"
                 onClick={handleSend}
-                disabled={loading}
             />
         </Tooltip>
     );

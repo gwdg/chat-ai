@@ -8,11 +8,12 @@ import {
 } from "../../Redux/reducers/conversationsSlice";
 import {
   ChevronLeft,
-  MoreVertical,
+  OverflowMenuVertical,
   Edit,
-  Trash2,
+  TrashCan,
   Download,
-} from "lucide-react";
+  Add,
+} from "@carbon/icons-react";
 import { useConversationList } from "../../db";
 import { useModal } from "../../modals/ModalContext";
 import { getDefaultSettings } from "../../utils/conversationUtils";
@@ -156,19 +157,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
               minHeight: "44px",
             }}
           >
-            <svg
-              className="h-4 w-4 flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+            <Add className="h-4 w-4 flex-shrink-0" />
             <span className="flex flex-col items-start leading-tight">
               <span className="truncate">
                 <Trans i18nKey="sidebar.new_conversation" />
@@ -247,7 +236,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
                             WebkitTapHighlightColor: "transparent",
                           }}
                         >
-                          <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                          <OverflowMenuVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         </button>
                       </div>
                     </div>
@@ -346,7 +335,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/30"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <TrashCan className="w-3.5 h-3.5" />
               <Trans i18nKey="common.delete" />
             </button>
           </div>
