@@ -416,7 +416,7 @@ export default {
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
     regenerate_confirm:
-      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden.",
+      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden. Um diese Unterhaltung zu behalten, verwenden Sie stattdessen „In neuem Chat fortfahren“.",
     regenerate_yes: "Regenerieren",
     fork_confirm:
       "Die Unterhaltung wird bis zu dieser Nachricht in einen neuen Chat kopiert. Die aktuelle Unterhaltung bleibt unverändert, Sie können also eine andere Antwort oder andere Einstellungen ausprobieren, ohne etwas zu verlieren.",

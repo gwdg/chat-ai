@@ -9,7 +9,7 @@ export default function ClearMessagesButton({localState, setLocalState}) {
   const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
     ? localState.messages[localState.messages.length - 2]?.loading || false
     : false;
-  const { openModal } = useModal();
+  const { confirmAction } = useModal();
   const {notifySuccess, notifyError } = useToast();
 
   // Clear conversation history
@@ -25,14 +25,17 @@ export default function ClearMessagesButton({localState, setLocalState}) {
     notifySuccess("Messages cleared");
   };
 
-  // Function to handle clearing chat history
-  const handleClearHistory = () => {
-    if (localState?.dontShow?.clearMessages) {
-      clearMessages();
-    } else {
-      openModal("clearMessages", { localState, setLocalState, clearMessages })
-    }
-  };
+  // Clearing is destructive, so confirm first unless the user opted out.
+  const handleClearHistory = () =>
+    confirmAction(
+      {
+        warningKey: "warn_clear_history",
+        messageKey: "alert.clear_messages",
+        confirmKey: "alert.yes",
+        danger: true,
+      },
+      clearMessages
+    );
 
   return (
     <Tooltip text={t("common.clear")}>

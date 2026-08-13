@@ -412,7 +412,7 @@ export default {
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
     regenerate_confirm:
-      "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone.",
+      "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone. To keep this conversation intact, use “Continue in a new chat” instead.",
     regenerate_yes: "Regenerate",
     fork_confirm:
       "This copies the conversation up to this message into a new chat. The current conversation stays as it is, so you can try a different answer or different settings without losing anything.",

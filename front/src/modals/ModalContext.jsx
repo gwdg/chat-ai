@@ -24,7 +24,6 @@ import FolderEditorModal from "../components/Sidebar/FolderEditorModal";
 import DeleteFolderModal from "../components/Sidebar/DeleteFolderModal";
 import MoveConversationModal from "../components/Sidebar/MoveConversationModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
-import ClearMessagesModal from "./Alert/ClearMessagesModal";
 import ConfirmActionModal from "./Alert/ConfirmActionModal";
 import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
@@ -162,9 +161,6 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "errorSessionExpired" && (
         <ErrorSessionExpiredModal isOpen onClose={closeModal} {...modalProps} />
-      )}
-      {modalType === "clearMessages" && (
-        <ClearMessagesModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "confirmAction" && (
         <ConfirmActionModal isOpen onClose={closeModal} {...modalProps} />
