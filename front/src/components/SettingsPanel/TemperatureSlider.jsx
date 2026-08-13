@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useModal } from "../../modals/ModalContext";
-import { HelpCircle } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 
 export default function TemperatureSlider({ localState, setLocalState }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -55,7 +55,7 @@ export default function TemperatureSlider({ localState, setLocalState }) {
     <div className="flex flex-row w-full md:items-center">
       <div className="flex-shrink-0 flex items-center gap-2 min-w-[80px]">
         <p className="text-sm font-medium">temp</p>
-        <HelpCircle
+        <CircleHelp
           className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
           alt="help"
           onClick={() => openModal("helpTemperature")}

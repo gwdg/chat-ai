@@ -1,6 +1,6 @@
 // components/settings/ArcanaContainer.jsx
 import { Trans, useTranslation } from "react-i18next";
-import { HelpCircle } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
 
 const ArcanaContainer = ({ localState, setLocalState }) => {
@@ -33,7 +33,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
       <div className="flex gap-4 w-full items-center">
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
           <p className="text-sm">{t("settings.label_arcana")}</p>
-          <HelpCircle
+          <CircleHelp
             className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
             alt="help"
             onClick={() => openModal("helpArcana")}

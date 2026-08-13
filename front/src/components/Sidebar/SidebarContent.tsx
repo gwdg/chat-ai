@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 
 import {
@@ -17,10 +17,17 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { assignConversationToFolder, useConversationList, useFolderList } from "../../db";
+import {
+  assignConversationToFolder,
+  useConversationList,
+  useFolderList,
+} from "../../db";
 import { useModal } from "../../modals/ModalContext";
 
-import { toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
+import {
+  selectShowUsageInSidebar,
+  toggleSidebar,
+} from "../../Redux/reducers/interfaceSettingsSlice";
 
 import { Bot } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
@@ -28,6 +35,8 @@ import ImportConversationButton from "./ImportConversationButton";
 import AiServicesMenu from "./AiServicesMenu";
 import ShortcutTooltip from "./ShortcutTooltip";
 import { useToast } from "../../hooks/useToast";
+import UserLimitsDisplay from "../../modals/UserSettings/UserLimitsDisplay";
+import OrgLimitsDisplay from "../../modals/UserSettings/OrgLimitsDisplay";
 
 const ALL_FOLDERS = "__all__";
 
@@ -35,10 +44,12 @@ export default function SidebarContent({
   localState,
   setLocalState,
   handleNewConversation,
+  userData,
 }: {
   localState: any;
   setLocalState: (state: any) => void;
   handleNewConversation: (folderId?: string | null) => Promise<void>;
+  userData?: any;
 }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -46,22 +57,25 @@ export default function SidebarContent({
   const { t } = useTranslation();
   const { notifyError } = useToast();
   const currentConversationId = localState?.id;
+  const showUsageInSidebar = useSelector(selectShowUsageInSidebar);
 
-  const { isDesktop, isTouch } = useWindowSize();
+  const { isDesktop } = useWindowSize();
   const conversations = useConversationList() || [];
   const folders = useFolderList() || [];
   const [foldersExpanded, setFoldersExpanded] = useState(true);
   const folderMap = useMemo(
     () => new Map(folders.map((folder) => [folder.id, folder.name])),
-    [folders]
+    [folders],
   );
   const [activeFolderId, setActiveFolderId] = useState<string>(ALL_FOLDERS);
   // have an own state of selected Conversation id to update the ui smoothly
   const [selectedConversationId, setSelectedConversationId] = useState(
-    currentConversationId
+    currentConversationId,
   );
   const [hoveredId, setHoveredId] = useState(null);
-  const [draggingConversationId, setDraggingConversationId] = useState<string | null>(null);
+  const [draggingConversationId, setDraggingConversationId] = useState<
+    string | null
+  >(null);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -124,7 +138,9 @@ export default function SidebarContent({
   const visibleConversations = useMemo(() => {
     if (!hasSearch) return filteredByFolder;
     return filteredByFolder.filter((conv) => {
-      const title = conv.title || t("conversation.untitled", { defaultValue: "Untitled Conversation" });
+      const title =
+        conv.title ||
+        t("conversation.untitled", { defaultValue: "Untitled Conversation" });
       return title.toLowerCase().includes(normalizedSearch);
     });
   }, [filteredByFolder, hasSearch, normalizedSearch, t]);
@@ -138,7 +154,7 @@ export default function SidebarContent({
       setDraggingConversationId(conversationId);
       setDragOverFolderId(null);
     },
-    []
+    [],
   );
 
   const handleConversationDragEnd = useCallback(() => {
@@ -151,7 +167,7 @@ export default function SidebarContent({
       if (!draggingConversationId) return;
 
       const conversation = conversations.find(
-        (conv) => conv.id === draggingConversationId
+        (conv) => conv.id === draggingConversationId,
       );
       if (!conversation) {
         setDraggingConversationId(null);
@@ -176,7 +192,7 @@ export default function SidebarContent({
         setDragOverFolderId(null);
       }
     },
-    [conversations, draggingConversationId, notifyError, t]
+    [conversations, draggingConversationId, notifyError, t],
   );
 
   function onClose() {
@@ -223,9 +239,12 @@ export default function SidebarContent({
   };
 
   const highlightText = (text?: string | null) => {
-    const value = text || t("conversation.untitled", { defaultValue: "Untitled Conversation" });
+    const value =
+      text ||
+      t("conversation.untitled", { defaultValue: "Untitled Conversation" });
     if (!hasSearch) return value;
-    const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escapeRegExp = (str: string) =>
+      str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const regex = new RegExp(`(${escapeRegExp(normalizedSearch)})`, "ig");
     const parts = value.split(regex);
     return parts.map((part, index) => {
@@ -244,16 +263,17 @@ export default function SidebarContent({
   };
 
   const renderFolderRow = (option: {
-    id: string
-    label: string
-    countKey: string
-    canEdit?: boolean
-    folder?: { id: string; name: string }
+    id: string;
+    label: string;
+    countKey: string;
+    canEdit?: boolean;
+    folder?: { id: string; name: string };
   }) => {
     const isActive = activeFolderId === option.id;
     const rawCount = folderCounts.get(option.countKey) ?? 0;
     const displayCount = rawCount > 999 ? "999+" : rawCount;
-    const isDropTarget = draggingConversationId !== null && dragOverFolderId === option.id;
+    const isDropTarget =
+      draggingConversationId !== null && dragOverFolderId === option.id;
     return (
       <div
         key={option.id}
@@ -293,7 +313,10 @@ export default function SidebarContent({
         } ${isDropTarget ? "border-tertiary/60 bg-tertiary/5 dark:bg-tertiary/20" : ""}`}
       >
         <div className="flex-1 flex items-center justify-between text-left min-w-0">
-          <span className="truncate select-none pointer-events-none" title={option.label}>
+          <span
+            className="truncate select-none pointer-events-none"
+            title={option.label}
+          >
             {option.label}
           </span>
           <div className="flex items-center justify-between text-left min-w-0">
@@ -340,10 +363,7 @@ export default function SidebarContent({
   };
 
   const onNewConversation = () => {
-    const targetFolder =
-      activeFolderId === ALL_FOLDERS
-        ? null
-        : activeFolderId;
+    const targetFolder = activeFolderId === ALL_FOLDERS ? null : activeFolderId;
     console.log("Creating new conversation in folder: ", activeFolderId);
     handleNewConversation(targetFolder)
       .then(() => {
@@ -416,7 +436,7 @@ export default function SidebarContent({
     const handleClickOutside = (event) => {
       // Check if click is on menu or any menu button
       const clickedOnMenuButton = Object.values(menuButtonRefs.current).some(
-        (ref) => ref && ref.contains(event.target)
+        (ref) => ref && ref.contains(event.target),
       );
 
       if (
@@ -466,7 +486,11 @@ export default function SidebarContent({
       {/* Header with close button */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2 gap-2">
         <AiServicesMenu />
-        <ShortcutTooltip label={t("sidebar.close_sidebar")} position="left" enterDelay={150}>
+        <ShortcutTooltip
+          label={t("sidebar.close_sidebar")}
+          position="left"
+          enterDelay={150}
+        >
           <button
             type="button"
             onClick={onClose}
@@ -482,24 +506,23 @@ export default function SidebarContent({
         <div className="sticky top-0 z-20 bg-white dark:bg-bg_secondary_dark shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
           <div className="px-3 pt-3 border-b border-gray-100 dark:border-gray-800 space-y-3">
             <div className="flex gap-1">
-            <button
-              onClick={onNewConversation}
-              className={`cursor-pointer w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
+              <button
+                onClick={onNewConversation}
+                className={`cursor-pointer w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
                 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white 
                 pl-3 pr-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs 
                 font-medium touch-manipulation transition-colors`}
-              style={{
-                WebkitTapHighlightColor: "transparent",
-                minHeight: "44px",
-              }}
-            >
-              <Plus className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">
-                <Trans i18nKey="sidebar.new_conversation" />
-              </span>
-              
-            </button>
-            {(
+                style={{
+                  WebkitTapHighlightColor: "transparent",
+                  minHeight: "44px",
+                }}
+              >
+                <Plus className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">
+                  <Trans i18nKey="sidebar.new_conversation" />
+                </span>
+              </button>
+              {
                 <button
                   type="button"
                   onClick={openSearch}
@@ -507,9 +530,11 @@ export default function SidebarContent({
                   text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200
                   hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-[max-width,max-height,padding,opacity,transform]
                   duration-300 cursor-pointer
-                  ${!searchVisible
-                    ? "max-w-14 max-h-14 px-2 py-2 opacity-100 gap-2 translate-y-0"
-                    : "max-w-0 max-w-0 px-0 py-0 opacity-0 -translate-y-1 pointer-events-none"}
+                  ${
+                    !searchVisible
+                      ? "max-w-14 max-h-14 px-2 py-2 opacity-100 gap-2 translate-y-0"
+                      : "max-w-0 max-w-0 px-0 py-0 opacity-0 -translate-y-1 pointer-events-none"
+                  }
                   `}
                   aria-label={t("folders.search_label")}
                 >
@@ -518,62 +543,62 @@ export default function SidebarContent({
                     {t("folders.search_action")}
                   </span> */}
                 </button>
-              )}
-              </div>
+              }
+            </div>
 
-              <div
-                className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                  searchVisible
-                    ? "max-h-14 opacity-100 pb-3 translate-y-0"
-                    : "max-h-0 opacity-0 pb-0 -translate-y-1 pointer-events-none"
-                }`}
-              >
-                <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40  transition">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Escape") return;
-                      e.preventDefault();
-                      if (hasSearch) {
-                        setSearchQuery("");
-                      } else {
-                        setSearchOpen(false);
-                      }
-                    }}
-                    placeholder={t("folders.search_placeholder")}
-                    className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none"
-                  />
-                  {searchQuery.length > 0 ? (
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                      aria-label={t("folders.clear_search")}
-                      onClick={() => setSearchQuery("")}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                      aria-label={t("common.cancel")}
-                      onClick={closeSearch}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+            <div
+              className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                searchVisible
+                  ? "max-h-14 opacity-100 pb-3 translate-y-0"
+                  : "max-h-0 opacity-0 pb-0 -translate-y-1 pointer-events-none"
+              }`}
+            >
+              <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40  transition">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Escape") return;
+                    e.preventDefault();
+                    if (hasSearch) {
+                      setSearchQuery("");
+                    } else {
+                      setSearchOpen(false);
+                    }
+                  }}
+                  placeholder={t("folders.search_placeholder")}
+                  className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none"
+                />
+                {searchQuery.length > 0 ? (
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                    aria-label={t("folders.clear_search")}
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                    aria-label={t("common.cancel")}
+                    onClick={closeSearch}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
+        </div>
         <div
           className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
@@ -611,20 +636,20 @@ export default function SidebarContent({
               `}
             >
               <div className="space-y-1 pt-1">
-              {renderFolderRow({
-                id: ALL_FOLDERS,
-                label: t("folders.all"),
-                countKey: ALL_FOLDERS,
-              })}
-              {folders.map((folder) =>
-                renderFolderRow({
-                  id: folder.id,
-                  label: folder.name,
-                  countKey: folder.id,
-                  canEdit: true,
-                  folder,
-                })
-              )}
+                {renderFolderRow({
+                  id: ALL_FOLDERS,
+                  label: t("folders.all"),
+                  countKey: ALL_FOLDERS,
+                })}
+                {folders.map((folder) =>
+                  renderFolderRow({
+                    id: folder.id,
+                    label: folder.name,
+                    countKey: folder.id,
+                    canEdit: true,
+                    folder,
+                  }),
+                )}
               </div>
             </div>
           </div>
@@ -638,12 +663,17 @@ export default function SidebarContent({
                   : folderMap.get(activeFolderId) || t("folders.uncategorized")}
               </span>
               <span className="ml-2 shrink-0 text-[11px] font-semibold text-gray-500 dark:text-gray-200">
-                {(visibleConversations.length ?? 0) > 999 ? "999+" : visibleConversations.length}
+                {(visibleConversations.length ?? 0) > 999
+                  ? "999+"
+                  : visibleConversations.length}
               </span>
             </div>
             {noSearchResults && (
               <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-4">
-                <Trans i18nKey="folders.search_no_results" values={{ query: searchQuery }} />
+                <Trans
+                  i18nKey="folders.search_no_results"
+                  values={{ query: searchQuery }}
+                />
               </div>
             )}
             {visibleConversations.map((conv) => {
@@ -659,7 +689,9 @@ export default function SidebarContent({
                   key={id}
                   onClick={() => handleSelectConversation(id)}
                   draggable
-                  onDragStart={(event) => handleConversationDragStart(event, id)}
+                  onDragStart={(event) =>
+                    handleConversationDragStart(event, id)
+                  }
                   onDragEnd={handleConversationDragEnd}
                   className={`group relative px-3 py-3 rounded-2xl touch-manipulation border border-transparent ${
                     isActive
@@ -719,6 +751,12 @@ export default function SidebarContent({
         {/* Bottom section */}
         <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex flex-col gap-3 mx-3">
+            {showUsageInSidebar && userData?.limits && (
+              <div className="flex flex-col gap-2">
+                <UserLimitsDisplay limits={userData.limits} variant="sidebar" />
+                <OrgLimitsDisplay limits={userData.limits} variant="sidebar" />
+              </div>
+            )}
             <ImportConversationButton variant="button" />
             <button
               onClick={() => {
@@ -737,7 +775,6 @@ export default function SidebarContent({
             </button>
           </div>
         </div>
-
       </div>
 
       {/* MENU RENDERED OUTSIDE - PORTAL STYLE */}

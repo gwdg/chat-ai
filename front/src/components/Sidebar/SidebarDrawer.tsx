@@ -1,9 +1,8 @@
+import type { ReactNode } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import SidebarContent from "./SidebarContent";
 import { selectShowSidebar, toggleSidebar } from "../../Redux/reducers/interfaceSettingsSlice";
 
-export default function SidebarDrawer({ localState, setLocalState, handleNewConversation }: { localState: any, setLocalState: (state: any) => void, handleNewConversation: (folderId?: string | null) => Promise<void> }) {
-
+export default function SidebarDrawer({ children }: { children: ReactNode }) {
   const dispatch = useDispatch();
   const showSidebar = useSelector(selectShowSidebar);
   return (
@@ -24,7 +23,7 @@ export default function SidebarDrawer({ localState, setLocalState, handleNewConv
           ${showSidebar ? "translate-x-0" : "-translate-x-full"} 
           bg-white dark:bg-bg_secondary_dark shadow-lg`}
       >
-        <SidebarContent localState={localState} setLocalState={setLocalState} handleNewConversation={handleNewConversation} />
+        {children}
       </div>
     </>
   );

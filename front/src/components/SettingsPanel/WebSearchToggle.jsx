@@ -1,7 +1,7 @@
 import { useModal } from "../../modals/ModalContext";
 import { Trans } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
-import { HelpCircle } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 import { selectAgreeWebSearch, agreeWebSearch } from "../../Redux/reducers/interfaceSettingsSlice";
 
 export default function WebSearchToggle({ localState, setLocalState }) {
@@ -40,7 +40,7 @@ export default function WebSearchToggle({ localState, setLocalState }) {
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
           <p className="text-sm">Web Search</p>
           {/* Help Button */}
-          <HelpCircle
+          <CircleHelp
             className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
             alt="help"
             onClick={() => openModal("helpWebSearch")}

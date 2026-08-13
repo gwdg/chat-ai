@@ -152,23 +152,101 @@ export default {
   // User Settings Modal
   user_settings: {
     title: "Benutzereinstellungen",
+    tabs: {
+      navigation_label: "Bereiche der Profileinstellungen",
+      profile: {
+        label: "Profil",
+        title: "Profil und Nutzung",
+        description: "Überblick über Ihre Kontodaten und Nutzung.",
+      },
+      chat: {
+        label: "Chat",
+        title: "Chat-Einstellungen",
+        description:
+          "Legen Sie Standards für alle Unterhaltungen auf diesem Gerät fest.",
+      },
+      memories: {
+        label: "Erinnerungen",
+        title: "Gespeicherte Erinnerungen",
+        description:
+          "Prüfen und verwalten Sie die von Chat AI gespeicherten Details.",
+      },
+      data: {
+        label: "Daten",
+        title: "Daten und Datenschutz",
+        description:
+          "Exportieren oder entfernen Sie die in diesem Browser gespeicherten Daten.",
+      },
+    },
+    account: {
+      username: "Benutzername",
+      email: "E-Mail-Adresse",
+    },
+    usage: {
+      title: "Nutzung",
+      description:
+        "Überblick über Ihre monatliche Nutzung und das Organisationsbudget.",
+    },
     monthly_usage: "Monatliche Nutzung",
     org_usage: "Nutzung des Organisationsbudgets",
+    sidebar_usage: {
+      label: "Nutzung in der Seitenleiste anzeigen",
+      description:
+        "Ihre aktuelle Nutzung bleibt beim Chatten in der Seitenleiste sichtbar.",
+    },
+    chat_preferences: {
+      title: "Chat-Einstellungen",
+      description:
+        "Diese Einstellungen gelten für alle Unterhaltungen auf diesem Gerät.",
+      memory: {
+        label: "Erinnerungen",
+        description:
+          "Legen Sie fest, wie Chat AI Ihre gespeicherten Erinnerungen verwendet.",
+        help_label: "Mehr über Erinnerungen erfahren",
+        options: {
+          none: {
+            label: "Keine",
+            description: "Gespeicherte Erinnerungen werden nicht verwendet.",
+          },
+          recall: {
+            label: "Abrufen",
+            description:
+              "Gespeicherte Erinnerungen werden für persönlichere Antworten verwendet.",
+          },
+          learn: {
+            label: "Lernen",
+            description:
+              "Erinnerungen werden verwendet und um relevante neue Details ergänzt.",
+          },
+        },
+      },
+      suggestions: {
+        section_label: "Vorschläge",
+        label: "Folgevorschläge anzeigen",
+        description:
+          "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
+        help_label: "Mehr über Folgevorschläge erfahren",
+      },
+    },
     default_model: {
       title: "Standardmodell",
       current: "Aktuell: {{currentModel}}",
       description: "Wählen Sie das Standardmodell für neue Gespräche aus.",
+      list_label: "Verfügbare Standardmodelle",
     },
     timeout: {
       title: "Wartezeit für Antworten",
       description: "Bestimmen Sie, wie lange auf KI-Antworten gewartet wird.",
       seconds: "Wartezeit (Sekunden)",
+      seconds_short: "Sek.",
       range: "Bereich: 5-900 Sekunden",
     },
     data: {
       title: "Daten verwalten",
-      description: `Hier können Sie alle lokal gespeicherten Daten verwalten. Diese Daten werden nur auf Ihrem Gerät gespeichert.\n\n
-            Das Löschen der Daten führt zum dauerhaften Verlust aller vergangenen Gespräche, Erinnerungen, Einstellungen und Anhänge.`,
+      description:
+        "Exportieren Sie eine Kopie Ihrer lokalen Daten oder entfernen Sie Unterhaltungen, Erinnerungen, Einstellungen und Anhänge dauerhaft aus diesem Browser.",
+      export_success: "Lokale Daten wurden erfolgreich exportiert.",
+      export_error: "Lokale Daten konnten nicht exportiert werden.",
     },
     clear_data_button: "Daten löschen",
     export_data_button: "Daten exportieren",
@@ -266,7 +344,8 @@ export default {
   // Help modals
   help: {
     title: "Hilfe",
-    choiceproposer: "Wenn auf \"On\" gestellt, schlägt das Modell eine Auswahl relevanter Folgeantworten zusammen mit seiner Antwort vor, um Sie bei der Fortführung des Gesprächs zu unterstützen.",
+    choiceproposer:
+      "Wenn diese Option aktiviert ist, zeigt Chat AI nach jeder Antwort passende Folgevorschläge an. Diese Einstellung gilt für alle Unterhaltungen auf diesem Gerät.",
     arcana:
       "Arcana ist eine einzigartige Funktion unseres Dienstes, die das LLM mit spezialisiertem Wissen ausstattet. Wenn Sie eine gültige Arcana-ID und den entsprechenden Schlüssel eingeben, erhält das LLM Zugriff auf das in dieser Arcana enthaltene Wissen. Dies ermöglicht es dem Modell, Antworten zu generieren, die besser informiert und relevanter für Ihre Bedürfnisse sind. Lassen Sie das Feld für die ID leer, um das Modell ohne spezialisiertes Wissen zu verwenden.",
     mcp: "Bitte geben Sie die URL Ihres MCP (Model Context Protocol) Servers ein (z. B. https://...). Der MCP-Server ist ein Dienst, der der Chat-AI zusätzliche Werkzeuge, Datenquellen oder Verarbeitungskapazitäten bereitstellen kann, die über ihr eingebautes Wissen hinausgehen. Durch die Verbindung mit dem angegebenen MCP-Server kann die KI mit externen Systemen interagieren, aktuelle oder spezialisierte Informationen abrufen und benutzerdefinierte Aufgaben entsprechend den angebotenen Funktionen ausführen.",
@@ -274,7 +353,7 @@ export default {
       "Chat AI bietet Zugriff auf eine Palette von state-of-the-art Large Language Models (LLMs), jedes mit eigenen Fähigkeiten und Leistungsmerkmalen. Dies ermöglicht es Ihnen, den Modelltyp auszuwählen, der am besten Ihren Forschungszielen und Anforderungen entspricht.\
       Größere Modelle bieten typischerweise höhere Antwortqualitäten, aber haben aufgrund ihrer erhöhten Komplexität längere Antwortzeiten. Umgekehrt bieten kleinere Modelle schnellere Antwortzeiten, mögen jedoch einige Genauigkeit und Tiefe opfern. Mit der Liste der verfügbaren Modelle können Sie Abwägungen zwischen Antwortqualität und Geschwindigkeit treffen, um Ihren spezifischen Bedürfnissen gerecht zu werden. Für weitere Einzelheiten",
     memory:
-      "Memory verbessert die Kontinuität von Gesprächen, indem es den Kontext aus vorherigen Nachrichten speichert. 'None' deaktiviert die Memory-Funktion - jedes Gespräch wird unabhängig behandelt. 'Recall' fügt Memory-Kontext zum System-Prompt hinzu, wodurch die KI auf frühere Teile Ihres Gesprächs verweisen kann. 'Learn' erhaltet auch automatische Memory-Updates. Diese Funktion bietet eine natürlichere Gesprächserfahrung ähnlich anderen KI-Diensten. Erinnerungen werden nur lokal in Ihrem Browser gespeichert.",
+      "Erinnerungen sind eine globale Einstellung für alle Unterhaltungen auf diesem Gerät. 'Keine' verwendet keine gespeicherten Erinnerungen. 'Abrufen' nutzt gespeicherte Erinnerungen für persönlichere Antworten. 'Lernen' speichert zusätzlich relevante neue Details aus Ihren Unterhaltungen. Erinnerungen werden ausschließlich in Ihrem Browser gespeichert.",
     system_prompt:
       "Der Systemprompt ist ein spezieller Befehl oder eine Anweisung, die zu Beginn eines Gesprächs gegeben wird, um den Ton, den Kontext oder die Einschränkungen für unsere Interaktion festzulegen. Damit wird das Verhalten des Modells gelenkt und sichergestellt, dass es auf hilfreiche und angemessene Weise reagiert.",
     temperature:
@@ -304,7 +383,7 @@ export default {
     sidebar:
       "Hier können Sie Unterhaltungen erstellen, löschen, importieren, exportieren, durchsuchen und zwischen ihnen wechseln. Organisieren Sie Ihre Unterhaltungen in Ordnern und chatten Sie auf Wunsch mit vordefinierten Personas.",
     settings:
-      "Hier können Sie die Unterhaltungseinstellungen anpassen, einschließlich System-Prompt, Temperatur, Top_p und Speichereinstellungen. Lassen Sie sich vom Modell Folge-Prompts vorschlagen und nutzen Sie GWDG‑Tools wie Arcana, Bildgenerierung, Websuche und mehr. Tools funktionieren möglicherweise nicht mit allen Modellen.",
+      "Hier können Sie unterhaltungsspezifische Einstellungen wie System-Prompt, Temperatur, Top_p und GWDG-Tools wie Arcana, Bildgenerierung und Websuche anpassen. Tools funktionieren möglicherweise nicht mit allen Modellen.",
     profile:
       "Diese Schaltfläche öffnet Ihr Benutzerprofil, in dem Sie Ihre Einstellungen festlegen, gespeicherte Erinnerungen verwalten sowie Ihre Daten exportieren oder löschen können.",
     interface:

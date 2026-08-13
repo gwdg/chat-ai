@@ -35,11 +35,14 @@ const getDefaultState = () => {
       warn_clear_settings: true,
       count_hallucination: 0,
       count_announcement: 0,
+      show_usage_in_sidebar: true,
     },
     // Conditionally preserve memories
     user_settings: {
       memories: [],
       timeout: 300000,
+      memory_mode: 0,
+      suggest_user_prompts: false,
     },
   };
 };

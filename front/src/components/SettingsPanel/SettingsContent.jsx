@@ -9,8 +9,6 @@ import { useModal } from "../../modals/ModalContext";
 
 //Components
 import ArcanaContainer from "./ArcanaContainer";
-import MemorySelector from "./MemorySelector";
-import ChoiceProposer from "./ChoiceProposer";
 import ShareSettingsButton from "./ShareSettingsButton";
 import SystemPromptContainer from "./SystemPromptContainer";
 import TemperatureSlider from "./TemperatureSlider";
@@ -54,7 +52,6 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const settings = localState.settings;
   const tools = settings?.tools || {};
   const toolsModule = import.meta.env.VITE_MODULE_TOOLS  === "true";
-  const choicesModule = import.meta.env.VITE_MODULE_CHOICES  === "true";
   const showArcanaBox = !!settings?.enable_tools && !!tools.arcana;
   const showMCPBox = !!settings?.enable_tools && !!tools.mcp;
   const showVideoList = !!tools.video_generation;
@@ -427,16 +424,6 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
               setLocalState={setLocalState}
             />
           )}
-          {/* Suggestions Toggle */}
-          {choicesModule && <ChoiceProposer
-            localState={localState}
-            setLocalState={setLocalState}
-          />}
-          {/* Memory Selector */}
-          <MemorySelector
-            localState={localState}
-            setLocalState={setLocalState}
-          />
           {/* temperature Slider */}
           <TemperatureSlider
             localState={localState}

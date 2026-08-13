@@ -45,7 +45,7 @@ export default async function generateChoiceProposal(history) {
     // Define openai object to call backend
     const openai = new OpenAI({
       baseURL : baseURL,
-      apiKey: null,
+      apiKey: "not-needed",
       dangerouslyAllowBrowser: true,
       timeout: 20000
     });

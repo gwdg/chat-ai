@@ -151,23 +151,95 @@ export default {
   // User Settings Modal
   user_settings: {
     title: "User Profile Settings",
+    tabs: {
+      navigation_label: "Profile settings sections",
+      profile: {
+        label: "Profile",
+        title: "Profile and usage",
+        description: "Review your account details and usage information.",
+      },
+      chat: {
+        label: "Chat",
+        title: "Chat preferences",
+        description:
+          "Choose defaults that apply to every conversation on this device.",
+      },
+      memories: {
+        label: "Memories",
+        title: "Saved memories",
+        description: "Review and manage details Chat AI has learned.",
+      },
+      data: {
+        label: "Data",
+        title: "Data and privacy",
+        description: "Export or remove data stored in this browser.",
+      },
+    },
+    account: {
+      username: "Username",
+      email: "Email address",
+    },
+    usage: {
+      title: "Usage",
+      description:
+        "Monitor your monthly usage and organization budget usage.",
+    },
     monthly_usage: "Monthly Usage",
     org_usage: "Organization Budget Usage",
+    sidebar_usage: {
+      label: "Show usage in sidebar",
+      description: "Keep your current usage visible while chatting.",
+    },
+    chat_preferences: {
+      title: "Chat preferences",
+      description:
+        "These preferences apply to every conversation on this device.",
+      memory: {
+        label: "Memory",
+        description: "Choose how Chat AI uses your saved memories.",
+        help_label: "Learn about memory",
+        options: {
+          none: {
+            label: "None",
+            description: "Do not use saved memories in responses.",
+          },
+          recall: {
+            label: "Recall",
+            description: "Use saved memories to personalize responses.",
+          },
+          learn: {
+            label: "Learn",
+            description:
+              "Use saved memories and learn relevant new details.",
+          },
+        },
+      },
+      suggestions: {
+        section_label: "Suggestions",
+        label: "Suggest follow-up prompts",
+        description: "Show suggested ways to continue after each response.",
+        help_label: "Learn about follow-up prompts",
+      },
+    },
     default_model: {
       title: "Default Model",
       current: "Current: {{currentModel}}",
       description: "Select the default model for new conversations.",
+      list_label: "Available default models",
     },
     timeout: {
       title: "Request Timeout",
       description: "Set how long to wait for AI responses before timing out.",
       seconds: "Timeout (seconds)",
+      seconds_short: "sec",
       range: "Range: 5-900 seconds",
     },
     data: {
       title: "Manage Data",
-      description: `Here you can manage all locally stored data. This data is only stored on your device.\n\n
-                            Clearing data will result in permanently losing access to all past conversations, memories, settings, and attachments.`,
+      description:
+        "Export a copy of your local data or permanently remove conversations, memories, settings, and attachments from this browser.",
+      export_success: "Local data exported successfully.",
+      export_error: "Local data could not be exported.",
     },
     clear_data_button: "Clear Data",
     export_data_button: "Export Data",
@@ -266,7 +338,8 @@ export default {
   // Help modals
   help: {
     title: "Help",
-    choiceproposer: "When set to \"On\", the model will propose a selection of relevant follow-up messages with its response, in order to assist you in continuing the conversation.",
+    choiceproposer:
+      "When enabled, Chat AI suggests relevant follow-up prompts after each response. This preference applies to every conversation on this device.",
     arcana:
       "Arcana is a unique feature of our service that empowers the LLM with specialized knowledge. When you enter a valid Arcana ID and its corresponding key, the LLM gains access to the knowledge contained within that Arcana. This enables the model to generate responses that are more informed and relevant to your needs. Leave the ID empty to use the model without any specialized knowledge.",
     mcp: "Enter the URL of your MCP (Model Context Protocol) Server (e.g., https://...). The MCP Server is a service that can provide the Chat AI with additional tools, data sources, or processing capabilities beyond its built‑in knowledge. By connecting to your specified MCP Server, the AI can interact with external systems, retrieve up‑to‑date or specialized information, and perform custom tasks according to the capabilities offered by that server.",
@@ -275,7 +348,7 @@ export default {
       Larger models typically offer higher-quality responses, but may have longer response times due to their increased complexity. Conversely, smaller models provide faster response times, but may sacrifice some accuracy and depth. With the list of available models, you can balance trade-offs between response quality and speed to suit your specific needs. For more details",
 
     memory:
-      "Memory enhances conversation continuity by remembering context from previous messages. 'None' disables memory functionality - each conversation is treated independently. 'Recall' adds memory context to the system prompt, allowing the AI to reference earlier parts of your conversation. 'Learn' works similar to Recall, but also updates the memory with relevant parts of the current conversation. This feature provides a more natural conversational experience similar to other AI services. Memories are only stored locally in your browser.",
+      "Memory is a global preference for all conversations on this device. 'None' does not use saved memories. 'Recall' uses saved memories to personalize responses. 'Learn' also stores relevant new details from your conversations. Memories are stored only in your browser.",
     system_prompt:
       "The system prompt is a special command or instruction given at the beginning of a conversation to set the tone, context, or constraints for our interaction. It's a way to guide the model's behavior and ensure that it responds in a helpful and appropriate manner.",
     temperature:
@@ -305,7 +378,7 @@ export default {
     sidebar:
       "Create, remove, import, export, remove, search, and switch between conversations here. Organize your conversations with folders, and chat with pre-defined personas, if you like.",
     settings:
-      "Here you can adjust the conversation settings, including the system prompt, temperature, top_p, and memory settings. Ask the model to suggest follow-up prompts, and use GWDG tools, including arcana, image generation, web search, and more! Tools may not work with all models.",
+      "Here you can adjust conversation-specific settings, including the system prompt, temperature, top_p, and GWDG tools such as Arcana, image generation, and web search. Tools may not work with all models.",
     profile:
       "This button will open your user profile, where you can set your preferences, manage saved memories, and export or clear your data.",
     interface:
