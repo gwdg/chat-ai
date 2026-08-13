@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { createConversation, newId, saveFile, loadFile } from "../db";
 import { useToast } from "./useToast";
@@ -43,6 +44,7 @@ async function cloneMessageContent(content, targetConversationId) {
 // `message_index` into a brand-new conversation, then navigate to it.
 export function useForkConversation(localState) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { notifySuccess, notifyError } = useToast();
   const [forking, setForking] = useState(false);
 
@@ -54,7 +56,7 @@ export function useForkConversation(localState) {
         const sourceMessages =
           localState?.messages?.slice(0, message_index + 1) || [];
         if (sourceMessages.length === 0) {
-          notifyError("Keine Nachrichten zum Forken gefunden.");
+          notifyError(t("conversation.fork_empty"));
           return;
         }
 
@@ -101,16 +103,16 @@ export function useForkConversation(localState) {
           folderId: localState?.folderId ?? null,
         });
 
-        notifySuccess("Neue Konversation erstellt.");
+        notifySuccess(t("conversation.fork_created"));
         navigate(`/chat/${newConversationId}`);
       } catch (error) {
         console.error("Failed to fork conversation", error);
-        notifyError("Konversation konnte nicht geforkt werden.");
+        notifyError(t("conversation.fork_failed"));
       } finally {
         setForking(false);
       }
     },
-    [forking, localState, navigate, notifyError, notifySuccess]
+    [forking, localState, navigate, notifyError, notifySuccess, t]
   );
 
   return { forkConversation, forking };

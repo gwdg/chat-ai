@@ -30,6 +30,8 @@ export default {
     record_start: "Aufnehmen (klicken/halten)",
     record_stop: "Stopp (klicken/loslassen)",
     dont_show_again: "Nicht mehr anzeigen",
+    regenerate: "Antwort neu generieren",
+    fork: "In neuem Chat fortfahren",
     backup_data: "Daten sichern",
     skip_backup: "Backup überspringen",
     upgrade_chat_ai: "Chat AI aktualisieren",
@@ -137,6 +139,9 @@ export default {
     empty_message:
       "Ihre Gespräche werden niemals auf unseren Servern gespeichert.",
     untitled: "Unbenannte Unterhaltung",
+    fork_empty: "Keine Nachrichten zum Kopieren gefunden.",
+    fork_created: "Neue Unterhaltung erstellt.",
+    fork_failed: "Unterhaltung konnte nicht kopiert werden.",
   },
   // Footer
   footer: {
@@ -412,9 +417,11 @@ export default {
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
     regenerate_confirm:
-      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Um diese Unterhaltung zu behalten, können Sie in einer Kopie dieses Chats fortfahren.",
+      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden.",
     regenerate_yes: "Regenerieren",
-    regenerate_fork: "Kopie",
+    fork_confirm:
+      "Die Unterhaltung wird bis zu dieser Nachricht in einen neuen Chat kopiert. Die aktuelle Unterhaltung bleibt unverändert, Sie können also eine andere Antwort oder andere Einstellungen ausprobieren, ohne etwas zu verlieren.",
+    fork_yes: "Kopie erstellen",
     summarize_replace:
       "Dies ersetzt den aktuellen Chatverlauf durch eine Zusammenfassung. Die bisherigen Nachrichten werden aus dieser Unterhaltung entfernt. Fortfahren?",
     summarize_in_progress:

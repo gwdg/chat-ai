@@ -33,6 +33,8 @@ const getDefaultState = () => {
       warn_clear_history: true,
       warn_clear_memory: true,
       warn_clear_settings: true,
+      warn_regenerate: true,
+      warn_fork: true,
       count_hallucination: 0,
       count_announcement: 0,
       show_usage_in_sidebar: true,
