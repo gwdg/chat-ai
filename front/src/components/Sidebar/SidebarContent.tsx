@@ -9,14 +9,15 @@ import {
   ChevronDown,
   Download,
   Edit,
-  FolderInput,
-  FolderPlus,
-  MoreVertical,
-  Plus,
+  FolderMoveTo,
+  FolderAdd,
+  OverflowMenuVertical,
+  Add,
   Search,
-  Trash2,
-  X,
-} from "lucide-react";
+  TrashCan,
+  Close,
+  UserAvatar,
+} from "@carbon/icons-react";
 import {
   assignConversationToFolder,
   useConversationList,
@@ -29,9 +30,9 @@ import {
   toggleSidebar,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 
-import { Bot } from "lucide-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
+import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
 import ShortcutTooltip from "./ShortcutTooltip";
 import { useToast } from "../../hooks/useToast";
@@ -45,11 +46,13 @@ export default function SidebarContent({
   setLocalState,
   handleNewConversation,
   userData,
+  modelsData,
 }: {
   localState: any;
   setLocalState: (state: any) => void;
   handleNewConversation: (folderId?: string | null) => Promise<void>;
   userData?: any;
+  modelsData?: any;
 }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -340,7 +343,7 @@ export default function SidebarContent({
                   }}
                   className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <TrashCan className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
@@ -517,7 +520,7 @@ export default function SidebarContent({
                   minHeight: "44px",
                 }}
               >
-                <Plus className="h-4 w-4 flex-shrink-0" />
+                <Add className="h-4 w-4 flex-shrink-0" />
                 <span className="truncate">
                   <Trans i18nKey="sidebar.new_conversation" />
                 </span>
@@ -583,7 +586,7 @@ export default function SidebarContent({
                     aria-label={t("folders.clear_search")}
                     onClick={() => setSearchQuery("")}
                   >
-                    <X className="w-4 h-4" />
+                    <Close className="w-4 h-4" />
                   </button>
                 ) : (
                   <button
@@ -592,10 +595,29 @@ export default function SidebarContent({
                     aria-label={t("common.cancel")}
                     onClick={closeSearch}
                   >
-                    <X className="w-4 h-4" />
+                    <Close className="w-4 h-4" />
                   </button>
                 )}
               </div>
+            </div>
+
+            <div className="flex flex-col gap-1 pb-3">
+              <ImportConversationButton variant="button" />
+              <button
+                onClick={() => {
+                  openModal("importPersona");
+                }}
+                className={`cursor-pointer w-full hover:bg-gray-50 dark:hover:bg-gray-800/50 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-start gap-2 text-xs font-medium touch-manipulation transition-all duration-100`}
+                style={{
+                  WebkitTapHighlightColor: "transparent",
+                  minHeight: "44px",
+                }}
+              >
+                <UserAvatar className="h-5 w-5 flex-shrink-0" />
+                <span className="truncate">
+                  <Trans i18nKey="sidebar.import_persona" />
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -625,7 +647,7 @@ export default function SidebarContent({
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition"
                 aria-label={t("folders.create_button")}
               >
-                <FolderPlus className="w-4 h-4" />
+                <FolderAdd className="w-4 h-4" />
               </button>
             </div>
             <div
@@ -738,7 +760,7 @@ export default function SidebarContent({
                           WebkitTapHighlightColor: "transparent",
                         }}
                       >
-                        <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <OverflowMenuVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                       </button>
                     </div>
                   </div>
@@ -757,22 +779,11 @@ export default function SidebarContent({
                 <OrgLimitsDisplay limits={userData.limits} variant="sidebar" />
               </div>
             )}
-            <ImportConversationButton variant="button" />
-            <button
-              onClick={() => {
-                openModal("importPersona");
-              }}
-              className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
-              style={{
-                WebkitTapHighlightColor: "transparent",
-                minHeight: "44px",
-              }}
-            >
-              <Bot className="h-5 w-5 flex-shrink-0" />
-              <span className="truncate">
-                <Trans i18nKey="sidebar.import_persona" />
-              </span>
-            </button>
+            <SidebarUserCard
+              localState={localState}
+              userData={userData}
+              modelsData={modelsData}
+            />
           </div>
         </div>
       </div>
@@ -826,7 +837,7 @@ export default function SidebarContent({
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <FolderInput className="w-3.5 h-3.5" />
+              <FolderMoveTo className="w-3.5 h-3.5" />
               <Trans i18nKey="folders.move_action" />
             </button>
 
@@ -865,7 +876,7 @@ export default function SidebarContent({
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/30"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <TrashCan className="w-3.5 h-3.5" />
               <Trans i18nKey="common.delete" />
             </button>
           </div>

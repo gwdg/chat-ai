@@ -1,4 +1,4 @@
-import { ChevronRight, Edit, Plus, Bot } from "lucide-react";
+import { ChevronRight, Edit, Add, Bot } from "@carbon/icons-react";
 import ImportConversationButton from "./ImportConversationButton";
 import { useModal } from "../../modals/ModalContext";
 import { useTranslation } from "react-i18next";
@@ -52,7 +52,7 @@ function CollapsedSidebar({
             className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
             aria-label={newConversationAria}
           >
-            <Plus className="w-5 h-5 text-tertiary" />
+            <Add className="w-5 h-5 text-tertiary" />
           </button>
         </ShortcutTooltip>
 

@@ -1,17 +1,20 @@
 import { Fragment } from "react";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
-import { SettingsAdjust } from "@carbon/icons-react";
+import { Tools } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
-import SettingsContent from "../SettingsPanel/SettingsContent";
+import ToolsContainer from "../SettingsPanel/ToolsContainer";
 
-export default function SettingsButton({ localState, setLocalState, userData, modelsData }) {
+export default function ToolsButton({ localState, setLocalState }) {
     const { t } = useTranslation();
+    const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
+    if (!toolsModule) return null;
+
     return (
-        <Popover className="settings-toggle relative flex">
-            <Tooltip text={t("settings.chat_settings")}>
+        <Popover className="relative flex">
+            <Tooltip text={t("settings.tools_title")}>
                 <PopoverButton className="flex cursor-pointer focus:outline-none">
-                    <SettingsAdjust className="cursor-pointer h-6 w-6 text-tertiary" />
+                    <Tools className="cursor-pointer h-6 w-6 text-tertiary" />
                 </PopoverButton>
             </Tooltip>
 
@@ -26,14 +29,9 @@ export default function SettingsButton({ localState, setLocalState, userData, mo
             >
                 <PopoverPanel
                     anchor="top"
-                    className="z-50 mb-2 w-[26rem] max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark shadow-xl dark:shadow-dark"
+                    className="z-50 mb-2 w-[26rem] max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark shadow-xl dark:shadow-dark p-4"
                 >
-                    <SettingsContent
-                        localState={localState}
-                        setLocalState={setLocalState}
-                        userData={userData}
-                        modelsData={modelsData}
-                    />
+                    <ToolsContainer localState={localState} setLocalState={setLocalState} />
                 </PopoverPanel>
             </Transition>
         </Popover>

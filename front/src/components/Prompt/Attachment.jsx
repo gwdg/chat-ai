@@ -1,10 +1,6 @@
 import { Trans } from "react-i18next";
 import { useAttachments } from "../../hooks/useAttachments";
-import icon_file_uploaded from "../../assets/icons/file_uploaded.svg";
-import icon_cross from "../../assets/icons/cross.svg";
-import icon_mic from "../../assets/icons/mic.svg";
 import MiniAudioButton from "./MiniAudioButton";
-import icon_support_video from "../../assets/icons/support_video.svg";
 import { useEffect, useRef, useState } from "react";
 import { useModal } from "../../modals/ModalContext";
 import {
@@ -14,7 +10,7 @@ import {
   loadFile,
   saveFile,
 } from "../../db";
-import { FileWarning } from "lucide-react";
+import { WarningAltFilled, Close, Video, DocumentBlank } from "@carbon/icons-react";
 import { processFile } from "../../apis/processFile";
 import { getFileType } from "../../utils/attachments";
 import { useToast } from "../../hooks/useToast";
@@ -130,9 +126,8 @@ export default function Attachment({
           "hover:from-yellow-100 hover:to-yellow-200 dark:hover:from-yellow-800/40 dark:hover:to-yellow-700/40",
         iconBg: "bg-yellow-500 dark:bg-yellow-600",
         icon: (
-          <FileWarning
+          <WarningAltFilled
             className="text-yellow-700 dark:text-yellow-300 w-5 h-5"
-            alt={file.name}
           />
         ),
       };
@@ -174,11 +169,7 @@ export default function Attachment({
           "hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800/30 dark:hover:to-purple-700/30",
         iconBg: "bg-purple-500 dark:bg-purple-600",
         icon: (
-          <img
-            className="h-4 w-4 brightness-0 invert"
-            src={icon_support_video}
-            alt="video"
-          />
+          <Video className="h-4 w-4 text-white" />
         ),
       };
     } else {
@@ -191,11 +182,7 @@ export default function Attachment({
           "hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700/60 dark:hover:to-gray-600/60",
         iconBg: "bg-gray-500 dark:bg-gray-600",
         icon: (
-          <img
-            className="h-4 w-4 brightness-0 invert"
-            src={icon_file_uploaded}
-            alt="uploaded"
-          />
+          <DocumentBlank className="h-4 w-4 text-white" />
         ),
       };
     }
@@ -291,33 +278,14 @@ export default function Attachment({
                   }}
                   aria-label="Remove file"
                 >
-                  <img
-                    src={icon_cross}
-                    alt="remove"
-                    className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity"
-                  />
+                  <Close className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity" />
                 </button>
               )}
             </div>
           </div>
           {/* Process Needed Warning*/}
           <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-3 h-3 flex-shrink-0"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.721-1.36 
-                3.486 0l6.857 12.177c.75 1.332-.213 2.974-1.742 
-                2.974H3.142c-1.53 0-2.492-1.642-1.743-2.974L8.257 3.1zM11 
-                14a1 1 0 10-2 0 1 1 0 002 0zm-1-2a1 1 
-                0 01-1-1V8a1 1 0 112 0v3a1 1 0 01-1 1z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <WarningAltFilled className="w-3 h-3 flex-shrink-0" />
             File must be processed
           </span>
         </div>
@@ -370,11 +338,7 @@ export default function Attachment({
                     }}
                     aria-label="Remove file"
                   >
-                    <img
-                      src={icon_cross}
-                      alt="remove"
-                      className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity"
-                    />
+                    <Close className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity" />
                   </button>
                 )}
               </div>
@@ -383,22 +347,7 @@ export default function Attachment({
           {/* Process Needed Warning*/}
           {!inAssistant && (!isFileSupported || fileType === "pdf") && (
             <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-3 h-3 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.721-1.36 
-                3.486 0l6.857 12.177c.75 1.332-.213 2.974-1.742 
-                2.974H3.142c-1.53 0-2.492-1.642-1.743-2.974L8.257 3.1zM11 
-                14a1 1 0 10-2 0 1 1 0 002 0zm-1-2a1 1 
-                0 01-1-1V8a1 1 0 112 0v3a1 1 0 01-1 1z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <WarningAltFilled className="w-3 h-3 flex-shrink-0" />
               {!isFileSupported
                 ? <Trans i18nKey="conversation.attachment.file_unsupported" values={{ filetype: fileType }} />
                 : <Trans i18nKey="conversation.attachment.unprocessed" />}

@@ -5,6 +5,7 @@ import SendButton from "./SendButton";
 import MicButton from "./MicButton";
 import AttachmentsContainer from "./AttachmentsContainer";
 import SettingsButton from "../Header/SettingsButton";
+import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import ClearButton from "./ClearButton";
@@ -16,7 +17,9 @@ import { useDebounce } from "../../hooks/useDebounce";
 export default function Prompt({
   localState,
   setLocalState,
-}) { 
+  userData,
+  modelsData,
+}) {
   const sendMessage = useSendMessage();
   const [shouldSend, setShouldSend] = useState(false);
   const [ignoreChanges, setIgnoreChanges] = useState(false);
@@ -103,15 +106,25 @@ export default function Prompt({
           />
           {/* Buttons Section */}
           <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
-            {/* Clear Button on the left  */}
-            <ClearButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
-            {/* Buttons on the right */}
-            <div className="flex gap-4 w-full justify-end items-center">
+            {/* Buttons on the left */}
+            <div className="flex gap-4 items-center">
+              {/* Clear Button */}
+              <ClearButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
+              {/* Tools Button */}
+              <ToolsButton
+                localState={localState}
+                setLocalState={setLocalState}
+              />
               {/* Settings Button */}
-              {/* <SettingsButton /> */}
+              <SettingsButton
+                localState={localState}
+                setLocalState={setLocalState}
+                userData={userData}
+                modelsData={modelsData}
+              />
               {/* Attach Button */}
               <AttachButton
                 localState={localState}
@@ -123,10 +136,13 @@ export default function Prompt({
                 setLocalState={setLocalState}
               /> */}
               {/* Mic Button */}
-              <MicButton 
+              <MicButton
                 localState={localState}
                 setLocalState={setLocalState}
               />
+            </div>
+            {/* Buttons on the right */}
+            <div className="flex gap-4 items-center">
               {/* Abort button (when loading) */}
               <AbortButton
                 localState={localState}

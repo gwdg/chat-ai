@@ -7,9 +7,6 @@ import {
   useState,
 } from "react";
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight, faChevronLeft, faPlus, faSearch, faEdit, faFileImport } from "@fortawesome/free-solid-svg-icons";
-import { faChevronUp, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import {
   selectDarkMode,
   selectShowSettings,
@@ -29,7 +26,7 @@ import {
   getDefaultSettings,
 } from "../../utils/conversationUtils";
 
-import { Bot, ChevronRight, Download, Edit, Plus, Sidebar, SquarePen } from "lucide-react";
+import { Bot, ChevronRight, Edit, Add } from "@carbon/icons-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
 import { useModal } from "../../modals/ModalContext";
@@ -105,7 +102,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
               className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl flex items-center justify-center`}
               aria-label={newConversationAria}
             >
-              <Plus className="w-5 h-5 text-tertiary" />
+              <Add className="w-5 h-5 text-tertiary" />
             </button>
           </ShortcutTooltip>
 
@@ -137,7 +134,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
                 ${true || isTouch ? "opacity-100" : "opacity-0"}`}
               aria-label={t("sidebar.expand")}
             >
-              <FontAwesomeIcon size="xl" className=" text-tertiary" icon={faChevronRight} />
+              <ChevronRight className="w-5 h-5 text-tertiary" />
             </button>
           </ShortcutTooltip>
         </div>

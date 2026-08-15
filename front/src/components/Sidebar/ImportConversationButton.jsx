@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
 import { useImportConversation } from "../../hooks/useImportConversation";
-import { Upload } from "lucide-react";
+import { Upload } from "@carbon/icons-react";
 import { useToast } from "../../hooks/useToast";
 import ShortcutTooltip from "./ShortcutTooltip";
 
@@ -84,7 +84,7 @@ export default function ImportConversationButton({
             disabled={loading}
             aria-label={t("common.import")}
           >
-            <Upload className="w-5 h-5 text-[#009EE0]" />
+            <Upload className="w-5 h-5 text-tertiary" />
           </button>
         </ShortcutTooltip>
       </>
@@ -105,7 +105,7 @@ export default function ImportConversationButton({
         <button
           onClick={handleClickJSON}
           disabled={loading}
-          className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors ${
+          className={`cursor-pointer w-full hover:bg-gray-50 dark:hover:bg-gray-800/50 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-start gap-2 text-xs font-medium touch-manipulation transition-all duration-100 ${
             loading ? "cursor-not-allowed opacity-50" : ""
           } `}
           style={{

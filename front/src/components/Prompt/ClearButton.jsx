@@ -1,9 +1,8 @@
-import icon_cross_sm from "../../assets/icons/cross_sm.svg";
-
 import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { abortRequest } from "../../apis/chatCompletions";
 import { useToast } from "../../hooks/useToast";
+import { Close } from "@carbon/icons-react";
 
 export default function ClearButton({
     localState,
@@ -36,15 +35,11 @@ export default function ClearButton({
     return (prompt?.trim() !== "" ? (
         <Tooltip text={t("common.clear")}>
             <button
-                className="h-[30px] w-[30px] cursor-pointer"
+                className="h-6 w-6 cursor-pointer"
                 onClick={handleClear}
                 disabled={loading}
             >
-                <img
-                className="cursor-pointer h-[25px] w-[25px]"
-                src={icon_cross_sm}
-                alt="clear"
-                />
+                <Close className="cursor-pointer h-6 w-6 text-tertiary" />
             </button>
         </Tooltip>
     ) : null)

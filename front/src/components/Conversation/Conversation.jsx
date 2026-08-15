@@ -366,7 +366,12 @@ export default function Conversation({
       </div>
 
       {/* Prompt */}
-      <Prompt localState={localState} setLocalState={setLocalState} />
+      <Prompt
+        localState={localState}
+        setLocalState={setLocalState}
+        userData={userData}
+        modelsData={modelsData}
+      />
       {emptyConversation && <Motto />}
     </div>
   );

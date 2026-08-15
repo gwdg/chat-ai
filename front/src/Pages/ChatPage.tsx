@@ -11,8 +11,8 @@ import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import ModelSelectorWrapper from "../components/Header/ModelSelectorWrapper";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
-import SettingsWrapper from "../components/SettingsPanel/SettingsWrapper";
 import Conversation from "../components/Conversation/Conversation";
+import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
@@ -49,6 +49,7 @@ export default function ChatPage() {
 
   return (
     <div className="h-dvh grid grid-rows-[auto_1fr]">
+      <TourManager />
       {/* Header + optional Announcement */}
       <div className="min-w-0 overflow-hidden">
         <AnnouncementBar />
@@ -80,13 +81,6 @@ export default function ChatPage() {
         />
 
         <Conversation
-          localState={localState}
-          setLocalState={setLocalState}
-          userData={userData}
-          modelsData={modelsData}
-        />
-
-        <SettingsWrapper
           localState={localState}
           setLocalState={setLocalState}
           userData={userData}
