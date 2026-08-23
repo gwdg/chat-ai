@@ -126,9 +126,7 @@ export default function Attachment({
           "hover:from-yellow-100 hover:to-yellow-200 dark:hover:from-yellow-800/40 dark:hover:to-yellow-700/40",
         iconBg: "bg-yellow-500 dark:bg-yellow-600",
         icon: (
-          <WarningAltFilled
-            className="text-yellow-700 dark:text-yellow-300 w-5 h-5"
-          />
+          <WarningAltFilled size={20} className="text-yellow-700 dark:text-yellow-300" />
         ),
       };
     }
@@ -169,7 +167,7 @@ export default function Attachment({
           "hover:from-purple-100 hover:to-purple-200 dark:hover:from-purple-800/30 dark:hover:to-purple-700/30",
         iconBg: "bg-purple-500 dark:bg-purple-600",
         icon: (
-          <Video className="h-4 w-4 text-white" />
+          <Video size={16} className="text-white" />
         ),
       };
     } else {
@@ -182,7 +180,7 @@ export default function Attachment({
           "hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700/60 dark:hover:to-gray-600/60",
         iconBg: "bg-gray-500 dark:bg-gray-600",
         icon: (
-          <DocumentBlank className="h-4 w-4 text-white" />
+          <DocumentBlank size={16} className="text-white" />
         ),
       };
     }
@@ -278,14 +276,14 @@ export default function Attachment({
                   }}
                   aria-label="Remove file"
                 >
-                  <Close className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity" />
+                  <Close size={16} className="opacity-70 hover:opacity-100 transition-opacity" />
                 </button>
               )}
             </div>
           </div>
           {/* Process Needed Warning*/}
           <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
-            <WarningAltFilled className="w-3 h-3 flex-shrink-0" />
+            <WarningAltFilled size={12} className="flex-shrink-0" />
             File must be processed
           </span>
         </div>
@@ -338,7 +336,7 @@ export default function Attachment({
                     }}
                     aria-label="Remove file"
                   >
-                    <Close className="h-4 w-4 opacity-70 hover:opacity-100 transition-opacity" />
+                    <Close size={16} className="opacity-70 hover:opacity-100 transition-opacity" />
                   </button>
                 )}
               </div>
@@ -347,7 +345,7 @@ export default function Attachment({
           {/* Process Needed Warning*/}
           {!inAssistant && (!isFileSupported || fileType === "pdf") && (
             <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
-              <WarningAltFilled className="w-3 h-3 flex-shrink-0" />
+              <WarningAltFilled size={12} className="flex-shrink-0" />
               {!isFileSupported
                 ? <Trans i18nKey="conversation.attachment.file_unsupported" values={{ filetype: fileType }} />
                 : <Trans i18nKey="conversation.attachment.unprocessed" />}

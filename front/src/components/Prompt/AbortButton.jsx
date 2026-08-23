@@ -24,7 +24,7 @@ export default function AbortButton({
          <Tooltip text={t("common.abort")}>
             {/* Abort Button */}
             <button className="h-7 w-7 cursor-pointer" onClick={handleAbort}>
-            <StopFilled className="cursor-pointer h-7 w-7 text-tertiary" />
+            <StopFilled size={28} className="cursor-pointer text-tertiary" />
             </button>
         </Tooltip>
     );

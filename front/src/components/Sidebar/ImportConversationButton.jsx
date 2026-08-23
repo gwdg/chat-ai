@@ -84,7 +84,7 @@ export default function ImportConversationButton({
             disabled={loading}
             aria-label={t("common.import")}
           >
-            <Upload className="w-5 h-5 text-tertiary" />
+            <Upload size={20} className="text-tertiary" />
           </button>
         </ShortcutTooltip>
       </>
@@ -113,7 +113,7 @@ export default function ImportConversationButton({
             minHeight: "44px",
           }}
         >
-          <Upload className="h-4 w-4 flex-shrink-0" />
+          <Upload size={16} className="flex-shrink-0" />
           <span className="truncate">{t("common.import")}</span>
         </button>
       </>

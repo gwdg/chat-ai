@@ -11,7 +11,7 @@ export default function SettingsButton({ localState, setLocalState, userData, mo
         <Popover className="settings-toggle relative flex">
             <Tooltip text={t("settings.chat_settings")}>
                 <PopoverButton className="flex cursor-pointer focus:outline-none">
-                    <SettingsAdjust className="cursor-pointer h-6 w-6 text-tertiary" />
+                    <SettingsAdjust size={24} className="cursor-pointer text-tertiary" />
                 </PopoverButton>
             </Tooltip>
 

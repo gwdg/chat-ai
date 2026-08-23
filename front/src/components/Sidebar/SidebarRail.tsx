@@ -80,7 +80,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
               className="absolute h-10 w-10 inset-0 grid place-items-center rounded-xl transition duration-200 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
               aria-label={t("sidebar.expand")}
             >
-              <ChevronRight className="w-10 h-10 text-tertiary" />
+              <ChevronRight size={40} className="text-tertiary" />
             </button>
           </ShortcutTooltip>
         </div>
@@ -102,7 +102,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
               className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl flex items-center justify-center`}
               aria-label={newConversationAria}
             >
-              <Add className="w-5 h-5 text-tertiary" />
+              <Add size={20} className="text-tertiary" />
             </button>
           </ShortcutTooltip>
 
@@ -115,7 +115,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
               className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
               aria-label={t("sidebar.rename_tooltip", { title: currentConversationTitle })}
             >
-              <Edit className="w-5 h-5 text-tertiary" />
+              <Edit size={20} className="text-tertiary" />
             </button>
           </ShortcutTooltip>
 
@@ -134,7 +134,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
                 ${true || isTouch ? "opacity-100" : "opacity-0"}`}
               aria-label={t("sidebar.expand")}
             >
-              <ChevronRight className="w-5 h-5 text-tertiary" />
+              <ChevronRight size={20} className="text-tertiary" />
             </button>
           </ShortcutTooltip>
         </div>
@@ -151,7 +151,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
               className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
               aria-label={t("sidebar.import_persona")}
             >
-              <Bot className="w-6 h-6 text-tertiary" />
+              <Bot size={24} className="text-tertiary" />
             </button>
           </ShortcutTooltip>
         </div>

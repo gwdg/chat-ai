@@ -34,9 +34,7 @@ export default function AnnouncementBar() {
           className="p-0.5 sm:p-1 hover:bg-orange-600 rounded-full transition-colors flex-shrink-0 ml-2 cursor-pointer"
           aria-label="Close announcement"
         >
-          <Close
-            className="h-[20px] w-[20px] sm:h-[24px] sm:w-[24px] md:h-[30px] md:w-[30px] cursor-pointer text-tertiary"
-          />
+          <Close size={20} className="sm:h-[24px] sm:w-[24px] md:h-[30px] md:w-[30px] cursor-pointer text-tertiary" />
         </button>
       </div>
     </div>

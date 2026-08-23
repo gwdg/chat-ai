@@ -333,7 +333,7 @@ export default function SidebarContent({
                   }}
                   className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
                 >
-                  <Edit className="w-3.5 h-3.5" />
+                  <Edit size={14} />
                 </button>
                 <button
                   type="button"
@@ -343,7 +343,7 @@ export default function SidebarContent({
                   }}
                   className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition"
                 >
-                  <TrashCan className="w-3.5 h-3.5" />
+                  <TrashCan size={14} />
                 </button>
               </div>
             )}
@@ -500,7 +500,7 @@ export default function SidebarContent({
             aria-label={t("sidebar.close_sidebar")}
             className="cursor-pointer p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-200 flex items-center justify-center text-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft size={20} />
           </button>
         </ShortcutTooltip>
       </div>
@@ -520,7 +520,7 @@ export default function SidebarContent({
                   minHeight: "44px",
                 }}
               >
-                <Add className="h-4 w-4 flex-shrink-0" />
+                <Add size={16} className="flex-shrink-0" />
                 <span className="truncate">
                   <Trans i18nKey="sidebar.new_conversation" />
                 </span>
@@ -541,7 +541,7 @@ export default function SidebarContent({
                   `}
                   aria-label={t("folders.search_label")}
                 >
-                  <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+                  <Search size={16} className="text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
                   {/* <span className="flex-1 text-left truncate">
                     {t("folders.search_action")}
                   </span> */}
@@ -557,7 +557,7 @@ export default function SidebarContent({
               }`}
             >
               <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40  transition">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
                 <input
                   ref={searchInputRef}
                   type="text"
@@ -586,7 +586,7 @@ export default function SidebarContent({
                     aria-label={t("folders.clear_search")}
                     onClick={() => setSearchQuery("")}
                   >
-                    <Close className="w-4 h-4" />
+                    <Close size={16} />
                   </button>
                 ) : (
                   <button
@@ -595,7 +595,7 @@ export default function SidebarContent({
                     aria-label={t("common.cancel")}
                     onClick={closeSearch}
                   >
-                    <Close className="w-4 h-4" />
+                    <Close size={16} />
                   </button>
                 )}
               </div>
@@ -613,7 +613,7 @@ export default function SidebarContent({
                   minHeight: "44px",
                 }}
               >
-                <UserAvatar className="h-5 w-5 flex-shrink-0" />
+                <UserAvatar size={20} className="flex-shrink-0" />
                 <span className="truncate">
                   <Trans i18nKey="sidebar.import_persona" />
                 </span>
@@ -635,7 +635,8 @@ export default function SidebarContent({
               >
                 <span>{t("folders.title")}</span>
                 <ChevronDown
-                  className={`transition-transform duration-200 h-3 w-3 ${
+                  size={12}
+                  className={`transition-transform duration-200 ${
                     foldersExpanded ? "rotate-0" : "-rotate-90"
                   }`}
                 />
@@ -647,7 +648,7 @@ export default function SidebarContent({
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition"
                 aria-label={t("folders.create_button")}
               >
-                <FolderAdd className="w-4 h-4" />
+                <FolderAdd size={16} />
               </button>
             </div>
             <div
@@ -760,7 +761,7 @@ export default function SidebarContent({
                           WebkitTapHighlightColor: "transparent",
                         }}
                       >
-                        <OverflowMenuVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <OverflowMenuVertical size={16} className="text-gray-500 dark:text-gray-400" />
                       </button>
                     </div>
                   </div>
@@ -821,7 +822,7 @@ export default function SidebarContent({
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <Edit className="w-3.5 h-3.5" />
+              <Edit size={14} />
               <Trans i18nKey="common.rename" />
               {/* TODO use Translation */}
             </button>
@@ -837,7 +838,7 @@ export default function SidebarContent({
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <FolderMoveTo className="w-3.5 h-3.5" />
+              <FolderMoveTo size={14} />
               <Trans i18nKey="folders.move_action" />
             </button>
 
@@ -860,7 +861,7 @@ export default function SidebarContent({
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download size={14} />
               <Trans i18nKey="export_conversation.export" />
             </button>
 
@@ -876,7 +877,7 @@ export default function SidebarContent({
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/30"
             >
-              <TrashCan className="w-3.5 h-3.5" />
+              <TrashCan size={14} />
               <Trans i18nKey="common.delete" />
             </button>
           </div>

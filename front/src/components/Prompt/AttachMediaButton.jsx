@@ -76,7 +76,7 @@ export default function AttachMediaButton({
                 onClick={() => hiddenFileInputImage.current?.click()}
                 disabled={loading}
             >
-                <Image className="cursor-pointer h-6 w-6 text-tertiary" />
+                <Image size={24} className="cursor-pointer text-tertiary" />
             </button>
             </Tooltip>
         </>

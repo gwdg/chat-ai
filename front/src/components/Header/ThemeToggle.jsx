@@ -27,9 +27,9 @@ export default function ThemeToggle() {
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       {isDarkMode ? (
-        <Sun className="h-5 w-5 flex-shrink-0 text-tertiary" />
+        <Sun size={20} className="flex-shrink-0 text-tertiary" />
       ) : (
-        <Moon className="h-5 w-5 flex-shrink-0 text-tertiary" />
+        <Moon size={20} className="flex-shrink-0 text-tertiary" />
       )}
     </button>
   );

@@ -44,7 +44,7 @@ export default function UserContainer({
       }
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      <User className="h-full w-full text-tertiary" />
+      <User size={20} className="h-full w-full text-tertiary" />
     </button>
   );
 }

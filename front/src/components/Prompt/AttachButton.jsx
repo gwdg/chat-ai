@@ -51,10 +51,7 @@ export default function AttachButton({
                     onChange={handleFilesChange}
                     className="hidden"
                 />
-                <Attachment
-                    className="cursor-pointer flex h-6 w-6 text-tertiary"
-                    onClick={handleClick}
-                />
+                <Attachment size={24} className="cursor-pointer flex text-tertiary" onClick={handleClick} />
             </Tooltip>
         </>
     );

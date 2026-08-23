@@ -29,7 +29,7 @@ export function DataSafetyText({ localState, userData }) {
   return (
     <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-600 rounded-md text-yellow-800 dark:text-yellow-300">
       <div className="flex items-center gap-2 p-2 text-sm text-yellow-700 dark:text-yellow-300 select-none">
-        <WarningAltFilled className="w-7 h-7 shrink-0 text-yellow-600 dark:text-yellow-400" />
+        <WarningAltFilled size={28} className="shrink-0 text-yellow-600 dark:text-yellow-400" />
         <Trans
         i18nKey={
             userData?.org === "MPG"
@@ -93,7 +93,7 @@ export default function WarningExternalModel({ localState, userData }) {
                   rounded-md text-green-800 dark:text-green-300
                   text-sm font-medium transition-colors shadow-md cursor-pointer"
       >
-        <Locked className="w-full h-full"/>
+        <Locked size={24} className="w-full h-full"/>
         {/* <Trans i18nKey="alert.title" /> */}
       </button>
 
@@ -117,7 +117,7 @@ export default function WarningExternalModel({ localState, userData }) {
                        transition-colors cursor-pointer"
             title="Close"
           >
-            <Close className="w-4 h-4" />
+            <Close size={16} />
           </button>
           <div
             className="absolute -bottom-1 right-17.5 md:right-6.5 w-2 h-2
@@ -143,7 +143,7 @@ export default function WarningExternalModel({ localState, userData }) {
                    rounded-md text-yellow-800 dark:text-yellow-300 
                    text-sm font-medium transition-colors shadow-md cursor-pointer"
       >
-        <WarningAltFilled className="w-full h-full" />
+        <WarningAltFilled size={24} className="w-full h-full" />
         {/* <Trans i18nKey="alert.title" /> */}
       </button>
 
@@ -171,7 +171,7 @@ export default function WarningExternalModel({ localState, userData }) {
                        transition-colors cursor-pointer"
             title="Close"
           >
-            <Close className="w-4 h-4" />
+            <Close size={16} />
           </button>
           <div
             className="absolute -bottom-1 right-17.5 md:right-6.5 w-2 h-2

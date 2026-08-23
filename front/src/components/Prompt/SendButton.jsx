@@ -15,10 +15,7 @@ export default function SendButton({localState, setLocalState, handleSend, promp
 
     return !loading && (prompt !== "" || attachments.length > 0) &&  (
          <Tooltip text={t("common.send")}>
-            <Send
-                className="cursor-pointer h-7 w-7 text-tertiary"
-                onClick={handleSend}
-            />
+            <Send size={28} className="cursor-pointer text-tertiary" onClick={handleSend} />
         </Tooltip>
     );
 }

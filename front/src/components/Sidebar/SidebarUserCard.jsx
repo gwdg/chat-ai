@@ -43,7 +43,7 @@ export default function SidebarUserCard({ localState, userData, modelsData }) {
         className="cursor-pointer h-9 w-9 flex-shrink-0 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         aria-label={t("user_settings.title")}
       >
-        <Settings className="h-5 w-5 text-tertiary" />
+        <Settings size={20} className="text-tertiary" />
       </button>
     </div>
   );

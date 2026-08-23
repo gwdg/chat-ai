@@ -231,7 +231,7 @@ export default function MicButton({
                 <div className="w-3 h-3 bg-white rounded-sm"></div>
                 ) : (
                 // Microphone icon when not recording
-                <Microphone className="h-[18px] w-[18px] text-tertiary" />
+                <Microphone size={18} className="text-tertiary" />
                 )}
             </button>
             </Tooltip>

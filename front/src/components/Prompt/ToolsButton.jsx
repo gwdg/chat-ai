@@ -14,7 +14,7 @@ export default function ToolsButton({ localState, setLocalState }) {
         <Popover className="relative flex">
             <Tooltip text={t("settings.tools_title")}>
                 <PopoverButton className="flex cursor-pointer focus:outline-none">
-                    <Tools className="cursor-pointer h-6 w-6 text-tertiary" />
+                    <Tools size={24} className="cursor-pointer text-tertiary" />
                 </PopoverButton>
             </Tooltip>
 

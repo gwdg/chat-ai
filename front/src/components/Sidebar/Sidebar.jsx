@@ -143,7 +143,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
             className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             title="Close sidebar"
           >
-            <ChevronLeft className="w-5 h-5 text-tertiary" />
+            <ChevronLeft size={20} className="text-tertiary" />
           </button>
         </div>
 
@@ -157,7 +157,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
               minHeight: "44px",
             }}
           >
-            <Add className="h-4 w-4 flex-shrink-0" />
+            <Add size={16} className="flex-shrink-0" />
             <span className="flex flex-col items-start leading-tight">
               <span className="truncate">
                 <Trans i18nKey="sidebar.new_conversation" />
@@ -236,7 +236,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
                             WebkitTapHighlightColor: "transparent",
                           }}
                         >
-                          <OverflowMenuVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                          <OverflowMenuVertical size={16} className="text-gray-500 dark:text-gray-400" />
                         </button>
                       </div>
                     </div>
@@ -306,7 +306,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <Edit className="w-3.5 h-3.5" />
+              <Edit size={14} />
               Rename
               {/* TODO use Translation */}
             </button>
@@ -320,7 +320,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download size={14} />
               <Trans i18nKey="export_conversation.export" />
             </button>
 
@@ -335,7 +335,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
               }}
               className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/30"
             >
-              <TrashCan className="w-3.5 h-3.5" />
+              <TrashCan size={14} />
               <Trans i18nKey="common.delete" />
             </button>
           </div>

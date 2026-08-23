@@ -39,7 +39,7 @@ export default function ClearButton({
                 onClick={handleClear}
                 disabled={loading}
             >
-                <Close className="cursor-pointer h-6 w-6 text-tertiary" />
+                <Close size={24} className="cursor-pointer text-tertiary" />
             </button>
         </Tooltip>
     ) : null)
