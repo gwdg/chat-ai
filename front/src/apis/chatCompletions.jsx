@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { createBackendClient } from "./openaiClient";
 
 // Controller for handling API request cancellation
 let controller = new AbortController();
@@ -13,17 +13,6 @@ async function* chatCompletions (
       ? conversation.settings.model
       : conversation.settings.model?.id; // TODO fall back to defaultModel
 
-    // Define base URL from config
-    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
-    try {
-      // If absolute, parse directly
-      baseURL = new URL(baseURL).toString();
-    } catch {
-      // If relative, resolve against current origin
-      baseURL = new URL(baseURL, window.location.origin).toString();
-    }
-    
-    
     // Initialize params
     const params = {
       model: model,
@@ -53,12 +42,7 @@ async function* chatCompletions (
     }
 
     // Define openai object to call backend
-    const openai = new OpenAI({
-      baseURL : baseURL,
-      apiKey: "not-needed",
-      dangerouslyAllowBrowser: true,
-      timeout: timeout
-    });
+    const openai = createBackendClient(timeout);
 
     // Get chat completion response
     const streamResponse = await openai.chat.completions.create(

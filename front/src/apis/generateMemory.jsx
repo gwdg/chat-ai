@@ -1,5 +1,5 @@
 import { getDefaultSettings } from "../utils/conversationUtils";
-import OpenAI from "openai";
+import { createBackendClient } from "./openaiClient";
 
 export default async function generateMemory(newUserMessage, memories) {
   const defaultSettings = getDefaultSettings();
@@ -76,23 +76,8 @@ export default async function generateMemory(newUserMessage, memories) {
   };
 
   try {
-    // Define base URL from config
-    let baseURL = import.meta.env.VITE_BACKEND_ENDPOINT;
-    try {
-      // If absolute, parse directly
-      baseURL = new URL(baseURL).toString();
-    } catch {
-      // If relative, resolve against current origin
-      baseURL = new URL(baseURL, window.location.origin).toString();
-    }
-
     // Define openai object to call backend
-    const openai = new OpenAI({
-      baseURL : baseURL,
-      apiKey: "not-needed",
-      dangerouslyAllowBrowser: true,
-      timeout: 20000
-    });
+    const openai = createBackendClient(20000);
   
 
     const params = {

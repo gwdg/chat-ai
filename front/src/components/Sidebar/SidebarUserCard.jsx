@@ -1,10 +1,12 @@
 import { Settings } from "@carbon/icons-react";
+import { useTranslation } from "react-i18next";
 import { useModal } from "../../modals/ModalContext";
 import UserContainer from "../Header/UserContainer";
 import WarningExternalModel from "../Header/WarningExternalModel";
 
 export default function SidebarUserCard({ localState, userData, modelsData }) {
   const { openModal } = useModal();
+  const { t } = useTranslation();
 
   const name = [userData?.firstname, userData?.lastname]
     .filter(Boolean)
@@ -39,7 +41,7 @@ export default function SidebarUserCard({ localState, userData, modelsData }) {
           openModal("userSettings", { localState, userData, modelsData })
         }
         className="cursor-pointer h-9 w-9 flex-shrink-0 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        aria-label="User settings"
+        aria-label={t("user_settings.title")}
       >
         <Settings className="h-5 w-5 text-tertiary" />
       </button>
