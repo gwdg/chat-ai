@@ -32,6 +32,7 @@ import {
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
 import TopicList, { UNSORTED_TOPIC_ID } from "./TopicList";
+import TopicCreateBubble from "./TopicCreateBubble";
 import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
 import ShortcutTooltip from "./ShortcutTooltip";
@@ -61,7 +62,10 @@ export default function SidebarContent({
   const showUsageInSidebar = useSelector(selectShowUsageInSidebar);
   const isDark = useSelector(selectDarkMode);
 
-  const { isDesktop } = useWindowSize();
+  const { isDesktop, windowWidth } = useWindowSize();
+  // Below this the sidebar is an overlay drawer (see Sidebar.jsx), which leaves
+  // an anchored bubble nowhere to go — those widths keep the dialog.
+  const sidebarIsDocked = windowWidth >= 1081;
   const conversations = useConversationList() || [];
   const folders = useFolderList() || [];
   // Topics are expanded by default; this holds the ones the user closed.
@@ -113,7 +117,7 @@ export default function SidebarContent({
     return conversations.filter((conv) => {
       const title =
         conv.title ||
-        t("conversation.untitled", { defaultValue: "Untitled Conversation" });
+        t("conversation.untitled", { defaultValue: "Untitled Chat" });
       return title.toLowerCase().includes(normalizedSearch);
     });
   }, [conversations, hasSearch, normalizedSearch, t]);
@@ -204,7 +208,16 @@ export default function SidebarContent({
     });
   }, []);
 
-  const handleCreateFolder = () => {
+  const [createTopicAnchor, setCreateTopicAnchor] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const handleCreateFolder = (anchor: { x: number; y: number }) => {
+    if (sidebarIsDocked) {
+      setCreateTopicAnchor(anchor);
+      return;
+    }
     openModal("createFolder");
   };
 
@@ -233,7 +246,7 @@ export default function SidebarContent({
     if (!conv) return;
     openModal("moveConversation", {
       conversationId: conv.id,
-      conversationTitle: conv.title || "Untitled Conversation",
+      conversationTitle: conv.title || "Untitled Chat",
       currentFolderId: conv.folderId ?? null,
       folders,
       localState,
@@ -244,7 +257,7 @@ export default function SidebarContent({
   const highlightText = (text?: string | null) => {
     const value =
       text ||
-      t("conversation.untitled", { defaultValue: "Untitled Conversation" });
+      t("conversation.untitled", { defaultValue: "Untitled Chat" });
     if (!hasSearch) return value;
     const escapeRegExp = (str: string) =>
       str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -296,7 +309,7 @@ export default function SidebarContent({
 
     openModal("renameConversation", {
       id: conv.id,
-      currentTitle: conv.title || "Untitled Conversation",
+      currentTitle: conv.title || "Untitled Chat",
       localState: localState,
       setLocalState: setLocalState,
     });
@@ -417,7 +430,7 @@ export default function SidebarContent({
         <div className="flex items-center h-full w-full group">
           <div
             className="flex-1 overflow-hidden min-w-0"
-            title={conv.title || "Untitled Conversation"}
+            title={conv.title || "Untitled Chat"}
             onDoubleClick={(e) => handleTitleDoubleClick(e, conv)}
             style={{ cursor: isDesktop ? "text" : "pointer" }}
           >
@@ -593,12 +606,12 @@ export default function SidebarContent({
           </div>
 
           {/* New Conversation / Persona / Import */}
-          <div className="mx-3 mt-2 pb-6 flex flex-col gap-1">
+          <div className="mx-3 mt-2 pb-6 flex items-center gap-1">
             <button
               onClick={onNewConversation}
-              className={`cursor-pointer w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
-              active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white 
-              pl-3 pr-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs 
+              className={`cursor-pointer flex-1 min-w-0 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
+              active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white
+              pl-3 pr-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs
               font-medium touch-manipulation transition-colors`}
               style={{
                 WebkitTapHighlightColor: "transparent",
@@ -610,28 +623,19 @@ export default function SidebarContent({
                 <Trans i18nKey="sidebar.new_conversation" />
               </span>
             </button>
-            <div className="flex items-stretch gap-1">
-              <div className="flex-1 min-w-0">
-                <button
-                  onClick={() => {
-                    openModal("importPersona");
-                  }}
-                  className={`cursor-pointer w-full hover:bg-gray-50 dark:hover:bg-gray-800/50 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-start gap-2 text-xs font-medium touch-manipulation transition-all duration-100`}
-                  style={{
-                    WebkitTapHighlightColor: "transparent",
-                    minHeight: "44px",
-                  }}
-                >
-                  <UserAvatar size={20} className="flex-shrink-0" />
-                  <span className="truncate">
-                    <Trans i18nKey="sidebar.import_persona" />
-                  </span>
-                </button>
-              </div>
-              <div className="flex-1 min-w-0">
-                <ImportConversationButton variant="button" />
-              </div>
-            </div>
+            <ShortcutTooltip label={t("sidebar.import_persona")}>
+              <button
+                onClick={() => {
+                  openModal("importPersona");
+                }}
+                aria-label={t("sidebar.import_persona")}
+                className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                style={{ WebkitTapHighlightColor: "transparent" }}
+              >
+                <UserAvatar size={20} className="text-tertiary" />
+              </button>
+            </ShortcutTooltip>
+            <ImportConversationButton />
           </div>
         </div>
 
@@ -655,6 +659,12 @@ export default function SidebarContent({
           </div>
         </div>
       </div>
+
+      <TopicCreateBubble
+        isOpen={createTopicAnchor !== null}
+        onClose={() => setCreateTopicAnchor(null)}
+        anchor={createTopicAnchor ?? { x: 0, y: 0 }}
+      />
 
       {/* MENU RENDERED OUTSIDE - PORTAL STYLE */}
       {activeMenu && (
@@ -681,7 +691,7 @@ export default function SidebarContent({
                 const conv = conversations.find((c) => c.id === activeMenu);
                 openModal("renameConversation", {
                   id: activeMenu,
-                  currentTitle: conv?.title || "Untitled Conversation",
+                  currentTitle: conv?.title || "Untitled Chat",
                   localState: localState,
                   setLocalState: setLocalState,
                 });

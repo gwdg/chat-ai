@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import type { DragEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Add, ChevronDown, Edit, TrashCan } from "@carbon/icons-react";
@@ -36,7 +37,7 @@ export default function TopicList({
   unsortedConversations: any[];
   collapsedIds: Set<string>;
   onToggleCollapse: (topicId: string) => void;
-  onCreateTopic: () => void;
+  onCreateTopic: (anchor: { x: number; y: number }) => void;
   onRenameTopic: (topic: TopicRef) => void;
   onDeleteTopic: (topic: TopicRef) => void;
   draggingConversationId: string | null;
@@ -48,6 +49,7 @@ export default function TopicList({
   isDark: boolean;
 }) {
   const { t } = useTranslation();
+  const createButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const renderRow = (options: {
     id: string;
@@ -182,7 +184,11 @@ export default function TopicList({
     <div className="space-y-1">
       <button
         type="button"
-        onClick={onCreateTopic}
+        ref={createButtonRef}
+        onClick={() => {
+          const rect = createButtonRef.current?.getBoundingClientRect();
+          onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
+        }}
         className="w-full flex items-center gap-2 rounded-2xl px-3 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition cursor-pointer"
       >
         <Add size={16} className="flex-shrink-0" />

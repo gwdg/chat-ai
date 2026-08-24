@@ -23,7 +23,7 @@ const sortOptions = [
   { value: "name-desc", label: "Name (Z→A)" },
 ];
 
-export default function ModelSelectorSimple({ selectedModel, modelsData, onChange, inHeader = false }: { selectedModel: BaseModelInfo | null, modelsData: BaseModelInfo[], inHeader: boolean, onChange: (model: BaseModelInfo) => void }) {
+export default function ModelSelectorSimple({ selectedModel, modelsData, onChange, inHeader = false, listOnly = false, onSelected }: { selectedModel: BaseModelInfo | null, modelsData: BaseModelInfo[], inHeader: boolean, onChange: (model: BaseModelInfo) => void, listOnly?: boolean, onSelected?: () => void }) {
   
   const { t } = useTranslation();
 
@@ -102,7 +102,8 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
   return (
 
     <div ref={dropdownRef} className="w-full relative dark:text-white">
-      {/** Trigger/Input **/}
+      {/** Trigger/Input — suppressed when the caller supplies its own **/}
+      {!listOnly && (
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
         className={`border border-gray-200 dark:border-bg_secondary_dark
@@ -133,10 +134,13 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
         </div>
 
       </button>
+      )}
 
 
-      {/** Dropdown Panel **/}
-      <div className={`${dropdownOpen ? "" : "hidden"} ${inHeader ? "fixed left-0 top-12 w-screen" : "absolute"} bg-white dark:bg-bg_secondary_dark z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500  shadow-2xl dark:shadow-dark pb-4`}>
+      {/** Dropdown Panel — rendered inline when there is no trigger **/}
+      <div className={listOnly
+        ? "bg-white dark:bg-bg_secondary_dark w-full rounded-2xl pb-2"
+        : `${dropdownOpen ? "" : "hidden"} ${inHeader ? "fixed left-0 top-12 w-screen" : "absolute"} bg-white dark:bg-bg_secondary_dark z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500  shadow-2xl dark:shadow-dark pb-4`}>
 
         <div className="px-3 pt-3 pb-2">
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-200">
@@ -205,7 +209,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             {filteredModelsList.map((m, idx) => (
               <ListElement
                 key={m.id}
-                onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}
+                onClick={() => { setSelectedModel(m); setDropdownOpen(false); onSelected?.(); }}
                 idx={idx} model={m} selected={selectedModel?.id === m.id} />
             ))}
           </div>

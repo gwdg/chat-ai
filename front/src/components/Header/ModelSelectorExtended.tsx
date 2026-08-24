@@ -37,7 +37,7 @@ const sortOptions = [
   { value: "context-asc", label: "Context (low→high)" },
 ];
 
-export default function ModelSelectorSimple({ selectedModel, modelsData, onChange }: { selectedModel: Object | undefined, modelsData: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void }) {
+export default function ModelSelectorSimple({ selectedModel, modelsData, onChange, listOnly = false, onSelected }: { selectedModel: Object | undefined, modelsData: ExtendedModelInfo[], onChange?: (model: ExtendedModelInfo) => void, listOnly?: boolean, onSelected?: () => void }) {
 
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -305,7 +305,8 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
 
 
-      {/** Trigger/Input **/}
+      {/** Trigger/Input — suppressed when the caller supplies its own **/}
+      {!listOnly && (
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
         className="h-13 min-h-[4rem] w-full text-left desktop:w-full border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md bg-white dark:bg-bg_secondary_dark px-3 py-2.5 shadow-sm hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
@@ -346,9 +347,12 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
         </div>
 
       </button>
+      )}
 
-      {/** Dropdown Panel **/}
-      <div className={`${dropdownOpen ? "" : "hidden"} bg-white dark:bg-bg_secondary_dark absolute z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500 shadow-2xl dark:shadow-dark pb-4`}>
+      {/** Dropdown Panel — rendered inline when there is no trigger **/}
+      <div className={listOnly
+        ? "bg-white dark:bg-bg_secondary_dark w-full rounded-2xl pb-2"
+        : `${dropdownOpen ? "" : "hidden"} bg-white dark:bg-bg_secondary_dark absolute z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500 shadow-2xl dark:shadow-dark pb-4`}>
 
         <div className="px-4 pt-4 pb-2">
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-200">
@@ -467,7 +471,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               {filteredModelsList.map((m, idx) => (
                 <ListElement
                   key={m.id} idx={idx} model={m}
-                  onClick={() => { setSelectedModel(m); setDropdownOpen(false); }} />
+                  onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
               ))}
             </div>
           )}
@@ -476,7 +480,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               {filteredModelsList.map((m, idx) => (
                 <ExtendedListElement
                   key={m.id} idx={idx} model={m}
-                  onClick={() => { setSelectedModel(m); setDropdownOpen(false); }} />
+                  onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
               ))}
             </div>
           )}
@@ -485,11 +489,11 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             <div className="overflow-hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 py-2">
               {filteredModelsList.map((m, idx) => (
                 <span
-                  onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}
+                  onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }}
                 >
                   <GridElement
                     key={m.id} idx={idx} model={m}
-                    onClick={() => { setSelectedModel(m); setDropdownOpen(false); }} />
+                    onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
                 </span>
               ))}
             </div>

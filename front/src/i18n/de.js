@@ -41,7 +41,7 @@ export default {
   },
   // Sidebar
   sidebar: {
-    new_conversation: "Neues Gespräch",
+    new_conversation: "Neuer Chat",
     import_persona: "Mit Persona chatten",
     expand: "Ausklappen",
     extend: "Ausklappen",
@@ -52,13 +52,13 @@ export default {
     user_section: "Benutzer",
   },
   folders: {
-    title: "Gespräche",
+    title: "Chats",
     all: "Alle Chats",
-    uncategorized: "Nicht zugeordnete Gespräche",
+    uncategorized: "Nicht zugeordnete Chats",
     create_button: "Neues Thema",
-    empty_topic: "Ziehen Sie ein Gespräch hierher.",
+    empty_topic: "Ziehen Sie einen Chat hierher.",
     search_label: "Suche",
-    search_action: "Gespräche durchsuchen",
+    search_action: "Chats durchsuchen",
     search_placeholder: "nach Titel durchsuchen",
     search_no_results: 'Keine Treffer für "{{query}}"',
     clear_search: "Suche löschen",
@@ -66,10 +66,17 @@ export default {
     rename_title: "Thema umbenennen",
     delete_title: "Thema löschen",
     delete_description:
-      'Thema "{{name}}" löschen? Gespräche bleiben erhalten und erscheinen unter "Nicht zugeordnete Gespräche".',
+      'Thema "{{name}}" löschen? Chats bleiben erhalten und erscheinen unter "Nicht zugeordnete Chats".',
     name_label: "Themenname",
     name_placeholder: "Themenname eingeben",
     error_required: "Bitte einen Themennamen eingeben.",
+    create_blurb: "Fassen Sie zusammengehörige Chats in einem Thema zusammen.",
+    suggestion_homework: "Hausaufgaben",
+    suggestion_writing: "Schreiben",
+    suggestion_health: "Gesundheit",
+    suggestion_research: "Forschung",
+    creating: "Wird erstellt…",
+    done: "Fertig",
     choose_color: "Farbe wählen",
     choose_icon: "Symbol wählen",
     error_generic: "Aktion konnte nicht ausgeführt werden. Bitte erneut versuchen.",
@@ -140,7 +147,7 @@ export default {
     references: "Referenzen",
     empty_message:
       "Ihre Gespräche werden niemals auf unseren Servern gespeichert.",
-    untitled: "Unbenannte Unterhaltung",
+    untitled: "Unbenannter Chat",
   },
   // Footer
   footer: {
@@ -328,14 +335,14 @@ export default {
   },
   // Rename Conversation Modal
   rename_conversation: {
-    title: "Gespräch umbenennen",
-    enter_name: "Gesprächstitel eingeben",
+    title: "Chat umbenennen",
+    enter_name: "Chat-Titel eingeben",
     alert_empty: "Titel ist erforderlich",
   },
   // Delete Conversation Modal
   delete_conversation: {
-    title: "Gespräch löschen",
-    description: "Sind Sie sicher, dass Sie dieses Gespräch löschen möchten?",
+    title: "Chat löschen",
+    description: "Sind Sie sicher, dass Sie diesen Chat löschen möchten?",
   },
   // Share Settings Modal
   share_settings: {
@@ -371,6 +378,7 @@ export default {
       "top_p ist ein Schieberegler von 0 bis 1, der den Gesamtbestand der Wahrscheinlichkeiten anpasst, die für das nächste Token in Betracht gezogen werden. Ein top_p von 0,1 würde bedeuten, dass nur die oberen 10% der kumulativen Wahrscheinlichkeiten berücksichtigt werden. Die Variation von top_p hat einen ähnlichen Effekt auf Vorhersagbarkeit und Kreativität wie die Temperatur.",
   },
   model_selector: {
+    change_model: "Modell wechseln",
     docs_hint_text: "Unsicher, welches Modell Sie wählen sollen?",
     docs_hint_link: "Lesen Sie die Modellübersicht.",
   },

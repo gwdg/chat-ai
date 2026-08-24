@@ -41,7 +41,7 @@ export default {
   },
   // Sidebar
   sidebar: {
-    new_conversation: "New Conversation",
+    new_conversation: "New Chat",
     import_persona: "Chat with Persona",
     expand: "Expand",
     extend: "Expand",
@@ -52,13 +52,13 @@ export default {
     user_section: "User",
   },
   folders: {
-    title: "Conversations",
+    title: "Chats",
     all: "All chats",
-    uncategorized: "Unsorted Conversations",
+    uncategorized: "Unsorted Chats",
     create_button: "New topic",
-    empty_topic: "Drag a conversation here.",
+    empty_topic: "Drag a chat here.",
     search_label: "Search",
-    search_action: "Search conversations",
+    search_action: "Search chats",
     search_placeholder: "Search by title",
     search_no_results: 'No matches for "{{query}}"',
     clear_search: "Clear search",
@@ -66,10 +66,17 @@ export default {
     rename_title: "Rename topic",
     delete_title: "Delete topic",
     delete_description:
-      'Delete topic "{{name}}"? Conversations remain available and move to "Unsorted Conversations".',
+      'Delete topic "{{name}}"? Chats remain available and move to "Unsorted Chats".',
     name_label: "Topic name",
     name_placeholder: "Enter topic name",
     error_required: "Please enter a topic name.",
+    create_blurb: "Group related chats under a topic.",
+    suggestion_homework: "Homework",
+    suggestion_writing: "Writing",
+    suggestion_health: "Health",
+    suggestion_research: "Research",
+    creating: "Creating…",
+    done: "Done",
     choose_color: "Choose a colour",
     choose_icon: "Choose an icon",
     error_generic: "Could not complete the action. Please try again.",
@@ -139,7 +146,7 @@ export default {
     sources: "Sources and References",
     references: "References",
     empty_message: "Your conversations are never stored on our servers",
-    untitled: "Untitled Conversation",
+    untitled: "Untitled Chat",
   },
   // Footer
   footer: {
@@ -322,14 +329,14 @@ export default {
   },
   // Rename Conversation Modal
   rename_conversation: {
-    title: "Rename conversation",
-    enter_name: "Enter conversation title",
+    title: "Rename chat",
+    enter_name: "Enter chat title",
     alert_empty: "Title is required",
   },
   // Delete Conversation Modal
   delete_conversation: {
-    title: "Delete Conversation",
-    description: "Are you sure you want to delete this conversation?",
+    title: "Delete Chat",
+    description: "Are you sure you want to delete this chat?",
   },
   // Share Settings Modal
   share_settings: {
@@ -366,6 +373,7 @@ export default {
       "top_p is a slider from 0 to 1 which adjusts the total population of probabilities considered for the next token. A top_p of 0.1 would mean only the top 10% of cumulative probabilities is considered. Variating top_p has a similar effect on predictability and creativity as temperature.",
   },
   model_selector: {
+    change_model: "Change model",
     docs_hint_text: "Need help deciding which model fits best?",
     docs_hint_link: "Read the model overview.",
   },

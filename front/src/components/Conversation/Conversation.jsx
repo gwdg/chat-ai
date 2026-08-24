@@ -3,7 +3,6 @@ import { useSelector } from "react-redux";
 
 // Hooks
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
-import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
 import Prompt from "../Prompt/Prompt";
 import ClearMessagesButton from "./ClearMessagesButton";
 import EmptyConversation from "./EmptyConversation";
@@ -222,15 +221,6 @@ export default function Conversation({
                   mx-auto flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
-      {/* Model selector at top, on tablet and desktop */}
-      <div className="model-selector hidden md:block">
-        <ModelSelectorWrapper
-          localState={localState}
-          setLocalState={setLocalState}
-          modelsData={modelsData}
-        />
-      </div>
-
       {/* Empty conversation */}
       <div
         className={`flex flex-col space-y-16 md:max-h-[40vh] xl:max_h-[40vh] justify-end

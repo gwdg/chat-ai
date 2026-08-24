@@ -5,7 +5,7 @@ import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';
 import type { ModelInfo } from '../../types/models';
 
-function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean}) {
+function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false, listOnly = false, onSelected}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean, listOnly?: boolean, onSelected?: () => void}) {
   /*
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
@@ -51,9 +51,9 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
     <>
       {
         hasExtendedModels ? 
-          <ModelSelectorExtended selectedModel={selectedModel} modelsData={modelsData} inHeader={inHeader} onChange={setModel} /> 
+          <ModelSelectorExtended selectedModel={selectedModel} modelsData={modelsData} inHeader={inHeader} listOnly={listOnly} onSelected={onSelected} onChange={setModel} /> 
         : 
-          <ModelSelectorSimple selectedModel={selectedModel} modelsData={modelsData} inHeader={inHeader} onChange={setModel} />
+          <ModelSelectorSimple selectedModel={selectedModel} modelsData={modelsData} inHeader={inHeader} listOnly={listOnly} onSelected={onSelected} onChange={setModel} />
       }
     </>
   )

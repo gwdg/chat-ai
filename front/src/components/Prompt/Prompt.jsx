@@ -5,6 +5,8 @@ import SendButton from "./SendButton";
 import MicButton from "./MicButton";
 import AttachmentsContainer from "./AttachmentsContainer";
 import SettingsButton from "../Header/SettingsButton";
+import WarningExternalModel from "../Header/WarningExternalModel";
+import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import AttachMediaButton from "./AttachMediaButton";
@@ -108,6 +110,14 @@ export default function Prompt({
           <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
             {/* Buttons on the left */}
             <div className="flex gap-4 items-center">
+              {/* Model Selector — the header keeps its own on narrow screens */}
+              <div className="hidden md:flex">
+                <ModelButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                  modelsData={modelsData}
+                />
+              </div>
               {/* Clear Button */}
               <ClearButton
                 localState={localState}
@@ -140,6 +150,15 @@ export default function Prompt({
                 localState={localState}
                 setLocalState={setLocalState}
               />
+              {/* Data safety indicator — the header keeps its own on narrow screens */}
+              <div className="hidden md:flex">
+                <WarningExternalModel
+                  localState={localState}
+                  userData={userData}
+                  portalPanel
+                  compact
+                />
+              </div>
             </div>
             {/* Buttons on the right */}
             <div className="flex gap-4 items-center">

@@ -35,5 +35,5 @@ export function useWindowSize() {
     };
   }, []);
 
-  return { isMobile, isTablet, isDesktop, isTouch };
+  return { windowWidth, isMobile, isTablet, isDesktop, isTouch };
 }
