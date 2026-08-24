@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import BaseModal from "../../modals/BaseModal";
-import { createFolder, renameFolder } from "../../db";
+import {
+  createFolder,
+  renameFolder,
+  setFolderColor,
+  setFolderIcon,
+} from "../../db";
+import { TOPIC_COLORS } from "./topicColors";
+import { DEFAULT_TOPIC_ICON, TOPIC_ICONS } from "./topicIcons";
 
 export default function FolderEditorModal({
   isOpen,
@@ -9,16 +16,22 @@ export default function FolderEditorModal({
   mode = "create",
   folderId = null,
   initialName = "",
+  initialColor = null,
+  initialIcon = null,
 }) {
   const isRename = mode === "rename";
   const { t } = useTranslation();
   const [name, setName] = useState(initialName || "");
+  const [colorId, setColorId] = useState(initialColor || TOPIC_COLORS[0].id);
+  const [iconId, setIconId] = useState(initialIcon || DEFAULT_TOPIC_ICON.id);
   const [error, setError] = useState("");
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
       setName(initialName || "");
+      setColorId(initialColor || TOPIC_COLORS[0].id);
+      setIconId(initialIcon || DEFAULT_TOPIC_ICON.id);
       setError("");
       requestAnimationFrame(() => {
         if (inputRef.current) {
@@ -27,7 +40,7 @@ export default function FolderEditorModal({
         }
       });
     }
-  }, [initialName, isOpen]);
+  }, [initialName, initialColor, initialIcon, isOpen]);
 
   const handleSubmit = async () => {
     const trimmed = name.trim();
@@ -38,8 +51,10 @@ export default function FolderEditorModal({
     try {
       if (isRename && folderId) {
         await renameFolder(folderId, trimmed);
+        await setFolderColor(folderId, colorId);
+        await setFolderIcon(folderId, iconId);
       } else {
-        await createFolder(trimmed);
+        await createFolder(trimmed, { color: colorId, icon: iconId });
       }
       onClose();
     } catch (err) {
@@ -83,6 +98,54 @@ export default function FolderEditorModal({
             placeholder={t("folders.name_placeholder")}
           />
         </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-gray-500 dark:text-gray-300">
+            <Trans i18nKey="folders.choose_color" />
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {TOPIC_COLORS.map((color) => (
+              <button
+                key={color.id}
+                type="button"
+                onClick={() => setColorId(color.id)}
+                aria-label={color.label}
+                aria-pressed={colorId === color.id}
+                className={`h-6 w-6 cursor-pointer rounded-full transition ${
+                  colorId === color.id
+                    ? "ring-2 ring-offset-2 ring-tertiary dark:ring-offset-bg_dark"
+                    : "hover:scale-110"
+                }`}
+                style={{ backgroundColor: color.hex }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-gray-500 dark:text-gray-300">
+            <Trans i18nKey="folders.choose_icon" />
+          </span>
+          <div className="grid grid-cols-7 gap-1">
+            {TOPIC_ICONS.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setIconId(id)}
+                title={label}
+                aria-label={label}
+                aria-pressed={iconId === id}
+                className={`flex cursor-pointer items-center justify-center rounded-lg p-2 transition ${
+                  iconId === id
+                    ? "bg-gray-100 dark:bg-gray-700 text-black dark:text-white"
+                    : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                }`}
+              >
+                <Icon size={16} />
+              </button>
+            ))}
+          </div>
+        </div>
+
         {error && (
           <p className="text-xs text-red-500" role="alert">
             {error}

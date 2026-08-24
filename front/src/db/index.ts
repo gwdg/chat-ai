@@ -663,7 +663,10 @@ export async function getFolderByName(name: string): Promise<FolderRow | undefin
   return db.folders.where('name').equals(name.trim()).first();
 }
 
-export async function createFolder(name: string): Promise<string> {
+export async function createFolder(
+  name: string,
+  options: { icon?: string; color?: string } = {},
+): Promise<string> {
   const trimmed = name?.trim();
   if (!trimmed) {
     throw new Error('Folder name is required');
@@ -675,6 +678,8 @@ export async function createFolder(name: string): Promise<string> {
     name: trimmed,
     createdAt: now,
     updatedAt: now,
+    ...(options.icon ? { icon: options.icon } : {}),
+    ...(options.color ? { color: options.color } : {}),
   });
   return id;
 }
@@ -686,6 +691,25 @@ export async function renameFolder(folderId: string, name: string) {
   }
   await db.folders.update(folderId, {
     name: trimmed,
+    updatedAt: Date.now(),
+  });
+}
+
+/**
+ * Set a topic's colour tag. `color` is not indexed, so this needs no schema
+ * version bump — Dexie stores unindexed properties on the row as-is.
+ */
+export async function setFolderColor(folderId: string, color: string) {
+  await db.folders.update(folderId, {
+    color,
+    updatedAt: Date.now(),
+  });
+}
+
+/** Set a topic's icon — its identity in the sidebar. Not indexed, no migration. */
+export async function setFolderIcon(folderId: string, icon: string) {
+  await db.folders.update(folderId, {
+    icon,
     updatedAt: Date.now(),
   });
 }

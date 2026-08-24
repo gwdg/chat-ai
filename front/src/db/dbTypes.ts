@@ -113,9 +113,16 @@ export type HydratedMessage = {
   content: ContentItemRow[]
 }
 
+// Conversation grouping — surfaced in the UI as "Topics".
 export type FolderRow = {
   id: string
   name: string
   createdAt: number
   updatedAt: number
+  // One of TopicColorId (see components/Sidebar/topicColors.ts). Unset means
+  // "derive from the id", so existing rows need no backfill.
+  color?: string
+  // One of TopicIconId (see components/Sidebar/topicIcons.ts). Unset falls back
+  // to the default icon. Neither field is indexed, so no schema bump is needed.
+  icon?: string
 }
