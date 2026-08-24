@@ -206,10 +206,10 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
                     <div className="flex items-center h-full w-full">
                       <div
                         className="flex-1 overflow-hidden min-w-0 mr-8"
-                        title={conv.title || "Untitled Conversation"}
+                        title={conv.title || "Untitled Chat"}
                       >
                         <div className="truncate text-xs font-medium leading-relaxed">
-                          {conv.title || "Untitled Conversation"}
+                          {conv.title || "Untitled Chat"}
                         </div>
                       </div>
 
@@ -298,7 +298,7 @@ function Sidebar({ localState, setLocalState, onClose, handleNewConversation }) 
                 const conv = conversations.find((c) => c.id === activeMenu);
                 openModal("renameConversation", {
                   id: activeMenu,
-                  currentTitle: conv?.title || "Untitled Conversation",
+                  currentTitle: conv?.title || "Untitled Chat",
                   localState,
                   setLocalState,
                 });

@@ -68,14 +68,14 @@ export default async function generateTitle(messages) {
     };
 
     const response = await openai.chat.completions.create(params);
-    const title = response?.choices[0]?.message?.content || "Untitled Conversation"
+    const title = response?.choices[0]?.message?.content || "Untitled Chat"
     return title?.trim();
   } catch (error) {
     // Handle AbortError specifically
     if (error.name === "AbortError") {
-      return "Untitled Conversation";
+      return "Untitled Chat";
     }
     console.error("Title generation failed:", error);
-    return "Untitled Conversation";
+    return "Untitled Chat";
   }
 }

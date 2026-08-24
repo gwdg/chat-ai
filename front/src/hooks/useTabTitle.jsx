@@ -14,9 +14,12 @@ export const useTabTitle = () => {
       );
 
       if (currentConversation) {
-        const title = currentConversation.title || "Untitled Conversation";
-        document.title =
-          title === "Untitled Conversation" ? "Chat AI" : title + " - Chat AI";
+        const title = currentConversation.title || "Untitled Chat";
+        // "Untitled Conversation" is the pre-rename default, still stored on
+        // chats created before it changed.
+        const untitled =
+          title === "Untitled Chat" || title === "Untitled Conversation";
+        document.title = untitled ? "Chat AI" : title + " - Chat AI";
       } else {
         document.title = "Chat AI";
       }

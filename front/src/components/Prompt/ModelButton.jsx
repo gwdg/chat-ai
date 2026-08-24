@@ -2,7 +2,6 @@ import { Fragment } from "react";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "@carbon/icons-react";
-import Tooltip from "../Others/Tooltip";
 import DemandIndicator from "../Header/DemandIndicator";
 import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
 
@@ -18,20 +17,23 @@ export default function ModelButton({ localState, setLocalState, modelsData }) {
   const selectedModel = localState?.settings?.model;
 
   return (
-    <Popover className="model-selector relative flex">
-      <Tooltip text={t("model_selector.change_model")}>
-        <PopoverButton
-          aria-label={t("model_selector.change_model")}
-          className="flex max-w-[10rem] lg:max-w-[16rem] cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark px-2 py-1 text-sm text-black dark:text-white hover:border-tertiary focus:outline-none transition-colors"
-        >
+    <Popover className="model-selector relative flex min-w-0">
+      {/* The chip names the model, so it needs no tooltip of its own — a
+          wrapper here would also block it from shrinking beside Send. */}
+      <PopoverButton
+        title={t("model_selector.change_model")}
+        aria-label={t("model_selector.change_model")}
+        className="flex min-w-0 max-w-[8rem] lg:max-w-[14rem] cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark px-2 py-1 text-sm text-black dark:text-white hover:border-tertiary focus:outline-none transition-colors"
+      >
+        <span className="flex-shrink-0 flex items-center">
           <DemandIndicator
             demand={selectedModel?.demand}
             status={selectedModel?.status}
           />
-          <span className="truncate font-medium">{selectedModel?.name}</span>
-          <ChevronDown size={16} className="flex-shrink-0 text-tertiary" />
-        </PopoverButton>
-      </Tooltip>
+        </span>
+        <span className="truncate font-medium">{selectedModel?.name}</span>
+        <ChevronDown size={16} className="flex-shrink-0 text-tertiary" />
+      </PopoverButton>
 
       <Transition
         as={Fragment}

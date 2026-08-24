@@ -154,6 +154,10 @@ export default function ShortcutTooltip({
       className="inline-flex"
       onMouseEnter={showTooltip}
       onMouseLeave={hideTooltip}
+      // Opening a modal leaves the pointer parked on the trigger with no
+      // mouseleave to follow, so dismiss on click and stay dismissed until the
+      // pointer moves — the same path a native file dialog takes via blur.
+      onClick={handleWindowInactive}
       onFocus={showTooltip}
       onBlur={hideTooltip}
     >

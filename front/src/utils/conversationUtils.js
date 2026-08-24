@@ -54,7 +54,7 @@ export const getDefaultConversation = (userSettings = {}, folderId = null) => {
   const now = Date.now();
   return {
     id: uuidv4(),
-    title: "Untitled Conversation",
+    title: "Untitled Chat",
     messageCount: 2,
     messages: [ {
         role: "system",
@@ -164,7 +164,7 @@ export const getExportData = async () => {
     const folderRow = conversation?.folderId ? await getFolder(conversation.folderId) : null;
     const processedConversation = {
       id: conversationId,
-      title: conversation?.title || "Untitled Conversation",
+      title: conversation?.title || "Untitled Chat",
       folderId: conversation?.folderId ?? null,
       folderName: folderRow?.name ?? null,
       messages: await processMessages(conversation.messages, true),

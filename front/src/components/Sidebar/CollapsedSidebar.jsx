@@ -11,7 +11,7 @@ function CollapsedSidebar({
 }) {
   const { openModal } = useModal();
   const { t } = useTranslation();
-  const currentTitle = localState?.title || "Untitled Conversation";
+  const currentTitle = localState?.title || "Untitled Chat";
   const newConversationLabel = t("sidebar.new_conversation");
   const newConversationShortcut = t("sidebar.shortcut_new_conversation");
   const newConversationAria = `${newConversationLabel} ${newConversationShortcut}`;

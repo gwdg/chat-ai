@@ -604,45 +604,44 @@ export default function SidebarContent({
               />
             )}
           </div>
-
-          {/* New Conversation / Persona / Import */}
-          <div className="mx-3 mt-2 pb-6 flex items-center gap-1">
-            <button
-              onClick={onNewConversation}
-              className={`cursor-pointer flex-1 min-w-0 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
-              active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white
-              pl-3 pr-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs
-              font-medium touch-manipulation transition-colors`}
-              style={{
-                WebkitTapHighlightColor: "transparent",
-                minHeight: "44px",
-              }}
-            >
-              <Add size={16} className="flex-shrink-0" />
-              <span className="truncate">
-                <Trans i18nKey="sidebar.new_conversation" />
-              </span>
-            </button>
-            <ShortcutTooltip label={t("sidebar.import_persona")}>
-              <button
-                onClick={() => {
-                  openModal("importPersona");
-                }}
-                aria-label={t("sidebar.import_persona")}
-                className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                style={{ WebkitTapHighlightColor: "transparent" }}
-              >
-                <UserAvatar size={20} className="text-tertiary" />
-              </button>
-            </ShortcutTooltip>
-            <ImportConversationButton />
-          </div>
         </div>
 
-        {/* Bottom section */}
+        {/* Pinned footer: actions, then the user block */}
         <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex flex-col gap-3 mx-3">
-            <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {/* New Chat / Persona / Import — pinned, never scrolls away */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onNewConversation}
+                className={`cursor-pointer flex-1 min-w-0 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
+                active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white
+                pl-3 pr-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs
+                font-medium touch-manipulation transition-colors`}
+                style={{
+                  WebkitTapHighlightColor: "transparent",
+                  minHeight: "44px",
+                }}
+              >
+                <Add size={16} className="flex-shrink-0" />
+                <span className="truncate">
+                  <Trans i18nKey="sidebar.new_conversation" />
+                </span>
+              </button>
+              <ShortcutTooltip label={t("sidebar.import_persona")}>
+                <button
+                  onClick={() => {
+                    openModal("importPersona");
+                  }}
+                  aria-label={t("sidebar.import_persona")}
+                  className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                  style={{ WebkitTapHighlightColor: "transparent" }}
+                >
+                  <UserAvatar size={20} className="text-tertiary" />
+                </button>
+              </ShortcutTooltip>
+              <ImportConversationButton />
+            </div>
+            <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-700">
               {t("sidebar.user_section")}
             </span>
             {showUsageInSidebar && userData?.limits && (

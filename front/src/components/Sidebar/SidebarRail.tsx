@@ -43,14 +43,14 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
   const handleRenameConversation = () => {
     openModal("renameConversation", {
       id: localState.id,
-      currentTitle: localState?.title || "Untitled Conversation",
+      currentTitle: localState?.title || "Untitled Chat",
     });
   };
 
-  const [currentConversationTitle, setCurrentConversationTitle] = useState(localState?.title || "Untitled Conversation");
+  const [currentConversationTitle, setCurrentConversationTitle] = useState(localState?.title || "Untitled Chat");
 
   useEffect(() => {
-    setCurrentConversationTitle(localState?.title || "Untitled Conversation");
+    setCurrentConversationTitle(localState?.title || "Untitled Chat");
   }, [localState]);
 
 

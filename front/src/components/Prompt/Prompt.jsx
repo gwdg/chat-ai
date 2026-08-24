@@ -110,14 +110,6 @@ export default function Prompt({
           <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
             {/* Buttons on the left */}
             <div className="flex gap-4 items-center">
-              {/* Model Selector — the header keeps its own on narrow screens */}
-              <div className="hidden md:flex">
-                <ModelButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                  modelsData={modelsData}
-                />
-              </div>
               {/* Clear Button */}
               <ClearButton
                 localState={localState}
@@ -161,7 +153,16 @@ export default function Prompt({
               </div>
             </div>
             {/* Buttons on the right */}
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-4 items-center min-w-0">
+              {/* Model Selector — the header keeps its own on narrow screens.
+                  It shrinks first, so Abort/Send never lose their place. */}
+              <div className="hidden md:flex min-w-0">
+                <ModelButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                  modelsData={modelsData}
+                />
+              </div>
               {/* Abort button (when loading) */}
               <AbortButton
                 localState={localState}
