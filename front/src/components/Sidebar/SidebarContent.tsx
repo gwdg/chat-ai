@@ -604,12 +604,10 @@ export default function SidebarContent({
               />
             )}
           </div>
-        </div>
 
-        {/* Pinned footer: actions, then the user block */}
-        <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
-          <div className="flex flex-col gap-3 mx-3">
-            {/* New Chat / Persona / Import — pinned, never scrolls away */}
+          {/* New Chat / Persona / Import — sits after the list, and sticks to
+              the bottom edge once the list is long enough to scroll under it */}
+          <div className="sticky bottom-0 z-10 bg-white dark:bg-bg_secondary_dark px-3 pt-2 pb-3">
             <div className="flex items-center gap-1">
               <button
                 onClick={onNewConversation}
@@ -641,7 +639,13 @@ export default function SidebarContent({
               </ShortcutTooltip>
               <ImportConversationButton />
             </div>
-            <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-700">
+          </div>
+        </div>
+
+        {/* Pinned footer: the user block */}
+        <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
+          <div className="flex flex-col gap-3 mx-3">
+            <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {t("sidebar.user_section")}
             </span>
             {showUsageInSidebar && userData?.limits && (
