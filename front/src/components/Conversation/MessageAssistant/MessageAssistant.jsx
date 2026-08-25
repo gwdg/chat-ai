@@ -162,14 +162,8 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     <div
       key={message_index}
       ref={assistantMessage}
-      className={`text-black dark:text-white overflow-hidden border border-gray-200 dark:border-gray-800 
-          rounded-2xl bg-bg_chat dark:bg-bg_chat_dark
-          ${editMode ? "px-1 pt-1" : "px-3 pt-3"}
-          ${
-            isContentEmpty && !loading
-              ? "bg-bg_chat/50 dark:bg-bg_chat_dark/50 pt-0"
-              : " bg-bg_chat dark:bg-bg_chat_dark"
-          }`}
+      className={`text-black dark:text-white overflow-hidden
+          ${editMode ? "px-1 pt-1" : "px-3 pt-3"}`}
     >
       {isContentEmpty ? (
         <div

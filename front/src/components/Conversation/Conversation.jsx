@@ -242,8 +242,7 @@ export default function Conversation({
 
       {/* Messages area */}
       <div
-        className={`flex flex-col relative w-full rounded-xl
-          bg-white dark:bg-bg_secondary_dark shadow-md dark:shadow-dark
+        className={`flex flex-col relative w-full
           transition-opacity duration-500 ease-in-out 
           ${
             localState.messages.length <= 2
@@ -326,7 +325,7 @@ export default function Conversation({
 
         {/* Bottom panel */}
         {localState?.messages?.length >= 4 && (
-          <div className="w-full select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+          <div className="w-full select-none h-fit px-3 py-1.5 flex justify-between items-center rounded-b-2xl ">
             <div className="flex items-baseline gap-3">
               {/* Clear Message button */}
               <ClearMessagesButton

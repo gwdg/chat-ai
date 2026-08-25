@@ -36,7 +36,7 @@ export default React.memo(({
         <div
             ref={userMessage}
             key={message_index}
-            className={`flex flex-col gap-1.5 text-black dark:text-white overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark
+            className={`flex flex-col w-fit ml-auto gap-1.5 text-black dark:text-white overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-4xl bg-bg_chat dark:bg-bg_chat_dark
                 ${ editMode ? "p-0" : "p-2.5"}`}
             >
             {/* Non-edit mode */}
