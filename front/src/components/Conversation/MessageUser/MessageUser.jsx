@@ -5,6 +5,7 @@ import EditButton from "./EditButton";
 import EditBox from "./EditBox";
 import MessageTextContainer from "./MessageTextContainer";
 import Attachment from "../../Prompt/Attachment"
+import CopyButton from "../MessageAssistant/CopyButton";
 
 export default React.memo(({
     localState,
@@ -36,23 +37,8 @@ export default React.memo(({
         <div
             ref={userMessage}
             key={message_index}
-            className={`flex flex-row max-w-full group pt-2`}
+            className={`flex flex-col items-end max-w-full group pt-2`}
             >
-            {/* Buttons area */}
-            {!editMode && (
-                <div className="flex flex-row w-fit opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-1.5 items-center justify-end ml-auto mr-2">
-                    {/* Retry button */}
-                    <RetryButton
-                        localState={localState}
-                        setLocalState={setLocalState}
-                        message_index={message_index}
-                    />
-                    {/* Edit button */}
-                    <EditButton
-                        setEditMode={setEditMode}
-                    />
-                </div>
-            )}
             {/* Message content */}
             {!editMode && (
                 <div className="flex flex-row w-fit p-2.5 gap-1.5 text-black dark:text-white overflow-y-auto border border-gray-200 rounded-xl bg-bg_chat dark:bg-bg_chat_dark dark:border-gray-800 items-start">
@@ -83,6 +69,24 @@ export default React.memo(({
             ))}
             </div>
         )}
+         {/* Buttons area */}
+            {!editMode && (
+                <div className="flex flex-row pt-2 w-fit opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-2.5 items-center justify-end ml-auto">
+                    {/* Retry button */}
+                    <RetryButton
+                        localState={localState}
+                        setLocalState={setLocalState}
+                        message_index={message_index}
+                    />
+                    {/* Edit button */}
+                    <EditButton
+                        setEditMode={setEditMode}
+                    />
+                    <CopyButton
+                        message={message}
+                    />
+                </div>
+            )}
         </div>
     )
 });

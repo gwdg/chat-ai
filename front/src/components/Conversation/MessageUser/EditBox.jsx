@@ -7,6 +7,7 @@ import { useSendMessage } from "../../../hooks/useSendMessage";
 // Constants
 const MAX_HEIGHT = 800;
 const MIN_HEIGHT = 56;
+const MIN_WIDTH = 600;
 
 export default function EditBox({
   localState,
@@ -53,7 +54,9 @@ export default function EditBox({
   }, []);
 
   return (
-    <div className="justify-between items-start text-black dark:text-white overflow-y-auto border dark:border-border_dark rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-2.5 flex flex-col gap-1.5">
+    <div className="
+    flex flex-col w-full p-2.5 gap-1.5 text-black dark:text-white overflow-y-auto justify-between 
+    items-end border dark:border-border_dark rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-2.5 flex flex-col gap-1.5">
       <textarea
         ref={editBox}
         className="p-1.5 outline-none text-sm rounded-xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
@@ -62,6 +65,7 @@ export default function EditBox({
           resize: `vertical`,
           minHeight: `${MIN_HEIGHT}px`,
           maxHeight: `${MAX_HEIGHT}px`,
+          minWidth: `${MIN_WIDTH}px`,
         }}
         onKeyDown={(event) => {
           if (

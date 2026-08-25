@@ -311,12 +311,12 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   {/* Vertical seperator like | */}
                   <div className="w-px h-6 bg-gray-200 dark:bg-gray-600 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>
                   {/* Render Mode Selector on the bottom left*/}
-                  <div className="flex h-8 p-1 bg-gray-200 dark:bg-gray-600 dark:bg-gray-700 rounded-xl overflow-hidden opacity-25 group-hover:opacity-100 transition-opacity duration-300 ">
+                  <div className="flex h-6 bg-gray-200 dark:bg-gray-600 dark:bg-gray-700 rounded-xl overflow-hidden opacity-25 group-hover:opacity-100 transition-opacity duration-300 ">
                     {renderModes.map((mode) => (
                       <button
                         key={mode}
                         onClick={() => !loading && setRenderMode(mode)}
-                        className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
+                        className={`px-2 text-xs font-medium rounded-xl transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
                     ${loading ? "cursor-not-allowed opacity-25" : ""}
                     ${
                       renderMode === mode

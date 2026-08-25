@@ -236,7 +236,7 @@ export default {
     default_model: {
       title: "Default Model",
       current: "Current: {{currentModel}}",
-      description: "Select the default model for new conversations.",
+      description: "Select the default model for new chats.",
       list_label: "Available default models",
     },
     timeout: {
@@ -249,7 +249,7 @@ export default {
     data: {
       title: "Manage Data",
       description:
-        "Export a copy of your local data or permanently remove conversations, memories, settings, and attachments from this browser.",
+        "Export a copy of your local data or permanently remove chats, memories, settings, and attachments from this browser.",
       export_success: "Local data exported successfully.",
       export_error: "Local data could not be exported.",
     },

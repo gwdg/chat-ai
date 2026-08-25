@@ -10,7 +10,7 @@ export default function EditButton({ setEditMode }) {
         <button onClick={handleEdit}>
             {" "}
             <Edit
-                className="h-[22px] w-[22px] cursor-pointer text-[#009EE0]"
+                className="h-[18px] w-[18px] cursor-pointer text-[#009EE0]"
                 alt="edit_icon"
             />
         </button>

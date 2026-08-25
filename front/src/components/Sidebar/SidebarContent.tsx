@@ -30,15 +30,14 @@ import {
 } from "../../Redux/reducers/interfaceSettingsSlice";
 
 import { useWindowSize } from "../../hooks/useWindowSize";
-import ImportConversationButton from "./ImportConversationButton";
 import TopicList, { UNSORTED_TOPIC_ID } from "./TopicList";
 import TopicCreateBubble from "./TopicCreateBubble";
 import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
-import ShortcutTooltip from "./ShortcutTooltip";
 import { useToast } from "../../hooks/useToast";
 import UserLimitsDisplay from "../../modals/UserSettings/UserLimitsDisplay";
 import OrgLimitsDisplay from "../../modals/UserSettings/OrgLimitsDisplay";
+import ShortcutTooltip from "./ShortcutTooltip";
 
 export default function SidebarContent({
   localState,
@@ -287,9 +286,9 @@ export default function SidebarContent({
     }
   };
 
-  const onNewConversation = () => {
+  const onNewConversation = (folderId) => {
     // New conversations start unsorted; the user files them into a topic after.
-    handleNewConversation(null)
+    handleNewConversation(folderId || null)
       .then(() => {
         if (conversations[0]?.id) {
           setSelectedConversationId(currentConversationId);
@@ -415,7 +414,7 @@ export default function SidebarContent({
         draggable
         onDragStart={(event) => handleConversationDragStart(event, id)}
         onDragEnd={handleConversationDragEnd}
-        className={`group relative px-3 py-3 rounded-2xl touch-manipulation border border-transparent ${
+        className={`group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
           isActive
             ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
             : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-100"
@@ -423,7 +422,7 @@ export default function SidebarContent({
         data-current={isActive ? "true" : "false"}
         style={{
           WebkitTapHighlightColor: "transparent",
-          minHeight: "52px",
+          minHeight: "22px",
         }}
       >
         {/* Title container */}
@@ -581,6 +580,7 @@ export default function SidebarContent({
                 )}
               </div>
             ) : (
+              
               <TopicList
                 topics={folders}
                 conversationsByTopic={conversationsByTopic}
@@ -590,6 +590,7 @@ export default function SidebarContent({
                 onCreateTopic={handleCreateFolder}
                 onRenameTopic={handleRenameFolder}
                 onDeleteTopic={handleDeleteFolder}
+                onNewConversation={onNewConversation}
                 draggingConversationId={draggingConversationId}
                 dragOverTopicId={dragOverTopicId}
                 onDragEnterTopic={setDragOverTopicId}
@@ -603,42 +604,6 @@ export default function SidebarContent({
                 isDark={isDark}
               />
             )}
-          </div>
-
-          {/* New Chat / Persona / Import — sits after the list, and sticks to
-              the bottom edge once the list is long enough to scroll under it */}
-          <div className="sticky bottom-0 z-10 bg-white dark:bg-bg_secondary_dark px-3 pt-2 pb-3">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={onNewConversation}
-                className={`cursor-pointer flex-1 min-w-0 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
-                active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white
-                pl-3 pr-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs
-                font-medium touch-manipulation transition-colors`}
-                style={{
-                  WebkitTapHighlightColor: "transparent",
-                  minHeight: "44px",
-                }}
-              >
-                <Add size={16} className="flex-shrink-0" />
-                <span className="truncate">
-                  <Trans i18nKey="sidebar.new_conversation" />
-                </span>
-              </button>
-              <ShortcutTooltip label={t("sidebar.import_persona")}>
-                <button
-                  onClick={() => {
-                    openModal("importPersona");
-                  }}
-                  aria-label={t("sidebar.import_persona")}
-                  className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                  style={{ WebkitTapHighlightColor: "transparent" }}
-                >
-                  <UserAvatar size={20} className="text-tertiary" />
-                </button>
-              </ShortcutTooltip>
-              <ImportConversationButton />
-            </div>
           </div>
         </div>
 

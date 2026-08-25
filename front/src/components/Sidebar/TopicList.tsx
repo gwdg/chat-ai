@@ -1,11 +1,14 @@
 import { useRef } from "react";
 import type { DragEvent, ReactNode } from "react";
-import { useTranslation } from "react-i18next";
-import { Add, ChevronDown, Edit, TrashCan } from "@carbon/icons-react";
+import { Trans, useTranslation } from "react-i18next";
+import { Add, AddFilled, AddAlt, BookmarkAdd, ChevronDown, Edit, TrashCan, UserAvatar } from "@carbon/icons-react";
 
 import type { FolderRow } from "../../db/dbTypes";
 import { topicColor, topicTint, withAlpha } from "./topicColors";
 import { topicIcon } from "./topicIcons";
+import ImportConversationButton from "./ImportConversationButton";
+
+import ShortcutTooltip from "./ShortcutTooltip";
 
 /**
  * The virtual topic holding conversations with no `folderId`. It is a UI
@@ -24,6 +27,7 @@ export default function TopicList({
   onCreateTopic,
   onRenameTopic,
   onDeleteTopic,
+  onNewConversation,
   draggingConversationId,
   dragOverTopicId,
   onDragEnterTopic,
@@ -40,6 +44,7 @@ export default function TopicList({
   onCreateTopic: (anchor: { x: number; y: number }) => void;
   onRenameTopic: (topic: TopicRef) => void;
   onDeleteTopic: (topic: TopicRef) => void;
+  onNewConversation: (folderId: string | null) => void;
   draggingConversationId: string | null;
   dragOverTopicId: string | null;
   onDragEnterTopic: (topicId: string) => void;
@@ -96,7 +101,7 @@ export default function TopicList({
             e.preventDefault();
             onDropTopic(id);
           }}
-          className={`group flex items-center gap-2 rounded-2xl px-3 py-2 text-xs transition cursor-pointer border border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40 ${
+          className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40 ${
             isDropTarget ? "border-tertiary/60" : ""
           }`}
           style={
@@ -164,16 +169,40 @@ export default function TopicList({
 
         {!isCollapsed && (
           <div
-            className="ml-3 pl-2 border-l space-y-1 py-1"
+            className="ml-2 pl-2 border-l"
             style={{ borderColor: withAlpha(hex, isDark ? 0.5 : 0.35) }}
           >
-            {count > 0 ? (
+            {count > 0 && (
               conversations.map((conv) => renderConversationRow(conv))
-            ) : (
-              <p className="px-3 py-2 text-[11px] text-gray-500 dark:text-gray-400">
-                {t("folders.empty_topic")}
-              </p>
-            )}
+            ) }
+            {/* New Chat / Persona / Import — sits after the list, and sticks to
+                          the bottom edge once the list is long enough to scroll under it */}
+            <div className="sticky bottom-0 z-10 bg-white dark:bg-bg_secondary_dark pr-3">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {onNewConversation(id);}}
+                  className="text-tertiary cursor-pointer flex-shrink-0 p-1.5 gap-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                >
+                  <AddAlt size={18} className="text-tertiary " />
+                  <span className="truncate text-xs">
+                    <Trans i18nKey="sidebar.new_conversation" />
+                  </span>
+                </button>
+                <ShortcutTooltip label={t("sidebar.import_persona")}>
+                  <button
+                    onClick={() => {
+                      // openModal("importPersona");
+                    }}
+                    aria-label={t("sidebar.import_persona")}
+                    className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                    style={{ WebkitTapHighlightColor: "transparent" }}
+                  >
+                    <UserAvatar size={20} className="text-tertiary" />
+                  </button>
+                </ShortcutTooltip>
+                <ImportConversationButton />
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -181,7 +210,7 @@ export default function TopicList({
   };
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 pt-1">
       <button
         type="button"
         ref={createButtonRef}
@@ -189,10 +218,10 @@ export default function TopicList({
           const rect = createButtonRef.current?.getBoundingClientRect();
           onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
         }}
-        className="w-full flex items-center gap-2 rounded-2xl px-3 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition cursor-pointer"
+        className="w-full flex items-center text-xs text-secondary gap-2 rounded-2xl px-1 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition cursor-pointer"
       >
-        <Add size={16} className="flex-shrink-0" />
-        <span className="truncate">{t("folders.create_button")}</span>
+        <BookmarkAdd size={18} className="flex-shrink-0" />
+          <span className="truncate">{t("folders.create_button")}</span>
       </button>
 
       {topics.map((topic) => {
