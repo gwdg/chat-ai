@@ -645,9 +645,6 @@ export default function SidebarContent({
         {/* Pinned footer: the user block */}
         <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex flex-col gap-3 mx-3">
-            <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              {t("sidebar.user_section")}
-            </span>
             {showUsageInSidebar && userData?.limits && (
               <div className="flex flex-col gap-2">
                 <UserLimitsDisplay limits={userData.limits} variant="sidebar" />

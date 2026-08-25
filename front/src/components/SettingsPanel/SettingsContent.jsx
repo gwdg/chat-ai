@@ -5,7 +5,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
 //Components
-import ArcanaContainer from "./ArcanaContainer";
+
 import ShareSettingsButton from "./ShareSettingsButton";
 import SystemPromptContainer from "./SystemPromptContainer";
 import TemperatureSlider from "./TemperatureSlider";
@@ -20,8 +20,6 @@ import {DataSafetyText} from "../Header/WarningExternalModel";
 
 import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
-import MCPContainer from "./MCPContainer";
-import VideoList from "./VideoList";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -34,10 +32,6 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const userSettings = useSelector(selectUserSettings);
   const settings = localState.settings;
   const tools = settings?.tools || {};
-  const showArcanaBox = !!settings?.enable_tools && !!tools.arcana;
-  const showMCPBox = !!settings?.enable_tools && !!tools.mcp;
-  const showVideoList = !!tools.video_generation;
-
   const { notifySuccess, notifyError } = useToast();
 
   //Local useStates
@@ -99,26 +93,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
-          {showVideoList && (
-            <VideoList
-              jobs={[]}
-              onDownload={() => {}}
-            />
-          )}
-          {/* Arcana box (only when enabled AND has an ID) */}
-          {showArcanaBox && (
-            <ArcanaContainer
-              localState={localState}
-              setLocalState={setLocalState}
-            />
-          )}
-          {/* MCP box (only when enabled AND has a value) */}
-          {showMCPBox && (
-            <MCPContainer
-              localState={localState}
-              setLocalState={setLocalState}
-            />
-          )}
+          
           {/* temperature Slider */}
           <TemperatureSlider
             localState={localState}

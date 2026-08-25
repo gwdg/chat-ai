@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
+import ArcanaContainer from "./ArcanaContainer";
+import MCPContainer from "./MCPContainer";
+import VideoList from "./VideoList";
 
 function MiniToolButton({ active, disabled, onClick, Icon, label }) {
   return (
@@ -62,6 +65,10 @@ export default function ToolsContainer({ localState, setLocalState }) {
 
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools && !isExternalModel;
+ 
+  const showArcanaBox = !!settings?.enable_tools && !!toolsState.arcana;
+  const showMCPBox = !!settings?.enable_tools && !!toolsState.mcp;
+  const showVideoList = !!toolsState.video_generation;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
@@ -226,6 +233,26 @@ export default function ToolsContainer({ localState, setLocalState }) {
           );
         })}
       </div>
+      {showVideoList && (
+          <VideoList
+          jobs={[]}
+          onDownload={() => {}}
+        />
+      )}
+      {/* Arcana box (only when enabled AND has an ID) */}
+      {showArcanaBox && (
+        <ArcanaContainer
+          localState={localState}
+          setLocalState={setLocalState}
+        />
+      )}
+      {/* MCP box (only when enabled AND has a value) */}
+      {showMCPBox && (
+        <MCPContainer
+          localState={localState}
+          setLocalState={setLocalState}
+        />
+      )}
     </div>
   );
 }

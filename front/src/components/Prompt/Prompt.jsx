@@ -98,86 +98,87 @@ export default function Prompt({
           setLocalState={setLocalState}
         />
         <div className={`flex flex-col gap-4 w-full relative select-none rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark`} >
-          {/* Prompt Text Area */}
-          <PromptTextArea
+        {/* Prompt Text Area */}
+        <PromptTextArea
+          localState={localState}
+          setLocalState={setLocalState}
+          handleSend={handleSend}
+          handleChange={handleChange}
+          prompt={prompt}
+        />
+        
+        {/* Floating buttons - top right over the text */}
+        <div className="absolute top-2 right-2 z-10 flex gap-2 items-center">
+          
+          {/* Clear Button */}
+          <ClearButton
             localState={localState}
             setLocalState={setLocalState}
-            handleSend={handleSend}
-            handleChange={handleChange}
-            prompt={prompt}
           />
-          {/* Buttons Section */}
-          <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
-            {/* Buttons on the left */}
-            <div className="flex gap-4 items-center">
-              {/* Clear Button */}
-              <ClearButton
+        </div>
+
+        {/* Buttons Section - now without the floating buttons */}
+        <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
+          {/* Buttons on the left */}
+          <div className="flex gap-4 items-center">
+            {/* Data safety indicator */}
+          <div className="hidden md:flex">
+            <WarningExternalModel
+              localState={localState}
+              userData={userData}
+              portalPanel
+              compact
+            />
+          </div>
+            {/* Attach Button */}
+            <AttachButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+            {/* Tools Button */}
+            <ToolsButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+            {/* Settings Button */}
+            <SettingsButton
+              localState={localState}
+              setLocalState={setLocalState}
+              userData={userData}
+              modelsData={modelsData}
+            />
+          </div>
+          {/* Buttons on the right */}
+          <div className="flex gap-4 items-center min-w-0">
+            {/* Mic Button */}
+            <MicButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+            {/* Model Selector — the header keeps its own on narrow screens.
+                It shrinks first, so Abort/Send never lose their place. */}
+            <div className="hidden md:flex min-w-0">
+              <ModelButton
                 localState={localState}
                 setLocalState={setLocalState}
-              />
-              {/* Tools Button */}
-              <ToolsButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* Settings Button */}
-              <SettingsButton
-                localState={localState}
-                setLocalState={setLocalState}
-                userData={userData}
                 modelsData={modelsData}
               />
-              {/* Attach Button */}
-              <AttachButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* Attach Media Button */}
-              {/* <AttachMediaButton
-                localState={localState}
-                setLocalState={setLocalState}
-              /> */}
-              {/* Mic Button */}
-              <MicButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* Data safety indicator — the header keeps its own on narrow screens */}
-              <div className="hidden md:flex">
-                <WarningExternalModel
-                  localState={localState}
-                  userData={userData}
-                  portalPanel
-                  compact
-                />
-              </div>
             </div>
-            {/* Buttons on the right */}
-            <div className="flex gap-4 items-center min-w-0">
-              {/* Model Selector — the header keeps its own on narrow screens.
-                  It shrinks first, so Abort/Send never lose their place. */}
-              <div className="hidden md:flex min-w-0">
-                <ModelButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                  modelsData={modelsData}
-                />
-              </div>
-              {/* Abort button (when loading) */}
-              <AbortButton
-                localState={localState}
-                setLocalState={setLocalState}
-              />
-              {/* If not loading, show send button */}
-              <SendButton
-                localState={localState}
-                setLocalState={setLocalState}
-                handleSend={handleSend}
-                prompt={prompt}
-              />
-            </div>
+            {/* Abort button (when loading) */}
+            <AbortButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+            {/* If not loading, show send button */}
+            <SendButton
+              localState={localState}
+              setLocalState={setLocalState}
+              handleSend={handleSend}
+              prompt={prompt}
+            />
           </div>
         </div>
+      </div>
       </div>
   );
 }
