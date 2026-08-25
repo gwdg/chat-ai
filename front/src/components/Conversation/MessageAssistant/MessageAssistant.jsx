@@ -302,19 +302,26 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               )}
               {/* Bottom panel for message */}
               <div className="group flex justify-between w-full mt-1 gap-2">
-                <div className="flex items-center justify-end mb-2 opacity-30 group-hover:opacity-100 transition-opacity duration-300">
+                {/* Buttons on the bottom right */}
+                <div className="flex items-center justify-end gap-3 overflow-hidden">
+                  <CopyButton message={message} />
+                  <SpeakButton message={message} />
+                  <ForkButton handleForkConversation={handleForkConversation} />
+                  <EditButton setEditMode={setEditMode} />
+                  {/* Vertical seperator like | */}
+                  <div className="w-px h-6 bg-gray-200 dark:bg-gray-600 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>
                   {/* Render Mode Selector on the bottom left*/}
-                  <div className="flex h-8 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden ">
+                  <div className="flex h-8 p-1 bg-gray-200 dark:bg-gray-600 dark:bg-gray-700 rounded-xl overflow-hidden opacity-25 group-hover:opacity-100 transition-opacity duration-300 ">
                     {renderModes.map((mode) => (
                       <button
                         key={mode}
                         onClick={() => !loading && setRenderMode(mode)}
                         className={`px-2 py-1 text-xs font-medium transition-all duration-300 ease-in-out min-w-[60px] cursor-pointer select-none
-                    ${loading ? "cursor-not-allowed opacity-20" : ""}
+                    ${loading ? "cursor-not-allowed opacity-25" : ""}
                     ${
                       renderMode === mode
-                        ? "bg-tertiary text-white"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        ? "bg-tertiary text-white rounded-xl"
+                        : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                     }
                     `}
                         disabled={loading}
@@ -323,6 +330,17 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                       </button>
                     ))}
                   </div>
+                  { /* Show message metadata */
+                  message?.meta && (<div className="w-px h-6 bg-gray-200 dark:bg-gray-600 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>)}
+                  {
+                  message?.meta && (
+                    <MetaBox meta={message.meta} /> 
+                  )}  
+                </div>
+
+                <div className="flex items-center justify-end mb-2 ">
+                  
+                  
                 </div>
 
                 {feedbackModule && (
@@ -334,18 +352,6 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     sendFeedbackFunc={sendFeedbackFunc}
                   />
                 )}
-                
-                {/* Buttons on the bottom right */}
-                <div className="flex items-center justify-end gap-3 overflow-hidden">
-                  { /* Show message metadata */
-                  message?.meta && (
-                    <MetaBox meta={message.meta} /> 
-                  )}
-                  <EditButton setEditMode={setEditMode} />
-                  <ForkButton handleForkConversation={handleForkConversation} />
-                  <SpeakButton message={message} />
-                  <CopyButton message={message} />
-                </div>
               </div>
             </div>
           )}

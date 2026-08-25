@@ -21,7 +21,7 @@ export default function MetaBox({ meta }) {
         <div className="
             items-center justify-end min-w-0 flex-shrink w-auto
             max-w-[200px] sm:max-w-[400px] md:max-w-[800px]
-            opacity-0 sm:opacity-40 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-300">
+            opacity-0 sm:opacity-25 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-300">
             <p
                 className="
                     text-xs text-gray-500 text-right dark:text-gray-400
