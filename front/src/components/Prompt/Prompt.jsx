@@ -121,20 +121,20 @@ export default function Prompt({
         <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
           {/* Buttons on the left */}
           <div className="flex gap-4 items-center">
-            {/* Data safety indicator */}
-          <div className="hidden md:flex">
-            <WarningExternalModel
-              localState={localState}
-              userData={userData}
-              portalPanel
-              compact
-            />
-          </div>
             {/* Attach Button */}
             <AttachButton
               localState={localState}
               setLocalState={setLocalState}
             />
+               {/* Mic Button */}
+            <MicButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          </div>
+          {/* Buttons in the center */}
+          <div className="flex gap-4 items-center">
+            
             {/* Tools Button */}
             <ToolsButton
               localState={localState}
@@ -147,14 +147,6 @@ export default function Prompt({
               userData={userData}
               modelsData={modelsData}
             />
-          </div>
-          {/* Buttons on the right */}
-          <div className="flex gap-4 items-center min-w-0">
-            {/* Mic Button */}
-            <MicButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
             {/* Model Selector — the header keeps its own on narrow screens.
                 It shrinks first, so Abort/Send never lose their place. */}
             <div className="hidden md:flex min-w-0">
@@ -162,6 +154,21 @@ export default function Prompt({
                 localState={localState}
                 setLocalState={setLocalState}
                 modelsData={modelsData}
+              />
+            </div>
+          </div>
+          {/* Buttons on the right */}
+          <div className="flex gap-4 items-center min-w-0">
+           
+          
+            
+            {/* Data safety indicator */}
+            <div className="hidden md:flex">
+              <WarningExternalModel
+                localState={localState}
+                userData={userData}
+                portalPanel
+                compact
               />
             </div>
             {/* Abort button (when loading) */}

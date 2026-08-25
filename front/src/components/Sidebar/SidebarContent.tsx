@@ -422,7 +422,7 @@ export default function SidebarContent({
         data-current={isActive ? "true" : "false"}
         style={{
           WebkitTapHighlightColor: "transparent",
-          minHeight: "22px",
+          minHeight: "16px",
         }}
       >
         {/* Title container */}
@@ -433,7 +433,7 @@ export default function SidebarContent({
             onDoubleClick={(e) => handleTitleDoubleClick(e, conv)}
             style={{ cursor: isDesktop ? "text" : "pointer" }}
           >
-            <div className="truncate text-xs font-medium leading-relaxed cursor-pointer">
+            <div className="truncate text-xs leading-relaxed cursor-pointer">
               {highlightText(conv.title)}
             </div>
           </div>

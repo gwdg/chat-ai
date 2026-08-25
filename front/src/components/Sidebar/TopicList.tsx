@@ -9,6 +9,7 @@ import { topicIcon } from "./topicIcons";
 import ImportConversationButton from "./ImportConversationButton";
 
 import ShortcutTooltip from "./ShortcutTooltip";
+import { useModal } from "../../modals/ModalContext";
 
 /**
  * The virtual topic holding conversations with no `folderId`. It is a UI
@@ -55,6 +56,7 @@ export default function TopicList({
 }) {
   const { t } = useTranslation();
   const createButtonRef = useRef<HTMLButtonElement | null>(null);
+  const { openModal } = useModal();
 
   const renderRow = (options: {
     id: string;
@@ -123,7 +125,7 @@ export default function TopicList({
           )}
 
           <span
-            className="flex-1 truncate select-none pointer-events-none"
+            className="flex-1 truncate select-none pointer-events-none font-medium"
             title={label}
           >
             {label}
@@ -169,7 +171,7 @@ export default function TopicList({
 
         {!isCollapsed && (
           <div
-            className="ml-2 pl-2 border-l"
+            className="ml-2 pl-2 border-l flex flex-col gap-1"
             style={{ borderColor: withAlpha(hex, isDark ? 0.5 : 0.35) }}
           >
             {count > 0 && (
@@ -183,15 +185,15 @@ export default function TopicList({
                   onClick={() => {onNewConversation(id);}}
                   className="text-tertiary cursor-pointer flex-shrink-0 p-1.5 gap-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 >
-                  <AddAlt size={18} className="text-tertiary " />
-                  <span className="truncate text-xs">
+                  <AddFilled size={18} className="text-tertiary" />
+                  <span className="truncate text-xs font-semibold py-1 pr-1">
                     <Trans i18nKey="sidebar.new_conversation" />
                   </span>
                 </button>
                 <ShortcutTooltip label={t("sidebar.import_persona")}>
                   <button
                     onClick={() => {
-                      // openModal("importPersona");
+                      openModal("importPersona");
                     }}
                     aria-label={t("sidebar.import_persona")}
                     className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
@@ -210,7 +212,8 @@ export default function TopicList({
   };
 
   return (
-    <div className="space-y-1 pt-1">
+    <div className="flex flex-col gap-1.5 pt-1">
+      <div className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40`}>
       <button
         type="button"
         ref={createButtonRef}
@@ -218,12 +221,12 @@ export default function TopicList({
           const rect = createButtonRef.current?.getBoundingClientRect();
           onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
         }}
-        className="w-full flex items-center text-xs text-secondary gap-2 rounded-2xl px-1 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition cursor-pointer"
+        className="w-full flex items-center text-xs text-secondary font-semibold text-gray-500 cursor-pointer"
       >
         <BookmarkAdd size={18} className="flex-shrink-0" />
-          <span className="truncate">{t("folders.create_button")}</span>
+          <span className="truncate px-2">{t("folders.create_button")}</span>
       </button>
-
+      </div>
       {topics.map((topic) => {
         const color = topicColor(topic);
         return renderRow({

@@ -650,7 +650,7 @@ export function useConversationList() {
 // ---------- Folders ----------
 
 export async function listFolders(): Promise<FolderRow[]> {
-  return db.folders.orderBy('createdAt').toArray();
+  return db.folders.orderBy('createdAt').reverse().toArray();
 }
 
 export async function getFolder(folderId: string): Promise<FolderRow | undefined> {
@@ -744,7 +744,7 @@ export async function ensureFolder(name: string): Promise<string | null> {
 export function useFolderList() {
   return useLiveQuery(
     async () => {
-      return await db.folders.orderBy('createdAt').toArray();
+      return await db.folders.orderBy('createdAt').reverse().toArray();
     },
     [],
     [] as FolderRow[],

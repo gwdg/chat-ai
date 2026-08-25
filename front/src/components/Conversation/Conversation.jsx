@@ -328,15 +328,15 @@ export default function Conversation({
           <div className="w-full select-none h-fit px-3 py-1.5 flex justify-between items-center rounded-b-2xl ">
             <div className="flex items-baseline gap-3">
               {/* Clear Message button */}
-              <ClearMessagesButton
+              {/* <ClearMessagesButton
                 localState={localState}
                 setLocalState={setLocalState}
-              />
+              /> */}
               {/* Summary button */}
-              <SummaryButton
+              {/* <SummaryButton
                   localState={localState}
                   setLocalState={setLocalState}
-                />
+                /> */}
             </div>
             <div className="flex items-baseline gap-3">
               {/* Export button */}
