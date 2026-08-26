@@ -180,8 +180,9 @@ export default function TopicCreateBubble({
           </div>
 
           <div className="h-px bg-gray-200 dark:bg-gray-600" />
-
+              
           <div className="grid grid-cols-7 gap-1 max-h-44 overflow-y-auto">
+            
             {TOPIC_ICONS.map(({ id, label, Icon }) => {
               const selected = id === iconId;
               return (
@@ -234,6 +235,7 @@ export default function TopicCreateBubble({
                        border border-gray-200 dark:border-gray-600
                        focus-within:border-tertiary transition-colors"
           >
+            
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
@@ -264,7 +266,9 @@ export default function TopicCreateBubble({
                          placeholder:text-gray-400 focus:outline-none disabled:opacity-50"
             />
           </div>
-
+          <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
+            {t("folders.blurb_examples")}
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {SUGGESTIONS.map((suggestion) => {
               const Icon = topicIconById(suggestion.icon).Icon;
