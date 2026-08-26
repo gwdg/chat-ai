@@ -188,8 +188,8 @@ export default function WarningExternalModel({
         onClick={handleToggleButton}
         onFocus={() => setSuppressHoverTooltip(false)}
         className={`flex items-center justify-center gap-2 relative border
-                    rounded-md text-sm font-medium transition-colors shadow-md cursor-pointer
-                    ${compact ? "h-8 w-8 p-1.5" : "h-10 w-10 px-2 py-2"}
+                    rounded-xl text-sm font-medium transition-colors cursor-pointer
+                    ${compact ? "h-8 w-8 p-1.5" : "h-10 w-10 px-2 py-1"}
                     ${tone.button}`}
       >
         <ToneIcon size={compact ? 20 : 24} />

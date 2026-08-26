@@ -131,6 +131,7 @@ export default function Prompt({
               localState={localState}
               setLocalState={setLocalState}
             />
+            
           </div>
           {/* Buttons in the center */}
           <div className="flex gap-4 items-center">
@@ -156,12 +157,6 @@ export default function Prompt({
                 modelsData={modelsData}
               />
             </div>
-          </div>
-          {/* Buttons on the right */}
-          <div className="flex gap-4 items-center min-w-0">
-           
-          
-            
             {/* Data safety indicator */}
             <div className="hidden md:flex">
               <WarningExternalModel
@@ -171,6 +166,13 @@ export default function Prompt({
                 compact
               />
             </div>
+          </div>
+          {/* Buttons on the right */}
+          <div className="flex gap-4 items-center min-w-0">
+           
+          
+            
+            
             {/* Abort button (when loading) */}
             <AbortButton
               localState={localState}
