@@ -26,7 +26,7 @@ import {
   getDefaultSettings,
 } from "../../utils/conversationUtils";
 
-import { Bot, ChevronRight, Edit, Add } from "@carbon/icons-react";
+import { Bot, ChevronRight, Edit, Add, AddFilled, UserAvatar} from "@carbon/icons-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
 import { useModal } from "../../modals/ModalContext";
@@ -86,7 +86,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
         </div>
 
         {/** Actions */}
-        <div className="mt-4 flex flex-col gap-3 items-center">
+        <div className="mt-4 flex flex-col gap-4 items-center">
 
           {/* New chat */}
           <ShortcutTooltip
@@ -102,9 +102,26 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
               className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl flex items-center justify-center`}
               aria-label={newConversationAria}
             >
-              <Add size={20} className="text-tertiary" />
+              <AddFilled size={22} className="text-tertiary" />
             </button>
           </ShortcutTooltip>
+          
+
+          {/* Import persona from Github */}
+          <ShortcutTooltip label={t("sidebar.import_persona") }>
+            <button
+              onClick={() => {
+                openModal("importPersona");
+              }}
+              className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+              aria-label={t("sidebar.import_persona")}
+            >
+              <Bot size={22} className="text-tertiary" />
+            </button>
+          </ShortcutTooltip>
+
+          {/* Import Conversation button */}
+          <ImportConversationButton variant="icon" />
 
           {/* Rename current conversation */}
           <ShortcutTooltip
@@ -115,7 +132,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
               className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
               aria-label={t("sidebar.rename_tooltip", { title: currentConversationTitle })}
             >
-              <Edit size={20} className="text-tertiary" />
+              <Edit size={22} className="text-tertiary" />
             </button>
           </ShortcutTooltip>
 
@@ -139,21 +156,7 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
           </ShortcutTooltip>
         </div>
         <div className="mb-2 flex flex-col items-center justify-between gap-3 border-t border-tertiary pt-3">
-          {/* Import Conversation button */}
-          <ImportConversationButton variant="icon" />
-
-          {/* Import persona from Github */}
-          <ShortcutTooltip label={t("sidebar.import_persona") }>
-            <button
-              onClick={() => {
-                openModal("importPersona");
-              }}
-              className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
-              aria-label={t("sidebar.import_persona")}
-            >
-              <Bot size={24} className="text-tertiary" />
-            </button>
-          </ShortcutTooltip>
+          
         </div>
       </div>
 

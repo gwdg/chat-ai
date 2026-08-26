@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import type { DragEvent, ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Add, AddFilled, AddAlt, BookmarkAdd, ChevronDown, Edit, TrashCan, UserAvatar } from "@carbon/icons-react";
+import { Add, AddFilled, AddAlt, BookmarkAdd, ChevronDown, Edit, TrashCan, UserAvatar, Bot } from "@carbon/icons-react";
 
 import type { FolderRow } from "../../db/dbTypes";
 import { topicColor, topicTint, withAlpha } from "./topicColors";
@@ -199,7 +199,7 @@ export default function TopicList({
                     className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                     style={{ WebkitTapHighlightColor: "transparent" }}
                   >
-                    <UserAvatar size={20} className="text-tertiary" />
+                    <Bot size={20} className="text-tertiary" />
                   </button>
                 </ShortcutTooltip>
                 <ImportConversationButton />

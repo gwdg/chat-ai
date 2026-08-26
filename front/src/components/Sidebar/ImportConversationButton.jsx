@@ -84,7 +84,7 @@ export default function ImportConversationButton({
             disabled={loading}
             aria-label={t("common.import")}
           >
-            <Upload size={20} className="text-tertiary" />
+            <Upload size={22} className="text-tertiary" />
           </button>
         </ShortcutTooltip>
       </>
