@@ -62,7 +62,9 @@ export const getDefaultConversation = (userSettings = {}, folderId = null) => {
         content: [
           {
             type: "text",
-            text: "You are a helpful assistant."
+            text:
+              config.default?.messages?.find((m) => m?.role === "system")
+                ?.content || "You are a helpful assistant."
           }
         ],
       }, {
