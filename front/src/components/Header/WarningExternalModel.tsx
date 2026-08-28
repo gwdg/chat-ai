@@ -87,7 +87,7 @@ export default function WarningExternalModel({
   const [showTextBox, setShowTextBox] = useState(true);
   const [isHovering, setIsHovering] = useState(false);
   const [suppressHoverTooltip, setSuppressHoverTooltip] = useState(false);
-  const isPopoverVisible = showTextBox || (isHovering && !suppressHoverTooltip);
+  const isPopoverVisible = (showTextBox && !isSafe) || (isHovering && !suppressHoverTooltip);
 
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [panelPosition, setPanelPosition] = useState({ left: 0, bottom: 0 });
