@@ -5,7 +5,7 @@ import { assignConversationToFolder, ensureFolder, getFolder } from "../../db";
 
 const UNSORTED_FOLDER = "__unsorted__";
 
-export default function MoveConversationModal({
+export default function MoveChatModal({
   isOpen,
   onClose,
   conversationId,

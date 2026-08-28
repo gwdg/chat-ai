@@ -16,13 +16,13 @@ import ShareSettingsModal from "./Chat/ShareSettingsModal";
 import ClearCacheModal from "./UserSettings/ClearCacheModal";
 import ErrorBadRequestModal from "./Alert/ErrorBadRequestModal";
 import ErrorSessionExpiredModal from "./Alert/ErrorSessionExpiredModal";
-import DeleteConversationModal from "../components/Sidebar/DeleteConversationModal";
-import RenameConversationModal from "../components/Sidebar/RenameConversationModal";
-import ExportConversationModal from "../components/Sidebar/ExportConversationModal";
+import DeleteChatModal from "../components/Sidebar/DeleteChatModal";
+import RenameChatModal from "../components/Sidebar/RenameChatModal";
+import ExportChatModal from "../components/Sidebar/ExportChatModal";
 import ImportPersonaModal from "../components/Sidebar/ImportPersonaModal";
 import FolderEditorModal from "../components/Sidebar/FolderEditorModal";
 import DeleteFolderModal from "../components/Sidebar/DeleteFolderModal";
-import MoveConversationModal from "../components/Sidebar/MoveConversationModal";
+import MoveChatModal from "../components/Sidebar/MoveChatModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
 import ClearMessagesModal from "./Alert/ClearMessagesModal";
 import RegenerateConfirmModal from "./Alert/RegenerateConfirmModal";
@@ -32,6 +32,7 @@ import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
 import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
 import MigrateDataModal from "./Alert/MigrateDataModal";
 import ConversationConflict from "./Chat/ConversationConflict";
+import SummarizeChatModal from "./Chat/SummarizeChatModal";
 
 import { useDispatch, useStore } from "react-redux";
 import { useToast } from "../hooks/useToast";
@@ -72,11 +73,11 @@ export function ModalProvider({ children }) {
         <WelcomeModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {/* Sidebar Modals */}
-      {modalType === "deleteConversation" && (
-        <DeleteConversationModal isOpen onClose={closeModal} {...modalProps} />
+      {modalType === "deleteChat" && (
+        <DeleteChatModal isOpen onClose={closeModal} {...modalProps} />
       )}
-      {modalType === "renameConversation" && (
-        <RenameConversationModal isOpen onClose={closeModal} {...modalProps} />
+      {modalType === "renameChat" && (
+        <RenameChatModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "importPersona" && (
         <ImportPersonaModal isOpen onClose={closeModal} {...modalProps} />
@@ -100,7 +101,7 @@ export function ModalProvider({ children }) {
       {modalType === "deleteFolder" && (
         <DeleteFolderModal isOpen onClose={closeModal} {...modalProps} />
       )}
-      {/* Setting Panel Modals */}
+      {/* Chat Modals */}
       {modalType === "shareSettings" && (
         <ShareSettingsModal isOpen onClose={closeModal} {...modalProps} />
       )}
@@ -162,14 +163,17 @@ export function ModalProvider({ children }) {
         <RegenerateConfirmModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {/* General Modals */}
-      {modalType === "exportConversation" && (
-        <ExportConversationModal isOpen onClose={closeModal} {...modalProps} />
+      {modalType === "exportChat" && (
+        <ExportChatModal isOpen onClose={closeModal} {...modalProps} />
       )}
-      {modalType === "moveConversation" && (
-        <MoveConversationModal isOpen onClose={closeModal} {...modalProps} />
+      {modalType === "moveChat" && (
+        <MoveChatModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "preview" && (
         <PreviewModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "summarizeChat" && (
+        <SummarizeChatModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "unsentFiles" && (
         <UnsentFilesModal isOpen onClose={closeModal} {...modalProps} />

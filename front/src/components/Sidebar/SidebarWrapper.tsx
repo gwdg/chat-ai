@@ -13,7 +13,12 @@ import { getDefaultConversation } from "../../utils/conversationUtils";
 import { useNavigate } from "react-router";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
-export default function SidebarWrapper({ localState, setLocalState, userData, modelsData }) {
+export default function SidebarWrapper({ 
+  localState, 
+  setLocalState, 
+  userData, 
+  modelsData 
+}) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const showSidebar = useSelector(selectShowSidebar);
@@ -109,7 +114,13 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
                       transition-all duration-300 ease-in-out
                       ${showSidebar && isDesktop ? "w-[13vw] opacity-0 pointer-events-none" : "w-[4rem] opacity-100"}
         `}>
-          <SidebarRail localState={localState} onOpen={() => { dispatch(toggleSidebar()) }} handleNewConversation={handleNewConversation} />
+          <SidebarRail 
+            localState={localState}
+            setLocalState={setLocalState}
+            userData={userData}
+            modelsData={modelsData}
+            onOpen={() => { dispatch(toggleSidebar()) }}
+            handleNewConversation={handleNewConversation} />
         </div>
 
         {(isDesktop) && (

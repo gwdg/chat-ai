@@ -8,7 +8,7 @@ export default {
     save: "Speichern",
     import: "Chat importieren",
     export: "Chat exportieren",
-    summarize: "Zusammenfassen und ersetzen",
+    summarize: "Zusammenfassen",
     summarizing: "Zusammenfassen...",
     summarize_success: "Unterhaltung erfolgreich zusammengefasst.",
     summarize_error: "Zusammenfassung fehlgeschlagen. Ihre Unterhaltung ist unverändert.",

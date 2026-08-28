@@ -8,7 +8,7 @@ export default {
     save: "Save",
     import: "Import Chat",
     export: "Export Chat",
-    summarize: "Summarize and Replace",
+    summarize: "Summarize",
     summarizing: "Summarizing...",
     summarize_success: "Conversation summarized successfully.",
     summarize_error: "Summarization failed. Your conversation is unchanged.",

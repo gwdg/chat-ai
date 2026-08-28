@@ -11,7 +11,7 @@ import { jsPDF } from "jspdf";
 import Logo from "../../assets/logos/chat_ai.png"
 import { processContentItems } from "../../utils/sendMessage";
 
-export default function ExportConversationModal({
+export default function ExportChatModal({
   isOpen,
   onClose,
   localState,

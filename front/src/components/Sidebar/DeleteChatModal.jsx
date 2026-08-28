@@ -8,7 +8,7 @@ import { createConversation, deleteConversation } from "../../db";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
-export default function DeleteConversationModal({
+export default function DeleteChatModal({
   id,
   conversations,
   currentConversationId,

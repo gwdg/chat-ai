@@ -14,7 +14,7 @@ import {
   Search,
   TrashCan,
   Close,
-  UserAvatar,
+  BrainstormFilled,
 } from "@carbon/icons-react";
 import {
   assignConversationToFolder,
@@ -243,7 +243,7 @@ export default function SidebarContent({
 
   const handleMoveConversation = (conv) => {
     if (!conv) return;
-    openModal("moveConversation", {
+    openModal("moveChat", {
       conversationId: conv.id,
       conversationTitle: conv.title || "Untitled Chat",
       currentFolderId: conv.folderId ?? null,
@@ -306,7 +306,7 @@ export default function SidebarContent({
     // Only enable double-click rename on desktop
     if (!isDesktop) return;
 
-    openModal("renameConversation", {
+    openModal("renameChat", {
       id: conv.id,
       currentTitle: conv.title || "Untitled Chat",
       localState: localState,
@@ -707,10 +707,28 @@ export default function SidebarContent({
               <Trans i18nKey="export_conversation.export" />
             </button>
 
+            {localState.id == activeMenu && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                openModal("deleteConversation", {
+                const conv = conversations.find((c) => c.id === activeMenu);
+                openModal("summarizeChat", {
+                  localState: localState,
+                  setLocalState: setLocalState,
+                });
+                closeMenu();
+              }}
+              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <BrainstormFilled size={14} />
+              <Trans i18nKey="common.summarize" />
+            </button>
+            )}
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openModal("deleteChat", {
                   id: activeMenu,
                   conversations,
                   currentConversationId: localState?.id,
