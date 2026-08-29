@@ -568,7 +568,6 @@ const sendMessage = async ({
           }
           });
           content.push("assistant: " + responseContent[0].text)
-          console.log(content.join("\n\n"))
 
           const response = await generateChoiceProposal(
             content.join("\n\n")

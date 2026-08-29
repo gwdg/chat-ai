@@ -357,6 +357,9 @@ export function useSyncConversation({
         const enableTools = coerceBoolean(decodedSettings?.enable_tools);
         if (enableTools !== undefined) nextSettings.enable_tools = enableTools;
 
+        const reasoningEffort = decodedSettings?.reasoning_effort;
+        if (reasoningEffort !== undefined) nextSettings.reasoning_effort = reasoningEffort;
+
         if (decodedSettings?.arcana && typeof decodedSettings.arcana === "object") {
           const arcanaId = decodedSettings.arcana?.id;
           if (typeof arcanaId === "string") {

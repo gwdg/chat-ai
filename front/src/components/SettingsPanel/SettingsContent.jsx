@@ -20,6 +20,7 @@ import {DataSafetyText} from "../Header/WarningExternalModel";
 
 import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
+import ReasoningEffortContainer from "./ReasoningEffortContainer";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 
@@ -93,7 +94,6 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
-          
           {/* temperature Slider */}
           <TemperatureSlider
             localState={localState}
@@ -101,6 +101,11 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
           />
           {/* top_p Slider */}
           <TopPSlider localState={localState} setLocalState={setLocalState} />
+          {/* Reasoning effort container */}
+          <ReasoningEffortContainer 
+            localState={localState}
+            setLocalState={setLocalState}
+          />
           {/* System Prompt */}
           <SystemPromptContainer
             localState={localState}
@@ -111,7 +116,6 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             <ShareSettingsButton
               localState={localState}
             />
-
             {/* Reset Default Button */}
             <button
               className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none cursor-pointer"

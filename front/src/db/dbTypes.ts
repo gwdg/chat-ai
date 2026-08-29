@@ -16,6 +16,7 @@ export type ConversationSettings = {
   temperature: number
   top_p: number
   memory: number
+  reasoning_effort: number
   enable_tools: boolean
   enable_web_search: boolean
   tools: Record<string, any>

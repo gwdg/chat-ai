@@ -95,6 +95,44 @@ export default {
     web_search_disabled: "Websuche ist deaktiviert",
     close_panel: "Einstellungen schließen",
     system_prompt_placeholder: "System-Prompt hier eingeben",
+    reasoning_effort: {
+      title: "Reasoning",
+      subtitle: "Legen Sie den Reasoning-Aufwand fest",
+      options: {
+        none: {
+            label: "Aus",
+            description: "Reasoning ist deaktiviert"
+        },
+        off: {
+            label: "Aus",
+            description: "Reasoning ist deaktiviert"
+        },
+        on: {
+            label: "An",
+            description: "Reasoning ist aktiviert"
+        },
+        low: {
+            label: "Niedrig",
+            description: "Minimaler Reasoning-Aufwand"
+        },
+        medium: {
+            label: "Mittel",
+            description: "Mittlerer Reasoning-Aufwand"
+        },
+        high: {
+            label: "Hoch",
+            description: "Hoher Reasoning-Aufwand"
+        },
+        xhigh: {
+            label: "Hoch",
+            description: "Hoher Reasoning-Aufwand"
+        },
+        max: {
+            label: "Maximal",
+            description: "Maximaler Reasoning-Aufwand"
+        }
+      }
+    },
     reset_default: "Standard zurücksetzen",
     default: "Standard",
     tools_title: "GWDG-Werkzeuge",
@@ -365,6 +403,8 @@ export default {
     models:
       "Chat AI bietet Zugriff auf eine Palette von state-of-the-art Large Language Models (LLMs), jedes mit eigenen Fähigkeiten und Leistungsmerkmalen. Dies ermöglicht es Ihnen, den Modelltyp auszuwählen, der am besten Ihren Forschungszielen und Anforderungen entspricht.\
       Größere Modelle bieten typischerweise höhere Antwortqualitäten, aber haben aufgrund ihrer erhöhten Komplexität längere Antwortzeiten. Umgekehrt bieten kleinere Modelle schnellere Antwortzeiten, mögen jedoch einige Genauigkeit und Tiefe opfern. Mit der Liste der verfügbaren Modelle können Sie Abwägungen zwischen Antwortqualität und Geschwindigkeit treffen, um Ihren spezifischen Bedürfnissen gerecht zu werden. Für weitere Einzelheiten",
+    reasoning:
+      "Die Reasoning-Einstellung bestimmt, wie tief das Modell Informationen verarbeitet und analysiert, bevor es eine Antwort generiert. Ein höherer Reasoning-Aufwand bedeutet, dass das Modell mehr Zeit darauf verwendet, den Kontext sorgfältig zu prüfen, mögliche Interpretationen abzuwägen und seinen internen Denkprozess zu verfeinern, um eine präzisere, differenziertere und besser strukturierte Antwort zu erzeugen. Ein niedrigerer Reasoning-Aufwand priorisiert Geschwindigkeit über Tiefe, was zu schnelleren, aber möglicherweise weniger gründlichen Antworten führt. Passen Sie diese Einstellung an, je nachdem, ob Sie schnelle Antworten oder sorgfältig ausgearbeitete, hochwertige Ergebnisse benötigen.",
     memory:
       "Erinnerungen sind eine globale Einstellung für alle Unterhaltungen auf diesem Gerät. 'Keine' verwendet keine gespeicherten Erinnerungen. 'Abrufen' nutzt gespeicherte Erinnerungen für persönlichere Antworten. 'Lernen' speichert zusätzlich relevante neue Details aus Ihren Unterhaltungen. Erinnerungen werden ausschließlich in Ihrem Browser gespeichert.",
     system_prompt:

@@ -87,7 +87,7 @@ export default {
     new_folder_prompt: "Create new topic",
     create_inline: "Create",
   },
-  // Settings panel
+  // Chat settings
   settings: {
     tools_enabled: "Tools are enabled",
     tools_disabled: "Tools are disabled",
@@ -95,6 +95,48 @@ export default {
     web_search_disabled: "Web search is disabled",
     close_panel: "Close Settings",
     system_prompt_placeholder: "Enter the system prompt here",
+    reasoning_effort: {
+      title: "Reasoning",
+      subtitle: "Configure the reasoning effort",
+      options: {
+          none: {
+            label: "Off",
+            description: "Reasoning is switched off",
+          },
+          off: {
+            label: "Off",
+            description: "Reasoning is switched off",
+          },
+          on: {
+            label: "On",
+            description: "Reasoning is switched on",
+          },
+          low: {
+            label: "Low",
+            description: "Minimal reasoning effort",
+          },
+          medium: {
+            label: "Medium",
+            description:
+              "Medium reasoning effort",
+          },
+          high: {
+            label: "High",
+            description:
+              "High reasoning effort",
+          },
+          xhigh: {
+            label: "High",
+            description:
+              "High reasoning effort",
+          },
+          max: {
+            label: "Max",
+            description:
+              "Maximum reasoning effort",
+          }
+        },
+    },
     reset_default: "Reset default",
     default: "Default",
     tools_title: "GWDG Tools",
@@ -359,7 +401,8 @@ export default {
     models:
       "Chat AI provides access to a range of state-of-the-art Large Language Models (LLMs), each with distinct capabilities and performance characteristics. This allows you to explore and select the model that best aligns with your research goals and requirements. \
       Larger models typically offer higher-quality responses, but may have longer response times due to their increased complexity. Conversely, smaller models provide faster response times, but may sacrifice some accuracy and depth. With the list of available models, you can balance trade-offs between response quality and speed to suit your specific needs. For more details",
-
+    reasoning:
+      "The reasoning setting determines how deeply the model processes and analyzes information before generating a response. A higher reasoning effort level means the model will spend more time carefully considering the context, weighing possible interpretations, and refining its internal thought process to produce a more accurate, nuanced, and well-structured answer. A lower reasoning effort prioritizes speed over depth, resulting in faster but potentially less thorough responses. Adjust this setting based on whether you need quick replies or more deliberate, high-quality outputs",
     memory:
       "Memory is a global preference for all conversations on this device. 'None' does not use saved memories. 'Recall' uses saved memories to personalize responses. 'Learn' also stores relevant new details from your conversations. Memories are stored only in your browser.",
     system_prompt:

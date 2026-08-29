@@ -203,7 +203,7 @@ export default function SidebarRail({
               <Download size={22} className="text-tertiary" />
             </button>
           </ShortcutTooltip>
-          <HorizontalLineSolid size={30} className="text-gray-200" />
+          <HorizontalLineSolid size={30} className="text-gray-200 dark:text-gray-600" />
           {/* User card */}
           <div
               role="button"

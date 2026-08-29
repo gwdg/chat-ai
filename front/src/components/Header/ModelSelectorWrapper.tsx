@@ -18,6 +18,7 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   const hasExtendedModels = modelsData?.[0]?.description !== undefined;
 
   function setModel(newModel: ModelInfo) {
+    if (newModel?.id === currentModelId) return;
     if (newModel?.status === "offline") {
       openModal("serviceOffline");
     }

@@ -213,7 +213,9 @@ app.post("/chat/completions", async (req, res) => {
     enable_tools = null,
     tools = null,
     stream = true,
-    feedback = null
+    feedback = null,
+    chat_template_kwargs = null,
+    reasoning_effort = null,
   } = req.body;
 
   const mcp_servers = req.body["mcp-servers"] || null;
@@ -251,6 +253,8 @@ app.post("/chat/completions", async (req, res) => {
       stream: stream,
       stream_options: stream ? {include_usage: true } : null,
       timeout: timeout,
+      chat_template_kwargs: chat_template_kwargs,
+      reasoning_effort: reasoning_effort,
     }
 
     const isExternalModel = (model.startsWith("openai-") && !model.startsWith("openai-gpt-oss")) || model.startsWith("claude");
