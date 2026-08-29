@@ -314,17 +314,6 @@ export default function SidebarContent({
     });
   };
 
-  const handleExportConversation = (conv) => {
-    const dataStr = JSON.stringify(conv, null, 2);
-    const dataUri =
-      "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-    const exportFileDefaultName = `conversation-${conv.id}-${Date.now()}.json`;
-    const linkElement = document.createElement("a");
-    linkElement.setAttribute("href", dataUri);
-    linkElement.setAttribute("download", exportFileDefaultName);
-    linkElement.click();
-  };
-
   const openMenu = (e, convId) => {
     e.stopPropagation();
     e.preventDefault();
@@ -695,7 +684,7 @@ export default function SidebarContent({
                     flush: true,
                   }));
                 }
-                openModal("exportConversation", {
+                openModal("exportChat", {
                   localState,
                   conversationId: conv.id,
                 });

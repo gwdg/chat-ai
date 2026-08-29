@@ -193,7 +193,9 @@ export default function TopicList({
                 <ShortcutTooltip label={t("sidebar.import_persona")}>
                   <button
                     onClick={() => {
-                      openModal("importPersona");
+                      openModal("importPersona", {
+                        topicId: id,
+                      });
                     }}
                     aria-label={t("sidebar.import_persona")}
                     className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
@@ -202,7 +204,7 @@ export default function TopicList({
                     <Bot size={20} className="text-tertiary" />
                   </button>
                 </ShortcutTooltip>
-                <ImportConversationButton />
+                <ImportConversationButton topicId={id} />
               </div>
             </div>
           </div>

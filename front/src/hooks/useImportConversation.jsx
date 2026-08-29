@@ -114,7 +114,7 @@ export function useImportConversation() {
     );
   }
 
-  const importConversation = async (data, silent = false) => {
+  const importConversation = async (data, silent = false, topicId = null) => {
     const conversationId = newId();
     try {
       // Handle multiple conversations import
@@ -316,7 +316,7 @@ export function useImportConversation() {
       if (arcana?.id) settings.arcana = arcana;
 
       // Determine folder assignment
-      let folderId = null;
+      let folderId = topicId;
       const folderRef =
         extractParameter(data, "folderId") ||
         extractParameter(data, "folder_id") ||

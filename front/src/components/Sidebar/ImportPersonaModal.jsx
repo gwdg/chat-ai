@@ -22,6 +22,7 @@ export default function ImportPersonaModal({
   repoOwner = "gwdg",
   repoName = "chat-ai-personas",
   branch = "main",
+  topicId = null,
 }) {
   const [selectedPath, setSelectedPath] = useState(null);
   const [rootContents, setRootContents] = useState({ folders: [], files: [] });
@@ -230,7 +231,7 @@ export default function ImportPersonaModal({
       const cleaned = rawText.replace(/,(\s*[}$])/g, "$1");
       const parsed = JSON.parse(cleaned);
 
-      await importConversation(parsed);
+      await importConversation(parsed, false, topicId);
       onClose();
     } catch (err) {
       console.error("Import error:", err);
