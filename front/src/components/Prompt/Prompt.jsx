@@ -117,10 +117,10 @@ export default function Prompt({
           />
         </div>
 
-        {/* Buttons Section - now without the floating buttons */}
-        <div className="px-3 py-2 w-full h-fit flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
+        {/* Buttons Section */}
+        <div className="px-3 py-2 w-full h-fit grid grid-cols-[1fr_auto_1fr] items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
           {/* Buttons on the left */}
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-4 items-center justify-start">
             {/* Attach Button */}
             <AttachButton
               localState={localState}
@@ -134,7 +134,7 @@ export default function Prompt({
             
           </div>
           {/* Buttons in the center */}
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-4 items-center justify-center">
             
             {/* Tools Button */}
             <ToolsButton
@@ -168,11 +168,7 @@ export default function Prompt({
             </div>
           </div>
           {/* Buttons on the right */}
-          <div className="flex gap-4 items-center min-w-0">
-           
-          
-            
-            
+          <div className="flex gap-4 items-center justify-end min-w-0">
             {/* Abort button (when loading) */}
             <AbortButton
               localState={localState}

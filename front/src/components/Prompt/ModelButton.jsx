@@ -23,7 +23,7 @@ export default function ModelButton({ localState, setLocalState, modelsData }) {
       <PopoverButton
         title={t("model_selector.change_model")}
         aria-label={t("model_selector.change_model")}
-        className="flex min-w-0 max-w-[11rem] lg:max-w-[17rem] cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark px-2 py-1 text-sm text-black dark:text-white hover:border-tertiary focus:outline-none transition-colors"
+        className="flex justify-between min-w-[12rem] max-w-[12rem] lg:min-w-[17rem] lg:max-w-[17rem] cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark px-2 py-1 text-sm text-black dark:text-white hover:border-tertiary focus:outline-none transition-colors"
       >
         <span className="flex-shrink-0 flex items-center">
           <DemandIndicator
