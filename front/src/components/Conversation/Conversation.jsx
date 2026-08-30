@@ -222,7 +222,7 @@ export default function Conversation({
     >
       {/* Empty conversation */}
       <div
-        className={`flex flex-col space-y-16 md:max-h-[40vh] xl:max_h-[40vh] justify-end
+        className={`flex flex-col space-y-16 md:max-h-[45vh] xl:max_h-[45vh] justify-end
           ${emptyConversation ? "flex-grow" : "absolute pointer-events-none"}`}
       >
         <div
