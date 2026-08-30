@@ -7,7 +7,7 @@ import { useSendMessage } from "../../../hooks/useSendMessage";
 // Constants
 const MAX_HEIGHT = 800;
 const MIN_HEIGHT = 56;
-const MIN_WIDTH = 600;
+const MIN_WIDTH = 56;
 
 export default function EditBox({
   localState,
