@@ -27,7 +27,7 @@ async function* chatCompletions (
 
     // Handle reasoning settings
     try {
-      if (modelDefaults.reasoning_effort !== undefined && modelDefaults.reasoning_effort !== null) {
+      if (modelDefaults?.reasoning_effort !== undefined && modelDefaults?.reasoning_effort !== null) {
         let reasoning_effort = modelDefaults.reasoning_effort;
         if (conversation.settings?.reasoning_effort !== undefined && conversation.settings?.reasoning_effort !== null) {
           reasoning_effort = Math.min(conversation.settings.reasoning_effort, modelDefaults.reasoning_options.length - 1)

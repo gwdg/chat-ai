@@ -468,6 +468,8 @@ export default {
       "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Um diese Unterhaltung zu behalten, können Sie in einer Kopie dieses Chats fortfahren.",
     regenerate_yes: "Regenerieren",
     regenerate_fork: "Kopie",
+    regenerate_fork_success: "Chat erfolgreich geforkt",
+    regenerate_fork_fail: "Chat konnte nicht geforkt werden.",
     summarize_replace:
       "Dies ersetzt den aktuellen Chatverlauf durch eine Zusammenfassung. Die bisherigen Nachrichten werden aus dieser Unterhaltung entfernt. Fortfahren?",
     summarize_in_progress:

@@ -467,6 +467,8 @@ export default {
       "Regenerating will delete this response and every message after it, and will apply your current settings. To keep this conversation intact, fork it into a new chat instead.",
     regenerate_yes: "Regenerate",
     regenerate_fork: "Fork",
+    regenerate_fork_success: "Chat forked successfully",
+    regenerate_fork_fail: "Chat could not be forked",
     summarize_replace:
       "This will replace your current chat history with a summary. Your existing messages will be removed from this conversation. Continue?",
     summarize_in_progress:

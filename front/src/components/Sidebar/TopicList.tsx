@@ -73,7 +73,29 @@ export default function TopicList({
     const count = conversations.length;
 
     return (
-      <div key={id}>
+      <div 
+        key={id} 
+        className={`group
+          isDropTarget ? "border-tertiary/60" : ""
+        `}
+        onDragEnter={(e) => {
+          if (!draggingConversationId) return;
+          e.preventDefault();
+          onDragEnterTopic(id);
+        }}
+        onDragOver={(e) => {
+          if (!draggingConversationId) return;
+          e.preventDefault();
+        }}
+        onDragLeave={() => {
+          if (!draggingConversationId) return;
+        }}
+        onDrop={(e: DragEvent<HTMLDivElement>) => {
+          if (!draggingConversationId) return;
+          e.preventDefault();
+          onDropTopic(id);
+        }} 
+      >
         <div
           role="button"
           tabIndex={0}
@@ -85,30 +107,10 @@ export default function TopicList({
               onToggleCollapse(id);
             }
           }}
-          onDragEnter={(e) => {
-            if (!draggingConversationId) return;
-            e.preventDefault();
-            onDragEnterTopic(id);
-          }}
-          onDragOver={(e) => {
-            if (!draggingConversationId) return;
-            e.preventDefault();
-          }}
-          onDragLeave={() => {
-            if (!draggingConversationId) return;
-            onDragLeaveTopic(id);
-          }}
-          onDrop={(e: DragEvent<HTMLDivElement>) => {
-            if (!draggingConversationId) return;
-            e.preventDefault();
-            onDropTopic(id);
-          }}
           className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40 ${
             isDropTarget ? "border-tertiary/60" : ""
           }`}
-          style={
-            isDropTarget ? { backgroundColor: topicTint(hex, isDark) } : undefined
-          }
+          // style={ isDropTarget ? { backgroundColor: topicTint(hex, isDark) } : undefined }
         >
           {Icon ? (
             <Icon

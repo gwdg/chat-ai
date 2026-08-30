@@ -9,7 +9,7 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
   const [systemPromptError, setSystemPromptError] = useState("");
   const [ignoreChanges, setIgnoreChanges] = useState(false);
   const [value, setValue] = useState(localState.messages[0]?.content[0]?.text || "");
-   const { t } = useTranslation();
+  const { t } = useTranslation();
   // Validate the system prompt is not empty
   const validateSystemPrompt = () => {
     if (!value.trim()) {
