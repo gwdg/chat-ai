@@ -10,7 +10,6 @@ import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import AttachMediaButton from "./AttachMediaButton";
-import ClearButton from "./ClearButton";
 import PromptTextArea from "./PromptTextArea";
 
 import { useSendMessage } from "../../hooks/useSendMessage";
@@ -111,15 +110,6 @@ export default function Prompt({
           prompt={prompt}
         />
         
-        {/* Floating buttons - top right over the text */}
-        <div className="absolute top-2 right-2 z-10 flex gap-2 items-center">
-          {/* Clear Button */}
-          <ClearButton
-            localState={localState}
-            setLocalState={setLocalState}
-          />
-        </div>
-
         {/* Buttons Section */}
         <div className="px-3 py-2 w-full h-fit grid grid-cols-[1fr_auto_1fr] items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
           {/* Buttons on the left */}

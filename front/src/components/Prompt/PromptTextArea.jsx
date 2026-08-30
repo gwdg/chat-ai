@@ -1,13 +1,16 @@
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useToast } from "../../hooks/useToast";
 
 import { useAttachments } from "../../hooks/useAttachments";
+import ClearButton from "./ClearButton";
 
-const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
+const MAX_HEIGHT = 200;
+const MIN_HEIGHT_MD = 80;
+const MAX_HEIGHT_MD = 300;
 
 export default function PromptTextArea({
     localState,
@@ -21,7 +24,7 @@ export default function PromptTextArea({
   const [isDragging, setIsDragging] = useState(false);
   const { notifySuccess, notifyError } = useToast();
   const { addAttachments, pasteAttachments } = useAttachments();
-  
+
   // Prompt is actually the last message's first content
   const lastMessage = localState?.messages?.[localState.messages.length - 1];
   const attachments = Array.isArray(lastMessage?.content)
@@ -31,9 +34,10 @@ export default function PromptTextArea({
 
   const adjustHeight = () => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = "56px";
+      const isMd = window.matchMedia("(min-width: 768px)").matches; // read fresh each time
+      textareaRef.current.style.height = `${isMd ? MIN_HEIGHT_MD : MIN_HEIGHT}px`;
       const scrollHeight = textareaRef.current.scrollHeight;
-      textareaRef.current.style.height = `${Math.min(scrollHeight, 200)}px`;
+      textareaRef.current.style.height = `${Math.min(Math.max(scrollHeight, isMd ? MIN_HEIGHT_MD : MIN_HEIGHT), isMd? MAX_HEIGHT_MD : MAX_HEIGHT)}px`;
     }
   };
 
@@ -58,6 +62,15 @@ export default function PromptTextArea({
       clipboardData: e.clipboardData
     });
   };
+
+  useEffect(() => {
+    adjustHeight();
+    const handleResize = () => adjustHeight();
+    window.addEventListener("resize", handleResize);
+
+    // cleanup: remove listener when component unmounts
+    return () => window.removeEventListener("resize", handleResize);
+  }, [prompt]);
 
   return (
     <div
@@ -106,44 +119,54 @@ export default function PromptTextArea({
       </div>
     )}
       {/* Actual text area */}
-      <textarea
-          autoFocus
-          ref={textareaRef}
-          className={`p-5 transition-opacity duration-300 ease-in-out outline-none text-base w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto ${
-            choices.length > 0 ? "" : "rounded-t-2xl"
-          }`}
-          value={prompt}
-          name="prompt"
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          data-1p-ignore="true"
-          placeholder={t("conversation.prompt.placeholder")}
-          style={{
-          minHeight: `${MIN_HEIGHT}px`,
-          maxHeight: `${MAX_HEIGHT}px`,
-          opacity: isDragging ? 0.5 : 1
-          }}
-          onChange={(e) => {
-            adjustHeight();
-            handleChange(e);
-          }}
-          onDragOver={(e) => {e.preventDefault(); }}
-          onDragEnter={(e) => {e.preventDefault(); setIsDragging(true);}}
-          onDragLeave={(e) => {e.preventDefault(); setIsDragging(false);}}
-          onDrop={handleDrop}
-          onKeyDown={(event) => {
-          if (
-              event.key === "Enter" &&
-              !event.shiftKey &&
-              (prompt?.trim() !== "" || attachments.length > 0)
-          ) {
-              event.preventDefault();
-              handleSend(event);
-          }
-          }}
-          onPaste={handlePaste}
-      />
+      <div className = "relative">
+        {/* Floating buttons - top right over the text */}
+        <div className="absolute top-2 right-3 z-10 flex gap-2 items-center">
+          {/* Clear Button */}
+          <ClearButton
+            localState={localState}
+            setLocalState={setLocalState}
+          />
+        </div>
+        <textarea
+            autoFocus
+            ref={textareaRef}
+            className={`p-4 md:p-5 transition-opacity duration-300 ease-in-out outline-none text-base w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto ${
+              choices.length > 0 ? "" : "rounded-t-2xl"
+            }`}
+            value={prompt}
+            name="prompt"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            data-1p-ignore="true"
+            placeholder={t("conversation.prompt.placeholder")}
+            style={{
+              minHeight: `${MIN_HEIGHT}px`,
+              maxHeight: `${MAX_HEIGHT}px`,
+              opacity: isDragging ? 0.5 : 1
+            }}
+            onChange={(e) => {
+              // adjustHeight();
+              handleChange(e);
+            }}
+            onDragOver={(e) => {e.preventDefault(); }}
+            onDragEnter={(e) => {e.preventDefault(); setIsDragging(true);}}
+            onDragLeave={(e) => {e.preventDefault(); setIsDragging(false);}}
+            onDrop={handleDrop}
+            onKeyDown={(event) => {
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                (prompt?.trim() !== "" || attachments.length > 0)
+            ) {
+                event.preventDefault();
+                handleSend(event);
+            }
+            }}
+            onPaste={handlePaste}
+        />
+      </div>
     </div>
   );
 }

@@ -122,11 +122,11 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
           <div className="flex items-center gap-2">
             <div className="ml-2 flex items-center gap-1 text-tertiary">
-              {selectedModel?.input.includes("image") && <Tooltip text={"Image Input"} placement="bottom"><FontAwesomeIcon icon={faImage} /></Tooltip>}
-              {selectedModel?.input.includes("video") && <Tooltip text={"Video Input"} placement="bottom"><FontAwesomeIcon icon={faVideo} /></Tooltip>}
-              {selectedModel?.input.includes("audio") && <Tooltip text={"Audio Input"} placement="bottom"><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
-              {selectedModel?.input.includes("arcana") && <Tooltip text={"Arcana Input"} placement="bottom"><FontAwesomeIcon icon={faBookOpen} /></Tooltip>}
-              {selectedModel?.output.includes("thought") && <Tooltip text={"Thinking"} placement="bottom"><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+              {selectedModel?.input?.includes("image") && <Tooltip text={"Image Input"} placement="bottom"><FontAwesomeIcon icon={faImage} /></Tooltip>}
+              {selectedModel?.input?.includes("video") && <Tooltip text={"Video Input"} placement="bottom"><FontAwesomeIcon icon={faVideo} /></Tooltip>}
+              {selectedModel?.input?.includes("audio") && <Tooltip text={"Audio Input"} placement="bottom"><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
+              {selectedModel?.input?.includes("arcana") && <Tooltip text={"Arcana Input"} placement="bottom"><FontAwesomeIcon icon={faBookOpen} /></Tooltip>}
+              {selectedModel?.output?.includes("thought") && <Tooltip text={"Thinking"} placement="bottom"><FontAwesomeIcon icon={faBrain} /></Tooltip>}
 
             </div>
             <FontAwesomeIcon icon={faChevronDown} />

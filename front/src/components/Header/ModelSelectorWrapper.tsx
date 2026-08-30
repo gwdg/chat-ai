@@ -11,10 +11,14 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   */
   const { openModal } = useModal();
   
-  const currentModelId = localState?.settings?.model?.id;
+  const currentModel = localState?.settings?.model || null;
+  const currentModelId = localState?.settings?.model?.id || null;
   const currentConversationId = localState?.id;
-  const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
-  //const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData[0] || null : null;
+  //const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
+  console.log(currentModelId)
+  const selectedModel = (modelsData && currentModelId) ?
+    (modelsData.find(model => model.id === currentModelId) || currentModel) : (modelsData ?
+    modelsData[0] : (currentModel || null));
 
   const hasExtendedModels = modelsData?.[0]?.description !== undefined;
 
@@ -25,7 +29,6 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
     if (newModel?.status === "offline") {
       openModal("serviceOffline");
     }
-    setSelectedModel(newModel);
     setLocalState((prev) => ({
       ...prev,
       settings: {
