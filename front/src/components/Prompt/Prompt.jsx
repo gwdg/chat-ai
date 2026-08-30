@@ -15,6 +15,7 @@ import PromptTextArea from "./PromptTextArea";
 
 import { useSendMessage } from "../../hooks/useSendMessage";
 import { useDebounce } from "../../hooks/useDebounce";
+import UndoButton from "../Conversation/UndoButton";
 
 export default function Prompt({
   localState,
@@ -91,7 +92,10 @@ export default function Prompt({
   };
   
   return (
-    <div className="prompt-area overflow-x-hidden w-full flex flex-shrink-0 flex-col bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-center sm:overflow-y-auto rounded-2xl shadow-bottom dark:shadow-darkBottom">
+    <div className="prompt-area overflow-x-hidden w-full flex flex-shrink-0 flex-col 
+    bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-center 
+    sm:overflow-y-auto rounded-2xl shadow-bottom dark:shadow-darkBottom
+    md:max-w-[85vw] xl:max-w-[1300px] transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none mx-auto">
         {/* Attachments Container */}
         <AttachmentsContainer
           localState={localState}
@@ -109,7 +113,6 @@ export default function Prompt({
         
         {/* Floating buttons - top right over the text */}
         <div className="absolute top-2 right-2 z-10 flex gap-2 items-center">
-          
           {/* Clear Button */}
           <ClearButton
             localState={localState}

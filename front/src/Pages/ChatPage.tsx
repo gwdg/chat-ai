@@ -67,7 +67,7 @@ export default function ChatPage() {
         className="
           grid
           grid-cols-1 grid-rows-[1fr_auto]
-          md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
+          md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto]
           md:gap-x-2 gap-y-1 md:pt-1
           bg-gray-50 dark:bg-bg_dark
           overflow-hidden
@@ -88,7 +88,7 @@ export default function ChatPage() {
         />
 
         <CollapsibleFooter
-          className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-4"
+          className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3"
         />
       </div>
     </div>

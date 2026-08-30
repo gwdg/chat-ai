@@ -3,6 +3,7 @@ export default {
   common: {
     loading: "Lädt...",
     undo: "Rückgängig",
+    scroll: "Nach unten scrollen",
     rename: "Umbenennen",
     create: "Erstellen",
     save: "Speichern",

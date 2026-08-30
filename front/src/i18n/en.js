@@ -3,6 +3,7 @@ export default {
   common: {
     loading: "Loading...",
     undo: "Undo",
+    scroll: "Scroll to bottom",
     rename: "Rename",
     create: "Create",
     save: "Save",
@@ -195,7 +196,7 @@ export default {
   footer: {
     imprint: "Imprint",
     terms: "Terms of Use",
-    docs: "Documentation",
+    docs: "Docs",
     privacy: "Privacy",
     faq: "FAQ",
     contact: "Contact Us",
