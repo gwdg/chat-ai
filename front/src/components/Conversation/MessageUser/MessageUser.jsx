@@ -71,7 +71,7 @@ export default React.memo(({
         )}
          {/* Buttons area */}
             {!editMode && (
-                <div className="flex flex-row pt-2 w-fit opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-2.5 items-center justify-end ml-auto">
+                <div className="flex flex-row pt-2 w-fit opacity-25 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-2.5 items-center justify-end ml-auto">
                     {/* Retry button */}
                     <RetryButton
                         localState={localState}

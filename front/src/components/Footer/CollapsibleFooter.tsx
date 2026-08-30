@@ -14,7 +14,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className={`bg-white rounded-xl dark:bg-bg_secondary_dark text-sm ${className}`}>
+    <footer className={`bg-white rounded-xl dark:bg-bg_secondary_dark text-xs md:text-sm ${className}`}>
       {/* Header / handle: always visible */}
       <div className="relative">
         <button
