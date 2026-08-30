@@ -6,6 +6,7 @@ import ImageAiLogo from '../../assets/logos/image-ai.svg'
 import VoiceAiLogo from '../../assets/logos/voice-ai.svg'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronRight } from '@fortawesome/free-solid-svg-icons'
+import config from '../../config'
 
 const items = [
   {
@@ -35,6 +36,10 @@ const items = [
 ]
 
 export default function AiServicesMenu() {
+  if (config.overrides?.branding === "mpg") {
+    return null;
+  }
+
   return (
     <Popover className="relative ">
       <PopoverButton

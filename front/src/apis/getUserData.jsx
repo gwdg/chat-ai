@@ -1,7 +1,9 @@
+import config from "../config";
+
 // Fetches authenticated user's profile data from the server
 export const getUserData = async () => {
   try {
-    const response = await fetch(import.meta.env.VITE_USERDATA_ENDPOINT);
+    const response = await fetch(config.userDataPath ?? "");
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

@@ -1,3 +1,5 @@
+import config from "../config";
+
 // PDF processing function
 export const processFile = async (file) => {
   try {
@@ -5,7 +7,7 @@ export const processFile = async (file) => {
     formData.append("document", file);
 
     const response = await fetch(
-      import.meta.env.VITE_BACKEND_ENDPOINT + "/documents",
+      (config.backendPath ?? "") + "/documents",
       {
         method: "POST",
         body: formData,

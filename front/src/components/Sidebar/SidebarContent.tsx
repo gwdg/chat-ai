@@ -28,6 +28,7 @@ import ImportConversationButton from "./ImportConversationButton";
 import AiServicesMenu from "./AiServicesMenu";
 import ShortcutTooltip from "./ShortcutTooltip";
 import { useToast } from "../../hooks/useToast";
+import config from "../../config";
 
 const ALL_FOLDERS = "__all__";
 
@@ -286,11 +287,10 @@ export default function SidebarContent({
           e.preventDefault();
           handleFolderDrop(option.id);
         }}
-        className={`group flex items-center gap-2 rounded-2xl px-3 py-2 text-xs transition cursor-pointer border border-transparent ${
-          isActive
+        className={`group flex items-center gap-2 rounded-2xl px-3 py-2 text-xs transition cursor-pointer border border-transparent ${isActive
             ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
             : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40"
-        } ${isDropTarget ? "border-tertiary/60 bg-tertiary/5 dark:bg-tertiary/20" : ""}`}
+          } ${isDropTarget ? "border-tertiary/60 bg-tertiary/5 dark:bg-tertiary/20" : ""}`}
       >
         <div className="flex-1 flex items-center justify-between text-left min-w-0">
           <span className="truncate select-none pointer-events-none" title={option.label}>
@@ -482,24 +482,24 @@ export default function SidebarContent({
         <div className="sticky top-0 z-20 bg-white dark:bg-bg_secondary_dark shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
           <div className="px-3 pt-3 border-b border-gray-100 dark:border-gray-800 space-y-3">
             <div className="flex gap-1">
-            <button
-              onClick={onNewConversation}
-              className={`cursor-pointer w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
+              <button
+                onClick={onNewConversation}
+                className={`cursor-pointer w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700
                 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white 
                 pl-3 pr-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs 
                 font-medium touch-manipulation transition-colors`}
-              style={{
-                WebkitTapHighlightColor: "transparent",
-                minHeight: "44px",
-              }}
-            >
-              <Plus className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">
-                <Trans i18nKey="sidebar.new_conversation" />
-              </span>
-              
-            </button>
-            {(
+                style={{
+                  WebkitTapHighlightColor: "transparent",
+                  minHeight: "44px",
+                }}
+              >
+                <Plus className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">
+                  <Trans i18nKey="sidebar.new_conversation" />
+                </span>
+
+              </button>
+              {(
                 <button
                   type="button"
                   onClick={openSearch}
@@ -508,8 +508,8 @@ export default function SidebarContent({
                   hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-[max-width,max-height,padding,opacity,transform]
                   duration-300 cursor-pointer
                   ${!searchVisible
-                    ? "max-w-14 max-h-14 px-2 py-2 opacity-100 gap-2 translate-y-0"
-                    : "max-w-0 max-w-0 px-0 py-0 opacity-0 -translate-y-1 pointer-events-none"}
+                      ? "max-w-14 max-h-14 px-2 py-2 opacity-100 gap-2 translate-y-0"
+                      : "max-w-0 max-w-0 px-0 py-0 opacity-0 -translate-y-1 pointer-events-none"}
                   `}
                   aria-label={t("folders.search_label")}
                 >
@@ -519,61 +519,60 @@ export default function SidebarContent({
                   </span> */}
                 </button>
               )}
-              </div>
+            </div>
 
-              <div
-                className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                  searchVisible
-                    ? "max-h-14 opacity-100 pb-3 translate-y-0"
-                    : "max-h-0 opacity-0 pb-0 -translate-y-1 pointer-events-none"
+            <div
+              className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${searchVisible
+                  ? "max-h-14 opacity-100 pb-3 translate-y-0"
+                  : "max-h-0 opacity-0 pb-0 -translate-y-1 pointer-events-none"
                 }`}
-              >
-                <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40  transition">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Escape") return;
-                      e.preventDefault();
-                      if (hasSearch) {
-                        setSearchQuery("");
-                      } else {
-                        setSearchOpen(false);
-                      }
-                    }}
-                    placeholder={t("folders.search_placeholder")}
-                    className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none"
-                  />
-                  {searchQuery.length > 0 ? (
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                      aria-label={t("folders.clear_search")}
-                      onClick={() => setSearchQuery("")}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                      aria-label={t("common.cancel")}
-                      onClick={closeSearch}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+            >
+              <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40  transition">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Escape") return;
+                    e.preventDefault();
+                    if (hasSearch) {
+                      setSearchQuery("");
+                    } else {
+                      setSearchOpen(false);
+                    }
+                  }}
+                  placeholder={t("folders.search_placeholder")}
+                  className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none"
+                />
+                {searchQuery.length > 0 ? (
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                    aria-label={t("folders.clear_search")}
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                    aria-label={t("common.cancel")}
+                    onClick={closeSearch}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
+        </div>
         <div
           className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
@@ -588,9 +587,8 @@ export default function SidebarContent({
               >
                 <span>{t("folders.title")}</span>
                 <ChevronDown
-                  className={`transition-transform duration-200 h-3 w-3 ${
-                    foldersExpanded ? "rotate-0" : "-rotate-90"
-                  }`}
+                  className={`transition-transform duration-200 h-3 w-3 ${foldersExpanded ? "rotate-0" : "-rotate-90"
+                    }`}
                 />
               </button>
 
@@ -611,20 +609,20 @@ export default function SidebarContent({
               `}
             >
               <div className="space-y-1 pt-1">
-              {renderFolderRow({
-                id: ALL_FOLDERS,
-                label: t("folders.all"),
-                countKey: ALL_FOLDERS,
-              })}
-              {folders.map((folder) =>
-                renderFolderRow({
-                  id: folder.id,
-                  label: folder.name,
-                  countKey: folder.id,
-                  canEdit: true,
-                  folder,
-                })
-              )}
+                {renderFolderRow({
+                  id: ALL_FOLDERS,
+                  label: t("folders.all"),
+                  countKey: ALL_FOLDERS,
+                })}
+                {folders.map((folder) =>
+                  renderFolderRow({
+                    id: folder.id,
+                    label: folder.name,
+                    countKey: folder.id,
+                    canEdit: true,
+                    folder,
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -661,11 +659,10 @@ export default function SidebarContent({
                   draggable
                   onDragStart={(event) => handleConversationDragStart(event, id)}
                   onDragEnd={handleConversationDragEnd}
-                  className={`group relative px-3 py-3 rounded-2xl touch-manipulation border border-transparent ${
-                    isActive
+                  className={`group relative px-3 py-3 rounded-2xl touch-manipulation border border-transparent ${isActive
                       ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
                       : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-100"
-                  } ${isDragging ? "border-tertiary/60 bg-tertiary/10 dark:bg-tertiary/20" : ""}`}
+                    } ${isDragging ? "border-tertiary/60 bg-tertiary/10 dark:bg-tertiary/20" : ""}`}
                   data-current={isActive ? "true" : "false"}
                   style={{
                     WebkitTapHighlightColor: "transparent",
@@ -688,14 +685,13 @@ export default function SidebarContent({
 
                     {/* Dropdown Menu Button */}
                     <div
-                      className={`transition-opacity duration-200 ${
-                        window.innerWidth < 1024 ||
-                        isHovered ||
-                        isActive ||
-                        isMenuOpen
+                      className={`transition-opacity duration-200 ${window.innerWidth < 1024 ||
+                          isHovered ||
+                          isActive ||
+                          isMenuOpen
                           ? "opacity-100"
                           : "opacity-0"
-                      } group-hover:opacity-100`}
+                        } group-hover:opacity-100`}
                     >
                       <button
                         ref={(el) => (menuButtonRefs.current[id] = el)}
@@ -717,26 +713,30 @@ export default function SidebarContent({
         </div>
 
         {/* Bottom section */}
-        <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
-          <div className="flex flex-col gap-3 mx-3">
-            <ImportConversationButton variant="button" />
-            <button
-              onClick={() => {
-                openModal("importPersona");
-              }}
-              className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
-              style={{
-                WebkitTapHighlightColor: "transparent",
-                minHeight: "44px",
-              }}
-            >
-              <Bot className="h-5 w-5 flex-shrink-0" />
-              <span className="truncate">
-                <Trans i18nKey="sidebar.import_persona" />
-              </span>
-            </button>
+        {!(config.overrides?.ui?.hideImportConversationButton && config.overrides?.ui?.hideImportPersonaButton) && (
+          <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
+            <div className="flex flex-col gap-3 mx-3">
+              {!config.overrides?.ui?.hideImportConversationButton && <ImportConversationButton variant="button" />}
+              {!config.overrides?.ui?.hideImportPersonaButton && (
+                <button
+                  onClick={() => {
+                    openModal("importPersona");
+                  }}
+                  className={`cursor-pointer w-full bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-medium touch-manipulation transition-colors`}
+                  style={{
+                    WebkitTapHighlightColor: "transparent",
+                    minHeight: "44px",
+                  }}
+                >
+                  <Bot className="h-5 w-5 flex-shrink-0" />
+                  <span className="truncate">
+                    <Trans i18nKey="sidebar.import_persona" />
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 

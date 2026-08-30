@@ -1,21 +1,31 @@
 
-import { memo, useEffect, useState, useRef } from 'react'
+import { memo, useEffect, useState } from 'react'
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
+import ModelSelectorIcon from "./ModelSelectorIcon";
 import { useModal } from '../../modals/ModalContext';
 import type { ModelInfo } from '../../types/models';
 
-function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean}) {
+interface ModelSelectorWrapperProps {
+  modelsData: ModelInfo[];
+  localState: any;
+  setLocalState: any;
+  inHeader?: boolean;
+  iconMode?: boolean;
+}
+
+function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false, iconMode = false}: ModelSelectorWrapperProps) {
   /*
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
   const { openModal } = useModal();
-  
+
   const currentModelId = localState?.settings?.model?.id;
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
-  //const selectedModel = modelsData ? modelsData.find(model => model.id === currentModelId) || modelsData[0] || null : null;
 
-  const hasExtendedModels = modelsData?.[0]?.description !== undefined;
+  // Ensure modelsData is always an array
+  const safeModelsData = Array.isArray(modelsData) ? modelsData : [];
+  const hasExtendedModels = safeModelsData.length > 0 && 'description' in safeModelsData[0];
 
   function setModel(newModel: ModelInfo) {
     if (newModel?.status === "offline") {
@@ -34,26 +44,28 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   // currentModelId has changed indirectly
   useEffect(() => {
     if(!currentModelId) return;
-    if(modelsData.length === 0) return;
+    if(safeModelsData.length === 0) return;
 
-    const foundModel = modelsData.find(
+    const foundModel = safeModelsData.find(
       (model) => model.id === currentModelId
     );
     if (foundModel){
       setModel(foundModel);
     } else {
       // fallback to first model
-      setModel(modelsData[0]);
+      setModel(safeModelsData[0]);
     }
-  }, [currentModelId, modelsData]);
+  }, [currentModelId, safeModelsData]);
 
   return (
     <>
       {
-        hasExtendedModels ? 
-          <ModelSelectorExtended selectedModel={selectedModel} modelsData={modelsData} inHeader={inHeader} onChange={setModel} /> 
-        : 
-          <ModelSelectorSimple selectedModel={selectedModel} modelsData={modelsData} inHeader={inHeader} onChange={setModel} />
+        iconMode ? (
+          <ModelSelectorIcon selectedModel={selectedModel} modelsData={modelsData} inHeader={inHeader} onChange={setModel} />
+        ) : hasExtendedModels ?
+          <ModelSelectorExtended selectedModel={selectedModel as any} modelsData={modelsData as any} onChange={setModel as any} />
+        :
+          <ModelSelectorSimple selectedModel={selectedModel} modelsData={modelsData as any} inHeader={inHeader} onChange={setModel} />
       }
     </>
   )

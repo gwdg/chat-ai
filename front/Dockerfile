@@ -1,5 +1,5 @@
 # We are using the node base image
-FROM node:latest
+FROM node:25
 
 # Configure config location
 ENV CONFIG_LOCATION=/run/secrets/front

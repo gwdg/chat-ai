@@ -4,12 +4,37 @@ import { Trans } from "react-i18next";
 import BaseModal from "../../modals/BaseModal";
 import icon_file_json from "../../assets/icons/file_json.svg";
 import icon_file_pdf from "../../assets/icons/file_pdf.svg";
+import icon_file_docx from "../../assets/icons/file_docx.svg";
 import icon_file_text from "../../assets/icons/file_text.svg";
 import { getConversation, loadFile, loadFileMeta } from "../../db";
 import { useToast } from "../../hooks/useToast";
 import { jsPDF } from "jspdf";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  AlignmentType,
+  ImageRun,
+  ShadingType,
+  Header,
+  Footer,
+  PageNumber,
+} from "docx";
 import Logo from "../../assets/logos/chat_ai.png"
 import { processContentItems } from "../../utils/sendMessage";
+
+// Matches the delimiter that separates an assistant's answer from the raw
+// Arcana/RAG reference snippets appended after it (mirrors
+// MarkdownRenderer's separateContentAndReferences split).
+const ARCANA_REFERENCES_RE = /(^|\n)[-\s]{5,}\n\s*References\s*:\s*\n/i;
+
+// Matches closed <think>...</think> reasoning blocks emitted by reasoning
+// models, in both literal and HTML-escaped (&lt;think&gt;) form (mirrors the
+// two variants MarkdownRenderer's splitThink handles).
+const THINKING_BLOCK_RE = /<think\b[^>]*>[\s\S]*?<\/think>/gi;
+const THINKING_BLOCK_ESCAPED_RE = /&lt;think\b[^&]*&gt;[\s\S]*?&lt;\/think&gt;/gi;
 
 export default function ExportConversationModal({
   isOpen,
@@ -20,8 +45,10 @@ export default function ExportConversationModal({
   const [exportFormat, setExportFormat] = useState("json");
   const [exportSettings, setExportSettings] = useState(true);
   const [exportArcana, setExportArcana] = useState(false);
+  const [exportArcanaRag, setExportArcanaRag] = useState(false);
   const [exportMcpServers, setExportMcpServers] = useState(false);
   const [exportFiles, setExportFiles] = useState(false);
+  const [exportThinking, setExportThinking] = useState(false);
   const [containsFiles, setContainsFiles] = useState(true); // TODO set dynamically
   const [conversation, setConversation] = useState(null);
 
@@ -63,6 +90,16 @@ export default function ExportConversationModal({
       : Array.isArray(mcpServers)
       ? mcpServers.length > 0
       : false;
+  const hasArcanaReferences =
+    Array.isArray(messages) &&
+    messages.some(
+      (m) => typeof m?.content === "string" && ARCANA_REFERENCES_RE.test(m.content)
+    );
+  const hasThinking =
+    Array.isArray(messages) &&
+    messages.some(
+      (m) => typeof m?.content === "string" && /(?:<|&lt;)think\b/i.test(m.content)
+    );
 
   // Function to generate timestamped filename for exports
   const generateFileName = (extension) => {
@@ -77,6 +114,22 @@ export default function ExportConversationModal({
   };
 
   // Function to process messages into export format
+  // Strip reasoning blocks and/or raw Arcana RAG reference snippets from a
+  // message's text content, depending on which export checkboxes are set
+  const filterMessageContent = (text) => {
+    if (typeof text !== "string") return text;
+    let result = text;
+    if (!exportThinking)
+      result = result
+        .replace(THINKING_BLOCK_RE, "")
+        .replace(THINKING_BLOCK_ESCAPED_RE, "");
+    if (!exportArcanaRag) {
+      const m = result.match(ARCANA_REFERENCES_RE);
+      if (m) result = result.slice(0, m.index + (m[1] ? m[1].length : 0));
+    }
+    return result.trim();
+  };
+
   const processMessages = async () => {
     let processedMessages = [];
     if (!Array.isArray(messages)) return processedMessages;
@@ -106,6 +159,17 @@ export default function ExportConversationModal({
           // Ignore files
           processedMessage.content = content[0]?.text || "";
         }
+      }
+
+      // Apply reasoning/Arcana-RAG content filters
+      if (typeof processedMessage.content === "string") {
+        processedMessage.content = filterMessageContent(processedMessage.content);
+      } else if (Array.isArray(processedMessage.content)) {
+        processedMessage.content = processedMessage.content.map((item) =>
+          item?.type === "text"
+            ? { ...item, text: filterMessageContent(item.text) }
+            : item
+        );
       }
 
       // Check if empty user prompt at the end
@@ -504,6 +568,219 @@ export default function ExportConversationModal({
     }
   };
 
+  // Decode an embedded image data URL into raw bytes for docx's ImageRun
+  const decodeImageDataUrl = (dataUrl) => {
+    const match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!match) return null;
+    let [, type, base64] = match;
+    type = type === "jpeg" ? "jpg" : type;
+    if (!["jpg", "png", "gif", "bmp"].includes(type)) return null;
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return { type, data: bytes };
+  };
+
+  // Export conversation as DOCX
+  const exportDOCX = async () => {
+    try {
+      const COLORS = {
+        ROLE: "0066CC",
+        CODE_BG: "F0F0F0",
+        HEADER_DATE: "969696",
+      };
+
+      // Turn a message's text into paragraphs, rendering fenced code blocks
+      // with a monospace font and a shaded background
+      const buildContentParagraphs = (content) => {
+        const paragraphs = [];
+        const parts = content.split(/(```[\s\S]+?```)/);
+        for (const part of parts) {
+          if (!part) continue;
+          if (part.startsWith("```")) {
+            const [, language, code] =
+              part.match(/```(\w+)?\n?([\s\S]+?)```/) || [];
+            if (code) {
+              if (language) {
+                paragraphs.push(
+                  new Paragraph({
+                    children: [new TextRun({ text: language, italics: true })],
+                  })
+                );
+              }
+              code
+                .trim()
+                .split("\n")
+                .forEach((line) => {
+                  paragraphs.push(
+                    new Paragraph({
+                      shading: {
+                        type: ShadingType.SOLID,
+                        color: COLORS.CODE_BG,
+                        fill: COLORS.CODE_BG,
+                      },
+                      children: [
+                        new TextRun({ text: line || " ", font: "Courier New" }),
+                      ],
+                    })
+                  );
+                });
+              continue;
+            }
+          }
+          // Regular text, preserving line breaks within the paragraph
+          const lines = part.split("\n");
+          paragraphs.push(
+            new Paragraph({
+              children: lines.flatMap((line, index) =>
+                index === 0
+                  ? [new TextRun(line)]
+                  : [new TextRun({ text: line, break: 1 })]
+              ),
+            })
+          );
+        }
+        return paragraphs;
+      };
+
+      // Process Messages
+      let processedMessages = await processMessages();
+
+      const children = [
+        new Paragraph({
+          text: conversation?.title || "Chat AI Conversation",
+          heading: HeadingLevel.TITLE,
+        }),
+      ];
+
+      // Process each message in conversation
+      for (const entry of processedMessages) {
+        children.push(
+          new Paragraph({
+            spacing: { before: 200 },
+            children: [
+              new TextRun({ text: `${entry.role}:`, bold: true, color: COLORS.ROLE }),
+            ],
+          })
+        );
+
+        if (typeof entry.content === "string") {
+          children.push(...buildContentParagraphs(entry.content));
+        } else if (Array.isArray(entry.content) && exportFiles) {
+          // Handle mixed content (text and images)
+          for (const item of entry.content) {
+            if (item.type === "text") {
+              children.push(...buildContentParagraphs(item.text));
+            } else if (item.type === "image_url") {
+              const image = item.image_url?.url?.startsWith("data:image")
+                ? decodeImageDataUrl(item.image_url.url)
+                : null;
+              if (image) {
+                children.push(
+                  new Paragraph({
+                    children: [
+                      new ImageRun({
+                        type: image.type,
+                        data: image.data,
+                        transformation: { width: 200, height: 150 },
+                      }),
+                    ],
+                  })
+                );
+              } else {
+                children.push(new Paragraph("[Invalid image format]"));
+              }
+            }
+          }
+        } else {
+          // Handle unavailable content
+          children.push(new Paragraph("Content unavailable"));
+        }
+      }
+
+      // Add settings section if enabled
+      if (exportSettings) {
+        let settings = processSettings();
+        children.push(
+          new Paragraph({
+            spacing: { before: 400 },
+            heading: HeadingLevel.HEADING_2,
+            text: "Conversation settings",
+          })
+        );
+        children.push(new Paragraph(`title: ${conversation?.title}`));
+        children.push(new Paragraph(`model: ${settings?.model}`));
+        children.push(new Paragraph(`model name: ${settings?.["model-name"]}`));
+        children.push(new Paragraph(`temperature: ${settings?.temperature}`));
+        children.push(new Paragraph(`top_p: ${settings?.top_p}`));
+
+        if (exportArcana && isArcanaSupported && settings?.arcana?.id) {
+          children.push(new Paragraph(`Arcana ID: ${settings.arcana.id}`));
+        }
+
+        if (exportMcpServers && hasMcpServers && settings?.mcp_servers) {
+          const mcpServersText = Array.isArray(settings.mcp_servers)
+            ? settings.mcp_servers.join(", ")
+            : settings.mcp_servers;
+          children.push(new Paragraph(`MCP server: ${mcpServersText}`));
+        }
+      }
+
+      const doc = new Document({
+        creator: "Chat AI",
+        title: conversation?.title || "Chat AI Conversation",
+        subject: "History",
+        description: "History",
+        keywords: "AI-Generated",
+        sections: [
+          {
+            headers: {
+              default: new Header({
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.RIGHT,
+                    children: [
+                      new TextRun({
+                        text: new Date().toLocaleDateString(),
+                        color: COLORS.HEADER_DATE,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            },
+            footers: {
+              default: new Footer({
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [
+                      new TextRun({
+                        children: ["Page ", PageNumber.CURRENT, " of ", PageNumber.TOTAL_PAGES],
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            },
+            children,
+          },
+        ],
+      });
+
+      // Create and download DOCX file
+      const blob = await Packer.toBlob(doc);
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = generateFileName("docx");
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.log(error)
+      notifyError("An error occurred while exporting to DOCX");
+    }
+  };
+
   // Handle Format Change
   const handleFormatChange = (format) => {
     setExportFormat(format);
@@ -516,6 +793,8 @@ export default function ExportConversationModal({
       await exportJSON();
     } else if (exportFormat === "pdf") {
       await exportPDF();
+    } else if (exportFormat === "docx") {
+      await exportDOCX();
     } else if (exportFormat === "text") {
       await exportTextFile();
     }
@@ -525,6 +804,7 @@ export default function ExportConversationModal({
   const exportOptions = [
     { id: "json", icon: icon_file_json, label: "export_conversation.json" },
     { id: "pdf", icon: icon_file_pdf, label: "export_conversation.pdf" },
+    { id: "docx", icon: icon_file_docx, label: "export_conversation.docx" },
     { id: "text", icon: icon_file_text, label: "export_conversation.text" },
   ];
 
@@ -540,8 +820,16 @@ export default function ExportConversationModal({
     setExportArcana(event.target.checked);
   };
 
+  const toggleExportArcanaRag = (event) => {
+    setExportArcanaRag(event.target.checked);
+  };
+
   const toggleExportMcpServers = (event) => {
     setExportMcpServers(event.target.checked);
+  };
+
+  const toggleExportThinking = (event) => {
+    setExportThinking(event.target.checked);
   };
 
   return (
@@ -598,6 +886,32 @@ export default function ExportConversationModal({
               />
               <label
                 htmlFor="exportArcana"
+                className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+              >
+                <Trans i18nKey="export_conversation.export_arcana" />
+              </label>
+            </div>
+          </>
+        ) : null}
+
+        {/* Arcana RAG reference snippets Export Option */}
+        {hasArcanaReferences ? (
+          <>
+            {exportArcanaRag && (
+              <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200">
+                <Trans i18nKey="alert.arcana_export" />
+              </p>
+            )}
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="exportArcanaRag"
+                checked={exportArcanaRag}
+                onChange={toggleExportArcanaRag}
+                className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+              />
+              <label
+                htmlFor="exportArcanaRag"
                 className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
               >
                 <Trans i18nKey="export_conversation.export_arcana" />
@@ -666,6 +980,23 @@ export default function ExportConversationModal({
             className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
           >
             <Trans i18nKey="export_conversation.export_files" />
+          </label>
+        </div>
+
+        {/* Export thinking/reasoning blocks checkbox */}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="exportThinking"
+            checked={exportThinking}
+            onChange={toggleExportThinking}
+            className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+          />
+          <label
+            htmlFor="exportThinking"
+            className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+          >
+            <Trans i18nKey="export_conversation.export_thinking" />
           </label>
         </div>
 

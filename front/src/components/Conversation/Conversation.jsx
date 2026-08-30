@@ -12,8 +12,11 @@ import HallucinationWarning from "./HallucinationWarning";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
 import MessageUser from "./MessageUser/MessageUser";
 import Motto from "./Motto";
+import OhbDisclaimer from "./OhbDisclaimer";
 import UndoButton from "./UndoButton";
 import SummaryButton from "./SummaryButton";
+
+import config from "../../config";
 
 export default function Conversation({
   localState,
@@ -38,6 +41,7 @@ export default function Conversation({
   const resizeObserver = useRef(null);
   const programmaticGuardUntil = useRef(0); // ignore our own scrolls for a short window
   const smoothTimer = useRef(null);
+  const prevMsgLengthRef = useRef(0);
 
   // Helpers
   const hasOverflow = useCallback(() => {
@@ -189,6 +193,24 @@ export default function Conversation({
     return () => clearTimeout(t);
   }, [copied]);
 
+  // Re-enable follow and jump to bottom whenever the user sends a message
+  useEffect(() => {
+    const msgs = localState?.messages;
+    if (!msgs) return;
+
+    const prev = prevMsgLengthRef.current;
+    prevMsgLengthRef.current = msgs.length;
+
+    // sendMessage adds 2 messages at once (assistant loading + empty user placeholder)
+    if (msgs.length === prev + 2) {
+      const secondToLast = msgs[msgs.length - 2];
+      if (secondToLast?.role === "assistant" && secondToLast?.loading === true) {
+        setAutoFollow(true);
+        requestAnimationFrame(() => scrollToBottom("auto"));
+      }
+    }
+  }, [localState?.messages, scrollToBottom]);
+
   // Lifecycle nudges: first message / sending while at bottom
   useEffect(() => {
     const msgs = localState?.messages;
@@ -223,13 +245,15 @@ export default function Conversation({
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
       {/* Model selector at top, on tablet and desktop */}
-      <div className="model-selector hidden md:block">
-        <ModelSelectorWrapper
-          localState={localState}
-          setLocalState={setLocalState}
-          modelsData={modelsData}
-        />
-      </div>
+      {config?.overrides?.ui?.hideModelSelector !== true && (
+        <div className="model-selector hidden md:block">
+          <ModelSelectorWrapper
+            localState={localState}
+            setLocalState={setLocalState}
+            modelsData={modelsData}
+          />
+        </div>
+      )}
 
       {/* Empty conversation */}
       <div
@@ -238,10 +262,9 @@ export default function Conversation({
       >
         <div
           className={`transition-all duration-500 ease-in-out p-10  
-            ${
-              emptyConversation
-                ? "scale-100 opacity-80"
-                : "scale-90 opacity-0 pointer-events-none"
+            ${emptyConversation
+              ? "scale-100 opacity-80"
+              : "scale-90 opacity-0 pointer-events-none"
             }`}
         >
           {emptyConversation && (
@@ -255,10 +278,9 @@ export default function Conversation({
         className={`flex flex-col relative w-full rounded-xl
           bg-white dark:bg-bg_secondary_dark shadow-md dark:shadow-dark
           transition-opacity duration-500 ease-in-out 
-          ${
-            localState.messages.length <= 2
-              ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden"
-              : "scale-100 opacity-100 flex-1 min-h-0"
+          ${localState.messages.length <= 2
+            ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden"
+            : "scale-100 opacity-100 flex-1 min-h-0"
           }`}
       >
         {/* Hallucination Warning */}
@@ -302,6 +324,7 @@ export default function Conversation({
                 )}
               </div>
             ))}
+            <div style={{minHeight: "30vh"}}></div>
           </div>
 
           {/* Floating scroll-to-bottom button (only when overflow && NOT at bottom) */}
@@ -345,9 +368,9 @@ export default function Conversation({
               />
               {/* Summary button */}
               <SummaryButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
+                localState={localState}
+                setLocalState={setLocalState}
+              />
             </div>
             <div className="flex items-baseline gap-3">
               {/* Export button */}
@@ -366,7 +389,8 @@ export default function Conversation({
       </div>
 
       {/* Prompt */}
-      <Prompt localState={localState} setLocalState={setLocalState} />
+      <Prompt localState={localState} setLocalState={setLocalState} modelsData={modelsData} />
+      {emptyConversation && <OhbDisclaimer />}
       {emptyConversation && <Motto />}
     </div>
   );

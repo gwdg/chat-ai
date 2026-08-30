@@ -19,6 +19,7 @@ const configPath = path.resolve(CONFIG_LOCATION);
 // Default configuration if config file is missing or invalid
 let port = 8081;
 let apiEndpoint = "https://chat-ai.academiccloud.de/v1";
+let gatewayEndpoint = apiEndpoint;
 let apiKey = "";
 let serviceName = "Chat AI Dev";
 
@@ -34,6 +35,9 @@ try {
     );
   }
   apiEndpoint = config.apiEndpoint;
+  if(config.gatewayEndpoint) {
+    gatewayEndpoint = config.gatewayEndpoint;
+  }
   apiKey = config.apiKey;
   serviceName = config.serviceName;
 } catch (error) {
@@ -219,6 +223,11 @@ app.post("/chat/completions", async (req, res) => {
   const mcp_servers = req.body["mcp-servers"] || null;
   const inference_id = req.headers["inference-id"];
   const uid = req.headers["oidc_claim_uid"];
+  console.log("Incoming /chat/completions request", {
+    method: req.method,
+    path: req.path,
+    headers: req.headers,
+  });
   if (!Array.isArray(messages)) {
     return res.status(422).json({ error: "Invalid messages provided" });
   }
@@ -307,7 +316,7 @@ app.post("/chat/completions", async (req, res) => {
       }
     }
     
-    const openai = new OpenAI({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id});
+    const openai = new OpenAI({baseURL : gatewayEndpoint, apiKey: apiKey ? apiKey : inference_id});
 
     // Temporary workaround as middleware doesn't support timeout yet
     if (params.arcana || params.model.includes("rag") || params.model.includes("sauerkraut")) delete params.timeout;
@@ -316,6 +325,7 @@ app.post("/chat/completions", async (req, res) => {
     const headers = {
       "inference-service": inference_service,
       "inference-portal": serviceName,
+      "x-user-email": req.headers['oidc_claim_email'],
       "user": uid
     };
 
@@ -365,13 +375,14 @@ app.post("/chat/completions", async (req, res) => {
          });
       }
       // Couldn't extract error message, so try without openai library
-      const response = await fetch(apiEndpoint + "/chat/completions", {
+      const response = await fetch(gatewayEndpoint + "/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${ apiKey ? apiKey : inference_id }`,
           "Content-Type": "application/json",
           "inference-service": inference_service,
           "inference-portal": serviceName,
+          "x-user-email": req.headers['oidc_claim_email'],
           "inference-id": inference_id
         },
         body: JSON.stringify(params)

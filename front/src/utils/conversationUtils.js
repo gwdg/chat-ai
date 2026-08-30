@@ -2,13 +2,14 @@ import { v4 as uuidv4 } from "uuid";
 import { useSelector } from "react-redux";
 import { getConversation, getFolder, listConversationMetas } from "../db";
 import { processContentItems } from "./sendMessage";
+import config from "../config";
 
 export const getDefaultSettings = (userSettings = {}) => {
   // Get environment settings
   let envSettings = {};
-  if (import.meta.env.VITE_DEFAULT_SETTINGS) {
+  if (config.default) {
     try {
-      envSettings = JSON.parse(import.meta.env.VITE_DEFAULT_SETTINGS);
+      envSettings = config.default;
     } catch (e) {
       envSettings = {};
     }
@@ -61,7 +62,9 @@ export const getDefaultConversation = (userSettings = {}, folderId = null) => {
         content: [
           {
             type: "text",
-            text: "You are a helpful assistant."
+            text:
+              config.default?.messages?.find((m) => m?.role === "system")
+                ?.content || "You are a helpful assistant."
           }
         ],
       }, {

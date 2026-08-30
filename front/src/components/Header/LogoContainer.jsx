@@ -1,8 +1,12 @@
 import Logo from "../../assets/logos/chat_ai.svg";
 import LogoSmall from "../../assets/logos/chat_ai_small.ico"
 import { Link } from "react-router-dom";
+import config from "../../config";
 
 export default function LogoContainer({ isMobile = false }) {
+  if (config.overrides?.branding === "gwdg") {
+    return null;
+  }
   return !isMobile ? (
     <Link to={"https://chat-ai.academiccloud.de/"}>
     <div className="flex items-center dark:border-gray-700">

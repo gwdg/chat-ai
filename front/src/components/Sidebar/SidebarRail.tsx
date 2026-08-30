@@ -34,6 +34,7 @@ import { useWindowSize } from "../../hooks/useWindowSize";
 import ImportConversationButton from "./ImportConversationButton";
 import { useModal } from "../../modals/ModalContext";
 import ShortcutTooltip from "./ShortcutTooltip";
+import config from "../../config";
 
 export default function SidebarRail({ localState, onOpen, handleNewConversation }: { localState: any, onOpen: () => void, handleNewConversation: (folderId?: string | null) => Promise<void> }) {
 
@@ -68,25 +69,41 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
       <div className="h-full flex flex-col items-center gap-2">
 
         {/* Logo with chevron on hover */}
-        <div className="mt-2 relative h-10 w-10 group">
-          {/* Logo */}
-          <img
-            className="absolute inset-0 object-contain transition-opacity duration-200 group-hover:opacity-0"
-            src={ChatAiLogoMini}
-            alt="Chat AI Logo"
-          />
+        {config.overrides?.branding !== "mpg" && (
+          <div className="mt-2 relative h-10 w-10 group">
+            {/* Logo */}
+            <img
+              className="absolute inset-0 object-contain transition-opacity duration-200 group-hover:opacity-0"
+              src={ChatAiLogoMini}
+              alt="Chat AI Logo"
+            />
 
-          {/* Chevron Button */}
-          <ShortcutTooltip label={t("sidebar.expand") }>
-            <button
-              onClick={() => onOpen?.()}
-              className="absolute h-10 w-10 inset-0 grid place-items-center rounded-xl transition duration-200 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
-              aria-label={t("sidebar.expand")}
-            >
-              <ChevronRight className="w-10 h-10 text-tertiary" />
-            </button>
-          </ShortcutTooltip>
-        </div>
+            {/* Chevron Button */}
+            <ShortcutTooltip label={t("sidebar.expand") }>
+              <button
+                onClick={() => onOpen?.()}
+                className="absolute h-10 w-10 inset-0 grid place-items-center rounded-xl transition duration-200 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
+                aria-label={t("sidebar.expand")}
+              >
+                <ChevronRight className="w-10 h-10 text-tertiary" />
+              </button>
+            </ShortcutTooltip>
+          </div>
+        )}
+        {config.overrides?.branding === "mpg" && (
+          <div className="mt-2 relative h-10 w-10">
+            {/* Chevron Button visible by default for mpg branding */}
+            <ShortcutTooltip label={t("sidebar.expand") }>
+              <button
+                onClick={() => onOpen?.()}
+                className="h-10 w-10 grid place-items-center rounded-xl transition duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
+                aria-label={t("sidebar.expand")}
+              >
+                <ChevronRight className="w-10 h-10 text-tertiary" />
+              </button>
+            </ShortcutTooltip>
+          </div>
+        )}
 
         {/** Actions */}
         <div className="mt-4 flex flex-col gap-3 items-center">
@@ -141,23 +158,27 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
             </button>
           </ShortcutTooltip>
         </div>
-        <div className="mb-2 flex flex-col items-center justify-between gap-3 border-t border-tertiary pt-3">
-          {/* Import Conversation button */}
-          <ImportConversationButton variant="icon" />
+        {!(config.overrides?.ui?.hideImportConversationButton && config.overrides?.ui?.hideImportPersonaButton) && (
+          <div className="mb-2 flex flex-col items-center justify-between gap-3 border-t border-tertiary pt-3">
+            {/* Import Conversation button */}
+            {!config.overrides?.ui?.hideImportConversationButton && <ImportConversationButton variant="icon" />}
 
-          {/* Import persona from Github */}
-          <ShortcutTooltip label={t("sidebar.import_persona") }>
-            <button
-              onClick={() => {
-                openModal("importPersona");
-              }}
-              className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
-              aria-label={t("sidebar.import_persona")}
-            >
-              <Bot className="w-6 h-6 text-tertiary" />
-            </button>
-          </ShortcutTooltip>
-        </div>
+            {/* Import persona from Github */}
+            {!config.overrides?.ui?.hideImportPersonaButton && (
+              <ShortcutTooltip label={t("sidebar.import_persona") }>
+                <button
+                  onClick={() => {
+                    openModal("importPersona");
+                  }}
+                  className={`cursor-pointer p-1 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+                  aria-label={t("sidebar.import_persona")}
+                >
+                  <Bot className="w-6 h-6 text-tertiary" />
+                </button>
+              </ShortcutTooltip>
+            )}
+          </div>
+        )}
       </div>
 
     </div>

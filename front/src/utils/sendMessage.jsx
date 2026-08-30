@@ -8,6 +8,7 @@ import generateChoiceProposal from "../apis/generateChoiceProposal";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
+import config from "../config";
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
@@ -199,9 +200,9 @@ const sendMessage = async ({
   try {
     const isArcanaSupported = localState.settings.model?.input?.includes("arcana") || (localState.settings?.enable_tools && !!localState.settings.tools.arcana)   
 
-    const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
-    const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
-    const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
+    const feedbackModule = config.modules?.feedback;
+    const toolsModule = config.modules?.tools;
+    const choicesModule = config.modules?.choices;
 
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState);
@@ -305,12 +306,17 @@ const sendMessage = async ({
     async function getChatChunk(conversationId, messageId = null) {
       let currentContent = [{"type": "text", "text": ""}];
       let usage = null;
+      let references = null;
       let process_block = "";
       let inThinking = false;
       let message_text = "";
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
         const delta = chunk?.choices[0]?.delta;
         if (chunk?.usage) usage = chunk.usage;
+        // Structured RAG references arrive as a top-level `references` field
+        if (Array.isArray(chunk?.references) && chunk.references.length > 0) {
+          references = chunk.references;
+        }
         // Check if reasoning exists
         if (delta?.reasoning) {
           process_block += delta.reasoning;
@@ -528,7 +534,8 @@ const sendMessage = async ({
       }
       return {
         answer: currentContent,
-        usage
+        usage,
+        references
       }
     }
 
@@ -544,7 +551,8 @@ const sendMessage = async ({
       usage = chatChunk?.usage;
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",
-        usage
+        usage,
+        references: chatChunk?.references || undefined
       };
     } catch (error) {
       const errorType = error?.type || "Error";
