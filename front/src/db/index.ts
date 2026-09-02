@@ -666,22 +666,23 @@ export async function getFolderByName(name: string): Promise<FolderRow | undefin
 export async function createFolder(
   name: string,
   options: { icon?: string; color?: string } = {},
+  id?: string | null,
 ): Promise<string> {
   const trimmed = name?.trim();
   if (!trimmed) {
     throw new Error('Folder name is required');
   }
-  const id = newId();
+  const resId = id || newId();
   const now = Date.now();
   await db.folders.add({
-    id,
+    id: resId,
     name: trimmed,
     createdAt: now,
     updatedAt: now,
     ...(options.icon ? { icon: options.icon } : {}),
     ...(options.color ? { color: options.color } : {}),
   });
-  return id;
+  return resId;
 }
 
 export async function renameFolder(folderId: string, name: string) {
@@ -733,12 +734,12 @@ export async function assignConversationToFolder(conversationId: string, folderI
   });
 }
 
-export async function ensureFolder(name: string): Promise<string | null> {
+export async function ensureFolder(name: string, id?: string | null): Promise<string | null> {
   const trimmed = name?.trim();
   if (!trimmed) return null;
   const existing = await getFolderByName(trimmed);
   if (existing) return existing.id;
-  return createFolder(trimmed);
+  return await createFolder(trimmed, {}, id);
 }
 
 export function useFolderList() {

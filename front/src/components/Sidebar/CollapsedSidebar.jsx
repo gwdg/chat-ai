@@ -1,5 +1,5 @@
 import { ChevronRight, Edit, Add, Bot } from "@carbon/icons-react";
-import ImportConversationButton from "./ImportConversationButton";
+import ImportConversationButton from "./ImportChatButton";
 import { useModal } from "../../modals/ModalContext";
 import { useTranslation } from "react-i18next";
 import ShortcutTooltip from "./ShortcutTooltip";

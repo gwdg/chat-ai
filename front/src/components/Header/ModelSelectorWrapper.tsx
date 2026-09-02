@@ -15,7 +15,6 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   const currentModelId = localState?.settings?.model?.id || null;
   const currentConversationId = localState?.id;
   //const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
-  console.log(currentModelId)
   const selectedModel = (modelsData && currentModelId) ?
     (modelsData.find(model => model.id === currentModelId) || currentModel) : (modelsData ?
     modelsData[0] : (currentModel || null));

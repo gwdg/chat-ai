@@ -28,7 +28,7 @@ import {
 
 import { Bot, ChevronRight, Edit, Add, AddFilled, BrainstormFilled, Download, HorizontalLineSolid } from "@carbon/icons-react";
 import { useWindowSize } from "../../hooks/useWindowSize";
-import ImportConversationButton from "./ImportConversationButton";
+import ImportConversationButton from "./ImportChatButton";
 import { useModal } from "../../modals/ModalContext";
 import ShortcutTooltip from "./ShortcutTooltip";
 import UserContainer from "../Header/UserContainer";

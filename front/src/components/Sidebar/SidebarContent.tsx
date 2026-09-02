@@ -10,7 +10,7 @@ import {
   Edit,
   FolderMoveTo,
   OverflowMenuVertical,
-  Add,
+  AddFilled,
   Search,
   TrashCan,
   Close,
@@ -38,6 +38,8 @@ import { useToast } from "../../hooks/useToast";
 import UserLimitsDisplay from "../../modals/UserSettings/UserLimitsDisplay";
 import OrgLimitsDisplay from "../../modals/UserSettings/OrgLimitsDisplay";
 import ShortcutTooltip from "./ShortcutTooltip";
+import ImportChatButton from "./ImportChatButton";
+import ImportPersonaButton from "./ImportPersonaButton";
 
 export default function SidebarContent({
   localState,
@@ -481,6 +483,27 @@ export default function SidebarContent({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Conversations header, with the search field it reveals */}
         <div className="sticky top-0 z-20 bg-white dark:bg-bg_secondary_dark px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-between gap-1 pb-3">
+            <button
+              onClick={onNewConversation}
+              className={`cursor-pointer w-full text-black dark:text-white font-medium touch-manipulation transition-colors
+                pl-2 pr-4 py-3 rounded-2xl flex items-center justify-start gap-3 text-sm text-tertiary
+                hover:bg-gray-100 dark:hover:bg-gray-800
+                `}
+              style={{
+                WebkitTapHighlightColor: "transparent"
+              }}
+            >
+              <AddFilled size={22} className="text-tertiary" />
+              <span className="truncate">
+                <Trans i18nKey="sidebar.new_conversation" />
+              </span>
+            </button>
+          <div className="flex items-center justify-between gap-1">
+            <ImportPersonaButton topicId={localState?.folderId} variant={"sidebar"} />
+            <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
+          </div>
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
               {t("folders.title")}

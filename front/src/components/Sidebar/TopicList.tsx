@@ -6,7 +6,7 @@ import { Add, AddFilled, AddAlt, BookmarkAdd, ChevronDown, Edit, TrashCan, UserA
 import type { FolderRow } from "../../db/dbTypes";
 import { topicColor, topicTint, withAlpha } from "./topicColors";
 import { topicIcon } from "./topicIcons";
-import ImportConversationButton from "./ImportConversationButton";
+import ImportChatButton from "./ImportChatButton";
 
 import ShortcutTooltip from "./ShortcutTooltip";
 import { useModal } from "../../modals/ModalContext";
@@ -206,7 +206,7 @@ export default function TopicList({
                     <Bot size={20} className="text-tertiary" />
                   </button>
                 </ShortcutTooltip>
-                <ImportConversationButton topicId={id} />
+                <ImportChatButton topicId={id} />
               </div>
             </div>
           </div>

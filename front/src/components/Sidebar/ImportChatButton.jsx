@@ -6,7 +6,7 @@ import { useToast } from "../../hooks/useToast";
 import ShortcutTooltip from "./ShortcutTooltip";
 
 
-export default function ImportConversationButton({
+export default function ImportChatButton({
   variant = "icon",
   topicId = null,
 }) {
@@ -117,6 +117,36 @@ export default function ImportConversationButton({
           <Upload size={16} className="flex-shrink-0" />
           <span className="truncate">{t("common.import")}</span>
         </button>
+      </>
+    );
+  }
+
+  // Render sidebar button variant (with text)
+  if (variant === "sidebar") {
+    return (
+      <>
+      <ShortcutTooltip label={t("common.import")}>
+        <input
+          type="file"
+          ref={hiddenFileInputJSON}
+          accept="application/JSON"
+          onChange={handleFilesChangeJSON}
+          className="hidden"
+        />
+        <button
+          onClick={handleClickJSON}
+          disabled={loading}
+          className={`cursor-pointer flex-shrink-0 p-2 rounded-2xl transition-all duration-200 flex items-center justify-center
+           hover:bg-gray-100 dark:hover:bg-gray-800 text-black dark:text-white transition-all duration-100 ${
+            loading ? "cursor-not-allowed opacity-50" : ""
+          } `}
+          style={{
+            WebkitTapHighlightColor: "transparent"
+          }}
+        >
+          <Upload size={24} className="text-tertiary" />
+        </button>
+        </ShortcutTooltip>
       </>
     );
   }
