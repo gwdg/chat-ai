@@ -70,7 +70,11 @@ export const migrations = {
   2: (state) => {
     state.interface_settings = {};
     state.interface_settings.show_tour = true;
-    console.log("Migrating to 2 really")
+  },
+  3: (state) => {
+    state.interface_settings.show_tour = true;
+    state.interface_settings.collapsed_topics = [];
+    console.log("Migrating redux to v3")
   }
-  // Future migrations here (e.g., 3: (state) => {...})
+  // Future migrations here (e.g., 4: (state) => {...})
 };

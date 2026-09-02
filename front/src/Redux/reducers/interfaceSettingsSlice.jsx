@@ -14,6 +14,7 @@ const interfaceSettingsSlice = createSlice({
     count_announcement: 0,
     agree_web_search: false,
     show_usage_in_sidebar: true,
+    collapsed_topics: [],
   },
   reducers: {
     toggleTheme: (state) => {
@@ -55,6 +56,15 @@ const interfaceSettingsSlice = createSlice({
     setShowUsageInSidebar: (state, action) => {
       state.show_usage_in_sidebar = Boolean(action.payload);
     },
+    toggleTopic: (state, action) => {
+      if (state.collapsed_topics.includes(action.payload)) {
+        state.collapsed_topics = state.collapsed_topics.filter(
+          (topic) => topic !== action.payload
+        );
+      } else {
+        state.collapsed_topics.push(action.payload);
+      }
+    },
   },
 });
 
@@ -67,10 +77,11 @@ export const selectAgreeWebSearch = (state) => state.interface_settings.agree_we
 export const selectShowTour = (state) => state.interface_settings.show_tour;
 export const selectShowUsageInSidebar = (state) =>
   state.interface_settings.show_usage_in_sidebar ?? true;
+export const selectCollapsedTopics = (state) => state.interface_settings.collapsed_topics;
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
-  setShowUsageInSidebar
+  setShowUsageInSidebar, toggleTopic,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

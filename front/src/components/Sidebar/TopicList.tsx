@@ -1,6 +1,7 @@
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import type { DragEvent, ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { useDispatch, useSelector } from "react-redux";
 import { Add, AddFilled, AddAlt, BookmarkAdd, ChevronDown, Edit, TrashCan, UserAvatar, Bot } from "@carbon/icons-react";
 
 import type { FolderRow } from "../../db/dbTypes";
@@ -12,6 +13,7 @@ import ShortcutTooltip from "./ShortcutTooltip";
 import { useModal } from "../../modals/ModalContext";
 import ImportPersonaButton from "./ImportPersonaButton";
 import NewChatButton from "./NewChatButton";
+import { selectCollapsedTopics, toggleTopic } from "../../Redux/reducers/interfaceSettingsSlice";
 
 /**
  * The virtual topic holding conversations with no `folderId`. It is a UI
@@ -25,8 +27,6 @@ export default function TopicList({
   topics,
   conversationsByTopic,
   unsortedConversations,
-  collapsedIds,
-  onToggleCollapse,
   onCreateTopic,
   onRenameTopic,
   onDeleteTopic,
@@ -42,8 +42,6 @@ export default function TopicList({
   topics: FolderRow[];
   conversationsByTopic: Map<string, any[]>;
   unsortedConversations: any[];
-  collapsedIds: Set<string>;
-  onToggleCollapse: (topicId: string) => void;
   onCreateTopic: (anchor: { x: number; y: number }) => void;
   onRenameTopic: (topic: TopicRef) => void;
   onDeleteTopic: (topic: TopicRef) => void;
@@ -59,6 +57,14 @@ export default function TopicList({
   const { t } = useTranslation();
   const createButtonRef = useRef<HTMLButtonElement | null>(null);
   const { openModal } = useModal();
+  const dispatch = useDispatch();
+
+  const collapsedTopicIds = useSelector(selectCollapsedTopics) || [];
+
+  const toggleTopicCollapse = useCallback((topicId: string) => {
+    console.log("Dispatching topic toggle", topicId);
+    dispatch(toggleTopic(topicId));
+  }, []);
 
   const renderRow = (options: {
     id: string;
@@ -69,7 +75,7 @@ export default function TopicList({
     topic?: TopicRef;
   }) => {
     const { id, label, conversations, hex, Icon, topic } = options;
-    const isCollapsed = collapsedIds.has(id);
+    const isCollapsed = collapsedTopicIds.includes(id);
     const isDropTarget =
       draggingConversationId !== null && dragOverTopicId === id;
     const count = conversations.length;
@@ -102,11 +108,11 @@ export default function TopicList({
           role="button"
           tabIndex={0}
           aria-expanded={!isCollapsed}
-          onClick={() => onToggleCollapse(id)}
+          onClick={() => toggleTopicCollapse(id)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              onToggleCollapse(id);
+              toggleTopicCollapse(id);
             }
           }}
           className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40 ${

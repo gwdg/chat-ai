@@ -24,6 +24,7 @@ import {
 import { useModal } from "../../modals/ModalContext";
 
 import {
+  selectCollapsedTopics,
   selectDarkMode,
   selectShowUsageInSidebar,
   toggleSidebar,
@@ -70,14 +71,9 @@ export default function SidebarContent({
   const sidebarIsDocked = windowWidth >= 1081;
   const conversations = useConversationList() || [];
   const folders = useFolderList() || [];
-  // Topics are expanded by default; this holds the ones the user closed.
-  const [collapsedTopicIds, setCollapsedTopicIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  
   // have an own state of selected Conversation id to update the ui smoothly
-  const [selectedConversationId, setSelectedConversationId] = useState(
-    currentConversationId,
-  );
+  const [selectedConversationId, setSelectedConversationId] = useState(currentConversationId);
   const [hoveredId, setHoveredId] = useState(null);
   const [draggingConversationId, setDraggingConversationId] = useState<
     string | null
@@ -197,18 +193,6 @@ export default function SidebarContent({
   function onClose() {
     dispatch(toggleSidebar());
   }
-
-  const toggleTopicCollapse = useCallback((topicId: string) => {
-    setCollapsedTopicIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(topicId)) {
-        next.delete(topicId);
-      } else {
-        next.add(topicId);
-      }
-      return next;
-    });
-  }, []);
 
   const [createTopicAnchor, setCreateTopicAnchor] = useState<{
     x: number;
@@ -579,13 +563,10 @@ export default function SidebarContent({
                 )}
               </div>
             ) : (
-              
               <TopicList
                 topics={folders}
                 conversationsByTopic={conversationsByTopic}
                 unsortedConversations={unsortedConversations}
-                collapsedIds={collapsedTopicIds}
-                onToggleCollapse={toggleTopicCollapse}
                 onCreateTopic={handleCreateFolder}
                 onRenameTopic={handleRenameFolder}
                 onDeleteTopic={handleDeleteFolder}
