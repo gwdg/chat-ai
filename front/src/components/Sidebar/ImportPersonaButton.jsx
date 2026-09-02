@@ -15,6 +15,25 @@ export default function ImportPersonaButton({
   const { notifySuccess, notifyError } = useToast();
   const { openModal } = useModal();
 
+  if (variant === "icon") {
+    return (
+      <ShortcutTooltip label={t("sidebar.import_persona")}>
+        <button
+          onClick={() => {
+            openModal("importPersona", {
+              topicId: topicId,
+            });
+          }}
+          aria-label={t("sidebar.import_persona")}
+          className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+          style={{ WebkitTapHighlightColor: "transparent" }}
+        >
+          <Bot size={20} className="text-tertiary" />
+        </button>
+      </ShortcutTooltip>
+    )
+  }
+
   // Render sidebar button variant (with text)
   if (variant === "sidebar") {
     return (

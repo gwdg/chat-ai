@@ -40,6 +40,7 @@ import OrgLimitsDisplay from "../../modals/UserSettings/OrgLimitsDisplay";
 import ShortcutTooltip from "./ShortcutTooltip";
 import ImportChatButton from "./ImportChatButton";
 import ImportPersonaButton from "./ImportPersonaButton";
+import NewChatButton from "./NewChatButton";
 
 export default function SidebarContent({
   localState,
@@ -484,21 +485,7 @@ export default function SidebarContent({
         {/* Conversations header, with the search field it reveals */}
         <div className="sticky top-0 z-20 bg-white dark:bg-bg_secondary_dark px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-between gap-1 pb-3">
-            <button
-              onClick={onNewConversation}
-              className={`cursor-pointer w-full text-black dark:text-white font-medium touch-manipulation transition-colors
-                pl-2 pr-4 py-3 rounded-2xl flex items-center justify-start gap-3 text-sm text-tertiary
-                hover:bg-gray-100 dark:hover:bg-gray-800
-                `}
-              style={{
-                WebkitTapHighlightColor: "transparent"
-              }}
-            >
-              <AddFilled size={22} className="text-tertiary" />
-              <span className="truncate">
-                <Trans i18nKey="sidebar.new_conversation" />
-              </span>
-            </button>
+            <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
           <div className="flex items-center justify-between gap-1">
             <ImportPersonaButton topicId={localState?.folderId} variant={"sidebar"} />
             <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
@@ -678,7 +665,6 @@ export default function SidebarContent({
             >
               <Edit size={14} />
               <Trans i18nKey="common.rename" />
-              {/* TODO use Translation */}
             </button>
 
             <button

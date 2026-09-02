@@ -10,6 +10,8 @@ import ImportChatButton from "./ImportChatButton";
 
 import ShortcutTooltip from "./ShortcutTooltip";
 import { useModal } from "../../modals/ModalContext";
+import ImportPersonaButton from "./ImportPersonaButton";
+import NewChatButton from "./NewChatButton";
 
 /**
  * The virtual topic holding conversations with no `folderId`. It is a UI
@@ -183,29 +185,8 @@ export default function TopicList({
                           the bottom edge once the list is long enough to scroll under it */}
             <div className="sticky bottom-0 z-10 bg-white dark:bg-bg_secondary_dark pr-3">
               <div className="flex items-center gap-1">
-                <button
-                  onClick={() => {onNewConversation(id);}}
-                  className="text-tertiary cursor-pointer flex-shrink-0 p-1.5 gap-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                >
-                  <AddFilled size={18} className="text-tertiary" />
-                  <span className="truncate text-xs font-semibold py-1 pr-1">
-                    <Trans i18nKey="sidebar.new_conversation" />
-                  </span>
-                </button>
-                <ShortcutTooltip label={t("sidebar.import_persona")}>
-                  <button
-                    onClick={() => {
-                      openModal("importPersona", {
-                        topicId: id,
-                      });
-                    }}
-                    aria-label={t("sidebar.import_persona")}
-                    className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                    style={{ WebkitTapHighlightColor: "transparent" }}
-                  >
-                    <Bot size={20} className="text-tertiary" />
-                  </button>
-                </ShortcutTooltip>
+                <NewChatButton topicId={id} onNewConversation={onNewConversation} />
+                <ImportPersonaButton topicId={id} />
                 <ImportChatButton topicId={id} />
               </div>
             </div>
