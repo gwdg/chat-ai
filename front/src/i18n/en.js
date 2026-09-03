@@ -435,7 +435,7 @@ export default {
     model:
       "Here you can select the model to chat with. Each model has its own characteristics, capabilities and limitations.",
     sidebar:
-      "Create, remove, import, export, remove, search, and switch between conversations here. Organize your conversations with folders, and chat with pre-defined personas, if you like.",
+      "Create, remove, import, export, remove, search, and switch between conversations here. Organize your conversations with topics, and chat with pre-defined personas, if you like.",
     settings:
       "Here you can adjust conversation-specific settings, including the system prompt, temperature, top_p, and GWDG tools such as Arcana, image generation, and web search. Tools may not work with all models.",
     profile:
