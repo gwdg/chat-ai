@@ -73,7 +73,7 @@ export default function SidebarRail({
           </div>
 
           {/* New chat button */}
-          <NewChatButton variant="rail" topicId={localState?.folderId} />
+          <NewChatButton variant="rail" topicId={localState?.folderId} onNewConversation={handleNewConversation} />
 
           {/* Import persona from Github button */}
           <ImportPersonaButton variant="rail" topicId={localState?.folderId} />
