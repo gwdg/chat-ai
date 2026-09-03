@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import BaseModal from "../../modals/BaseModal";
+import BaseModal from "../../../modals/BaseModal";
 import {
   createFolder,
   renameFolder,
   setFolderColor,
   setFolderIcon,
-} from "../../db";
-import { TOPIC_COLORS } from "./topicColors";
-import { DEFAULT_TOPIC_ICON, TOPIC_ICONS } from "./topicIcons";
+} from "../../../db";
+import { TOPIC_COLORS } from "../topicColors";
+import { DEFAULT_TOPIC_ICON, TOPIC_ICONS } from "../topicIcons";
 
 export default function FolderEditorModal({
   isOpen,

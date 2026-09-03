@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Trans } from "react-i18next";
-import BaseModal from "../../modals/BaseModal";
-import icon_file_json from "../../assets/icons/file_json.svg";
-import icon_file_pdf from "../../assets/icons/file_pdf.svg";
-import icon_file_text from "../../assets/icons/file_text.svg";
-import { getConversation, loadFile, loadFileMeta } from "../../db";
-import { useToast } from "../../hooks/useToast";
+import BaseModal from "../../../modals/BaseModal";
+import icon_file_json from "../../../assets/icons/file_json.svg";
+import icon_file_pdf from "../../../assets/icons/file_pdf.svg";
+import icon_file_text from "../../../assets/icons/file_text.svg";
+import { getConversation, loadFile, loadFileMeta } from "../../../db";
+import { useToast } from "../../../hooks/useToast";
 import { jsPDF } from "jspdf";
-import Logo from "../../assets/logos/chat_ai.png"
-import { processContentItems } from "../../utils/sendMessage";
+import Logo from "../../../assets/logos/chat_ai.png"
+import { processContentItems } from "../../../utils/sendMessage";
 
 export default function ExportChatModal({
   isOpen,

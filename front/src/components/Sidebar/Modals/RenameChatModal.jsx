@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { Trans, useTranslation } from "react-i18next";
-import BaseModal from "../../modals/BaseModal";
-import { updateConversationMeta } from "../../db";
+import BaseModal from "../../../modals/BaseModal";
+import { updateConversationMeta } from "../../../db";
 
 export default function RenameChatModal({
   id,

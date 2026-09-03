@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import BaseModal from "../../modals/BaseModal";
-import { assignConversationToFolder, ensureFolder, getFolder } from "../../db";
+import BaseModal from "../../../modals/BaseModal";
+import { assignConversationToFolder, ensureFolder, getFolder } from "../../../db";
 
 const UNSORTED_FOLDER = "__unsorted__";
 

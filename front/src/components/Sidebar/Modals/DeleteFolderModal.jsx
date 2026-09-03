@@ -1,6 +1,6 @@
 import { Trans } from "react-i18next";
-import BaseModal from "../../modals/BaseModal";
-import { deleteFolder } from "../../db";
+import BaseModal from "../../../modals/BaseModal";
+import { deleteFolder } from "../../../db";
 
 export default function DeleteFolderModal({
   isOpen,

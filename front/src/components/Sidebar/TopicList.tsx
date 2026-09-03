@@ -7,12 +7,12 @@ import { Add, AddFilled, AddAlt, BookmarkAdd, ChevronDown, Edit, TrashCan, UserA
 import type { FolderRow } from "../../db/dbTypes";
 import { topicColor, topicTint, withAlpha } from "./topicColors";
 import { topicIcon } from "./topicIcons";
-import ImportChatButton from "./ImportChatButton";
+import ImportChatButton from "./Buttons/ImportChatButton";
 
 import ShortcutTooltip from "./ShortcutTooltip";
 import { useModal } from "../../modals/ModalContext";
-import ImportPersonaButton from "./ImportPersonaButton";
-import NewChatButton from "./NewChatButton";
+import ImportPersonaButton from "./Buttons/ImportPersonaButton";
+import NewChatButton from "./Buttons/NewChatButton";
 import { selectCollapsedTopics, toggleTopic } from "../../Redux/reducers/interfaceSettingsSlice";
 
 /**
@@ -212,7 +212,7 @@ export default function TopicList({
           const rect = createButtonRef.current?.getBoundingClientRect();
           onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
         }}
-        className="w-full flex items-center text-xs text-secondary font-semibold text-gray-500 cursor-pointer"
+        className="w-full flex items-center text-xs text-secondary dark:text-primary font-semibold cursor-pointer"
       >
         <BookmarkAdd size={18} className="flex-shrink-0" />
           <span className="truncate px-2">{t("folders.create_button")}</span>

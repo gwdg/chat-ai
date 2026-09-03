@@ -6,15 +6,10 @@ import { useNavigate } from "react-router";
 
 import {
   ChevronLeft,
-  Download,
-  Edit,
   FolderMoveTo,
   OverflowMenuVertical,
-  AddFilled,
   Search,
-  TrashCan,
   Close,
-  BrainstormFilled,
 } from "@carbon/icons-react";
 import {
   assignConversationToFolder,
@@ -39,9 +34,13 @@ import { useToast } from "../../hooks/useToast";
 import UserLimitsDisplay from "../../modals/UserSettings/UserLimitsDisplay";
 import OrgLimitsDisplay from "../../modals/UserSettings/OrgLimitsDisplay";
 import ShortcutTooltip from "./ShortcutTooltip";
-import ImportChatButton from "./ImportChatButton";
-import ImportPersonaButton from "./ImportPersonaButton";
-import NewChatButton from "./NewChatButton";
+import ImportChatButton from "./Buttons/ImportChatButton";
+import ImportPersonaButton from "./Buttons/ImportPersonaButton";
+import NewChatButton from "./Buttons/NewChatButton";
+import SummarizeChatButton from "./Buttons/SummarizeChatButton";
+import ExportChatButton from "./Buttons/ExportChatButton";
+import DeleteChatButton from "./Buttons/DeleteChatButton";
+import RenameChatButton from "./Buttons/RenameChatButton";
 
 export default function SidebarContent({
   localState,
@@ -630,24 +629,16 @@ export default function SidebarContent({
           />
 
           <div className="p-1 bg-white dark:bg-gray-800 rounded-lg relative">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const conv = conversations.find((c) => c.id === activeMenu);
-                openModal("renameConversation", {
-                  id: activeMenu,
-                  currentTitle: conv?.title || "Untitled Chat",
-                  localState: localState,
-                  setLocalState: setLocalState,
-                });
-                closeMenu();
-              }}
-              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Edit size={14} />
-              <Trans i18nKey="common.rename" />
-            </button>
-
+            {/* Rename chat menu item */}
+            <RenameChatButton
+              localState={localState}
+              setLocalState={setLocalState}
+              variant={"menu"}
+              closeMenu={closeMenu}
+              convId={activeMenu}
+              conversations={conversations}
+            />
+            {/* Move chat menu item */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -663,62 +654,33 @@ export default function SidebarContent({
               <Trans i18nKey="folders.move_action" />
             </button>
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const conv = conversations.find((c) => c.id === activeMenu);
-                if (conv.id === localState.id) {
-                  // Flush changes
-                  setLocalState((prev) => ({
-                    ...prev,
-                    flush: true,
-                  }));
-                }
-                openModal("exportChat", {
-                  localState,
-                  conversationId: conv.id,
-                });
-                closeMenu();
-              }}
-              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Download size={14} />
-              <Trans i18nKey="export_conversation.export" />
-            </button>
+            {/* Export chat menu item */}
+            <ExportChatButton
+              localState={localState}
+              setLocalState={setLocalState}
+              variant={"menu"}
+              closeMenu={closeMenu}
+              convId={activeMenu}
+            />
 
+            {/* Summarize chat menu item - only if active chat */}
             {localState.id == activeMenu && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const conv = conversations.find((c) => c.id === activeMenu);
-                openModal("summarizeChat", {
-                  localState: localState,
-                  setLocalState: setLocalState,
-                });
-                closeMenu();
-              }}
-              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <BrainstormFilled size={14} />
-              <Trans i18nKey="common.summarize" />
-            </button>
+              <SummarizeChatButton
+                variant={"menu"}
+                localState={localState}
+                setLocalState={setLocalState}
+                closeMenu={closeMenu}
+              />
             )}
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                openModal("deleteChat", {
-                  id: activeMenu,
-                  conversations,
-                  currentConversationId: localState?.id,
-                });
-                closeMenu();
-              }}
-              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/30"
-            >
-              <TrashCan size={14} />
-              <Trans i18nKey="common.delete" />
-            </button>
+            
+            {/* Delete chat menu item */}
+            <DeleteChatButton
+              localState={localState}
+              setLocalState={setLocalState}
+              variant={"menu"}
+              closeMenu={closeMenu}
+              convId={activeMenu}
+            />
           </div>
         </div>
       )}

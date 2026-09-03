@@ -1,12 +1,12 @@
 import { Trans } from "react-i18next";
-import BaseModal from "../../modals/BaseModal";
+import BaseModal from "../../../modals/BaseModal";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
-import { persistor } from "../../Redux/store/store";
-import { createConversation, deleteConversation } from "../../db";
-import { getDefaultConversation } from "../../utils/conversationUtils";
-import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
+import { persistor } from "../../../Redux/store/store";
+import { createConversation, deleteConversation } from "../../../db";
+import { getDefaultConversation } from "../../../utils/conversationUtils";
+import { selectUserSettings } from "../../../Redux/reducers/userSettingsReducer";
 
 export default function DeleteChatModal({
   id,

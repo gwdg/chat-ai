@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Trans } from "react-i18next";
-import BaseModal from "../../modals/BaseModal";
-import { useImportConversation } from "../../hooks/useImportConversation";
-import i18n from "../../i18n";
-import { useToast } from "../../hooks/useToast";
+import BaseModal from "../../../modals/BaseModal";
+import { useImportConversation } from "../../../hooks/useImportConversation";
+import i18n from "../../../i18n";
+import { useToast } from "../../../hooks/useToast";
 import {
   Folder,
   FolderOpen,

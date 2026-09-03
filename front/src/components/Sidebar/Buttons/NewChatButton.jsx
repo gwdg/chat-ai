@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
-import { useImportConversation } from "../../hooks/useImportConversation";
+import { useImportConversation } from "../../../hooks/useImportConversation";
 import { AddFilled } from "@carbon/icons-react";
-import { useToast } from "../../hooks/useToast";
-import ShortcutTooltip from "./ShortcutTooltip";
-import { useModal } from "../../modals/ModalContext";
+import { useToast } from "../../../hooks/useToast";
+import ShortcutTooltip from "../ShortcutTooltip";
+import { useModal } from "../../../modals/ModalContext";
 
 
 export default function NewChatButton({
@@ -27,6 +27,23 @@ export default function NewChatButton({
           {t("sidebar.new_conversation")}
         </span>
       </button>
+    )
+  }
+
+  if (variant === "rail") {
+    return (
+      <ShortcutTooltip
+        label={t("sidebar.new_conversation")}
+        shortcut={t("sidebar.shortcut_new_conversation")}
+      >
+        <button
+          onClick={() => {onNewConversation(topicId);}}
+          className={`cursor-pointer p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl flex items-center justify-center`}
+          aria-label={t("sidebar.new_conversation")}
+        >
+          <AddFilled size={22} className="text-tertiary" />
+        </button>
+      </ShortcutTooltip>
     )
   }
 

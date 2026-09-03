@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
-import { useImportConversation } from "../../hooks/useImportConversation";
+import { useImportConversation } from "../../../hooks/useImportConversation";
 import { Bot } from "@carbon/icons-react";
-import { useToast } from "../../hooks/useToast";
-import ShortcutTooltip from "./ShortcutTooltip";
-import { useModal } from "../../modals/ModalContext";
+import { useToast } from "../../../hooks/useToast";
+import ShortcutTooltip from "../ShortcutTooltip";
+import { useModal } from "../../../modals/ModalContext";
 
 
 export default function ImportPersonaButton({
@@ -29,6 +29,25 @@ export default function ImportPersonaButton({
           style={{ WebkitTapHighlightColor: "transparent" }}
         >
           <Bot size={20} className="text-tertiary" />
+        </button>
+      </ShortcutTooltip>
+    )
+  }
+
+  if (variant === "rail") {
+    return (
+      <ShortcutTooltip label={t("sidebar.import_persona")}>
+        <button
+          onClick={() => {
+            openModal("importPersona", {
+              topicId: topicId,
+            });
+          }}
+          aria-label={t("sidebar.import_persona")}
+          className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+          style={{ WebkitTapHighlightColor: "transparent" }}
+        >
+          <Bot size={22} className="text-tertiary" />
         </button>
       </ShortcutTooltip>
     )
