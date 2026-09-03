@@ -680,6 +680,7 @@ export default function SidebarContent({
               variant={"menu"}
               closeMenu={closeMenu}
               convId={activeMenu}
+              conversations={conversations}
             />
           </div>
         </div>

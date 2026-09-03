@@ -189,6 +189,7 @@ export default function TopicList({
             ) }
             {/* New Chat / Persona / Import — sits after the list, and sticks to
                           the bottom edge once the list is long enough to scroll under it */}
+            {id && id != UNSORTED_TOPIC_ID && (
             <div className="sticky bottom-0 z-10 bg-white dark:bg-bg_secondary_dark pr-3">
               <div className="flex items-center gap-1">
                 <NewChatButton topicId={id} onNewConversation={onNewConversation} />
@@ -196,6 +197,7 @@ export default function TopicList({
                 <ImportChatButton topicId={id} />
               </div>
             </div>
+            )}
           </div>
         )}
       </div>

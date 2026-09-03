@@ -12,6 +12,7 @@ export default function DeleteChatButton({
   variant = "menu",
   closeMenu = null,
   convId = null,
+  conversations = null,
 }) {
   const { t } = useTranslation();
   const { notifySuccess, notifyError } = useToast();
@@ -19,7 +20,7 @@ export default function DeleteChatButton({
 
   const handleDeleteChat = () => {
     openModal("deleteChat", {
-        id: activeMenu,
+        id: convId,
         conversations,
         currentConversationId: localState?.id,
     });
