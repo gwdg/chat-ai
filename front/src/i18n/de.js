@@ -301,6 +301,7 @@ export default {
       export_error: "Lokale Daten konnten nicht exportiert werden.",
     },
     clear_data_button: "Daten löschen",
+    import_data_button: "Daten importieren",
     export_data_button: "Daten exportieren",
     memory: {
       title: "Erinnerungen",

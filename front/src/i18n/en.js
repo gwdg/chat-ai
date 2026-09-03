@@ -298,6 +298,7 @@ export default {
       export_error: "Local data could not be exported.",
     },
     clear_data_button: "Clear Data",
+    import_data_button: "Import Data",
     export_data_button: "Export Data",
     memory: {
       title: "User Memories",

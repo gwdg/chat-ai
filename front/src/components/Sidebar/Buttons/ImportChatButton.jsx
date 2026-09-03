@@ -67,6 +67,29 @@ export default function ImportChatButton({
   };
 
   // Render icon variant (original behavior)
+  if (variant === "userData") {
+    return (
+      <>
+        <input
+          type="file"
+          ref={hiddenFileInputJSON}
+          accept="application/JSON"
+          onChange={handleFilesChangeJSON}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={handleClickJSON}
+          className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+        >
+          <Upload className="h-4 w-4" aria-hidden="true" />
+          {t("user_settings.import_data_button")}
+        </button>
+      </>
+    );
+  }
+
+  // Render icon variant (original behavior)
   if (variant === "icon") {
     return (
       <>
