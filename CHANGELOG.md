@@ -1,5 +1,12 @@
 # Changelog 
 
+## Version: v1.0.0 (03.09.2026)
+Highlights:
+- Redesigned UI to be more intuitive and follow conventions for main elements 
+- Added reasoning effort configuration for supported models
+- Added topics instead of folders to organize chats, with custom icon and colors
+- Bug fixes
+
 ## Version: v0.9.4 (21.05.2026)
 Highlights:
 - Upstream error messages stored and shown permanently

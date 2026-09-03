@@ -32,7 +32,7 @@ export default function RegenerateConfirmModal({
       </div>
 
       {/* Checkbox */}
-      <div className="flex items-center gap-3">
+      {/*<div className="flex items-center gap-3">
         <input
           type="checkbox"
           id="dontShowAgainRegenerate"
@@ -46,7 +46,7 @@ export default function RegenerateConfirmModal({
         >
           <Trans i18nKey="common.dont_show_again" />
         </label>
-      </div>
+      </div>*/}
 
       {/* Action buttons */}
       <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm mt-4">
