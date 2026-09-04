@@ -32,13 +32,14 @@ async function* chatCompletions (
         if (conversation.settings?.reasoning_effort !== undefined && conversation.settings?.reasoning_effort !== null) {
           reasoning_effort = Math.min(conversation.settings.reasoning_effort, modelDefaults.reasoning_options.length - 1)
         }
-        if (model?.toLowerCase().includes("mistral") || model?.toLowerCase().includes("openai") ) {
-          // Handle mistral and openai models separately
+        if (model?.toLowerCase().includes("mistral")) {
+          // Handle models that don't use enable_thinking separately
           params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
         }
         else {
           if (reasoning_effort == 0) {
-            params.chat_template_kwargs = {enable_thinking: false};
+            params.chat_template_kwargs = modelDefaults.reasoning_options[0] == "none" ?
+              {enable_thinking: false} : {reasoning_effort: modelDefaults.reasoning_options[0]};
           } else if (modelDefaults.reasoning_options[reasoning_effort] == "on") {
             params.chat_template_kwargs = {enable_thinking: true};
           } else {
