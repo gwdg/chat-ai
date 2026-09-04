@@ -975,6 +975,21 @@ export default function Prompt({
     bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-center 
     sm:overflow-y-auto rounded-2xl shadow-bottom dark:shadow-darkBottom
     md:max-w-[85vw] xl:max-w-[1300px] transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none mx-auto">
+      {speechModeOpen && portalRoot &&
+          createPortal(
+            <div className="absolute inset-0 z-50 bg-slate-100 dark:bg-black">
+              <SpeechModePanel
+                ref={speechPanelRef}
+                onClose={handleSpeechClose}
+                onInterrupt={handleSpeechInterrupt}
+                onAudioCaptured={handleSpeechAudio}
+                phase={speechPhase}
+                autoStart
+              />
+            </div>,
+            portalRoot
+          )
+        }
         {/* Attachments Container */}
         <AttachmentsContainer
           localState={localState}
@@ -1044,19 +1059,6 @@ export default function Prompt({
           </div>
           {/* Buttons on the right */}
           <div className="flex gap-4 items-center justify-end min-w-0">
-            {/* Abort button (when loading) */}
-            <AbortButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
-            {/* If not loading, show send button */}
-            <SendButton
-              localState={localState}
-              setLocalState={setLocalState}
-              handleSend={handleSend}
-              prompt={prompt}
-            />
-            </div>
             {/* Mobile Floating Controls */}
             {!speechModeOpen && (
               <div className="hidden mobile:flex absolute right-2.5 bottom-2.5 z-20 items-center gap-1.5 rounded-full border border-gray-200/90 dark:border-gray-700/90 bg-white/95 dark:bg-bg_secondary_dark/95 backdrop-blur-sm px-2 py-1.5 shadow-md">
@@ -1074,23 +1076,37 @@ export default function Prompt({
               </div>
             )}
             {/* Desktop / Tablet Buttons Section */}
-          {!speechModeOpen && (
-            <div className="mobile:hidden px-3 py-2 w-full h-fit grid grid-cols-[auto_1fr_auto] items-center gap-3 bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
-              <div className="flex justify-center">
-                {speechEnabled && (
-                  <button
-                    type="button"
-                    onClick={() => setSpeechModeOpen(true)}
-                    className="cursor-pointer h-9 sm:h-10 px-4 sm:px-5 rounded-full bg-tertiary text-white text-xs sm:text-sm font-semibold shadow-lg hover:bg-[#008ac2] transition-all duration-200 flex items-center justify-center gap-2"
-                    aria-label={t("conversation.speech_mode_button")}
-                  >
-                    <AudioWaveform className="h-4 w-4 sm:h-5 sm:w-5" />
-                    {t("conversation.speech_mode_button")}
-                  </button>
-                )}
+            {!speechModeOpen && (
+              <div className="mobile:hidden px-3 py-2 w-full h-fit grid grid-cols-[auto_1fr_auto] items-center gap-3 bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
+                <div className="flex justify-center">
+                  {speechEnabled && (
+                    <button
+                      type="button"
+                      onClick={() => setSpeechModeOpen(true)}
+                      className="cursor-pointer h-9 sm:h-10 px-4 sm:px-5 rounded-full bg-tertiary text-white text-xs sm:text-sm font-semibold shadow-lg hover:bg-[#008ac2] transition-all duration-200 flex items-center justify-center gap-2"
+                      aria-label={t("conversation.speech_mode_button")}
+                    >
+                      <AudioWaveform className="h-4 w-4 sm:h-5 sm:w-5" />
+                      {t("conversation.speech_mode_button")}
+                    </button>
+                  )}
+                </div>
               </div>
+            )}
+            {/* Abort button (when loading) */}
+            <AbortButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+            {/* If not loading, show send button */}
+            <SendButton
+              localState={localState}
+              setLocalState={setLocalState}
+              handleSend={handleSend}
+              prompt={prompt}
+            />
             </div>
-          )}
+            
           </div>
       </div>
       </div>

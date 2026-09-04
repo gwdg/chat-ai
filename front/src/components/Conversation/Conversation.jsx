@@ -218,6 +218,7 @@ export default function Conversation({
 
   return (
     <div
+      id={"conversation-shell"}
       className={`w-full flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
