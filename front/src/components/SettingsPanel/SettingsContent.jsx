@@ -5,7 +5,8 @@ import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
 //Components
-
+import ArcanaContainer from "./ArcanaContainer";
+import AudioSettingsContainer from "./AudioSettingsContainer";
 import ShareSettingsButton from "./ShareSettingsButton";
 import SystemPromptContainer from "./SystemPromptContainer";
 import TemperatureSlider from "./TemperatureSlider";
@@ -33,6 +34,14 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const userSettings = useSelector(selectUserSettings);
   const settings = localState.settings;
   const tools = settings?.tools || {};
+  const toolsModule = import.meta.env.VITE_MODULE_TOOLS  === "true";
+  const choicesModule = import.meta.env.VITE_MODULE_CHOICES  === "true";
+  const showArcanaBox = !!settings?.enable_tools && !!tools.arcana;
+  const showMCPBox = !!settings?.enable_tools && !!tools.mcp;
+  const showAudioSettings = toolsModule && !!settings?.enable_tools && !!tools.audio_generation;
+  const showVideoList = !!tools.video_generation;
+
+  const migrationData = useSelector((state) => state.migration_data) || {};
   const { notifySuccess, notifyError } = useToast();
 
   //Local useStates
@@ -94,7 +103,12 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
-          {/* temperature Slider */}
+          {showAudioSettings && (
+            <AudioSettingsContainer
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          )}
           <TemperatureSlider
             localState={localState}
             setLocalState={setLocalState}

@@ -37,6 +37,10 @@ export const getDefaultSettings = (userSettings = {}) => {
       "arcana": true,
       "mcp": false,
     },
+    audio: {
+      voice: "auto",
+      language: "auto",
+    },
     enable_web_search: false,
     arcana: {id: "",},
   };

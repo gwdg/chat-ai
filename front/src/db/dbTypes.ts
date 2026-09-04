@@ -127,3 +127,13 @@ export type FolderRow = {
   // to the default icon. Neither field is indexed, so no schema bump is needed.
   icon?: string
 }
+
+export type CustomPersonaRow = {
+  id: string
+  title: string
+  createdAt: number
+  updatedAt: number
+  sourceConversationId: string
+  sourceConversationTitle?: string
+  payload: any
+}

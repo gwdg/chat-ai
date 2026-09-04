@@ -1,5 +1,5 @@
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useToast } from "../../hooks/useToast";
@@ -22,6 +22,10 @@ export default function PromptTextArea({
   const { t } = useTranslation();
   const textareaRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 800px)").matches
+  );
   const { notifySuccess, notifyError } = useToast();
   const { addAttachments, pasteAttachments } = useAttachments();
 
@@ -39,7 +43,37 @@ export default function PromptTextArea({
       const scrollHeight = textareaRef.current.scrollHeight;
       textareaRef.current.style.height = `${Math.min(Math.max(scrollHeight, isMd ? MIN_HEIGHT_MD : MIN_HEIGHT), isMd? MAX_HEIGHT_MD : MAX_HEIGHT)}px`;
     }
-  };
+    return () => {
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", onMediaChange);
+      } else if (typeof mediaQuery.removeListener === "function") {
+        mediaQuery.removeListener(onMediaChange);
+      }
+    };
+  }
+  
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia("(max-width: 800px)");
+    const onMediaChange = (event) => setIsMobileViewport(event.matches);
+    setIsMobileViewport(mediaQuery.matches);
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", onMediaChange);
+    } else if (typeof mediaQuery.addListener === "function") {
+      mediaQuery.addListener(onMediaChange);
+    }
+    return () => {
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", onMediaChange);
+      } else if (typeof mediaQuery.removeListener === "function") {
+        mediaQuery.removeListener(onMediaChange);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    requestAnimationFrame(() => adjustHeight());
+  }, [prompt, adjustHeight, isMobileViewport]);
 
   // Handle file drop events for images and videos
   const handleDrop = async (e) => {

@@ -59,7 +59,7 @@ export default function SidebarContent({
   const dispatch = useDispatch();
   const { openModal } = useModal();
   const { t } = useTranslation();
-  const { notifyError } = useToast();
+  const { notifyError, notifySuccess } = useToast();
   const currentConversationId = localState?.id;
   const showUsageInSidebar = useSelector(selectShowUsageInSidebar);
   const isDark = useSelector(selectDarkMode);
@@ -639,6 +639,18 @@ export default function SidebarContent({
               conversations={conversations}
             />
             {/* Move chat menu item */}
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                await handleCreateCustomPersona(activeMenu);
+                closeMenu();
+              }}
+              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <Trans i18nKey="persona.createFromConversation" />
+            </button>
+
             <button
               onClick={(e) => {
                 e.stopPropagation();

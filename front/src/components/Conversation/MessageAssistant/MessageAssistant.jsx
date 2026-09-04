@@ -156,6 +156,12 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   );
 
   const content = message?.content?.[0]?.text ?? "";
+  const hasAttachments =
+    Array.isArray(message?.content) &&
+    message.content.some((item, index) => index > 0 && item?.type === "file");
+  const hasHiddenSpeechText =
+    typeof message?.meta?.speechAssistantText === "string" &&
+    message.meta.speechAssistantText.trim().length > 0;
   const isContentEmpty = !content.trim();
   const errorMessage = message?.meta?.error || "Unknown Error";
   return (
@@ -165,30 +171,6 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
       className={`text-black dark:text-white overflow-hidden
           ${editMode ? "px-1 pt-1" : "px-3 pt-3"}`}
     >
-      {isContentEmpty ? (
-        <div
-          className={`flex flex-col
-            ${loading ? "pb-4" : "pb-3"}`}
-        >
-          {loading && <Typing />}
-          {!loading && (
-            <div className="flex flex-col items-center justify-start gap-3 py-1">
-              <div className="text-red-500 dark:text-red-400 text-sm font-medium text-center">
-              {errorMessage}
-              </div>
-              <button
-                onClick={handleRetry}
-                className="cursor-pointer flex items-center gap-2 px-4 py-3 text-sm opacity-100 text-black dark:text-white bg-red-500/40 rounded-full hover:bg-red-400/100 transition-all"
-                disabled={loading}
-              >
-                <RotateCw className="w-4 h-4" />
-                Try Again
-              </button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
           {/* Edit Mode */}
           {editMode && (
             <div className="flex flex-col justify-between gap-1">
@@ -281,9 +263,11 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                {message.content[0]?.text}
-              </MarkdownRenderer>
+              {!isContentEmpty && (
+                <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+                  {message.content[0]?.text}
+                </MarkdownRenderer>
+              )}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
@@ -350,9 +334,6 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               </div>
             </div>
           )}
-        </>
-      )}
-      
     </div>
   );
 });

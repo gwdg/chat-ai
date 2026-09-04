@@ -3,7 +3,7 @@ import Tooltip from "../Others/Tooltip";
 import { Download } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
 
-export default function ExportButton({ localState, setLocalState }) {
+export default function ExportButton({ localState, setLocalState, closeMenu }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
@@ -24,7 +24,9 @@ export default function ExportButton({ localState, setLocalState }) {
       localState,
       conversationId: localState.id,
     });
-    closeMenu();
+    if (typeof closeMenu === "function") {
+      closeMenu();
+    }
   };
 
   return (
