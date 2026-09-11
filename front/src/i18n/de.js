@@ -439,6 +439,10 @@ export default {
       "Keine Sorge! Sie können eine neue Unterhaltung starten, indem Sie auf den Button unten klicken.",
     buttonText: "Zum Chat gehen",
   },
+  no_access: {
+    title: "Kein Zugriff",
+    description: "Sie haben keinen Zugriff auf diese Anwendung.",
+  },
   // Announcement
   announcement: "",
 };

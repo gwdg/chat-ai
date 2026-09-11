@@ -3,9 +3,9 @@ import type { FrontConfig } from "./front.config";
 const config: FrontConfig = {
     "mode": "prod",
     "port": 7220,
-    "backendPath": "/api",
-    "modelsPath": "/models",
-    "userDataPath": "/user",
+    "backendPath": "http://localhost:8081",
+    "modelsPath": "http://localhost:8081/models",
+    "userDataPath": "http://localhost:8081/user",
     "titleGenerationModel": "meta-llama-3.1-8b-instruct",
     "memoryGenerationModel": "meta-llama-3.1-8b-instruct",
     "proposalGenerationModel": "qwen3-30b-a3b-instruct-2507",

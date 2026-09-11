@@ -8,15 +8,19 @@ import store, { persistor } from "./Redux/store/store.jsx"; // Import Redux stor
 import App from "./App.jsx"; // Import main App component
 import "./index.css"; // Import global CSS styles
 import { TabTitleManager } from "./hooks/useTabTitle.jsx";
+import AccessGate from "./components/Others/AccessGate.jsx";
 
 // Render the app inside the root element using createRoot for better performance
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <Provider store={store}>
-    {/* PersistGate ensures Redux store rehydration before rendering */}
-    <PersistGate loading={null} persistor={persistor}>
-      {/* Render the main App component */}
-      <TabTitleManager />
-      <App />
-    </PersistGate>
-  </Provider>
+  // AccessGate checks the user endpoint before anything else is rendered
+  <AccessGate>
+    <Provider store={store}>
+      {/* PersistGate ensures Redux store rehydration before rendering */}
+      <PersistGate loading={null} persistor={persistor}>
+        {/* Render the main App component */}
+        <TabTitleManager />
+        <App />
+      </PersistGate>
+    </Provider>
+  </AccessGate>
 );

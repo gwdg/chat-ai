@@ -22,6 +22,11 @@ let apiEndpoint = "https://chat-ai.academiccloud.de/v1";
 let gatewayEndpoint = apiEndpoint;
 let apiKey = "";
 let serviceName = "Chat AI Dev";
+// Access filter on OIDC org (oidc_claim_o) / organization (oidc_claim_ou)
+// Shape: { org: { whitelist: [], blacklist: [] }, organization: { whitelist: [], blacklist: [] } }
+let userFilter = {};
+// Users (matched by uid or email) that always bypass the userFilter
+let adminUsers = [];
 
 // Load configuration
 try {
@@ -40,6 +45,12 @@ try {
   }
   apiKey = config.apiKey;
   serviceName = config.serviceName;
+  if (config.userFilter && typeof config.userFilter === "object") {
+    userFilter = config.userFilter;
+  }
+  if (Array.isArray(config.adminUsers)) {
+    adminUsers = config.adminUsers.map((u) => String(u).trim().toLowerCase());
+  }
 } catch (error) {
   console.error("Failed to read back.json. Using default values.", error);
 }
@@ -69,6 +80,64 @@ app.use((err, req, res, next) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
+
+// Extract user info from OIDC headers set by the auth proxy
+function getUserFromHeaders(req) {
+  return {
+    email: req.headers["oidc_claim_email"] || "",
+    firstname: req.headers["oidc_claim_given_name"] || "",
+    lastname: req.headers["oidc_claim_family_name"] || "",
+    org: req.headers["oidc_claim_o"] || "",
+    organization: req.headers["oidc_claim_ou"] || "",
+    username: req.headers["oidc_claim_uid"] || "",
+    uid: req.headers["oidc_claim_uid"] || "",
+  };
+}
+
+// Multi-valued claims may arrive comma or semicolon separated
+function splitClaim(value) {
+  return value
+    .split(/[,;]/)
+    .map((v) => v.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+// Check a claim value against a { whitelist, blacklist } rule
+function passesRule(value, rule) {
+  if (!rule) return true;
+  const values = splitClaim(value);
+  const normalize = (list) =>
+    Array.isArray(list) ? list.map((v) => String(v).trim().toLowerCase()) : [];
+  const whitelist = normalize(rule.whitelist);
+  const blacklist = normalize(rule.blacklist);
+  if (blacklist.length > 0 && values.some((v) => blacklist.includes(v))) {
+    return false;
+  }
+  if (whitelist.length > 0 && !values.some((v) => whitelist.includes(v))) {
+    return false;
+  }
+  return true;
+}
+
+// Reject requests from users whose org/organization is not allowed
+app.use((req, res, next) => {
+  const user = getUserFromHeaders(req);
+  const isAdmin =
+    adminUsers.length > 0 &&
+    [user.uid, user.email]
+      .map((v) => v.trim().toLowerCase())
+      .some((v) => v && adminUsers.includes(v));
+  if (
+    !isAdmin &&
+    !passesRule(user.org, userFilter.org) ||
+    !passesRule(user.organization, userFilter.organization)
+  ) {
+    return res
+      .status(403)
+      .json({ error: "Access denied for your organization." });
+  }
+  next();
+});
 
 // Function to process file with docling
 async function processFile(file, inference_id) {
@@ -152,17 +221,10 @@ app.get("/models", async (req, res) => {
   }
 });
 
-// Get placeholder user data
+// Get user data from OIDC request headers
 app.get("/user", async (req, res) => {
   try {
-    res.status(200).json({
-      email: "user@example.com",
-      firstname: "Sample",
-      lastname: "User",
-      org: "GWD",
-      organization: "GWDG",
-      username: "sample-user",
-    });
+    res.status(200).json(getUserFromHeaders(req));
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch user info." });

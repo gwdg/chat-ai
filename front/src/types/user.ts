@@ -14,5 +14,6 @@ export interface User {
   org: string;
   organization: string;
   username: string;
+  uid: string;
 }
 
