@@ -61,7 +61,10 @@ cd front && npm i && npm run dev     # :8080
 
 Both default `CONFIG_LOCATION` to `../secrets/<name>.json` and `path.resolve` it against the
 **current working directory**, so run them from inside `front/` and `back/`, or set
-`CONFIG_LOCATION` explicitly.
+`CONFIG_LOCATION` explicitly. The two services fail differently when the path is wrong: `front`
+exits, while `back` only logs `Failed to read back.json. Using default values.` and keeps running
+**with an empty `apiKey`** — so every upstream call comes back unauthorized. If requests are
+rejected, check that log line first.
 
 ### Docker
 
@@ -79,13 +82,21 @@ configured. `front/entrypoint.sh` greps `"mode"` out of `front.json` and runs `n
 ### Checks
 
 ```bash
-cd front && npm run lint     # eslint, --max-warnings 0
-cd front && npm run build    # vite build
+cd front && npm run build    # vite build — works, ~6s
 ```
 
-**There is no test suite and no CI.** `front` has no test script, `back`'s `npm test` is
-`exit 1`, and `.github/` contains only issue templates. So: lint + build + exercise the change in a
+**`npm run lint` does not currently run.** The script invokes `eslint`, but neither `eslint` nor the
+plugins `.eslintrc.cjs` extends are in `front/devDependencies`, so a clean `npm i` gives
+`sh: eslint: command not found`. (`.eslintrc.cjs` is also the pre-flat-config format.) Don't put
+lint in your verification loop until that is fixed, and don't report it as passing.
+
+**There is no test suite and no CI.** `front` has no test script, `back`'s `npm test` is `exit 1`,
+and `.github/` contains only issue templates. So the loop is: build + exercise the change in a
 browser. A passing build is not evidence that behaviour works.
+
+`npm i` in `front/` may rewrite `package-lock.json` (the committed lock is stamped with an older
+`version` than `package.json`). Check `git status` afterwards and keep unrelated lockfile churn out
+of your commit.
 
 ## 4. Architecture invariants
 
@@ -164,6 +175,19 @@ The API key is read only by `back/service.mjs` from `secrets/back.json`. `secret
 ignores everything in that directory except itself, so real config files there are invisible to
 git. Never move a key into front-end code or into a `.sample`.
 
+### 4.8 The back service's responses can mislead you
+
+Verified in `back/service.mjs`:
+
+- **`/models` always returns HTTP 200**, even when the upstream rejects the request — the handler is
+  `res.status(200).json(await response.json())`, so an upstream `{"message":"Unauthorized"}` arrives
+  as a 200. Check the response body, never the status.
+- **If `apiKey` is empty, `Authorization` falls back to the `inference-id` request header** rather
+  than erroring — that is how the deployed setup passes per-user credentials through.
+- **`/user` is a hard-coded placeholder** in this repo: it always returns the same `sample-user`
+  object. Real user data comes from the gateway in a full deployment, so don't debug user/usage
+  features against this response.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
@@ -187,10 +211,10 @@ git. Never move a key into front-end code or into a `.sample`.
 
 ## 6. Git workflow
 
-- Long-lived branches on `origin` are `main`, `dev` and `beta`. Work branches use flat,
-  dash-separated names — e.g. `feature-forms`, `fix-toolNaming`, `markdown-fixes`, `tools-ui`,
-  `lib-major-openai-v6`. CONTRIBUTING.md describes the fork → feature branch → PR flow and does
-  not name a target branch.
+- **Branch off `dev` and open PRs into `dev`.** `beta` is for changes that need testing before
+  they go into `dev`; `main` carries releases. Work branches use flat, dash-separated names — e.g.
+  `feature-forms`, `fix-toolNaming`, `markdown-fixes`, `tools-ui`, `lib-major-openai-v6`.
+  (CONTRIBUTING.md documents the fork → feature branch → PR flow for outside contributors.)
 - Releases are manual: bump `version` in `front/package.json` — it is shown in the footer by
   `VersionDisplay.jsx` and stamped into exported conversations by `conversationUtils.js` — and add a
   `## Version: vX.Y.Z (DD.MM.YYYY)` block with a `Highlights:` list at the top of `CHANGELOG.md`. `back/package.json` is versioned independently and is not
@@ -199,7 +223,7 @@ git. Never move a key into front-end code or into a `.sample`.
 
 ## 7. Before you finish
 
-- [ ] `npm run lint` and `npm run build` clean in `front/`
+- [ ] `npm run build` clean in `front/` (there is no working lint — see §3)
 - [ ] new strings added to both `en.js` and `de.js`
 - [ ] Dexie schema change → version bump + `.upgrade()` backfill, existing version blocks untouched
 - [ ] new persisted Redux key → `whitelist` + `getDefaultState()` (+ a migration if the shape changed)
