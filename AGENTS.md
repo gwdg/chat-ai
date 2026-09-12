@@ -94,9 +94,8 @@ lint in your verification loop until that is fixed, and don't report it as passi
 and `.github/` contains only issue templates. So the loop is: build + exercise the change in a
 browser. A passing build is not evidence that behaviour works.
 
-`npm i` in `front/` may rewrite `package-lock.json` (the committed lock is stamped with an older
-`version` than `package.json`). Check `git status` afterwards and keep unrelated lockfile churn out
-of your commit.
+`npm i` can rewrite `package-lock.json`. Check `git status` afterwards and keep unrelated lockfile
+churn out of your commit.
 
 ## 4. Architecture invariants
 
