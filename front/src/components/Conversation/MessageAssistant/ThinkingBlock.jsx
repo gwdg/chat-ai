@@ -7,7 +7,7 @@ import { ChevronDown, ChevronRight, Brain } from "lucide-react";
 import { rendererComponents } from "./MarkdownRenderer";
 
 const ThinkingBlock = memo(
-  ({ children, autoExpand = false, isStreaming = false }) => {
+  ({ children, autoExpand = false, isStreaming = false, renderContent }) => {
     const [isOpen, setIsOpen] = useState(autoExpand && isStreaming);
     const [autoOpened, setAutoOpened] = useState(autoExpand && isStreaming);
     const contentRef = useRef(null);
@@ -50,13 +50,17 @@ const ThinkingBlock = memo(
             aria-live="polite"
             aria-busy={isStreaming ? "true" : "false"}
           >
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
-              components={rendererComponents}
-            >
-              {children || ""}
-            </ReactMarkdown>
+            {renderContent ? (
+              renderContent(children || "")
+            ) : (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+                components={rendererComponents}
+              >
+                {children || ""}
+              </ReactMarkdown>
+            )}
           </div>
         )}
       </div>
