@@ -1,16 +1,13 @@
 
-import { useState, useMemo, useEffect, useRef, memo, use } from "react";
+import { useState, useMemo, useEffect, useRef, memo } from "react";
 import Tooltip from "../Others/Tooltip";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useSelector } from "react-redux";
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { useTranslation } from "react-i18next";
 
 import {
   faChevronDown, faList, faTableCells, faMagnifyingGlass, faBrain,
-  faImage, faVideo, faCircleDot, faLayerGroup, faFilter,
-  faHashtag, faTriangleExclamation,
-  faShield,
+  faImage, faVideo, faCircleDot, faTriangleExclamation,
   faShieldHalved,
   faMicrophone
 } from '@fortawesome/free-solid-svg-icons'
@@ -25,7 +22,6 @@ import {
   faArrowUpAZ,
   faCircleInfo
 } from "@fortawesome/free-solid-svg-icons";
-import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 const sortOptions = [
   { value: "name-asc", label: "Name (A→Z)" },
   { value: "name-desc", label: "Name (Z→A)" },

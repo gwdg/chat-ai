@@ -1,10 +1,9 @@
 import { Trans } from "react-i18next";
 import { useAttachments } from "../../hooks/useAttachments";
 import MiniAudioButton from "./MiniAudioButton";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useModal } from "../../modals/ModalContext";
 import {
-  useFiles,
   useFileMeta,
   useFileBase64,
   loadFile,

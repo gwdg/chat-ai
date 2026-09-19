@@ -9,7 +9,6 @@ import {
   editMemory,
   deleteMemory,
   selectAllMemories,
-  deleteAllMemories,
 } from "../../Redux/reducers/userSettingsReducer";
 
 export default function UserMemoryModal({

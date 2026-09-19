@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Volume2, Square } from "lucide-react";
 import generateAudio from "../../../apis/generateAudio";
 

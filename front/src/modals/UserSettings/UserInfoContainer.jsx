@@ -1,4 +1,4 @@
-import { AtSign, Building2, LogOut, Mail } from "lucide-react";
+import { Building2, LogOut, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 

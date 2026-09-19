@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
 import { Trans } from "react-i18next";
 
 const LandingPage = () => {

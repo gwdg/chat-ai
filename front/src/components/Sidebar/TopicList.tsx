@@ -1,15 +1,14 @@
 import { useCallback, useRef } from "react";
 import type { DragEvent, ReactNode } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { Add, AddFilled, AddAlt, BookmarkAdd, ChevronDown, Edit, TrashCan, UserAvatar, Bot } from "@carbon/icons-react";
+import { BookmarkAdd, ChevronDown, Edit, TrashCan } from "@carbon/icons-react";
 
 import type { FolderRow } from "../../db/dbTypes";
-import { topicColor, topicTint, withAlpha } from "./topicColors";
+import { topicColor, withAlpha } from "./topicColors";
 import { topicIcon } from "./topicIcons";
 import ImportChatButton from "./Buttons/ImportChatButton";
 
-import ShortcutTooltip from "./ShortcutTooltip";
 import { useModal } from "../../modals/ModalContext";
 import ImportPersonaButton from "./Buttons/ImportPersonaButton";
 import NewChatButton from "./Buttons/NewChatButton";

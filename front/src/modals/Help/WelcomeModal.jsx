@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans } from "react-i18next";
 import BaseModal from "../BaseModal";
 

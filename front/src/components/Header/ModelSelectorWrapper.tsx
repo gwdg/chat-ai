@@ -1,5 +1,5 @@
 
-import { memo, useEffect, useState, useRef } from 'react'
+import { memo, useEffect } from 'react'
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';

@@ -1,5 +1,4 @@
 import packageJson from "../../../package.json";
-import { Trans, useTranslation } from "react-i18next";
 
 export default function VersionDisplay() {
     return (

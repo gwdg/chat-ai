@@ -7,7 +7,6 @@ import { X } from "lucide-react";
 
 import {
   selectCountHallucination,
-  selectShowSettings,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import { closeHallucination } from "../../Redux/reducers/interfaceSettingsSlice";
 

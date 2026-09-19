@@ -1,6 +1,6 @@
 import Dexie, { Table } from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useCallback, useMemo, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid';
 
 import type { 

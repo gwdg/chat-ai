@@ -1,8 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { useRef } from "react";
 import { TrashCan } from "@carbon/icons-react";
 import { useToast } from "../../../hooks/useToast";
-import ShortcutTooltip from "../ShortcutTooltip";
 import { useModal } from "../../../modals/ModalContext";
 
 

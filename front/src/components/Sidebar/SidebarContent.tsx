@@ -19,7 +19,6 @@ import {
 import { useModal } from "../../modals/ModalContext";
 
 import {
-  selectCollapsedTopics,
   selectDarkMode,
   selectShowUsageInSidebar,
   toggleSidebar,

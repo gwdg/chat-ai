@@ -1,8 +1,8 @@
 // components/settings/ReasoningEffortContainer.jsx
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import getModelDefaults from "../../config/getModelDefaults";
 
 const ReasoningEffortContainer = ({ localState, setLocalState }) => {

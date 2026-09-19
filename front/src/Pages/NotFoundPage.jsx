@@ -1,10 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { Trans } from "react-i18next";
-import { v4 as uuidv4 } from "uuid";
 import { persistor } from "../Redux/store/store";
 import { setLastConversation, selectLastConversation } from "../Redux/reducers/lastConversationSlice";
-import { listConversationMetas } from "../db";
 
 const NotFoundPage = () => {
   const navigate = useNavigate();

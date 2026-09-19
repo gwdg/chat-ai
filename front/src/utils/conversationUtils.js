@@ -1,5 +1,4 @@
 import { v4 as uuidv4 } from "uuid";
-import { useSelector } from "react-redux";
 import { getConversation, getFolder, listConversationMetas } from "../db";
 import { processContentItems } from "./sendMessage";
 import packageJson from "../../package.json";
