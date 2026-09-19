@@ -228,12 +228,6 @@ export async function getConversation(conversationId: string) {
   return hydrateConversation(conversationId)
 }
 
-export async function getConversationLastModified(conversationId: string) {
-  // Find conversation
-  const convo = await db.conversations.get(conversationId);
-  return convo?.lastModified || 0;
-}
-
 async function cleanUpOrphanFiles(conversationId: string) {
   // after the sync,
   // after all content items are inserted, we can check if there are orphan files
@@ -523,16 +517,12 @@ export function useConversationList() {
 
 // ---------- Folders ----------
 
-export async function listFolders(): Promise<FolderRow[]> {
-  return db.folders.orderBy('createdAt').reverse().toArray();
-}
-
 export async function getFolder(folderId: string): Promise<FolderRow | undefined> {
   if (!folderId) return undefined;
   return db.folders.get(folderId);
 }
 
-export async function getFolderByName(name: string): Promise<FolderRow | undefined> {
+async function getFolderByName(name: string): Promise<FolderRow | undefined> {
   if (!name?.trim()) return undefined;
   return db.folders.where('name').equals(name.trim()).first();
 }
@@ -669,7 +659,7 @@ export async function loadFileMeta(fileId: string): Promise<FileMetaRow | null> 
 }
 
 // Load file data */
-export async function loadFileData(fileId: string): Promise<ArrayBuffer | null> {
+async function loadFileData(fileId: string): Promise<ArrayBuffer | null> {
   console.log("Loading file:", fileId);
   const row = (await db.files_data.get(fileId)) ?? null;
   return row?.data;
