@@ -79,13 +79,6 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   };
   // Function to adjust textarea height for specific index
   const adjustHeightRefs = () => {
-    // if (textareaRefs.current[index]) {
-    //   const textarea = textareaRefs.current[index];
-    //   textarea.style.height = `${MIN_HEIGHT}px`;
-    //   const scrollHeight = textarea.scrollHeight;
-    //   const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
-    //   textarea.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
-    // }
   };
 
   // Detect outside double clicks

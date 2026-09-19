@@ -23,7 +23,6 @@ export default function FeedbackButtons({
   };
 
   const sendFeedback = async () => {
-    //console.log(msg.feedback);
     sendFeedbackFunc(msg?.feedback?.rating, msg?.feedback?.comment, msg?.feedback?.result);
   };
 

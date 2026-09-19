@@ -38,10 +38,6 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
             onClick={() => openModal("helpReasoning")}
           />
         </div>
-        {/* <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400"> */}
-          {/* {t("settings.reasoning_effort.subtitle")} */}
-          {/* {t(`settings.reasoning_effort.options.${reasoningEffortOptions[reasoningEffortIndex]}.description`)} */}
-        {/* </p> */}
       </div>
 
       <div

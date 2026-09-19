@@ -14,7 +14,6 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   const currentModel = localState?.settings?.model || null;
   const currentModelId = localState?.settings?.model?.id || null;
   const currentConversationId = localState?.id;
-  //const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
   const selectedModel = (modelsData && currentModelId) ?
     (modelsData.find(model => model.id === currentModelId) || currentModel) : (modelsData ?
     modelsData[0] : (currentModel || null));
@@ -64,6 +63,5 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
     </>
   )
 }
-
 
 export default memo(ModelSelectorWrapper);

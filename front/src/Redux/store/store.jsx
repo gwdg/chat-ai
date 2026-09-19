@@ -114,8 +114,6 @@ initMessageListener(store);
 
 // Create the persistor object to persist the Redux store
 export const persistor = persistStore(store, null, () => {
-  // this will be invoked after rehydration is complete
-  //store.dispatch({ type: "MIGRATE" });
 });
 
 export default store;

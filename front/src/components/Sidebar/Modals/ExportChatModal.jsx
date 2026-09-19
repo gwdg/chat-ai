@@ -27,7 +27,6 @@ export default function ExportChatModal({
 
   const { notifyError, notifySuccess } = useToast();
 
-
   // Async function to load conversation from DB
   const refreshConversation = async () => {
     if (localState?.id === conversationId) {
@@ -330,29 +329,6 @@ export default function ExportChatModal({
 
       // Process Messages
       let processedMessages = await processMessages();
-
-      // Convert messages to formatted text
-      // let textContent = processedMessages
-      //   .map((msg) => {
-      //     let contentString = `${msg.role.toUpperCase()}: `;
-
-      //     if (Array.isArray(msg.content)) {
-      //       msg.content.forEach((item) => {
-      //         if (item.type === "text") {
-      //           contentString += `${item.text}\n`;
-      //         } else if (item.type === "image_url") {
-      //           if (exportFiles) {
-      //             contentString += "[Image]\n";
-      //           }
-      //         }
-      //       });
-      //     } else {
-      //       contentString += msg.content;
-      //     }
-
-      //     return contentString;
-      //   })
-      //   .join("\n\n");
 
       // Process each message in conversation
       for (const entry of processedMessages) {

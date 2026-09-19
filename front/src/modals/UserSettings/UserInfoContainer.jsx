@@ -57,7 +57,6 @@ export default function UserInfoContainer({ userData }) {
         <dl className="grid gap-3 border-t border-gray-200 pt-4 dark:border-gray-700 sm:grid-cols-2">
           <div className="min-w-0">
             <dt className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-              {/* <AtSign className="h-3.5 w-3.5" aria-hidden="true" /> */}
               {t("user_settings.account.username")}
             </dt>
             <dd

@@ -32,7 +32,6 @@ export default function Prompt({
   }
   const [prompt, setPrompt] = useState(lastMessage?.content[0]?.text || "");
 
-  //const prompt = localState.messages[localState.messages.length - 1].content[0]?.text || "";
   const attachments = lastMessage.content.slice(1);
   
   // Update partial local state while preserving other values

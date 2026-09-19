@@ -95,7 +95,6 @@ async function* chatCompletions (
     let answer = ""
     let completed = false
     for await (const chunk of streamResponse) {
-      //console.log(chunk);
       if (chunk?.object == "error") {
         console.error(chunk)
           const err = new Error(chunk?.message || "Unknown error");
@@ -118,60 +117,14 @@ async function* chatCompletions (
         }
         if (chunk?.choices?.[0]?.finish_reason === 'stop') {
           completed = true
-          // return answer
         }
       }
       catch (err) {
         console.warn("Warning: ", err)
         console.log(chunk)
         // TODO forward exact error
-        // res.status(response.status).send(response.statusText);
-        // res.status(500).end();
       }
     }
-
-    // // Handle auth error
-    // if (response.status === 401) {
-    //   //setShowModalSession(true);
-    //   return 401;
-    // }
-
-    // // Handle request size error
-    // if (response.status === 413) {
-    //   // setShowBadRequest(true);
-    //   return 413;
-    // }
-
-    // if (!response.ok) {
-    //   throw new Error(response.statusText || "Error: " + response.status);
-    // }
-
-    // const reader = response.body.getReader();
-    // const decoder = new TextDecoder();
-    // let currentResponse = "";
-    // let streamComplete = false;
-
-    // try {
-    //   // Stream and process response chunks
-    //   while (!streamComplete) {
-    //     const { value, done } = await reader.read();
-    //     if (done) {
-    //       streamComplete = true;
-    //       break;
-    //     }
-    //     const decodedChunk = decoder.decode(value, { stream: true });
-    //     yield decodedChunk
-    //     currentResponse += decodedChunk;
-    //   }
-    //   return currentResponse;
-    // } catch (error) {
-    //   // Handle AbortError specifically during streaming
-    //   if (error.name === "AbortError") {
-    //     console.log("Request aborted by user")
-    //     return currentResponse;
-    //   }
-    //   throw error;
-    // }
   } catch (error) {
     // Handle AbortError at the top level
     if (error?.name === "AbortError") {

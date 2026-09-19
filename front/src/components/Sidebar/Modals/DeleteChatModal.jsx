@@ -32,8 +32,6 @@ export default function DeleteChatModal({
       const newConversationId = await createConversation(getDefaultConversation(userSettings, folderId));
       console.log("Created new conversation with id:", newConversationId);
       navigate(`/chat/${newConversationId}`);
-      // const action = dispatch(addConversation());
-      // nextConversationId = action.payload.id;
     }
 
     // If deleting current conversation

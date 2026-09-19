@@ -7,7 +7,6 @@ const interfaceSettingsSlice = createSlice({
     show_sidebar: true,
     show_settings: false,
     warn_clear_history: true,
-    // warn_clear_memory: true,
     warn_share_settings: true,
     warn_regenerate: true,
     warn_fork: true,

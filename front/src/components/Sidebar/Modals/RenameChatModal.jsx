@@ -16,7 +16,6 @@ export default function RenameChatModal({
   const [error, setError] = useState("");
   const inputRef = useRef(null);
 
-  // const dispatch = useDispatch();
   const { t } = useTranslation();
 
   useEffect(() => {

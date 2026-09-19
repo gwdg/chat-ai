@@ -19,18 +19,7 @@ export default function ClearCacheModal({ isOpen, onClose }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useToast();
-  // const currentConversationId = useSelector(selectCurrentConversationId);
   const [isCleared, setIsCleared] = useState(false);
-
-  // Navigate to the current conversation after clearing cache
-  // useEffect(() => {
-  //   if (!isCleared) return;
-  //   if (currentConversationId) {
-  //     navigate(`/chat/${currentConversationId}`, { replace: true });
-  //   }
-  //   notifySuccess("Chats cleared successfully");
-  //   onClose();
-  // }, [currentConversationId]);
 
   const clearData = useCallback(async () => {
     try {
