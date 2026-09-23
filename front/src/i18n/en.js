@@ -114,9 +114,13 @@ export default {
             label: "On",
             description: "Reasoning is switched on",
           },
+          minimal: {
+            label: "Minimal",
+            description: "Minimal reasoning effort",
+          },
           low: {
             label: "Low",
-            description: "Minimal reasoning effort",
+            description: "Low reasoning effort",
           },
           medium: {
             label: "Medium",

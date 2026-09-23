@@ -114,9 +114,13 @@ export default {
             label: "An",
             description: "Reasoning ist aktiviert"
         },
+        minimal: {
+            label: "Minimal",
+            description: "Minimaler Reasoning-Aufwand",
+          },
         low: {
             label: "Niedrig",
-            description: "Minimaler Reasoning-Aufwand"
+            description: "Niedriger Reasoning-Aufwand"
         },
         medium: {
             label: "Mittel",

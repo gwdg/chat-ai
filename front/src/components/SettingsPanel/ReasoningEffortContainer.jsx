@@ -47,7 +47,7 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
       <div
         role="group"
         aria-labelledby="global-reasoning-label"
-        className={`grid min-h-10 grid-flow-col grid-rows-1 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60`}
+        className={`grid min-h-10 grid-flow-col grid-rows-${(reasoningEffortOptions.length > 4) ? 2 : 1} gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60`}
       >
         {reasoningEffortOptions.map((option, index) => {
           const selected = index === reasoningEffortIndex;
