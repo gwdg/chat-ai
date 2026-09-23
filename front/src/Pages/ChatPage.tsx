@@ -49,9 +49,9 @@ export default function ChatPage() {
 
   return (
     <div className="h-dvh grid grid-rows-[auto_1fr]">
-      <TourManager />
       {/* Header + optional Announcement */}
       <div className="min-w-0 overflow-hidden">
+        <TourManager />
         <AnnouncementBar />
         <Header
           className="md:hidden"

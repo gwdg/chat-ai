@@ -19,7 +19,8 @@ export default function TourManager() {
 
   const migrationData = useSelector((state) => state.migration_data) || {};
   const showTourSelected = useSelector(selectShowTour);
-  const showTour = !isMobile && showTourSelected;
+  // const showTour = !isMobile && showTourSelected;
+  const showTour = showTourSelected;
 
   const welcomeTimerRef = useRef(null);
   const [tourReady, setTourReady] = useState(false);
@@ -30,7 +31,7 @@ export default function TourManager() {
     {
       target: ".prompt-area",
       content: t("tour.prompt"),
-      placement: "bottom",
+      placement: "top",
       disableBeacon: true,
       styles: {
         tooltip: { border: "none", boxShadow: "none" },
@@ -38,7 +39,7 @@ export default function TourManager() {
       },
     },
     {
-      target: ".model-selector",
+      target: isMobile ? ".model-selector-header" : ".model-selector",
       content: t("tour.model"),
       placement: "bottom",
       disableBeacon: false,
@@ -50,7 +51,17 @@ export default function TourManager() {
     {
       target: ".sidebar-wrapper",
       content: t("tour.sidebar"),
-      placement: "right",
+      placement: isMobile? "center": "right",
+      disableBeacon: true,
+      styles: {
+        tooltip: { border: "none", boxShadow: "none" },
+        spotlight: { border: "none" },
+      },
+    },
+    {
+      target: isMobile ? ".user-profile-block" : ".user-profile-button",
+      content: t("tour.profile"),
+      placement: "top",
       disableBeacon: true,
       styles: {
         tooltip: { border: "none", boxShadow: "none" },
@@ -60,16 +71,6 @@ export default function TourManager() {
     {
       target: ".settings-toggle",
       content: t("tour.settings"),
-      placement: "left",
-      disableBeacon: true,
-      styles: {
-        tooltip: { border: "none", boxShadow: "none" },
-        spotlight: { border: "none" },
-      },
-    },
-    {
-      target: ".user-profile-button",
-      content: t("tour.profile"),
       placement: "left",
       disableBeacon: true,
       styles: {
@@ -102,22 +103,16 @@ export default function TourManager() {
         const newIndex = index + (action === "prev" ? -1 : 1);
         if (newIndex === 0) {
           dispatch(toggleSidebar(false));
-          dispatch(toggleSettings(false));
         } else if (newIndex === 1) {
           dispatch(toggleSidebar(false));
-          dispatch(toggleSettings(false));
         } else if (newIndex === 2) {
           dispatch(toggleSidebar(true));
-          dispatch(toggleSettings(false));
         } else if (newIndex === 3) {
-          dispatch(toggleSidebar(false));
-          dispatch(toggleSettings(true));
+          dispatch(toggleSidebar(true));
         } else if (newIndex === 4) {
           dispatch(toggleSidebar(false));
-          dispatch(toggleSettings(false));
         } else if (newIndex === 5) {
           dispatch(toggleSidebar(false));
-          dispatch(toggleSettings(false));
         }
         setTimeout(() => {
           setTourStepIndex(newIndex);

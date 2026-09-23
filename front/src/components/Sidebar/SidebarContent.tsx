@@ -389,7 +389,7 @@ export default function SidebarContent({
         draggable
         onDragStart={(event) => handleConversationDragStart(event, id)}
         onDragEnd={handleConversationDragEnd}
-        className={`group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
+        className={`sidebar-wrapper group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
           isActive
             ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
             : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-100"

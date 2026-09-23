@@ -26,7 +26,7 @@ export default function SidebarUserCard({ localState, userData, modelsData }) {
         }
       }}
       aria-label={t("user_settings.title")}
-      className="flex items-center gap-2 px-1 py-1 rounded-2xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50"
+      className="user-profile-block flex items-center gap-2 px-1 py-1 rounded-2xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       {/* Presentation only — the whole card is the click target. */}
