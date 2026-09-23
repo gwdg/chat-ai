@@ -1,5 +1,12 @@
 # Changelog 
 
+## Version: v1.0.1 (23.09.2026)
+Highlights:
+- Added tour support for mobile view
+- Added fork chat button for user messages
+- Updated npm packages
+- Bug fixes
+
 ## Version: v1.0.0 (03.09.2026)
 Highlights:
 - Redesigned UI to be more intuitive and follow conventions for main elements 
