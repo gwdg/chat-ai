@@ -429,6 +429,10 @@ export default {
     change_model: "Modell wechseln",
     docs_hint_text: "Unsicher, welches Modell Sie wählen sollen?",
     docs_hint_link: "Lesen Sie die Modellübersicht.",
+    scope_filter: "Modelle filtern",
+    scope_all: "Alle Modelle",
+    scope_internal: "Nur interne",
+    scope_external: "Nur externe",
   },
   // Tour
   tour: {
