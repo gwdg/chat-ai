@@ -620,8 +620,8 @@ const MarkdownRenderer = memo(
       return isLoading ? referencesContent : processedReferences;
     }, [isLoading, referencesContent, processedReferences]);
 
-    const renderContentByMode = () => {
-      const contentToRender = mainContent.trim();
+    const renderContentByMode = useCallback((content) => {
+      const contentToRender = content.trim();
 
       switch (renderMode) {
         case "Plaintext":
@@ -683,7 +683,7 @@ const MarkdownRenderer = memo(
             </SafeMarkdown>
           );
       }
-    };
+    }, [renderMode]);
 
     if (!children) return null;
 
@@ -698,12 +698,16 @@ const MarkdownRenderer = memo(
                 index === thinkingBlocks.length - 1
               }
               isStreaming={isStreaming && index === thinkingBlocks.length - 1}
+              // Default keeps the block's own rendering, other modes follow the switch
+              renderContent={
+                renderMode === "Default" ? undefined : renderContentByMode
+              }
             >
               {content}
             </ThinkingBlock>
           ))}
 
-          {renderContentByMode()}
+          {renderContentByMode(mainContent)}
         </div>
 
         {finalReferences && (
