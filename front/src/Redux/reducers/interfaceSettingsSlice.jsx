@@ -9,6 +9,8 @@ const interfaceSettingsSlice = createSlice({
     warn_clear_history: true,
     // warn_clear_memory: true,
     warn_share_settings: true,
+    warn_regenerate: true,
+    warn_fork: true,
     show_tour: true,
     count_hallucination: 0,
     count_announcement: 0,
@@ -56,6 +58,12 @@ const interfaceSettingsSlice = createSlice({
     setShowUsageInSidebar: (state, action) => {
       state.show_usage_in_sidebar = Boolean(action.payload);
     },
+    // Enable or disable one of the warn_* confirmation dialogs, e.g. when the
+    // user dismisses it with "don't show this again".
+    setWarning: (state, action) => {
+      const { key, value } = action.payload;
+      state[key] = Boolean(value);
+    },
     toggleTopic: (state, action) => {
       if (state.collapsed_topics.includes(action.payload)) {
         state.collapsed_topics = state.collapsed_topics.filter(
@@ -77,11 +85,14 @@ export const selectAgreeWebSearch = (state) => state.interface_settings.agree_we
 export const selectShowTour = (state) => state.interface_settings.show_tour;
 export const selectShowUsageInSidebar = (state) =>
   state.interface_settings.show_usage_in_sidebar ?? true;
+// Warnings default to shown, so anything unknown counts as enabled.
+export const selectWarning = (key) => (state) =>
+  state.interface_settings[key] ?? true;
 export const selectCollapsedTopics = (state) => state.interface_settings.collapsed_topics;
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
-  setShowUsageInSidebar, toggleTopic,
+  setShowUsageInSidebar, setWarning, toggleTopic,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

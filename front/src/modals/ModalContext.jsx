@@ -24,8 +24,7 @@ import FolderEditorModal from "../components/Sidebar/Modals/FolderEditorModal";
 import DeleteFolderModal from "../components/Sidebar/Modals/DeleteFolderModal";
 import MoveChatModal from "../components/Sidebar/Modals/MoveChatModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
-import ClearMessagesModal from "./Alert/ClearMessagesModal";
-import RegenerateConfirmModal from "./Alert/RegenerateConfirmModal";
+import ConfirmActionModal from "./Alert/ConfirmActionModal";
 import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
@@ -35,6 +34,7 @@ import ConversationConflict from "./Chat/ConversationConflict";
 import SummarizeChatModal from "./Chat/SummarizeChatModal";
 
 import { useDispatch, useStore } from "react-redux";
+import { selectWarning } from "../Redux/reducers/interfaceSettingsSlice";
 import { useToast } from "../hooks/useToast";
 import { useImportConversation } from "../hooks/useImportConversation";
 import HelpWebSearchModal from "./Help/HelpWebSearchModal";
@@ -66,8 +66,15 @@ export function ModalProvider({ children }) {
     setModalProps({});
   };
 
+  // Run `onConfirm` behind a confirmation dialog, unless the user turned that
+  // dialog off with "don't show this again".
+  const confirmAction = ({ warningKey, ...props }, onConfirm) => {
+    if (!selectWarning(warningKey)(store.getState())) onConfirm();
+    else openModal("confirmAction", { ...props, warningKey, onConfirm });
+  };
+
   return (
-    <ModalContext.Provider value={{ openModal, closeModal }}>
+    <ModalContext.Provider value={{ openModal, closeModal, confirmAction }}>
       {children}
       {/* Welcome Tour Modal */}
       {modalType === "welcome" && (
@@ -160,11 +167,8 @@ export function ModalProvider({ children }) {
       {modalType === "errorSessionExpired" && (
         <ErrorSessionExpiredModal isOpen onClose={closeModal} {...modalProps} />
       )}
-      {modalType === "clearMessages" && (
-        <ClearMessagesModal isOpen onClose={closeModal} {...modalProps} />
-      )}
-      {modalType === "regenerateConfirm" && (
-        <RegenerateConfirmModal isOpen onClose={closeModal} {...modalProps} />
+      {modalType === "confirmAction" && (
+        <ConfirmActionModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {/* General Modals */}
       {modalType === "exportChat" && (
