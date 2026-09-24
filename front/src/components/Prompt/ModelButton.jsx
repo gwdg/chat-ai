@@ -46,7 +46,7 @@ export default function ModelButton({ localState, setLocalState, modelsData }) {
       >
         <PopoverPanel
           anchor="top"
-          className="z-50 mb-2 w-[26rem] max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark shadow-xl dark:shadow-dark"
+          className="z-50 mb-2 flex w-[26rem] max-w-[90vw] flex-col rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark shadow-xl dark:shadow-dark"
         >
           {({ close }) => (
             <ModelSelectorWrapper

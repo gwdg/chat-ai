@@ -431,6 +431,10 @@ export default {
     change_model: "Change model",
     docs_hint_text: "Need help deciding which model fits best?",
     docs_hint_link: "Read the model overview.",
+    scope_filter: "Filter models",
+    scope_all: "All models",
+    scope_internal: "Internal only",
+    scope_external: "External only",
   },
   // Tour
   tour: {
