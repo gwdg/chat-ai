@@ -53,6 +53,12 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
     };
   }, []);
 
+  // Nothing to choose between when a deployment offers only one kind of model.
+  const showScopeFilter = useMemo(() => {
+    if (!modelsData || modelsData.length === 0) return false;
+    return modelsData.some(isExternalModel) && modelsData.some((m) => !isExternalModel(m));
+  }, [modelsData]);
+
   const filteredModelsList = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (modelsData === undefined || modelsData.length === 0) {
@@ -68,19 +74,13 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
       );
     }
 
-    if (modelScope !== "all") {
+    if (showScopeFilter && modelScope !== "all") {
       const wantExternal = modelScope === "external";
       result = result.filter((m) => isExternalModel(m) === wantExternal);
     }
 
     return result.sort((a, b) => a.name.localeCompare(b.name));
-  }, [searchQuery, modelsData, modelScope]);
-
-  // Nothing to choose between when a deployment offers only one kind of model.
-  const showScopeFilter = useMemo(() => {
-    if (!modelsData || modelsData.length === 0) return false;
-    return modelsData.some(isExternalModel) && modelsData.some((m) => !isExternalModel(m));
-  }, [modelsData]);
+  }, [searchQuery, modelsData, modelScope, showScopeFilter]);
 
   // use memo to not rerender on search input
   const ListElement = memo(({ idx, model, selected, onClick }: { idx: number, model: BaseModelInfo, selected: boolean, onClick: () => void }) => {
@@ -219,7 +219,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
         {/** Results List **/}
         <div
           id="model-listbox" role="listbox" aria-label="Models" tabIndex={-1}
-          className="px-2 flex-1 min-h-0 overflow-auto"
+          className="px-2 flex-1 min-h-0 max-h-96 overflow-auto"
         >
           <div className="rounded-xl overflow-hidden">
             {filteredModelsList.map((m, idx) => (
