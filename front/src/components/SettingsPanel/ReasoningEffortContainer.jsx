@@ -48,7 +48,7 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
         role="group"
         aria-labelledby="global-reasoning-label"
         className={`grid min-h-10 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60 ${
-          reasoningEffortOptions?.length <= 4
+          reasoningEffortOptions?.length <= 5
             ? "grid-flow-col grid-rows-1"
             : reasoningEffortOptions?.length <= 6
                 ? "grid-flow-row grid-cols-3"
