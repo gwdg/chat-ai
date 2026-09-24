@@ -1,4 +1,4 @@
 {
     "reasoning_effort": 3,
-    "reasoning_options": ["none", "low", "medium", "high", "xhigh", "max"]
+    "reasoning_options": ["none", "low", "medium", "high", "max"]
 }
