@@ -21,6 +21,10 @@ import DemandIndicator from "./DemandIndicator";
 const isExternalModel = (model: { name?: string } | undefined) =>
   typeof model?.name === "string" && model.name.toLowerCase().includes("external");
 
+// persist the filter choice for the session. 
+// a page reload starts at "all" again.
+let lastModelScope = "all";
+
 const scopeOptions = [
   { value: "all", labelKey: "model_selector.scope_all" },
   { value: "internal", labelKey: "model_selector.scope_internal" },
@@ -37,7 +41,8 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
   const [searchQuery, setSearchQuery] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [modelScope, setModelScope] = useState("all"); // all, internal, external
+  const [modelScope, setModelScope] = useState(lastModelScope); // all, internal, external
+  useEffect(() => { lastModelScope = modelScope; }, [modelScope]);
 
   // Dropdown close on click outside logic
   const dropdownRef = useRef(null);
