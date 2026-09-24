@@ -32,8 +32,16 @@ async function* chatCompletions (
         if (conversation.settings?.reasoning_effort !== undefined && conversation.settings?.reasoning_effort !== null) {
           reasoning_effort = Math.min(conversation.settings.reasoning_effort, modelDefaults.reasoning_options.length - 1)
         }
+        if (model?.toLowerCase().includes("claude")) {
+          // External Claude models
+          params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
+        }
+        else if (model?.toLowerCase().includes("openai") && !(model?.toLowerCase().includes("openai-gpt-oss"))) {
+          // External OpenAI models
+          params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
+        }
         if (model?.toLowerCase().includes("mistral")) {
-          // Handle models that don't use enable_thinking separately
+          // Internal models that don't use enable_thinking separately
           params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
         }
         else {
