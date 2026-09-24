@@ -111,7 +111,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
   return (
 
-    <div ref={dropdownRef} className="w-full relative dark:text-white">
+    <div ref={dropdownRef} className={`w-full relative dark:text-white ${listOnly ? "flex min-h-0 flex-1 flex-col" : ""}`}>
       {/** Trigger/Input — suppressed when the caller supplies its own **/}
       {!listOnly && (
       <button
@@ -149,10 +149,10 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
       {/** Dropdown Panel — rendered inline when there is no trigger **/}
       <div className={listOnly
-        ? "bg-white dark:bg-bg_secondary_dark w-full rounded-2xl pb-2"
+        ? "bg-white dark:bg-bg_secondary_dark w-full rounded-2xl pb-2 flex min-h-0 flex-1 flex-col"
         : `${dropdownOpen ? "" : "hidden"} ${inHeader ? "fixed left-0 top-12 w-screen" : "absolute"} flex flex-col max-h-[80dvh] bg-white dark:bg-bg_secondary_dark z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500  shadow-2xl dark:shadow-dark pb-4`}>
 
-        <div className="px-3 pt-3 pb-2">
+        <div className="px-3 pt-3 pb-2 shrink-0">
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-200">
             <FontAwesomeIcon icon={faCircleInfo} className="text-tertiary" />
             <span>
@@ -169,7 +169,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
           </div>
         </div>
         {/** Controls **/}
-        <div className={`text-sm flex items-center gap-2 p-2 border-b border-slate-100 dark:border-gray-500 sticky top-0 z-10 bg-white dark:bg-bg_secondary_dark`}>
+        <div className={`text-sm flex items-center gap-2 p-2 border-b border-slate-100 dark:border-gray-500 shrink-0`}>
           <div className="relative flex-1 min-w-0">
             <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -219,7 +219,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
         {/** Results List **/}
         <div
           id="model-listbox" role="listbox" aria-label="Models" tabIndex={-1}
-          className={`px-2 ${listOnly ? "" : "flex-1 min-h-0 overflow-auto"}`}
+          className="px-2 flex-1 min-h-0 overflow-auto"
         >
           <div className="rounded-xl overflow-hidden">
             {filteredModelsList.map((m, idx) => (
