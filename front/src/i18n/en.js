@@ -133,7 +133,7 @@ export default {
               "High reasoning effort",
           },
           xhigh: {
-            label: "High",
+            label: "High+",
             description:
               "High reasoning effort",
           },

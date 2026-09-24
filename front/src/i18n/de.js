@@ -131,7 +131,7 @@ export default {
             description: "Hoher Reasoning-Aufwand"
         },
         xhigh: {
-            label: "Hoch",
+            label: "Hoch‌+",
             description: "Hoher Reasoning-Aufwand"
         },
         max: {
