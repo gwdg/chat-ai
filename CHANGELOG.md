@@ -3,6 +3,7 @@
 ## Version: v1.0.1 (24.09.2026)
 Highlights:
 - Support reasoning effort for external models
+- Internal and external filter in model selector
 - Added tour support for mobile view
 - Added fork chat button for user messages
 - Updated npm packages
