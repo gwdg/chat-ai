@@ -11,6 +11,7 @@ import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
+import { preprocessLaTeX } from "../../../utils/preprocessLaTeX";
 
 /* --------------------------------------------
  * Shared renderer components (unchanged styles)
@@ -164,52 +165,6 @@ export const rendererComponents = {
     </div>
   ),
   inlineMath: ({ value }) => <span className="katex">{value}</span>,
-};
-
-/* ------------------------------------------------
- * LaTeX preprocessor
- * ------------------------------------------------ */
-const preprocessLaTeX = (content) => {
-  if (!content) return "";
-
-  const codeBlocks = [];
-  let processedContent = content.replace(
-    /(```[\s\S]*?```|`[^`\n]+`)/g,
-    (match, code) => {
-      codeBlocks.push(code);
-      return `<<CODE_BLOCK_${codeBlocks.length - 1}>>`;
-    }
-  );
-
-  const latexExpressions = [];
-  processedContent = processedContent.replace(
-    /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g,
-    (match) => {
-      latexExpressions.push(match);
-      return `<<LATEX_${latexExpressions.length - 1}>>`;
-    }
-  );
-
-  processedContent = processedContent.replace(/\$(?=\d)/g, "\\$");
-
-  processedContent = processedContent.replace(/<<LATEX_(\d+)>>/g, (_, i) => {
-    return latexExpressions[parseInt(i)];
-  });
-
-  processedContent = processedContent.replace(
-    /<<CODE_BLOCK_(\d+)>>/g,
-    (_, i) => {
-      return codeBlocks[parseInt(i)];
-    }
-  );
-
-  processedContent = processedContent
-    .replace(/\\\[/g, "$$")
-    .replace(/\\\]/g, "$$")
-    .replace(/\\\(/g, "$")
-    .replace(/\\\)/g, "$");
-
-  return processedContent;
 };
 
 /* ------------------------------------------------
