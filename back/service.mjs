@@ -68,15 +68,19 @@ app.use(cors());
 
 // Function to process file with docling
 async function processFile(file, inference_id) {
-  const url = apiEndpoint + "/documents/convert";
+  const url = apiEndpoint + "/documents/convert/file";
   const formData = new FormData();
-  formData.append("document", file.data, {
+  formData.append("files", file.data, {
     filename: file.name,
     contentType: file.mimetype,
   });
   formData.append("extract_tables_as_images", "false");
   formData.append("image_resolution_scale", "4");
-
+  formData.append("image_export_mode", "placeholder");
+  formData.append("to_formats", "md");
+  formData.append("pdf_backend", "dlparse_v4");
+  formData.append("include_images", "false");
+  
   const headers = {
     "inference-portal": serviceName,
   };
@@ -100,7 +104,7 @@ async function processFile(file, inference_id) {
 }
 
 // Process PDF file
-app.post("/documents", async (req, res) => {
+app.post("/documents/convert/file", async (req, res) => {
   // Check for the presence of `document` file key
   if (!req.files || !req.files.document) {
     return res.status(422).json({ error: "No file provided" });
@@ -109,7 +113,7 @@ app.post("/documents", async (req, res) => {
   const inference_id = req.headers["inference-id"];
   try {
     // Access the file using the correct key name
-    const file = req.files.document;
+    const file = req.files;
     const response = await processFile(file, inference_id);
     if (!response.ok) {
       return res.status(response.status).send(response.statusText);
