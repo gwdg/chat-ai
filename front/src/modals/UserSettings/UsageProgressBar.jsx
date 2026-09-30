@@ -21,18 +21,30 @@ export default function UsageProgressBar({
   const hasProgress = clampedPercent !== null;
   const progressColor = hasProgress ? getProgressColor(clampedPercent) : "";
 
+  const ceilNum = (n) => Number.isFinite(n) ? Math.ceil(n).toLocaleString() : "";
+
+  const formatNoFraction = (input) => {
+    if (input == null) return "";
+    if (typeof input === "number") return ceilNum(input);
+
+    // strip existing separators inside numbers, then ceil every number found
+    return String(input).replace(/\d[\d,]*(\.\d+)?/g, (match) =>
+      ceilNum(parseFloat(match.replace(/,/g, "")))
+    );
+  };
+
   if (variant === "sidebar") {
     return (
       <div className="w-full min-w-0 rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2.5">
         <div className="flex items-baseline justify-between gap-2 min-w-0">
           <span className="min-w-0 truncate text-[11px] font-medium text-gray-700 dark:text-gray-200">
-            {label}
+            {formatNoFraction(label)}
           </span>
           <span
             className="max-w-[62%] shrink-0 truncate text-right text-[11px] tabular-nums text-gray-500 dark:text-gray-300"
             title={typeof value === "string" ? value : undefined}
           >
-            {value}
+            {formatNoFraction(value)}
           </span>
         </div>
         {hasProgress && (
