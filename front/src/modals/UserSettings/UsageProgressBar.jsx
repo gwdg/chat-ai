@@ -27,7 +27,6 @@ export default function UsageProgressBar({
     if (input == null) return "";
     if (typeof input === "number") return ceilNum(input);
 
-    // strip existing separators inside numbers, then ceil every number found
     return String(input).replace(/\d[\d,]*(\.\d+)?/g, (match) =>
       ceilNum(parseFloat(match.replace(/,/g, "")))
     );
