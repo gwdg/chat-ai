@@ -1,19 +1,12 @@
-import { Trans } from "react-i18next";
-import store, { persistor } from "../../Redux/store/store";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../hooks/useToast";
-import { useCallback, useEffect, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 // Hooks
-import {
-  getDefaultConversation,
-  getDefaultSettings,
-} from "../../utils/conversationUtils";
-import { createConversation, resetDB, updateConversation } from "../../db";
+
+
+import { updateConversation } from "../../db";
 
 import BaseModal from "../BaseModal";
-import { setLastConversation } from "../../Redux/reducers/lastConversationSlice";
 
 export default function ConversationConflict({ isOpen, onClose, localState, setLocalState, setUnsavedChanges }) {
   const dispatch = useDispatch();

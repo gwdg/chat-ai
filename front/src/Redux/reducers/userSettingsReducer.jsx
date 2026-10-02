@@ -3,7 +3,6 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   memories: [],
-  // model: "", // TODO load from file
   timeout: 300000,
   memory_mode: 0,
   suggest_user_prompts: false,
@@ -93,7 +92,6 @@ export const {
 
 // Selectors
 export const selectAllMemories = (state) => state.user_settings.memories;
-export const selectMemoryByIndex = (state, index) => state.user_settings.memories[index];
 export const selectTimeout = (state) => state.user_settings.timeout;
 export const selectDefaultModel = (state) => state.user_settings.model;
 export const selectMemoryMode = (state) => {

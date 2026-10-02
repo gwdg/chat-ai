@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
 import { Trans } from "react-i18next";
 
 const LandingPage = () => {
@@ -45,7 +44,6 @@ const LandingPage = () => {
 
         <button
           onClick={() =>
-            // navigate(`/`, { replace: false })
             (window.location.href = "/")
           }
           className="px-8 py-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"

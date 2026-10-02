@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import Tooltip from "../Others/Tooltip";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { useToast } from "../../hooks/useToast";
 import { Image } from "@carbon/icons-react";
 

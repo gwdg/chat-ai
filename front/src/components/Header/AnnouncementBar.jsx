@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Trans } from "react-i18next";
 import { Close } from "@carbon/icons-react";
 import { closeAnnouncement, selectCountAnnouncement } from "../../Redux/reducers/interfaceSettingsSlice";
 

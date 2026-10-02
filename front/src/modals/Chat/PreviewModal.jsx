@@ -1,9 +1,8 @@
-import { useMemo, useEffect, useState, useRef } from "react";
+import { useMemo, useState } from "react";
 import Papa from "papaparse";
 import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
 import AudioPlayer from "./AudioPlayer";
-import icon_cross_sm from "../../assets/icons/cross_sm.svg";
-import { loadFile, useFile, useFileBase64, useFileContent } from "../../db";
+import { useFile, useFileBase64, useFileContent } from "../../db";
 import { X } from "lucide-react";
 import { getFileType } from "../../utils/attachments";
 

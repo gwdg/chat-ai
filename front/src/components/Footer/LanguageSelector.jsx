@@ -1,4 +1,4 @@
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 
 import flag_english from "../../assets/flags/english.svg";
 import flag_german from "../../assets/flags/german.svg";

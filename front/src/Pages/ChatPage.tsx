@@ -8,16 +8,14 @@ import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
-import ModelSelectorWrapper from "../components/Header/ModelSelectorWrapper";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
 import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
 
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
 
 export default function ChatPage() {

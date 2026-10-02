@@ -1,6 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { useRef } from "react";
-import { useImportConversation } from "../../../hooks/useImportConversation";
 import { AddFilled } from "@carbon/icons-react";
 import { useToast } from "../../../hooks/useToast";
 import ShortcutTooltip from "../ShortcutTooltip";

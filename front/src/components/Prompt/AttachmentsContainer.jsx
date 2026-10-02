@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useState } from "react";
+import { Trans } from "react-i18next";
 import { useAttachments } from "../../hooks/useAttachments";
 import Attachment from "./Attachment";
 

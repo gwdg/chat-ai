@@ -1,8 +1,6 @@
-import { useState, useEffect} from "react";
-import { ThumbsUp, ThumbsDown, MessageCircleReply, MessageCircleWarning } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageCircleReply } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
 import i18n from "i18next";
-import { memo } from 'react';
 
 export default function FeedbackButtons({
   localState,
@@ -23,7 +21,6 @@ export default function FeedbackButtons({
   };
 
   const sendFeedback = async () => {
-    //console.log(msg.feedback);
     sendFeedbackFunc(msg?.feedback?.rating, msg?.feedback?.comment, msg?.feedback?.result);
   };
 

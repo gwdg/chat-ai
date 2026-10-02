@@ -11,12 +11,6 @@ export default function UndoButton({ localState, setLocalState }) {
   // Function to handle retry of last message
   const handleUndo = (e) => {
     e.preventDefault();
-    // Remove last two messages
-    // setLocalState((prev) => ({
-    //   ...prev,
-    //   messages: localState.messages.slice(0, Math.max(2, localState.messages.length - 2)),
-    // }));
-
     setLocalState(prev => {
       if (prev.messages.length <= 3) return prev;
       // Truncated messages after the removal

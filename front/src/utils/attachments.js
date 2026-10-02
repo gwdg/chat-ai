@@ -29,7 +29,6 @@ export function dataURLtoFile(dataurl, filenameWithoutExt, mimeType = null) {
     return new File([u8arr], `${filenameWithoutExt}.${extension}`, { type: mime });
 }
 
-
 // Read file content as text
 export const readFileAsText = (file) => {
     return new Promise((resolve, reject) => {
@@ -124,7 +123,6 @@ const formatCSVText = (csvText) => {
     const formattedRows = rows.map((row) => row.split(",").join(" | "));
     return formattedRows.join("\n");
 };
-
 
 const setAttachments = ({
     localState,
@@ -239,7 +237,6 @@ const addAttachments = async ({
     // Notify success
     notifySuccess(`File${newAttachments.length > 1 ? "s" : ""} attached`);
 
-    // e.target.value = "";
     } catch (error) {
         console.log(error)
     notifyError(`An error occurred: ${error.message}`);

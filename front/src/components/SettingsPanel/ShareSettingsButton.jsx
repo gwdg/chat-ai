@@ -89,17 +89,6 @@ export default function ShareSettingsButton({ localState }) {
     }
   };
 
-  // Handle share settings modal display
-  // TODO use this to handle dont show again
-  // const handleShareSettingsModal = () => {
-  //   // Check if user has chosen to not show the modal again
-  //   if (localState.dontShow.dontShowAgainShare) {
-  //     handleShareSettings();
-  //   } else {
-  //     setModalShareSettings(true);
-  //   }
-  // };
-
   return (
     <button
       className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2 cursor-pointer"
@@ -114,17 +103,6 @@ export default function ShareSettingsButton({ localState }) {
         })
       }
     >
-      {/* <ShareSettingsModal
-            isOpen={modalShareSettings}
-            onClose={() => setModalShareSettings(false)}
-            arcana={localState.arcana}
-            exportArcana={localState.exportOptions.exportArcana}
-            showModal={setModalShareSettings}
-            handleShareSettings={handleShareSettings}
-            dontShowAgainShare={localState.dontShow.dontShowAgainShare}
-            setLocalState={setLocalState}
-            isArcanaSupported={(localState.settings.model?.input?.includes("arcana") || false)}
-        /> */}
       <div className="hidden desktop:block text-sm">
         <Trans i18nKey="common.share" />
       </div>

@@ -227,7 +227,6 @@ export function useSyncConversation({
     // Open modal for backup
     if (migrationData && Object.entries(migrationData).length > 0) {
       openModal("migrate");
-      //return;
     }
     (async () => {
       if (sharedSettings) {
@@ -449,7 +448,6 @@ export function useSyncConversation({
     const currentConversation = localState?.id;
     // Check if want to write immediately
     const flushChanges = localState?.flush || false;
-    // console.log("localState changed", localState);
     if (!isActive) return; // Only auto-save when tab active
     if (!currentConversation) return;
     setUnsavedChanges(true);

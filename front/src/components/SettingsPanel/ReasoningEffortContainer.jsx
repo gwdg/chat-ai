@@ -1,8 +1,8 @@
 // components/settings/ReasoningEffortContainer.jsx
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import getModelDefaults from "../../config/getModelDefaults";
 
 const ReasoningEffortContainer = ({ localState, setLocalState }) => {
@@ -38,10 +38,6 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
             onClick={() => openModal("helpReasoning")}
           />
         </div>
-        {/* <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400"> */}
-          {/* {t("settings.reasoning_effort.subtitle")} */}
-          {/* {t(`settings.reasoning_effort.options.${reasoningEffortOptions[reasoningEffortIndex]}.description`)} */}
-        {/* </p> */}
       </div>
 
       <div

@@ -9,7 +9,6 @@ import {
   editMemory,
   deleteMemory,
   selectAllMemories,
-  deleteAllMemories,
 } from "../../Redux/reducers/userSettingsReducer";
 
 export default function UserMemoryModal({
@@ -62,13 +61,7 @@ export default function UserMemoryModal({
 
   // Delete all memories
   const handleDeleteAll = () => {
-    // if (localState.dontShow?.dontShowAgainMemory) {
-    //   dispatch(deleteAllMemories());
-    //   if (notifySuccess) notifySuccess("Memories Deleted Successfully");
-    // } else {
-      // setShowClearMemoryModal(true);
-      openModal("clearMemory", { localState });
-    // }
+    openModal("clearMemory", { localState });
   };
 
   return (

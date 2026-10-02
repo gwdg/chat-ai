@@ -1,7 +1,5 @@
 import Tooltip from "../Others/Tooltip";
-import { Trans, useTranslation } from "react-i18next";
-import { abortRequest } from "../../apis/chatCompletions";
-import { useToast } from "../../hooks/useToast";
+import { useTranslation } from "react-i18next";
 import { Close } from "@carbon/icons-react";
 
 export default function ClearButton({

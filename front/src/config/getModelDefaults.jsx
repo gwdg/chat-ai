@@ -1,6 +1,3 @@
-import { useState, useCallback, useEffect } from 'react';
-// import { getDefaultSettings } from '../utils/conversationUtils';
-
 
 // Use Vite's import.meta.glob
 const modelFiles = import.meta.glob('../config/models/*.json', { eager: true });

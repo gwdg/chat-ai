@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
-import { Copy, Check, CopyCheck } from "lucide-react";
+import { Copy, CopyCheck } from "lucide-react";
 
 export default function CopyButton({ message, cooldown_ms = 700 }) {
   // State to manage copy status

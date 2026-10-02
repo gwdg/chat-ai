@@ -37,7 +37,3 @@ export const processFile = async (file) => {
   }
 };
 
-// Keep these for backward compatibility if needed
-export const processPdfDocument = processFile;
-export const processExcelDocument = processFile;
-export const processDocxDocument = processFile;

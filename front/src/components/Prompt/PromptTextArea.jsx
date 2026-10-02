@@ -147,7 +147,6 @@ export default function PromptTextArea({
               opacity: isDragging ? 0.5 : 1
             }}
             onChange={(e) => {
-              // adjustHeight();
               handleChange(e);
             }}
             onDragOver={(e) => {e.preventDefault(); }}

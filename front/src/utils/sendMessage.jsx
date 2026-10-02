@@ -285,7 +285,6 @@ const sendMessage = async ({
     }
     
     if(!setLocalState){   
-      // console.log(conversationForAPI);
       // send the message WITHOUT changing the UI with any response
       // TODO handle errors and print them to the user
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)){
@@ -609,17 +608,6 @@ const sendMessage = async ({
       });
     }
 
-    // Handle errors
-    // if (response === 401) {
-    //   // TODO clean up localState
-    //   openModal("errorSessionExpired")
-    //   return;
-    // } else if (response === 413) {
-    //   // TODO clean up localState
-    //   openModal("errorBadRequest")
-    //   return;
-    // }
-    
     // If not successful don't continue
     if (!responseContent) {
       // TODO clean up localState

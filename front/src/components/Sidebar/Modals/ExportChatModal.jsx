@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
 import { Trans } from "react-i18next";
 import BaseModal from "../../../modals/BaseModal";
 import icon_file_json from "../../../assets/icons/file_json.svg";
 import icon_file_pdf from "../../../assets/icons/file_pdf.svg";
 import icon_file_text from "../../../assets/icons/file_text.svg";
-import { getConversation, loadFile, loadFileMeta } from "../../../db";
+import { getConversation } from "../../../db";
 import { useToast } from "../../../hooks/useToast";
 import { jsPDF } from "jspdf";
 import Logo from "../../../assets/logos/chat_ai.png"
@@ -26,7 +25,6 @@ export default function ExportChatModal({
   const [conversation, setConversation] = useState(null);
 
   const { notifyError, notifySuccess } = useToast();
-
 
   // Async function to load conversation from DB
   const refreshConversation = async () => {
@@ -330,29 +328,6 @@ export default function ExportChatModal({
 
       // Process Messages
       let processedMessages = await processMessages();
-
-      // Convert messages to formatted text
-      // let textContent = processedMessages
-      //   .map((msg) => {
-      //     let contentString = `${msg.role.toUpperCase()}: `;
-
-      //     if (Array.isArray(msg.content)) {
-      //       msg.content.forEach((item) => {
-      //         if (item.type === "text") {
-      //           contentString += `${item.text}\n`;
-      //         } else if (item.type === "image_url") {
-      //           if (exportFiles) {
-      //             contentString += "[Image]\n";
-      //           }
-      //         }
-      //       });
-      //     } else {
-      //       contentString += msg.content;
-      //     }
-
-      //     return contentString;
-      //   })
-      //   .join("\n\n");
 
       // Process each message in conversation
       for (const entry of processedMessages) {

@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+ 
 import { configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore, createMigrate } from "redux-persist";
 import storage from "redux-persist/lib/storage";
@@ -114,8 +114,6 @@ initMessageListener(store);
 
 // Create the persistor object to persist the Redux store
 export const persistor = persistStore(store, null, () => {
-  // this will be invoked after rehydration is complete
-  //store.dispatch({ type: "MIGRATE" });
 });
 
 export default store;
