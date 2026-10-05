@@ -448,8 +448,6 @@ const MarkdownRenderer = memo(
       const style = document.createElement("style");
       style.textContent = `
       .katex-display {
-        display: flex !important;
-        justify-content: center !important;
         text-align: center !important;
         margin: 1em 0 !important;
       }
