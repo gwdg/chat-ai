@@ -19,7 +19,7 @@ export default function UserLimitsDisplay({ limits, variant = "profile" }) {
     monthlyLimitValue > 0;
 
   const usageFormatted = monthlyUsage.toFixed(2);
-  const limitFormatted = hasLimit ? monthlyLimitValue.toFixed(2) : null;
+  const limitFormatted = hasLimit ? monthlyLimitValue.toFixed(variant == "sidebar" ? 0 : 2) : null;
 
   const progressPercent = hasLimit
     ? (monthlyUsage / monthlyLimitValue) * 100
