@@ -181,16 +181,26 @@ const preprocessLaTeX = (content) => {
     }
   );
 
+  // Inline $...$ follows pandoc's tex_math_dollars rule (as markdown-it-katex
+  // does): the opening $ needs a non-space on its right, the next unescaped $
+  // closes only with a non-space on its left and no digit on its right, and
+  // the region may not cross a blank line. So "$3g=90$" is math, while
+  // "$20,000 and $30,000" is not. Escape pairs like "\$" or "\\" are consumed
+  // as a unit, so an escaped character never acts as a delimiter. Every other
+  // single $ is escaped, so remark-math, which pairs dollars by different
+  // rules, cannot turn it into a delimiter.
   const latexExpressions = [];
   processedContent = processedContent.replace(
-    /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g,
+    /\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\)|\\[\s\S]|\$\$|\$(?=[^\s$])(?:\\[\s\S]|[^\\$\n]|\n(?![ \t]*\n))*(?:\\\S|[^\\$\s])\$(?!\d)|\$/g,
     (match) => {
+      if (match === "$") return "\\$";
+      if (match === "$$" || (match.length === 2 && match[0] === "\\")) {
+        return match;
+      }
       latexExpressions.push(match);
       return `<<LATEX_${latexExpressions.length - 1}>>`;
     }
   );
-
-  processedContent = processedContent.replace(/\$(?=\d)/g, "\\$");
 
   processedContent = processedContent.replace(/<<LATEX_(\d+)>>/g, (_, i) => {
     return latexExpressions[parseInt(i)];
