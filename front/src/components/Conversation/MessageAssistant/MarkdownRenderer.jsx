@@ -706,9 +706,11 @@ const MarkdownRenderer = memo(
           {renderContentByMode()}
         </div>
 
-        {Array.isArray(references) && references.length > 0 ? (
+        {/* New RAG backends send structured references, old ones append them to the content */}
+        {(Array.isArray(references) && references.length > 0) || finalReferences ? (
           <ReferencesSection
             structuredReferences={references}
+            content={finalReferences}
             isLoading={isLoading}
             isStreaming={isStreaming}
           />
