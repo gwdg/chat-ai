@@ -8,10 +8,14 @@ import VersionDisplay from "./VersionDisplay";
 import PartnerLogo from "./PartnerLogo";
 import LanguageSelector from "./LanguageSelector";
 import { Link } from "react-router";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import ThemeToggle from "../Header/ThemeToggle";
+import branding, { localize } from "../../branding";
 
 export default function CollapsibleFooter({ className }: { className?: string }) {
+  const { i18n } = useTranslation();
+  // Branding override: help link (file or URL) from the branding directory
+  const helpUrl = localize(branding.footer?.help, i18n.language);
   const [open, setOpen] = useState(false);
   const currentYear = new Date().getFullYear();
 
@@ -59,16 +63,18 @@ export default function CollapsibleFooter({ className }: { className?: string })
               <Trans i18nKey="footer.imprint" />
             </p>
           </Link>
-          {/* Help (static PDF) */}
-          <Link
-            className="justify-center"
-            to={"/OHB-Chatbot__DE___EN__v1.0.pdf"}
-            target="_blank"
-          >
-            <p className="text-center text-blue-600 dark:text-blue-400 hover:underline">
-              <Trans i18nKey="footer.help" />
-            </p>
-          </Link>
+          {/* Help (only with a branding that defines it) */}
+          {helpUrl && (
+            <Link
+              className="justify-center"
+              to={helpUrl}
+              target="_blank"
+            >
+              <p className="text-center text-blue-600 dark:text-blue-400 hover:underline">
+                <Trans i18nKey="footer.help" />
+              </p>
+            </Link>
+          )}
 
         </div>
 

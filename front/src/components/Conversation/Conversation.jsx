@@ -9,14 +9,16 @@ import ClearMessagesButton from "./ClearMessagesButton";
 import EmptyConversation from "./EmptyConversation";
 import ExportButton from "./ExportButton";
 import HallucinationWarning from "./HallucinationWarning";
+import BrandingChatDisclaimer from "./BrandingChatDisclaimer";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
 import MessageUser from "./MessageUser/MessageUser";
 import Motto from "./Motto";
-import OhbDisclaimer from "./OhbDisclaimer";
+import BrandingDisclaimer from "./BrandingDisclaimer";
 import UndoButton from "./UndoButton";
 import SummaryButton from "./SummaryButton";
 
 import config from "../../config";
+import branding from "../../branding";
 
 export default function Conversation({
   localState,
@@ -283,8 +285,9 @@ export default function Conversation({
             : "scale-100 opacity-100 flex-1 min-h-0"
           }`}
       >
-        {/* Hallucination Warning */}
-        <HallucinationWarning />
+        {/* Branding override: the branding's chat disclaimer replaces the
+            default hallucination warning (see front/branding/) */}
+        {branding.chatDisclaimer ? <BrandingChatDisclaimer /> : <HallucinationWarning />}
 
         {/* Scrollable messages container */}
         <div className="relative flex-1 min-h-0">
@@ -390,7 +393,7 @@ export default function Conversation({
 
       {/* Prompt */}
       <Prompt localState={localState} setLocalState={setLocalState} modelsData={modelsData} />
-      {emptyConversation && <OhbDisclaimer />}
+      {emptyConversation && <BrandingDisclaimer />}
       {emptyConversation && <Motto />}
     </div>
   );

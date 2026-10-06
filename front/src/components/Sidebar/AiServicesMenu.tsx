@@ -6,7 +6,7 @@ import ImageAiLogo from '../../assets/logos/image-ai.svg'
 import VoiceAiLogo from '../../assets/logos/voice-ai.svg'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronRight } from '@fortawesome/free-solid-svg-icons'
-import config from '../../config'
+import branding from '../../branding'
 
 const items = [
   {
@@ -36,7 +36,9 @@ const items = [
 ]
 
 export default function AiServicesMenu() {
-  if (config.overrides?.branding === "mpg") {
+  // Branding override: hide the Chat AI services menu when a custom branding
+  // is configured (overrides.branding, see front/branding/)
+  if (branding.active) {
     return null;
   }
 

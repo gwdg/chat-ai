@@ -1,10 +1,12 @@
 import Logo from "../../assets/logos/chat_ai.svg";
 import LogoSmall from "../../assets/logos/chat_ai_small.ico"
 import { Link } from "react-router-dom";
-import config from "../../config";
+import branding from "../../branding";
 
 export default function LogoContainer({ isMobile = false }) {
-  if (config.overrides?.branding === "gwdg") {
+  // Branding override: hide the Chat AI logo when a custom branding is
+  // configured (overrides.branding, see front/branding/)
+  if (branding.active) {
     return null;
   }
   return !isMobile ? (

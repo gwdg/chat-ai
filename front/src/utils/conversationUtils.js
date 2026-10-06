@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { getConversation, getFolder, listConversationMetas } from "../db";
 import { processContentItems } from "./sendMessage";
 import config from "../config";
+import branding from "../branding";
 
 export const getDefaultSettings = (userSettings = {}) => {
   // Get environment settings
@@ -50,6 +51,12 @@ export const getDefaultSettings = (userSettings = {}) => {
   return mergedSettings ;
 };
 
+// System prompt for new conversations: branding first, then the front config
+export const getDefaultSystemPrompt = () =>
+  branding.systemPrompt ||
+  config.default?.messages?.find((m) => m?.role === "system")?.content ||
+  "You are a helpful assistant.";
+
 export const getDefaultConversation = (userSettings = {}, folderId = null) => {
   const settings = getDefaultSettings(userSettings);
   const now = Date.now();
@@ -62,9 +69,7 @@ export const getDefaultConversation = (userSettings = {}, folderId = null) => {
         content: [
           {
             type: "text",
-            text:
-              config.default?.messages?.find((m) => m?.role === "system")
-                ?.content || "You are a helpful assistant."
+            text: getDefaultSystemPrompt(),
           }
         ],
       }, {

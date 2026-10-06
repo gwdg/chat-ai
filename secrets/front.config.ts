@@ -52,7 +52,7 @@ export interface FrontOverrides {
         whitelist?: string[]; // Exclude all models except these from the UI (e.g. model selector)
         blacklist?: string[]; // Hide these models from the UI (e.g. model selector)
     };
-    branding?: "gwdg" | "mpg";
+    branding?: string; // Folder name under front/branding/ or absolute path; hides the Chat AI logo and services menu
 }
 
 export interface FrontConfig {

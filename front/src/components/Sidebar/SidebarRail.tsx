@@ -35,6 +35,7 @@ import ImportConversationButton from "./ImportConversationButton";
 import { useModal } from "../../modals/ModalContext";
 import ShortcutTooltip from "./ShortcutTooltip";
 import config from "../../config";
+import branding from "../../branding";
 
 export default function SidebarRail({ localState, onOpen, handleNewConversation }: { localState: any, onOpen: () => void, handleNewConversation: (folderId?: string | null) => Promise<void> }) {
 
@@ -69,7 +70,9 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
       <div className="h-full flex flex-col items-center gap-2">
 
         {/* Logo with chevron on hover */}
-        {config.overrides?.branding !== "mpg" && (
+        {/* Branding override: the Chat AI logo is only shown without a custom
+            branding (overrides.branding, see front/branding/) */}
+        {!branding.active && (
           <div className="mt-2 relative h-10 w-10 group">
             {/* Logo */}
             <img
@@ -90,9 +93,10 @@ export default function SidebarRail({ localState, onOpen, handleNewConversation 
             </ShortcutTooltip>
           </div>
         )}
-        {config.overrides?.branding === "mpg" && (
+        {/* Branding override: with a custom branding, show only the chevron */}
+        {branding.active && (
           <div className="mt-2 relative h-10 w-10">
-            {/* Chevron Button visible by default for mpg branding */}
+            {/* Chevron Button visible by default for custom branding */}
             <ShortcutTooltip label={t("sidebar.expand") }>
               <button
                 onClick={() => onOpen?.()}

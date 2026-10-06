@@ -21,7 +21,7 @@ import { Navigate, useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
 
 import config from "../config";
-import MPGHeader from "../components/Header/MPGHeader";
+import BrandingHeader from "../components/Header/BrandingHeader";
 
 export default function ChatPage() {
   const params = useParams();
@@ -57,9 +57,7 @@ export default function ChatPage() {
     <div className="h-dvh grid grid-rows-[auto_1fr]">
       {/* Header + optional Announcement */}
       <div className="min-w-0 overflow-hidden">
-        { config.overrides?.branding === "mpg" &&
-          <MPGHeader></MPGHeader>
-        }
+        <BrandingHeader />
         <AnnouncementBar />
         <Header
           className="md:hidden"

@@ -36,7 +36,7 @@ import UserContainer from "../Header/UserContainer";
 import {DataSafetyText} from "../Header/WarningExternalModel";
 
 import { useConversationList } from "../../db";
-import { getDefaultSettings } from "../../utils/conversationUtils";
+import { getDefaultSettings, getDefaultSystemPrompt } from "../../utils/conversationUtils";
 import MCPContainer from "./MCPContainer";
 import ToolsContainer from "./ToolsContainer";
 import VideoList from "./VideoList";
@@ -212,8 +212,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
           content: [
             {
               type: "text",
-              text:
-                defaultSettings?.system_prompt || "You are a helpful assistant",
+              text: getDefaultSystemPrompt(),
             },
           ],
         };

@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from '@tailwindcss/vite';
 import fs from "fs";
 import path from "path";
+import { brandingPlugin, loadBranding } from "./vite-plugin-branding";
 
 const CONFIG_LOCATION = process.env.CONFIG_LOCATION || "../secrets/front.ts";
 
@@ -21,15 +22,24 @@ if(CONFIG_LOCATION.endsWith(".ts") || CONFIG_LOCATION.endsWith(".js")) {
   config = JSON.parse(fs.readFileSync(resolvedPath, "utf8"));
 }
 
+// Branding (logo, header text/colors, disclaimer): a folder name under
+// front/branding/ or a path to a branding directory
+const brandingSetting = config.overrides?.branding;
+const brandingDir = brandingSetting ? path.resolve(viteConfigDir, "branding", brandingSetting) : undefined;
+if (brandingDir) console.log(`Loading branding from ${brandingDir}...`);
+const branding = loadBranding(brandingDir);
+
 const port = typeof config.port === "number" && config.port > 0 ? config.port : 8080;
 
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss()
+    tailwindcss(),
+    brandingPlugin(brandingDir, branding),
   ],
   define: {
     __GLOBAL_CONFIG__: JSON.stringify(config),
+    __BRANDING__: JSON.stringify(branding),
   },
   base: "/",
   server: {

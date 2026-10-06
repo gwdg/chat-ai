@@ -40,7 +40,7 @@ const config: FrontConfig = {
     "overrides": {
         "ui": {
             "show_tour": false,
-            "hideFooter": true,
+            "hideFooter": false,
             "hideImportConversationButton": true,
             "hideImportPersonaButton": true,
             "hideSettings": true,
@@ -52,7 +52,13 @@ const config: FrontConfig = {
         "models": {
             "whitelist": ["qwen3-30b-a3b-thinking-2507", "qwen3-30b-a3b-instruct-2507", "qwen3-omni-30b-a3b-instruct"]
         },
-        "branding": "mpg",
+        // Branding override: folder name under front/branding/ (e.g. "mpg-ohb")
+        // or an absolute path to a branding directory anywhere on the build
+        // host (e.g. "/srv/branding/mpg-ohb"), containing branding.yaml, logo
+        // and disclaimer HTML. It is only read at build time.
+        // When set, the Chat AI logo and AI services menu are hidden.
+        // Leave unset for the default Chat AI look.
+        "branding": "mpg-ohb",
     },
 }
 export default config;

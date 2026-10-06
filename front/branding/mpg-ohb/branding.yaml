@@ -1,0 +1,64 @@
+# Branding for the MPG Organisationshandbuch (OHB) assistant.
+#
+# Activate it by setting `overrides.branding` in the front ts config to the
+# folder name "mpg-ohb". Any active branding hides the Chat AI logo and the
+# AI services menu.
+#
+# All paths are relative to this directory. Only files in public/ are served
+# (public/logo.svg -> /branding/logo.svg); everything else stays private.
+# Text values may be a plain string or a map of language codes, e.g.
+#   title:
+#     de: KI-Assistent zum Organisationshandbuch
+#     en: AI Assistant for the Organisational Handbook
+
+# Browser tab. Omit for the default "Chat AI" title and icon.
+browserTab:
+  # Replaces "Chat AI" in the tab title ("<conversation> - <title>")
+  title:
+    de: KI-Assistent zum Organisationshandbuch
+    en: AI Assistant for the Organisational Handbook
+  # Icon file in public/ (.svg, .png or .ico)
+  favicon: public/logo.svg
+
+# Header bar shown above the chat. Omit the whole section for no header.
+header:
+  # Image file in public/, shown on the left of the header. Its colors
+  # come from the image itself, not from textColor below.
+  logo: public/logo.svg
+  # Alternative text of the logo for screen readers
+  logoAlt: Max-Planck-Gesellschaft
+  # Bold first line next to the logo
+  title:
+    de: KI-Assistent zum Organisationshandbuch
+    en: AI Assistant for the Organisational Handbook
+  # Smaller second line below the title
+  subtitle:
+    de: Anweisungen und Arbeitshilfen
+    en: Instructions and Working Aids
+  # Color of the header title and subtitle (any CSS color); default black
+  textColor: "#006c66"
+  # Background color of the header bar (any CSS color); default white
+  backgroundColor: "#ffffff"
+
+# HTML file(s) shown below the prompt on every new conversation.
+# Plain tags (h2, p, strong, a, ul, ...) are styled automatically; the HTML is
+# sanitized, so scripts and event handlers are stripped.
+disclaimer:
+  de: disclaimer.de.html
+  en: disclaimer.en.html
+
+# HTML file(s) shown permanently at the top of a conversation once the first
+# message was sent, replacing the default hallucination warning.
+chatDisclaimer:
+  de: chat-disclaimer.de.html
+  en: chat-disclaimer.en.html
+
+# Footer (only visible if overrides.ui.hideFooter is not set in the front config)
+footer:
+  # Help link: a file in public/ or an external URL (https://...).
+  # May also be set per language. Omit for no help link.
+  help: public/OHB-Chatbot__DE___EN__v1.0.pdf
+
+# Markdown file with the system prompt for new conversations. If unset, missing,
+# empty or unreadable, the system prompt from the front config is used.
+systemPrompt: system-prompt.md
