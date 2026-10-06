@@ -201,7 +201,13 @@ const preprocessLaTeX = (content) => {
   );
 
   processedContent = processedContent.replace(/<<LATEX_(\d+)>>/g, (_, i) => {
-    return latexExpressions[parseInt(i)];
+    // Convert \[...\] and \(...\) to the $$/$ delimiters remark-math expects
+    // here, on the matched math only, so code blocks and math bodies (e.g.
+    // the "\\[4pt]" row separator) are never rewritten.
+    const latex = latexExpressions[parseInt(i)];
+    if (latex.startsWith("\\[")) return `$$${latex.slice(2, -2)}$$`;
+    if (latex.startsWith("\\(")) return `$${latex.slice(2, -2)}$`;
+    return latex;
   });
 
   processedContent = processedContent.replace(
@@ -210,12 +216,6 @@ const preprocessLaTeX = (content) => {
       return codeBlocks[parseInt(i)];
     }
   );
-
-  processedContent = processedContent
-    .replace(/\\\[/g, "$$")
-    .replace(/\\\]/g, "$$")
-    .replace(/\\\(/g, "$")
-    .replace(/\\\)/g, "$");
 
   return processedContent;
 };
