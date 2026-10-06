@@ -205,6 +205,14 @@ Verified in `back/service.mjs`:
   `BaseModal.jsx`; that is the pattern every existing modal in the repo follows.
 - **Upstream calls** each get their own file in `apis/`. Components, hooks and modals import them
   directly — there is no enforced layer between them.
+- **Never enable `rehype-raw` without a sanitizer.** Model output is untrusted: it reaches the DOM
+  verbatim, and so does any imported or shared conversation. `rehype-raw` in `ThinkingBlock.jsx`
+  once turned HTML the model drafted while reasoning into live markup — `<iframe>` tags fetched
+  real URLs (tripping Chrome's local-network prompt) and an injected `<style>` restyled the whole
+  page. `SafeMarkdown` is safe only because it leaves `rehype-raw` off, so react-markdown drops
+  raw HTML nodes. To *show* raw HTML instead of dropping it, convert mdast `html` nodes to `text`
+  (`remarkHtmlAsText` in `ThinkingBlock.jsx`) — that leaves code fences alone, since fenced and
+  inline code are their own node types.
 - CONTRIBUTING.md asks that files and folders follow the structure of the existing ones; keep
   components in the folder of the screen area they belong to.
 

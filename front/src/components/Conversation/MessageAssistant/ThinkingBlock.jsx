@@ -2,9 +2,26 @@ import { useState, useEffect, useRef, memo } from "react";
 import { Trans } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import { ChevronDown, ChevronRight, Brain } from "lucide-react";
 import { rendererComponents } from "./MarkdownRenderer";
+
+// Models often draft raw HTML while reasoning. Rendering that as live markup let
+// injected <iframe>/<style> tags hit the network and restyle the whole page, so
+// show raw HTML as literal text instead. Code fences are untouched: fenced and
+// inline code are their own mdast node types, never "html".
+const remarkHtmlAsText = () => (tree) => {
+  const visit = (node) => {
+    if (!Array.isArray(node.children)) return;
+    node.children.forEach((child, i) => {
+      if (child.type === "html") {
+        node.children[i] = { type: "text", value: child.value };
+      } else {
+        visit(child);
+      }
+    });
+  };
+  visit(tree);
+};
 
 const ThinkingBlock = memo(
   ({ children, autoExpand = false, isStreaming = false, renderContent }) => {
@@ -54,8 +71,7 @@ const ThinkingBlock = memo(
               renderContent(children || "")
             ) : (
               <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
+                remarkPlugins={[remarkGfm, remarkHtmlAsText]}
                 components={rendererComponents}
               >
                 {children || ""}

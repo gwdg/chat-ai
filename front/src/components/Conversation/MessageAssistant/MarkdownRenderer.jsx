@@ -3,8 +3,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
-import DOMPurify from "dompurify";
 
 import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
@@ -393,18 +391,9 @@ export const SafeMarkdown = ({
   if (!markdownContent || typeof markdownContent !== "string") return null;
 
   try {
-    const cleanContent = useMemo(() => {
-      return DOMPurify.sanitize(markdownContent, {
-        ALLOWED_TAGS: ['p','pre','code','strong','em','ul','li','ol','a','blockquote','h1','h2','h3','h4'],
-        ALLOWED_ATTR: ['href','title','class'],
-        ALLOW_DATA_ATTR: false,
-        ALLOW_UNKNOWN_PROTOCOLS: false,
-        SANITIZE_DOM: true,
-        KEEP_CONTENT: true,
-        ALLOWED_URI_REGEXP:
-          /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-      });
-    }, [markdownContent]);
+    // Raw HTML is inert here because rehype-raw is deliberately not enabled:
+    // react-markdown drops html nodes it cannot turn into components. Do not add
+    // rehype-raw without a sanitizer — see remarkHtmlAsText in ThinkingBlock.jsx.
     const remarkPlugins = [remarkGfm];
     if (enableKatex) remarkPlugins.push(remarkMath);
 
@@ -618,7 +607,7 @@ const MarkdownRenderer = memo(
           );
 
         default:
-          // Default = Markdown + KaTeX + sanitized HTML
+          // Default = Markdown + KaTeX, raw HTML inert (no rehype-raw)
           return (
             <SafeMarkdown
               enableKatex={true}
