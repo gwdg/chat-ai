@@ -119,16 +119,18 @@ function passesRule(value, rule) {
   return true;
 }
 
+// Admins are matched by uid or email (case-insensitive)
+function isAdmin(user) {
+  return [user.uid, user.email]
+    .map((v) => v.trim().toLowerCase())
+    .some((v) => v && adminUsers.includes(v));
+}
+
 // Reject requests from users whose org/organization is not allowed
 app.use((req, res, next) => {
   const user = getUserFromHeaders(req);
-  const isAdmin =
-    adminUsers.length > 0 &&
-    [user.uid, user.email]
-      .map((v) => v.trim().toLowerCase())
-      .some((v) => v && adminUsers.includes(v));
+  if (isAdmin(user)) return next();
   if (
-    !isAdmin &&
     !passesRule(user.org, userFilter.org) ||
     !passesRule(user.organization, userFilter.organization)
   ) {

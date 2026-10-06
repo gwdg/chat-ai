@@ -558,7 +558,8 @@ const sendMessage = async ({
       const errorType = error?.type || "Error";
       const errorMsg = error?.error?.message || error?.error || error?.message || "An unknown error occurred";
       const errorStatus = error?.status ? `${error.status}` : "";
-      notifyError(`${errorType}: ${errorMsg.toString()} (${errorStatus})`);
+      if (error?.status === 401) openModal("errorSessionExpired");
+      else notifyError(`${errorType}: ${errorMsg.toString()} (${errorStatus})`);
       console.error(error);
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",
