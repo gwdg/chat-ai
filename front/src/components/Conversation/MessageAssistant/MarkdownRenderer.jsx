@@ -216,8 +216,6 @@ const preprocessLaTeX = (content) => {
  * Streaming processor (unchanged)
  * ------------------------------------------------ */
 const useStreamingProcessor = (content, isLoading) => {
-  const [displayedText, setDisplayedText] = useState("");
-  const [referencesContent, setReferencesContent] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
 
   // NEW: live split outputs
@@ -276,20 +274,7 @@ const useStreamingProcessor = (content, isLoading) => {
   const processStreamingContent = useCallback(() => {
     if (!content || !isLoading) {
       // not streaming: finalize everything from full content
-      setDisplayedText(content || "");
       setIsStreaming(false);
-
-      // regular refs split (your existing logic)
-      if (content) {
-        const rrefMatch = content.match(/\[RREF\d+\]/i);
-        if (rrefMatch) {
-          const splitIndex = content.lastIndexOf("\n", rrefMatch.index);
-          if (splitIndex !== -1) {
-            setDisplayedText(content.substring(0, splitIndex).trim());
-            setReferencesContent(content.substring(splitIndex).trim());
-          }
-        }
-      }
 
       // build final think view from full content
       const { main, closed, live } = splitThink(content || "");
@@ -317,27 +302,6 @@ const useStreamingProcessor = (content, isLoading) => {
         const char = content[processedIndexRef.current];
         bufferRef.current += char;
 
-        // Keep your displayedText/refs behavior
-        const rrefMatch = bufferRef.current.match(/\[RREF\d+\]/i);
-        if (rrefMatch) {
-          const splitIndex = bufferRef.current.lastIndexOf(
-            "\n",
-            rrefMatch.index
-          );
-          if (splitIndex !== -1) {
-            const mainContent = bufferRef.current
-              .substring(0, splitIndex)
-              .trim();
-            const refContent = bufferRef.current.substring(splitIndex).trim();
-            setDisplayedText(mainContent);
-            setReferencesContent(refContent);
-          } else {
-            setDisplayedText(bufferRef.current);
-          }
-        } else {
-          setDisplayedText(bufferRef.current);
-        }
-
         // 🔥 NEW: split <think> live so nothing after <think> leaks outside
         const { main, closed, live } = splitThink(bufferRef.current);
         setMainText(main);
@@ -354,8 +318,6 @@ const useStreamingProcessor = (content, isLoading) => {
     };
 
     if (processedIndexRef.current === 0) {
-      setDisplayedText("");
-      setReferencesContent("");
       bufferRef.current = "";
       setMainText("");
       setThinkBlocks([]);
@@ -374,10 +336,8 @@ const useStreamingProcessor = (content, isLoading) => {
     };
   }, [processStreamingContent]);
 
-  // return BOTH the legacy fields and the new live-split fields
+  // return the live-split fields
   return {
-    displayedText,
-    referencesContent,
     isStreaming,
     mainText, // <-- use this instead of running a separate extractor
     thinkBlocks, // closed <think> blocks (array)
@@ -518,8 +478,6 @@ const MarkdownRenderer = memo(
     }, []);
 
     const {
-      displayedText,
-      referencesContent,
       isStreaming,
       mainText,
       thinkBlocks,
@@ -596,29 +554,15 @@ const MarkdownRenderer = memo(
       return { main: processedMain, refs };
     }, []);
 
-    const { main: processedMainContent, refs: processedReferences } =
-      useMemo(() => {
-        const contentToProcess = isLoading ? displayedText : children;
-        return separateContentAndReferences(contentToProcess);
-      }, [displayedText, children, isLoading, separateContentAndReferences]);
+    // Use the same delimiter-based split while streaming and when done, so inline
+    // [RREFn] citations in the answer are never mistaken for reference entries.
+    const { main: mainContent, refs: finalReferences } = useMemo(() => {
+      return separateContentAndReferences(isLoading ? mainText : children);
+    }, [isLoading, mainText, children, separateContentAndReferences]);
 
-    const mainContent = useMemo(() => {
-      return isLoading
-        ? separateContentAndReferences(mainText).main // strip refs while streaming
-        : processedMainContent; // already stripped when done
-    }, [
-      isLoading,
-      mainText,
-      processedMainContent,
-      separateContentAndReferences,
-    ]);
     const thinkingBlocks = useMemo(() => {
       return liveThink ? [...thinkBlocks, liveThink] : thinkBlocks;
     }, [thinkBlocks, liveThink]);
-
-    const finalReferences = useMemo(() => {
-      return isLoading ? referencesContent : processedReferences;
-    }, [isLoading, referencesContent, processedReferences]);
 
     const renderContentByMode = () => {
       const contentToRender = mainContent.trim();
