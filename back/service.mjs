@@ -205,6 +205,49 @@ app.post("/audio/speech", async (req, res) => {
   }
 });
 
+// Speech-to-text endpoint: forwards an uploaded recording and returns { text }.
+// Recordings are dictations with patient data, so neither the audio nor the
+// transcript is logged.
+app.post("/audio/transcriptions", async (req, res) => {
+  if (!req.files || !req.files.file) {
+    return res.status(422).json({ error: "No audio file provided" });
+  }
+  try {
+    const url = apiEndpoint + "/audio/transcriptions";
+    const inference_id = req.headers["inference-id"];
+    const file = req.files.file;
+    const formData = new FormData();
+    formData.append("file", file.data, {
+      filename: file.name,
+      contentType: file.mimetype,
+    });
+    for (const field of ["model", "language"]) {
+      if (req.body[field]) formData.append(field, req.body[field]);
+    }
+    formData.append("response_format", "json");
+
+    const headers = {
+      Authorization: "Bearer " + (apiKey ? apiKey : inference_id),
+      "inference-portal": serviceName,
+    };
+    const response = await fetch(url, { method: "POST", headers, body: formData });
+    if (!response.ok) {
+      console.error("Transcription failed:", response.status);
+      return res.status(response.status).json({ error: await response.text() });
+    }
+    // The upstream can answer 200 with an error body, so check for the text
+    const result = await response.json();
+    if (typeof result?.text !== "string") {
+      console.error("Transcription returned no text");
+      return res.status(502).json({ error: "Unexpected transcription response" });
+    }
+    res.status(200).json({ text: result.text });
+  } catch (error) {
+    console.error("Error in transcription endpoint:", error.message);
+    res.status(500).json({ error: "Failed to transcribe audio." });
+  }
+});
+
 // Chat Completions API
 app.post("/chat/completions", async (req, res) => {
   const {

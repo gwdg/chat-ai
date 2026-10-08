@@ -581,8 +581,20 @@ export default {
       dictation: "Diktat einfügen (nur Änderungen)",
       assessment: "Beurteilung einfügen",
     },
-    paste_placeholder: "Text hier einfügen …",
-    verbatim_hint: "Der Text wird unverändert übernommen. Strg+Enter bestätigt.",
+    paste_placeholder: "Text hier einfügen oder diktieren …",
+    verbatim_hint:
+      "Der Text wird unverändert übernommen. Diktate werden vom Spracherkennungsdienst der GWDG transkribiert. Strg+Enter bestätigt.",
+    dictate: "Diktieren",
+    dictate_stop: "Aufnahme beenden",
+    transcribing: "Wird transkribiert …",
+    mic_insecure: "Mikrofonzugriff ist nur über HTTPS oder localhost möglich.",
+    mic_denied:
+      "Der Mikrofonzugriff wurde verweigert. Bitte im Browser erlauben und erneut versuchen.",
+    mic_not_found: "Kein Mikrofon gefunden.",
+    mic_failed: "Die Aufnahme konnte nicht gestartet werden.",
+    transcription_failed:
+      "Die Transkription ist fehlgeschlagen. Bitte erneut versuchen.",
+    no_speech: "Es wurde keine Sprache erkannt.",
     edit: "Klicken zum Ansehen oder Bearbeiten",
     remove: "Entfernen",
     note_placeholder: "Optional: zusätzliche Hinweise – oder direkt senden",
