@@ -566,6 +566,10 @@ export default {
       "Don't worry! You can start a new conversation by clicking the button below.",
     buttonText: "Go to chat",
   },
+  no_access: {
+    title: "No access",
+    description: "You don't have access to this application.",
+  },
   // Announcement
   announcement: "",
 };

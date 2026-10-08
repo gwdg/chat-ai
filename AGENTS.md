@@ -183,9 +183,12 @@ Verified in `back/service.mjs`:
   as a 200. Check the response body, never the status.
 - **If `apiKey` is empty, `Authorization` falls back to the `inference-id` request header** rather
   than erroring — that is how the deployed setup passes per-user credentials through.
-- **`/user` is a hard-coded placeholder** in this repo: it always returns the same `sample-user`
-  object. Real user data comes from the gateway in a full deployment, so don't debug user/usage
-  features against this response.
+- **`/user` returns a hard-coded `sample-user` placeholder unless an SSO proxy is in front.** It
+  builds the user from the `oidc_claim_*` request headers only when `oidc_claim_uid` is present,
+  so don't debug user/usage features against a local back end.
+- **Access rules (`userFilter`, `adminUsers` in `back.json`) trust the `oidc_claim_*` headers
+  blindly.** A middleware before every route returns 403 when a rule fails. This is only safe
+  when the back end is reachable solely through the SSO proxy (`deploy/README.md`).
 
 ## 5. Conventions
 

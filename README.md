@@ -113,6 +113,7 @@ The `back` service listens to requests from `front` and interacts with an OpenAI
 - `apiEndpoint`: Endpoint of your API provider. If you have a Chat AI API key, set this to `https://chat-ai.academiccloud.de/v1`
 - `apiKey`: Your valid API key
 - `serviceName`: (Optional) A custom service name to be sent as a header in API requests to your provider. Will not be visible in the interface
+- `userFilter`, `adminUsers`: (Optional) Restrict access to certain organisations or users. These rules read the identity headers set by an SSO proxy, so they only work behind one; see [deploy/README.md](deploy/README.md)
 
 If you wish to avoid using different ports for the `front` and `back` services, you must set up a reverse proxy or virtual host to route paths such as `/models` and `/backend` to the backend service listening on its own distinguished port. This can be done with popular server software such as Apache or Nginx.
 

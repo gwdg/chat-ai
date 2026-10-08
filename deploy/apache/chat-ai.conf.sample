@@ -1,0 +1,51 @@
+# Apache virtual host: Chat AI behind AcademicCloud SSO (mod_auth_openidc).
+# Copy to /etc/apache2/sites-available/chat-ai.conf and replace every <...>.
+# See deploy/README.md for the full setup.
+
+<VirtualHost *:80>
+    ServerName <your.domain>
+    Redirect permanent / https://<your.domain>/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName <your.domain>
+
+    SSLEngine on
+    SSLCertificateFile    <path to certificate, full chain>
+    SSLCertificateKeyFile <path to private key>
+
+    # --- SSO, values from the GWDG SSO ticket ---
+    OIDCProviderMetadataURL <issuer URL>/.well-known/openid-configuration
+    OIDCClientID            <client id>
+    OIDCClientSecret        <client secret>
+    # Must be the redirect URI registered for this client. Any path the app
+    # itself doesn't use; mod_auth_openidc handles it.
+    OIDCRedirectURI         https://<your.domain>/oidc-redirect
+    # Encrypts the session cookie. Generate with: openssl rand -hex 32
+    OIDCCryptoPassphrase    <random secret>
+    # Must deliver the claims uid, email, o and ou; adjust to the ticket.
+    OIDCScope               "openid email profile"
+    # Hand the user's claims to the back end as OIDC_CLAIM_* request headers.
+    # The module always removes such headers if a client sends them itself.
+    OIDCPassClaimsAs        headers
+    OIDCClaimPrefix         OIDC_CLAIM_
+
+    # Every path requires a login
+    <Location />
+        AuthType openid-connect
+        Require valid-user
+    </Location>
+
+    # Long answers (reasoning models) can take minutes
+    ProxyTimeout 600
+
+    # Back end: /backend/... -> service.mjs with the prefix stripped.
+    # flushpackets=on passes streamed answers on piece by piece.
+    ProxyPass        /backend/ http://127.0.0.1:8081/ flushpackets=on
+    ProxyPassReverse /backend/ http://127.0.0.1:8081/
+
+    # Front end. Keep ProxyPreserveHost off: Vite only answers requests
+    # addressed to localhost or an IP address.
+    ProxyPass        / http://127.0.0.1:8080/
+    ProxyPassReverse / http://127.0.0.1:8080/
+</VirtualHost>
