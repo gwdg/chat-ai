@@ -5,6 +5,7 @@ import ForkButton from "./ForkButton";
 import EditButton from "./EditButton";
 import EditBox from "./EditBox";
 import MessageTextContainer from "./MessageTextContainer";
+import RadiologyMessageText from "./RadiologyMessageText";
 import Attachment from "../../Prompt/Attachment"
 import CopyButton from "../MessageAssistant/CopyButton";
 
@@ -44,7 +45,9 @@ export default React.memo(({
             {!editMode && (
                 <div className="flex flex-row w-fit p-2.5 gap-1.5 text-black dark:text-white overflow-y-auto border border-gray-200 rounded-xl bg-bg_chat dark:bg-bg_chat_dark dark:border-gray-800 items-start">
                     {/* Display message text */}
-                    <MessageTextContainer message={message} />
+                    {message.meta?.radiology
+                        ? <RadiologyMessageText message={message} />
+                        : <MessageTextContainer message={message} />}
                 </div>
             )}
             {/* Edit mode */}

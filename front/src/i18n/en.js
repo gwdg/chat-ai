@@ -566,6 +566,24 @@ export default {
       "Don't worry! You can start a new conversation by clicking the button below.",
     buttonText: "Go to chat",
   },
+  // Radiology report inputs
+  radiology: {
+    previous_report: "Previous report",
+    dictation: "Dictation",
+    assessment: "Assessment",
+    modal_title: {
+      previous_report: "Paste previous report",
+      dictation: "Paste dictation (changes only)",
+      assessment: "Paste assessment",
+    },
+    paste_placeholder: "Paste text here …",
+    verbatim_hint: "The text is used exactly as pasted. Ctrl+Enter confirms.",
+    edit: "Click to view or edit",
+    remove: "Remove",
+    note_placeholder: "Optional: additional notes – or send right away",
+    show_prompt: "Show sent prompt",
+    hide_prompt: "Hide sent prompt",
+  },
   // Announcement
   announcement: "",
 };

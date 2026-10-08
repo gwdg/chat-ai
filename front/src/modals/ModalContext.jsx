@@ -32,6 +32,7 @@ import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
 import MigrateDataModal from "./Alert/MigrateDataModal";
 import ConversationConflict from "./Chat/ConversationConflict";
 import SummarizeChatModal from "./Chat/SummarizeChatModal";
+import ReportInputModal from "./Chat/ReportInputModal";
 
 import { useDispatch, useStore } from "react-redux";
 import { selectWarning } from "../Redux/reducers/interfaceSettingsSlice";
@@ -182,6 +183,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "summarizeChat" && (
         <SummarizeChatModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "reportInput" && (
+        <ReportInputModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "unsentFiles" && (
         <UnsentFilesModal isOpen onClose={closeModal} {...modalProps} />

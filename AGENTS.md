@@ -128,6 +128,13 @@ IndexedDB. Writes go through `updateConversation(id, data)` in `db/index.ts`, wh
 
 So: thread the `lastModified` you read through to the write, and handle `-1`.
 
+The unsent draft is the **last user message** in `localState.messages` (`content[0]` = typed
+text, `content[1..]` = attachments), so it is autosaved like any message. `updateConversation`
+stores only `type`, `text` and `fileId` per content item — any other field is silently dropped.
+Per-message data that must survive a reload goes in the message's `meta`, which is persisted and
+never sent upstream. `<Prompt>` is not remounted on conversation switch, so component state in it
+carries over to the next chat unless keyed by `localState.id`.
+
 Data is normalised across `conversations → messages → content_items`, with `files_meta` /
 `files_data` holding attachment bytes keyed by `fileId`; `hydrateConversation()` joins them back
 into the nested shape the UI uses. Raw table access (`db.messages`, `db.content_items`, …) appears
@@ -158,7 +165,7 @@ restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence
 `=== "true"` comparisons.
 
 Feature modules are gated this way — `VITE_MODULE_TOOLS`, `VITE_MODULE_FEEDBACK`,
-`VITE_MODULE_CHOICES`, `VITE_MODULE_SPEECH` (JSON, with `model` and `voice`). A deployment can
+`VITE_MODULE_CHOICES`, `VITE_MODULE_RADIOLOGY`, `VITE_MODULE_SPEECH` (JSON, with `model` and `voice`). A deployment can
 switch these parts of the UI off, so new code in those areas must still behave with the flag off.
 
 ### 4.6 Model capabilities are data, not code

@@ -571,6 +571,24 @@ export default {
       "Keine Sorge! Sie können eine neue Unterhaltung starten, indem Sie auf den Button unten klicken.",
     buttonText: "Zum Chat gehen",
   },
+  // Radiology report inputs
+  radiology: {
+    previous_report: "Vorbefund",
+    dictation: "Diktat",
+    assessment: "Beurteilung",
+    modal_title: {
+      previous_report: "Vorbefund einfügen",
+      dictation: "Diktat einfügen (nur Änderungen)",
+      assessment: "Beurteilung einfügen",
+    },
+    paste_placeholder: "Text hier einfügen …",
+    verbatim_hint: "Der Text wird unverändert übernommen. Strg+Enter bestätigt.",
+    edit: "Klicken zum Ansehen oder Bearbeiten",
+    remove: "Entfernen",
+    note_placeholder: "Optional: zusätzliche Hinweise – oder direkt senden",
+    show_prompt: "Gesendeten Prompt anzeigen",
+    hide_prompt: "Gesendeten Prompt ausblenden",
+  },
   // Announcement
   announcement: "",
 };

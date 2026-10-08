@@ -18,6 +18,7 @@ export default function PromptTextArea({
     handleSend,
     handleChange,
     prompt,
+    hasReportInputs = false,
 }) {
   const { t } = useTranslation();
   const textareaRef = useRef(null);
@@ -140,7 +141,9 @@ export default function PromptTextArea({
             autoCorrect="off"
             autoCapitalize="off"
             data-1p-ignore="true"
-            placeholder={t("conversation.prompt.placeholder")}
+            placeholder={hasReportInputs
+              ? t("radiology.note_placeholder")
+              : t("conversation.prompt.placeholder")}
             style={{
               minHeight: `${MIN_HEIGHT}px`,
               maxHeight: `${MAX_HEIGHT}px`,
@@ -161,7 +164,7 @@ export default function PromptTextArea({
             if (
                 event.key === "Enter" &&
                 !event.shiftKey &&
-                (prompt?.trim() !== "" || attachments.length > 0)
+                (prompt?.trim() !== "" || attachments.length > 0 || hasReportInputs)
             ) {
                 event.preventDefault();
                 handleSend(event);

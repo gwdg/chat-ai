@@ -4,7 +4,7 @@ import { useToast } from "../../hooks/useToast";
 import { useSendMessage } from "../../hooks/useSendMessage";
 import { Send, SendFilled } from "@carbon/icons-react";
 
-export default function SendButton({localState, setLocalState, handleSend, prompt}) {
+export default function SendButton({localState, setLocalState, handleSend, prompt, hasReportInputs = false}) {
     const { t, i18n } = useTranslation();
     const { notifySuccess, notifyError } = useToast();
 
@@ -35,7 +35,7 @@ export default function SendButton({localState, setLocalState, handleSend, promp
     const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
     const isSafe = isSafeSettings(localState);
 
-    return !loading && ( (prompt !== "" || attachments.length > 0)  ? (
+    return !loading && ( (prompt !== "" || attachments.length > 0 || hasReportInputs)  ? (
          <Tooltip text={t("common.send")}>
             <SendFilled size={28} className={"cursor-pointer " + (isSafe ? "text-green-600" : "text-yellow-600")} onClick={handleSend} />
         </Tooltip>
