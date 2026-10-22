@@ -1,7 +1,7 @@
 # Production: the front end is built once and served as static files by nginx.
 # secrets/front.json is baked in at build time, so always start with --build:
 #   docker compose -f docker-compose.prod.yml up -d --build
-# Published on host port 80; override with CHATAI_PORT (env or .env file).
+# Published on host port 8080; override with CHATAI_PORT (env or .env file).
 # docker-compose.yml stays the development setup (Vite dev server, source mounted).
 services:
   front:
@@ -12,5 +12,5 @@ services:
       additional_contexts:
         config: ./secrets
     ports:
-      - "${CHATAI_PORT:-80}:8080"
+      - "${CHATAI_PORT:-8080}:8080"
     restart: unless-stopped
