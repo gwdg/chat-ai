@@ -11,6 +11,7 @@ MODE=$(echo "$CONFIG" | grep -oP '"mode"\s*:\s*"\K[^"]+')
 if [ "$MODE" == "dev" ]; then
   npm run dev
 elif [ "$MODE" == "prod" ]; then
+  echo "WARNING: 'vite preview' is not meant for production. Use docker-compose.prod.yml (nginx) instead."
   npm run prod
 else
   echo "Invalid mode in front.json. Must be 'dev' or 'prod'."

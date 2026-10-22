@@ -93,12 +93,23 @@ docker compose restart back
 
 Note that in some cases rebuilding the docker image might be necessary.
 
+## Production Deployment
+
+`docker-compose.yml` is the development setup. For production, use `docker-compose.prod.yml`: it builds the front end with Vite and serves the static files with nginx. It does not use host networking: the front end is published on host port `80` (override with `CHATAI_PORT`), and the `port` in `front.json` is not used:
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+`front.json` is baked into the build, so rerun this command (with `--build`) after every config change; a restart alone does not pick it up. Dependencies are installed with `npm ci`, so `front/package-lock.json` must be in sync with `front/package.json`.
+
+The production setup does not include the `back` service: `backendPath`, `modelsPath` and `userDataPath` in `front.json` should point at your API gateway. Legacy setups that still need `back` can run it from `docker-compose.yml`.
+
 ## Configuration
 
 You can set the port numbers for both the `front` and `back` services in the `front.json` and `back.json` files.
 
 The `front` service uses the following configurable attributes in `front.json`:
-- `mode`: Set to `dev` to enable development environment and `prod` for production.
+- `mode`: Set to `dev` to enable development environment and `prod` for production. Only used by `docker-compose.yml`; `prod` there runs `vite preview`, which is superseded by `docker-compose.prod.yml`.
 - `port`: Port number to listen on. Default: 8080
 - `backendPath`: Path to `back` service, used for sending messages and processing PDF files, e.g. `http://localhost:8081/` or `/backend`
 - `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure

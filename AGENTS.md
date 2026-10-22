@@ -79,6 +79,15 @@ declared in `docker-compose.yml`. Both services use `network_mode: host`, so por
 configured. `front/entrypoint.sh` greps `"mode"` out of `front.json` and runs `npm run dev` for
 `dev` or `npm run prod` for `prod`, and exits on any other value.
 
+**Production is a separate file:** `docker compose -f docker-compose.prod.yml up -d --build`.
+`front/Dockerfile.prod` runs `npm ci` (so the lockfile must match `package.json`) and
+`vite build`, then serves `dist/` with nginx (`front/nginx.conf`, SPA fallback to
+`index.html`). It ignores `mode` and does not use `entrypoint.sh`. `front.json` enters through the
+build context `config` (= `secrets/`) and is baked into the bundle, so a config change needs a
+rebuild. No host networking there: nginx listens on a fixed 8080 in the container, published as
+`CHATAI_PORT` (default 80), so `port` in `front.json` is ignored. `back` is not part of the
+production file; it exists only in `docker-compose.yml`.
+
 ### Checks
 
 ```bash
