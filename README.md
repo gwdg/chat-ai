@@ -95,7 +95,7 @@ Note that in some cases rebuilding the docker image might be necessary.
 
 ## Production Deployment
 
-`docker-compose.yml` is the development setup. For production, use `docker-compose.prod.yml`: it builds the front end with Vite and serves the static files with nginx. It does not use host networking: the front end is published on host port `80` (override with `CHATAI_PORT`), and the `port` in `front.json` is not used:
+`docker-compose.yml` is the development setup. For production, use `docker-compose.prod.yml`: it builds the front end with Vite and serves the static files with nginx. It does not use host networking: the front end is published on host port `8080` (override with `CHATAI_PORT`), and the `port` in `front.json` is not used:
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
 ```

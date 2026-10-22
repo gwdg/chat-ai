@@ -85,7 +85,7 @@ configured. `front/entrypoint.sh` greps `"mode"` out of `front.json` and runs `n
 `index.html`). It ignores `mode` and does not use `entrypoint.sh`. `front.json` enters through the
 build context `config` (= `secrets/`) and is baked into the bundle, so a config change needs a
 rebuild. No host networking there: nginx listens on a fixed 8080 in the container, published as
-`CHATAI_PORT` (default 80), so `port` in `front.json` is ignored. `back` is not part of the
+`CHATAI_PORT` (default 8080), so `port` in `front.json` is ignored. `back` is not part of the
 production file; it exists only in `docker-compose.yml`.
 
 ### Checks
