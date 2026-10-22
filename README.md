@@ -110,7 +110,7 @@ You can set the port numbers for both the `front` and `back` services in the `fr
 
 The `front` service uses the following configurable attributes in `front.json`:
 - `mode`: Set to `dev` to enable development environment and `prod` for production. Only used by `docker-compose.yml`; `prod` there runs `vite preview`, which is superseded by `docker-compose.prod.yml`.
-- `port`: Port number to listen on. Default: 8080
+- `port`: Port number to listen on. Default: 8080. Not used by `docker-compose.prod.yml`, which publishes on `CHATAI_PORT` instead.
 - `backendPath`: Path to `back` service, used for sending messages and processing PDF files, e.g. `http://localhost:8081/` or `/backend`
 - `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure
 - `userDataPath`: (Optional) Path to get user data. Simply set to `<backendPath>/user` if unsure
