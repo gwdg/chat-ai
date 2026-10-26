@@ -16,7 +16,7 @@ export default function AttachmentsContainer({ localState, setLocalState }) {
         {/* Header for attachments */}
         <div className="flex items-center justify-between mb-2">
           {/* Attachments title text */}
-          <p className="text-sm font-medium text-tertiary">
+          <p className="text-sm font-medium text-accent">
             <Trans i18nKey="conversation.prompt.attachments" />
           </p>
           {/* Clear attachments button */}

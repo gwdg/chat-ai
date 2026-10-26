@@ -34,7 +34,7 @@ export default function ExportButton({ localState, setLocalState }) {
         onClick={handleExport}
         disabled={loading} // TODO handle loading
       >
-        <Download className="cursor-pointer h-[26px] w-[26px] text-[#009EE0] hover:text-blue-600 transition-colors" />
+        <Download className="cursor-pointer h-[26px] w-[26px] text-[#009EE0] hover:text-info transition-colors" />
       </button>
     </Tooltip>
   );

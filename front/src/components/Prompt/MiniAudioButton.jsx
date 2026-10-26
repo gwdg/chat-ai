@@ -69,7 +69,7 @@ export default function MiniAudioButton({ src }) {
   return (
     <button
       onClick={toggle}
-      className="relative w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center"
+      className="btn btn-info btn-circle relative"
     >
       <audio ref={audioRef} src={src} preload="metadata" />
 

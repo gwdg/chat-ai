@@ -43,7 +43,7 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
       <div
         role="group"
         aria-labelledby="global-reasoning-label"
-        className={`grid min-h-10 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60 ${
+        className={`grid min-h-10 gap-1 rounded-lg border border-base-300 bg-base-200 p-1 ${
           reasoningEffortOptions?.length <= 5
             ? "grid-flow-col grid-rows-1"
             : reasoningEffortOptions?.length <= 6
@@ -59,10 +59,10 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
               type="button"
               aria-pressed={selected}
               onClick={() => dispatch(setReasoningEffort(index))}
-              className={`min-w-0 rounded-md px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
+              className={`min-w-0 rounded-md px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
                 selected
-                  ? "bg-white text-tertiary shadow-sm dark:bg-gray-700 dark:text-white"
-                  : "text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white"
+                  ? "bg-base-100 text-accent shadow-sm dark:text-white"
+                  : "text-base-content/70 hover:bg-white/70 hover:text-base-content dark:hover:bg-gray-700/70"
               }`}
             >
               <span className="block truncate">

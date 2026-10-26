@@ -83,7 +83,7 @@ export default function TopicList({
       <div 
         key={id} 
         className={`group
-          isDropTarget ? "border-tertiary/60" : ""
+          isDropTarget ? "border-accent/60" : ""
         `}
         onDragEnter={(e) => {
           if (!draggingConversationId) return;
@@ -114,8 +114,8 @@ export default function TopicList({
               toggleTopicCollapse(id);
             }
           }}
-          className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40 ${
-            isDropTarget ? "border-tertiary/60" : ""
+          className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200 ${
+            isDropTarget ? "border-accent/60" : ""
           }`}
           // style={ isDropTarget ? { backgroundColor: topicTint(hex, isDark) } : undefined }
         >
@@ -149,7 +149,7 @@ export default function TopicList({
                   onRenameTopic(topic);
                 }}
                 aria-label={t("folders.rename_title")}
-                className="p-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                className="p-1 rounded-lg hover:bg-base-300 transition"
               >
                 <Edit size={14} />
               </button>
@@ -160,19 +160,19 @@ export default function TopicList({
                   onDeleteTopic(topic);
                 }}
                 aria-label={t("folders.delete_title")}
-                className="p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition"
+                className="p-1 rounded-lg hover:bg-error/10 text-error transition"
               >
                 <TrashCan size={14} />
               </button>
             </span>
           )}
 
-          <span className="text-[11px] select-none pointer-events-none font-semibold text-gray-500 dark:text-gray-200">
+          <span className="text-[11px] select-none pointer-events-none font-semibold text-base-content/70">
             {count > 999 ? "999+" : count}
           </span>
           <ChevronDown
             size={12}
-            className={`flex-shrink-0 pointer-events-none text-gray-400 dark:text-gray-500 transition-transform duration-200 ${
+            className={`flex-shrink-0 pointer-events-none text-base-content/50 transition-transform duration-200 ${
               isCollapsed ? "-rotate-90" : "rotate-0"
             }`}
           />
@@ -189,7 +189,7 @@ export default function TopicList({
             {/* New Chat / Persona / Import — sits after the list, and sticks to
                           the bottom edge once the list is long enough to scroll under it */}
             {id && id != UNSORTED_TOPIC_ID && (
-            <div className="sticky bottom-0 z-10 bg-white dark:bg-bg_secondary_dark pr-3">
+            <div className="sticky bottom-0 z-10 bg-base-100 pr-3">
               <div className="flex items-center gap-1">
                 <NewChatButton topicId={id} onNewConversation={onNewConversation} />
                 <ImportPersonaButton topicId={id} />
@@ -205,7 +205,7 @@ export default function TopicList({
 
   return (
     <div className="flex flex-col gap-1.5 pt-1">
-      <div className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40`}>
+      <div className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200`}>
       <button
         type="button"
         ref={createButtonRef}

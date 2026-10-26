@@ -37,8 +37,8 @@ function MiniToolButton({ active, disabled, onClick, Icon, label }) {
         disabled
           ? "opacity-50 cursor-not-allowed"
           : active
-          ? "border-green-500 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-200 dark:border-green-700 cursor-pointer"
-          : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50 dark:bg-bg_secondary_dark dark:text-gray-100 dark:border-border_dark dark:hover:bg-gray-800 cursor-pointer",
+          ? "border-success bg-success/10 text-success cursor-pointer"
+          : "border-base-300 bg-base-100 text-base-content hover:bg-base-200 cursor-pointer",
         active ? "shadow-sm" : "shadow-none",
       ].join(" ")}
       title={label}
@@ -160,7 +160,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
         <div className="flex-shrink-0 flex items-center gap-2">
           <p className="text-sm font-medium">{t("settings.tools_title")}</p>
           <CircleHelp
-            className="h-[16px] w-[16px] cursor-pointer text-gray-500 dark:text-gray-400"
+            className="h-[16px] w-[16px] cursor-pointer text-base-content/70"
             alt="help"
             onClick={() => openModal("helpTools")}
           />
@@ -177,30 +177,30 @@ export default function ToolsContainer({ localState, setLocalState }) {
               }))
             }
             disabled={isExternalModel}
-            className={[
-              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer",
-              toolsEnabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600",
-            ].join(" ")}
+            className="inline-flex cursor-pointer disabled:cursor-not-allowed"
             aria-label={
               toolsEnabled
                 ? t("settings.tools_enabled")
                 : t("settings.tools_disabled")
             }
           >
-            <span
-              className={[
-                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                toolsEnabled ? "translate-x-6" : "translate-x-1",
-              ].join(" ")}
+            <input
+              type="checkbox"
+              aria-hidden="true"
+              tabIndex={-1}
+              readOnly
+              checked={toolsEnabled}
+              disabled={isExternalModel}
+              className="toggle toggle-success pointer-events-none"
             />
           </button>
 
           {toolsEnabled ? (
-            <span className="text-sm font-medium text-green-700 dark:text-green-300">
+            <span className="text-sm font-medium text-success">
               <Trans i18nKey="settings.tools_enabled">Tools are enabled</Trans>
             </span>
           ) : (
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            <span className="text-sm font-medium text-base-content/70">
               <Trans i18nKey="settings.tools_disabled">Tools are disabled</Trans>
             </span>
           )}

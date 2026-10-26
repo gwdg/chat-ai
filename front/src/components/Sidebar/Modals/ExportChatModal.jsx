@@ -534,8 +534,8 @@ export default function ExportChatModal({
             className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition-all duration-200
               ${
                 exportFormat === option.id
-                  ? "border-tertiary bg-gray-100 dark:bg-gray-800"
-                  : "border-gray-300 dark:border-gray-600"
+                  ? "border-accent bg-base-200"
+                  : "border-base-300"
               }`}
             onClick={() => handleFormatChange(option.id)}
           >
@@ -543,8 +543,8 @@ export default function ExportChatModal({
             <label
               className={`text-sm ${
                 exportFormat === option.id
-                  ? "text-tertiary"
-                  : "text-black dark:text-white"
+                  ? "text-accent"
+                  : "text-base-content"
               }`}
             >
               <Trans i18nKey={option.label} />
@@ -556,7 +556,7 @@ export default function ExportChatModal({
         {arcana?.id && isArcanaSupported && exportSettings ? (
           <>
             {exportArcana && (
-              <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200">
+              <p className="rounded-lg border border-error/30 bg-error/10 p-2 text-xs text-error">
                 <Trans i18nKey="alert.arcana_export" />
               </p>
             )}
@@ -566,14 +566,14 @@ export default function ExportChatModal({
                 id="exportArcana"
                 checked={exportArcana}
                 onChange={toggleExportArcana}
-                className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
+                className={`checkbox checkbox-accent checkbox-sm ${
                   !arcana.id ? "bg-gray-400 cursor-not-allowed" : ""
                 }`}
                 disabled={!arcana?.id || !isArcanaSupported}
               />
               <label
                 htmlFor="exportArcana"
-                className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                className="text-xs text-base-content cursor-pointer select-none"
               >
                 <Trans i18nKey="export_conversation.export_arcana" />
               </label>
@@ -585,7 +585,7 @@ export default function ExportChatModal({
         {hasMcpServers && exportSettings ? (
           <>
             {exportMcpServers && (
-              <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200">
+              <p className="rounded-lg border border-error/30 bg-error/10 p-2 text-xs text-error">
                 <Trans i18nKey="alert.mcp_export" />
               </p>
             )}
@@ -595,11 +595,11 @@ export default function ExportChatModal({
                 id="exportMcpServers"
                 checked={exportMcpServers}
                 onChange={toggleExportMcpServers}
-                className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+                className="checkbox checkbox-accent checkbox-sm"
               />
               <label
                 htmlFor="exportMcpServers"
-                className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                className="text-xs text-base-content cursor-pointer select-none"
               >
                 <Trans i18nKey="export_conversation.export_mcp_servers" />
               </label>
@@ -614,11 +614,11 @@ export default function ExportChatModal({
             id="exportSettings"
             checked={exportSettings}
             onChange={toggleExportSettings}
-            className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+            className="checkbox checkbox-accent checkbox-sm"
           />
           <label
             htmlFor="exportSettings"
-            className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+            className="text-xs text-base-content cursor-pointer select-none"
           >
             <Trans i18nKey="export_conversation.export_settings" />
           </label>
@@ -631,14 +631,14 @@ export default function ExportChatModal({
             id="exportFiles"
             checked={exportFiles}
             onChange={toggleExportFiles}
-            className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
+            className={`checkbox checkbox-accent checkbox-sm ${
               !containsFiles ? "bg-gray-400 cursor-not-allowed" : ""
             }`}
             disabled={!containsFiles}
           />
           <label
             htmlFor="exportFiles"
-            className="text-xs text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+            className="text-xs text-base-content cursor-pointer select-none"
           >
             <Trans i18nKey="export_conversation.export_files" />
           </label>
@@ -649,7 +649,7 @@ export default function ExportChatModal({
           <button
             onClick={handleExport}
             type="button"
-            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none text-sm cursor-pointer"
+            className="btn btn-accent md:w-fit w-full min-w-[150px] select-none text-sm"
           >
             <Trans i18nKey="export_conversation.export" />
           </button>

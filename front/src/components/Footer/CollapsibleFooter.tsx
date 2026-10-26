@@ -12,7 +12,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className={`bg-white rounded-xl dark:bg-bg_secondary_dark text-xs md:text-sm ${className}`}>
+    <footer className={`bg-base-100 rounded-xl text-xs md:text-sm ${className}`}>
       {/* Header / handle: always visible */}
       <div className="flex justify-between">
         
@@ -26,7 +26,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
         >
         </button>
           {/* Version Display - Desktop and Tablet */}
-          <div className="hidden md:block flex flex-col md:flex-row justify-center items-center gap-4 dark:text-white text-black w-full md:p-0 py-2">
+          <div className="hidden md:block flex flex-col md:flex-row justify-center items-center gap-4 text-base-content w-full md:p-0 py-2">
             <VersionDisplay />
           </div>
           {/* Imprint */}
@@ -36,7 +36,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
             }
             target="_blank"
           >
-            <p className="text-center text-blue-600 dark:text-blue-400 hover:underline">
+            <p className="text-center text-info hover:underline">
               <Trans i18nKey="footer.imprint" />
             </p>
           </Link>
@@ -47,7 +47,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
           }
           target="_blank"
           >
-          <p className="text-center text-blue-600 dark:text-blue-400 hover:underline">
+          <p className="text-center text-info hover:underline">
               <Trans i18nKey="footer.privacy"></Trans>
           </p>
           </Link>
@@ -58,7 +58,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
             }
             target="_blank"
           >
-            <p className="text-center whitespace-nowrap truncate text-blue-600 dark:text-blue-400 hover:underline">
+            <p className="text-center whitespace-nowrap truncate text-info hover:underline">
               <Trans i18nKey="footer.terms" />
             </p>
           </Link>
@@ -69,7 +69,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
             }
             target="_blank"
           >
-            <p className="text-center h-full text-blue-600 dark:text-blue-400 hover:underline">
+            <p className="text-center h-full text-info hover:underline">
               <Trans i18nKey="footer.docs" />
             </p>
           </Link>
@@ -77,7 +77,7 @@ export default function CollapsibleFooter({ className }: { className?: string })
 
         {/* Right section */}
         <div className="interface-toggles h-[3vh] top-0 flex items-center pr-3 gap-2"> 
-          <p className="hidden md:block text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-gray-700 dark:text-purple-100">
+          <p className="hidden md:block text-center w-full flex flex-grow whitespace-nowrap overflow-visible text-base-content">
             <Trans i18nKey="footer.iso_certified" />
           </p>
           <ThemeToggle />

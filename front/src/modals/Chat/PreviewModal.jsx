@@ -29,11 +29,11 @@ const CSVTable = ({ content }) => {
 
   if (error)
     return (
-      <div className="p-4 text-red-500 dark:text-red-400">Error: {error}</div>
+      <div className="p-4 text-error">Error: {error}</div>
     );
   if (!parsedData?.length)
     return (
-      <div className="p-4 text-gray-600 dark:text-gray-400">
+      <div className="p-4 text-base-content/70">
         No data available
       </div>
     );
@@ -43,25 +43,25 @@ const CSVTable = ({ content }) => {
   return (
     <div className="overflow-auto max-h-[85vh] w-full">
       <table className="min-w-full border-collapse">
-        <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
+        <thead className="bg-base-200 sticky top-0 z-10">
           <tr>
             {headers.map((header, index) => (
               <th
                 key={index}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border border-gray-200 dark:border-gray-600"
+                className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase tracking-wider border border-base-300"
               >
                 {header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody className="bg-base-100 divide-y divide-base-300">
           {parsedData.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {headers.map((header, colIndex) => (
                 <td
                   key={colIndex}
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600"
+                  className="px-6 py-4 whitespace-nowrap text-sm text-base-content/70 border border-base-300"
                 >
                   {row[header] || "-"}
                 </td>
@@ -108,13 +108,13 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
     try {
       if (loadError)
         return (
-          <div className="p-4 text-red-500 dark:text-red-400">
+          <div className="p-4 text-error">
             Error: {loadError}
           </div>
         );
       if (!file)
         return (
-          <div className="p-4 text-gray-600 dark:text-gray-400">
+          <div className="p-4 text-base-content/70">
             No file to preview
           </div>
         );
@@ -164,9 +164,9 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         // Show mobile warning for PDF previews (only if not processed)
         if (isMobile && base64) {
           return (
-            <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-base-200 rounded-lg">
               <svg
-                className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
+                className="w-12 h-12 text-base-content/50 mb-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -178,10 +178,10 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              <p className="text-gray-600 dark:text-gray-400 mb-2">
+              <p className="text-base-content/70 mb-2">
                 PDF preview is not available on mobile devices
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500">
+              <p className="text-sm text-base-content/70">
                 Please use a desktop browser to preview PDF files
               </p>
             </div>
@@ -193,10 +193,10 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
           return (
             <div className="w-full h-[85vh] flex flex-col">
               {/* Show processing status if not processed */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-lg p-3 mb-4 mx-4">
+              <div className="bg-info/10 border border-info/30 rounded-lg p-3 mb-4 mx-4">
                 <div className="flex items-center gap-2">
                   <svg
-                    className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                    className="w-5 h-5 text-info"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -212,7 +212,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
                     <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
                       Original PDF Preview
                     </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-300">
+                    <p className="text-xs text-info">
                       This PDF hasn&quot;t been processed yet. Click
                       &quot;Process&quot; to extract text content.
                     </p>
@@ -233,9 +233,9 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
 
         // If no PDF data available, show helpful message
         return (
-          <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg mx-4">
+          <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-base-200 rounded-lg mx-4">
             <svg
-              className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4"
+              className="w-12 h-12 text-base-content/50 mb-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -247,10 +247,10 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <p className="text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-base-content/70 mb-2">
               PDF content not available
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
+            <p className="text-sm text-base-content/70">
               The original PDF file data is not available for preview
             </p>
           </div>
@@ -268,7 +268,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         fileType === "txt"
       ) {
         return (
-          <pre className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg overflow-auto max-h-[85vh] w-full font-mono text-sm text-gray-800 dark:text-gray-200">
+          <pre className="bg-base-200 p-6 rounded-lg overflow-auto max-h-[85vh] w-full font-mono text-sm text-base-content">
             {textContent || "No content available"}
           </pre>
         );
@@ -277,8 +277,8 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       // Code Viewer
       if (fileType === "code") {
         return (
-          <pre className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg overflow-auto max-h-[85vh] w-full">
-            <code className="font-mono text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+          <pre className="bg-base-200 p-6 rounded-lg overflow-auto max-h-[85vh] w-full">
+            <code className="font-mono text-sm whitespace-pre-wrap text-base-content">
               {textContent || "No content available"}
             </code>
           </pre>
@@ -288,7 +288,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       // Default display for any other file type
       if (textContent && typeof textContent === "string") {
         return (
-          <div className="bg-white dark:bg-gray-900 p-6 overflow-auto max-h-[80vh] w-full whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+          <div className="bg-base-100 p-6 overflow-auto max-h-[80vh] w-full whitespace-pre-wrap text-base-content">
             {textContent}
           </div>
         );
@@ -296,14 +296,14 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
 
       // Unsupported File Type
       return (
-        <div className="p-4 text-gray-600 dark:text-gray-400">
+        <div className="p-4 text-base-content/70">
           Unsupported file type
         </div>
       );
     } catch (error) {
       console.error("Error rendering content:", error);
       return (
-        <div className="p-4 text-red-500 dark:text-red-400">
+        <div className="p-4 text-error">
           Error displaying content: {error.message}
         </div>
       );
@@ -320,14 +320,14 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
     >
       {/* Custom Header with Filename + Actions */}
       <div className="flex justify-between items-center mb-4 px-2">
-        <p className="text-lg font-medium text-tertiary dark:text-gray-200 truncate max-w-[70%]">
+        <p className="text-lg font-medium text-accent dark:text-gray-200 truncate max-w-[70%]">
           {file.name}
         </p>
         <div className="flex items-center gap-4">
           {/* Download File Button */}
           <button
             onClick={handleSave}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 rounded-2xl text-white font-medium text-sm transition-colors cursor-pointer"
+            className="btn btn-sm btn-info"
             aria-label="Download file"
           >
             Save to device

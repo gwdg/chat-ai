@@ -105,10 +105,10 @@ export default function PromptTextArea({
               }}
               title={choice}
               className="shrink-0 max-w-[75vw] sm:max-w-[22rem]
-                         inline-flex items-center cursor-pointer rounded-full border border-gray-200 dark:border-gray-700 choice-chip-enter
-                         bg-gray-50 dark:bg-gray-900/30 px-3 py-2 text-xs font-medium
-                         text-gray-700 dark:text-gray-200
-                         hover:bg-gray-100 dark:hover:bg-gray-800
+ inline-flex items-center cursor-pointer rounded-full border border-base-300 choice-chip-enter
+ bg-base-200 px-3 py-2 text-xs font-medium
+ text-base-content
+ hover:bg-base-200
                          active:scale-95 transition"
               style={{ animationDelay: `${Math.min(index, 6) * 45}ms` }}
             >
@@ -131,7 +131,7 @@ export default function PromptTextArea({
         <textarea
             autoFocus
             ref={textareaRef}
-            className={`p-4 md:p-5 transition-opacity duration-300 ease-in-out outline-none text-base w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto ${
+            className={`p-4 md:p-5 transition-opacity duration-300 ease-in-out outline-none text-base w-full text-base-content bg-base-100 overflow-y-auto ${
               choices.length > 0 ? "" : "rounded-t-2xl"
             }`}
             value={prompt}

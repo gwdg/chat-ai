@@ -50,9 +50,9 @@ const MermaidDiagram = memo(({ content }) => {
 
   if (error) {
     return (
-      <div className="p-2 text-red-500">
+      <div className="p-2 text-error">
         Failed to render diagram. Showing raw code instead:
-        <pre className="mt-2 text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded">
+        <pre className="mt-2 text-xs bg-base-200 p-2 rounded">
           {content}
         </pre>
       </div>

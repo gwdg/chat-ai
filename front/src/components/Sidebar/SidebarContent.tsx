@@ -252,7 +252,7 @@ export default function SidebarContent({
         return (
           <mark
             key={`highlight-${index}`}
-            className="bg-yellow-200 dark:bg-yellow-600/60 text-black dark:text-white px-0.5 rounded-sm"
+            className="bg-yellow-200 dark:bg-yellow-600/60 text-base-content px-0.5 rounded-sm"
           >
             {part}
           </mark>
@@ -390,9 +390,9 @@ export default function SidebarContent({
         onDragEnd={handleConversationDragEnd}
         className={`sidebar-wrapper group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
           isActive
-            ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
-            : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-100"
-        } ${isDragging ? "border-tertiary/60 bg-tertiary/10 dark:bg-tertiary/20" : ""}`}
+            ? "bg-base-200 text-base-content shadow-sm"
+            : "text-base-content hover:bg-base-200 transition-all duration-100"
+        } ${isDragging ? "border-accent/60 bg-accent/10 dark:bg-accent/20" : ""}`}
         data-current={isActive ? "true" : "false"}
         style={{
           WebkitTapHighlightColor: "transparent",
@@ -423,13 +423,13 @@ export default function SidebarContent({
             <button
               ref={(el) => (menuButtonRefs.current[id] = el)}
               onClick={(e) => openMenu(e, id)}
-              className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center 
+              className={`p-1.5 hover:bg-base-300 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center 
                 hover:scale-110 active:scale-95 cursor-pointer`}
               style={{
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              <OverflowMenuVertical size={16} className="text-gray-500 dark:text-gray-400" />
+              <OverflowMenuVertical size={16} className="text-base-content/70" />
             </button>
           </div>
         </div>
@@ -456,7 +456,7 @@ export default function SidebarContent({
             type="button"
             onClick={onClose}
             aria-label={t("sidebar.close_sidebar")}
-            className="cursor-pointer p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-200 flex items-center justify-center text-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50"
+            className="btn btn-ghost btn-square text-accent"
           >
             <ChevronLeft size={20} />
           </button>
@@ -465,7 +465,7 @@ export default function SidebarContent({
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Conversations header, with the search field it reveals */}
-        <div className="sticky top-0 z-20 bg-white dark:bg-bg_secondary_dark px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+        <div className="sticky top-0 z-20 bg-base-100 px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-between gap-1 pb-3">
             <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
           <div className="flex items-center justify-between gap-1">
@@ -474,13 +474,13 @@ export default function SidebarContent({
           </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] uppercase tracking-wide text-base-content/70">
               {t("folders.title")}
             </span>
             <button
               type="button"
               onClick={openSearch}
-              className={`flex items-center rounded-lg p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer ${
+              className={`flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
                 searchVisible ? "opacity-0 pointer-events-none" : "opacity-100"
               }`}
               aria-label={t("folders.search_label")}
@@ -495,8 +495,8 @@ export default function SidebarContent({
                 : "max-h-0 opacity-0 pt-0 pb-0 -translate-y-1 pointer-events-none"
             }`}
           >
-            <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40  transition">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
+            <div className="relative rounded-xl border border-base-300 bg-base-200 transition">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 pointer-events-none" />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -516,12 +516,12 @@ export default function SidebarContent({
                   }
                 }}
                 placeholder={t("folders.search_placeholder")}
-                className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none"
+                className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-base-content placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none"
               />
               {searchQuery.length > 0 ? (
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-base-content/50 hover:text-base-content"
                   aria-label={t("folders.clear_search")}
                   onClick={() => setSearchQuery("")}
                 >
@@ -530,7 +530,7 @@ export default function SidebarContent({
               ) : (
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-base-content/50 hover:text-base-content"
                   aria-label={t("common.cancel")}
                   onClick={closeSearch}
                 >
@@ -550,7 +550,7 @@ export default function SidebarContent({
             {hasSearch ? (
               <div className="space-y-1">
                 {noSearchResults ? (
-                  <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-4">
+                  <div className="text-center text-xs text-base-content/70 py-4">
                     <Trans
                       i18nKey="folders.search_no_results"
                       values={{ query: searchQuery }}
@@ -586,7 +586,7 @@ export default function SidebarContent({
         </div>
 
         {/* Pinned footer: the user block */}
-        <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
+        <div className="sticky bottom-0 bg-base-100 pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex flex-col gap-3 mx-3">
             {showUsageInSidebar && userData?.limits && (
               <div className="flex flex-col gap-2">
@@ -613,7 +613,7 @@ export default function SidebarContent({
       {activeMenu && (
         <div
           ref={menuRef}
-          className="fixed w-40 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-gray-200 dark:border-gray-700"
+          className="fixed w-40 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-base-300"
           style={{
             left: `${menuPosition.x}px`,
             top: `${menuPosition.y}px`,
@@ -623,11 +623,11 @@ export default function SidebarContent({
         >
           {/* Solid background overlay to hide text */}
           <div
-            className="absolute inset-0 bg-white dark:bg-gray-800 rounded-lg"
+            className="absolute inset-0 bg-base-100 rounded-lg"
             style={{ zIndex: -1 }}
           />
 
-          <div className="p-1 bg-white dark:bg-gray-800 rounded-lg relative">
+          <div className="p-1 bg-base-100 rounded-lg relative">
             {/* Rename chat menu item */}
             <RenameChatButton
               localState={localState}
@@ -647,7 +647,7 @@ export default function SidebarContent({
                   closeMenu();
                 }
               }}
-              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-200"
             >
               <FolderMoveTo size={14} />
               <Trans i18nKey="folders.move_action" />

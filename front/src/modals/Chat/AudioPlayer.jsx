@@ -128,7 +128,7 @@ export default function AudioPlayer({ file, dataURL }) {
 
   if (error || !dataURL) {
     return (
-      <div className="w-full max-w-md p-6 bg-red-50 dark:bg-red-900/30 rounded-2xl border border-red-200 dark:border-red-700/50 mx-auto text-center text-red-600 dark:text-red-300">
+      <div className="w-full max-w-md p-6 bg-error/10 rounded-2xl border border-error/30 mx-auto text-center text-error">
         Failed to load audio
       </div>
     );
@@ -169,7 +169,7 @@ export default function AudioPlayer({ file, dataURL }) {
       {/* Play Button */}
       <button
         onClick={togglePlayPause}
-        className="mb-2 bg-blue-500 hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-400 text-white rounded-full p-5 shadow-lg transition-transform transform hover:scale-105 active:scale-95"
+        className="btn btn-info btn-circle btn-xl mb-2 shadow-lg"
       >
         {isPlaying ? (
           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
@@ -183,15 +183,15 @@ export default function AudioPlayer({ file, dataURL }) {
       </button>
 
       {/* MIME Type */}
-      <p className="text-xs text-gray-600 dark:text-gray-200 mb-4">
+      <p className="text-xs text-base-content/70 mb-4">
         {mimeType} • {formatFileSize(file?.size)}
       </p>
 
       {/* Player box */}
-      <div className="w-full p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 rounded-2xl border border-blue-200 dark:border-gray-700 shadow-lg">
+      <div className="w-full p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900 rounded-2xl border border-info/30 shadow-lg">
         {/* Progress Bar */}
         <div
-          className="relative w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-full cursor-pointer"
+          className="relative w-full h-2 bg-base-300 rounded-full cursor-pointer"
           onMouseDown={handleSeekStart}
           onMouseMove={handleSeekMove}
           onMouseUp={handleSeekEnd}
@@ -201,11 +201,11 @@ export default function AudioPlayer({ file, dataURL }) {
           onTouchEnd={handleSeekEnd}
         >
           <div
-            className="absolute left-0 top-0 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"
+            className="absolute left-0 top-0 h-2 bg-info rounded-full"
             style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
           />
           <div
-            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 dark:bg-blue-400 rounded-full shadow border border-white dark:border-gray-900 cursor-pointer"
+            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-info rounded-full shadow border border-white dark:border-gray-900 cursor-pointer"
             style={{ left: `calc(${(currentTime / duration) * 100 || 0}% - 8px)` }}
           />
         </div>
@@ -213,7 +213,7 @@ export default function AudioPlayer({ file, dataURL }) {
         {/* Controls */}
         <div className="flex justify-between items-center mt-2 relative">
           {/* Current time */}
-          <div className="text-xs leading-none text-gray-800 dark:text-gray-100">
+          <div className="text-xs leading-none text-base-content">
             {formatTime(currentTime)}
           </div>
 
@@ -227,20 +227,20 @@ export default function AudioPlayer({ file, dataURL }) {
                   setShowVolumeSlider(false);
                 }}
                 style={{ minWidth: "42px", textAlign: "center", lineHeight: "1" }}
-                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                className="text-info hover:text-info"
               >
                 {playbackRate}x
               </button>
               {showSpeedMenu && (
-                <div className="absolute right-0 bottom-full mb-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow text-xs z-20">
+                <div className="absolute right-0 bottom-full mb-1 bg-base-100 border border-base-300 rounded shadow text-xs z-20">
                   {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
                     <div
                       key={rate}
                       onClick={() => changeSpeed(rate)}
-                      className={`py-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                      className={`py-1 cursor-pointer hover:bg-base-200 ${
                         playbackRate === rate
-                          ? "font-semibold text-blue-600 dark:text-blue-400"
-                          : "text-gray-800 dark:text-gray-100"
+                          ? "font-semibold text-info"
+                          : "text-base-content"
                       }`}
                     >
                       {rate}x
@@ -257,12 +257,12 @@ export default function AudioPlayer({ file, dataURL }) {
                   setShowVolumeSlider((v) => !v);
                   setShowSpeedMenu(false);
                 }}
-                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center"
+                className="text-info hover:text-info flex items-center"
               >
                 <VolumeIcon />
               </button>
               {showVolumeSlider && (
-                <div className="absolute right-0 bottom-full mb-2 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg flex flex-col items-center">
+                <div className="absolute right-0 bottom-full mb-2 py-3 bg-base-100 border border-base-300 rounded shadow-lg flex flex-col items-center">
                   <input
                     type="range"
                     min="0"
@@ -281,7 +281,7 @@ export default function AudioPlayer({ file, dataURL }) {
               )}
             </div>
             {/* Total duration */}
-            <div className="text-gray-800 dark:text-gray-100">
+            <div className="text-base-content">
               {formatTime(duration - currentTime)}
             </div>
           </div>

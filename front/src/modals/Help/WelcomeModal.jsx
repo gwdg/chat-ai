@@ -19,11 +19,11 @@ export default function WelcomeModal({ isOpen, onClose, onRunTour }) {
     <BaseModal isOpen={isOpen} onClose={onClose} minimal={true}>
         <div className="flex flex-col gap-4">
             <div className="pt-0 pb-2">
-            <p className="dark:text-white text-black text-justify justify-center text-2xl">
+            <p className="text-base-content text-justify justify-center text-2xl">
                 <Trans i18nKey="tour.welcome_message" /> {packageJson.version}
             </p>
             </div>
-        <p className="dark:text-white text-black text-sm">
+        <p className="text-base-content text-sm">
             <Trans i18nKey="tour.description" />
         </p>
         {/* Begin Tour Button */}
@@ -31,7 +31,7 @@ export default function WelcomeModal({ isOpen, onClose, onRunTour }) {
             <button
                 onClick={() => { onRunTour(); onClose(); }}
                 className="
-                    bg-green-500 hover:bg-green-600
+ bg-success hover:bg-success/90
                     text-white font-semibold
                     px-6 py-3
                     rounded-xl
@@ -46,7 +46,7 @@ export default function WelcomeModal({ isOpen, onClose, onRunTour }) {
             </button>
             {/* Skip Tour Button */}
             <button
-                className="text-tertiary dark:text-primary p-3 justify-center items-center md:w-fit w-full min-w-[150px] select-none cursor-pointer"
+                className="btn btn-ghost text-accent dark:text-primary md:w-fit w-full min-w-[150px] select-none"
                 onClick={handleSkipTour}
             >
                 <Trans i18nKey="tour.skip_tour" />

@@ -51,7 +51,7 @@ export default function DeleteChatModal({
     >
       {/* Warning Message */}
       <div className="pt-0 pb-2">
-        <p className="dark:text-white text-black text-justify text-sm">
+        <p className="text-base-content text-justify text-sm">
           <Trans i18nKey="delete_conversation.description" />
         </p>
       </div>
@@ -60,12 +60,7 @@ export default function DeleteChatModal({
       <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm">
         {/* Cancel Button */}
         <button
-          className="cursor-pointer px-5 py-3 rounded-lg font-medium 
-                    text-gray-700 bg-gray-200 border border-gray-300 
-                    hover:bg-gray-300 hover:border-gray-400 
-                    active:scale-95 transition-all duration-200 
-                    dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 
-                    dark:hover:bg-gray-600"
+          className="btn"
           onClick={onClose}
         >
           <Trans i18nKey="common.cancel" />
@@ -73,11 +68,7 @@ export default function DeleteChatModal({
 
         {/* Delete Button */}
         <button
-          className="cursor-pointer px-5 py-3 rounded-lg font-medium 
-                    text-white bg-red-600 border border-red-700 
-                    hover:bg-red-700 hover:border-red-800 
-                    active:scale-95 transition-all duration-200 shadow-md 
-                    dark:shadow-black/30"
+          className="btn btn-error"
           onClick={handleDelete}
         >
           <Trans i18nKey="common.delete" />

@@ -63,15 +63,15 @@ export default function TopPSlider({ localState, setLocalState }) {
       </div>
 
       <div className="w-full">
-        <div className="select-none flex justify-between text-[10px] text-tertiary">
+        <div className="select-none flex justify-between text-[10px] text-accent">
           <span>Focused</span>
           <span>Diverse</span>
         </div>
 
         <div className="relative w-full h-4 flex items-center">
-          <div className="w-full h-1 bg-gray-300 dark:bg-gray-600 rounded-full">
+          <div className="w-full h-1 bg-base-300 rounded-full">
             <div
-              className="h-full bg-tertiary rounded-full"
+              className="h-full bg-accent rounded-full"
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
@@ -97,14 +97,14 @@ export default function TopPSlider({ localState, setLocalState }) {
             style={{ left: `${progressPercentage}%` }}
           >
             {showValue && (
-              <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 bg-white dark:bg-bg_dark text-tertiary text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
+              <div className="absolute -top-9 left-1/2 transform -translate-x-1/2 bg-base-100 text-accent text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
                 {Number(value).toFixed(2)}
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-l-transparent border-r-transparent border-t-white dark:border-t-bg_dark"></div>
               </div>
             )}
 
             <div
-              className={`w-4 h-4 bg-white dark:bg-gray-200 border-2 border-tertiary rounded-full shadow-md ${
+              className={`w-4 h-4 bg-base-100 border-2 border-accent rounded-full shadow-md ${
                 showValue ? "scale-125" : ""
               }`}
             />

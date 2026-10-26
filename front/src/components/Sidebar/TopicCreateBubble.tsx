@@ -127,15 +127,15 @@ export default function TopicCreateBubble({
     <div
       ref={bubbleRef}
       className="fixed z-[999999] w-80 rounded-2xl p-4 shadow-2xl dark:shadow-dark
-                 border border-gray-200 dark:border-gray-600
-                 bg-white dark:bg-bg_secondary_dark text-black dark:text-white"
+ border border-base-300
+ bg-base-100 text-base-content"
       style={{ left, top }}
     >
       {/* Tail pointing back at the trigger button */}
       <div
         className="absolute -left-[6px] h-3 w-3 rotate-45
-                   border-l border-b border-gray-200 dark:border-gray-600
-                   bg-white dark:bg-bg_secondary_dark"
+ border-l border-b border-base-300
+ bg-base-100"
         style={{ top: tailOffset }}
       />
 
@@ -179,7 +179,7 @@ export default function TopicCreateBubble({
             })}
           </div>
 
-          <div className="h-px bg-gray-200 dark:bg-gray-600" />
+          <div className="h-px bg-base-300" />
               
           <div className="grid grid-cols-7 gap-1 max-h-44 overflow-y-auto">
             
@@ -196,7 +196,7 @@ export default function TopicCreateBubble({
                   className={`h-9 w-9 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
                     selected
                       ? ""
-                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      : "text-base-content/70 hover:bg-base-200"
                   }`}
                   style={
                     selected
@@ -217,7 +217,7 @@ export default function TopicCreateBubble({
             type="button"
             onClick={() => setPickerOpen(false)}
             className="self-end rounded-xl px-4 py-1.5 text-sm font-medium cursor-pointer
-                       bg-tertiary text-white hover:bg-tertiary/90 transition-colors"
+                       bg-accent text-white hover:bg-accent/90 transition-colors"
           >
             {t("folders.done")}
           </button>
@@ -225,15 +225,15 @@ export default function TopicCreateBubble({
       ) : (
         /* Name and icon */
         <div className="relative flex flex-col gap-4">
-          <p className="text-center text-xs leading-5 text-gray-500 dark:text-gray-400">
+          <p className="text-center text-xs leading-5 text-base-content/70">
             {t("folders.create_blurb")}
           </p>
 
           <div
             className="flex items-center gap-2 rounded-2xl px-3 py-2.5
-                       bg-gray-50 dark:bg-bg_dark
-                       border border-gray-200 dark:border-gray-600
-                       focus-within:border-tertiary transition-colors"
+ bg-base-200
+ border border-base-300
+                       focus-within:border-accent transition-colors"
           >
             
             <button
@@ -262,11 +262,11 @@ export default function TopicCreateBubble({
               autoComplete="off"
               spellCheck={false}
               placeholder={t("folders.name_placeholder")}
-              className="flex-1 min-w-0 bg-transparent text-sm text-black dark:text-white
+              className="flex-1 min-w-0 bg-transparent text-sm text-base-content
                          placeholder:text-gray-400 focus:outline-none disabled:opacity-50"
             />
           </div>
-          <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
+          <p className="text-xs leading-5 text-base-content/70">
             {t("folders.blurb_examples")}
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -279,12 +279,12 @@ export default function TopicCreateBubble({
                   onClick={() => applySuggestion(suggestion)}
                   disabled={busy}
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 cursor-pointer
-                             border border-gray-200 dark:border-gray-600
-                             text-xs font-medium text-black dark:text-white
-                             hover:bg-gray-100 dark:hover:bg-gray-700
+ border border-base-300
+ text-xs font-medium text-base-content
+ hover:bg-base-200
                              transition-colors disabled:opacity-50"
                 >
-                  <Icon size={16} className="shrink-0 text-gray-500 dark:text-gray-400" />
+                  <Icon size={16} className="shrink-0 text-base-content/70" />
                   <span className="truncate">
                     {t(`folders.suggestion_${suggestion.key}`)}
                   </span>
@@ -294,7 +294,7 @@ export default function TopicCreateBubble({
           </div>
 
           {error && (
-            <p className="text-center text-xs text-red-500" role="alert">
+            <p className="text-center text-xs text-error" role="alert">
               {error}
             </p>
           )}
@@ -304,10 +304,7 @@ export default function TopicCreateBubble({
               type="button"
               onClick={onClose}
               disabled={busy}
-              className="rounded-xl px-4 py-2 text-sm font-medium cursor-pointer
-                         text-black dark:text-white
-                         hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
-                         disabled:opacity-50"
+              className="btn btn-ghost btn-sm"
             >
               {t("common.cancel")}
             </button>
@@ -315,9 +312,7 @@ export default function TopicCreateBubble({
               type="button"
               onClick={submit}
               disabled={busy || name.trim().length === 0}
-              className="rounded-xl px-4 py-2 text-sm font-medium cursor-pointer
-                         bg-tertiary text-white hover:bg-tertiary/90 transition-colors
-                         disabled:opacity-40 disabled:cursor-not-allowed"
+              className="btn btn-accent btn-sm"
             >
               {busy ? t("folders.creating") : t("common.create")}
             </button>

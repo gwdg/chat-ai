@@ -67,7 +67,7 @@ export default function ChatPage() {
           grid-cols-1 grid-rows-[1fr_auto]
           md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto]
           md:gap-x-2 gap-y-1 md:pt-1
-          bg-gray-50 dark:bg-bg_dark
+ bg-base-200
           overflow-hidden
         "
       >

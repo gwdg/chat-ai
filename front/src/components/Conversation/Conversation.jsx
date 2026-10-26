@@ -282,7 +282,7 @@ export default function Conversation({
                 {message.role === "info" && (
                   <div className="flex flex-col gap-1">
                     {message.content && (
-                      <div className="text-sm font-bold text-tertiary p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl">
+                      <div className="text-sm font-bold text-accent p-1.5 bg-base-200 rounded-2xl">
                         {message.content[0]?.text}
                       </div>
                     )}
@@ -303,11 +303,7 @@ export default function Conversation({
               <button
                 onClick={handleScrollButtonClick}
                 aria-label="Scroll to bottom"
-                className="cursor-pointer bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 
-                         px-2 py-2 rounded-full shadow-lg hover:shadow-xl dark:shadow-dark
-                         flex items-center justify-center gap-2 transition-all duration-200 
-                         hover:scale-105 border border-gray-200 dark:border-gray-600
-                         backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
+                className="btn btn-circle shadow-lg"
               >
                 <svg
                   className="w-5 h-5"

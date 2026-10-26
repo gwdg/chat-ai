@@ -68,10 +68,10 @@ export default function ImportSettingsDisclaimerModal({
       minimal={true}
     >
       <div className="flex flex-col gap-3">
-        <p className="text-red-600">
+        <p className="text-error">
           <Trans i18nKey="common.disclaimer" />
         </p>
-        <p className="dark:text-white text-black text-sm whitespace-pre-line">
+        <p className="text-base-content text-sm whitespace-pre-line">
           <Trans i18nKey="alert.import_settings_intro" />
         </p>
 
@@ -79,8 +79,8 @@ export default function ImportSettingsDisclaimerModal({
           {options.map((opt) => {
             const toneClasses =
               opt.tone === "red"
-                ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20"
-                : "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20";
+                ? "border-error/30 bg-error/10"
+                : "border-warning/30 bg-warning/10";
             return (
               <label
                 key={opt.key}
@@ -93,13 +93,13 @@ export default function ImportSettingsDisclaimerModal({
                   type="checkbox"
                   checked={opt.checked}
                   onChange={(e) => opt.onChange(e.target.checked)}
-                  className="mt-1 h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+                  className="mt-1 checkbox checkbox-accent checkbox-sm"
                 />
                 <div className="flex flex-col gap-1">
-                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <div className="text-sm font-medium text-base-content">
                     <Trans i18nKey={opt.labelKey} />
                   </div>
-                  <div className="text-xs text-gray-700 dark:text-gray-200 whitespace-pre-line">
+                  <div className="text-xs text-base-content whitespace-pre-line">
                     <Trans i18nKey={opt.bodyKey} />
                   </div>
                 </div>
@@ -110,19 +110,19 @@ export default function ImportSettingsDisclaimerModal({
 
         <div className="flex flex-col md:flex-row gap-2 pt-3 justify-center w-full">
           <button
-            className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
+            className="btn btn-accent md:w-fit w-full min-w-[150px] select-none"
             onClick={handleAllow}
           >
             <Trans i18nKey="common.allow" />
           </button>
           <button
-            className="text-white p-3 bg-gray-700 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
+            className="btn btn-neutral md:w-fit w-full min-w-[150px] select-none"
             onClick={handleDisallow}
           >
             <Trans i18nKey="common.disallow" />
           </button>
           <button
-            className="text-primary dark:text-tertiary p-3 justify-center items-center md:w-fit w-full min-w-[150px] select-none cursor-pointer"
+            className="btn btn-ghost text-primary dark:text-accent md:w-fit w-full min-w-[150px] select-none"
             onClick={handleCancel}
           >
             <Trans i18nKey="common.cancel" />

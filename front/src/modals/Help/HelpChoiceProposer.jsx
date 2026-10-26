@@ -4,10 +4,10 @@ import BaseModal from "../BaseModal";
 export default function HelpChoiceProposer({ isOpen, onClose }) {
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="help.title">
-      <p className="text-red-600">
+      <p className="text-error">
         <Trans i18nKey="alert.settings_external" />
       </p>
-      <p className="dark:text-white text-black text-sm">
+      <p className="text-base-content text-sm">
         <Trans i18nKey="help.choiceproposer" />
       </p>
     </BaseModal>

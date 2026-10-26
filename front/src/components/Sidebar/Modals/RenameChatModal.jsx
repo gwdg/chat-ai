@@ -100,34 +100,23 @@ export default function RenameChatModal({
             value={title}
             onChange={handleTitleChange}
             onKeyDown={handleKeyDown}
-            className={`w-full p-2 border ${
-              error ? "border-red-500" : "dark:border-border_dark"
-            } rounded-lg 
-                   bg-white dark:bg-black text-black dark:text-white
-                   focus:outline-none focus:ring-2 ${
-                     error ? "focus:ring-red-500" : "focus:ring-tertiary"
-                   }`}
+            className={`input w-full ${error ? "input-error" : ""}`}
             placeholder={t("rename_conversation.enter_name")}
           />
-          {error && <p className="text-red-500 text-sm pl-1">{error}</p>}
+          {error && <p className="text-error text-sm pl-1">{error}</p>}
         </div>
 
         {/* Buttons */}
         <div className="flex justify-end gap-3 w-full pt-2">
           <button
-            className="cursor-pointer p-3 border dark:border-border_dark rounded-2xl
-                     text-black dark:text-white bg-gray-100 dark:bg-gray-800
-                     hover:bg-gray-200 dark:hover:bg-gray-700
-                     min-w-[100px] select-none"
+            className="btn min-w-[100px] select-none"
             onClick={onClose}
           >
             {t("common.cancel")}
           </button>
 
           <button
-            className="cursor-pointer p-3 bg-tertiary text-white rounded-2xl
-                     hover:bg-tertiary/90 min-w-[100px]
-                     select-none shadow-lg dark:shadow-dark"
+            className="btn btn-accent min-w-[100px] select-none"
             onClick={handleRename}
           >
             <Trans i18nKey="common.rename" />
