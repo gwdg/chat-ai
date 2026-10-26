@@ -5,9 +5,9 @@ function clampPercent(percent) {
 }
 
 function getProgressColor(percent) {
-  if (percent >= 90) return "bg-red-500 dark:bg-red-500";
+  if (percent >= 90) return "bg-error";
   if (percent >= 70) return "bg-yellow-400 dark:bg-yellow-400";
-  return "bg-blue-500 dark:bg-blue-400";
+  return "bg-info";
 }
 
 export default function UsageProgressBar({
@@ -23,13 +23,13 @@ export default function UsageProgressBar({
 
   if (variant === "sidebar") {
     return (
-      <div className="w-full min-w-0 rounded-xl bg-gray-50 dark:bg-gray-800/60 px-3 py-2.5">
+      <div className="w-full min-w-0 rounded-xl bg-base-200 px-3 py-2.5">
         <div className="flex items-baseline justify-between gap-2 min-w-0">
-          <span className="min-w-0 truncate text-[11px] font-medium text-gray-700 dark:text-gray-200">
+          <span className="min-w-0 truncate text-[11px] font-medium text-base-content">
             {label}
           </span>
           <span
-            className="max-w-[62%] shrink-0 truncate text-right text-[11px] tabular-nums text-gray-500 dark:text-gray-300"
+            className="max-w-[62%] shrink-0 truncate text-right text-[11px] tabular-nums text-base-content/70"
             title={typeof value === "string" ? value : undefined}
           >
             {value}
@@ -37,7 +37,7 @@ export default function UsageProgressBar({
         </div>
         {hasProgress && (
           <div
-            className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+            className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-base-300"
             role="progressbar"
             aria-label={ariaLabel}
             aria-valuemin={0}
@@ -57,11 +57,11 @@ export default function UsageProgressBar({
   return (
     <div className="w-full min-w-0">
       <div className="flex min-w-0 items-baseline justify-between gap-3">
-        <span className="min-w-0 truncate text-sm font-medium text-gray-800 dark:text-gray-100">
+        <span className="min-w-0 truncate text-sm font-medium text-base-content">
           {label}
         </span>
         <span
-          className="max-w-[58%] shrink-0 truncate text-right text-sm tabular-nums text-gray-600 dark:text-gray-300"
+          className="max-w-[58%] shrink-0 truncate text-right text-sm tabular-nums text-base-content/70"
           title={typeof value === "string" ? value : undefined}
         >
           {value}
@@ -70,7 +70,7 @@ export default function UsageProgressBar({
 
       {hasProgress && (
         <div
-          className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+          className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-base-300"
           role="progressbar"
           aria-label={ariaLabel}
           aria-valuemin={0}

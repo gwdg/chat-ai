@@ -23,10 +23,10 @@ export default function ImportPersonaButton({
             });
           }}
           aria-label={t("sidebar.import_persona")}
-          className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+          className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-base-200 transition-all duration-200 flex items-center justify-center"
           style={{ WebkitTapHighlightColor: "transparent" }}
         >
-          <Bot size={20} className="text-tertiary" />
+          <Bot size={20} className="text-accent" />
         </button>
       </ShortcutTooltip>
     )
@@ -42,10 +42,10 @@ export default function ImportPersonaButton({
             });
           }}
           aria-label={t("sidebar.import_persona")}
-          className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+          className={`cursor-pointer p-2.5 hover:bg-success/10 hover:text-success rounded-2xl transition-all duration-200 flex items-center justify-center`}
           style={{ WebkitTapHighlightColor: "transparent" }}
         >
-          <Bot size={22} className="text-tertiary" />
+          <Bot size={22} className="text-accent" />
         </button>
       </ShortcutTooltip>
     )
@@ -64,10 +64,10 @@ export default function ImportPersonaButton({
           }}
           aria-label={t("sidebar.import_persona")}
           className="cursor-pointer flex-shrink-0 p-2 rounded-2xl transition-all duration-200 flex items-center justify-center
-            hover:bg-gray-100 dark:hover:bg-gray-800 text-black dark:text-white"
+ hover:bg-base-200 text-base-content"
           style={{ WebkitTapHighlightColor: "transparent" }}
         >
-          <Bot size={24} className="text-tertiary" />
+          <Bot size={24} className="text-accent" />
         </button>
       </ShortcutTooltip>
       </>

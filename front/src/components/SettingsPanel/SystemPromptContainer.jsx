@@ -71,7 +71,7 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
       </div>
       <div className="w-full relative z-10 flex-grow">
           <textarea
-            className="h-full resize-none bg-white text-black dark:text-white dark:bg-bg_secondary_dark p-3 border border-gray-200 dark:border-black/20 outline-none rounded-lg shadow-lg dark:shadow-dark w-full min-h-[24vh] text-sm overflow-y-auto"
+            className="textarea h-full resize-none w-full min-h-[24vh] text-sm overflow-y-auto"
             type="text"
             name="systemPrompt"
             placeholder={t("settings.system_prompt_placeholder")}
@@ -81,7 +81,7 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
           />
       </div>
       {(systemPromptError || !value) && (
-          <p className="text-yellow-600 text-xs">
+          <p className="text-warning text-xs">
             <Trans i18nKey="alert.system_prompt_empty" />
           </p>
         )}

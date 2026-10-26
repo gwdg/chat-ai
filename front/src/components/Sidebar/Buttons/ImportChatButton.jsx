@@ -80,7 +80,7 @@ export default function ImportChatButton({
         <button
           type="button"
           onClick={handleClickJSON}
-          className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+          className="btn w-full"
         >
           <Upload className="h-4 w-4" aria-hidden="true" />
           {t("user_settings.import_data_button")}
@@ -103,12 +103,12 @@ export default function ImportChatButton({
         <ShortcutTooltip label={t("common.import")}
 >
           <button
-            className={`cursor-pointer p-1.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center `}
+            className="btn btn-ghost btn-sm btn-square hover:bg-success/10 hover:text-success"
             onClick={handleClickJSON}
             disabled={loading}
             aria-label={t("common.import")}
           >
-            <Upload size={22} className="text-tertiary" />
+            <Upload size={22} className="text-accent" />
           </button>
         </ShortcutTooltip>
       </>
@@ -127,12 +127,12 @@ export default function ImportChatButton({
         />
         <ShortcutTooltip label={t("common.import")}>
           <button
-            className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+            className="btn btn-ghost btn-square hover:bg-success/10 hover:text-success"
             onClick={handleClickJSON}
             disabled={loading}
             aria-label={t("common.import")}
           >
-            <Upload size={22} className="text-tertiary" />
+            <Upload size={22} className="text-accent" />
           </button>
         </ShortcutTooltip>
         </>
@@ -153,7 +153,7 @@ export default function ImportChatButton({
         <button
           onClick={handleClickJSON}
           disabled={loading}
-          className={`cursor-pointer w-full hover:bg-gray-50 dark:hover:bg-gray-800/50 text-black dark:text-white px-4 py-3 rounded-2xl flex items-center justify-start gap-2 text-xs font-medium touch-manipulation transition-all duration-100 ${
+          className={`cursor-pointer w-full hover:bg-base-200 text-base-content px-4 py-3 rounded-2xl flex items-center justify-start gap-2 text-xs font-medium touch-manipulation transition-all duration-100 ${
             loading ? "cursor-not-allowed opacity-50" : ""
           } `}
           style={{
@@ -184,14 +184,14 @@ export default function ImportChatButton({
           onClick={handleClickJSON}
           disabled={loading}
           className={`cursor-pointer flex-shrink-0 p-2 rounded-2xl transition-all duration-200 flex items-center justify-center
-           hover:bg-gray-100 dark:hover:bg-gray-800 text-black dark:text-white transition-all duration-100 ${
+ hover:bg-base-200 text-base-content transition-all duration-100 ${
             loading ? "cursor-not-allowed opacity-50" : ""
           } `}
           style={{
             WebkitTapHighlightColor: "transparent"
           }}
         >
-          <Upload size={24} className="text-tertiary" />
+          <Upload size={24} className="text-accent" />
         </button>
         </ShortcutTooltip>
       </>

@@ -98,18 +98,18 @@ export default function MoveChatModal({
       titleKey="folders.move_title"
       maxWidth="max-w-lg"
     >
-      <div className="space-y-4 text-sm text-gray-800 dark:text-gray-100">
-        <p className="text-gray-700 dark:text-gray-200">
+      <div className="space-y-4 text-sm text-base-content">
+        <p className="text-base-content">
           <Trans
             i18nKey="folders.move_description"
             values={{ title: conversationTitle || "" }}
           />
         </p>
-        <div className="max-h-60 overflow-y-auto rounded-xl border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
-          <label className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40">
+        <div className="max-h-60 overflow-y-auto rounded-xl border border-base-300 divide-y divide-base-300">
+          <label className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-base-200">
             <input
               type="radio"
-              className="text-tertiary focus:ring-tertiary"
+              className="radio radio-accent radio-sm"
               checked={selectedFolder === UNSORTED_FOLDER}
               onChange={() => setSelectedFolder(UNSORTED_FOLDER)}
             />
@@ -120,11 +120,11 @@ export default function MoveChatModal({
           {folderOptions?.map((folder) => (
             <label
               key={folder.id}
-              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40"
+              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-base-200"
             >
               <input
                 type="radio"
-                className="text-tertiary focus:ring-tertiary"
+                className="radio radio-accent radio-sm"
                 checked={selectedFolder === folder.id}
                 onChange={() => setSelectedFolder(folder.id)}
               />
@@ -134,7 +134,7 @@ export default function MoveChatModal({
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs text-gray-500 dark:text-gray-400">
+          <label className="text-xs text-base-content/70">
             <Trans i18nKey="folders.new_folder_prompt" />
           </label>
           <div className="flex gap-2">
@@ -149,11 +149,11 @@ export default function MoveChatModal({
                 setNewFolderName(e.target.value);
                 if (error) setError("");
               }}
-              className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-bg_dark px-3 py-2 text-sm text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-tertiary/40"
+              className="input flex-1 text-sm"
               placeholder={t("folders.name_placeholder")}
             />
             <button
-              className="cursor-pointer px-3 py-2 rounded-xl border border-tertiary text-tertiary hover:bg-tertiary/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-accent btn-outline"
               onClick={handleCreateFolder}
               disabled={creating}
             >
@@ -163,20 +163,20 @@ export default function MoveChatModal({
         </div>
 
         {error && (
-          <p className="text-xs text-red-500" role="alert">
+          <p className="text-xs text-error" role="alert">
             {error}
           </p>
         )}
 
         <div className="flex justify-end gap-2">
           <button
-            className="cursor-pointer px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            className="btn"
             onClick={onClose}
           >
             <Trans i18nKey="common.cancel" />
           </button>
           <button
-            className="cursor-pointer px-5 py-2 rounded-lg bg-tertiary text-white hover:bg-tertiary/90 transition shadow disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-accent"
             onClick={handleMove}
             disabled={!conversationId}
           >

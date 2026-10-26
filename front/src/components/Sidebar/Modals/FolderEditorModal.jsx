@@ -78,7 +78,7 @@ export default function FolderEditorModal({
     >
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500 dark:text-gray-300">
+          <label className="text-xs text-base-content/70">
             <Trans i18nKey="folders.name_label" />
           </label>
           <input
@@ -94,12 +94,12 @@ export default function FolderEditorModal({
               if (error) setError("");
             }}
             onKeyDown={handleKeyDown}
-            className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-bg_dark px-3 py-2 text-sm text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-tertiary/40"
+            className="input w-full text-sm"
             placeholder={t("folders.name_placeholder")}
           />
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-gray-500 dark:text-gray-300">
+          <span className="text-xs text-base-content/70">
             <Trans i18nKey="folders.choose_color" />
           </span>
           <div className="flex flex-wrap gap-2">
@@ -112,7 +112,7 @@ export default function FolderEditorModal({
                 aria-pressed={colorId === color.id}
                 className={`h-6 w-6 cursor-pointer rounded-full transition ${
                   colorId === color.id
-                    ? "ring-2 ring-offset-2 ring-tertiary dark:ring-offset-bg_dark"
+                    ? "ring-2 ring-offset-2 ring-accent dark:ring-offset-bg_dark"
                     : "hover:scale-110"
                 }`}
                 style={{ backgroundColor: color.hex }}
@@ -122,7 +122,7 @@ export default function FolderEditorModal({
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-gray-500 dark:text-gray-300">
+          <span className="text-xs text-base-content/70">
             <Trans i18nKey="folders.choose_icon" />
           </span>
           <div className="grid grid-cols-7 gap-1">
@@ -136,8 +136,8 @@ export default function FolderEditorModal({
                 aria-pressed={iconId === id}
                 className={`flex cursor-pointer items-center justify-center rounded-lg p-2 transition ${
                   iconId === id
-                    ? "bg-gray-100 dark:bg-gray-700 text-black dark:text-white"
-                    : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    ? "bg-base-200 text-base-content"
+                    : "text-base-content/70 hover:bg-base-200"
                 }`}
               >
                 <Icon size={16} />
@@ -147,19 +147,19 @@ export default function FolderEditorModal({
         </div>
 
         {error && (
-          <p className="text-xs text-red-500" role="alert">
+          <p className="text-xs text-error" role="alert">
             {error}
           </p>
         )}
         <div className="flex justify-end gap-2 text-sm">
           <button
-            className="cursor-pointer px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            className="btn"
             onClick={onClose}
           >
             <Trans i18nKey="common.cancel" />
           </button>
           <button
-            className="cursor-pointer px-5 py-2 rounded-lg bg-tertiary text-white hover:bg-tertiary/90 transition shadow"
+            className="btn btn-accent"
             onClick={handleSubmit}
           >
             <Trans i18nKey={isRename ? "common.save" : "common.create"} />

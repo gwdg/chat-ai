@@ -26,13 +26,13 @@ export default function UserContainer({
   };
 
   const avatar = userData?.username ? (
-    <div className="user-profile-button w-9 h-9 rounded-lg border-2 border-tertiary flex items-center justify-center bg-gray-50 dark:bg-gray-800">
-      <span className="text-tertiary font-medium text-sm">
+    <div className="user-profile-button w-9 h-9 rounded-lg border-2 border-accent flex items-center justify-center bg-base-200">
+      <span className="text-accent font-medium text-sm">
         {getInitials(userData.username)}
       </span>
     </div>
   ) : (
-    <User size={20} className="h-full w-full text-tertiary" />
+    <User size={20} className="h-full w-full text-accent" />
   );
 
   if (!interactive) {
@@ -57,7 +57,7 @@ export default function UserContainer({
     </div>
   ) : (
     <button
-      className="h-9 w-9 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-lg p-2 touch-manipulation border-l border-gray-200 dark:border-gray-700 ml-3"
+      className="btn btn-ghost btn-sm btn-square h-9 w-9 p-2 touch-manipulation ml-3"
       onClick={() =>
         openModal("userSettings", { localState, userData, modelsData })
       }

@@ -32,13 +32,13 @@ const MCPContainer = ({ localState, setLocalState }) => {
             value={settings?.mcp_servers || ""}
             onChange={handleMCPChange}
             placeholder={t("settings.placeholder_mcp_id")}
-            className="dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-lg shadow-lg dark:shadow-dark w-full max-h-[40px]"
+            className="input w-full"
           />
         </div>
       </div>
 
       {settings?.mcp_servers && (
-        <div className="text-yellow-600 text-xs w-full select-none mt-1.5">
+        <div className="text-warning text-xs w-full select-none mt-1.5">
           <Trans i18nKey="alert.mcp_usage" />
         </div>
       )}

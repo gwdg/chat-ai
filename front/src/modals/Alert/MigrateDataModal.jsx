@@ -106,7 +106,7 @@ export default function MigrateDataModal({
     >
       <div className="flex flex-col gap-4">
         <div className="pt-0 pb-2">
-          <p className="dark:text-white text-black text-justify text-sm">
+          <p className="text-base-content text-justify text-sm">
             <Trans i18nKey="alert.migrate_data" />
           </p>
         </div>
@@ -117,9 +117,9 @@ export default function MigrateDataModal({
             <p className="text-sm text-center mb-2 dark:text-gray-300">
               Upgrading conversation {currentIndex} of {totalCount}…
             </p>
-            <div className="w-full bg-gray-300 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+            <div className="w-full bg-base-300 rounded-full h-4 overflow-hidden">
               <div
-                className="bg-green-500 h-4 transition-all duration-300 ease-in-out"
+                className="bg-success h-4 transition-all duration-300 ease-in-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -132,14 +132,14 @@ export default function MigrateDataModal({
             {!backupComplete && (
               <>
                 <button
-                  className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
+                  className="btn btn-accent md:w-fit w-full min-w-[150px] select-none"
                   onClick={handleBackup}
                 >
                   <Trans i18nKey="common.backup_data" />
                 </button>
 
                 <button
-                  className="text-tertiary dark:text-primary p-3 justify-center items-center md:w-fit w-full min-w-[150px] select-none cursor-pointer"
+                  className="btn btn-ghost text-accent dark:text-primary md:w-fit w-full min-w-[150px] select-none"
                   onClick={() => setBackupComplete(true)}
                 >
                   <Trans i18nKey="common.skip_backup" />
@@ -149,17 +149,7 @@ export default function MigrateDataModal({
             {backupComplete && (
               <button
                 onClick={handleMigrate}
-                className="
-                  bg-green-500 hover:bg-green-600
-                  text-white font-semibold
-                  px-6 py-3
-                  rounded-xl
-                  shadow-lg hover:shadow-xl
-                  transition-all duration-200 ease-in-out
-                  border border-green-700 dark:border-green-400
-                  w-full md:w-auto min-w-[150px]
-                  select-none cursor-pointer
-                "
+                className="btn btn-success w-full md:w-auto min-w-[150px] select-none"
               >
                 <Trans i18nKey="common.upgrade_chat_ai" />
               </button>

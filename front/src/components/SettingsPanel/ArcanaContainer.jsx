@@ -45,7 +45,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
             value={settings?.arcana?.id}
             onChange={handleArcanaChange()}
             placeholder={t("settings.placeholder_arcana_id")}
-            className="dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-lg shadow-lg dark:shadow-dark w-full max-h-[40px]"
+            className="input w-full"
           />
         </div>
       </div>
@@ -53,7 +53,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
         (settings?.enable_tools ||
           settings.model?.input?.includes("arcana") ||
           false) && (
-          <div className="text-yellow-600 text-xs w-full select-none space-y-1">
+          <div className="text-warning text-xs w-full select-none space-y-1">
             <div>
               <Trans i18nKey="alert.arcana_usage" />
             </div>

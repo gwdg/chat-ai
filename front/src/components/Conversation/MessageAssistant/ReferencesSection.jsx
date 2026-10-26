@@ -79,7 +79,7 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
       style={{ animationDelay: `${index * 100}ms` }}
     >
       <div
-        className={`w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center justify-between group transition-colors duration-200 ${
+        className={`w-full px-4 py-3 hover:bg-base-200 flex items-center justify-between group transition-colors duration-200 ${
           canExpand ? "cursor-pointer" : "cursor-default"
         }`}
         onClick={canExpand ? () => setIsOpen((o) => !o) : undefined}
@@ -89,7 +89,7 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
         }
       >
         <div className="flex items-center gap-3 flex-grow overflow-hidden min-w-0">
-          <span className="text-xs font-mono bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full whitespace-nowrap">
+          <span className="text-xs font-mono bg-info/10 text-info px-2 py-1 rounded-full whitespace-nowrap">
             {reference?.rrefNumber || index + 1}
           </span>
 
@@ -103,7 +103,7 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
                 href={reference.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0"
+                className="text-info hover:text-info shrink-0"
                 onClick={(e) => e.stopPropagation()}
                 title="Open source"
               >
@@ -113,8 +113,8 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
 
             {isPartial && isStreaming && (
               <span className="inline-flex items-center ml-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-xs text-blue-600 dark:text-blue-400 ml-1">
+                <div className="w-2 h-2 bg-info rounded-full animate-pulse"></div>
+                <span className="text-xs text-info ml-1">
                   loading...
                 </span>
               </span>
@@ -126,22 +126,22 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
           {hasContent && isRendered && !isPartial && (
             <button
               onClick={copyReference}
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors cursor-pointer"
+              className="btn btn-ghost btn-xs btn-square"
               title="Copy reference"
             >
               {copied ? (
-                <Check size={14} className="text-green-600" />
+                <Check size={14} className="text-success" />
               ) : (
-                <Copy size={14} className="text-gray-500" />
+                <Copy size={14} className="text-base-content/70" />
               )}
             </button>
           )}
           {canExpand ? (
             <div className="transition-transform duration-200">
               {isOpen ? (
-                <ChevronDown size={16} className="text-gray-500" />
+                <ChevronDown size={16} className="text-base-content/70" />
               ) : (
-                <ChevronRight size={16} className="text-gray-500" />
+                <ChevronRight size={16} className="text-base-content/70" />
               )}
             </div>
           ) : (
@@ -155,7 +155,7 @@ const ProgressiveReferenceItem = memo(function ProgressiveReferenceItem({
           id={`reference-${reference?.rrefNumber || index}`}
           className="overflow-hidden"
         >
-          <div className="px-4 py-4 bg-gray-50 dark:bg-gray-800/30 border-t animate-in slide-in-from-top-2 duration-300">
+          <div className="px-4 py-4 bg-base-200 border-t animate-in slide-in-from-top-2 duration-300">
             <div className="leading-relaxed">
               <SafeMarkdown components={rendererComponents}>
                 {contentBody}
@@ -246,13 +246,13 @@ const ReferencesSection = memo(function ReferencesSection({
       <div className="mb-8">
         <div className="relative w-full flex items-center">
           {/* Left line */}
-          <div className="flex-1 border-t border-gray-300 dark:border-gray-600" />
+          <div className="flex-1 border-t border-base-300" />
 
           {/* Center content */}
           <div className="flex items-center gap-3 px-4">
             <div
               className={`w-2 h-2 rounded-full ${
-                isStreaming ? "bg-blue-500 animate-pulse" : "bg-green-500"
+                isStreaming ? "bg-info animate-pulse" : "bg-success"
               }`}
             />
             <span className="text-sm font-semibold uppercase tracking-wider">
@@ -260,13 +260,13 @@ const ReferencesSection = memo(function ReferencesSection({
             </span>
             <div
               className={`w-2 h-2 rounded-full ${
-                isStreaming ? "bg-blue-500 animate-pulse" : "bg-green-500"
+                isStreaming ? "bg-info animate-pulse" : "bg-success"
               }`}
             />
           </div>
 
           {/* Right line */}
-          <div className="flex-1 border-t border-gray-300 dark:border-gray-600" />
+          <div className="flex-1 border-t border-base-300" />
         </div>
       </div>
 
@@ -275,7 +275,7 @@ const ReferencesSection = memo(function ReferencesSection({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-lg font-semibold"><Trans i18nKey="conversation.references" /></span>
-              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full">
+              <span className="px-3 py-1 bg-info/10 text-info text-sm font-medium rounded-full">
                 {visibleCount} of {references.length} source
                 {references.length !== 1 ? "s" : ""}
               </span>
@@ -291,8 +291,8 @@ const ReferencesSection = memo(function ReferencesSection({
               disabled={!isFullyLoaded || references.length === 0}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 isFullyLoaded && references.length > 0
-                  ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md cursor-pointer"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                  ? "bg-info hover:bg-info/90 text-white shadow-sm hover:shadow-md cursor-pointer"
+                  : "bg-base-300 text-base-content/50 cursor-not-allowed"
               }`}
               aria-label="Copy all references"
               title={

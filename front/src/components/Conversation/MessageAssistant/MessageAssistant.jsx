@@ -165,7 +165,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     <div
       key={message_index}
       ref={assistantMessage}
-      className={`text-black dark:text-white overflow-hidden
+      className={`text-base-content overflow-hidden
           ${editMode ? "px-1 pt-1" : "px-3 pt-3"}`}
     >
       {isContentEmpty ? (
@@ -176,12 +176,12 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {loading && <Typing />}
           {!loading && (
             <div className="flex flex-col items-center justify-start gap-3 py-1">
-              <div className="text-red-500 dark:text-red-400 text-sm font-medium text-center">
+              <div className="text-error text-sm font-medium text-center">
               {errorMessage}
               </div>
               <button
                 onClick={handleRetry}
-                className="cursor-pointer flex items-center gap-2 px-4 py-3 text-sm opacity-100 text-black dark:text-white bg-red-500/40 rounded-full hover:bg-red-400/100 transition-all"
+                className="btn btn-error btn-soft rounded-full text-sm"
                 disabled={loading}
               >
                 <RotateCw className="w-4 h-4" />
@@ -212,7 +212,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     setEditMode(false);
                   }
                 }}
-                className="p-2 outline-none rounded-sm w-full text-sm dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-y-auto"
+                className="p-2 outline-none rounded-sm w-full text-sm text-base-content bg-base-100 resize-y overflow-y-auto"
                 placeholder="Edit response..."
                 style={{
                   minHeight: `${MIN_HEIGHT}px`,
@@ -222,13 +222,13 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               <div className="flex gap-4 justify-end w-full gap-2 pt-1 pb-2 px-2">
                 <button
                   onClick={() => setEditMode(false)}
-                  className="text-sm text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full cursor-pointer"
+                  className="text-sm text-base-content/70 px-2 py-1 rounded-full cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleSave()}
-                  className="text-md text-primary border dark:text-tertiary rounded-full px-3 py-1 cursor-pointer"
+                  className="text-md text-primary border dark:text-accent rounded-full px-3 py-1 cursor-pointer"
                 >
                   Save
                 </button>
@@ -258,7 +258,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     setFeedbackMode(false);
                   }
                 }}
-                className="p-2 outline-none rounded-sm w-full text-sm dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-y-auto"
+                className="p-2 outline-none rounded-sm w-full text-sm text-base-content bg-base-100 resize-y overflow-y-auto"
                 placeholder="Provide feedback..."
                 style={{
                   minHeight: `${MIN_HEIGHT}px`,
@@ -268,13 +268,13 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               <div className="flex gap-4 justify-end w-full gap-2 pt-1 pb-2 px-2">
                 <button
                   onClick={() => setFeedbackMode(false)}
-                  className="text-sm text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full cursor-pointer"
+                  className="text-sm text-base-content/70 px-2 py-1 rounded-full cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleSaveFB()}
-                  className="text-md text-primary border dark:text-tertiary rounded-full px-3 py-1 cursor-pointer"
+                  className="text-md text-primary border dark:text-accent rounded-full px-3 py-1 cursor-pointer"
                 >
                   Save & Send FB
                 </button>
@@ -312,9 +312,9 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   <ForkButton handleForkConversation={handleForkConversation} />
                   <EditButton setEditMode={setEditMode} />
                   {/* Vertical seperator like | */}
-                  <div className="hidden md:flex w-px h-6 bg-gray-200 dark:bg-gray-600 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="hidden md:flex w-px h-6 bg-base-300 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>
                   {/* Render Mode Selector on the bottom left*/}
-                  <div className="hidden md:flex h-6 bg-gray-200 dark:bg-gray-600 dark:bg-gray-700  rounded-xl overflow-hidden opacity-25 group-hover:opacity-100 transition-opacity duration-300 ">
+                  <div className="hidden md:flex h-6 bg-base-300 rounded-xl overflow-hidden opacity-25 group-hover:opacity-100 transition-opacity duration-300 ">
                     {renderModes.map((mode) => (
                       <button
                         key={mode}
@@ -323,8 +323,8 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     ${loading ? "cursor-not-allowed opacity-25" : ""}
                     ${
                       renderMode === mode
-                        ? "bg-tertiary text-white rounded-xl"
-                        : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        ? "bg-accent text-white rounded-xl"
+                        : "bg-base-300 text-base-content/70 hover:bg-base-300"
                     }
                     `}
                         disabled={loading}
@@ -334,7 +334,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     ))}
                   </div>
                   { /* Show message metadata */
-                  message?.meta && (<div className="w-px h-6 bg-gray-200 dark:bg-gray-600 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>)}
+                  message?.meta && (<div className="w-px h-6 bg-base-300 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>)}
                   {
                   message?.meta && (
                     <MetaBox meta={message.meta} /> 

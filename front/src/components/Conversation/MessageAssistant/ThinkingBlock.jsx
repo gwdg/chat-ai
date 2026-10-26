@@ -42,7 +42,7 @@ const ThinkingBlock = memo(
     }, [autoExpand, isStreaming, autoOpened]);
 
     return (
-      <div className="my-4 rounded-lg border border-tertiary">
+      <div className="my-4 rounded-lg border border-accent">
         <button
           onClick={() => {
             if (!isStreaming) {
@@ -50,7 +50,7 @@ const ThinkingBlock = memo(
               setAutoOpened(false);
             }
           }}
-          className="rounded-lg cursor-pointer flex items-center w-full p-3 text-xs bg-blue-50 dark:bg-blue-900/30 rounded-t-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
+          className="rounded-lg cursor-pointer flex items-center w-full p-3 text-xs bg-info/10 rounded-t-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
           aria-expanded={isOpen}
           aria-controls="thinking-content"
           disabled={isStreaming}

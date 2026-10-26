@@ -46,15 +46,11 @@ export default function UndoButton({ localState, setLocalState }) {
   return (
     <Tooltip text={t("common.undo")}>
       <button
-        className="cursor-pointer bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 
-                         px-2 py-2 rounded-full shadow-lg hover:shadow-xl dark:shadow-dark
-                         flex items-center justify-center gap-2 transition-all duration-200 
-                         hover:scale-105 border border-gray-200 dark:border-gray-600
-                         backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
+        className="btn btn-circle shadow-lg"
         onClick={handleUndo}
         disabled={loading}
       >
-        <Undo2 className="cursor-pointer h-5 w-5 text-[#009EE0] hover:text-blue-600 transition-colors" />
+        <Undo2 className="cursor-pointer h-5 w-5 text-[#009EE0] hover:text-info transition-colors" />
       </button>
     </Tooltip>
   );

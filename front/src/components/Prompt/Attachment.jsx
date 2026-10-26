@@ -120,12 +120,12 @@ export default function Attachment({
       return {
         bgColor:
           "relative bg-gradient-to-br from-yellow-100 to-yellow-300 dark:from-yellow-900/30 dark:to-yellow-800/30",
-        borderColor: "border-yellow-300 dark:border-yellow-500",
+        borderColor: "border-warning/30",
         hoverColor:
           "hover:from-yellow-100 hover:to-yellow-200 dark:hover:from-yellow-800/40 dark:hover:to-yellow-700/40",
-        iconBg: "bg-yellow-500 dark:bg-yellow-600",
+        iconBg: "bg-warning",
         icon: (
-          <WarningAltFilled size={20} className="text-yellow-700 dark:text-yellow-300" />
+          <WarningAltFilled size={20} className="text-warning" />
         ),
       };
     }
@@ -133,7 +133,7 @@ export default function Attachment({
       return {
         bgColor:
           "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20",
-        borderColor: "border-blue-200 dark:border-blue-700/50",
+        borderColor: "border-info/30",
         hoverColor:
           "hover:from-blue-100 hover:to-blue-200 dark:hover:from-blue-800/30 dark:hover:to-blue-700/30",
         iconBg: "bg-transparent",
@@ -145,10 +145,10 @@ export default function Attachment({
       return {
         bgColor:
           "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20",
-        borderColor: "border-green-200 dark:border-green-700/50",
+        borderColor: "border-success/30",
         hoverColor:
           "hover:from-green-100 hover:to-green-200 dark:hover:from-green-800/30 dark:hover:to-green-700/30",
-        iconBg: "bg-green-500 dark:bg-green-600",
+        iconBg: "bg-success",
         icon: (
           <img
             className="h-full w-full object-cover rounded"
@@ -174,7 +174,7 @@ export default function Attachment({
       return {
         bgColor:
           "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50",
-        borderColor: "border-gray-200 dark:border-gray-600/50",
+        borderColor: "border-base-300",
         hoverColor:
           "hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700/60 dark:hover:to-gray-600/60",
         iconBg: "bg-gray-500 dark:bg-gray-600",
@@ -201,7 +201,7 @@ export default function Attachment({
           <div>
             {/* Top row */}
             <p
-              className="font-medium text-xs text-gray-900 dark:text-white mb-1 truncate"
+              className="font-medium text-xs text-base-content mb-1 truncate"
               title={file.name}
             >
               {file.name}
@@ -252,7 +252,7 @@ export default function Attachment({
               )}
 
               {/* File size */}
-              <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+              <span className="text-xs text-base-content/70 whitespace-nowrap">
                 {formatFileSize(file.size)}
               </span>
 
@@ -267,7 +267,7 @@ export default function Attachment({
               {/* Remove button - positioned at card corner */}
               {!inHistory && (
                 <button
-                  className="absolute top-1 right-1 p-1 bg-white/30 hover:bg-white/90 dark:hover:bg-black/70 rounded-full flex-shrink-0 focus:outline-none transition-colors"
+                  className="btn btn-ghost btn-xs btn-circle absolute top-1 right-1 bg-base-100/30 hover:bg-base-100/90"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRemove();
@@ -280,7 +280,7 @@ export default function Attachment({
             </div>
           </div>
           {/* Process Needed Warning*/}
-          <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
+          <span className="text-[11px] text-warning flex items-center gap-1">
             <WarningAltFilled size={12} className="flex-shrink-0" />
             File must be processed
           </span>
@@ -296,14 +296,14 @@ export default function Attachment({
             </div>
             <div className="min-w-0 flex-grow pr-6">
               <p
-                className="font-medium text-xs text-gray-900 dark:text-white leading-tight mb-1 truncate"
+                className="font-medium text-xs text-base-content leading-tight mb-1 truncate"
                 title={file.name}
               >
                 {file.name}
               </p>
               <div className="flex items-center gap-2">
                 {/* File size */}
-                <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                <span className="text-xs text-base-content/70 whitespace-nowrap">
                   {formatFileSize(file.size)}
                 </span>
                 {/* Badge */}
@@ -315,7 +315,7 @@ export default function Attachment({
                       ? "bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200"
                       : file.type === "video"
                       ? "bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                      : "bg-base-300 text-base-content"
                   }`}
                 >
                   {badge}
@@ -323,7 +323,7 @@ export default function Attachment({
                 {/* Remove button - positioned at card corner */}
                 {!inHistory && (
                   <button
-                    className="absolute top-1 right-1 p-1 bg-white/30 hover:bg-white/90 dark:hover:bg-black/70 rounded-full flex-shrink-0 focus:outline-none transition-colors"
+                    className="btn btn-ghost btn-xs btn-circle absolute top-1 right-1 bg-base-100/30 hover:bg-base-100/90"
                     onClick={(e) => {
                       e.stopPropagation();
                       removeAttachment({
@@ -342,7 +342,7 @@ export default function Attachment({
           </div>
           {/* Process Needed Warning*/}
           {!inAssistant && (!isFileSupported || fileType === "pdf") && (
-            <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
+            <span className="text-[11px] text-warning flex items-center gap-1">
               <WarningAltFilled size={12} className="flex-shrink-0" />
               {!isFileSupported
                 ? <Trans i18nKey="conversation.attachment.file_unsupported" values={{ filetype: fileType }} />

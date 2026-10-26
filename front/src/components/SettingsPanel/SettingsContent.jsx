@@ -88,7 +88,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
   return (
     <>
-      <div className="flex relative w-full h-full flex-col items-center text-tertiary min-w-0 min-h-0 max-h-full">
+      <div className="flex relative w-full h-full flex-col items-center text-accent min-w-0 min-h-0 max-h-full">
         {/* Settings Panel */}
         <div className="flex flex-col gap-3 p-3 lg:p-4 h-full w-full min-h-0 overflow-y-auto">
 
@@ -118,7 +118,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             />
             {/* Reset Default Button */}
             <button
-              className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none cursor-pointer"
+              className="btn md:w-fit select-none"
               type="reset"
               onClick={resetDefault}
             >

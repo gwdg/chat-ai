@@ -91,7 +91,7 @@ export default function ShareSettingsButton({ localState }) {
 
   return (
     <button
-      className="text-white p-3 bg-green-600 hover:bg-green-550 active:bg-green-700 dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none flex gap-2 cursor-pointer"
+      className="btn btn-success md:w-fit select-none flex gap-2"
       type="reset"
       onClick={() =>
         openModal("shareSettings", {

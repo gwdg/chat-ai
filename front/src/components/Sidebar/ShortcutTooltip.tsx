@@ -72,7 +72,7 @@ export default function ShortcutTooltip({
           >
             <span>{label}</span>
             {shortcut ? (
-              <span className="ml-2 text-gray-400 dark:text-gray-400">
+              <span className="ml-2 text-base-content/50">
                 {shortcut}
               </span>
             ) : null}

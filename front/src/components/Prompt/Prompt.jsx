@@ -91,7 +91,7 @@ export default function Prompt({
   
   return (
     <div className="prompt-area overflow-x-hidden w-full flex flex-shrink-0 flex-col 
-    bg-white dark:bg-bg_secondary_dark dark:text-white text-black mobile:h-fit justify-center 
+ bg-base-100 text-base-content mobile:h-fit justify-center 
     sm:overflow-y-auto rounded-2xl shadow-bottom dark:shadow-darkBottom
     md:max-w-[85vw] xl:max-w-[1300px] transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none mx-auto">
         {/* Attachments Container */}
@@ -99,7 +99,7 @@ export default function Prompt({
           localState={localState}
           setLocalState={setLocalState}
         />
-        <div className={`flex flex-col gap-4 w-full relative select-none rounded-2xl shadow-lg dark:text-white text-black bg-white dark:bg-bg_secondary_dark`} >
+        <div className={`flex flex-col gap-4 w-full relative select-none rounded-2xl shadow-lg text-base-content bg-base-100`} >
         {/* Prompt Text Area */}
         <PromptTextArea
           localState={localState}
@@ -110,7 +110,7 @@ export default function Prompt({
         />
         
         {/* Buttons Section */}
-        <div className="px-3 py-2 w-full h-fit grid grid-cols-[1fr_auto_1fr] items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl relative">
+        <div className="px-3 py-2 w-full h-fit grid grid-cols-[1fr_auto_1fr] items-center bg-base-100 rounded-b-2xl relative">
           {/* Buttons on the left */}
           <div className="flex gap-4 items-center justify-start">
             {/* Attach Button */}

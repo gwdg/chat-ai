@@ -28,9 +28,9 @@ export function DataSafetyText({ localState, userData }) {
   const isSafe = isSafeSettings(localState);
   if(isSafe) return null;
   return (
-    <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-600 rounded-md text-yellow-800 dark:text-yellow-300">
-      <div className="flex items-center gap-2 p-2 text-sm text-yellow-700 dark:text-yellow-300 select-none">
-        <WarningAltFilled size={28} className="shrink-0 text-yellow-600 dark:text-yellow-400" />
+    <div className="bg-warning/10 border border-warning/30 rounded-md text-warning">
+      <div className="flex items-center gap-2 p-2 text-sm text-warning select-none">
+        <WarningAltFilled size={28} className="shrink-0 text-warning" />
         <Trans
         i18nKey={
             userData?.org === "MPG"
@@ -48,20 +48,20 @@ const TONES = {
   safe: {
     Icon: Locked,
     button:
-      `bg-green-100 hover:bg-green-200
+      `bg-success/10 hover:bg-green-200
        dark:bg-green-900/30 dark:hover:bg-green-900/50
-       border-green-300 dark:border-green-600
+ border-success/30
        text-green-800 dark:text-green-300`,
-    text: "text-green-600 dark:text-green-400",
+    text: "text-success",
   },
   warning: {
     Icon: WarningAltFilled,
     button:
-      `bg-yellow-100 hover:bg-yellow-200
+      `bg-warning/10 hover:bg-yellow-200
        dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50
-       border-yellow-300 dark:border-yellow-600
-       text-yellow-800 dark:text-yellow-300`,
-    text: "text-yellow-600 dark:text-yellow-400",
+ border-warning/30
+ text-warning`,
+    text: "text-warning",
   },
 };
 
@@ -147,8 +147,8 @@ export default function WarningExternalModel({
     <div
       className={`${
         portalPanel ? "fixed z-[999999]" : "absolute right-0 bottom-full mb-2 z-20"
-      } p-4 bg-white dark:bg-gray-800
-         border border-gray-200 dark:border-gray-600
+      } p-4 bg-base-100
+ border border-base-300
          rounded-lg shadow-xl w-56 max-w-[calc(100vw-2rem)]`}
       style={
         portalPanel
@@ -161,10 +161,7 @@ export default function WarningExternalModel({
       </div>
       <button
         onClick={handleCloseTooltip}
-        className="absolute top-2 right-2
-                   text-gray-500 hover:text-gray-700
-                   dark:text-gray-400 dark:hover:text-white
-                   transition-colors cursor-pointer"
+        className="btn btn-ghost btn-xs btn-square absolute top-2 right-2 text-base-content/70"
         title="Close"
       >
         <Close size={16} />
@@ -173,8 +170,8 @@ export default function WarningExternalModel({
       {!portalPanel && (
         <div
           className="absolute -bottom-1 right-17.5 md:right-6.5 w-2 h-2
-                        bg-white dark:bg-gray-800
-                        border-r border-b border-gray-200 dark:border-gray-600
+ bg-base-100
+ border-r border-b border-base-300
                         transform rotate-45"
         ></div>
       )}
