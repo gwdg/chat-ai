@@ -39,6 +39,7 @@ const getDefaultState = () => {
       count_announcement: 0,
       show_usage_in_sidebar: true,
       collapsed_topics: [],
+      disable_screensavers: false,
     },
     // Conditionally preserve memories
     user_settings: {
