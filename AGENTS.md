@@ -36,7 +36,8 @@ front/src/
   config/         getModelDefaults.jsx + models/<model-id>.json capability files
   i18n/           en.js, de.js
   utils/          sendMessage, conversationUtils, attachments, appContext, tabChangeSync
-back/service.mjs  POST /documents, GET /models, GET /user, POST /audio/speech, POST /chat/completions
+back/service.mjs  POST /documents, GET /models, GET /user, POST /audio/speech, POST /chat/completions,
+                  /agent/* (pass-through proxy for the browser agent, front.json `agentPath`)
 secrets/          front.json + back.json (gitignored; *.sample committed)
 ```
 
