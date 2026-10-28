@@ -4,11 +4,13 @@ import { useTranslation } from "react-i18next";
 import { Tools } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
 import ToolsContainer from "../SettingsPanel/ToolsContainer";
+import { isAgentEnabled } from "../../apis/agentEndpoints";
 
 export default function ToolsButton({ localState, setLocalState }) {
     const { t } = useTranslation();
     const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
-    if (!toolsModule) return null;
+    // The agent always has tools to choose from
+    if (!toolsModule && !isAgentEnabled()) return null;
 
     return (
         <Popover className="relative flex">

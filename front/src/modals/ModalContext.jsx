@@ -25,6 +25,7 @@ import DeleteFolderModal from "../components/Sidebar/Modals/DeleteFolderModal";
 import MoveChatModal from "../components/Sidebar/Modals/MoveChatModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
 import ConfirmActionModal from "./Alert/ConfirmActionModal";
+import FolderAccessModal from "./Alert/FolderAccessModal";
 import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
@@ -169,6 +170,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "confirmAction" && (
         <ConfirmActionModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "folderAccess" && (
+        <FolderAccessModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {/* General Modals */}
       {modalType === "exportChat" && (

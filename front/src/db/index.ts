@@ -2,6 +2,7 @@ import Dexie, { Table } from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid';
+import { deleteAllWorkspaces, deleteWorkspace } from '../agent/workspace'
 
 import type { 
   ConversationRow, 
@@ -478,11 +479,14 @@ export async function deleteConversation(conversationId: string) {
       await db.conversations.delete(conversationId);
     }
   );
+  // The agent's files live in OPFS, outside the database
+  await deleteWorkspace(conversationId);
 }
 
 // Maintenance
 export async function resetDB() {
   await db.delete()
+  await deleteAllWorkspaces()
   // Recreate instance (Dexie deletes the database but not the in-memory schema)
   ;(db as any)['_state']?.db?.close?.()
   ;(db as any).open?.()
