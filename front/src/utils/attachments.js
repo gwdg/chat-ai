@@ -1,3 +1,7 @@
+import i18n from "i18next";
+import { isAgentEnabled } from "../apis/agentEndpoints";
+import { prepareAttachment } from "../agent/prepare";
+
 // Converts a file to base64 string format using FileReader
 export const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -155,6 +159,29 @@ const appendAttachments = ({
     });
 };
 
+// In agent mode, start converting a newly attached file right away (see agent/prepare.ts).
+// An audio file's transcript goes into the prompt for the user to edit, unless the file was
+// sent or removed in the meantime, or the model hears the audio itself.
+const prepareForAgent = ({ localState, setLocalState, fileId, file }) => {
+    if (!isAgentEnabled()) return;
+    prepareAttachment(localState.id, fileId, file).then((transcript) => {
+    if (!transcript) return;
+    setLocalState((prev) => {
+        if (prev.settings?.model?.input?.includes("audio")) return prev;
+        const messages = [...prev.messages];
+        const draft = messages[messages.length - 1];
+        if (draft?.role !== "user" || !draft.content?.some((item) => item.fileId === fileId)) return prev;
+        const text = draft.content[0]?.text || "";
+        const block = `[${i18n.t("conversation.attachment.transcript_of", { name: file.name })}]\n${transcript.trim()}`;
+        messages[messages.length - 1] = {
+        ...draft,
+        content: [{ type: "text", text: text ? `${text}\n\n${block}` : block }, ...draft.content.slice(1)],
+        };
+        return { ...prev, messages };
+    });
+    });
+};
+
 // Add media attachments
 const addAttachments = async ({
     localState,
@@ -225,6 +252,7 @@ const addAttachments = async ({
         // TODO check if files can be processed
         const fileId = saveFile(localState.id, file) // save file with conversationId
         newAttachments.push({"type": "file", "fileId": fileId});
+        prepareForAgent({ localState, setLocalState, fileId, file });
     }
 
     // Update state with new files
@@ -397,6 +425,7 @@ const addAudioAttachment = async ({
         setLocalState,
         newAttachments: [{"type": "file", "fileId": fileId}]
     });
+    prepareForAgent({ localState, setLocalState, fileId, file });
 
     notifySuccess("Audio recorded and converted to WAV successfully");
     } catch (error) {

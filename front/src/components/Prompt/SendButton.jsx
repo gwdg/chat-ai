@@ -3,6 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { useToast } from "../../hooks/useToast";
 import { useSendMessage } from "../../hooks/useSendMessage";
 import { Send, SendFilled } from "@carbon/icons-react";
+import { isAgentEnabled } from "../../apis/agentEndpoints";
 
 export default function SendButton({localState, setLocalState, handleSend, prompt}) {
     const { t, i18n } = useTranslation();
@@ -14,7 +15,8 @@ export default function SendButton({localState, setLocalState, handleSend, promp
             typeof modelName === "string" &&
             modelName.toLowerCase().includes("external");
 
-        const toolsEnabled = !!localState?.settings?.enable_tools;
+        // The agent does not use web search or MCP
+        const toolsEnabled = !!localState?.settings?.enable_tools && !isAgentEnabled();
         const tools = localState?.settings?.tools || {};
 
         // Web search should only trigger warnings when the toolset is active

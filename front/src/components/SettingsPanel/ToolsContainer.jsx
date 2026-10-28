@@ -15,14 +15,23 @@ import {
   Wand2,
   AudioLines,
   Server, // MCP
+  Pencil,
+  Code,
+  FileText,
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import ArcanaContainer from "./ArcanaContainer";
 import MCPContainer from "./MCPContainer";
 import VideoList from "./VideoList";
+import { isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 
-function MiniToolButton({ active, disabled, onClick, Icon, label }) {
+// Tools the agent has no counterpart for
+const AGENT_UNAVAILABLE = new Set(["web_search", "video_generation", "arcana", "mcp"]);
+// Tools that only exist in agent mode
+const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
+
+function MiniToolButton({ active, disabled, onClick, Icon, label, title }) {
   return (
     <button
       type="button"
@@ -41,7 +50,7 @@ function MiniToolButton({ active, disabled, onClick, Icon, label }) {
           : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50 dark:bg-bg_secondary_dark dark:text-gray-100 dark:border-border_dark dark:hover:bg-gray-800 cursor-pointer",
         active ? "shadow-sm" : "shadow-none",
       ].join(" ")}
-      title={label}
+      title={title || label}
     >
       <Icon className="h-6 w-6 md:h-7 md:w-7 shrink-0" aria-hidden="true" />
       <span className="leading-none text-xs text-center">
@@ -65,14 +74,21 @@ export default function ToolsContainer({ localState, setLocalState }) {
 
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools && !isExternalModel;
- 
-  const showArcanaBox = !!settings?.enable_tools && !!toolsState.arcana;
-  const showMCPBox = !!settings?.enable_tools && !!toolsState.mcp;
-  const showVideoList = !!toolsState.video_generation;
+  // In agent mode every tool is switched on its own and a missing key counts as on
+  // (as in agent/tools.ts); the master switch and the server-side tools do not apply.
+  const agentMode = isAgentEnabled();
+  const agentWithoutTools = agentMode && !modelSupportsTools(settings?.model);
+
+  const showArcanaBox = !agentMode && !!settings?.enable_tools && !!toolsState.arcana;
+  const showMCPBox = !agentMode && !!settings?.enable_tools && !!toolsState.mcp;
+  const showVideoList = !agentMode && !!toolsState.video_generation;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
     () => [
+      { key: "write_access", Icon: Pencil, label: t("settings.label_write_access") },
+      { key: "codemode", Icon: Code, label: t("settings.label_codemode") },
+      { key: "create_docx", Icon: FileText, label: t("settings.label_create_docx") },
       { key: "web_search", Icon: Globe, label: t("settings.label_web_search") },
       {
         key: "image_generation",
@@ -115,7 +131,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
       },
     ],
     [t]
-  );
+  ).filter(({ key }) => agentMode || !AGENT_ONLY.has(key));
 
   // Simple setter for per-tool flags
   const toggleTool = (toolKey, nextValue) => {
@@ -166,6 +182,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
           />
         </div>
 
+        {agentMode ? (
+          agentWithoutTools && (
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300 select-none">
+              {t("settings.tools_agent_external")}
+            </span>
+          )
+        ) : (
         <div className="w-full flex items-center gap-3 select-none">
           <button
             type="button"
@@ -205,6 +228,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
             </span>
           )}
         </div>
+        )}
       </div>
 
       {/* Compact, responsive grid */}
@@ -215,7 +239,8 @@ export default function ToolsContainer({ localState, setLocalState }) {
         ].join(" ")}
       >
         {TOOL_DEFS.map(({ key, Icon, label }) => {
-          const active = !!toolsState[key];
+          const unavailable = agentMode && AGENT_UNAVAILABLE.has(key);
+          const active = agentMode ? !unavailable && toolsState[key] !== false : !!toolsState[key];
           const onToggle =
             key === "web_search"
               ? () => handleToggleWebSearch(!active)
@@ -225,10 +250,11 @@ export default function ToolsContainer({ localState, setLocalState }) {
             <MiniToolButton
               key={key}
               active={active}
-              disabled={!toolsEnabled}
+              disabled={agentMode ? unavailable || agentWithoutTools : !toolsEnabled}
               onClick={onToggle}
               Icon={Icon}
               label={label}
+              title={unavailable ? `${label}: ${t("settings.tools_agent_unavailable")}` : label}
             />
           );
         })}

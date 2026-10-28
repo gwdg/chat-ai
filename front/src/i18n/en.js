@@ -155,6 +155,11 @@ export default {
     label_video_generation: "Video Generation",
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",
+    label_write_access: "Write files",
+    label_codemode: "Codemode",
+    label_create_docx: "Word document",
+    tools_agent_unavailable: "Not available in agent mode",
+    tools_agent_external: "This model runs without tools",
     placeholder_arcana_id: "Arcana id",
     placeholder_mcp_id: "Server id",
     video_queue_title: "Video generation queue",
@@ -178,6 +183,9 @@ export default {
 
   // Conversation
   conversation: {
+    mount_folder: "Give the assistant access to a local folder",
+    folder_mounted: "Folder available to the assistant at {{path}}",
+    tool_failed: "failed",
     prompt: {
       placeholder: "Ask me",
       attach: "Attach File",
@@ -190,6 +198,9 @@ export default {
       audio_unsupported: "Switch model to process audio",
       file_unsupported: "Switch model to process {{filetype}}",
       unprocessed: "Unprocessed file",
+      transcript_of: "Transcript of {{name}}",
+      converting: "Converting…",
+      transcribing: "Transcribing…",
     },
     reasoning: "Reasoning Process",
     action: "Action",
@@ -471,6 +482,8 @@ export default {
   },
   // Alerts and warnings
   alert: {
+    folder_access:
+      "The assistant wants to use the local folder <strong>{{name}}</strong> again. Your browser needs you to allow access after a reload.",
     title: "Warning",
     bad_request:
       "Bad request was sent: Please clear conversation, reattempt within the limit, and save your chat history for future reference.",
