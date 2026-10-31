@@ -2,9 +2,11 @@
 import {
   faBookOpen,
   faBrain,
-  faCircleInfo,
+  faChevronRight,
   faChevronDown,
+  faCircleInfo,
   faFilter,
+  faFolder,
   faImage,
   faMagnifyingGlass,
   faMicrophone,
@@ -42,6 +44,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
   const [searchQuery, setSearchQuery] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [modelScope, setModelScope] = useState(lastModelScope); // all, internal, external
+  const [openGroups, setOpenGroups] = useState({}); // folders start closed
   useEffect(() => { lastModelScope = modelScope; }, [modelScope]);
 
   // Dropdown close on click outside logic
@@ -86,6 +89,26 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
     return result.sort((a, b) => a.name.localeCompare(b.name));
   }, [searchQuery, modelsData, modelScope, showScopeFilter]);
+
+  // Group models into subfolders by the first word of their name.
+  // While a search query is active the list stays flat so that search
+  // still matches against every model name.
+  const isSearching = searchQuery.trim() !== "";
+  const groupedModels = useMemo(() => {
+    if (isSearching) return null;
+    const groups = new Map();
+    for (const m of filteredModelsList) {
+      const key = (m.name || "").trim().split(/\s+/)[0] || "Other";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(m);
+    }
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([key, models]) => ({ key, models }));
+  }, [filteredModelsList, isSearching]);
+
+  const toggleGroup = (key: string) =>
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
   // use memo to not rerender on search input
   const ListElement = memo(({ idx, model, selected, onClick }: { idx: number, model: BaseModelInfo, selected: boolean, onClick: () => void }) => {
@@ -227,12 +250,56 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
           className="px-2 flex-1 min-h-0 max-h-96 overflow-auto"
         >
           <div className="rounded-xl overflow-hidden">
-            {filteredModelsList.map((m, idx) => (
-              <ListElement
-                key={m.id}
-                onClick={() => { setSelectedModel(m); setDropdownOpen(false); onSelected?.(); }}
-                idx={idx} model={m} selected={selectedModel?.id === m.id} />
-            ))}
+            {groupedModels ? (
+              groupedModels.map((group) => {
+                // A group with a single model is shown directly, no folder.
+                if (group.models.length <= 1) {
+                  return (
+                    <ListElement
+                      key={group.models[0].id}
+                      onClick={() => { setSelectedModel(group.models[0]); setDropdownOpen(false); onSelected?.(); }}
+                      idx={0} model={group.models[0]} selected={selectedModel?.id === group.models[0].id} />
+                  );
+                }
+                const open = !!openGroups[group.key];
+                return (
+                  <div key={group.key}>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.key)}
+                      className="flex w-full items-center gap-1.5 px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl"
+                    >
+                      <FontAwesomeIcon
+                        icon={open ? faChevronDown : faChevronRight}
+                        className="text-[10px]"
+                      />
+                      <FontAwesomeIcon icon={faFolder} className="text-tertiary" />
+                      <span>{group.key}</span>
+                      <span className="ml-auto text-[10px] font-normal text-slate-400 dark:text-slate-500">
+                        {group.models.length}
+                      </span>
+                    </button>
+                    {open && (
+                      <div>
+                        {group.models.map((m, idx) => (
+                          <ListElement
+                            key={m.id}
+                            onClick={() => { setSelectedModel(m); setDropdownOpen(false); onSelected?.(); }}
+                            idx={idx} model={m} selected={selectedModel?.id === m.id} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              filteredModelsList.map((m, idx) => (
+                <ListElement
+                  key={m.id}
+                  onClick={() => { setSelectedModel(m); setDropdownOpen(false); onSelected?.(); }}
+                  idx={idx} model={m} selected={selectedModel?.id === m.id} />
+              ))
+            )}
           </div>
         </div>
       </div>
