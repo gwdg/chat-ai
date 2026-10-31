@@ -46,6 +46,8 @@ const getDefaultState = () => {
       timeout: 300000,
       memory_mode: 0,
       suggest_user_prompts: false,
+      html_render_mode: "render",
+      html_load_external: true,
     },
   };
 };

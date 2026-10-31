@@ -189,6 +189,10 @@ export default {
     },
     reasoning: "Denkprozess",
     action: "Aktion",
+    html_block: {
+      render: "HTML rendern",
+      show_code: "Code anzeigen",
+    },
     sources: "Quellen und Referenzen",
     references: "Referenzen",
     empty_message:
@@ -287,6 +291,33 @@ export default {
         description:
           "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
         help_label: "Mehr über Folgevorschläge erfahren",
+      },
+      html_render: {
+        label: "HTML-Blöcke",
+        description:
+          "Legt fest, wie HTML-Blöcke in Antworten standardmäßig angezeigt werden.",
+        options: {
+          render: {
+            label: "Rendern",
+            description:
+              "HTML-Blöcke als Live-Inhalt rendern. Pro Block kann weiterhin auf den Code gewechselt werden.",
+          },
+          code: {
+            label: "Code",
+            description:
+              "HTML-Blöcke standardmäßig als Code anzeigen. Pro Block kann weiterhin gerendert werden.",
+          },
+          off: {
+            label: "Aus",
+            description:
+              "HTML-Blöcke niemals rendern. Sie werden immer als Code angezeigt.",
+          },
+        },
+        external_references: {
+          label: "Externe Referenzen laden",
+          description:
+            "Erlaubt HTML-Blöcken, Bilder und Links von externen Hosts zu laden. Für mehr Privatsphäre deaktivieren (externe Referenzen werden entfernt).",
+        },
       },
     },
     default_model: {

@@ -6,6 +6,8 @@ const initialState = {
   timeout: 300000,
   memory_mode: 0,
   suggest_user_prompts: false,
+  html_render_mode: "render",
+  html_load_external: true,
 };
 
 const userSettingsSlice = createSlice({
@@ -64,6 +66,17 @@ const userSettingsSlice = createSlice({
       state.suggest_user_prompts = Boolean(action.payload);
     },
 
+    setHtmlRenderMode: (state, action) => {
+      const mode = action.payload;
+      if (["render", "code", "off"].includes(mode)) {
+        state.html_render_mode = mode;
+      }
+    },
+
+    setHtmlLoadExternal: (state, action) => {
+      state.html_load_external = Boolean(action.payload);
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -87,7 +100,8 @@ const userSettingsSlice = createSlice({
 export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
-  setDefaultModel, setMemoryMode, setSuggestUserPrompts
+  setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
+  setHtmlLoadExternal
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -100,5 +114,11 @@ export const selectMemoryMode = (state) => {
 };
 export const selectSuggestUserPrompts = (state) =>
   state.user_settings.suggest_user_prompts ?? false;
+export const selectHtmlRenderMode = (state) => {
+  const mode = state.user_settings.html_render_mode;
+  return ["render", "code", "off"].includes(mode) ? mode : "render";
+};
+export const selectHtmlLoadExternal = (state) =>
+  state.user_settings.html_load_external ?? true;
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;
