@@ -1,14 +1,20 @@
 import { useState, useEffect, useRef, memo, useCallback, useMemo } from "react";
+import { useSelector } from "react-redux";
+import { Code2, Eye } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
+import DOMPurify from "dompurify";
 
 import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
+import { selectHtmlRenderMode, selectHtmlLoadExternal } from "../../../Redux/reducers/userSettingsReducer";
 
 /* --------------------------------------------
  * Shared renderer components (unchanged styles)
@@ -33,6 +39,10 @@ export const rendererComponents = {
 
     if (match && match[1] === "mermaid") {
       return <MermaidDiagram content={content} />;
+    }
+
+    if (match && match[1] === "html") {
+      return <HtmlBlock content={content} />;
     }
 
     return <Code language={match ? match[1] : null}>{content}</Code>;
@@ -221,6 +231,183 @@ const preprocessLaTeX = (content) => {
 };
 
 /* ------------------------------------------------
+ * HTML sanitizer
+ *
+ * Model output is untrusted: raw HTML reaches the DOM verbatim. rehype-raw only
+ * turns raw HTML into live elements, so any raw <script>, event handler, or
+ * <iframe> fetching a local-network URL would run. Sanitize every raw HTML
+ * fragment with DOMPurify (allowlist-based) before rehype-raw parses it.
+ * ------------------------------------------------ */
+const SAFE_HTML_TAGS = [
+  "a", "abbr", "b", "bdi", "bdo", "blockquote", "br", "caption", "cite",
+  "code", "col", "colgroup", "dd", "del", "details", "dfn", "div", "dl",
+  "dt", "em", "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6",
+  "hr", "i", "img", "ins", "kbd", "li", "mark", "ol", "p", "pre", "q",
+  "s", "samp", "small", "span", "strong", "sub", "summary", "sup", "table",
+  "tbody", "td", "tfoot", "th", "thead", "tr", "u", "ul", "var",
+];
+
+const SAFE_HTML_ATTRS = [
+  "href", "src", "alt", "title", "width", "height",
+  "colspan", "rowspan", "scope", "start", "type", "value",
+  "datetime", "cite", "open",
+];
+
+const sanitizeHtmlFragment = (html) =>
+  DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: SAFE_HTML_TAGS,
+    ALLOWED_ATTR: SAFE_HTML_ATTRS,
+    ALLOW_DATA_ATTR: false,
+  });
+
+// Like sanitizeHtmlFragment but also permits embedded <svg> (including filters
+// and gradients) so fenced HTML blocks can render SVG diagrams. It uses
+// DOMPurify's battle-tested HTML + SVG profiles (correct geometry/presentation
+// attributes) while explicitly forbidding the dangerous elements those profiles
+// would otherwise allow — same hardening as sanitizeHtmlFragment.
+//
+// When loadExternal is false, src/href/xlink:href attributes that point to an
+// external host are dropped for privacy, so the browser never contacts third
+// parties. Same-page anchors, relative paths, data: URIs and mailto: are kept.
+const isExternalUrl = (value) => {
+  const v = (value || "").trim();
+  if (!v) return false;
+  const lower = v.toLowerCase();
+  if (
+    lower.startsWith("#") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("mailto:") ||
+    lower.startsWith("tel:")
+  ) {
+    return false;
+  }
+  // Protocol-relative (//host) or any scheme (http:, https:, ...) → external
+  if (/^\/\//.test(lower)) return true;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(lower)) return true;
+  return false; // relative path or bare name
+};
+
+const blockExternalRefHook = (node, data) => {
+  if (
+    data.attrName === "src" ||
+    data.attrName === "href" ||
+    data.attrName === "xlink:href"
+  ) {
+    if (isExternalUrl(data.attrValue)) {
+      data.keepAttr = false;
+    }
+  }
+};
+
+const sanitizeSvgHtml = (html, loadExternal = true) => {
+  // addHook/removeHook are global on the DOMPurify instance; sanitize is
+  // synchronous so add/remove around the single call is safe and reentrant.
+  if (!loadExternal) {
+    DOMPurify.addHook("uponSanitizeAttribute", blockExternalRefHook);
+  }
+  const result = DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true, svg: true, svgFilters: true },
+    FORBID_TAGS: [
+      "iframe", "object", "embed", "form", "input", "textarea", "select",
+      "button", "script", "style", "link", "meta", "base", "math",
+      "foreignObject",
+    ],
+    FORBID_ATTR: ["style"],
+    ALLOW_DATA_ATTR: false,
+  });
+  if (!loadExternal) {
+    DOMPurify.removeHook("uponSanitizeAttribute", blockExternalRefHook);
+  }
+  return result;
+};
+
+// remark plugin: scrub raw html nodes in the mdast tree so rehype-raw never
+// turns dangerous markup into live elements. Runs before rehype-raw parses.
+const remarkSanitizeHtml = () => (tree) => {
+  const visit = (node) => {
+    if (!Array.isArray(node.children)) return;
+    node.children.forEach((child, i) => {
+      if (child.type === "html") {
+        node.children[i] = {
+          ...child,
+          value: sanitizeHtmlFragment(child.value),
+        };
+      } else {
+        visit(child);
+      }
+    });
+  };
+  visit(tree);
+};
+
+// Renders a ```html fenced block. By default the fenced content is shown as
+// live HTML (mirrors the mermaid fence); a button lets the user toggle between
+// the rendered output and the raw code. The starting view honors the
+// user_settings.html_render_mode preference ("render" | "code" | "off"), and
+// "off" disables rendering entirely. The content is sanitized with the same
+// DOMPurify allowlist as raw HTML before being inserted into the DOM.
+const HtmlBlock = memo(({ content }) => {
+  const { t } = useTranslation();
+  const defaultMode = useSelector(selectHtmlRenderMode);
+  const loadExternal = useSelector(selectHtmlLoadExternal);
+  const [showCode, setShowCode] = useState(defaultMode === "code");
+
+  useEffect(() => {
+    setShowCode(defaultMode === "code");
+  }, [defaultMode]);
+
+  const safeHtml = useMemo(
+    () => sanitizeSvgHtml(content || "", loadExternal),
+    [content, loadExternal]
+  );
+
+  const codeContent = String(content || "").replace(/\n$/, "");
+
+  if (defaultMode === "off") {
+    return (
+      <div className="relative my-2">
+        <Code language="html">{codeContent}</Code>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative my-2">
+      <button
+        type="button"
+        onClick={() => setShowCode((prev) => !prev)}
+        aria-pressed={!showCode}
+        className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-medium text-gray-600 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+      >
+        {showCode ? (
+          <>
+            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("conversation.html_block.render")}
+          </>
+        ) : (
+          <>
+            <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("conversation.html_block.show_code")}
+          </>
+        )}
+      </button>
+
+      {showCode ? (
+        <div className="pt-3">
+          <Code language="html">{codeContent}</Code>
+        </div>
+      ) : (
+        <div
+          className="html-block pt-3"
+          dangerouslySetInnerHTML={{ __html: safeHtml }}
+        />
+      )}
+    </div>
+  );
+});
+HtmlBlock.displayName = "HtmlBlock";
+
+/* ------------------------------------------------
  * Streaming processor (unchanged)
  * ------------------------------------------------ */
 const useStreamingProcessor = (content, isLoading) => {
@@ -397,17 +584,21 @@ export const SafeMarkdown = ({
   children: markdownContent,
   components,
   enableKatex = true,
+  renderHtml = false,
 }) => {
   if (!markdownContent || typeof markdownContent !== "string") return null;
 
   try {
-    // Raw HTML is inert here because rehype-raw is deliberately not enabled:
-    // react-markdown drops html nodes it cannot turn into components. Do not add
-    // rehype-raw without a sanitizer — see remarkHtmlAsText in ThinkingBlock.jsx.
+    // Raw HTML is only rendered when renderHtml is set, and even then every
+    // html node is scrubbed by remarkSanitizeHtml (DOMPurify allowlist) before
+    // rehype-raw turns it into live elements — never enable rehype-raw without
+    // that sanitizer (see remarkHtmlAsText in ThinkingBlock.jsx).
     const remarkPlugins = [remarkGfm];
     if (enableKatex) remarkPlugins.push(remarkMath);
+    if (renderHtml) remarkPlugins.push(remarkSanitizeHtml);
 
     const rehypePlugins = [];
+    if (renderHtml) rehypePlugins.push(rehypeRaw);
     if (enableKatex)
       rehypePlugins.push([
         rehypeKatex,
@@ -615,10 +806,11 @@ const MarkdownRenderer = memo(
           );
 
         default:
-          // Default = Markdown + KaTeX, raw HTML inert (no rehype-raw)
+          // Default = Markdown + KaTeX, raw HTML rendered but sanitized
           return (
             <SafeMarkdown
               enableKatex={true}
+              renderHtml={true}
               components={rendererComponents}
             >
               {preprocessLaTeX(contentToRender)}

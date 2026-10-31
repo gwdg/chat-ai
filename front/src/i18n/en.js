@@ -193,6 +193,10 @@ export default {
     },
     reasoning: "Reasoning Process",
     action: "Action",
+    html_block: {
+      render: "Render HTML",
+      show_code: "Show code",
+    },
     sources: "Sources and References",
     references: "References",
     empty_message: "Your conversations are never stored on our servers",
@@ -284,6 +288,33 @@ export default {
         label: "Suggest follow-up prompts",
         description: "Show suggested ways to continue after each response.",
         help_label: "Learn about follow-up prompts",
+      },
+      html_render: {
+        label: "HTML blocks",
+        description:
+          "Choose how HTML fenced blocks in responses are shown by default.",
+        options: {
+          render: {
+            label: "Render",
+            description:
+              "Render HTML blocks as live content. You can still switch to code per block.",
+          },
+          code: {
+            label: "Code",
+            description:
+              "Show HTML blocks as code by default. You can still render them per block.",
+          },
+          off: {
+            label: "Off",
+            description:
+              "Never render HTML blocks. They are always shown as code.",
+          },
+        },
+        external_references: {
+          label: "Load external references",
+          description:
+            "Allow HTML blocks to load images and links from external hosts. Turn off for more privacy (external references are removed).",
+        },
       },
     },
     default_model: {

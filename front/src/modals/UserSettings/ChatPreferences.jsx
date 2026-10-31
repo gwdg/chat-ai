@@ -7,6 +7,10 @@ import {
   selectSuggestUserPrompts,
   setMemoryMode,
   setSuggestUserPrompts,
+  selectHtmlRenderMode,
+  setHtmlRenderMode,
+  selectHtmlLoadExternal,
+  setHtmlLoadExternal,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -15,6 +19,12 @@ const MEMORY_OPTIONS = [
   { value: 0, key: "none" },
   { value: 1, key: "recall" },
   { value: 2, key: "learn" },
+];
+
+const HTML_RENDER_OPTIONS = [
+  { value: "render", key: "render" },
+  { value: "code", key: "code" },
+  { value: "off", key: "off" },
 ];
 
 export function MemoryPreference() {
@@ -125,6 +135,81 @@ export function SuggestionPreference() {
         )}
         checked={suggestUserPrompts}
         onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
+      />
+    </section>
+  );
+}
+
+export function HtmlRenderPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const htmlRenderMode = useSelector(selectHtmlRenderMode);
+  const htmlLoadExternal = useSelector(selectHtmlLoadExternal);
+  const selectedOption =
+    HTML_RENDER_OPTIONS.find((option) => option.value === htmlRenderMode) ??
+    HTML_RENDER_OPTIONS[0];
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="min-w-0">
+        <h3
+          id="global-html-render-mode-label"
+          className="text-sm font-medium text-gray-900 dark:text-white"
+        >
+          {t("user_settings.chat_preferences.html_render.label")}
+        </h3>
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+          {t("user_settings.chat_preferences.html_render.description")}
+        </p>
+      </div>
+
+      <div
+        role="group"
+        aria-labelledby="global-html-render-mode-label"
+        className="grid min-h-10 grid-cols-3 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60"
+      >
+        {HTML_RENDER_OPTIONS.map((option) => {
+          const selected = option.value === htmlRenderMode;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => dispatch(setHtmlRenderMode(option.value))}
+              className={`min-w-0 rounded-md px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
+                selected
+                  ? "bg-white text-tertiary shadow-sm dark:bg-gray-700 dark:text-white"
+                  : "text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white"
+              }`}
+            >
+              <span className="block truncate">
+                {t(
+                  `user_settings.chat_preferences.html_render.options.${option.key}.label`,
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p
+        className="text-xs text-gray-500 dark:text-gray-400"
+        aria-live="polite"
+      >
+        {t(
+          `user_settings.chat_preferences.html_render.options.${selectedOption.key}.description`,
+        )}
+      </p>
+
+      <ProfilePreferenceSwitch
+        label={t(
+          "user_settings.chat_preferences.html_render.external_references.label",
+        )}
+        description={t(
+          "user_settings.chat_preferences.html_render.external_references.description",
+        )}
+        checked={htmlLoadExternal}
+        onChange={(checked) => dispatch(setHtmlLoadExternal(checked))}
       />
     </section>
   );
