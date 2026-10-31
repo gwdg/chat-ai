@@ -1,13 +1,7 @@
-import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
-import icon_support_vision from "../../assets/icons/support_vision.svg";
-import icon_support_audio from "../../assets/icons/support_audio.svg";
-import icon_support_video from "../../assets/icons/support_video.svg";
-import icon_support_reasoning from "../../assets/icons/support_reasoning.svg";
-import icon_support_arcana from "../../assets/icons/support_arcana.svg";
-import DemandStatusIcon from "../../components/Header/DemandStatusIcon";
+import ModelSelectorWrapper from "../../components/Header/ModelSelectorWrapper";
 import {
   selectDefaultModel,
   setDefaultModel,
@@ -18,7 +12,10 @@ export default function DefaultModelSelector({ modelsData }) {
   const { t } = useTranslation();
   const currentDefaultModel = useSelector(selectDefaultModel);
 
-  const handleChangeDefaultModel = (model) => {
+  const selectedModel =
+    modelsData?.find((m) => m.id === currentDefaultModel?.id) || null;
+
+  const handleChange = (model) => {
     dispatch(
       setDefaultModel({
         name: model.name,
@@ -53,49 +50,15 @@ export default function DefaultModelSelector({ modelsData }) {
         aria-label={t("user_settings.default_model.list_label")}
         className="max-h-52 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700"
       >
-        {modelsData.map((option) => {
-          const selected = currentDefaultModel?.id === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => handleChangeDefaultModel(option)}
-              className={`flex min-h-10 w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-left text-sm transition-colors last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-tertiary/50 dark:border-gray-800 ${
-                selected
-                  ? "bg-tertiary/10 text-tertiary dark:bg-tertiary/20 dark:text-blue-300"
-                  : "text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800/70"
-              }`}
-            >
-              <DemandStatusIcon status={option?.status} demand={option?.demand} />
-              <span className="min-w-0 flex-1 truncate">{option.name}</span>
-              <span className="flex shrink-0 items-center gap-1.5">
-                {option.input?.includes("audio") && (
-                  <img src={icon_support_audio} alt="" className="h-4 w-4" />
-                )}
-                {option.input?.includes("image") && (
-                  <img src={icon_support_vision} alt="" className="h-4 w-4" />
-                )}
-                {option.input?.includes("video") && (
-                  <img src={icon_support_video} alt="" className="h-4 w-4" />
-                )}
-                {option.output?.includes("thought") && (
-                  <img
-                    src={icon_support_reasoning}
-                    alt=""
-                    className="h-4 w-4"
-                  />
-                )}
-                {option.input?.includes("arcana") && (
-                  <img src={icon_support_arcana} alt="" className="h-4 w-4" />
-                )}
-                {selected && (
-                  <Check className="ml-1 h-4 w-4" aria-hidden="true" />
-                )}
-              </span>
-            </button>
-          );
-        })}
+        <ModelSelectorWrapper
+          modelsData={modelsData}
+          localState={undefined}
+          setLocalState={undefined}
+          selectedModel={selectedModel}
+          onChange={handleChange}
+          inHeader={false}
+          listOnly
+        />
       </div>
     </section>
   );
