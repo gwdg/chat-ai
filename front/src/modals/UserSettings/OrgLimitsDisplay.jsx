@@ -5,6 +5,7 @@ export default function OrgLimitsDisplay({ limits, variant = "profile" }) {
   const { t } = useTranslation();
   const orgLimits = limits?.org;
   if (!orgLimits) return null;
+
   if (
     (orgLimits?.monthly_usage !== null && orgLimits?.monthly_usage !== undefined)
   ) {

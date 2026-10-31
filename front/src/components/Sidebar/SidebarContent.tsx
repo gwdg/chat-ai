@@ -30,8 +30,7 @@ import TopicCreateBubble from "./TopicCreateBubble";
 import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
 import { useToast } from "../../hooks/useToast";
-import UserLimitsDisplay from "../../modals/UserSettings/UserLimitsDisplay";
-import OrgLimitsDisplay from "../../modals/UserSettings/OrgLimitsDisplay";
+import SidebarUsageSummary from "../../modals/UserSettings/SidebarUsageSummary";
 import ShortcutTooltip from "./ShortcutTooltip";
 import ImportChatButton from "./Buttons/ImportChatButton";
 import ImportPersonaButton from "./Buttons/ImportPersonaButton";
@@ -588,11 +587,8 @@ export default function SidebarContent({
         {/* Pinned footer: the user block */}
         <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex flex-col gap-3 mx-3">
-            {showUsageInSidebar && userData?.limits && (
-              <div className="flex flex-col gap-2">
-                <UserLimitsDisplay limits={userData.limits} variant="sidebar" />
-                <OrgLimitsDisplay limits={userData.limits} variant="sidebar" />
-              </div>
+            {showUsageInSidebar && userData && (
+              <SidebarUsageSummary data={userData} />
             )}
             <SidebarUserCard
               localState={localState}
