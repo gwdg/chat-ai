@@ -12,6 +12,7 @@ import MetaBox from "./MetaBox";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
+import ToolForm from "./ToolForm";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -159,8 +160,25 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   );
 
   const content = message?.content?.[0]?.text ?? "";
-  const isContentEmpty = !content.trim();
+  const hasForms = Array.isArray(message?.content) && message.content.some((i) => i?.type === "form");
+  const isContentEmpty = !content.trim() && !hasForms;
   const errorMessage = message?.meta?.error || "Unknown Error";
+
+  // Update the submitted/values of a form content item on this message
+  const updateFormContent = (formIndex, patch) => {
+    setLocalState((prev) => {
+      const messages = [...prev.messages];
+      const msg = { ...messages[message_index] };
+      const contentArr = Array.isArray(msg.content) ? [...msg.content] : [];
+      const item = { ...contentArr[formIndex] };
+      item.form = { ...item.form, ...patch };
+      contentArr[formIndex] = item;
+      msg.content = contentArr;
+      messages[message_index] = msg;
+      return { ...prev, messages, flush: true };
+    });
+  };
+
   return (
     <div
       key={message_index}
@@ -290,7 +308,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-                  {message.content.slice(1).map((attachment, i) => (
+                  {message.content.slice(1).filter((a) => a?.type !== "form").map((attachment, i) => (
                     <Attachment
                       key={i}
                       localState={localState}
@@ -303,6 +321,19 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   ))}
                 </div>
               )}
+              {/* Editable tool forms */}
+              {Array.isArray(message?.content) &&
+                message.content.map((item, i) =>
+                  item?.type === "form" ? (
+                    <ToolForm
+                      key={i}
+                      form={item.form}
+                      localState={localState}
+                      setLocalState={setLocalState}
+                      onUpdate={(patch) => updateFormContent(i, patch)}
+                    />
+                  ) : null
+                )}
               {/* Bottom panel for message */}
               <div className="group flex justify-between w-full mt-1 gap-2">
                 {/* Buttons on the bottom right */}

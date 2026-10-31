@@ -573,4 +573,13 @@ export default {
   },
   // Announcement
   announcement: "",
+  // Editierbare Tool-Formulare
+  tool_form: {
+    submit: "Tool ausführen",
+    sending: "Wird ausgeführt...",
+    reset: "Zurücksetzen",
+    edit: "Bearbeiten",
+    tool_call: "Tool-Aufruf",
+    select_placeholder: "Auswählen…",
+  },
 };
