@@ -8,6 +8,7 @@ const initialState = {
   suggest_user_prompts: false,
   html_render_mode: "render",
   html_load_external: true,
+  html_sanitization: "strict",
 };
 
 const userSettingsSlice = createSlice({
@@ -77,6 +78,13 @@ const userSettingsSlice = createSlice({
       state.html_load_external = Boolean(action.payload);
     },
 
+    setHtmlSanitization: (state, action) => {
+      const mode = action.payload;
+      if (["strict", "relaxed"].includes(mode)) {
+        state.html_sanitization = mode;
+      }
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -101,7 +109,7 @@ export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
-  setHtmlLoadExternal
+  setHtmlLoadExternal, setHtmlSanitization
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -120,5 +128,9 @@ export const selectHtmlRenderMode = (state) => {
 };
 export const selectHtmlLoadExternal = (state) =>
   state.user_settings.html_load_external ?? true;
+export const selectHtmlSanitization = (state) => {
+  const mode = state.user_settings.html_sanitization;
+  return ["strict", "relaxed"].includes(mode) ? mode : "strict";
+};
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;

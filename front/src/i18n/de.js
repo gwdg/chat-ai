@@ -318,6 +318,23 @@ export default {
           description:
             "Erlaubt HTML-Blöcken, Bilder und Links von externen Hosts zu laden. Für mehr Privatsphäre deaktivieren (externe Referenzen werden entfernt).",
         },
+        sanitization: {
+          label: "Bereinigung",
+          description:
+            "Legt fest, wie streng HTML-Blöcke vor dem Rendern bereinigt werden.",
+          options: {
+            strict: {
+              label: "Streng",
+              description:
+                "Blockiert interaktive und scriptfähige HTML-Elemente (Buttons, Formulare, Iframes, Skripte, Inline-Styles). Am sichersten für unvertraute Inhalte.",
+            },
+            relaxed: {
+              label: "Gelockert",
+              description:
+                "Erlaubt interaktives HTML mit JavaScript (Buttons, Formulare, Iframes, Skripte, Inline-Styles). Warnung: Modellausgaben können Code ausführen – nur aktivieren, wenn die Quelle vertrauenswürdig ist.",
+            },
+          },
+        },
       },
     },
     default_model: {

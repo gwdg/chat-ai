@@ -315,6 +315,23 @@ export default {
           description:
             "Allow HTML blocks to load images and links from external hosts. Turn off for more privacy (external references are removed).",
         },
+        sanitization: {
+          label: "Sanitization",
+          description:
+            "Control how strictly HTML blocks are sanitized before being rendered.",
+          options: {
+            strict: {
+              label: "Strict",
+              description:
+                "Block interactive and scriptable HTML (buttons, forms, iframes, scripts, inline styles). Safest for untrusted content.",
+            },
+            relaxed: {
+              label: "Relaxed",
+              description:
+                "Allow interactive HTML with JavaScript (buttons, forms, iframes, scripts, inline styles). Warning: model output can execute code — only enable if you trust the source.",
+            },
+          },
+        },
       },
     },
     default_model: {

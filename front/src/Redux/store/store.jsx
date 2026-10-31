@@ -48,6 +48,7 @@ const getDefaultState = () => {
       suggest_user_prompts: false,
       html_render_mode: "render",
       html_load_external: true,
+      html_sanitization: "strict",
     },
   };
 };

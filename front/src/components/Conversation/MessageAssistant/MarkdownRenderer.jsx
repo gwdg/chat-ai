@@ -14,7 +14,11 @@ import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
-import { selectHtmlRenderMode, selectHtmlLoadExternal } from "../../../Redux/reducers/userSettingsReducer";
+import {
+  selectHtmlRenderMode,
+  selectHtmlLoadExternal,
+  selectHtmlSanitization,
+} from "../../../Redux/reducers/userSettingsReducer";
 
 /* --------------------------------------------
  * Shared renderer components (unchanged styles)
@@ -253,11 +257,31 @@ const SAFE_HTML_ATTRS = [
   "datetime", "cite", "open",
 ];
 
-const sanitizeHtmlFragment = (html) =>
+// Extra tags/attributes permitted only when the user opts into relaxed
+// sanitization so interactive HTML (buttons, forms, iframes, scripts, inline
+// styles) can run. Untrusted model output can execute code with this setting.
+const RELAXED_HTML_TAGS = [
+  "button", "form", "iframe", "input", "label", "legend", "option", "select",
+  "style", "textarea", "script", "canvas", "audio", "video", "source",
+  "progress", "meter", "output", "fieldset", "datalist", "optgroup",
+];
+const RELAXED_HTML_ATTRS = [
+  "style", "class", "id", "name", "for", "action", "method", "target",
+  "placeholder", "checked", "selected", "disabled", "readonly", "required",
+  "rows", "cols", "maxlength", "min", "max", "step", "pattern", "autocomplete",
+  "contenteditable", "tabindex", "role", "aria-label", "controls", "autoplay",
+  "loop", "muted", "poster", "frameborder", "allow", "allowfullscreen",
+  "sandbox", "download", "rel", "data", "onclick", "onchange", "oninput",
+  "onkeydown", "onkeyup", "onkeypress", "onmouseover", "onmouseout",
+  "onmousedown", "onmouseup", "onfocus", "onblur", "onsubmit", "onload",
+  "onerror",
+];
+
+const sanitizeHtmlFragment = (html, relaxed = false) =>
   DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: SAFE_HTML_TAGS,
-    ALLOWED_ATTR: SAFE_HTML_ATTRS,
-    ALLOW_DATA_ATTR: false,
+    ALLOWED_TAGS: relaxed ? [...SAFE_HTML_TAGS, ...RELAXED_HTML_TAGS] : SAFE_HTML_TAGS,
+    ALLOWED_ATTR: relaxed ? [...SAFE_HTML_ATTRS, ...RELAXED_HTML_ATTRS] : SAFE_HTML_ATTRS,
+    ALLOW_DATA_ATTR: relaxed,
   });
 
 // Like sanitizeHtmlFragment but also permits embedded <svg> (including filters
@@ -299,7 +323,7 @@ const blockExternalRefHook = (node, data) => {
   }
 };
 
-const sanitizeSvgHtml = (html, loadExternal = true) => {
+const sanitizeSvgHtml = (html, loadExternal = true, relaxed = false) => {
   // addHook/removeHook are global on the DOMPurify instance; sanitize is
   // synchronous so add/remove around the single call is safe and reentrant.
   if (!loadExternal) {
@@ -307,13 +331,18 @@ const sanitizeSvgHtml = (html, loadExternal = true) => {
   }
   const result = DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true, svg: true, svgFilters: true },
-    FORBID_TAGS: [
-      "iframe", "object", "embed", "form", "input", "textarea", "select",
-      "button", "script", "style", "link", "meta", "base", "math",
-      "foreignObject",
-    ],
-    FORBID_ATTR: ["style"],
-    ALLOW_DATA_ATTR: false,
+    FORBID_TAGS: relaxed
+      ? []
+      : [
+          "iframe", "object", "embed", "form", "input", "textarea", "select",
+          "button", "script", "style", "link", "meta", "base", "math",
+          "foreignObject",
+        ],
+    FORBID_ATTR: relaxed ? [] : ["style"],
+    ALLOW_DATA_ATTR: relaxed,
+    ADD_TAGS: relaxed ? RELAXED_HTML_TAGS : [],
+    ADD_ATTR: relaxed ? RELAXED_HTML_ATTRS : [],
+    ALLOW_UNKNOWN_PROTOCOLS: relaxed,
   });
   if (!loadExternal) {
     DOMPurify.removeHook("uponSanitizeAttribute", blockExternalRefHook);
@@ -340,30 +369,100 @@ const remarkSanitizeHtml = () => (tree) => {
   visit(tree);
 };
 
+// DOMPurify discards <head> content entirely (it only returns body content).
+// Well-formed pages put their CSS/JS in <head>, so without this the whole
+// stylesheet would be lost. Move <style>, <script> and stylesheet <link>
+// elements out of <head> and into <body> so they survive sanitization.
+const relocateHeadAssets = (html) => {
+  const headMatch = html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i);
+  if (!headMatch) return html;
+  const assets = [];
+  headMatch[1].replace(
+    /<style\b[^>]*>[\s\S]*?<\/style>|<script\b[^>]*>[\s\S]*?<\/script>|<link\b[^>]*rel=["']stylesheet["'][^>]*\/?>/gi,
+    (m) => {
+      assets.push(m);
+      return "";
+    }
+  );
+  if (!assets.length) return html;
+  let result = html.replace(/<head\b[^>]*>[\s\S]*?<\/head>/i, "");
+  const closeIdx = result.search(/<\/body>/i);
+  const insert = assets.join("\n");
+  if (closeIdx !== -1) {
+    result = result.slice(0, closeIdx) + insert + "\n" + result.slice(closeIdx);
+  } else {
+    result = result + insert;
+  }
+  return result;
+};
+
 // Renders a ```html fenced block. By default the fenced content is shown as
 // live HTML (mirrors the mermaid fence); a button lets the user toggle between
 // the rendered output and the raw code. The starting view honors the
 // user_settings.html_render_mode preference ("render" | "code" | "off"), and
 // "off" disables rendering entirely. The content is sanitized with the same
 // DOMPurify allowlist as raw HTML before being inserted into the DOM.
-const HtmlBlock = memo(({ content }) => {
+// Tiny script appended to the iframe document so it can report its content
+// height back to the parent for auto-resizing. Runs inside the sandboxed,
+// opaque-origin iframe.
+const RESIZE_PROBE =
+  "<script>" +
+  "(function(){function report(){" +
+  "var b=document.body;var d=document.documentElement;" +
+  "var h=Math.max(b.scrollHeight,d.scrollHeight);" +
+  "window.parent.postMessage({__htmlBlockResize:h},'*');" +
+  "}window.addEventListener('load',report);setTimeout(report,50);})()" +
+  "</script>";
+
+const HtmlBlock = memo(({ content, isLoading }) => {
   const { t } = useTranslation();
   const defaultMode = useSelector(selectHtmlRenderMode);
   const loadExternal = useSelector(selectHtmlLoadExternal);
+  const sanitization = useSelector(selectHtmlSanitization);
+  const relaxed = sanitization === "relaxed";
   const [showCode, setShowCode] = useState(defaultMode === "code");
+  const [iframeHeight, setIframeHeight] = useState(500);
 
   useEffect(() => {
     setShowCode(defaultMode === "code");
   }, [defaultMode]);
 
-  const safeHtml = useMemo(
-    () => sanitizeSvgHtml(content || "", loadExternal),
-    [content, loadExternal]
+  const safeHtml = useMemo(() => {
+    const relocated = relocateHeadAssets(content || "");
+    return sanitizeSvgHtml(relocated, loadExternal, relaxed);
+  }, [content, loadExternal, relaxed]);
+
+  // srcdoc gives the block a real document context (its own <body>, 100vh,
+  // background and scroll) so full standalone pages render and layout
+  // correctly. The iframe is sandboxed with an opaque origin (no
+  // allow-same-origin), so embedded scripts cannot touch the parent page —
+  // safer than injecting into the main document. A probe script posts the
+  // content height back so the iframe can auto-resize.
+  const srcDoc = useMemo(
+    () => (relaxed ? `${safeHtml}\n${RESIZE_PROBE}` : safeHtml),
+    [safeHtml, relaxed]
   );
+
+  // Listen for the height message from the sandboxed iframe.
+  useEffect(() => {
+    const onMessage = (event) => {
+      const data = event.data;
+      if (data && typeof data === "object" && data.__htmlBlockResize) {
+        setIframeHeight(Number(data.__htmlBlockResize) || 500);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
 
   const codeContent = String(content || "").replace(/\n$/, "");
 
-  if (defaultMode === "off") {
+  // While the message is still streaming the fenced block may be incomplete.
+  // Do not render partial HTML: show the raw code until the whole block has
+  // been received.
+  const forceCode = defaultMode === "off" || isLoading;
+
+  if (forceCode) {
     return (
       <div className="relative my-2">
         <Code language="html">{codeContent}</Code>
@@ -397,9 +496,12 @@ const HtmlBlock = memo(({ content }) => {
           <Code language="html">{codeContent}</Code>
         </div>
       ) : (
-        <div
-          className="html-block pt-3"
-          dangerouslySetInnerHTML={{ __html: safeHtml }}
+        <iframe
+          title={t("conversation.html_block.render")}
+          sandbox="allow-scripts"
+          srcDoc={srcDoc}
+          className="html-block w-full overflow-hidden rounded border border-gray-200 bg-white dark:border-gray-700"
+          style={{ height: iframeHeight, minHeight: 200 }}
         />
       )}
     </div>
@@ -757,6 +859,24 @@ const MarkdownRenderer = memo(
     const renderContentByMode = useCallback((content) => {
       const contentToRender = content.trim();
 
+      // rendererComponents but with the html fence wired to receive isLoading
+      // so HtmlBlock can avoid rendering partial HTML while streaming.
+      const components = {
+        ...rendererComponents,
+        code(props) {
+          const match = /language-(\w+)/.exec(props.className || "");
+          if (match && match[1] === "html") {
+            return (
+              <HtmlBlock
+                content={String(props.children).replace(/\n$/, "")}
+                isLoading={isLoading}
+              />
+            );
+          }
+          return rendererComponents.code(props);
+        },
+      };
+
       switch (renderMode) {
         case "Plaintext":
           return (
@@ -799,7 +919,7 @@ const MarkdownRenderer = memo(
           return (
             <SafeMarkdown
               enableKatex={false}
-              components={rendererComponents}
+              components={components}
             >
               {contentToRender}
             </SafeMarkdown>
@@ -811,13 +931,13 @@ const MarkdownRenderer = memo(
             <SafeMarkdown
               enableKatex={true}
               renderHtml={true}
-              components={rendererComponents}
+              components={components}
             >
               {preprocessLaTeX(contentToRender)}
             </SafeMarkdown>
           );
       }
-    }, [renderMode]);
+    }, [renderMode, isLoading]);
 
     if (!children) return null;
 
