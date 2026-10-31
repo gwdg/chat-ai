@@ -5,6 +5,7 @@ import { useToast } from "./useToast";
 import {
   selectAllMemories,
   selectMemoryMode,
+  selectSetTitleOnce,
   selectSuggestUserPrompts,
   selectTimeout,
 } from "../Redux/reducers/userSettingsReducer";
@@ -17,6 +18,7 @@ export function useSendMessage() {
   const memories = useSelector(selectAllMemories);
   const memoryMode = useSelector(selectMemoryMode);
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
+  const setTitleOnce = useSelector(selectSetTitleOnce);
 
   // Make this async
   return async ({localState, setLocalState}) => {
@@ -31,6 +33,7 @@ export function useSendMessage() {
       timeout,
       memoryMode,
       suggestUserPrompts,
+      setTitleOnce,
     });
   };
 }

@@ -287,6 +287,11 @@ export default {
         description:
           "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
         help_label: "Mehr über Folgevorschläge erfahren",
+        title_once: {
+          label: "Titel nur bei der ersten Anfrage festlegen",
+          description:
+            "Den Gesprächstitel nur einmal, aus der ersten Anfrage, generieren.",
+        },
       },
     },
     default_model: {

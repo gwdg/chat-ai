@@ -284,6 +284,11 @@ export default {
         label: "Suggest follow-up prompts",
         description: "Show suggested ways to continue after each response.",
         help_label: "Learn about follow-up prompts",
+        title_once: {
+          label: "Set title only on first prompt",
+          description:
+            "Only generate the conversation title once, from the first prompt.",
+        },
       },
     },
     default_model: {
