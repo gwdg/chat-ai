@@ -19,7 +19,7 @@ export function useSendMessage() {
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
 
   // Make this async
-  return async ({localState, setLocalState}) => {
+  return async ({localState, setLocalState, formSubmission}) => {
     await sendMessage({
       localState,
       setLocalState,
@@ -31,6 +31,7 @@ export function useSendMessage() {
       timeout,
       memoryMode,
       suggestUserPrompts,
+      formSubmission,
     });
   };
 }

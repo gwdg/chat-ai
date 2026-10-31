@@ -568,4 +568,13 @@ export default {
   },
   // Announcement
   announcement: "",
+  // Editable tool forms
+  tool_form: {
+    submit: "Run tool",
+    sending: "Running...",
+    reset: "Reset",
+    edit: "Edit",
+    tool_call: "Tool call",
+    select_placeholder: "Select…",
+  },
 };
