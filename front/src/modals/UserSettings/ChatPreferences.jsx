@@ -4,8 +4,10 @@ import { useDispatch, useSelector } from "react-redux";
 
 import {
   selectMemoryMode,
+  selectSetTitleOnce,
   selectSuggestUserPrompts,
   setMemoryMode,
+  setSetTitleOnce,
   setSuggestUserPrompts,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
@@ -99,6 +101,7 @@ export function SuggestionPreference() {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
+  const setTitleOnce = useSelector(selectSetTitleOnce);
 
   return (
     <section>
@@ -118,14 +121,24 @@ export function SuggestionPreference() {
           <HelpCircle className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
-      <ProfilePreferenceSwitch
-        label={t("user_settings.chat_preferences.suggestions.label")}
-        description={t(
-          "user_settings.chat_preferences.suggestions.description",
-        )}
-        checked={suggestUserPrompts}
-        onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
-      />
+      <div className="flex flex-col gap-3 px-2">
+        <ProfilePreferenceSwitch
+          label={t("user_settings.chat_preferences.suggestions.label")}
+          description={t(
+            "user_settings.chat_preferences.suggestions.description",
+          )}
+          checked={suggestUserPrompts}
+          onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
+        />
+        <ProfilePreferenceSwitch
+          label={t("user_settings.chat_preferences.suggestions.title_once.label")}
+          description={t(
+            "user_settings.chat_preferences.suggestions.title_once.description",
+          )}
+          checked={setTitleOnce}
+          onChange={(checked) => dispatch(setSetTitleOnce(checked))}
+        />
+      </div>
     </section>
   );
 }
