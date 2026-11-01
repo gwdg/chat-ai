@@ -203,6 +203,63 @@ body {
   stroke: #fff;
 }
 
+/* ──────────────────────────────────────────────────────────
+   HTML blocks (rendered ```html fences)
+   Highlight the box so rendered HTML is visually distinct from
+   ordinary markdown. Dark mode follows the .dark body class.
+   ────────────────────────────────────────────────────────── */
+.html-block {
+  position: relative;
+  margin: 0.5rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #c4b5fd;
+  border-radius: 0.5rem;
+  background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 100%);
+  overflow-x: auto;
+}
+.html-block::before {
+  content: "HTML";
+  position: absolute;
+  top: -0.55rem;
+  left: 0.75rem;
+  padding: 0 0.4rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #7c3aed;
+  background: #f5f3ff;
+  border: 1px solid #c4b5fd;
+  border-radius: 0.3rem;
+  line-height: 1;
+}
+.dark .html-block {
+  border-color: #6d28d9;
+  background: linear-gradient(180deg, #2e1065 0%, #1e1b2e 100%);
+}
+.dark .html-block::before {
+  color: #c4b5fd;
+  background: #2e1065;
+  border-color: #6d28d9;
+}
+/* Keep tables/images inside HTML blocks scrollable and readable */
+.html-block table {
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+}
+.html-block th,
+.html-block td {
+  border: 1px solid #c4b5fd;
+  padding: 0.35rem 0.6rem;
+}
+.dark .html-block th,
+.dark .html-block td {
+  border-color: #6d28d9;
+}
+.html-block img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Toasts */
 .light-toast {
   background: #ffffff;
