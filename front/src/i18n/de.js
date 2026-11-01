@@ -16,6 +16,7 @@ export default {
     clear: "Löschen",
     abort: "Abbrechen",
     send: "Senden",
+    send_shortcut: "Senden (Umschalt+Enter)",
     stop: "Anhalten",
     share: "Teilen",
     delete: "Löschen",
@@ -188,6 +189,7 @@ export default {
       unprocessed: "Unverarbeitete Datei",
     },
     reasoning: "Denkprozess",
+    copy_reasoning: "Denkprozess kopieren",
     action: "Aktion",
     html_block: {
       render: "HTML rendern",
