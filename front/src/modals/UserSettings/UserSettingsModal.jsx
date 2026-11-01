@@ -20,7 +20,6 @@ import {
   MemoryPreference,
   RenderingPreferences,
   SuggestionPreference,
-  HtmlRenderPreference,
 } from "./ChatPreferences";
 import { getExportData } from "../../utils/conversationUtils";
 import { useToast } from "../../hooks/useToast";
@@ -139,9 +138,6 @@ export default function UserSettingsModal({
               <SuggestionPreference />
             </div>
           )}
-          <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
-            <HtmlRenderPreference />
-          </div>
           <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
             <TimeoutSetter />
           </div>
