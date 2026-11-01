@@ -188,6 +188,7 @@ export default {
       unprocessed: "Unverarbeitete Datei",
     },
     reasoning: "Denkprozess",
+    copy_reasoning: "Denkprozess kopieren",
     action: "Aktion",
     sources: "Quellen und Referenzen",
     references: "Referenzen",

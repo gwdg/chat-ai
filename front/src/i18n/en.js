@@ -192,6 +192,7 @@ export default {
       unprocessed: "Unprocessed file",
     },
     reasoning: "Reasoning Process",
+    copy_reasoning: "Copy reasoning process",
     action: "Action",
     sources: "Sources and References",
     references: "References",
