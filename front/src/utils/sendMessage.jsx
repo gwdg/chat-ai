@@ -31,6 +31,11 @@ export async function processContentItems({
       continue;
     }
 
+    if (item.type === 'form') {
+      // Forms are UI-only; never forward to the model
+      continue;
+    }
+
     if (item.type === 'file' && item.fileId) {
       const meta = await loadFileMeta(item.fileId);
       if (!meta) {
@@ -184,6 +189,75 @@ export async function buildConversationForAPI(localState) {
   };
 }
 
+// Map a tool event name to a human-readable text fragment (appended to the
+// "thinking" block) or a form object (rendered as an editable form).
+// Returns { text } or { form }.
+function handleToolEvent(name, arg) {
+  const text = (s) => ({ text: s });
+  switch (name) {
+    case "tools.event": {
+      if (arg.event === "error") return text("Could not use tools: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "mcp.event": {
+      if (arg.event === "call") {
+        return text("Calling MCP server: " + String(arg?.server)
+          + "\n\nfunction: `" + String(arg?.function)
+          + "` with args: `" + String(arg?.arguments) + "`\n\n");
+      }
+      if (arg.event === "result") return text("MCP response received of type `" + String(arg?.type) + "`\n\n");
+      return {};
+    }
+    case "rscript.event": {
+      if (arg.event === "preparing_script") return text("Running R Script:\n```r\n" + String(arg?.script) + "\n```\n\n");
+      if (arg.event === "error") return text("Cannot use Rscript: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "websearch.event": {
+      if (arg.event === "begin") return text("Searching for \"" + arg.query + "\" on ");
+      if (arg.event === "config") return text(String(arg?.["search-engine"]) + "\n\n");
+      if (arg.event === "websearch_done") return text("Web search completed. Used " + String(arg.selected) + " relevant sources.\n\n");
+      if (arg.event === "websearch_page_cache" || arg.event === "fetch") return text("Reading source: " + String(arg?.url) + "\n\n");
+      if (arg.event === "error") return text("Websearch Error: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "arcana.event": {
+      if (arg.event === "accessing") return text(`Reading arcana "${arg.arcana}" \n\n`);
+      return {};
+    }
+    case "image.event": {
+      if (arg.event === "image_creation_begin") return text(`Generating image: "${arg.query}" \n\n`);
+      if (arg.event === "image_modify_begin") return text("Modifying image: " + String(arg?.query) + "\n\n");
+      if (arg.event === "error") return text("Image generation failed: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "video.event": {
+      if (arg.event === "begin") return text(`Generating video: "${arg.query}" \n\n`);
+      if (arg.event === "error") return text("Video generation failed: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "audio.event": {
+      if (arg.event === "audio_creation_begin") return text(`Generating audio: "${arg.query}" \n\n`);
+      if (arg.event === "error") return text("Audio generation failed: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "audio_transcription.event": {
+      if (arg.event === "begin") return text(`Transcribing audio: `);
+      if (arg.event === "done") return text(arg.transcription + "\n\n");
+      if (arg.event === "error") return text("Audio transcription failed: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    default: {
+      // Any tool can return an editable form: event name "<tool>.form"
+      if (typeof name === "string" && name.endsWith(".form") && Array.isArray(arg?.fields)) {
+        const { tool_id, title, description, fields } = arg;
+        return { form: { tool_id, title, description, fields } };
+      }
+      return {};
+    }
+  }
+}
+
 const sendMessage = async ({
   localState,
   setLocalState,
@@ -195,6 +269,7 @@ const sendMessage = async ({
   timeout,
   memoryMode = 0,
   suggestUserPrompts = false,
+  formSubmission = null,
 }) => {
   const conversationId = localState.id
 
@@ -252,6 +327,29 @@ const sendMessage = async ({
       ),
     };
 
+    // If a form was submitted, append the tool call (MCP/OpenAI function-calling
+    // shape) the gateway executes with the user's chosen values.
+    if (formSubmission?.tool_id) {
+      const toolCallId = `call_${Date.now()}`;
+      conversationForAPI.messages.push(
+        {
+          role: "user",
+          content: "Please run the tool with my chosen settings.",
+          tool_calls: [
+            {
+              id: toolCallId,
+              type: "function",
+              function: {
+                name: formSubmission.tool_id,
+                arguments: JSON.stringify(formSubmission.values || {}),
+              },
+            },
+          ],
+        },
+        { role: "assistant", content: null }
+      );
+    }
+
     // Set system prompt in conversationForAPI
     if (systemPromptAPI) {
       conversationForAPI = {
@@ -308,6 +406,7 @@ const sendMessage = async ({
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
       let currentContent = [{"type": "text", "text": ""}];
+      let collectedForms = [];
       let usage = null;
       let process_block = "";
       let inThinking = false;
@@ -322,117 +421,15 @@ const sendMessage = async ({
         // Check if tool calls exist
         if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
           try {
-            if (delta.tool_calls[0]?.function?.name === "tools.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "error") {
-                process_block += "Could not use tools: " + String(arg?.msg) + "\n\n";
-              } 
+            const name = delta.tool_calls[0]?.function?.name;
+            let arg = delta.tool_calls[0]?.function?.arguments;
+            if (typeof arg === "string") arg = JSON.parse(arg);
+            const handled = handleToolEvent(name, arg);
+            if (handled?.text) {
+              process_block += handled.text;
             }
-            if (delta.tool_calls[0]?.function?.name === "mcp.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "call") {
-                process_block += "Calling MCP server: " + String(arg?.server) 
-                + "\n\nfunction: `" 
-                + String(arg?.function) 
-                + "` with args: `"
-                + String(arg?.arguments)
-                + "`\n\n";
-              } else if (arg.event === "result") {
-                process_block += "MCP response received of type `" + String(arg?.type) + "`\n\n";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "rscript.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "preparing_script") {
-                process_block += "Running R Script:\n```r\n" + String(arg?.script) + "\n```\n\n";
-              } 
-              if (arg.event === "error") {
-                process_block += "Cannot use Rscript: " + String(arg?.msg) + "\n\n";
-              } 
-            }
-            // Handle web search events
-            if (delta.tool_calls[0]?.function?.name === "websearch.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "begin") {
-                process_block += "Searching for \"" + arg.query + "\" on ";
-              } else if (arg.event === "config") {
-                process_block += String(arg?.["search-engine"]) + "\n\n";
-              } else if (arg.event === "websearch_done") {
-                process_block += "Web search completed. Used " + String(arg.selected) + " relevant sources.\n\n";
-              } else if (arg.event === "websearch_page_cache" || arg.event === "fetch") {
-                process_block += "Reading source: " + String(arg?.url) + "\n\n";
-              } else if (arg.event === "error") {
-                process_block += "Websearch Error: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "arcana.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "accessing") {
-                process_block += `Reading arcana "${arg.arcana}" \n\n`;
-              } else if (arg.event === "done") {
-                process_block += "";// "Arcana retrieval completed.";
-              } else {
-                process_block += "";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "image.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "image_creation_begin") {
-                process_block += `Generating image: "${arg.query}" \n\n`;
-              } else if (arg.event === "image_modify_begin") {
-                process_block += "Modifying image: " + String(arg?.query) + "\n\n";
-              } else if (arg.event === "done") {
-                process_block += "";// "Image generation completed.";
-              } if (arg.event === "error") {
-                process_block += "Image generation failed: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "video.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "begin") {
-                process_block += `Generating video: "${arg.query}" \n\n`;
-              } if (arg.event === "error") {
-                process_block += "Video generation failed: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "audio.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "audio_creation_begin") {
-                process_block += `Generating audio: "${arg.query}" \n\n`;
-              } else if (arg.event === "done") {
-                process_block += "";// "Audio generation completed.";
-              } if (arg.event === "error") {
-                process_block += "Audio generation failed: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "audio_transcription.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "begin") {
-                process_block += `Transcribing audio: `;
-              } else if (arg.event === "done") {
-                process_block += arg.transcription + "\n\n";// "Audio transcription completed.";
-              } if (arg.event === "error") {
-                process_block += "Audio transcription failed: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
+            if (handled?.form) {
+              collectedForms.push({ type: "form", form: handled.form });
             }
           } catch (err) {
             console.warn("Didn't understand: ", delta)
@@ -529,6 +526,9 @@ const sendMessage = async ({
         message_text += "</think>";
         inThinking = false;
         currentContent[0].text = message_text
+      }
+      if (collectedForms.length > 0) {
+        currentContent.push(...collectedForms);
       }
       return {
         answer: currentContent,
