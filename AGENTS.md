@@ -205,9 +205,10 @@ Verified in `back/service.mjs`:
 ### 4.9 Typst rendering is client-side, from fenced code blocks
 
 **Entry point.** `rendererComponents.code` in `MarkdownRenderer.jsx` handles fenced blocks:
-` ```mermaid ` goes to `MermaidDiagram.jsx`, ` ```typst ` / ` ```typ ` goes to `TypstBlock.jsx`
-with rendering enabled by default, and every other language also goes to `TypstBlock.jsx` with
-`defaultRender={false}`. Inline code is returned directly and never rendered.
+` ```mermaid ` goes to `MermaidDiagram.jsx`, ` ```latex ` / ` ```tex ` goes to `LatexBlock.jsx`
+(§4.10), ` ```typst ` / ` ```typ ` goes to `TypstBlock.jsx` with rendering enabled by default, and
+every other language also goes to `TypstBlock.jsx` with `defaultRender={false}`. Inline code is
+returned directly and never rendered.
 
 **Pipeline.** `TypstBlock.jsx` lazily imports `@myriaddreamin/typst.ts` on the first render. Its
 compiler and renderer WASM files are imported with Vite's `?url` (`TypstBlock.jsx:6-7`), so Vite
@@ -237,6 +238,46 @@ fetches its default text fonts from jsDelivr at runtime unless `assetUrlPrefix`/
 configured, so rendering needs network access to that CDN. Model output is untrusted: the SVG is
 sanitised with DOMPurify's SVG profile plus `ADD_TAGS: ["use"]` (the profile otherwise drops
 `<use>`, which Typst uses to reuse glyphs), and `data_selection.js` is disabled.
+
+### 4.10 LaTeX document blocks render client-side with faster-latex
+
+`rendererComponents.code` routes ` ```latex ` / ` ```tex ` fences to `LatexBlock.jsx`; other code
+blocks still go to `TypstBlock.jsx` with `defaultRender={false}`. `LatexBlock` lazily imports the
+`faster-latex/web` build, initializes its WASM (emitted as a Vite asset), and calls
+`render(source, { fullDocument: false })`. The WASM is imported via the `faster-latex-wasm` alias
+in `vite.config.js`, which maps to the package's `web/faster_latex_bg.wasm`; this is required
+because the package's own `new URL(..., import.meta.url)` path works in the production build but
+not in the dev server. faster-latex is a Rust→WASM LaTeX subset that emits HTML
+with MathML; it is **not** a full TeX distribution — `\usepackage`, TikZ and other primitives are
+unsupported, and unsupported constructs produce warnings and visible fallbacks rather than failing.
+The HTML is sanitised with DOMPurify's `html` + `mathMl` profiles, then inserted into a shadow root
+with the shipped article CSS plus a small override, so the stylesheet cannot leak into the app.
+Rendering is debounced by 400 ms and cached by source text. `user_settings.render_latex` only
+selects the default view; every block keeps a "Render as LaTeX" / "Show code" toggle. No back
+service or API endpoint is involved.
+
+### 4.11 TikZ inside LaTeX blocks renders with self-hosted TikZJax
+
+TikZ is **not** a separate code-block type. `LatexBlock` preprocesses every ` ```latex ` / ` ```tex `
+block: `tikzRenderer.js` extracts `tikzpicture`/`tikzcd` environments, strips
+`\usetikzlibrary` and known `\usepackage` declarations from the text, and replaces each environment
+with a `TIKZPLACEHOLDER<n>END` token. The extracted snippets are rendered off-screen through
+TikZJax (a hidden `<pre class="language-tikz">`) to SVG strings, while the cleaned source is
+rendered with faster-latex. The tokens are then replaced with
+`<span class="latex-tikz">…SVG…</span>`, and the combined HTML is sanitized with DOMPurify's
+`html` + `svg` + `mathMl` profiles (plus `ADD_TAGS: ["use"]`).
+
+TikZJax's dist and its ~7.7 MB of TeX/font assets are copied from `@rod2ik/tikzjax` into
+`public/tikzjax` by `scripts/copy-tikzjax.mjs`, which runs as `predev` / `prebuild` / `preprod`;
+that directory is gitignored. `vite.config.js` serves `/tikzjax/*.gz` with
+`Content-Encoding: identity`: otherwise Vite marks the `.gz` files as gzip-encoded, the browser
+transparently decompresses them, and TikZJax's own gunzip fails with "incorrect header check".
+`tikzRenderer.js` sets `workerMode: "direct"` and disables `workerPool`; the pool path wraps the
+worker in a blob and loads it with `importScripts`, which can fail under some deployments/CSPs.
+Only packages in the loader's known set are forwarded; TikZ libraries from
+`\usetikzlibrary` and preamble commands such as `\tikzset` are forwarded via the pre's data
+attributes. `user_settings.render_latex` controls the LaTeX block's default view. The TikZJax
+package is GPL-3.0+.
 
 ## 5. Conventions
 

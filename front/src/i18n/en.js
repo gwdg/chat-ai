@@ -197,6 +197,10 @@ export default {
       render: "Render as Typst",
       show_code: "Show code",
     },
+    latex_block: {
+      render: "Render as LaTeX",
+      show_code: "Show code",
+    },
     sources: "Sources and References",
     references: "References",
     empty_message: "Your conversations are never stored on our servers",
@@ -289,11 +293,18 @@ export default {
         description: "Show suggested ways to continue after each response.",
         help_label: "Learn about follow-up prompts",
       },
+      rendering: {
+        label: "Rendering",
+      },
       typst: {
-        section_label: "Rendering",
         label: "Render Typst blocks",
         description:
           "Choose whether Typst code blocks are rendered by default. You can still render or show code for each block.",
+      },
+      latex: {
+        label: "Render LaTeX blocks",
+        description:
+          "Choose whether LaTeX code blocks are rendered by default. You can still render or show code for each block.",
       },
     },
     default_model: {
@@ -580,6 +591,11 @@ export default {
     rendering: "Rendering Typst document...",
     render_error:
       "Failed to render Typst document. Showing source instead:",
+  },
+  latex: {
+    rendering: "Rendering LaTeX document...",
+    render_error:
+      "Failed to render LaTeX document. Showing source instead:",
   },
   // Announcement
   announcement: "",

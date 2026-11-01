@@ -7,6 +7,7 @@ const initialState = {
   memory_mode: 0,
   suggest_user_prompts: false,
   render_typst: true,
+  render_latex: true,
 };
 
 const userSettingsSlice = createSlice({
@@ -69,6 +70,10 @@ const userSettingsSlice = createSlice({
       state.render_typst = Boolean(action.payload);
     },
 
+    setRenderLatex: (state, action) => {
+      state.render_latex = Boolean(action.payload);
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -92,7 +97,8 @@ const userSettingsSlice = createSlice({
 export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
-  setDefaultModel, setMemoryMode, setSuggestUserPrompts, setRenderTypst
+  setDefaultModel, setMemoryMode, setSuggestUserPrompts, setRenderTypst,
+  setRenderLatex
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -107,5 +113,7 @@ export const selectSuggestUserPrompts = (state) =>
   state.user_settings.suggest_user_prompts ?? false;
 export const selectRenderTypst = (state) =>
   state.user_settings.render_typst ?? true;
+export const selectRenderLatex = (state) =>
+  state.user_settings.render_latex ?? true;
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;
