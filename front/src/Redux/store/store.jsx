@@ -50,6 +50,7 @@ const getDefaultState = () => {
       html_load_external: true,
       html_sanitization: "strict",
       set_title_once: true,
+      render_typst: true,
     },
   };
 };

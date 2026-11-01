@@ -8,6 +8,8 @@ import {
   selectSuggestUserPrompts,
   setMemoryMode,
   setSetTitleOnce,
+  selectRenderTypst,
+  setRenderTypst,
   setSuggestUserPrompts,
   selectHtmlRenderMode,
   setHtmlRenderMode,
@@ -287,6 +289,26 @@ export function HtmlRenderPreference() {
           )}
         </p>
       </div>
+    </section>
+  );
+}
+
+export function TypstPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const renderTypst = useSelector(selectRenderTypst);
+
+  return (
+    <section>
+      <h3 className="px-2 text-sm font-medium text-gray-900 dark:text-white">
+        {t("user_settings.chat_preferences.typst.section_label")}
+      </h3>
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.typst.label")}
+        description={t("user_settings.chat_preferences.typst.description")}
+        checked={renderTypst}
+        onChange={(checked) => dispatch(setRenderTypst(checked))}
+      />
     </section>
   );
 }
