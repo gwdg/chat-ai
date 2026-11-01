@@ -5,18 +5,24 @@ import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';
 import type { ModelInfo } from '../../types/models';
 
-function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false, listOnly = false, onSelected}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean, listOnly?: boolean, onSelected?: () => void}) {
+function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false, listOnly = false, onSelected, selectedModel: selectedModelOverride, onChange}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean, listOnly?: boolean, onSelected?: () => void, selectedModel?: ModelInfo | null, onChange?: (model: ModelInfo) => void}) {
   /*
   render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
   */
   const { openModal } = useModal();
-  
+
+  // When called with an explicit selectedModel/onChange (e.g. the settings
+  // panel), drive the selector directly. Otherwise derive from localState.
+  const controlled = onChange !== undefined && selectedModelOverride !== undefined;
+
   const currentModel = localState?.settings?.model || null;
   const currentModelId = localState?.settings?.model?.id || null;
   const currentConversationId = localState?.id;
-  const selectedModel = (modelsData && currentModelId) ?
-    (modelsData.find(model => model.id === currentModelId) || currentModel) : (modelsData ?
-    modelsData[0] : (currentModel || null));
+  const selectedModel = controlled
+    ? selectedModelOverride
+    : (modelsData && currentModelId)
+      ? (modelsData.find(model => model.id === currentModelId) || currentModel)
+      : (modelsData ? modelsData[0] : (currentModel || null));
 
   const hasExtendedModels = modelsData?.[0]?.description !== undefined;
 
@@ -26,6 +32,10 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
     }
     if (newModel?.status === "offline") {
       openModal("serviceOffline");
+    }
+    if (controlled) {
+      onChange?.(newModel);
+      return;
     }
     setLocalState((prev) => ({
       ...prev,
