@@ -10,6 +10,8 @@ import Code from "./Code";
 
 const CACHE_LIMIT = 50;
 const CROP_PADDING = 6;
+const TYPST_SVG_STYLES =
+  "<style>:host{display:block}svg{display:block;max-width:100%;height:auto}</style>";
 const svgCache = new Map();
 
 const isPageBackground = (element) => {
@@ -113,7 +115,14 @@ const TypstBlock = memo(
     const contentRef = useRef(null);
 
     useLayoutEffect(() => {
-      if (svg && !showCode) cropSvgToContent(contentRef.current);
+      const host = contentRef.current;
+      if (!host || !svg || showCode) return;
+
+      // Typst's SVG contains a global <style> (notably `svg { fill: none }`).
+      // Keep it in a shadow root so it cannot restyle the app's own SVG icons.
+      const root = host.shadowRoot || host.attachShadow({ mode: "open" });
+      root.innerHTML = `${TYPST_SVG_STYLES}${svg}`;
+      cropSvgToContent(root);
     }, [svg, showCode]);
 
     useEffect(() => {
@@ -214,11 +223,7 @@ const TypstBlock = memo(
           <div className="pt-3 p-2">{t("typst.rendering")}</div>
         ) : svg ? (
           <div className="mt-2 overflow-x-auto rounded-lg bg-white p-4 text-black">
-            <div
-              ref={contentRef}
-              className="typst-document"
-              dangerouslySetInnerHTML={{ __html: svg }}
-            />
+            <div ref={contentRef} className="typst-document block w-full" />
           </div>
         ) : (
           <div className="pt-3" />

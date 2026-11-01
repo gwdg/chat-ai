@@ -214,8 +214,10 @@ compiler and renderer WASM files are imported with Vite's `?url` (`TypstBlock.js
 emits them as app assets; nothing is fetched from a Typst server. The first render calls
 `$typst.svg({ mainContent })`, which runs the Typst compiler and renderer WASM in the browser and
 returns an SVG string. That SVG is sanitised, cached by source text (max 50 entries), and inserted
-into the message with `dangerouslySetInnerHTML`. After mounting, full-page page-background shapes
-(Typst emits one for `#set page(fill: ...)`) are ignored for measurement, then the viewBox is
+into a shadow root attached to the block's container. The shadow root is required because Typst's
+SVG carries its own `<style>` with global selectors such as `svg { fill: none; }`; in the light DOM
+that silently strips the fill from unrelated app icons. After mounting, full-page page-background
+shapes (Typst emits one for `#set page(fill: ...)`) are ignored for measurement, then the viewBox is
 rewritten to the rendered content's `getBBox()` plus 6 pt padding, so the unused page canvas is
 cropped away. The back service and API endpoint are not involved.
 
