@@ -36,11 +36,11 @@ export default function SendButton({localState, setLocalState, handleSend, promp
     const isSafe = isSafeSettings(localState);
 
     return !loading && ( (prompt !== "" || attachments.length > 0)  ? (
-         <Tooltip text={t("common.send")}>
+         <Tooltip text={t("common.send_shortcut")}>
             <SendFilled size={28} className={"cursor-pointer " + (isSafe ? "text-green-600" : "text-yellow-600")} onClick={handleSend} />
         </Tooltip>
     ) : (
-        <Tooltip text={t("common.send")}>
+        <Tooltip text={t("common.send_shortcut")}>
             <SendFilled size={28} className={"opacity-10 " + (isSafe ? "text-green-600" : "text-yellow-600")} />
         </Tooltip>
     ))

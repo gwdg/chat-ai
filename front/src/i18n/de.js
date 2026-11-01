@@ -16,6 +16,7 @@ export default {
     clear: "Löschen",
     abort: "Abbrechen",
     send: "Senden",
+    send_shortcut: "Senden (Umschalt+Enter)",
     stop: "Anhalten",
     share: "Teilen",
     delete: "Löschen",
