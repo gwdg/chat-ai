@@ -195,6 +195,10 @@ export default {
       render: "HTML rendern",
       show_code: "Code anzeigen",
     },
+    typst_block: {
+      render: "Als Typst rendern",
+      show_code: "Code anzeigen",
+    },
     sources: "Quellen und Referenzen",
     references: "Referenzen",
     empty_message:
@@ -366,6 +370,12 @@ export default {
             },
           },
         },
+      },
+      typst: {
+        section_label: "Darstellung",
+        label: "Typst-Blöcke rendern",
+        description:
+          "Legt fest, ob Typst-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
       },
     },
     default_model: {
@@ -649,6 +659,11 @@ export default {
     reassurance:
       "Keine Sorge! Sie können eine neue Unterhaltung starten, indem Sie auf den Button unten klicken.",
     buttonText: "Zum Chat gehen",
+  },
+  typst: {
+    rendering: "Typst-Dokument wird gerendert...",
+    render_error:
+      "Typst-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
   },
   // Announcement
   announcement: "",

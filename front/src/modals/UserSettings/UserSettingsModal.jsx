@@ -20,6 +20,7 @@ import {
   MemoryPreference,
   SuggestionPreference,
   HtmlRenderPreference,
+  TypstPreference,
 } from "./ChatPreferences";
 import { getExportData } from "../../utils/conversationUtils";
 import { useToast } from "../../hooks/useToast";
@@ -130,6 +131,9 @@ export default function UserSettingsModal({
               {t("common.loading")}
             </p>
           )}
+          <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+            <TypstPreference />
+          </div>
           {choicesModule && (
             <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
               <SuggestionPreference />
