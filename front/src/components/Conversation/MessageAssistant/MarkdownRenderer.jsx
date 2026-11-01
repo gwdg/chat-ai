@@ -349,6 +349,12 @@ const sanitizeSvgHtml = (html, loadExternal = true, relaxed = false) => {
   }
   const result = DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true, svg: true, svgFilters: true },
+    // Relaxed mode allows scripts, and the SAFE_FOR_XML mXSS heuristic
+    // force-removes any script/style whose text contains markup-like text
+    // (e.g. `</b>` inside a JS template literal), which is normal in
+    // interactive documents. The output only ever runs in the sandboxed
+    // iframe, so skip that heuristic once the user has opted into scripts.
+    SAFE_FOR_XML: !relaxed,
     FORBID_TAGS: relaxed
       ? []
       : [
