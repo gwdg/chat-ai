@@ -8,6 +8,7 @@ import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import MermaidDiagram from "./MermaidDiagram";
+import LatexBlock from "./LatexBlock";
 import TypstBlock from "./TypstBlock";
 
 /* --------------------------------------------
@@ -35,6 +36,10 @@ export const rendererComponents = {
 
     if (language === "mermaid") {
       return <MermaidDiagram content={content} />;
+    }
+
+    if (language === "latex" || language === "tex") {
+      return <LatexBlock content={content} language={language} />;
     }
 
     if (language === "typst" || language === "typ") {

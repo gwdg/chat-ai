@@ -193,6 +193,10 @@ export default {
       render: "Als Typst rendern",
       show_code: "Code anzeigen",
     },
+    latex_block: {
+      render: "Als LaTeX rendern",
+      show_code: "Code anzeigen",
+    },
     sources: "Quellen und Referenzen",
     references: "Referenzen",
     empty_message:
@@ -292,11 +296,18 @@ export default {
           "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
         help_label: "Mehr über Folgevorschläge erfahren",
       },
+      rendering: {
+        label: "Darstellung",
+      },
       typst: {
-        section_label: "Darstellung",
         label: "Typst-Blöcke rendern",
         description:
           "Legt fest, ob Typst-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
+      },
+      latex: {
+        label: "LaTeX-Blöcke rendern",
+        description:
+          "Legt fest, ob LaTeX-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
       },
     },
     default_model: {
@@ -585,6 +596,11 @@ export default {
     rendering: "Typst-Dokument wird gerendert...",
     render_error:
       "Typst-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
+  },
+  latex: {
+    rendering: "LaTeX-Dokument wird gerendert...",
+    render_error:
+      "LaTeX-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
   },
   // Announcement
   announcement: "",

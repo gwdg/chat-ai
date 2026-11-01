@@ -47,6 +47,7 @@ const getDefaultState = () => {
       memory_mode: 0,
       suggest_user_prompts: false,
       render_typst: true,
+      render_latex: true,
     },
   };
 };
