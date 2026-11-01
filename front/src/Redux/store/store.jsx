@@ -49,6 +49,7 @@ const getDefaultState = () => {
       html_render_mode: "render",
       html_load_external: true,
       html_sanitization: "strict",
+      set_title_once: true,
     },
   };
 };
