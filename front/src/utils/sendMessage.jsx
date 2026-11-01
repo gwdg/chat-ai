@@ -270,6 +270,7 @@ const sendMessage = async ({
   memoryMode = 0,
   suggestUserPrompts = false,
   formSubmission = null,
+  setTitleOnce = true,
 }) => {
   const conversationId = localState.id
 
@@ -633,7 +634,8 @@ const sendMessage = async ({
         { role: "assistant", content: responseContent },
         { role: "user", content: "" }
       ];
-      if (conversationForAPI.messages.length <= 4) {
+      // Only generate the title on the first prompt when setTitleOnce is enabled
+      if (!setTitleOnce || conversationForAPI.messages.length <= 4) {
         const title = await generateTitle(conversationForAPI.messages);
         console.log("Generated title is ", title)
         setLocalState(prev => {

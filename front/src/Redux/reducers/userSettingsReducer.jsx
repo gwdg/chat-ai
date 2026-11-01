@@ -9,6 +9,7 @@ const initialState = {
   html_render_mode: "render",
   html_load_external: true,
   html_sanitization: "strict",
+  set_title_once: true,
 };
 
 const userSettingsSlice = createSlice({
@@ -85,6 +86,10 @@ const userSettingsSlice = createSlice({
       }
     },
 
+    setSetTitleOnce: (state, action) => {
+      state.set_title_once = Boolean(action.payload);
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -109,7 +114,7 @@ export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
-  setHtmlLoadExternal, setHtmlSanitization
+  setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -132,5 +137,7 @@ export const selectHtmlSanitization = (state) => {
   const mode = state.user_settings.html_sanitization;
   return ["strict", "relaxed"].includes(mode) ? mode : "strict";
 };
+export const selectSetTitleOnce = (state) =>
+  state.user_settings.set_title_once ?? true;
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;
