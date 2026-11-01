@@ -163,6 +163,12 @@ async function hydrateConversation(conversationId: string) {
         fileId: ci.fileId,
       })
     }
+    else if (ci.type === 'form' && ci.form) {
+      items.push({
+        type: 'form',
+        form: { ...ci.form },
+      })
+    }
   }
 
   // Build hydrated messages
@@ -385,6 +391,16 @@ export async function updateConversation(
               idx: ciIdx++,
               type: 'file',
               fileId: item.fileId
+            });
+          }
+          else if (item.type === 'form' && item.form) {
+            // Add form content item
+            await db.content_items.add({
+              id: newId(),
+              messageId: m.id,
+              idx: ciIdx++,
+              type: 'form',
+              form: item.form
             });
           }
           else {
