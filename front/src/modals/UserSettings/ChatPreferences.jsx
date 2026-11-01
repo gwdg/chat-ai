@@ -8,7 +8,9 @@ import {
   selectSuggestUserPrompts,
   setMemoryMode,
   setSetTitleOnce,
+  selectRenderLatex,
   selectRenderTypst,
+  setRenderLatex,
   setRenderTypst,
   setSuggestUserPrompts,
   selectHtmlRenderMode,
@@ -293,21 +295,28 @@ export function HtmlRenderPreference() {
   );
 }
 
-export function TypstPreference() {
+export function RenderingPreferences() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const renderTypst = useSelector(selectRenderTypst);
+  const renderLatex = useSelector(selectRenderLatex);
 
   return (
-    <section>
+    <section className="flex flex-col gap-2">
       <h3 className="px-2 text-sm font-medium text-gray-900 dark:text-white">
-        {t("user_settings.chat_preferences.typst.section_label")}
+        {t("user_settings.chat_preferences.rendering.label")}
       </h3>
       <ProfilePreferenceSwitch
         label={t("user_settings.chat_preferences.typst.label")}
         description={t("user_settings.chat_preferences.typst.description")}
         checked={renderTypst}
         onChange={(checked) => dispatch(setRenderTypst(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.latex.label")}
+        description={t("user_settings.chat_preferences.latex.description")}
+        checked={renderLatex}
+        onChange={(checked) => dispatch(setRenderLatex(checked))}
       />
     </section>
   );

@@ -48,26 +48,24 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   };
   
   const sendFeedbackFunc = async (ratingInt, commentStr, expectedStr) => {
-    // Remove messages after current index
-    let newState;
-    setLocalState((prev) => {
-      const newMessages = [...prev.messages];
-      const newMessagesWithFB = [...prev.messages];
-      newMessages.splice(message_index + 1);
+    const feedback = {
+      rating: ratingInt,
+      comment: commentStr,
+      result: expectedStr,
+    };
+    const newMessagesWithFB = [...localState.messages];
+    newMessagesWithFB[message_index] = {
+      ...newMessagesWithFB[message_index],
+      feedback,
+    };
 
-      newMessages[newMessages.length-1].feedback = {
-        rating : ratingInt,
-        comment: commentStr,
-        result : expectedStr
-      };
-      console.log("sending feedback");
-      console.log(newMessages[newMessages.length-1].feedback);
+    const newState = {
+      ...localState,
+      messages: newMessagesWithFB.slice(0, message_index + 1),
+    };
 
-      newMessagesWithFB[newMessages.length-1].feedback = newMessages[newMessages.length-1].feedback;
-      newState = { ...prev, messages: newMessages }
-      sendMessage({localState: newState});
-      return { ...prev, messages: newMessagesWithFB };
-    });
+    setLocalState({ ...localState, messages: newMessagesWithFB });
+    sendMessage({ localState: newState });
   };
 
   const [feedbackMode, setFeedbackMode] = useState(false);  
@@ -135,15 +133,12 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
 
   // Function to handle resending a previous message
   const handleRetry = async () => {
-    // Remove messages after current index
+    const newMessages = [...localState.messages];
+    newMessages.splice(message_index);
+    const newState = { ...localState, messages: newMessages };
 
-    setLocalState((prev) => {
-      const newMessages = [...prev.messages];
-      newMessages.splice(message_index);
-      let newState = { ...prev, messages: newMessages };
-      sendMessage({ localState: newState, setLocalState });
-      return { ...prev, messages: newMessages };
-    });
+    setLocalState(newState);
+    await sendMessage({ localState: newState, setLocalState });
   };
 
   const handleForkConversation = useCallback(

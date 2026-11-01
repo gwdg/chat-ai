@@ -51,6 +51,7 @@ const getDefaultState = () => {
       html_sanitization: "strict",
       set_title_once: true,
       render_typst: true,
+      render_latex: true,
     },
   };
 };

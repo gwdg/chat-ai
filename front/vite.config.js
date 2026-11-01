@@ -3,6 +3,39 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from '@tailwindcss/vite'
 import fs from "fs";
 import path from "path";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const fasterLatexRoot = path.dirname(
+  require.resolve("faster-latex/package.json")
+);
+
+const serveTikzGzip = (middlewares) => {
+  middlewares.use((req, res, next) => {
+    const url = (req.url || "").split("?")[0];
+    if (!url.startsWith("/tikzjax/") || !url.endsWith(".gz")) {
+      return next();
+    }
+
+    const file = path.join(process.cwd(), "public", url);
+    fs.readFile(file, (error, data) => {
+      if (error) return next();
+      res.setHeader("Content-Type", "application/gzip");
+      res.setHeader("Content-Encoding", "identity");
+      res.end(data);
+    });
+  });
+};
+
+const tikzAssetsPlugin = {
+  name: "serve-tikzjax-gzip",
+  configureServer(server) {
+    serveTikzGzip(server.middlewares);
+  },
+  configurePreviewServer(server) {
+    serveTikzGzip(server.middlewares);
+  },
+};
 
 const ASSET_URL = process.env.ASSET_URL || "";
 const CONFIG_LOCATION = process.env.CONFIG_LOCATION || "../secrets/front.json";
@@ -72,9 +105,18 @@ try {
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss()
+    tailwindcss(),
+    tikzAssetsPlugin
   ],
   base: "/",
+  resolve: {
+    alias: [
+      {
+        find: /^faster-latex-wasm/,
+        replacement: path.join(fasterLatexRoot, "web/faster_latex_bg.wasm"),
+      },
+    ],
+  },
   server: {
     port: port,
     open: false,
