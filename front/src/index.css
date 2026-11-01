@@ -134,12 +134,6 @@ body {
   background: inherit !important;
 }
 
-.typst-document svg {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
 .react-markdown-output h1 {
   font-size: 24px;
   font-weight: bold;
