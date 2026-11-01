@@ -161,13 +161,117 @@ app.get("/models", async (req, res) => {
 app.get("/user", async (req, res) => {
   try {
     res.status(200).json({
-      email: "user@example.com",
-      firstname: "Sample",
+      email: "tets.user@gwdg.de",
+      firstname: "Test",
       lastname: "User",
       org: "GWD",
       organization: "GWDG",
-      username: "sample-user",
-    });
+      username: "Test user",
+      max_api_keys: 10,
+      max_api_keys_per_day: 10,
+      is_ai_admin: true,
+      external: {
+        rate_limits: {
+          requests: {
+            "10s": {
+              limit: 100.0,
+              used: 0.0,
+              remaining: 100.0,
+              resets_at: "2026-10-31T17:20:42.736938",
+            },
+            hourly: {
+              limit: 100000.0,
+              used: 555.0,
+              remaining: 99445.0,
+              resets_at: "2026-10-31T19:00:00.736938",
+            },
+            daily: {
+              limit: 100000.0,
+              used: 1384.0,
+              remaining: 98616.0,
+              resets_at: "2026-11-01T00:00:00.736938",
+            },
+            monthly: {
+              limit: 1000000.0,
+              used: 1793.0,
+              remaining: 998207.0,
+              resets_at: "2026-11-01T00:00:00.736938",
+            },
+          },
+          budget: {
+            hourly: {
+              limit: 100,
+              used: 5.0,
+              remaining: 995.0,
+              resets_at: "2026-10-31T19:00:00.736938",
+            }      
+          },
+        },
+        limits: {
+          user: {
+            monthly_limit: 100.0,
+            monthly_usage: 1.0,
+            total_limit: null,
+            total_usage: 0.055230774578,
+          },
+          org: {
+            monthly_usage_percent: 0.09173001825808,
+            total_usage_percent: null,
+          },
+        },
+      },
+      internal: {
+        rate_limits: {
+          requests: {
+            "10s": {
+              limit: 100.0,
+              used: 0.0,
+              remaining: 100.0,
+              resets_at: "2026-10-31T17:20:42.736938",
+            },
+            daily: {
+              limit: 100000.0,
+              used: 1384.0,
+              remaining: 98616.0,
+              resets_at: "2026-11-01T00:00:00.736938",
+            },
+            monthly: {
+              limit: 1000000.0,
+              used: 1793.0,
+              remaining: 998207.0,
+              resets_at: "2026-11-01T00:00:00.736938",
+            },
+          },
+          budget: {
+            hourly: {
+              limit: 100,
+              used: 5.0,
+              remaining: 995.0,
+              resets_at: "2026-10-31T19:00:00.736938",
+            },
+            daily: {
+              limit: 200.0,
+              used: 10.0,
+              remaining: 990.0,
+              resets_at: "2026-11-01T00:00:00.736938",
+            }          
+          },
+        },
+        limits: {
+          user: {
+            monthly_limit: 100.0,
+            monthly_usage: 1.0,
+            total_limit: null,
+            total_usage: 0.055230774578,
+          },
+          org: {
+            monthly_usage_percent: 0.09173001825808,
+            total_usage_percent: null,
+          },
+        },
+      }
+    }
+    );
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch user info." });
