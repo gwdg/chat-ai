@@ -193,6 +193,10 @@ export default {
     },
     reasoning: "Reasoning Process",
     action: "Action",
+    typst_block: {
+      render: "Render as Typst",
+      show_code: "Show code",
+    },
     sources: "Sources and References",
     references: "References",
     empty_message: "Your conversations are never stored on our servers",
@@ -284,6 +288,12 @@ export default {
         label: "Suggest follow-up prompts",
         description: "Show suggested ways to continue after each response.",
         help_label: "Learn about follow-up prompts",
+      },
+      typst: {
+        section_label: "Rendering",
+        label: "Render Typst blocks",
+        description:
+          "Choose whether Typst code blocks are rendered by default. You can still render or show code for each block.",
       },
     },
     default_model: {
@@ -565,6 +575,11 @@ export default {
     reassurance:
       "Don't worry! You can start a new conversation by clicking the button below.",
     buttonText: "Go to chat",
+  },
+  typst: {
+    rendering: "Rendering Typst document...",
+    render_error:
+      "Failed to render Typst document. Showing source instead:",
   },
   // Announcement
   announcement: "",

@@ -189,6 +189,10 @@ export default {
     },
     reasoning: "Denkprozess",
     action: "Aktion",
+    typst_block: {
+      render: "Als Typst rendern",
+      show_code: "Code anzeigen",
+    },
     sources: "Quellen und Referenzen",
     references: "Referenzen",
     empty_message:
@@ -287,6 +291,12 @@ export default {
         description:
           "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
         help_label: "Mehr über Folgevorschläge erfahren",
+      },
+      typst: {
+        section_label: "Darstellung",
+        label: "Typst-Blöcke rendern",
+        description:
+          "Legt fest, ob Typst-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
       },
     },
     default_model: {
@@ -570,6 +580,11 @@ export default {
     reassurance:
       "Keine Sorge! Sie können eine neue Unterhaltung starten, indem Sie auf den Button unten klicken.",
     buttonText: "Zum Chat gehen",
+  },
+  typst: {
+    rendering: "Typst-Dokument wird gerendert...",
+    render_error:
+      "Typst-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
   },
   // Announcement
   announcement: "",
