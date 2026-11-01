@@ -12,6 +12,7 @@ import DOMPurify from "dompurify";
 import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
+import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
 import {
   selectHtmlRenderMode,
@@ -437,11 +438,11 @@ const HtmlBlock = memo(({ content, isLoading }) => {
   const loadExternal = useSelector(selectHtmlLoadExternal);
   const sanitization = useSelector(selectHtmlSanitization);
   const relaxed = sanitization === "relaxed";
-  const [showCode, setShowCode] = useState(defaultMode === "code");
+  const [showCode, setShowCode] = useState(defaultMode !== "render");
   const [iframeHeight, setIframeHeight] = useState(500);
 
   useEffect(() => {
-    setShowCode(defaultMode === "code");
+    setShowCode(defaultMode !== "render");
   }, [defaultMode]);
 
   const safeHtml = useMemo(() => {
@@ -477,25 +478,19 @@ const HtmlBlock = memo(({ content, isLoading }) => {
   // While the message is still streaming the fenced block may be incomplete.
   // Do not render partial HTML: show the raw code until the whole block has
   // been received.
-  const forceCode = defaultMode === "off" || isLoading;
-
-  if (forceCode) {
-    return (
-      <div className="relative my-2">
-        <Code language="html">{codeContent}</Code>
-      </div>
-    );
-  }
+  const forceCode = isLoading;
+  const codeVisible = showCode || forceCode;
 
   return (
     <div className="relative my-2">
       <button
         type="button"
         onClick={() => setShowCode((prev) => !prev)}
-        aria-pressed={!showCode}
-        className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-medium text-gray-600 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        disabled={forceCode}
+        aria-pressed={!codeVisible}
+        className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-medium text-gray-600 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
       >
-        {showCode ? (
+        {codeVisible ? (
           <>
             <Eye className="h-3.5 w-3.5" aria-hidden="true" />
             {t("conversation.html_block.render")}
@@ -508,7 +503,7 @@ const HtmlBlock = memo(({ content, isLoading }) => {
         )}
       </button>
 
-      {showCode ? (
+      {codeVisible ? (
         <div className="pt-3">
           <Code language="html">{codeContent}</Code>
         </div>

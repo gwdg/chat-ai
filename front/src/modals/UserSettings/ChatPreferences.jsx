@@ -179,119 +179,93 @@ export function HtmlRenderPreference() {
     ) ?? HTML_SANITIZATION_OPTIONS[0];
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="min-w-0">
-        <h3
-          id="global-html-render-mode-label"
-          className="text-sm font-medium text-gray-900 dark:text-white"
-        >
-          {t("user_settings.chat_preferences.html_render.label")}
-        </h3>
-        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-          {t("user_settings.chat_preferences.html_render.description")}
-        </p>
-      </div>
+    <section className="flex flex-col gap-2">
+      <SegmentedPreference
+        label={t("user_settings.chat_preferences.html_render.label")}
+        description={t(
+          `user_settings.chat_preferences.html_render.options.${selectedOption.key}.description`,
+        )}
+        options={HTML_RENDER_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(
+            `user_settings.chat_preferences.html_render.options.${option.key}.label`,
+          ),
+        }))}
+        value={htmlRenderMode}
+        onChange={(value) => dispatch(setHtmlRenderMode(value))}
+      />
 
+      <div className="ml-4 flex flex-col gap-2">
+        <ProfilePreferenceSwitch
+          label={t(
+            "user_settings.chat_preferences.html_render.external_references.label",
+          )}
+          description={t(
+            "user_settings.chat_preferences.html_render.external_references.description",
+          )}
+          checked={htmlLoadExternal}
+          onChange={(checked) => dispatch(setHtmlLoadExternal(checked))}
+        />
+
+        <SegmentedPreference
+          label={t(
+            "user_settings.chat_preferences.html_render.sanitization.label",
+          )}
+          description={t(
+            `user_settings.chat_preferences.html_render.sanitization.options.${selectedSanitizationOption.key}.description`,
+          )}
+          options={HTML_SANITIZATION_OPTIONS.map((option) => ({
+            value: option.value,
+            label: t(
+              `user_settings.chat_preferences.html_render.sanitization.options.${option.key}.label`,
+            ),
+          }))}
+          value={htmlSanitization}
+          onChange={(value) => dispatch(setHtmlSanitization(value))}
+        />
+      </div>
+    </section>
+  );
+}
+
+function SegmentedPreference({ label, description, options, value, onChange }) {
+  return (
+    <div className="flex min-h-14 w-full items-center justify-between gap-4 rounded-lg px-2 py-2">
+      <div className="min-w-0">
+        <span className="block text-sm font-medium text-gray-800 dark:text-gray-100">
+          {label}
+        </span>
+        {description && (
+          <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+            {description}
+          </span>
+        )}
+      </div>
       <div
         role="group"
-        aria-labelledby="global-html-render-mode-label"
-        className="grid min-h-10 grid-cols-3 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60"
+        aria-label={label}
+        className="flex shrink-0 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60"
       >
-        {HTML_RENDER_OPTIONS.map((option) => {
-          const selected = option.value === htmlRenderMode;
+        {options.map((option) => {
+          const selected = option.value === value;
           return (
             <button
               key={option.value}
               type="button"
               aria-pressed={selected}
-              onClick={() => dispatch(setHtmlRenderMode(option.value))}
-              className={`min-w-0 rounded-md px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
+              onClick={() => onChange(option.value)}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
                 selected
                   ? "bg-white text-tertiary shadow-sm dark:bg-gray-700 dark:text-white"
                   : "text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white"
               }`}
             >
-              <span className="block truncate">
-                {t(
-                  `user_settings.chat_preferences.html_render.options.${option.key}.label`,
-                )}
-              </span>
+              {option.label}
             </button>
           );
         })}
       </div>
-
-      <p
-        className="text-xs text-gray-500 dark:text-gray-400"
-        aria-live="polite"
-      >
-        {t(
-          `user_settings.chat_preferences.html_render.options.${selectedOption.key}.description`,
-        )}
-      </p>
-
-      <ProfilePreferenceSwitch
-        label={t(
-          "user_settings.chat_preferences.html_render.external_references.label",
-        )}
-        description={t(
-          "user_settings.chat_preferences.html_render.external_references.description",
-        )}
-        checked={htmlLoadExternal}
-        onChange={(checked) => dispatch(setHtmlLoadExternal(checked))}
-      />
-
-      <div className="border-t border-gray-200 pt-3 dark:border-gray-700">
-        <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-          {t("user_settings.chat_preferences.html_render.sanitization.label")}
-        </p>
-        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-          {t(
-            "user_settings.chat_preferences.html_render.sanitization.description",
-          )}
-        </p>
-
-        <div
-          role="group"
-          aria-label={t(
-            "user_settings.chat_preferences.html_render.sanitization.label",
-          )}
-          className="mt-2 grid min-h-10 grid-cols-2 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60"
-        >
-          {HTML_SANITIZATION_OPTIONS.map((option) => {
-            const selected = option.value === htmlSanitization;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => dispatch(setHtmlSanitization(option.value))}
-                className={`min-w-0 rounded-md px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
-                  selected
-                    ? "bg-white text-tertiary shadow-sm dark:bg-gray-700 dark:text-white"
-                    : "text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white"
-                }`}
-              >
-                <span className="block truncate">
-                  {t(
-                    `user_settings.chat_preferences.html_render.sanitization.options.${option.key}.label`,
-                  )}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <p
-          className="mt-2 text-xs text-gray-500 dark:text-gray-400"
-          aria-live="polite"
-        >
-          {t(
-            `user_settings.chat_preferences.html_render.sanitization.options.${selectedSanitizationOption.key}.description`,
-          )}
-        </p>
-      </div>
-    </section>
+    </div>
   );
 }
 
@@ -318,6 +292,7 @@ export function RenderingPreferences() {
         checked={renderLatex}
         onChange={(checked) => dispatch(setRenderLatex(checked))}
       />
+      <HtmlRenderPreference />
     </section>
   );
 }

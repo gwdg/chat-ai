@@ -332,7 +332,7 @@ export default {
         },
       },
       html_render: {
-        label: "HTML-Blöcke",
+        label: "HTML-Blöcke rendern",
         description:
           "Legt fest, wie HTML-Blöcke in Antworten standardmäßig angezeigt werden.",
         options: {
@@ -349,7 +349,7 @@ export default {
           off: {
             label: "Aus",
             description:
-              "HTML-Blöcke niemals rendern. Sie werden immer als Code angezeigt.",
+              "HTML-Blöcke nicht automatisch rendern. Sie werden zunächst als Code angezeigt; pro Block kann weiterhin gerendert werden.",
           },
         },
         external_references: {

@@ -329,7 +329,7 @@ export default {
         },
       },
       html_render: {
-        label: "HTML blocks",
+        label: "Render HTML blocks",
         description:
           "Choose how HTML fenced blocks in responses are shown by default.",
         options: {
@@ -346,7 +346,7 @@ export default {
           off: {
             label: "Off",
             description:
-              "Never render HTML blocks. They are always shown as code.",
+              "Do not render HTML blocks automatically. They start as code; you can still render them per block.",
           },
         },
         external_references: {
