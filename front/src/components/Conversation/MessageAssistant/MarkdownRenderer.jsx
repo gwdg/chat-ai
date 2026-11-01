@@ -7,8 +7,8 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
-import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
+import TypstBlock from "./TypstBlock";
 
 /* --------------------------------------------
  * Shared renderer components (unchanged styles)
@@ -31,11 +31,23 @@ export const rendererComponents = {
       );
     }
 
-    if (match && match[1] === "mermaid") {
+    const language = match ? match[1].toLowerCase() : null;
+
+    if (language === "mermaid") {
       return <MermaidDiagram content={content} />;
     }
 
-    return <Code language={match ? match[1] : null}>{content}</Code>;
+    if (language === "typst" || language === "typ") {
+      return <TypstBlock content={content} language={language} />;
+    }
+
+    return (
+      <TypstBlock
+        content={content}
+        language={match ? match[1] : null}
+        defaultRender={false}
+      />
+    );
   },
 
   pre({ children, ...props }) {

@@ -187,6 +187,40 @@ Verified in `back/service.mjs`:
   object. Real user data comes from the gateway in a full deployment, so don't debug user/usage
   features against this response.
 
+### 4.9 Typst rendering is client-side, from fenced code blocks
+
+**Entry point.** `rendererComponents.code` in `MarkdownRenderer.jsx` handles fenced blocks:
+` ```mermaid ` goes to `MermaidDiagram.jsx`, ` ```typst ` / ` ```typ ` goes to `TypstBlock.jsx`
+with rendering enabled by default, and every other language also goes to `TypstBlock.jsx` with
+`defaultRender={false}`. Inline code is returned directly and never rendered.
+
+**Pipeline.** `TypstBlock.jsx` lazily imports `@myriaddreamin/typst.ts` on the first render. Its
+compiler and renderer WASM files are imported with Vite's `?url` (`TypstBlock.jsx:6-7`), so Vite
+emits them as app assets; nothing is fetched from a Typst server. The first render calls
+`$typst.svg({ mainContent })`, which runs the Typst compiler and renderer WASM in the browser and
+returns an SVG string. That SVG is sanitised, cached by source text (max 50 entries), and inserted
+into the message with `dangerouslySetInnerHTML`. After mounting, full-page page-background shapes
+(Typst emits one for `#set page(fill: ...)`) are ignored for measurement, then the viewBox is
+rewritten to the rendered content's `getBBox()` plus 6 pt padding, so the unused page canvas is
+cropped away. The back service and API endpoint are not involved.
+
+**Scheduling.** Rendering is debounced by 400 ms, so streaming code blocks are not recompiled on
+every keystroke. `$typst` is a single shared, stateful instance, so `TypstBlock` serialises all
+compilations through a module-level promise queue; a cancelled render is ignored when it finishes.
+Compile errors fall back to the raw source.
+
+**Per-block UI.** ` ```typst ` / ` ```typ ` blocks start rendered or as code according to the
+`user_settings.render_typst` flag (Chat preferences → Rendering). All other code blocks start as
+code. Every block keeps a "Render as Typst" / "Show code" toggle regardless of the preference; the
+preference only selects the default view. The selector defaults the flag to `true` so existing
+persisted settings without the key keep rendering.
+
+**Resources and security.** The WASM modules are served from the app's own build output. typst.ts
+fetches its default text fonts from jsDelivr at runtime unless `assetUrlPrefix`/`loadFonts` is
+configured, so rendering needs network access to that CDN. Model output is untrusted: the SVG is
+sanitised with DOMPurify's SVG profile plus `ADD_TAGS: ["use"]` (the profile otherwise drops
+`<use>`, which Typst uses to reuse glyphs), and `data_selection.js` is disabled.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
