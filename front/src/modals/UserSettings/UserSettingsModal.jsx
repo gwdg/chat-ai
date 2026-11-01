@@ -18,9 +18,9 @@ import TimeoutSetter from "./TimeoutSetter";
 import UserMemoryContainer from "./UserMemoryContainer";
 import {
   MemoryPreference,
+  RenderingPreferences,
   SuggestionPreference,
   HtmlRenderPreference,
-  TypstPreference,
 } from "./ChatPreferences";
 import { getExportData } from "../../utils/conversationUtils";
 import { useToast } from "../../hooks/useToast";
@@ -132,7 +132,7 @@ export default function UserSettingsModal({
             </p>
           )}
           <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
-            <TypstPreference />
+            <RenderingPreferences />
           </div>
           {choicesModule && (
             <div className="border-t border-gray-200 pt-5 dark:border-gray-700">

@@ -18,6 +18,7 @@ import {
   selectHtmlLoadExternal,
   selectHtmlSanitization,
 } from "../../../Redux/reducers/userSettingsReducer";
+import LatexBlock from "./LatexBlock";
 import TypstBlock from "./TypstBlock";
 
 /* --------------------------------------------
@@ -49,6 +50,10 @@ export const rendererComponents = {
 
     if (language === "html") {
       return <HtmlBlock content={content} />;
+    }
+
+    if (language === "latex" || language === "tex") {
+      return <LatexBlock content={content} language={language} />;
     }
 
     if (language === "typst" || language === "typ") {

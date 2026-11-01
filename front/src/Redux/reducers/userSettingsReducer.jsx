@@ -11,6 +11,7 @@ const initialState = {
   html_sanitization: "strict",
   set_title_once: true,
   render_typst: true,
+  render_latex: true,
 };
 
 const userSettingsSlice = createSlice({
@@ -95,6 +96,10 @@ const userSettingsSlice = createSlice({
       state.render_typst = Boolean(action.payload);
     },
 
+    setRenderLatex: (state, action) => {
+      state.render_latex = Boolean(action.payload);
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -119,7 +124,8 @@ export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
-  setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst
+  setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
+  setRenderLatex
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -146,5 +152,7 @@ export const selectSetTitleOnce = (state) =>
   state.user_settings.set_title_once ?? true;
 export const selectRenderTypst = (state) =>
   state.user_settings.render_typst ?? true;
+export const selectRenderLatex = (state) =>
+  state.user_settings.render_latex ?? true;
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;
