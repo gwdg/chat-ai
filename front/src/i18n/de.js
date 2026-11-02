@@ -59,6 +59,15 @@ export default {
     title: "Chats",
     all: "Alle Chats",
     uncategorized: "Nicht zugeordnete Chats",
+    by_date: "Alle Chats nach Datum",
+    modified: "Geändert {{date}}",
+    dateBuckets: {
+      today: "Heute",
+      yesterday: "Gestern",
+      lastWeek: "Letzte Woche",
+      lastMonth: "Letzter Monat",
+      older: "Älter",
+    },
     create_button: "Neues Thema",
     empty_topic: "Ziehen Sie einen Chat hierher.",
     search_label: "Suche",
@@ -90,6 +99,62 @@ export default {
     move_action: "Verschieben",
     new_folder_prompt: "Neues Thema anlegen",
     create_inline: "Erstellen",
+  },
+  sorter: {
+    button: "Sortieren & organisieren",
+    title: "Chats sortieren & organisieren",
+    intro:
+      "Prüfen Sie die Vorschläge unten. Änderungen werden erst beim Anwenden übernommen.",
+    ai_model_note:
+      "Chat-Titel, vorhandene Zusammenfassungen und bestehende Themennamen werden vom Standard-ChatAI-Modell analysiert.",
+    ai_analyzing: "Ihre Chats werden mit {{model}} analysiert…",
+    ai_error:
+      "Das Modell konnte Ihre Chats nicht analysieren. Es werden keine Änderungen angezeigt.",
+    ai_retry: "Modell erneut versuchen",
+    ai_limited:
+      "Die {{analyzed}} neuesten von {{total}} Chats wurden analysiert. Ältere Chats bleiben unverändert.",
+    ai_default_model: "das Standardmodell",
+    assessment_title: "Einschätzung des Modells",
+    preview_title: "Vorgeschlagene Struktur",
+    include_topic_rename: "Themenumbenennung übernehmen",
+    include_title_change: "Titeländerung übernehmen",
+    new_topic: "Neues Thema",
+    existing_topic: "Bestehendes Thema",
+    no_changes: "Keine Themenänderungen vorgeschlagen.",
+    select_all_moves: "Alle auswählen",
+    deselect_all_moves: "Alle abwählen",
+    deletions_title: "Vorgeschlagene Löschungen",
+    deletions_hint:
+      "Vom Modell vorgeschlagene Löschungen werden hier angezeigt. Sie sind standardmäßig nicht ausgewählt.",
+    no_deletions: "Keine Löschungen vorgeschlagen.",
+    reason_empty: "Leerer Chat",
+    reason_duplicate: 'Duplikat von "{{title}}"',
+    reason_duplicate_generic: "Doppelter Chat",
+    select_all_deletions: "Alle Löschungen auswählen",
+    deselect_all_deletions: "Alle Löschungen abwählen",
+    summary_moves: "{{count}} Verschiebungen",
+    summary_new_topics: "{{count}} neue Themen",
+    summary_titles: "{{count}} Titeländerungen",
+    summary_topic_renames: "{{count}} Themenumbenennungen",
+    summary_deletions: "{{count}} Löschungen",
+    apply: "Änderungen anwenden",
+    applying: "Wird angewendet…",
+    error_name: "Bitte geben Sie jedem neuen Thema einen Namen.",
+    error_generic:
+      "Die Änderungen konnten nicht angewendet werden. Bitte erneut versuchen.",
+    success: "Chats wurden neu organisiert.",
+    categories: {
+      code: "Programmierung",
+      writing: "Schreiben",
+      research: "Forschung",
+      data: "Daten & Analyse",
+      planning: "Planung",
+      learning: "Lernen",
+      health: "Gesundheit",
+      travel: "Reisen",
+      finance: "Finanzen",
+      creative: "Kreatives Arbeiten",
+    },
   },
   // Settings panel
   settings: {
@@ -333,6 +398,12 @@ export default {
           description:
             "Den Gesprächstitel nur einmal, aus der ersten Anfrage, generieren.",
         },
+      },
+      summaries: {
+        section_label: "Unterhaltungszusammenfassungen",
+        label: "Zusammenfassungen beim Darüberfahren anzeigen",
+        description:
+          "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",
       },
       html_render: {
         label: "HTML-Blöcke rendern",

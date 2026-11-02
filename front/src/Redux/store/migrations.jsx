@@ -92,6 +92,18 @@ export const migrations = {
     delete settings.browser_document_conversion;
     state.user_settings = settings;
     console.log("Migrating redux to v5");
-  }
-  // Future migrations here (e.g., 6: (state) => {...})
+  },
+  6: (state) => {
+    state.interface_settings = state.interface_settings ?? {};
+    state.interface_settings.conversation_sort =
+      state.interface_settings.conversation_sort ?? "created_desc";
+    console.log("Migrating redux to v6");
+  },
+  7: (state) => {
+    state.user_settings = state.user_settings ?? {};
+    state.user_settings.conversation_summaries =
+      state.user_settings.conversation_summaries ?? true;
+    console.log("Migrating redux to v7");
+  },
+  // Future migrations here (e.g., 8: (state) => {...})
 };

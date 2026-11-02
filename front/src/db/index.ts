@@ -72,6 +72,21 @@ export class AppDB extends Dexie {
         }
       });
     });
+
+    this.version(5).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt'
+    }).upgrade(async tx => {
+      await tx.table('conversations').toCollection().modify((conv: any) => {
+        if (typeof conv.lastOpenedAt === 'undefined') {
+          conv.lastOpenedAt = conv.lastModified ?? conv.createdAt ?? Date.now();
+        }
+      });
+    });
   }
 }
 
@@ -219,6 +234,7 @@ export async function createConversation(params: {
       messageCount: 0,
       folderId,
       hasFirstPrompt,
+      lastOpenedAt: now,
     })
 
     if (messages.length > 0) {
@@ -438,7 +454,7 @@ export async function getConversationMeta(conversationId: string): Promise<Conve
 
 // Get list of conversation Metas
 export async function listConversationMetas(): Promise<
-  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'messageCount' | 'folderId'>>
+  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'lastOpenedAt' | 'messageCount' | 'folderId' | 'summary'>>
 > {
   return db.conversations.orderBy('id').toArray()
 }
@@ -454,6 +470,18 @@ export async function updateConversationMeta(
   }
   await db.conversations.update(conversationId, payload)
   return 0;
+}
+
+export async function setConversationSummary(
+  conversationId: string,
+  summary: string,
+  sourceHash: string,
+) {
+  await db.conversations.update(conversationId, {
+    summary,
+    summaryUpdatedAt: Date.now(),
+    summarySourceHash: sourceHash,
+  });
 }
 
 // Delete entire conversation (messages + content items + files)
@@ -588,6 +616,13 @@ export async function setFolderColor(folderId: string, color: string) {
 }
 
 /** Set a topic's icon — its identity in the sidebar. Not indexed, no migration. */
+export async function setFolderOrder(folderId: string, sortOrder: number) {
+  await db.folders.update(folderId, {
+    sortOrder,
+    updatedAt: Date.now(),
+  });
+}
+
 export async function setFolderIcon(folderId: string, icon: string) {
   await db.folders.update(folderId, {
     icon,
@@ -625,7 +660,15 @@ export async function ensureFolder(name: string, id?: string | null): Promise<st
 export function useFolderList() {
   return useLiveQuery(
     async () => {
-      return await db.folders.orderBy('createdAt').reverse().toArray();
+      const folders = await db.folders.toArray();
+      return folders.sort((a, b) => {
+        const aOrder = typeof a.sortOrder === 'number' ? a.sortOrder : null;
+        const bOrder = typeof b.sortOrder === 'number' ? b.sortOrder : null;
+        if (aOrder !== null && bOrder !== null) return aOrder - bOrder;
+        if (aOrder !== null) return -1;
+        if (bOrder !== null) return 1;
+        return b.createdAt - a.createdAt;
+      });
     },
     [],
     [] as FolderRow[],

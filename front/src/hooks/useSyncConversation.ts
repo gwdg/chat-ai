@@ -224,6 +224,7 @@ export function useSyncConversation({
 
   // Effect 1: Try to load conversation on mount
   useEffect(() => {
+    setInitialized(false);
     // Open modal for backup
     if (migrationData && Object.entries(migrationData).length > 0) {
       openModal("migrate");

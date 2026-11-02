@@ -9,6 +9,9 @@ interface ShortcutTooltipProps {
   shortcut?: string;
   position?: TooltipPosition;
   enterDelay?: number;
+  multiline?: boolean;
+  containerClassName?: string;
+  disabled?: boolean;
 }
 
 export default function ShortcutTooltip({
@@ -17,6 +20,9 @@ export default function ShortcutTooltip({
   shortcut,
   position = "right",
   enterDelay = 0,
+  multiline = false,
+  containerClassName = "inline-flex",
+  disabled = false,
 }: ShortcutTooltipProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
@@ -58,10 +64,14 @@ export default function ShortcutTooltip({
   }, [visible, isClient, updatePosition]);
 
   const tooltip =
-    isClient && visible
+    isClient && visible && !disabled
       ? createPortal(
           <div
-            className={`pointer-events-none fixed z-50 whitespace-nowrap rounded bg-gray-800 dark:bg-gray-700 px-2 py-1 text-xs text-white border dark:border-border_dark shadow ${
+            className={`pointer-events-none fixed z-50 rounded bg-gray-800 dark:bg-gray-700 text-xs text-white border dark:border-border_dark shadow ${
+              multiline
+                ? "max-w-xs whitespace-normal px-2.5 py-2 text-left leading-snug"
+                : "whitespace-nowrap px-2 py-1"
+            } ${
               position === "right"
                 ? "-translate-y-1/2"
                 : position === "left"
@@ -82,7 +92,7 @@ export default function ShortcutTooltip({
       : null;
 
   const showTooltip = useCallback(() => {
-    if (suppressHoverRef.current) return;
+    if (disabled || suppressHoverRef.current) return;
     if (enterDelay > 0) {
       delayRef.current = window.setTimeout(() => {
         setVisible(true);
@@ -91,7 +101,7 @@ export default function ShortcutTooltip({
     } else {
       setVisible(true);
     }
-  }, [enterDelay]);
+  }, [enterDelay, disabled]);
 
   const hideTooltip = useCallback(() => {
     if (delayRef.current) {
@@ -151,7 +161,7 @@ export default function ShortcutTooltip({
   return (
     <div
       ref={containerRef}
-      className="inline-flex"
+      className={containerClassName}
       onMouseEnter={showTooltip}
       onMouseLeave={hideTooltip}
       // Opening a modal leaves the pointer parked on the trigger with no
