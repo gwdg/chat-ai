@@ -118,6 +118,15 @@ If you wish to avoid using different ports for the `front` and `back` services, 
 
 If you wish to customize the list of available models, you must create a path that returns an OpenAI-style JSON response containing the model ids and names, and set the `modelsPath` in `front.json` accordingly. If configured correctly, your custom list will be displayed in the dropdown menu in the interface, instead of the list from your API provider.
 
+### Model metadata and the model selector
+
+The interface has two model-selector variants and picks one automatically from the `/models` response:
+
+- **Extended selector** — used for SAIA / Chat AI, whose `/models` response includes extra metadata beyond the OpenAI defaults. It offers search, sorting, list/extended/grid views, and groups models into folders by the first word of their name. The `description` field is shown for each model; `releaseDate`, `company`, `contextLength`, and `external` are also displayed, and name, release date, parameter count, and context length can be used for sorting.
+- **Simple selector** — used for a plain OpenAI-compatible API that only returns the standard model fields. It offers search and the same folder grouping, but no extended metadata or view modes.
+
+The variant is chosen from the `description` field of the **first** model in the response. If you provide a custom `modelsPath` and want the extended selector, include a `description` in each entry (plus any of the optional fields above that you want to display). A model's `name` falls back to its `id` when omitted.
+
 ## Development
 You can use docker as local development setup. Alternatively, you can run Chat AI directly for which you nee `nodejs` installed.
 

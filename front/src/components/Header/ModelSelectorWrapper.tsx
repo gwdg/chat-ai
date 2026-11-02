@@ -7,7 +7,9 @@ import type { ModelInfo } from '../../types/models';
 
 function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false, listOnly = false, onSelected, selectedModel: selectedModelOverride, onChange}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean, listOnly?: boolean, onSelected?: () => void, selectedModel?: ModelInfo | null, onChange?: (model: ModelInfo) => void}) {
   /*
-  render either ModelSelectorSimple or ModelSelectorExtended depending if modelsList contains models with extended==true
+  Render ModelSelectorExtended when the models carry SAIA metadata (detected via
+  `description` on the first model), otherwise the plain OpenAI-compatible
+  ModelSelectorSimple.
   */
   const { openModal } = useModal();
 

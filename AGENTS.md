@@ -267,6 +267,18 @@ Only packages in the loader's known set are forwarded; TikZ libraries from
 attributes. `user_settings.render_latex` controls the LaTeX block's default view. The TikZJax
 package is GPL-3.0+.
 
+### 4.12 Two model-selector variants, chosen from the data
+
+`Header/ModelSelectorWrapper.tsx` renders one of two selectors for all three call sites (header,
+prompt-box `ModelButton`, settings `DefaultModelSelector`). The choice is
+`modelsData?.[0]?.description !== undefined`: SAIA / Chat AI returns `description` (plus
+`releaseDate`, `company`, `contextLength`, `external`, …), so it gets `ModelSelectorExtended`;
+a plain OpenAI-compatible `/models` response does not, so it gets `ModelSelectorSimple`. Only the
+**first** model is inspected, so a mixed or reordered response silently selects the wrong variant.
+Both are data-tolerant (optional chaining), but the simple selector has no metadata columns or
+view modes. Add new model fields to `types/models.ts` and both selectors if they affect both
+variants.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
