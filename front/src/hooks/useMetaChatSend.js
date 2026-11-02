@@ -7,14 +7,16 @@ import { listConversationMetas, listFolders } from "../db";
 import { extractMessageText } from "../utils/conversationSummary";
 import { getDefaultChatAIModel } from "../utils/conversationUtils";
 import {
+  selectAllMemories,
   selectTimeout,
   selectUserSettings,
 } from "../Redux/reducers/userSettingsReducer";
 
 const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
+const MAX_MEMORY_CHARS = 12000;
 
-function buildSystemPrompt(conversations, topics) {
+function buildSystemPrompt(conversations, topics, memories) {
   const topicById = new Map(
     topics.map((topic) => [topic.id, topic.name]),
   );
@@ -23,6 +25,16 @@ function buildSystemPrompt(conversations, topics) {
     .join("\n") || "(no topics available)";
   let used = topicLines.length;
   const lines = [];
+
+  const memoryLines = [];
+  let memoryUsed = 0;
+  for (const memory of memories) {
+    const text = String(memory || "").trim();
+    if (!text) continue;
+    if (memoryUsed + text.length > MAX_MEMORY_CHARS) break;
+    memoryLines.push(`- ${text}`);
+    memoryUsed += text.length;
+  }
 
   for (const conversation of conversations.slice(0, MAX_CONVERSATIONS)) {
     const summary = conversation.summary || "(no summary available)";
@@ -43,7 +55,7 @@ function buildSystemPrompt(conversations, topics) {
 
   return `You are the Meta chat assistant for a local chat application. You help the user find and understand their past conversations and topics.
 
-You receive metadata for the user's conversations and topics (categories). Each conversation has an id, title, topic, summary, and last-modified time. This metadata is your only source. Summaries may be missing or stale. Never invent a conversation, topic, title, id, or summary.
+You receive metadata for the user's conversations and topics (categories). Each conversation has an id, title, topic, summary, and last-modified time. This metadata and any saved memories are your only sources. Summaries may be missing or stale. Never invent a conversation, topic, title, id, summary, or memory.
 
 Use the topic tree to answer questions about which topic or category contains something. When naming a topic, use its exact name.
 
@@ -53,13 +65,23 @@ Use only ids from the list below. Do not link to any other URL or invent an id. 
 
 Answer in the same language as the user's question. Be concise and concrete.
 
+You may also receive the user's saved memories. Use them when relevant, but they may be stale. Never invent memories.
+
 <topics>
 ${topicLines}
 </topics>
 
 <conversations>
 ${lines.join("\n") || "(no conversations available)"}
-</conversations>`;
+</conversations>${
+    memoryLines.length
+      ? `
+
+<memories>
+${memoryLines.join("\n")}
+</memories>`
+      : ""
+  }`;
 }
 
 async function loadMetaContext() {
@@ -101,6 +123,7 @@ async function loadMetaContext() {
 export function useMetaChatSend() {
   const timeout = useSelector(selectTimeout);
   const userSettings = useSelector(selectUserSettings);
+  const memories = useSelector(selectAllMemories);
   const { t } = useTranslation();
 
   return useCallback(
@@ -157,7 +180,14 @@ export function useMetaChatSend() {
           tools: {},
         },
         messages: [
-          { role: "system", content: buildSystemPrompt(conversations, topics) },
+          {
+            role: "system",
+            content: buildSystemPrompt(
+              conversations,
+              topics,
+              (memories || []).map((memory) => memory?.text || ""),
+            ),
+          },
           ...history,
         ],
       };
@@ -224,6 +254,6 @@ export function useMetaChatSend() {
         });
       }
     },
-    [timeout, userSettings, t],
+    [timeout, userSettings, memories, t],
   );
 }

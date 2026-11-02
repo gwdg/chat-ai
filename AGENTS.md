@@ -323,8 +323,9 @@ The AI icon in the sidebar header navigates to `/meta`, rendered by
 `useMetaChatSend` while inside the page. A banner above the conversation labels it as the Meta chat
 and shows an example question. The sender loads `listConversationMetas()` and `listFolders()`, keeps
 non-empty conversations, and sends each conversation's id, title, topic, summary, and last-modified
-time plus the topic tree to the default model — never the full message history. Missing summaries
-fall back to the title. The model is instructed to reference a chat as `[title](/chat/<id>)`;
+time plus the topic tree and saved user memories to the default model — never the full message
+history. Missing summaries fall back to the title. The model is instructed to reference a chat as
+`[title](/chat/<id>)`;
 `MarkdownRenderer`'s link component navigates `/chat/...` links inside the SPA. The meta chat is
 stored as a hidden conversation row (`id: "meta-chat"`, `isMetaChat: true`), excluded from the
 sidebar, last-conversation lookup, and its own summary context. `getExportData()` emits it as
