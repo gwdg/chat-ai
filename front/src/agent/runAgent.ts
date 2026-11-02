@@ -13,6 +13,7 @@ import { onAbortRequest, reasoningParams } from "../apis/chatCompletions";
 import { loadFileMeta, saveFile } from "../db";
 import { getFileType } from "../utils/attachments";
 import { prepareAttachment, UPLOADS, uploadPath } from "./prepare";
+import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
 import { createTools } from "./tools";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
@@ -245,11 +246,13 @@ export async function runAgentTurn({
   );
 
   const extra = { top_p: settings.top_p, ...reasoningParams(spec.id, settings) };
+  const gatewayFields = external ? {} : gatewayRequestFields(settings);
   const onPayload = (payload: any) => {
     // Let the server pick the output limit, as the plain chat path does.
     delete payload.max_tokens;
     delete payload.max_completion_tokens;
     Object.assign(payload, extra);
+    addGatewayFields(payload, gatewayFields);
     if (!useTools) {
       delete payload.tools;
       payload.messages = flattenToolHistory(payload.messages);
@@ -267,6 +270,15 @@ export async function runAgentTurn({
     if (audio?.size) addInputAudio(payload.messages, audio);
     return payload;
   };
+
+  // The gateway's own tool use during a request, as pi messages. It belongs before the
+  // assistant message that request produced: `before` maps that message to it, for the
+  // following requests of this turn (transformContext) and the stored transcript (done).
+  let gatewayMessages: AgentMessage[] = [];
+  const before = new Map<AgentMessage, AgentMessage[]>();
+  const fetchFn = gatewayFetch((exchange) =>
+    gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
+  );
 
   const mounts = listMounts(conversationId);
   const agent = new Agent({
@@ -286,7 +298,11 @@ export async function runAgentTurn({
       tools: useTools ? createTools(workspace, { vision, enabled: settings.tools }) : [],
       messages: conversation,
     },
-    streamFn: (m, context, options) => models.streamSimple(m, context, { ...options, temperature: settings.temperature, onPayload }),
+    transformContext: async (messages) => nameResults(messages.flatMap((message) => [...(before.get(message) ?? []), message])),
+    streamFn: (m, context, options) => {
+      gatewayMessages = [];
+      return models.streamSimple(m, context, { ...options, temperature: settings.temperature, onPayload, fetch: fetchFn });
+    },
   });
 
   // Files the agent wrote, by path. A file written twice keeps one place in the message.
@@ -321,6 +337,11 @@ export async function runAgentTurn({
       case "message_end":
         streaming = undefined;
         if (event.message.role === "user") return;
+        if (event.message.role === "assistant" && gatewayMessages.length) {
+          before.set(event.message, gatewayMessages);
+          done.push(...nameResults(gatewayMessages));
+          gatewayMessages = [];
+        }
         done.push(event.message);
         if (event.message.role === "assistant" && event.message.stopReason === "error") {
           error = event.message.errorMessage ?? "The model request failed.";
