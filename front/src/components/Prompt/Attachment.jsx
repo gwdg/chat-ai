@@ -20,7 +20,7 @@ import {
 import { selectDocumentConversionMode } from "../../Redux/reducers/userSettingsReducer";
 import { useToast } from "../../hooks/useToast";
 import { isAgentEnabled } from "../../apis/agentEndpoints";
-import { usePrepareStatus } from "../../agent/prepare";
+import { usePrepareStatus, reconvertAttachment, conversionMethodOf } from "../../agent/prepare";
 
 export default function Attachment({
   localState,
@@ -160,7 +160,22 @@ export default function Attachment({
   };
 
   const badge = getFileBadge(file);
-  const canProcess = !agentMode && !inHistory && (fileType === "pdf" || fileType === "docx"); // TODO add other supported types
+  const isDocument = fileType === "pdf" || fileType === "docx" || fileType === "excel";
+  // Agent mode converts in the background (agent/prepare.ts); show it on the same card
+  const agentConversion =
+    agentMode && !inHistory && isDocument &&
+    (prepareStatus?.startsWith("converting_") || prepareStatus === "convert_failed");
+  const canProcess = agentConversion || (!agentMode && needsConversion);
+  const currentMethod = agentMode
+    ? conversionMethodOf(attachment.fileId) ?? "server"
+    : conversionMethod ?? documentConversionMode;
+  const switchMethod = currentMethod === "browser" ? "server" : "browser";
+  const canSwitch = switchMethod === "server" || canConvertDocumentLocally(fileType);
+  const failed = agentMode ? prepareStatus === "convert_failed" : conversionFailed;
+  const runConversion = (method) =>
+    agentMode
+      ? reconvertAttachment(localState.id, attachment.fileId, method)
+      : startConversion(method);
 
   const getFileDisplayInfo = (file) => {
     if (canProcess) {
@@ -257,61 +272,69 @@ export default function Attachment({
             </span>
           </div>
 
-          <div className="mt-1 flex flex-1 flex-col justify-center gap-0.5 text-[10px] leading-tight">
-            <span
-              className={`flex items-center gap-1 ${
-                conversionFailed
-                  ? "text-red-700 dark:text-red-300"
-                  : "text-yellow-800 dark:text-yellow-300"
-              }`}
-            >
-              {conversionFailed ? (
-                <WarningAltFilled size={10} className="flex-shrink-0" />
-              ) : (
-                <span className="h-2 w-2 flex-shrink-0 rounded-full bg-amber-600 animate-pulse" />
-              )}
-              <span className="truncate">
-                {conversionFailed
-                  ? t("conversation.attachment.convert_failed")
-                  : t(`conversation.attachment.converting_${conversionMethod ?? documentConversionMode}`)}
-              </span>
-            </span>
-            <span className="flex items-center gap-2">
-              {conversionFailed && (
+          <div className="mt-1 flex-1">
+            <div className={`grid gap-1 ${canSwitch ? "grid-cols-2" : "grid-cols-1"}`}>
+              {failed ? (
                 <button
                   type="button"
-                  className="font-semibold text-amber-800 underline hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
                   onClick={(e) => {
                     e.stopPropagation();
-                    startConversion(conversionMethod ?? documentConversionMode);
+                    runConversion(currentMethod);
                   }}
+                  className="py-0.5 leading-tight bg-gradient-to-r from-amber-500 to-orange-600
+                  hover:from-amber-600 hover:to-orange-700 text-white truncate px-1
+                  rounded-sm text-[10px] font-semibold shadow-md shadow-yellow-500/30
+                  transition duration-200 ease-in-out text-center"
                 >
                   {t("conversation.attachment.retry")}
                 </button>
+              ) : (
+                <div
+                  className="flex min-h-5 min-w-0 items-center justify-center gap-1 rounded-sm px-1
+                  bg-gradient-to-r from-amber-700 to-orange-700 py-0.5 text-[10px] leading-tight text-white"
+                >
+                  <svg className="animate-spin h-3 w-3 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className="truncate">{t(`conversation.attachment.method_${currentMethod}`)}</span>
+                </div>
               )}
-              <button
-                type="button"
-                className="truncate text-amber-800 underline hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  startConversion(otherMethod);
-                }}
-              >
-                {t(`conversation.attachment.use_${otherMethod}`)}
-              </button>
-            </span>
+              {canSwitch && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    runConversion(switchMethod);
+                  }}
+                  className="py-0.5 leading-tight bg-gradient-to-r from-amber-500 to-orange-600
+                  hover:from-amber-600 hover:to-orange-700 text-white truncate px-1
+                  rounded-sm text-[10px] font-semibold shadow-md shadow-yellow-500/30
+                  transition duration-200 ease-in-out text-center"
+                >
+                  {t(`conversation.attachment.use_${switchMethod}`)}
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center justify-between gap-1 leading-tight">
-            <button
-              type="button"
-              className="rounded p-0.5 text-yellow-800 hover:bg-white/50 dark:text-yellow-300 dark:hover:bg-black/30"
-              onClick={openConversionSettings}
-              title={t("conversation.attachment.conversion_settings")}
-              aria-label={t("conversation.attachment.conversion_settings")}
-            >
-              <Settings size={12} />
-            </button>
+          <div className="mt-1 flex items-center justify-between gap-1 leading-tight">
+            <span className={`flex min-w-0 items-center gap-1 text-[10px] ${failed ? "text-red-700 dark:text-red-300" : "text-yellow-700 dark:text-yellow-400"}`}>
+              <button
+                type="button"
+                className="flex-shrink-0 rounded hover:bg-white/50 dark:hover:bg-black/30"
+                onClick={openConversionSettings}
+                title={t("conversation.attachment.conversion_settings")}
+                aria-label={t("conversation.attachment.conversion_settings")}
+              >
+                <Settings size={11} />
+              </button>
+              <span className="truncate">
+                {failed
+                  ? t("conversation.attachment.convert_failed")
+                  : t(`conversation.attachment.converting_${currentMethod}`)}
+              </span>
+            </span>
             <span
               className={`shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded-full
                 bg-red-500/30 dark:bg-red-800/30 text-red-800 dark:text-red-200
@@ -391,9 +414,15 @@ export default function Attachment({
           </div>
           {/* Agent mode: converting or transcribing in the background */}
           {prepareStatus && (
-            <span className="text-[11px] text-tertiary flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-tertiary animate-pulse flex-shrink-0" />
-              <Trans i18nKey={`conversation.attachment.${prepareStatus}`} />
+            <span className="text-[11px] text-tertiary flex items-center gap-1 min-w-0">
+              {prepareStatus === "convert_failed" ? (
+                <WarningAltFilled size={12} className="flex-shrink-0 text-red-600 dark:text-red-400" />
+              ) : (
+                <span className="h-2 w-2 rounded-full bg-tertiary animate-pulse flex-shrink-0" />
+              )}
+              <span className="truncate">
+                <Trans i18nKey={`conversation.attachment.${prepareStatus}`} />
+              </span>
             </span>
           )}
           {/* Process Needed Warning*/}

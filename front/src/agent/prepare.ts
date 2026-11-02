@@ -7,11 +7,15 @@ import { convertDocument, transcribeAudio } from "../apis/agentEndpoints";
 import { loadFile } from "../db";
 import { getFileType } from "../utils/attachments";
 import { getWorkspace } from "./workspace";
+import { canConvertDocumentLocally, convertDocumentLocally } from "../utils/browserDocumentConversion";
+import store from "../Redux/store/store";
+import { selectDocumentConversionMode } from "../Redux/reducers/userSettingsReducer";
 
 export const UPLOADS = "/uploads";
 export const uploadPath = (fileId: string, name: string) => `${UPLOADS}/${fileId.slice(0, 8)}/${name}`;
 
-export type PrepareStatus = "converting" | "transcribing";
+export type ConversionMethod = "browser" | "server";
+export type PrepareStatus = "converting_browser" | "converting_server" | "convert_failed" | "transcribing";
 
 /** Resolves to the transcript for audio, otherwise null. */
 const jobs = new Map<string, Promise<string | null>>();
@@ -48,7 +52,25 @@ export function prepareAttachment(conversationId: string, fileId: string, file?:
   return job;
 }
 
-async function prepare(conversationId: string, fileId: string, file?: File): Promise<string | null> {
+/** The method last used per document, so the card can offer the other one. */
+const methods = new Map<string, ConversionMethod>();
+export const conversionMethodOf = (fileId: string) => methods.get(fileId);
+const runs = new Map<string, number>();
+
+/** Converts a document again with the given method, replacing any earlier result. */
+export function reconvertAttachment(conversationId: string, fileId: string, method: ConversionMethod) {
+  const job = prepare(conversationId, fileId, undefined, method, true);
+  jobs.set(fileId, job);
+  return job;
+}
+
+async function prepare(
+  conversationId: string,
+  fileId: string,
+  file?: File,
+  method?: ConversionMethod,
+  force = false,
+): Promise<string | null> {
   const fs = await getWorkspace(conversationId);
   file ??= (await loadFile(fileId)) ?? undefined;
   if (!file) {
@@ -64,19 +86,34 @@ async function prepare(conversationId: string, fileId: string, file?: File): Pro
   const isAudio = kind === "audio";
   if (!isDocument && !isAudio) return null;
   const variant = `${path}${isAudio ? ".txt" : ".md"}`;
-  if (await fs.stat(variant)) return isAudio ? new TextDecoder().decode(await fs.readFile(variant)) : null;
+  if (!force && (await fs.stat(variant))) return isAudio ? new TextDecoder().decode(await fs.readFile(variant)) : null;
 
-  setStatus(fileId, isAudio ? "transcribing" : "converting");
+  // Documents follow the conversion setting; the browser handles PDF and DOCX only
+  const chosen = method ?? (selectDocumentConversionMode(store.getState()) as ConversionMethod);
+  const useBrowser = !isAudio && chosen === "browser" && canConvertDocumentLocally(kind);
+  if (!isAudio) methods.set(fileId, useBrowser ? "browser" : "server");
+  const run = (runs.get(fileId) ?? 0) + 1;
+  runs.set(fileId, run);
+
+  setStatus(fileId, isAudio ? "transcribing" : useBrowser ? "converting_browser" : "converting_server");
   try {
-    const text = isAudio ? await transcribeAudio(bytes, file.name) : await convertDocument(bytes, file.name);
+    const text = isAudio
+      ? await transcribeAudio(bytes, file.name)
+      : useBrowser
+        ? ((await convertDocumentLocally(file, kind))?.content ?? "")
+        : await convertDocument(bytes, file.name);
+    if (!isAudio && !text) throw new Error("no text extracted");
+    // A newer attempt (the user switched method) supersedes this one
+    if (runs.get(fileId) !== run) return null;
     await fs.writeFile(variant, text);
+    setStatus(fileId, null);
     return isAudio ? text : null;
   } catch (error) {
     console.warn(`Could not convert ${path}:`, error);
+    if (runs.get(fileId) !== run) return null;
     // Let the next attempt (at the latest, sending) try again
     jobs.delete(fileId);
+    setStatus(fileId, isAudio ? null : "convert_failed");
     return null;
-  } finally {
-    setStatus(fileId, null);
   }
 }
