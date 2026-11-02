@@ -390,6 +390,14 @@ export default {
           },
         },
       },
+      screensavers: {
+        section_label: "Screensavers",
+        label: "Disable screensavers",
+        hint_sweep: "Sweep the snow\nwith your mouse",
+        hint_stop: "Click to stop",
+        hint_disable: "Disable in settings",
+        description: "Turn off seasonal animations that appear when the interface is idle.",
+      },
     },
     default_model: {
       title: "Default Model",

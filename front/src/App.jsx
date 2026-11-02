@@ -6,6 +6,7 @@ import PublicRoute from "./Route/PublicRoute";
 import { BrowserRouter } from "react-router";
 import { ToastProvider } from "./components/Others/ToastProvider";
 import { ModalProvider } from "./modals/ModalContext";
+import ScreensaverGate from "./components/Screensaver/ScreensaverGate";
 
 function App() {
   const { i18n } = useTranslation();
@@ -28,6 +29,7 @@ function App() {
   return (
     <BrowserRouter key={i18n.language}>
       <ToastProvider/>
+      <ScreensaverGate />
       <ModalProvider>
         <PublicRoute />
       </ModalProvider>

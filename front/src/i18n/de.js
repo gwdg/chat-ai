@@ -393,6 +393,14 @@ export default {
           },
         },
       },
+      screensavers: {
+        section_label: "Bildschirmschoner",
+        label: "Bildschirmschoner deaktivieren",
+        hint_sweep: "Schnee mit der Maus\nwegfegen",
+        hint_stop: "Klicken zum Beenden",
+        hint_disable: "In Einstellungen abschaltbar",
+        description: "Schaltet saisonale Animationen aus, die bei Inaktivität erscheinen.",
+      },
     },
     default_model: {
       title: "Standardmodell",

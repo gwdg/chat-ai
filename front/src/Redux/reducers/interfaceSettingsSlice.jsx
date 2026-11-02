@@ -16,6 +16,7 @@ const interfaceSettingsSlice = createSlice({
     agree_web_search: false,
     show_usage_in_sidebar: true,
     collapsed_topics: [],
+    disable_screensavers: false,
   },
   reducers: {
     toggleTheme: (state) => {
@@ -57,6 +58,9 @@ const interfaceSettingsSlice = createSlice({
     setShowUsageInSidebar: (state, action) => {
       state.show_usage_in_sidebar = Boolean(action.payload);
     },
+    setDisableScreensavers: (state, action) => {
+      state.disable_screensavers = Boolean(action.payload);
+    },
     // Enable or disable one of the warn_* confirmation dialogs, e.g. when the
     // user dismisses it with "don't show this again".
     setWarning: (state, action) => {
@@ -87,11 +91,13 @@ export const selectShowUsageInSidebar = (state) =>
 // Warnings default to shown, so anything unknown counts as enabled.
 export const selectWarning = (key) => (state) =>
   state.interface_settings[key] ?? true;
+export const selectDisableScreensavers = (state) =>
+  state.interface_settings.disable_screensavers ?? false;
 export const selectCollapsedTopics = (state) => state.interface_settings.collapsed_topics;
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
-  setShowUsageInSidebar, setWarning, toggleTopic,
+  setShowUsageInSidebar, setWarning, toggleTopic, setDisableScreensavers,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

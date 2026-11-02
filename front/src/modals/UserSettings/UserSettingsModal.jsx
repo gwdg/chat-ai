@@ -20,8 +20,10 @@ import {
   DocumentConversionPreference,
   MemoryPreference,
   RenderingPreferences,
+  ScreensaverPreference,
   SuggestionPreference,
 } from "./ChatPreferences";
+import { isSnowSeason } from "../../components/Screensaver/screensaverConfig";
 import { getExportData } from "../../utils/conversationUtils";
 import { useToast } from "../../hooks/useToast";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
@@ -145,6 +147,11 @@ export default function UserSettingsModal({
           <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
             <TimeoutSetter />
           </div>
+          {isSnowSeason() && (
+            <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+              <ScreensaverPreference />
+            </div>
+          )}
         </div>
       );
     }
