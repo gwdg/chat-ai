@@ -190,8 +190,13 @@ export default {
     reasoning: "Denkprozess",
     action: "Aktion",
     html_block: {
-      render: "HTML rendern",
+      render: "Vorschau",
       show_code: "Code anzeigen",
+      static_hint: "Vorschau ohne Skripte",
+      run: "Skripte ausführen",
+      run_session: "In dieser Sitzung alle ausführen",
+      stop: "Skripte stoppen",
+      open_link: "Diesen Link in einem neuen Tab öffnen?\n\n{{url}}",
     },
     sources: "Quellen und Referenzen",
     references: "Referenzen",
@@ -293,46 +298,23 @@ export default {
         help_label: "Mehr über Folgevorschläge erfahren",
       },
       html_render: {
-        label: "HTML-Blöcke",
+        label: "HTML-Vorschau",
         description:
-          "Legt fest, wie HTML-Blöcke in Antworten standardmäßig angezeigt werden.",
+          "Wie HTML-Codeblöcke in Antworten angezeigt werden. Vorschauen sind von der App isoliert und können nichts aus dem Netz laden.",
         options: {
-          render: {
-            label: "Rendern",
-            description:
-              "HTML-Blöcke als Live-Inhalt rendern. Pro Block kann weiterhin auf den Code gewechselt werden.",
-          },
-          code: {
-            label: "Code",
-            description:
-              "HTML-Blöcke standardmäßig als Code anzeigen. Pro Block kann weiterhin gerendert werden.",
-          },
           off: {
             label: "Aus",
-            description:
-              "HTML-Blöcke niemals rendern. Sie werden immer als Code angezeigt.",
+            description: "HTML-Blöcke immer als Code anzeigen.",
           },
-        },
-        external_references: {
-          label: "Externe Referenzen laden",
-          description:
-            "Erlaubt HTML-Blöcken, Bilder und Links von externen Hosts zu laden. Für mehr Privatsphäre deaktivieren (externe Referenzen werden entfernt).",
-        },
-        sanitization: {
-          label: "Bereinigung",
-          description:
-            "Legt fest, wie streng HTML-Blöcke vor dem Rendern bereinigt werden.",
-          options: {
-            strict: {
-              label: "Streng",
-              description:
-                "Blockiert interaktive und scriptfähige HTML-Elemente (Buttons, Formulare, Iframes, Skripte, Inline-Styles). Am sichersten für unvertraute Inhalte.",
-            },
-            relaxed: {
-              label: "Gelockert",
-              description:
-                "Erlaubt interaktives HTML mit JavaScript (Buttons, Formulare, Iframes, Skripte, Inline-Styles). Warnung: Modellausgaben können Code ausführen – nur aktivieren, wenn die Quelle vertrauenswürdig ist.",
-            },
+          static: {
+            label: "Vorschau",
+            description:
+              "Vorschau mit deaktivierten Skripten. Sicher für beliebige Inhalte.",
+          },
+          ask: {
+            label: "Vorschau + Ausführen",
+            description:
+              "Wie Vorschau, zusätzlich mit einer Schaltfläche, um die Skripte eines Blocks auszuführen. Nur vertrauenswürdigen Code ausführen: Skripte erreichen weder die App noch das Netz, könnten aber Daten durch Navigieren ihres Rahmens nach außen senden.",
           },
         },
       },
