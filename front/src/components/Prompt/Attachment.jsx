@@ -19,6 +19,8 @@ import {
 } from "../../utils/browserDocumentConversion";
 import { selectDocumentConversionMode } from "../../Redux/reducers/userSettingsReducer";
 import { useToast } from "../../hooks/useToast";
+import { isAgentEnabled } from "../../apis/agentEndpoints";
+import { usePrepareStatus } from "../../agent/prepare";
 
 export default function Attachment({
   localState,
@@ -40,13 +42,16 @@ export default function Attachment({
   const isImage = file?.type?.startsWith("image/");
   const isAudio = file?.type?.startsWith("audio/");
   const base64 = useFileBase64((isImage || isAudio) ? attachment.fileId : null);
+  const prepareStatus = usePrepareStatus(attachment.fileId);
   if (!file) return ""; // TODO placeholder file
   const fileType = getFileType(file); // Get readable file type, e.g., "image"
   const model = localState.settings.model;
+  // The agent copies every upload into its workspace and converts documents and audio on send
+  const agentMode = isAgentEnabled();
 
-  const isAudioSupported = (localState.settings.enable_tools || (model?.input?.includes("audio") || false));
-  const isVideoSupported = (localState.settings.enable_tools || (model?.input?.includes("video") || false));
-  const isImageSupported = (localState.settings.enable_tools || (model?.input?.includes("image") || false));
+  const isAudioSupported = (agentMode || localState.settings.enable_tools || (model?.input?.includes("audio") || false));
+  const isVideoSupported = (agentMode || localState.settings.enable_tools || (model?.input?.includes("video") || false));
+  const isImageSupported = (agentMode || localState.settings.enable_tools || (model?.input?.includes("image") || false));
   const isFileSupported = !fileType
     ? false
     : fileType === "image"
@@ -124,7 +129,7 @@ export default function Attachment({
   };
 
   const badge = getFileBadge(file);
-  const canProcess = !inHistory && (fileType === "pdf" || fileType === "docx"); // TODO add other supported types
+  const canProcess = !agentMode && !inHistory && (fileType === "pdf" || fileType === "docx"); // TODO add other supported types
 
   const getFileDisplayInfo = (file) => {
     if (canProcess) {
@@ -368,8 +373,15 @@ export default function Attachment({
               </div>
             </div>
           </div>
+          {/* Agent mode: converting or transcribing in the background */}
+          {prepareStatus && (
+            <span className="text-[11px] text-tertiary flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-tertiary animate-pulse flex-shrink-0" />
+              <Trans i18nKey={`conversation.attachment.${prepareStatus}`} />
+            </span>
+          )}
           {/* Process Needed Warning*/}
-          {!inAssistant && (!isFileSupported || fileType === "pdf") && (
+          {!inAssistant && !agentMode && (!isFileSupported || fileType === "pdf") && (
             <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
               <WarningAltFilled size={12} className="flex-shrink-0" />
               {!isFileSupported

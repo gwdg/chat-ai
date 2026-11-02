@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "../../hooks/useToast";
 import { useAttachments } from "../../hooks/useAttachments";
 
+import { isAgentEnabled } from "../../apis/agentEndpoints";
 import { Microphone } from "@carbon/icons-react";
 
 export default function MicButton({
@@ -30,7 +31,7 @@ export default function MicButton({
     : false;
 
     const model = localState.settings.model;
-    const isAudioSupported = (model?.input?.includes("audio") || localState?.settings?.enable_tools)
+    const isAudioSupported = (isAgentEnabled() || model?.input?.includes("audio") || localState?.settings?.enable_tools)
 
     const handleAudioClick = () => {
         if (loading) return;

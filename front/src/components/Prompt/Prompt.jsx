@@ -9,6 +9,7 @@ import WarningExternalModel from "../Header/WarningExternalModel";
 import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
+import MountFolderButton from "./MountFolderButton";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
 
@@ -137,6 +138,8 @@ export default function Prompt({
               localState={localState}
               setLocalState={setLocalState}
             />
+            {/* Local folder for the agent */}
+            <MountFolderButton localState={localState} />
                {/* Mic Button */}
             <MicButton
               localState={localState}

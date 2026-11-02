@@ -2,6 +2,7 @@ import { Trans } from "react-i18next";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Locked, WarningAltFilled, Close } from "@carbon/icons-react";
+import { isAgentEnabled } from "../../apis/agentEndpoints";
 
 function isSafeSettings(localState) {
   const modelName = localState?.settings?.model?.name;
@@ -9,7 +10,8 @@ function isSafeSettings(localState) {
     typeof modelName === "string" &&
     modelName.toLowerCase().includes("external");
 
-  const toolsEnabled = !!localState?.settings?.enable_tools;
+  // The agent does not use web search or MCP
+  const toolsEnabled = !!localState?.settings?.enable_tools && !isAgentEnabled();
   const tools = localState?.settings?.tools || {};
 
   // Web search should only trigger warnings when the toolset is active

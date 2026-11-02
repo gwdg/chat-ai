@@ -35,6 +35,10 @@ export const getDefaultSettings = (userSettings = {}) => {
       "video_generation": false,
       "arcana": true,
       "mcp": false,
+      // Agent mode only
+      "write_access": true,
+      "codemode": true,
+      "create_docx": true,
     },
     enable_web_search: false,
     arcana: {id: "",},

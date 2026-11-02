@@ -152,6 +152,11 @@ export default {
     label_video_generation: "Videogenerierung",
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",
+    label_write_access: "Dateien schreiben",
+    label_codemode: "Codemode",
+    label_create_docx: "Word-Dokument",
+    tools_agent_unavailable: "Im Agentenmodus nicht verfügbar",
+    tools_agent_external: "Dieses Modell läuft ohne Werkzeuge",
     placeholder_arcana_id: "Arcana-ID",
     placeholder_mcp_id: "Server-ID",
     video_queue_title: "Videogenerierungs-Warteschlange",
@@ -175,6 +180,9 @@ export default {
 
   // Conversation
   conversation: {
+    mount_folder: "Dem Assistenten Zugriff auf einen lokalen Ordner geben",
+    folder_mounted: "Ordner für den Assistenten unter {{path}} verfügbar",
+    tool_failed: "fehlgeschlagen",
     prompt: {
       placeholder: "Frag mich",
       attach: "Datei anhängen",
@@ -190,6 +198,9 @@ export default {
       process_browser: "Im Browser verarbeiten",
       process_server: "Auf dem Server verarbeiten",
       must_process: "Datei muss verarbeitet werden",
+      transcript_of: "Transkript von {{name}}",
+      converting: "Wird konvertiert…",
+      transcribing: "Wird transkribiert…",
     },
     reasoning: "Denkprozess",
     copy_reasoning: "Denkprozess kopieren",
@@ -586,6 +597,8 @@ export default {
   },
   // Alerts and warnings
   alert: {
+    folder_access:
+      "Der Assistent möchte den lokalen Ordner <strong>{{name}}</strong> wieder verwenden. Nach einem Neuladen muss der Zugriff erneut erlaubt werden.",
     title: "Warning",
     bad_request:
       "Fehlerhafte Anfrage wurde gesendet: Bitte löschen Sie die Konversation, versuchen Sie es innerhalb des Limits erneut, und speichern Sie Ihren Chatverlauf für spätere Zwecke.",

@@ -7,7 +7,7 @@ import fileUpload from "express-fileupload";
 import FormData from "form-data";
 import fs from "fs";
 import path from "path";
-import { Readable } from "stream"; // Node's stream module
+import { Readable, pipeline } from "stream"; // Node's stream module
 import OpenAI from "openai";
 
 const app = express();
@@ -44,6 +44,53 @@ try {
 } catch (error) {
   console.error("Failed to read back.json. Using default values.", error);
 }
+
+// Proxy for the browser-side agent: forwards requests under /agent unchanged to the API and
+// inserts the API key. Registered before the body parsers, so bodies and SSE streams pass
+// through as they are. Only the paths the agent uses are forwarded.
+const AGENT_PATHS = [
+  "/chat/completions",
+  "/models",
+  "/documents/convert",
+  "/audio/speech",
+  "/audio/transcriptions",
+  "/images/generations",
+  "/images/edits",
+];
+// Headers that must not be copied between the two connections
+const HOP_HEADERS = new Set(["host", "connection", "content-length", "transfer-encoding", "authorization", "origin", "referer", "cookie", "accept-encoding", "content-encoding"]);
+
+app.use("/agent", cors(), async (req, res) => {
+  const url = new URL(req.url, "http://agent");
+  if (!AGENT_PATHS.includes(url.pathname)) return res.status(404).send("Not found");
+
+  const headers = Object.fromEntries(Object.entries(req.headers).filter(([name]) => !HOP_HEADERS.has(name)));
+  // Same rule as the other routes: the inference-id header only stands in for a missing apiKey
+  headers.authorization = "Bearer " + (apiKey || req.headers["inference-id"]);
+  headers["inference-portal"] = serviceName;
+  const controller = new AbortController();
+  res.on("close", () => controller.abort());
+  try {
+    const upstream = await globalThis.fetch(apiEndpoint + url.pathname + url.search, {
+      method: req.method,
+      headers,
+      body: req.method === "GET" ? undefined : Readable.toWeb(req),
+      duplex: "half",
+      signal: controller.signal,
+    });
+    for (const [name, value] of upstream.headers) {
+      if (!HOP_HEADERS.has(name) && !name.startsWith("access-control-")) res.setHeader(name, value);
+    }
+    res.status(upstream.status);
+    if (upstream.body) pipeline(Readable.fromWeb(upstream.body), res, () => {});
+    else res.end();
+  } catch (error) {
+    if (controller.signal.aborted) return;
+    console.error(`Error: ${error}`);
+    if (!res.headersSent) res.status(502);
+    res.end("Upstream request failed.");
+  }
+});
 
 // Global request limitations
 app.use(bodyParser.json({ limit: "50mb" }));

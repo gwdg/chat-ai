@@ -13,6 +13,7 @@ import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
 import ToolForm from "./ToolForm";
+import AgentSteps from "./AgentSteps";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -119,6 +120,11 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
     setLocalState((prev) => {
       let newMessages = [...prev.messages];
       newMessages[message_index].content[0].text = editedText;
+      // The edited text replaces the agent's transcript of this turn
+      if (newMessages[message_index].meta?.agent) {
+        const { agent, ...meta } = newMessages[message_index].meta;
+        newMessages[message_index].meta = meta;
+      }
       return { ...prev, messages: newMessages, flush: true };
     });
     setEditMode(false);
@@ -156,6 +162,9 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
 
   const content = message?.content?.[0]?.text ?? "";
   const hasForms = Array.isArray(message?.content) && message.content.some((i) => i?.type === "form");
+  // Agent turns that used tools are shown step by step
+  const hasToolCalls = Array.isArray(message?.meta?.agent)
+    && message.meta.agent.some((m) => m.role === "toolResult" || m.content?.some?.((b) => b.type === "toolCall"));
   const isContentEmpty = !content.trim() && !hasForms;
   const errorMessage = message?.meta?.error || "Unknown Error";
 
@@ -297,9 +306,13 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                {message.content[0]?.text}
-              </MarkdownRenderer>
+              {hasToolCalls ? (
+                <AgentSteps agentMessages={message.meta.agent} isLoading={loading} renderMode={renderMode} />
+              ) : (
+                <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+                  {message.content[0]?.text}
+                </MarkdownRenderer>
+              )}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
