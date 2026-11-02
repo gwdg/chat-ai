@@ -427,6 +427,9 @@ const HtmlBlock = memo(({ content, isLoading }) => {
   const loadExternal = useSelector(selectHtmlLoadExternal);
   const sanitization = useSelector(selectHtmlSanitization);
   const relaxed = sanitization === "relaxed";
+  const sanitizationLabel = t(
+    `user_settings.chat_preferences.html_render.sanitization.options.${sanitization}.label`
+  );
   const [showCode, setShowCode] = useState(defaultMode !== "render");
   const [iframeHeight, setIframeHeight] = useState(500);
 
@@ -482,7 +485,7 @@ const HtmlBlock = memo(({ content, isLoading }) => {
         {codeVisible ? (
           <>
             <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("conversation.html_block.render")}
+            {t("conversation.html_block.render")} ({sanitizationLabel})
           </>
         ) : (
           <>

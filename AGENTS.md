@@ -192,9 +192,9 @@ Verified in `back/service.mjs`:
 
 **Entry point.** `rendererComponents.code` in `MarkdownRenderer.jsx` handles fenced blocks:
 ` ```mermaid ` goes to `MermaidDiagram.jsx`, ` ```latex ` / ` ```tex ` goes to `LatexBlock.jsx`
-(§4.10), ` ```typst ` / ` ```typ ` goes to `TypstBlock.jsx` with rendering enabled by default, and
-every other language also goes to `TypstBlock.jsx` with `defaultRender={false}`. Inline code is
-returned directly and never rendered.
+(§4.10), ` ```typst ` / ` ```typ ` goes to `TypstBlock.jsx` (rendering defaults to off via the
+preference), and every other language also goes to `TypstBlock.jsx` with `defaultRender={false}`.
+Inline code is returned directly and never rendered.
 
 **Pipeline.** `TypstBlock.jsx` lazily imports `@myriaddreamin/typst.ts` on the first render. Its
 compiler and renderer WASM files are imported with Vite's `?url` (`TypstBlock.jsx:6-7`), so Vite
@@ -216,8 +216,8 @@ Compile errors fall back to the raw source.
 **Per-block UI.** ` ```typst ` / ` ```typ ` blocks start rendered or as code according to the
 `user_settings.render_typst` flag (Chat preferences → Rendering). All other code blocks start as
 code. Every block keeps a "Render as Typst" / "Show code" toggle regardless of the preference; the
-preference only selects the default view. The selector defaults the flag to `true` so existing
-persisted settings without the key keep rendering.
+preference only selects the default view. The selector defaults the flag to `false`, so blocks are
+shown as code unless rendering is enabled.
 
 **Resources and security.** The WASM modules are served from the app's own build output. The
 default text fonts are vendored in `front/public/typst-assets/` (from

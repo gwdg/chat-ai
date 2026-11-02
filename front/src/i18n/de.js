@@ -4,6 +4,8 @@ export default {
     loading: "Lädt...",
     undo: "Rückgängig",
     scroll: "Nach unten scrollen",
+    scroll_to_message: "Zum Anfang der Nachricht springen",
+    next_message: "Zur nächsten Nachricht scrollen",
     rename: "Umbenennen",
     create: "Erstellen",
     save: "Speichern",

@@ -4,6 +4,8 @@ export default {
     loading: "Loading...",
     undo: "Undo",
     scroll: "Scroll to bottom",
+    scroll_to_message: "Jump to start of message",
+    next_message: "Scroll to next message",
     rename: "Rename",
     create: "Create",
     save: "Save",
