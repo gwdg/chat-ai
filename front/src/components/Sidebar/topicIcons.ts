@@ -82,6 +82,11 @@ export function topicIconById(id?: string | null) {
   return (id && BY_ID.get(id)) || DEFAULT_TOPIC_ICON;
 }
 
+/** Whether a stored icon is one of the known Carbon icon ids. */
+export function isTopicIconId(id?: string | null): boolean {
+  return Boolean(id && BY_ID.has(id));
+}
+
 /** The icon a topic should render with. */
 export function topicIcon(topic: { icon?: string }) {
   return topicIconById(topic?.icon).Icon;

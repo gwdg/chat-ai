@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { getDefaultConversation } from "../utils/conversationUtils";
 
 import { useSyncConversation } from "../hooks/useSyncConversation";
+import { useConversationSummaries } from "../hooks/useConversationSummaries";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
@@ -37,6 +38,8 @@ export default function ChatPage() {
     setLocalState,
     conversationId,
   });
+
+  useConversationSummaries({ localState, conversationId });
 
   // Save last conversation when current conversation changes
   useEffect(() => {

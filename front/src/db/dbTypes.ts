@@ -33,6 +33,10 @@ export type ConversationRow = {
   messageCount: number
   folderId?: string | null
   hasFirstPrompt?: boolean
+  summary?: string
+  summaryUpdatedAt?: number
+  summarySourceHash?: string
+  lastOpenedAt?: number
 }
 
 export type HydratedConversation = ConversationRow & {
@@ -151,4 +155,5 @@ export type FolderRow = {
   // One of TopicIconId (see components/Sidebar/topicIcons.ts). Unset falls back
   // to the default icon. Neither field is indexed, so no schema bump is needed.
   icon?: string
+  sortOrder?: number
 }

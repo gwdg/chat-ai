@@ -150,11 +150,12 @@ into the nested shape the UI uses. Raw table access (`db.messages`, `db.content_
 
 ### 4.3 Dexie migrations
 
-`db/index.ts` is at **version 4**. A new *indexed* field needs a new `this.version(n).stores({...})`
-block plus an `.upgrade()` that backfills existing rows — this is how `folderId` (v3) and
-`hasFirstPrompt` (v4) were added. A field that is only stored and never queried needs **no**
-version bump; Dexie keeps unindexed properties on the row as-is. Never edit an existing version
-block: users have live databases.
+`db/index.ts` is at **version 5**. A new *indexed* field needs a new `this.version(n).stores({...})`
+block plus an `.upgrade()` that backfills existing rows — this is how `folderId` (v3),
+`hasFirstPrompt` (v4) and `lastOpenedAt` (v5) were added. A field that is only stored and never
+queried needs **no** version bump; Dexie keeps unindexed properties on the row as-is. A version
+bump and `.upgrade()` are still appropriate when existing rows need a backfill. Never edit an
+existing version block: users have live databases.
 
 ### 4.4 "folder" in code == "topic" in the UI
 

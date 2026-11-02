@@ -21,6 +21,8 @@ import {
   setHtmlSanitization,
   selectDocumentConversionMode,
   setDocumentConversionMode,
+  selectConversationSummaries,
+  setConversationSummaries,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -168,6 +170,28 @@ export function SuggestionPreference() {
           onChange={(checked) => dispatch(setSetTitleOnce(checked))}
         />
       </div>
+    </section>
+  );
+}
+
+export function ConversationSummaryPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const conversationSummaries = useSelector(selectConversationSummaries);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="px-2 text-sm font-medium text-gray-900 dark:text-white">
+        {t("user_settings.chat_preferences.summaries.section_label")}
+      </h3>
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.summaries.label")}
+        description={t(
+          "user_settings.chat_preferences.summaries.description",
+        )}
+        checked={conversationSummaries}
+        onChange={(checked) => dispatch(setConversationSummaries(checked))}
+      />
     </section>
   );
 }

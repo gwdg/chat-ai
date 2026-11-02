@@ -18,7 +18,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 5,
+  version: 7,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -39,6 +39,7 @@ const getDefaultState = () => {
       count_announcement: 0,
       show_usage_in_sidebar: true,
       collapsed_topics: [],
+      conversation_sort: "created_desc",
     },
     // Conditionally preserve memories
     user_settings: {
@@ -53,6 +54,7 @@ const getDefaultState = () => {
       render_typst: true,
       render_latex: true,
       document_conversion_mode: "choice",
+      conversation_summaries: true,
     },
   };
 };

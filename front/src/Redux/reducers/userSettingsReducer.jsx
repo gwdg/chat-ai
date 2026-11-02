@@ -13,6 +13,7 @@ const initialState = {
   render_typst: true,
   render_latex: true,
   document_conversion_mode: "choice",
+  conversation_summaries: true,
 };
 
 const userSettingsSlice = createSlice({
@@ -108,6 +109,10 @@ const userSettingsSlice = createSlice({
       }
     },
 
+    setConversationSummaries: (state, action) => {
+      state.conversation_summaries = Boolean(action.payload);
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -133,7 +138,7 @@ export const {
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
-  setRenderLatex, setDocumentConversionMode
+  setRenderLatex, setDocumentConversionMode, setConversationSummaries
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -166,5 +171,7 @@ export const selectDocumentConversionMode = (state) => {
   const mode = state.user_settings.document_conversion_mode;
   return ["server", "browser", "choice"].includes(mode) ? mode : "choice";
 };
+export const selectConversationSummaries = (state) =>
+  state.user_settings.conversation_summaries ?? true;
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;
