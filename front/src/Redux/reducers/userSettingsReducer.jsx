@@ -6,12 +6,12 @@ const initialState = {
   timeout: 300000,
   memory_mode: 0,
   suggest_user_prompts: false,
-  html_render_mode: "render",
+  html_render_mode: "off",
   html_load_external: false,
   html_sanitization: "strict",
   set_title_once: true,
-  render_typst: true,
-  render_latex: true,
+  render_typst: false,
+  render_latex: false,
   document_conversion_mode: "choice",
   conversation_summaries: true,
 };
@@ -153,7 +153,7 @@ export const selectSuggestUserPrompts = (state) =>
   state.user_settings.suggest_user_prompts ?? false;
 export const selectHtmlRenderMode = (state) => {
   const mode = state.user_settings.html_render_mode;
-  return ["render", "code", "off"].includes(mode) ? mode : "render";
+  return ["render", "code", "off"].includes(mode) ? mode : "off";
 };
 export const selectHtmlLoadExternal = (state) =>
   state.user_settings.html_load_external ?? false;
@@ -164,9 +164,9 @@ export const selectHtmlSanitization = (state) => {
 export const selectSetTitleOnce = (state) =>
   state.user_settings.set_title_once ?? true;
 export const selectRenderTypst = (state) =>
-  state.user_settings.render_typst ?? true;
+  state.user_settings.render_typst ?? false;
 export const selectRenderLatex = (state) =>
-  state.user_settings.render_latex ?? true;
+  state.user_settings.render_latex ?? false;
 export const selectDocumentConversionMode = (state) => {
   const mode = state.user_settings.document_conversion_mode;
   return ["server", "browser", "choice"].includes(mode) ? mode : "choice";

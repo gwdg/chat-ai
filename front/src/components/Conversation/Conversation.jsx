@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
+import { ChevronDown } from "lucide-react";
 
 // Hooks
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
@@ -30,13 +31,16 @@ export default function Conversation({
   const [autoFollow, setAutoFollow] = useState(true); // << explicit follow switch
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [showJumpToStartButton, setShowJumpToStartButton] = useState(false);
 
   // Refs
   const containerRef = useRef(null);
+  const messageRefs = useRef({});
   const contentObserver = useRef(null);
   const resizeObserver = useRef(null);
   const programmaticGuardUntil = useRef(0); // ignore our own scrolls for a short window
   const smoothTimer = useRef(null);
+  const jumpTimer = useRef(null);
 
   // Helpers
   const hasOverflow = useCallback(() => {
@@ -52,6 +56,49 @@ export default function Conversation({
     return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
   }, []);
 
+  const getTopMessage = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return null;
+    const containerTop = el.getBoundingClientRect().top;
+    let topElement = null;
+    let top = null;
+
+    Object.keys(messageRefs.current).forEach((key) => {
+      const element = messageRefs.current[key];
+      if (!element) return;
+      const rect = element.getBoundingClientRect();
+      if (rect.height === 0) return;
+      if (rect.top <= containerTop + 8) {
+        topElement = element;
+        top = rect.top;
+      }
+    });
+
+    return topElement ? { element: topElement, top } : null;
+  }, []);
+
+  const updateArrow = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const overflow = hasOverflow();
+    const atBottom = checkIfAtBottom();
+    setIsAtBottom((prev) => (prev !== atBottom ? atBottom : prev));
+
+    const shouldShowBottom = overflow && !atBottom;
+    setShowScrollButton((prev) =>
+      prev !== shouldShowBottom ? shouldShowBottom : prev
+    );
+
+    const topMessage = getTopMessage();
+    const containerTop = el.getBoundingClientRect().top;
+    const shouldShowTop =
+      overflow && Boolean(topMessage) && topMessage.top < containerTop - 2;
+    setShowJumpToStartButton((prev) =>
+      prev !== shouldShowTop ? shouldShowTop : prev
+    );
+  }, [checkIfAtBottom, getTopMessage, hasOverflow]);
+
   const scrollToBottom = useCallback((behavior = "auto") => {
     const el = containerRef.current;
     if (!el) return;
@@ -64,11 +111,67 @@ export default function Conversation({
     }, guardMs);
   }, []);
 
-  // Arrow visibility: show only if overflow AND NOT at bottom
-  const updateArrow = useCallback(() => {
-    const shouldShow = hasOverflow() && !isAtBottom;
-    setShowScrollButton((prev) => (prev !== shouldShow ? shouldShow : prev));
-  }, [hasOverflow, isAtBottom]);
+  const scrollElementToTop = useCallback(
+    (element) => {
+      const el = containerRef.current;
+      if (!el || !element) return;
+
+      setAutoFollow(false);
+      setShowScrollButton(hasOverflow());
+
+      const guardMs = 400;
+      programmaticGuardUntil.current = Date.now() + guardMs;
+
+      const containerRect = el.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      const targetTop = Math.max(
+        0,
+        el.scrollTop + elementRect.top - containerRect.top
+      );
+      el.scrollTo({ top: targetTop, behavior: "smooth" });
+
+      clearTimeout(jumpTimer.current);
+      jumpTimer.current = setTimeout(updateArrow, guardMs + 50);
+    },
+    [hasOverflow, updateArrow]
+  );
+
+  const handleJumpToStart = useCallback(() => {
+    const topMessage = getTopMessage();
+    if (topMessage?.element) scrollElementToTop(topMessage.element);
+  }, [getTopMessage, scrollElementToTop]);
+
+  const handleNextMessage = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const containerTop = el.getBoundingClientRect().top;
+    let nextElement = null;
+    let nextTop = Infinity;
+
+    Object.keys(messageRefs.current).forEach((key) => {
+      const element = messageRefs.current[key];
+      if (!element) return;
+      const rect = element.getBoundingClientRect();
+      if (rect.height === 0) return;
+      if (rect.top > containerTop + 8 && rect.top < nextTop) {
+        nextTop = rect.top;
+        nextElement = element;
+      }
+    });
+
+    if (nextElement) {
+      scrollElementToTop(nextElement);
+      return;
+    }
+
+    setAutoFollow(true);
+    requestAnimationFrame(() => scrollToBottom("smooth"));
+    clearTimeout(jumpTimer.current);
+    jumpTimer.current = setTimeout(updateArrow, 450);
+  }, [scrollElementToTop, scrollToBottom, updateArrow]);
+
+  useEffect(() => () => clearTimeout(jumpTimer.current), []);
 
   // Track bottom state on scroll; disable follow only on real user scroll away
   const handleScroll = useCallback(() => {
@@ -252,19 +355,26 @@ export default function Conversation({
         <HallucinationWarning />
 
         {/* Scrollable messages container */}
-        <div ref={containerRef}
-          className="relative flex-1 min-h-0 overflow-y-auto"
-          style={{
-              scrollPaddingBottom: "20px",
-              WebkitOverflowScrolling: "touch",
-              // no scroll-smooth class and no inline scrollBehavior
-            }}
-        >
+        <div className="relative flex-1 min-h-0">
+          <div ref={containerRef}
+            className="h-full overflow-y-auto"
+            style={{
+                scrollPaddingBottom: "20px",
+                WebkitOverflowScrolling: "touch",
+                // no scroll-smooth class and no inline scrollBehavior
+              }}
+          >
           <div
             className="p-1.5 flex flex-col gap-1.5 h-full md:max-w-[85vw] xl:max-w-[1300px] transition-[max-width] duration-300 ease-in-out motion-reduce:transition-none mx-auto"
           >
             {localState.messages.slice(0, -1)?.map((message, message_index) => (
-              <div key={message_index}>
+              <div
+                key={message_index}
+                className="flex flex-col"
+                ref={(node) => {
+                  messageRefs.current[message_index] = node;
+                }}
+              >
                 {message.role === "user" && (
                   <MessageUser
                     localState={localState}
@@ -291,38 +401,83 @@ export default function Conversation({
               </div>
             ))}
           </div>
+          </div>
+
+          {/* Floating jump-to-start button at the top of the message area */}
+          {showJumpToStartButton && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
+              <Tooltip text={t("common.scroll_to_message")}>
+                <button
+                  onClick={handleJumpToStart}
+                  aria-label={t("common.scroll_to_message")}
+                  className="cursor-pointer bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 
+                           px-2 py-2 rounded-full shadow-lg hover:shadow-xl dark:shadow-dark
+                           flex items-center justify-center gap-2 transition-all duration-200 
+                           hover:scale-105 border border-gray-200 dark:border-gray-600
+                           backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 10l7-7m0 0l7 7m-7-7v18"
+                    />
+                  </svg>
+                </button>
+              </Tooltip>
+            </div>
+          )}
         </div>
 
         <div
           className="relative px-1.5 flex flex-col w-full max-h-0 md:max-w-[85vw] xl:max-w-[1300px] mx-auto"
         >
-        {/* Floating scroll-to-bottom button (only when overflow && NOT at bottom) */}
+        {/* Floating next-message / scroll-to-bottom buttons */}
           {showScrollButton && (
-            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-10">
-              <Tooltip text={t("common.scroll")}>
-              <button
-                onClick={handleScrollButtonClick}
-                aria-label="Scroll to bottom"
-                className="cursor-pointer bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 
-                         px-2 py-2 rounded-full shadow-lg hover:shadow-xl dark:shadow-dark
-                         flex items-center justify-center gap-2 transition-all duration-200 
-                         hover:scale-105 border border-gray-200 dark:border-gray-600
-                         backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
+              <Tooltip text={t("common.next_message")}>
+                <button
+                  onClick={handleNextMessage}
+                  aria-label={t("common.next_message")}
+                  className="cursor-pointer bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 
+                           px-2 py-2 rounded-full shadow-lg hover:shadow-xl dark:shadow-dark
+                           flex items-center justify-center gap-2 transition-all duration-200 
+                           hover:scale-105 border border-gray-200 dark:border-gray-600
+                           backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
-              </button>
+                  <ChevronDown className="w-5 h-5" />
+                </button>
+              </Tooltip>
+              <Tooltip text={t("common.scroll")}>
+                <button
+                  onClick={handleScrollButtonClick}
+                  aria-label="Scroll to bottom"
+                  className="cursor-pointer bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 
+                           px-2 py-2 rounded-full shadow-lg hover:shadow-xl dark:shadow-dark
+                           flex items-center justify-center gap-2 transition-all duration-200 
+                           hover:scale-105 border border-gray-200 dark:border-gray-600
+                           backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                    />
+                  </svg>
+                </button>
               </Tooltip>
             </div>
           )}
