@@ -76,6 +76,38 @@ const interfaceSettingsSlice = createSlice({
     setConversationSort: (state, action) => {
       state.conversation_sort = action.payload;
     },
+    importInterfaceSettings: (state, action) => {
+      const incoming = action.payload;
+      if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return;
+      for (const key of [
+        "dark_mode",
+        "show_sidebar",
+        "show_settings",
+        "warn_clear_history",
+        "warn_clear_memory",
+        "warn_clear_settings",
+        "warn_share_settings",
+        "warn_regenerate",
+        "warn_fork",
+        "show_tour",
+        "agree_web_search",
+        "show_usage_in_sidebar",
+      ]) {
+        if (typeof incoming[key] === "boolean") state[key] = incoming[key];
+      }
+      for (const key of ["count_hallucination", "count_announcement"]) {
+        const value = Number(incoming[key]);
+        if (Number.isFinite(value)) state[key] = value;
+      }
+      if (Array.isArray(incoming.collapsed_topics)) {
+        state.collapsed_topics = incoming.collapsed_topics.filter(
+          (topic) => typeof topic === "string"
+        );
+      }
+      if (typeof incoming.conversation_sort === "string") {
+        state.conversation_sort = incoming.conversation_sort;
+      }
+    },
   },
 });
 
@@ -99,5 +131,6 @@ export const {
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
   setShowUsageInSidebar, setWarning, toggleTopic, setConversationSort,
+  importInterfaceSettings,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

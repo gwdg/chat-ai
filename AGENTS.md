@@ -111,8 +111,9 @@ These are the things that are not guessable from the file tree.
 `version` is in the root reducer but is not in the persist whitelist.
 
 Redux is persisted with a `version` + `migrations` map (`Redux/store/migrations.jsx`), and only a
-four-action whitelist is mirrored across tabs via `redux-state-sync`: `SET_ADV`, `RESET_ALL`,
-`MIGRATE`, `SET_COUNT`. Adding a persisted key means adding it to `whitelist` **and**
+six-action whitelist is mirrored across tabs via `redux-state-sync`: `SET_ADV`, `RESET_ALL`,
+`MIGRATE`, `SET_COUNT`, `user_settings/importUserSettings`,
+`interface_settings/importInterfaceSettings`. Adding a persisted key means adding it to `whitelist` **and**
 `getDefaultState()` in `Redux/store/store.jsx`.
 
 ### 4.2 The conversation data flow
@@ -292,6 +293,28 @@ runs in the package's blob worker first; if the worker cannot be created (for ex
 CSP) it retries on the main thread. The PDFium WASM is imported with `?url` so Vite emits it as an
 app asset.
 
+### 4.14 Full-data export/import must stay lossless
+
+The **Export Data / Import Data** buttons in user settings are a backup path, not a share path.
+`getExportData()` (`utils/conversationUtils.js`) exports every conversation plus the `folders`
+table; `UserSettingsModal.jsx` adds the complete `user_settings` and `interface_settings` Redux
+state. Conversation entries carry both the complete nested `settings` object and the legacy flat
+settings fields, plus `createdAt` / `lastModified` / `lastOpenedAt` / `hasFirstPrompt` /
+`messageCount` / summary metadata. Messages keep `feedback`, `meta`, forms, and attachments
+(including `video_url`), not just text.
+
+`useImportConversation` restores all of it: `user_settings` and `interface_settings` through the
+`importUserSettings` / `importInterfaceSettings` reducers, folders through `importFolder()` (ids are
+kept when free, otherwise names are reused or ids remapped), conversation metadata through
+`createConversation({ preserveMetadata: true })`, and the complete settings object when present.
+The flat extraction branch is only for older exports and persona files.
+
+Consequence: any new persisted Redux setting, `ConversationSettings` field, folder field, message
+field, or content-item type must be added to **both** `getExportData`/`UserSettingsModal` and
+`useImportConversation`. Otherwise the setting silently disappears on restore. Keep the legacy flat
+layout and id/name topic fallback working for old files. The single-conversation export in
+`Sidebar/Modals/ExportChatModal.jsx` is a separate, deliberately selective share format.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
@@ -345,6 +368,9 @@ app asset.
 - [ ] new `front.json` key → mapped in `vite.config.js`
 - [ ] touched a `VITE_MODULE_*` area → still correct with the module off
 - [ ] conversation write → `lastModified` threaded through and `-1` handled
+- [ ] touched export/import → export, clear data, re-import, and verify conversations, topics
+      (name/colour/icon/order), user + interface settings, feedback, forms, attachments (incl.
+      video), `reasoning_effort`, and web-search flags survive
 - [ ] behaviour exercised in a browser, not just compiled
 
 ## 8. Maintaining this file

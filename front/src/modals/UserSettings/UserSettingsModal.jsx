@@ -81,6 +81,7 @@ export default function UserSettingsModal({
   const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
   const userSettings = useSelector(selectUserSettings);
+  const interfaceSettings = useSelector((state) => state.interface_settings);
   const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
   const [activeTab, setActiveTab] = useState("profile");
   const activeTabConfig =
@@ -92,8 +93,7 @@ export default function UserSettingsModal({
 
   const handleExportData = async () => {
     try {
-      const exportData = await getExportData();
-      exportData.user_settings = userSettings;
+      const exportData = await getExportData({ userSettings, interfaceSettings });
       const content = JSON.stringify(exportData, null, 2);
       const file = new Blob([content], { type: "application/json" });
       const link = document.createElement("a");

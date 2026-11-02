@@ -16,6 +16,50 @@ const initialState = {
   conversation_summaries: true,
 };
 
+const MEMORY_MODES = [0, 1, 2];
+const RENDER_MODES = ["render", "code", "off"];
+const SANITIZATION_MODES = ["strict", "relaxed"];
+const DOCUMENT_CONVERSION_MODES = ["server", "browser", "choice"];
+
+// Apply settings from an exported backup without trusting arbitrary fields.
+function importUserSettingsState(state, incoming) {
+  if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return;
+  if (Array.isArray(incoming.memories)) {
+    state.memories = incoming.memories
+      .filter((memory) => memory && typeof memory === "object")
+      .map((memory) => ({ ...memory }));
+  }
+  const timeout = Number(incoming.timeout);
+  if (Number.isFinite(timeout)) {
+    state.timeout = Math.min(Math.max(timeout, 5000), 900000);
+  }
+  const memoryMode = Number(incoming.memory_mode);
+  if (MEMORY_MODES.includes(memoryMode)) state.memory_mode = memoryMode;
+  if (RENDER_MODES.includes(incoming.html_render_mode)) {
+    state.html_render_mode = incoming.html_render_mode;
+  }
+  if (SANITIZATION_MODES.includes(incoming.html_sanitization)) {
+    state.html_sanitization = incoming.html_sanitization;
+  }
+  if (DOCUMENT_CONVERSION_MODES.includes(incoming.document_conversion_mode)) {
+    state.document_conversion_mode = incoming.document_conversion_mode;
+  } else if (typeof incoming.browser_document_conversion === "boolean") {
+    // Pre-v5 export shape.
+    state.document_conversion_mode = incoming.browser_document_conversion ? "choice" : "server";
+  }
+  for (const key of [
+    "suggest_user_prompts",
+    "html_load_external",
+    "set_title_once",
+    "render_typst",
+    "render_latex",
+    "conversation_summaries",
+  ]) {
+    if (typeof incoming[key] === "boolean") state[key] = incoming[key];
+  }
+  if (incoming.model !== undefined) state.model = incoming.model;
+}
+
 const userSettingsSlice = createSlice({
   name: "user_settings",
   initialState,
@@ -113,6 +157,10 @@ const userSettingsSlice = createSlice({
       state.conversation_summaries = Boolean(action.payload);
     },
 
+    importUserSettings: (state, action) => {
+      importUserSettingsState(state, action.payload);
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -138,7 +186,8 @@ export const {
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
-  setRenderLatex, setDocumentConversionMode, setConversationSummaries
+  setRenderLatex, setDocumentConversionMode, setConversationSummaries,
+  importUserSettings
 } = userSettingsSlice.actions;
 
 // Selectors

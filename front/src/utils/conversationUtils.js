@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { getConversation, getFolder, listConversationMetas } from "../db";
+import { getConversation, getFolder, listConversationMetas, listFolders, loadFileMeta } from "../db";
 import { processContentItems } from "./sendMessage";
 import packageJson from "../../package.json";
 
@@ -101,6 +101,46 @@ export const getDefaultConversation = (userSettings = {}, folderId = null) => {
   };
 };
 
+// Function to process message content into export format. Unlike the API
+// conversion, every content item is kept so that an export can be imported
+// again without losing attachments or forms.
+const processMessageContent = async (content, exportFiles = false) => {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content) || content.length === 0) return null;
+  if (content.length === 1 && content[0]?.text != null) return content[0].text;
+  if (!exportFiles) return content[0]?.text || "";
+
+  const output = [];
+  for (const item of content) {
+    if (!item) continue;
+    if (item.type === "form" && item.form) {
+      output.push({ type: "form", form: item.form });
+      continue;
+    }
+    const processed = await processContentItems({
+      items: [item],
+      convertDocs: false, // Keep OpenAI file format
+    });
+    const exportedItems = Array.isArray(processed)
+      ? processed
+      : typeof processed === "string"
+        ? [{ type: "text", text: processed }]
+        : [];
+    if (item.type === "file" && item.fileId) {
+      const meta = await loadFileMeta(item.fileId);
+      if (meta?.name) {
+        for (const exported of exportedItems) {
+          if (exported?.type !== "text" && exported?.name === undefined) {
+            exported.name = meta.name;
+          }
+        }
+      }
+    }
+    output.push(...exportedItems);
+  }
+  return output.length > 0 ? output : null;
+};
+
 // Function to process messages into export format
 const processMessages = async (messages, exportFiles = false) => {
   let processedMessages = [];
@@ -112,22 +152,11 @@ const processMessages = async (messages, exportFiles = false) => {
     if (!["system", "user", "assistant", "info"].includes(role)) continue;
     const content = messages[i].content;
     let processedMessage = {"role": role};
-    if (typeof content === "string") processedMessage.content = content;
-    else if (Array.isArray(content)) {
-      if (content.length === 0) continue; // Invalid message
-      if (content.length === 1 && content[0]?.text != null) {
-        processedMessage.content = content[0].text;
-      } else if (exportFiles) {
-        // Content includes files
-        processedMessage.content = await processContentItems({
-          items: content,
-          convertDocs: false, // Keep OpenAI file format
-        })
-      } else {
-        // Ignore files
-        processedMessage.content = content[0]?.text || "";
-      }
-    }
+    processedMessage.content = await processMessageContent(content, exportFiles);
+    if (processedMessage.content === null) continue; // Invalid message
+
+    if (messages[i].feedback !== undefined) processedMessage.feedback = messages[i].feedback;
+    if (messages[i].meta !== undefined) processedMessage.meta = messages[i].meta;
 
     // Check if empty user prompt at the end
     if (i === messages.length-1 
@@ -148,28 +177,10 @@ const processMessages = async (messages, exportFiles = false) => {
   return processedMessages;
 }
   
-// Function to process settings into export format
-const processSettings = (conversation, exportArcana = false) => {
-  let settings = {}
-  if (conversation?.title) settings.title = conversation.title;
-  if (conversation?.settings?.temperature) settings.temperature = conversation.settings.temperature;
-  if (conversation?.settings?.top_p) settings.top_p = conversation.settings.top_p;
-  if (exportArcana && isArcanaSupported && conversation?.settings?.arcana?.id) {
-    settings.arcana = conversation.settings.arcana;
-  }
-  if (conversation?.settings?.model) {
-    if (typeof conversation.settings.model === "string") settings.model = conversation.settings.model;
-    else if (conversation.settings.model?.id) {
-      settings.model = conversation.settings.model.id
-      if (conversation.settings.model?.name) settings["model-name"] = conversation.settings.model.name;
-    }
-  }
-  return settings
-};
-
 // Export all data as JSON
-export const getExportData = async () => {
+export const getExportData = async ({ userSettings, interfaceSettings } = {}) => {
   const conversationList = await listConversationMetas()
+  const folderList = await listFolders();
   const processedConversations = [];
   // Process Messages
   for (let c = 0; c < conversationList.length; c++) {
@@ -186,10 +197,38 @@ export const getExportData = async () => {
       title: conversation?.title || "Untitled Chat",
       folderId: conversation?.folderId ?? null,
       folderName: folderRow?.name ?? null,
+      createdAt: conversation?.createdAt,
+      lastModified: conversation?.lastModified,
+      lastOpenedAt: conversation?.lastOpenedAt,
+      hasFirstPrompt: conversation?.hasFirstPrompt,
+      messageCount: conversation?.messageCount,
+      ...(conversation?.summary !== undefined && { summary: conversation.summary }),
+      ...(conversation?.summaryUpdatedAt !== undefined && { summaryUpdatedAt: conversation.summaryUpdatedAt }),
+      ...(conversation?.summarySourceHash !== undefined && { summarySourceHash: conversation.summarySourceHash }),
       messages: await processMessages(conversation.messages, true),
+      // Nested copy is the lossless representation; the spread keeps the
+      // legacy flat layout readable by older versions of this app.
+      settings: conversation.settings,
       ...conversation.settings,
     };
     processedConversations.push(processedConversation);
   }
-  return { conversations: processedConversations, version: packageJson.version };
-};
+
+  const processedFolders = folderList.map((folder) => ({
+    id: folder.id,
+    name: folder.name,
+    createdAt: folder.createdAt,
+    updatedAt: folder.updatedAt,
+    ...(folder.icon ? { icon: folder.icon } : {}),
+    ...(folder.color ? { color: folder.color } : {}),
+    ...(typeof folder.sortOrder === "number" ? { sortOrder: folder.sortOrder } : {}),
+  }));
+
+  return {
+    conversations: processedConversations,
+    folders: processedFolders,
+    ...(userSettings ? { user_settings: userSettings } : {}),
+    ...(interfaceSettings ? { interface_settings: interfaceSettings } : {}),
+    version: packageJson.version,
+  };
+}

@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 
 import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
-import { createConversation, ensureFolder, getFolder, newId, saveFile } from "../db";
+import { createConversation, ensureFolder, getFolder, importFolder, newId, saveFile } from "../db";
 import { dataURLtoFile } from "../utils/attachments";
-import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
+import { selectUserSettings, importUserSettings } from "../Redux/reducers/userSettingsReducer";
+import { importInterfaceSettings } from "../Redux/reducers/interfaceSettingsSlice";
 
 /**
  * useImportConversation
@@ -17,7 +18,6 @@ export function useImportConversation() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const userSettings = useSelector(selectUserSettings);
-  const defaultSettings = getDefaultSettings(userSettings);
 
   const extractMessageContent = (message, conversationId = null) => {
     let res = [{
@@ -36,7 +36,10 @@ export function useImportConversation() {
 
       // if message or content is array
       if (Array.isArray(content)) {
-        res = content.map(item => extractMessageContent(item, conversationId)[0]);
+        res = [];
+        for (const item of content) {
+          res.push(...extractMessageContent(item, conversationId));
+        }
         if (res[0]?.type !== "text") {
           res.unshift({type: "text", text: ""});
         } 
@@ -71,6 +74,27 @@ export function useImportConversation() {
         return [{
           "type": "file",
           "fileId": fileId,
+        }]
+      }
+      // If contentItem is a video file
+      if (content?.type === "video_url") {
+        if (!content?.video_url || !content?.video_url?.url) return res;
+        const dataURL = content.video_url.url; // base64 starting with data:video/..
+        const filename = content?.name || content.video_url?.filename || "video";
+        const file = dataURLtoFile(dataURL, filename);
+        if (!file) return res; // fallback
+        const fileId = saveFile(conversationId, file);
+        console.log("Saved new file", fileId)
+        return [{
+          "type": "file",
+          "fileId": fileId,
+        }]
+      }
+      // Forms are UI-only content items and must survive a round-trip.
+      if (content?.type === "form" && content.form) {
+        return [{
+          "type": "form",
+          "form": content.form,
         }]
       }
       // If contentItem is any file
@@ -114,13 +138,31 @@ export function useImportConversation() {
     );
   }
 
-  const importConversation = async (data, silent = false, topicId = null) => {
+  const importConversation = async (data, silent = false, topicId = null, folderIdMap = null) => {
     const conversationId = newId();
     try {
+      if (data?.user_settings) dispatch(importUserSettings(data.user_settings));
+      if (data?.interface_settings) dispatch(importInterfaceSettings(data.interface_settings));
+
+      let resolvedFolderIdMap = folderIdMap;
+      if (!resolvedFolderIdMap && Array.isArray(data?.folders)) {
+        resolvedFolderIdMap = new Map();
+        for (const folder of data.folders) {
+          const restoredId = await importFolder(folder);
+          if (folder?.id && restoredId) resolvedFolderIdMap.set(folder.id, restoredId);
+        }
+      }
+
       // Handle multiple conversations import
       if (Array.isArray(data?.conversations)) {
-        for (const c of data.conversations) {
-          await importConversation(c);
+        for (let i = 0; i < data.conversations.length; i++) {
+          const isLast = i === data.conversations.length - 1;
+          await importConversation(
+            data.conversations[i],
+            silent || !isLast,
+            topicId,
+            resolvedFolderIdMap,
+          );
         }
         return;
       }
@@ -141,6 +183,8 @@ export function useImportConversation() {
         // Look for system prompt
         const systemMessage = messages.find((msg) => msg.role === "system");
         sanitizedMessages[0].content = extractMessageContent(systemMessage, conversationId);
+        if (systemMessage?.feedback !== undefined) sanitizedMessages[0].feedback = systemMessage.feedback;
+        if (systemMessage?.meta !== undefined) sanitizedMessages[0].meta = systemMessage.meta;
         // Sanitize user + assistant messages
         try {       
           for (let i = 0; i < messages.length; i++) {
@@ -149,12 +193,17 @@ export function useImportConversation() {
               // TODO robustness - check if string and add it
               continue;
             }
+            const buildImportedMessage = (role, content) => {
+              const imported = { role, content };
+              if (message?.feedback !== undefined) imported.feedback = message.feedback;
+              if (message?.meta !== undefined) imported.meta = message.meta;
+              return imported;
+            };
             if (message.role === "system") continue;
             if (message.role === "info") {
-              sanitizedMessages.push({
-                "role": "info",
-                "content": extractMessageContent(message, conversationId),
-              });
+              sanitizedMessages.push(
+                buildImportedMessage("info", extractMessageContent(message, conversationId))
+              );
               continue;
             }
 
@@ -170,10 +219,9 @@ export function useImportConversation() {
                 })
                 expectUserMessage = true;
               }
-              sanitizedMessages.push({
-                "role": "user",
-                "content": extractMessageContent(message, conversationId),
-              })
+              sanitizedMessages.push(
+                buildImportedMessage("user", extractMessageContent(message, conversationId))
+              );
               
             } else if (message.role === "assistant") {
               if (expectUserMessage) {
@@ -187,14 +235,9 @@ export function useImportConversation() {
                 })
                 expectUserMessage = false;
               }
-              sanitizedMessages.push({
-                "role": "assistant",
-                "content": extractMessageContent(message, conversationId),
-              })
-
-              if (message?.feedback){
-                sanitizedMessages[sanitizedMessages.length-1].feedback = message.feedback;
-              }
+              sanitizedMessages.push(
+                buildImportedMessage("assistant", extractMessageContent(message, conversationId))
+              );
             } else {
               console.warn("Unrecognized role: ", message.role)
               continue;
@@ -216,93 +259,142 @@ export function useImportConversation() {
           }]
         })
       }
-      // Populate settings from data
-      let settings = { ...defaultSettings };
+      // Populate settings from data. Newer exports contain the complete nested
+      // settings object; older exports and personas use the flat layout below.
+      const baseSettings = getDefaultSettings(data?.user_settings ?? userSettings);
+      let settings = { ...baseSettings };
+      const structuredSettings =
+        data?.settings && typeof data.settings === "object" && !Array.isArray(data.settings)
+          ? data.settings
+          : null;
 
       // Check for system prompt in data settings
       const system_prompt = extractParameter(data, "system_prompt") || extractParameter(data, "systemPrompt");
       if (system_prompt && typeof system_prompt === "string")
         sanitizedMessages[0].content = extractMessageContent(system_prompt, conversationId);
-      
-      // temperature
-      const temperature =
-        extractParameter(data, "temperature") ??
-        extractParameter(data, "temp") ??
-        extractParameter(data, "settings.temperature");
-      if (typeof temperature === "number" && temperature >= 0 && temperature <= 2.0) {
-        settings.temperature = temperature;
-      }
 
-      // top_p
-      const top_p = extractParameter(data, "top_p") || extractParameter(data, "topP");
-      if (top_p && typeof top_p === "number" && top_p > 0 && top_p <= 2.0)
-        settings.top_p = top_p;
-
-      // model
-      let model = {};
-      const model_id = extractParameter(data, "model") || extractParameter(data, "model_api") || extractParameter(data, "model-id");
-      if (model_id) {
-        if (typeof model_id === "string") {
-          model.id = model_id;
-          model.name = model_id;
+      // Legacy flat export / persona format. This also fills fields that a
+      // partial `settings` object from an older file may omit.
+      {
+        // temperature
+        const temperature =
+          extractParameter(data, "temperature") ??
+          extractParameter(data, "temp") ??
+          extractParameter(data, "settings.temperature");
+        if (typeof temperature === "number" && temperature >= 0 && temperature <= 2.0) {
+          settings.temperature = temperature;
         }
-        else if (typeof model_id?.id === "string") {
-          model = model_id;
+
+        // top_p
+        const top_p = extractParameter(data, "top_p") ?? extractParameter(data, "topP");
+        if (typeof top_p === "number" && top_p >= 0 && top_p <= 2.0)
+          settings.top_p = top_p;
+
+        // model
+        let model = {};
+        const model_id = extractParameter(data, "model") || extractParameter(data, "model_api") || extractParameter(data, "model-id");
+        if (model_id) {
+          if (typeof model_id === "string") {
+            model.id = model_id;
+            model.name = model_id;
+          }
+          else if (typeof model_id?.id === "string") {
+            model = model_id;
+          }
         }
-      }
-      const model_name = extractParameter(data, "model-name") || extractParameter(data, "model_name");
-      if (model_name && typeof model_name === "string") {
-        model.name = model_name;
-      }
-      // Replace model if we have all information
-      if (model?.id && model?.name) settings.model = model;
-
-      // tools
-      const enable_tools = extractParameter(data, "enable_tools")
-      if (typeof enable_tools === "boolean") {
-        settings.enable_tools = enable_tools;
-      }
-      const tools = extractParameter(data, "tools");
-      if (Array.isArray(tools)) {
-        const allFalse = Object.fromEntries(
-          Object.keys(settings.tools || {}).map(key => [key, false])
-        );
-        settings.tools = {
-          ...allFalse,
-          ...Object.fromEntries(tools
-            .filter(t => t.type !== "web_search" && t.type !== "fetch_url")
-            .map(t => [t.type, true]))
-        };
-        // TODO check if web search can be added
-      } else if (tools && typeof tools === "object") {
-        tools['web_search'] = false;
-        tools['fecth_url'] = false;
-        settings.tools = tools
-      }
-
-      // MCP servers
-      const mcp_servers = extractParameter(data, "mcp_servers") || extractParameter(data, "mcp-servers");
-      if (Array.isArray(mcp_servers) || typeof mcp_servers === "string") {
-        settings.mcp_servers = mcp_servers;
-      }
-
-      // memory
-      const memory = extractParameter(data, "memory");
-      if (memory && typeof memory === "number" && [0, 1, 2].some(v => v == memory))
-        settings.memory = [0,1,2].find(v => v == memory);
-
-      // arcana
-      let arcana = {};
-      const arcana_id = extractParameter(data, "arcana");
-      if (arcana_id) {
-        if (typeof arcana_id === "string") {
-          arcana.id = arcana_id;
-        } else if (typeof arcana_id?.id === "string") {
-          arcana = arcana_id;
+        const model_name = extractParameter(data, "model-name") || extractParameter(data, "model_name");
+        if (model_name && typeof model_name === "string") {
+          model.name = model_name;
         }
+        // Replace model if we have all information
+        if (model?.id && model?.name) settings.model = model;
+
+        // tools
+        const enable_tools = extractParameter(data, "enable_tools")
+        if (typeof enable_tools === "boolean") {
+          settings.enable_tools = enable_tools;
+        }
+        const tools = extractParameter(data, "tools");
+        if (Array.isArray(tools)) {
+          const allFalse = Object.fromEntries(
+            Object.keys(settings.tools || {}).map(key => [key, false])
+          );
+          settings.tools = {
+            ...allFalse,
+            ...Object.fromEntries(tools
+              .filter(t => t?.type)
+              .map(t => [t.type, true]))
+          };
+          if (tools.some(t => t?.type === "web_search" || t?.type === "fetch_url")) {
+            settings.enable_web_search = true;
+          }
+        } else if (tools && typeof tools === "object") {
+          settings.tools = { ...settings.tools, ...tools };
+          if (tools.web_search === true || tools.fetch_url === true) {
+            settings.enable_web_search = true;
+          }
+        }
+
+        const enable_web_search = extractParameter(data, "enable_web_search");
+        if (typeof enable_web_search === "boolean") {
+          settings.enable_web_search = enable_web_search;
+        }
+
+        // reasoning effort
+        const reasoning_effort = extractParameter(data, "reasoning_effort");
+        if (typeof reasoning_effort === "number") {
+          settings.reasoning_effort = reasoning_effort;
+        }
+
+        // MCP servers
+        const mcp_servers = extractParameter(data, "mcp_servers") || extractParameter(data, "mcp-servers");
+        if (Array.isArray(mcp_servers) || typeof mcp_servers === "string") {
+          settings.mcp_servers = mcp_servers;
+        }
+
+        // memory (0 is a valid value)
+        const memory = extractParameter(data, "memory");
+        if (memory !== null && memory !== undefined) {
+          const parsedMemory = Number(memory);
+          if ([0, 1, 2].includes(parsedMemory)) settings.memory = parsedMemory;
+        }
+
+        // arcana
+        let arcana = {};
+        const arcana_id = extractParameter(data, "arcana");
+        if (arcana_id) {
+          if (typeof arcana_id === "string") {
+            arcana.id = arcana_id;
+          } else if (typeof arcana_id?.id === "string") {
+            arcana = arcana_id;
+          }
+        }
+        // Replace arcana if exists
+        if (arcana?.id) settings.arcana = arcana;
       }
-      // Replace arcana if exists
-      if (arcana?.id) settings.arcana = arcana;
+
+      // A complete settings object (new exports) wins over the flat fields.
+      if (structuredSettings) settings = { ...settings, ...structuredSettings };
+
+      // Merge nested defaults and normalize fields old exports may omit.
+      settings.tools = {
+        ...baseSettings.tools,
+        ...(settings.tools && typeof settings.tools === "object" && !Array.isArray(settings.tools)
+          ? settings.tools
+          : {}),
+      };
+      if (typeof settings.model === "string") {
+        settings.model = { id: settings.model, name: settings.model };
+      } else if (!settings.model || typeof settings.model !== "object") {
+        settings.model = { ...baseSettings.model };
+      }
+      const importedMemory = Number(settings.memory);
+      settings.memory = [0, 1, 2].includes(importedMemory) ? importedMemory : 0;
+      if (settings.arcana === undefined || settings.arcana === null) {
+        settings.arcana = { id: "" };
+      } else if (typeof settings.arcana === "string") {
+        settings.arcana = { id: settings.arcana };
+      }
 
       // Determine folder assignment
       let folderId = topicId;
@@ -317,18 +409,26 @@ export function useImportConversation() {
           extractParameter(data, "folderName") ||
           extractParameter(data, "folder_name") ||
           folderRef?.name;
-      if (typeof folderRef === "string") {
-        const existing = await getFolder(folderRef);
-        folderId = existing?.id ?? null;
-      } else if (folderRef?.id) {
-        const existing = await getFolder(folderRef.id);
-        folderId = existing?.id ?? null;
-      }
-      if (!folderId && typeof folderName === "string") {
+      const folderRefId = typeof folderRef === "string" ? folderRef : folderRef?.id;
+      const mappedFolderId = folderRefId
+        ? resolvedFolderIdMap?.get(folderRefId) ?? null
+        : null;
+      if (mappedFolderId) {
+        folderId = mappedFolderId;
+      } else {
         if (typeof folderRef === "string") {
-          folderId = await ensureFolder(folderName, folderRef);
-        } else {
-          folderId = await ensureFolder(folderName);
+          const existing = await getFolder(folderRef);
+          folderId = existing?.id ?? null;
+        } else if (folderRef?.id) {
+          const existing = await getFolder(folderRef.id);
+          folderId = existing?.id ?? null;
+        }
+        if (!folderId && typeof folderName === "string") {
+          if (typeof folderRef === "string") {
+            folderId = await ensureFolder(folderName, folderRef);
+          } else {
+            folderId = await ensureFolder(folderName);
+          }
         }
       }
 
@@ -340,6 +440,15 @@ export function useImportConversation() {
           messages: sanitizedMessages,
           settings: settings,
           folderId: folderId ?? "__unsorted__",
+          preserveMetadata: true,
+          ...(typeof data?.createdAt === "number" && { createdAt: data.createdAt }),
+          ...(typeof data?.lastModified === "number" && { lastModified: data.lastModified }),
+          ...(typeof data?.lastOpenedAt === "number" && { lastOpenedAt: data.lastOpenedAt }),
+          ...(typeof data?.messageCount === "number" && { messageCount: data.messageCount }),
+          ...(typeof data?.hasFirstPrompt === "boolean" && { hasFirstPrompt: data.hasFirstPrompt }),
+          ...(typeof data?.summary === "string" && { summary: data.summary }),
+          ...(typeof data?.summaryUpdatedAt === "number" && { summaryUpdatedAt: data.summaryUpdatedAt }),
+          ...(typeof data?.summarySourceHash === "string" && { summarySourceHash: data.summarySourceHash }),
         },
       )
 

@@ -101,6 +101,8 @@ const stateSyncConfig = {
     "RESET_ALL",
     "MIGRATE",
     "SET_COUNT",
+    "user_settings/importUserSettings",
+    "interface_settings/importInterfaceSettings",
   ],
   // Use localStorage for better compatibility
   broadcastChannelOption: {

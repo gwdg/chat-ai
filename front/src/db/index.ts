@@ -215,6 +215,15 @@ export async function createConversation(params: {
   id?: string, // for import
   folderId?: string | null
   hasFirstPrompt?: boolean
+  // Optional metadata preserved by import/export.
+  preserveMetadata?: boolean
+  createdAt?: number
+  lastModified?: number
+  lastOpenedAt?: number
+  messageCount?: number
+  summary?: string
+  summaryUpdatedAt?: number
+  summarySourceHash?: string
 }) {
   const id = params?.id ?? newId()
   const now = Date.now()
@@ -223,22 +232,43 @@ export async function createConversation(params: {
   const messages = params.messages ?? []
   const folderId = params.folderId ?? null
   const hasFirstPrompt = params.hasFirstPrompt ?? conversationHasPrompt(messages);
+  const preserveMetadata = params.preserveMetadata === true;
+  const createdAt = preserveMetadata && typeof params.createdAt === 'number' ? params.createdAt : now
+  const lastModified = preserveMetadata && typeof params.lastModified === 'number' ? params.lastModified : now
+  const lastOpenedAt = preserveMetadata && typeof params.lastOpenedAt === 'number' ? params.lastOpenedAt : createdAt
+  const messageCount = preserveMetadata && typeof params.messageCount === 'number' ? params.messageCount : 0
+
+  const preservedMeta: Partial<ConversationRow> = {}
+  if (preserveMetadata && typeof params.summary === 'string') preservedMeta.summary = params.summary
+  if (preserveMetadata && typeof params.summaryUpdatedAt === 'number') preservedMeta.summaryUpdatedAt = params.summaryUpdatedAt
+  if (preserveMetadata && typeof params.summarySourceHash === 'string') preservedMeta.summarySourceHash = params.summarySourceHash
 
   await db.transaction('rw', db.conversations, db.messages, db.content_items, db.files_meta, db.files_data, async () => {
     await db.conversations.add({
       id,
       title,
-      createdAt: now,
-      lastModified: now,
+      createdAt,
+      lastModified,
       settings,
-      messageCount: 0,
+      messageCount,
       folderId,
       hasFirstPrompt,
-      lastOpenedAt: now,
+      lastOpenedAt,
+      ...preservedMeta,
     })
 
     if (messages.length > 0) {
       await updateConversation(id, { title, settings, messages, folderId, hasFirstPrompt }, true)
+      if (preserveMetadata) {
+        // updateConversation refreshes lastModified; restore the imported metadata.
+        await db.conversations.update(id, {
+          createdAt,
+          lastModified,
+          lastOpenedAt,
+          messageCount,
+          ...preservedMeta,
+        })
+      }
     }
   })
 
@@ -370,7 +400,7 @@ export async function updateConversation(
           idx: m.idx,
           role: m.role,
           createdAt: m.createdAt,
-          updatedAt: now,
+          updatedAt: m.updatedAt ?? now,
           meta: m.meta,
           feedback : m.feedback
         };
@@ -566,6 +596,10 @@ export async function getFolder(folderId: string): Promise<FolderRow | undefined
   return db.folders.get(folderId);
 }
 
+export async function listFolders(): Promise<FolderRow[]> {
+  return db.folders.toArray();
+}
+
 async function getFolderByName(name: string): Promise<FolderRow | undefined> {
   if (!name?.trim()) return undefined;
   return db.folders.where('name').equals(name.trim()).first();
@@ -655,6 +689,32 @@ export async function ensureFolder(name: string, id?: string | null): Promise<st
   const existing = await getFolderByName(trimmed);
   if (existing) return existing.id;
   return await createFolder(trimmed, {}, id);
+}
+
+/**
+ * Restore a folder from an export without overwriting existing data.
+ * The folder id is preserved when free; otherwise the name is reused or a new
+ * id is generated and returned so conversations can be remapped.
+ */
+export async function importFolder(folder: Partial<FolderRow>): Promise<string | null> {
+  const trimmed = folder?.name?.trim();
+  if (!trimmed) return null;
+  const byId = folder.id ? await getFolder(folder.id) : undefined;
+  if (byId?.name === trimmed) return byId.id;
+  const byName = await getFolderByName(trimmed);
+  if (byName) return byName.id;
+  const id = byId ? newId() : (folder.id || newId());
+  const now = Date.now();
+  await db.folders.add({
+    id,
+    name: trimmed,
+    createdAt: typeof folder.createdAt === 'number' ? folder.createdAt : now,
+    updatedAt: typeof folder.updatedAt === 'number' ? folder.updatedAt : now,
+    ...(folder.icon ? { icon: folder.icon } : {}),
+    ...(folder.color ? { color: folder.color } : {}),
+    ...(typeof folder.sortOrder === 'number' ? { sortOrder: folder.sortOrder } : {}),
+  });
+  return id;
 }
 
 export function useFolderList() {

@@ -9,6 +9,14 @@ export const readFileAsBase64 = (file) => {
 };
 
 // function to convert base64 to a File object
+const MIME_EXTENSION_OVERRIDES = {
+    "audio/mpeg": "mp3",
+    "audio/mp4": "m4a",
+    "image/jpeg": "jpg",
+    "image/svg+xml": "svg",
+    "video/quicktime": "mov",
+};
+
 export function dataURLtoFile(dataurl, filenameWithoutExt, mimeType = null) {
     const arr = dataurl.split(',');
     let mime;
@@ -25,8 +33,11 @@ export function dataURLtoFile(dataurl, filenameWithoutExt, mimeType = null) {
         u8arr[n] = bstr.charCodeAt(n);
     }
     // derive extension from MIME type
-    const extension = mime.split('/')[1]; // e.g. "image/png" → "png"
-    return new File([u8arr], `${filenameWithoutExt}.${extension}`, { type: mime });
+    const extension = MIME_EXTENSION_OVERRIDES[mime.toLowerCase()] || mime.split('/')[1];
+    const baseName = String(filenameWithoutExt || "file");
+    const hasExtension = /\.[^./\\]+$/.test(baseName);
+    const filename = hasExtension ? baseName : `${baseName}.${extension}`;
+    return new File([u8arr], filename, { type: mime });
 }
 
 // Read file content as text
