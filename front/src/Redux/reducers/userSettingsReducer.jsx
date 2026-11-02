@@ -14,7 +14,55 @@ const initialState = {
   render_latex: false,
   document_conversion_mode: "choice",
   conversation_summaries: true,
+  // null = device default (Enter on desktop, Shift+Enter on mobile).
+  send_with_enter: null,
 };
+
+const MEMORY_MODES = [0, 1, 2];
+const RENDER_MODES = ["render", "code", "off"];
+const SANITIZATION_MODES = ["strict", "relaxed"];
+const DOCUMENT_CONVERSION_MODES = ["server", "browser", "choice"];
+
+// Apply settings from an exported backup without trusting arbitrary fields.
+function importUserSettingsState(state, incoming) {
+  if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return;
+  if (Array.isArray(incoming.memories)) {
+    state.memories = incoming.memories
+      .filter((memory) => memory && typeof memory === "object")
+      .map((memory) => ({ ...memory }));
+  }
+  const timeout = Number(incoming.timeout);
+  if (Number.isFinite(timeout)) {
+    state.timeout = Math.min(Math.max(timeout, 5000), 900000);
+  }
+  const memoryMode = Number(incoming.memory_mode);
+  if (MEMORY_MODES.includes(memoryMode)) state.memory_mode = memoryMode;
+  if (RENDER_MODES.includes(incoming.html_render_mode)) {
+    state.html_render_mode = incoming.html_render_mode;
+  }
+  if (SANITIZATION_MODES.includes(incoming.html_sanitization)) {
+    state.html_sanitization = incoming.html_sanitization;
+  }
+  if (DOCUMENT_CONVERSION_MODES.includes(incoming.document_conversion_mode)) {
+    state.document_conversion_mode = incoming.document_conversion_mode;
+  } else if (typeof incoming.browser_document_conversion === "boolean") {
+    state.document_conversion_mode = incoming.browser_document_conversion ? "choice" : "server";
+  }
+  for (const key of [
+    "suggest_user_prompts",
+    "html_load_external",
+    "set_title_once",
+    "render_typst",
+    "render_latex",
+    "conversation_summaries",
+  ]) {
+    if (typeof incoming[key] === "boolean") state[key] = incoming[key];
+  }
+  if (typeof incoming.send_with_enter === "boolean" || incoming.send_with_enter === null) {
+    state.send_with_enter = incoming.send_with_enter;
+  }
+  if (incoming.model !== undefined) state.model = incoming.model;
+}
 
 const userSettingsSlice = createSlice({
   name: "user_settings",
@@ -113,6 +161,14 @@ const userSettingsSlice = createSlice({
       state.conversation_summaries = Boolean(action.payload);
     },
 
+    setSendWithEnter: (state, action) => {
+      state.send_with_enter = Boolean(action.payload);
+    },
+
+    importUserSettings: (state, action) => {
+      importUserSettingsState(state, action.payload);
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -138,7 +194,8 @@ export const {
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
-  setRenderLatex, setDocumentConversionMode, setConversationSummaries
+  setRenderLatex, setDocumentConversionMode, setConversationSummaries,
+  setSendWithEnter, importUserSettings
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -173,5 +230,8 @@ export const selectDocumentConversionMode = (state) => {
 };
 export const selectConversationSummaries = (state) =>
   state.user_settings.conversation_summaries ?? true;
+// null means "use the device default", resolved in the prompt component.
+export const selectSendWithEnter = (state) =>
+  state.user_settings.send_with_enter ?? null;
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;

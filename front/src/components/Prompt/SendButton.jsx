@@ -2,11 +2,16 @@ import Tooltip from "../Others/Tooltip";
 import { Trans, useTranslation } from "react-i18next";
 import { useToast } from "../../hooks/useToast";
 import { useSendMessage } from "../../hooks/useSendMessage";
+import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import { Send, SendFilled } from "@carbon/icons-react";
 
 export default function SendButton({localState, setLocalState, handleSend, prompt}) {
     const { t, i18n } = useTranslation();
     const { notifySuccess, notifyError } = useToast();
+    const sendWithEnter = useSendWithEnter();
+    const sendShortcutKey = sendWithEnter
+        ? "common.send_shortcut"
+        : "common.send_shortcut_shift_enter";
 
     function isSafeSettings(localState) {
         const modelName = localState?.settings?.model?.name;
@@ -36,11 +41,11 @@ export default function SendButton({localState, setLocalState, handleSend, promp
     const isSafe = isSafeSettings(localState);
 
     return !loading && ( (prompt !== "" || attachments.length > 0)  ? (
-         <Tooltip text={t("common.send_shortcut")}>
+         <Tooltip text={t(sendShortcutKey)}>
             <SendFilled size={28} className={"cursor-pointer " + (isSafe ? "text-green-600" : "text-yellow-600")} onClick={handleSend} />
         </Tooltip>
     ) : (
-        <Tooltip text={t("common.send_shortcut")}>
+        <Tooltip text={t(sendShortcutKey)}>
             <SendFilled size={28} className={"opacity-10 " + (isSafe ? "text-green-600" : "text-yellow-600")} />
         </Tooltip>
     ))

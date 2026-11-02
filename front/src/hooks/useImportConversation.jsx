@@ -6,7 +6,7 @@ import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
 import { createConversation, ensureFolder, getFolder, newId, saveFile } from "../db";
 import { dataURLtoFile } from "../utils/attachments";
-import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
+import { selectUserSettings, importUserSettings } from "../Redux/reducers/userSettingsReducer";
 
 /**
  * useImportConversation
@@ -117,6 +117,7 @@ export function useImportConversation() {
   const importConversation = async (data, silent = false, topicId = null) => {
     const conversationId = newId();
     try {
+      if (data?.user_settings) dispatch(importUserSettings(data.user_settings));
       // Handle multiple conversations import
       if (Array.isArray(data?.conversations)) {
         for (const c of data.conversations) {

@@ -55,6 +55,7 @@ const getDefaultState = () => {
       render_latex: false,
       document_conversion_mode: "choice",
       conversation_summaries: true,
+      send_with_enter: null,
     },
   };
 };
@@ -101,6 +102,7 @@ const stateSyncConfig = {
     "RESET_ALL",
     "MIGRATE",
     "SET_COUNT",
+    "user_settings/importUserSettings",
   ],
   // Use localStorage for better compatibility
   broadcastChannelOption: {

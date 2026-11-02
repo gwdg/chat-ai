@@ -18,7 +18,8 @@ export default {
     clear: "Löschen",
     abort: "Abbrechen",
     send: "Senden",
-    send_shortcut: "Senden (Umschalt+Enter)",
+    send_shortcut: "Senden (Enter)",
+    send_shortcut_shift_enter: "Senden (Umschalt+Enter)",
     stop: "Anhalten",
     share: "Teilen",
     delete: "Löschen",
@@ -406,6 +407,21 @@ export default {
         label: "Zusammenfassungen beim Darüberfahren anzeigen",
         description:
           "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",
+      },
+      submission: {
+        label: "Nachricht senden mit",
+        options: {
+          enter: {
+            label: "Enter",
+            description:
+              "Enter sendet die Nachricht. Umschalt+Enter fügt einen Zeilenumbruch ein.",
+          },
+          shift_enter: {
+            label: "Umschalt+Enter",
+            description:
+              "Umschalt+Enter sendet die Nachricht. Enter fügt einen Zeilenumbruch ein. Dies ist die Standardeinstellung auf mobilen Geräten.",
+          },
+        },
       },
       html_render: {
         label: "HTML-Blöcke rendern",

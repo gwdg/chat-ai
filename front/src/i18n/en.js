@@ -18,7 +18,8 @@ export default {
     clear: "Clear",
     abort: "Abort",
     send: "Send",
-    send_shortcut: "Send (Shift+Enter)",
+    send_shortcut: "Send (Enter)",
+    send_shortcut_shift_enter: "Send (Shift+Enter)",
     stop: "Stop",
     share: "Share",
     delete: "Delete",
@@ -402,6 +403,21 @@ export default {
         label: "Show summaries on hover",
         description:
           "Generate a short summary when you switch away from a chat, then show it when hovering over that chat in the sidebar.",
+      },
+      submission: {
+        label: "Send message with",
+        options: {
+          enter: {
+            label: "Enter",
+            description:
+              "Enter sends the message. Shift+Enter adds a new line.",
+          },
+          shift_enter: {
+            label: "Shift+Enter",
+            description:
+              "Shift+Enter sends the message. Enter adds a new line. This is the default on mobile devices.",
+          },
+        },
       },
       html_render: {
         label: "Render HTML blocks",

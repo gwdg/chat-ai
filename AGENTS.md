@@ -111,9 +111,9 @@ These are the things that are not guessable from the file tree.
 `version` is in the root reducer but is not in the persist whitelist.
 
 Redux is persisted with a `version` + `migrations` map (`Redux/store/migrations.jsx`), and only a
-four-action whitelist is mirrored across tabs via `redux-state-sync`: `SET_ADV`, `RESET_ALL`,
-`MIGRATE`, `SET_COUNT`. Adding a persisted key means adding it to `whitelist` **and**
-`getDefaultState()` in `Redux/store/store.jsx`.
+five-action whitelist is mirrored across tabs via `redux-state-sync`: `SET_ADV`, `RESET_ALL`,
+`MIGRATE`, `SET_COUNT`, `user_settings/importUserSettings`. Adding a persisted key means adding it to
+`whitelist` **and** `getDefaultState()` in `Redux/store/store.jsx`.
 
 ### 4.2 The conversation data flow
 
@@ -291,6 +291,16 @@ calls the `back` `/documents/convert/file` endpoint. Redux migration 5 maps the 
 runs in the package's blob worker first; if the worker cannot be created (for example under a strict
 CSP) it retries on the main thread. The PDFium WASM is imported with `?url` so Vite emits it as an
 app asset.
+
+### 4.14 Prompt submission key is a user setting
+
+`user_settings.send_with_enter` controls whether plain Enter or Shift+Enter submits the prompt:
+`true` = Enter sends, `false` = Shift+Enter sends, `null` = device default. The default is
+resolved by `hooks/useSendWithEnter.ts`: Enter on desktop, Shift+Enter on mobile. `PromptTextArea`
+implements the key handling, and `SendButton` uses the same hook for its shortcut tooltip. Alt with
+Enter always inserts a newline. When adding another user setting, update
+`userSettingsReducer`'s `initialState`, the `getDefaultState()` fallback in `Redux/store/store.jsx`,
+both i18n files, and the export/import path.
 
 ## 5. Conventions
 
