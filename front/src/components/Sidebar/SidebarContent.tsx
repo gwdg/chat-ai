@@ -6,11 +6,15 @@ import { useNavigate } from "react-router";
 
 import {
   ArrangeHorizontal,
+  Calendar,
+  Checkmark,
   ChevronLeft,
+  Close,
   FolderMoveTo,
+  FolderTree,
   OverflowMenuVertical,
   Search,
-  Close,
+  SortAscending,
 } from "@carbon/icons-react";
 import {
   assignConversationToFolder,
@@ -20,9 +24,11 @@ import {
 import { useModal } from "../../modals/ModalContext";
 
 import {
+  selectConversationGrouping,
   selectConversationSort,
   selectDarkMode,
   selectShowUsageInSidebar,
+  setConversationGrouping,
   toggleSidebar,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import { selectConversationSummaries } from "../../Redux/reducers/userSettingsReducer";
@@ -30,8 +36,10 @@ import { selectConversationSummaries } from "../../Redux/reducers/userSettingsRe
 import { useWindowSize } from "../../hooks/useWindowSize";
 import { sortConversations } from "../../utils/conversationSort";
 import {
+  formatCompactDate,
   formatModifiedTime,
   formatRelativeTime,
+  groupConversationsByCreationDate,
   groupConversationsByDate,
 } from "../../utils/conversationDates";
 import TopicList, { UNSORTED_TOPIC_ID } from "./TopicList";
@@ -71,6 +79,7 @@ export default function SidebarContent({
   const showUsageInSidebar = useSelector(selectShowUsageInSidebar);
   const isDark = useSelector(selectDarkMode);
   const conversationSort = useSelector(selectConversationSort);
+  const conversationGrouping = useSelector(selectConversationGrouping);
   const summariesEnabled = useSelector(selectConversationSummaries);
 
   const { isDesktop, windowWidth } = useWindowSize();
@@ -109,6 +118,35 @@ export default function SidebarContent({
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchVisible = searchOpen || hasSearch;
+
+  const [groupMenuOpen, setGroupMenuOpen] = useState(false);
+  const groupMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!groupMenuOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (
+        groupMenuRef.current &&
+        !groupMenuRef.current.contains(event.target as Node)
+      ) {
+        setGroupMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setGroupMenuOpen(false);
+    };
+    // Deferred so the click that opened the menu does not close it.
+    const id = setTimeout(
+      () => document.addEventListener("mousedown", onPointerDown),
+      0,
+    );
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [groupMenuOpen]);
 
   const openSearch = useCallback(() => {
     setSearchOpen(true);
@@ -158,6 +196,11 @@ export default function SidebarContent({
 
   const dateGroups = useMemo(
     () => groupConversationsByDate(conversations),
+    [conversations],
+  );
+
+  const creationDateGroups = useMemo(
+    () => groupConversationsByCreationDate(conversations),
     [conversations],
   );
 
@@ -406,9 +449,11 @@ export default function SidebarContent({
     const isDragging = draggingConversationId === id;
     const summary = summariesEnabled ? (conv.summary ?? "").trim() : "";
     const showSummary = summary.length > 0;
+    const showCreated = options.showCreated === true;
     const showDateModified = options.showModified === true;
     const showDates =
-      showDateModified || (isActive && options.showMetadata !== false);
+      !showCreated &&
+      (showDateModified || (isActive && options.showMetadata !== false));
     const modifiedTimestamp = conv.lastModified ?? conv.createdAt;
     const modified = showDateModified
       ? formatModifiedTime(modifiedTimestamp, i18n.language)
@@ -450,8 +495,15 @@ export default function SidebarContent({
               onDoubleClick={(e) => handleTitleDoubleClick(e, conv)}
               style={{ cursor: isDesktop ? "text" : "pointer" }}
             >
-              <div className="truncate text-xs leading-relaxed cursor-pointer">
-                {highlightText(conv.title)}
+              <div className="flex items-center gap-2">
+                <div className="truncate text-xs leading-relaxed cursor-pointer flex-1">
+                  {highlightText(conv.title)}
+                </div>
+                {showCreated && conv.createdAt ? (
+                  <span className="shrink-0 text-[10px] leading-tight text-gray-500 dark:text-gray-400">
+                    {formatCompactDate(conv.createdAt, i18n.language)}
+                  </span>
+                ) : null}
               </div>
               {showDates && (
                 <div className="truncate text-[10px] leading-tight text-gray-500 dark:text-gray-400">
@@ -527,6 +579,87 @@ export default function SidebarContent({
               {t("folders.title")}
             </span>
             <div className="flex items-center gap-1">
+              <div ref={groupMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setGroupMenuOpen((open) => !open)}
+                  aria-haspopup="menu"
+                  aria-expanded={groupMenuOpen}
+                  aria-label={t("folders.sort_label")}
+                  title={t("folders.sort_label")}
+                  className="flex items-center rounded-lg p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer"
+                >
+                  {conversationGrouping === "date" ? (
+                    <Calendar size={16} />
+                  ) : conversationGrouping === "created" ? (
+                    <SortAscending size={16} />
+                  ) : (
+                    <FolderTree size={16} />
+                  )}
+                </button>
+                {groupMenuOpen && (
+                  <div
+                    role="menu"
+                    aria-label={t("folders.sort_label")}
+                    className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-bg_secondary_dark"
+                  >
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={conversationGrouping === "topic"}
+                      onClick={() => {
+                        dispatch(setConversationGrouping("topic"));
+                        setGroupMenuOpen(false);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                    >
+                      <FolderTree size={14} className="shrink-0" />
+                      <span className="flex-1 truncate">
+                        {t("folders.sort_by_topic")}
+                      </span>
+                      {conversationGrouping === "topic" && (
+                        <Checkmark size={14} className="shrink-0 text-tertiary" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={conversationGrouping === "date"}
+                      onClick={() => {
+                        dispatch(setConversationGrouping("date"));
+                        setGroupMenuOpen(false);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                    >
+                      <Calendar size={14} className="shrink-0" />
+                      <span className="flex-1 truncate">
+                        {t("folders.sort_by_date")}
+                      </span>
+                      {conversationGrouping === "date" && (
+                        <Checkmark size={14} className="shrink-0 text-tertiary" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={conversationGrouping === "created"}
+                      onClick={() => {
+                        dispatch(setConversationGrouping("created"));
+                        setGroupMenuOpen(false);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+                    >
+                      <SortAscending size={14} className="shrink-0" />
+                      <span className="flex-1 truncate">
+                        {t("folders.sort_by_created")}
+                      </span>
+                      {conversationGrouping === "created" && (
+                        <Checkmark size={14} className="shrink-0 text-tertiary" />
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() =>
@@ -647,7 +780,9 @@ export default function SidebarContent({
                 onDropTopic={handleTopicDrop}
                 renderConversationRow={renderConversationRow}
                 dateGroups={dateGroups}
+                creationDateGroups={creationDateGroups}
                 isDark={isDark}
+                grouping={conversationGrouping}
               />
             )}
           </div>

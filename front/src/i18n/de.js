@@ -63,6 +63,11 @@ export default {
     all: "Alle Chats",
     uncategorized: "Nicht zugeordnete Chats",
     by_date: "Alle Chats nach Datum",
+    by_created: "Alle Chats nach Erstellungsdatum",
+    sort_label: "Chats sortieren",
+    sort_by_topic: "Nach Thema",
+    sort_by_date: "Nach Datum",
+    sort_by_created: "Nach Erstellungsdatum",
     modified: "Geändert {{date}}",
     dateBuckets: {
       today: "Heute",

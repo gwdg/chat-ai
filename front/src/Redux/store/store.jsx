@@ -40,6 +40,7 @@ const getDefaultState = () => {
       show_usage_in_sidebar: true,
       collapsed_topics: [],
       conversation_sort: "created_desc",
+      conversation_grouping: "topic",
     },
     // Conditionally preserve memories
     user_settings: {

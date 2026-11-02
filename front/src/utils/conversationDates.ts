@@ -26,6 +26,12 @@ export function conversationModifiedAt(
   return conversation.lastModified ?? conversation.createdAt ?? 0;
 }
 
+export function conversationCreatedAt(
+  conversation: ConversationLike,
+): number {
+  return conversation.createdAt ?? conversation.lastModified ?? 0;
+}
+
 function startOfToday(now: number): number {
   const date = new Date(now);
   date.setHours(0, 0, 0, 0);
@@ -44,15 +50,16 @@ export function getDateBucket(
   return "older";
 }
 
-export function groupConversationsByDate<T extends ConversationLike>(
+function groupConversationsByTimestamp<T extends ConversationLike>(
   conversations: T[],
+  timestampOf: (conversation: T) => number,
   now: number = Date.now(),
 ) {
   const buckets = new Map<DateBucketKey, T[]>();
   for (const key of DATE_BUCKET_ORDER) buckets.set(key, []);
 
   for (const conversation of conversations) {
-    const timestamp = conversationModifiedAt(conversation);
+    const timestamp = timestampOf(conversation);
     buckets.get(getDateBucket(timestamp, now))!.push(conversation);
   }
 
@@ -60,10 +67,22 @@ export function groupConversationsByDate<T extends ConversationLike>(
     key,
     conversations: buckets
       .get(key)!
-      .sort(
-        (a, b) => conversationModifiedAt(b) - conversationModifiedAt(a),
-      ),
+      .sort((a, b) => timestampOf(b) - timestampOf(a)),
   })).filter((bucket) => bucket.conversations.length > 0);
+}
+
+export function groupConversationsByDate<T extends ConversationLike>(
+  conversations: T[],
+  now: number = Date.now(),
+) {
+  return groupConversationsByTimestamp(conversations, conversationModifiedAt, now);
+}
+
+export function groupConversationsByCreationDate<T extends ConversationLike>(
+  conversations: T[],
+  now: number = Date.now(),
+) {
+  return groupConversationsByTimestamp(conversations, conversationCreatedAt, now);
 }
 
 export function formatCompactDate(

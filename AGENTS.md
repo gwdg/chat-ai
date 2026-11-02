@@ -302,6 +302,19 @@ Enter always inserts a newline. When adding another user setting, update
 `userSettingsReducer`'s `initialState`, the `getDefaultState()` fallback in `Redux/store/store.jsx`,
 both i18n files, and the export/import path.
 
+### 4.15 Sidebar conversation grouping is a persisted interface setting
+
+`interface_settings.conversation_grouping` is `"topic"` (default), `"date"`, or `"created"`. The
+sort menu in `SidebarContent` dispatches `setConversationGrouping`, and `TopicList` receives the
+value as `grouping` to render either topic rows or a date-bucket tree. `date` uses
+`groupConversationsByDate` (modified time); `created` uses `groupConversationsByCreationDate`. Both
+date-like modes show a non-collapsible parent label; their date buckets sit at the top level and are
+collapsible. Collapse state reuses `collapsed_topics` with `__by_date__` / `__by_created__`
+prefixes. Created-mode rows also show the creation date beside the title. The date/created labels
+only appear in their own mode; the topic-creation/unsorted rows only appear in topic mode.
+It is in `interfaceSettingsSlice`'s `initialState` and `getDefaultState()`; an old persisted state
+without the key falls back to `"topic"` in the selector, so no migration is needed.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
