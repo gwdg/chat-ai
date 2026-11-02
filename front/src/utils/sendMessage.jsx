@@ -189,6 +189,48 @@ export async function buildConversationForAPI(localState) {
   };
 }
 
+// Forms arrive from the stream and are persisted to IndexedDB, so they are
+// untrusted: keep only known keys with the expected primitive types, so a
+// malformed form can't crash rendering every time the chat is reopened.
+const FORM_FIELD_TYPES = new Set([
+  "text", "number", "range", "checkbox", "select", "textarea",
+  "radio", "color", "date", "email", "url",
+]);
+const optStr = (v) => (typeof v === "string" || typeof v === "number" ? String(v) : undefined);
+const optNum = (v) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+const optPrim = (v) =>
+  typeof v === "string" || typeof v === "boolean" || (typeof v === "number" && Number.isFinite(v)) ? v : undefined;
+
+function sanitizeToolForm(arg) {
+  const fields = arg.fields
+    .filter((f) => f && typeof f === "object" && typeof f.name === "string" && f.name !== "")
+    .map((f) => ({
+      name: f.name,
+      label: optStr(f.label),
+      type: FORM_FIELD_TYPES.has(f.type) ? f.type : "text",
+      value: optPrim(f.value),
+      default: optPrim(f.default),
+      placeholder: optStr(f.placeholder),
+      min: optNum(f.min),
+      max: optNum(f.max),
+      step: optNum(f.step),
+      rows: optNum(f.rows),
+      required: f.required === true,
+      options: Array.isArray(f.options)
+        ? f.options
+            .filter((o) => o && typeof o === "object" && optStr(o.value) !== undefined)
+            .map((o) => ({ value: optStr(o.value), label: optStr(o.label) ?? optStr(o.value) }))
+        : undefined,
+    }));
+  if (fields.length === 0) return null;
+  return {
+    tool_id: optStr(arg.tool_id),
+    title: optStr(arg.title),
+    description: optStr(arg.description),
+    fields,
+  };
+}
+
 // Map a tool event name to a human-readable text fragment (appended to the
 // "thinking" block) or a form object (rendered as an editable form).
 // Returns { text } or { form }.
@@ -250,8 +292,8 @@ function handleToolEvent(name, arg) {
     default: {
       // Any tool can return an editable form: event name "<tool>.form"
       if (typeof name === "string" && name.endsWith(".form") && Array.isArray(arg?.fields)) {
-        const { tool_id, title, description, fields } = arg;
-        return { form: { tool_id, title, description, fields } };
+        const form = sanitizeToolForm(arg);
+        return form ? { form } : {};
       }
       return {};
     }
