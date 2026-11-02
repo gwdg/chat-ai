@@ -1,9 +1,20 @@
-// Upstream calls used by the agent's tools. They go through the agent proxy
-// (VITE_AGENT_ENDPOINT, e.g. http://localhost:8081/agent), a route of back/ that adds the API key.
+// Upstream calls used by the agent. With agentPath in front.json they go through the agent
+// proxy (VITE_AGENT_ENDPOINT, e.g. http://localhost:8081/agent), a route of back/ that adds the
+// API key. Without it they go to the normal backend endpoint (VITE_BACKEND_ENDPOINT), which in
+// production reaches the gateway directly and authenticates through the OIDC proxy.
 import getModelDefaults from "../config/getModelDefaults";
 
-export const agentEndpoint = () => (import.meta.env.VITE_AGENT_ENDPOINT || "").replace(/\/$/, "");
-export const isAgentEnabled = () => !!agentEndpoint();
+/** True when requests go through back/'s /agent proxy rather than the normal endpoint. */
+export const usesAgentProxy = () => !!import.meta.env.VITE_AGENT_ENDPOINT;
+
+export const agentEndpoint = () => {
+  const endpoint = import.meta.env.VITE_AGENT_ENDPOINT || import.meta.env.VITE_BACKEND_ENDPOINT || "";
+  if (!endpoint) return "";
+  // The model client needs an absolute URL; backendPath may be relative (e.g. /api)
+  return new URL(endpoint, window.location.origin).toString().replace(/\/$/, "");
+};
+// "agentPath": "" (or false) in front.json turns agent mode off
+export const isAgentEnabled = () => import.meta.env.VITE_AGENT_DISABLED !== "true" && !!agentEndpoint();
 
 // Models whose server rejected a request with tools during this session
 const toollessModels = new Set<string>();

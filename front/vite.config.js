@@ -89,8 +89,10 @@ try {
       process.env["VITE_PROPOSAL_GENERATION_MODEL"] = value;
       console.log("Proposal generation model:", value);
     } else if (key == "agentPath") {
-      process.env["VITE_AGENT_ENDPOINT"] = value;
-      console.log("Agent path:", value);
+      // Unset: the agent uses backendPath. Empty or false: agent mode off.
+      if (value) process.env["VITE_AGENT_ENDPOINT"] = value;
+      else process.env["VITE_AGENT_DISABLED"] = "true";
+      console.log("Agent path:", value || "(agent mode off)");
     } else if (key == "announcement") {
       process.env["VITE_ANNOUNCEMENT"] = value;
       console.log("Announcement:", value);

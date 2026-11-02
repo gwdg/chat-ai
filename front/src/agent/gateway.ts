@@ -7,6 +7,7 @@
 // assistant tool-call message and tool results) into pi messages for the transcript, so the
 // model sees them again on later requests. See docs/tool-passthrough.md in the gateway repo.
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import { usesAgentProxy } from "../apis/agentEndpoints";
 
 /** Request fields that switch on gateway tools for this turn. */
 export function gatewayRequestFields(settings: any) {
@@ -36,6 +37,13 @@ type Exchange = { event: "call" | "result"; message: any };
  */
 export function gatewayFetch(onExchange: (exchange: Exchange) => void): typeof fetch {
   return async (input, init) => {
+    // The model client always sends a placeholder API key. Only the agent proxy replaces it;
+    // the normal endpoint authenticates through the OIDC proxy and must not see it.
+    if (!usesAgentProxy() && init?.headers) {
+      const headers = new Headers(init.headers);
+      headers.delete("authorization");
+      init = { ...init, headers };
+    }
     const response = await fetch(input, init);
     const type = response.headers.get("content-type") ?? "";
     // Streams only; a JSON answer has no events in it
