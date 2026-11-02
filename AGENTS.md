@@ -17,8 +17,8 @@ OpenAI-compatible API endpoint. It is one of three repos in the wider architectu
 
 Two services, no monorepo tooling — each has its own `package.json` and is installed separately:
 
-- **`front/`** — React 19 SPA, Vite 7, runs entirely in the user's browser. All chat data is local.
-- **`back/`** — single-file Express 4 proxy (`back/service.mjs`, 412 lines). Per README it exists to
+- **`front/`** — React 19 SPA, Vite 8, runs entirely in the user's browser. All chat data is local.
+- **`back/`** — single-file Express 5 proxy (`back/service.mjs`, 412 lines). Per README it exists to
   hold the API key server-side and to prevent CORS errors in the user's browser.
 
 ## 2. Layout
