@@ -106,6 +106,12 @@ try {
       }
     }
   }
+  // Agent mode is on by default: without an explicit agentPath, use the back
+  // service's /agent proxy. Set "agentPath": "" in front.json to turn it off.
+  if (!("agentPath" in config) && config.backendPath) {
+    process.env["VITE_AGENT_ENDPOINT"] = `${String(config.backendPath).replace(/\/$/, "")}/agent`;
+    console.log("Agent path (default):", process.env["VITE_AGENT_ENDPOINT"]);
+  }
 } catch (error) {
   console.error("Failed to load config.json:", error);
   process.exit(1);
