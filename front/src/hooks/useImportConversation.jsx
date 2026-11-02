@@ -303,6 +303,14 @@ export function useImportConversation() {
       if (memory && typeof memory === "number" && [0, 1, 2].some(v => v == memory))
         settings.memory = [0,1,2].find(v => v == memory);
 
+      // per-conversation memory mode
+      const memory_mode_override = extractParameter(data, "memory_mode_override");
+      if (memory_mode_override === "default") {
+        settings.memory_mode_override = "default";
+      } else if ([0, 1, 2].includes(Number(memory_mode_override))) {
+        settings.memory_mode_override = Number(memory_mode_override);
+      }
+
       // arcana
       let arcana = {};
       const arcana_id = extractParameter(data, "arcana");

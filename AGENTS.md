@@ -332,6 +332,15 @@ sidebar, last-conversation lookup, and its own summary context. `getExportData()
 `meta_chat` and `useImportConversation` recreates it silently. Do not make it summarize full
 conversations on the fly without accounting for the extra model calls.
 
+### 4.17 Per-conversation memory mode overrides the global preference
+
+`ConversationSettings.memory_mode_override` is `"default"`, `0` (off), `1` (recall), or `2`
+(learn). `getDefaultSettings()` defaults it to `"default"`, and `useSendMessage` resolves it at send
+time: `"default"` uses `user_settings.memory_mode`; a numeric value overrides it for that chat. The
+control is `SettingsPanel/MemoryModeContainer.jsx`; the global preference remains in
+`UserSettings/ChatPreferences.jsx`. The value is stored with the conversation settings (no Dexie
+version bump) and restored by `useImportConversation`.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

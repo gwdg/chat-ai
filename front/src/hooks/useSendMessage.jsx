@@ -27,6 +27,14 @@ export function useSendMessage() {
 
   // Make this async
   return async ({localState, setLocalState, formSubmission}) => {
+    const override = localState?.settings?.memory_mode_override;
+    const effectiveMemoryMode =
+      override === undefined || override === null || override === "default"
+        ? memoryMode
+        : [0, 1, 2].includes(Number(override))
+          ? Number(override)
+          : memoryMode;
+
     await sendMessage({
       localState,
       setLocalState,
@@ -36,7 +44,7 @@ export function useSendMessage() {
       notifyError,
       notifySuccess,
       timeout,
-      memoryMode,
+      memoryMode: effectiveMemoryMode,
       suggestUserPrompts,
       formSubmission,
       setTitleOnce,

@@ -25,6 +25,7 @@ export const getDefaultSettings = (userSettings = {}) => {
     temperature: 0.5,
     top_p: 0.5,
     memory: 0,
+    memory_mode_override: "default",
     enable_tools: false,
     reasoning_effort: null,
     tools: {

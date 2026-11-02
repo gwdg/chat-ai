@@ -1,6 +1,6 @@
 // components/settings/ReasoningEffortContainer.jsx
 import { useTranslation } from "react-i18next";
-import { CircleHelp } from "lucide-react";
+import { Brain, CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
 import { useDispatch } from "react-redux";
 import getModelDefaults from "../../config/getModelDefaults";
@@ -31,6 +31,10 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
     <section className="flex flex-col gap-2">
       <div className="min-w-0">
         <div className="flex-shrink-0 flex items-center gap-2 min-w-[80px]">
+          <Brain
+            className="h-4 w-4 shrink-0 text-tertiary"
+            aria-hidden="true"
+          />
           <p className="text-sm font-medium">{t("settings.reasoning_effort.title")}</p>
           <CircleHelp
             className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
@@ -47,8 +51,8 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
           reasoningEffortOptions?.length <= 5
             ? "grid-flow-col grid-rows-1"
             : reasoningEffortOptions?.length <= 6
-                ? "grid-flow-row grid-cols-3"
-                : "grid-flow-row grid-cols-4"
+              ? "grid-flow-row grid-cols-3"
+              : "grid-flow-row grid-cols-4"
         }`}
       >
         {reasoningEffortOptions.map((option, index) => {

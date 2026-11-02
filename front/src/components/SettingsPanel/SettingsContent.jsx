@@ -10,6 +10,7 @@ import ShareSettingsButton from "./ShareSettingsButton";
 import SystemPromptContainer from "./SystemPromptContainer";
 import TemperatureSlider from "./TemperatureSlider";
 import TopPSlider from "./TopPSlider";
+import MemoryModeContainer from "./MemoryModeContainer";
 
 //Redux
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
@@ -94,6 +95,10 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
+          <MemoryModeContainer
+            localState={localState}
+            setLocalState={setLocalState}
+          />
           {/* temperature Slider */}
           <TemperatureSlider
             localState={localState}

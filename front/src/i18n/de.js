@@ -174,6 +174,34 @@ export default {
   },
   // Settings panel
   settings: {
+    memory_mode: {
+      label: "Erinnerungen",
+      description:
+        "Legen Sie fest, wie diese Unterhaltung Ihre gespeicherten Erinnerungen verwendet.",
+      help_label: "Mehr über Erinnerungen erfahren",
+      options: {
+        default: {
+          label: "Standard",
+          description:
+            "Verwendet die globale Erinnerungseinstellung (aktuell: {{mode}}).",
+        },
+        none: {
+          label: "Aus",
+          description:
+            "Gespeicherte Erinnerungen werden in dieser Unterhaltung nicht verwendet.",
+        },
+        recall: {
+          label: "Abrufen",
+          description:
+            "Gespeicherte Erinnerungen werden in dieser Unterhaltung für persönlichere Antworten verwendet.",
+        },
+        learn: {
+          label: "Lernen",
+          description:
+            "Gespeicherte Erinnerungen werden verwendet und neue Details aus dieser Unterhaltung gelernt.",
+        },
+      },
+    },
     tools_enabled: "Werkzeuge sind aktiviert",
     tools_disabled: "Werkzeuge sind deaktiviert",
     web_search_enabled: "Websuche ist erlaubt",

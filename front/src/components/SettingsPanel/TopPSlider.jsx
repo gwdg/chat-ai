@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useModal } from "../../modals/ModalContext";
-import { CircleHelp } from "lucide-react";
+import { CircleHelp, Gauge } from "lucide-react";
 
 export default function TopPSlider({ localState, setLocalState }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -54,6 +54,10 @@ export default function TopPSlider({ localState, setLocalState }) {
   return (
     <div className="flex flex-row w-full md:items-center">
       <div className="flex-shrink-0 flex items-center gap-2 min-w-[80px]">
+        <Gauge
+          className="h-4 w-4 shrink-0 text-tertiary"
+          aria-hidden="true"
+        />
         <p className="text-sm font-medium">top_p</p>
         <CircleHelp
           className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"

@@ -173,6 +173,32 @@ export default {
   },
   // Chat settings
   settings: {
+    memory_mode: {
+      label: "Memories",
+      description: "Choose how this conversation uses your saved memories.",
+      help_label: "Learn about memories",
+      options: {
+        default: {
+          label: "Default",
+          description:
+            "Use the global memory preference (currently {{mode}}).",
+        },
+        none: {
+          label: "Off",
+          description: "Do not use saved memories in this conversation.",
+        },
+        recall: {
+          label: "Recall",
+          description:
+            "Use saved memories to personalize responses in this conversation.",
+        },
+        learn: {
+          label: "Learn",
+          description:
+            "Use saved memories and learn new details from this conversation.",
+        },
+      },
+    },
     tools_enabled: "Tools are enabled",
     tools_disabled: "Tools are disabled",
     web_search_enabled: "Web search is enabled",
