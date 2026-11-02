@@ -13,12 +13,8 @@ import {
   setRenderLatex,
   setRenderTypst,
   setSuggestUserPrompts,
-  selectHtmlRenderMode,
-  setHtmlRenderMode,
-  selectHtmlLoadExternal,
-  setHtmlLoadExternal,
-  selectHtmlSanitization,
-  setHtmlSanitization,
+  selectHtmlPreview,
+  setHtmlPreview,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -29,16 +25,7 @@ const MEMORY_OPTIONS = [
   { value: 2, key: "learn" },
 ];
 
-const HTML_RENDER_OPTIONS = [
-  { value: "render", key: "render" },
-  { value: "code", key: "code" },
-  { value: "off", key: "off" },
-];
-
-const HTML_SANITIZATION_OPTIONS = [
-  { value: "strict", key: "strict" },
-  { value: "relaxed", key: "relaxed" },
-];
+const HTML_PREVIEW_OPTIONS = ["off", "static", "ask"];
 
 export function MemoryPreference() {
   const dispatch = useDispatch();
@@ -167,105 +154,55 @@ export function SuggestionPreference() {
 export function HtmlRenderPreference() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const htmlRenderMode = useSelector(selectHtmlRenderMode);
-  const htmlLoadExternal = useSelector(selectHtmlLoadExternal);
-  const htmlSanitization = useSelector(selectHtmlSanitization);
-  const selectedOption =
-    HTML_RENDER_OPTIONS.find((option) => option.value === htmlRenderMode) ??
-    HTML_RENDER_OPTIONS[0];
-  const selectedSanitizationOption =
-    HTML_SANITIZATION_OPTIONS.find(
-      (option) => option.value === htmlSanitization,
-    ) ?? HTML_SANITIZATION_OPTIONS[0];
+  const mode = useSelector(selectHtmlPreview);
 
   return (
-    <section className="flex flex-col gap-2">
-      <SegmentedPreference
-        label={t("user_settings.chat_preferences.html_render.label")}
-        description={t(
-          `user_settings.chat_preferences.html_render.options.${selectedOption.key}.description`,
-        )}
-        options={HTML_RENDER_OPTIONS.map((option) => ({
-          value: option.value,
-          label: t(
-            `user_settings.chat_preferences.html_render.options.${option.key}.label`,
-          ),
-        }))}
-        value={htmlRenderMode}
-        onChange={(value) => dispatch(setHtmlRenderMode(value))}
-      />
-
-      <div className="ml-4 flex flex-col gap-2">
-        <ProfilePreferenceSwitch
-          label={t(
-            "user_settings.chat_preferences.html_render.external_references.label",
-          )}
-          description={t(
-            "user_settings.chat_preferences.html_render.external_references.description",
-          )}
-          checked={htmlLoadExternal}
-          onChange={(checked) => dispatch(setHtmlLoadExternal(checked))}
-        />
-
-        <SegmentedPreference
-          label={t(
-            "user_settings.chat_preferences.html_render.sanitization.label",
-          )}
-          description={t(
-            `user_settings.chat_preferences.html_render.sanitization.options.${selectedSanitizationOption.key}.description`,
-          )}
-          options={HTML_SANITIZATION_OPTIONS.map((option) => ({
-            value: option.value,
-            label: t(
-              `user_settings.chat_preferences.html_render.sanitization.options.${option.key}.label`,
-            ),
-          }))}
-          value={htmlSanitization}
-          onChange={(value) => dispatch(setHtmlSanitization(value))}
-        />
-      </div>
-    </section>
-  );
-}
-
-function SegmentedPreference({ label, description, options, value, onChange }) {
-  return (
-    <div className="flex min-h-14 w-full items-center justify-between gap-4 rounded-lg px-2 py-2">
+    <section className="flex flex-col gap-3">
       <div className="min-w-0">
-        <span className="block text-sm font-medium text-gray-800 dark:text-gray-100">
-          {label}
-        </span>
-        {description && (
-          <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-            {description}
-          </span>
-        )}
+        <h3
+          id="global-html-preview-label"
+          className="text-sm font-medium text-gray-900 dark:text-white"
+        >
+          {t("user_settings.chat_preferences.html_render.label")}
+        </h3>
+        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+          {t("user_settings.chat_preferences.html_render.description")}
+        </p>
       </div>
+
       <div
         role="group"
-        aria-label={label}
-        className="flex shrink-0 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60"
+        aria-labelledby="global-html-preview-label"
+        className="grid min-h-10 grid-cols-3 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60"
       >
-        {options.map((option) => {
-          const selected = option.value === value;
+        {HTML_PREVIEW_OPTIONS.map((option) => {
+          const selected = option === mode;
           return (
             <button
-              key={option.value}
+              key={option}
               type="button"
               aria-pressed={selected}
-              onClick={() => onChange(option.value)}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
+              onClick={() => dispatch(setHtmlPreview(option))}
+              className={`min-w-0 rounded-md px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
                 selected
                   ? "bg-white text-tertiary shadow-sm dark:bg-gray-700 dark:text-white"
                   : "text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white"
               }`}
             >
-              {option.label}
+              <span className="block truncate">
+                {t(
+                  `user_settings.chat_preferences.html_render.options.${option}.label`,
+                )}
+              </span>
             </button>
           );
         })}
       </div>
-    </div>
+
+      <p className="text-xs text-gray-500 dark:text-gray-400" aria-live="polite">
+        {t(`user_settings.chat_preferences.html_render.options.${mode}.description`)}
+      </p>
+    </section>
   );
 }
 
