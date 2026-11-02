@@ -1,14 +1,16 @@
 // userMemorySlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
+// off: show code only · static: preview without scripts · ask: static
+// preview plus a per-block "Run" button
+export const HTML_PREVIEW_MODES = ["off", "static", "ask"];
+
 const initialState = {
   memories: [],
   timeout: 300000,
   memory_mode: 0,
   suggest_user_prompts: false,
-  html_render_mode: "render",
-  html_load_external: false,
-  html_sanitization: "strict",
+  html_preview: "static",
   set_title_once: true,
   render_typst: true,
   render_latex: true,
@@ -71,21 +73,9 @@ const userSettingsSlice = createSlice({
       state.suggest_user_prompts = Boolean(action.payload);
     },
 
-    setHtmlRenderMode: (state, action) => {
-      const mode = action.payload;
-      if (["render", "code", "off"].includes(mode)) {
-        state.html_render_mode = mode;
-      }
-    },
-
-    setHtmlLoadExternal: (state, action) => {
-      state.html_load_external = Boolean(action.payload);
-    },
-
-    setHtmlSanitization: (state, action) => {
-      const mode = action.payload;
-      if (["strict", "relaxed"].includes(mode)) {
-        state.html_sanitization = mode;
+    setHtmlPreview: (state, action) => {
+      if (HTML_PREVIEW_MODES.includes(action.payload)) {
+        state.html_preview = action.payload;
       }
     },
 
@@ -131,9 +121,8 @@ const userSettingsSlice = createSlice({
 export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
-  setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
-  setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
-  setRenderLatex, setDocumentConversionMode
+  setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlPreview,
+  setSetTitleOnce, setRenderTypst, setRenderLatex, setDocumentConversionMode
 } = userSettingsSlice.actions;
 
 // Selectors
@@ -146,15 +135,9 @@ export const selectMemoryMode = (state) => {
 };
 export const selectSuggestUserPrompts = (state) =>
   state.user_settings.suggest_user_prompts ?? false;
-export const selectHtmlRenderMode = (state) => {
-  const mode = state.user_settings.html_render_mode;
-  return ["render", "code", "off"].includes(mode) ? mode : "render";
-};
-export const selectHtmlLoadExternal = (state) =>
-  state.user_settings.html_load_external ?? false;
-export const selectHtmlSanitization = (state) => {
-  const mode = state.user_settings.html_sanitization;
-  return ["strict", "relaxed"].includes(mode) ? mode : "strict";
+export const selectHtmlPreview = (state) => {
+  const mode = state.user_settings.html_preview;
+  return HTML_PREVIEW_MODES.includes(mode) ? mode : "static";
 };
 export const selectSetTitleOnce = (state) =>
   state.user_settings.set_title_once ?? true;

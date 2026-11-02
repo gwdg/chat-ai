@@ -1,15 +1,14 @@
 import { useState, useEffect, memo } from "react";
-import { useSelector } from "react-redux";
 import mermaid from "mermaid";
 import DOMPurify from "dompurify";
-import { selectHtmlLoadExternal } from "../../../Redux/reducers/userSettingsReducer";
 import { sanitizeExternalRefs } from "../../../utils/externalRefs";
 
 // Initialize mermaid once
 mermaid.initialize({ startOnLoad: false, theme: "forest" });
 
 const MermaidDiagram = memo(({ content }) => {
-  const loadExternal = useSelector(selectHtmlLoadExternal);
+  // Diagrams never load external references (images/links to other hosts).
+  const loadExternal = false;
   const [svg, setSvg] = useState(null);
   const [error, setError] = useState(false);
 

@@ -199,8 +199,13 @@ export default {
     copy_reasoning: "Copy reasoning process",
     action: "Action",
     html_block: {
-      render: "Render HTML",
+      render: "Preview",
       show_code: "Show code",
+      static_hint: "Preview without scripts",
+      run: "Run scripts",
+      run_session: "Run all this session",
+      stop: "Stop scripts",
+      open_link: "Open this link in a new tab?\n\n{{url}}",
     },
     typst_block: {
       render: "Render as Typst",
@@ -332,46 +337,23 @@ export default {
         },
       },
       html_render: {
-        label: "Render HTML blocks",
+        label: "HTML previews",
         description:
-          "Choose how HTML fenced blocks in responses are shown by default.",
+          "How html code blocks in responses are shown. Previews are isolated from the app and cannot load anything from the network.",
         options: {
-          render: {
-            label: "Render",
-            description:
-              "Render HTML blocks as live content. You can still switch to code per block.",
-          },
-          code: {
-            label: "Code",
-            description:
-              "Show HTML blocks as code by default. You can still render them per block.",
-          },
           off: {
             label: "Off",
-            description:
-              "Do not render HTML blocks automatically. They start as code; you can still render them per block.",
+            description: "Always show HTML blocks as code.",
           },
-        },
-        external_references: {
-          label: "Load external references",
-          description:
-            "Allow HTML blocks to load images and links from external hosts. Off by default: when disabled, external references are removed so the browser only contacts this server.",
-        },
-        sanitization: {
-          label: "Sanitization",
-          description:
-            "Control how strictly HTML blocks are sanitized before being rendered.",
-          options: {
-            strict: {
-              label: "Strict",
-              description:
-                "Block interactive and scriptable HTML (buttons, forms, iframes, scripts, inline styles). Safest for untrusted content.",
-            },
-            relaxed: {
-              label: "Relaxed",
-              description:
-                "Allow interactive HTML with JavaScript (buttons, forms, iframes, scripts, inline styles). Warning: model output can execute code — only enable if you trust the source.",
-            },
+          static: {
+            label: "Preview",
+            description:
+              "Show a preview with scripts disabled. Safe for any content.",
+          },
+          ask: {
+            label: "Preview + run",
+            description:
+              "Like Preview, plus a button to run a block's scripts. Run only code you trust: scripts cannot reach the app or the network, but could still send data out by navigating their frame.",
           },
         },
       },
