@@ -161,15 +161,17 @@ app.get("/models", async (req, res) => {
 app.get("/user", async (req, res) => {
   try {
     res.status(200).json({
-      email: "tets.user@gwdg.de",
-      firstname: "Test",
+      email: "user@example.com",
+      firstname: "Sample",
       lastname: "User",
       org: "GWD",
       organization: "GWDG",
-      username: "Test user",
+      username: "sample-user",
       max_api_keys: 10,
       max_api_keys_per_day: 10,
-      is_ai_admin: true,
+      // Placeholder data must never grant admin rights. Real user data comes
+      // from the gateway in a deployment.
+      is_ai_admin: false,
       external: {
         rate_limits: {
           requests: {
@@ -462,19 +464,28 @@ app.post("/chat/completions", async (req, res) => {
   }
 
   // ----- TEST MODE -----
-  // With testMode enabled in back.json, no upstream call is made. We print the
-  // user input to the console and synthesise a response. When any tool is
-  // requested, we return a sophisticated JSON form via a "<tool>.form" event.
+  // With testMode enabled in back.json, no upstream call is made. We log only
+  // request metadata (never message content or tool arguments) and synthesise
+  // a response. When any tool is requested, we return a sophisticated JSON form
+  // via a "<tool>.form" event.
   if (testMode) {
+    const toolNames = Array.isArray(tools)
+      ? tools.map((tool) => tool?.function?.name || tool?.type || "unknown")
+      : [];
+    const messageSummary = (messages || []).map((message) => ({
+      role: message?.role,
+      contentLength:
+        typeof message?.content === "string" ? message.content.length : 0,
+      hasToolCalls: Array.isArray(message?.tool_calls),
+    }));
+
     console.log("\n=== TEST MODE: incoming /chat/completions request ===");
     console.log("model:", model);
     console.log("enable_tools:", enable_tools);
-    console.log("tools:", JSON.stringify(tools, null, 2));
+    console.log("tools:", toolNames);
     console.log("stream:", stream);
-    console.log("messages:");
-    for (const m of messages || []) {
-      console.log(JSON.stringify(m, null, 2));
-    }
+    console.log("messageCount:", messageSummary.length);
+    console.log("messages:", JSON.stringify(messageSummary, null, 2));
     console.log("=== END OF REQUEST ===\n");
 
     const hasTools = !!enable_tools && Array.isArray(tools) && tools.length > 0;

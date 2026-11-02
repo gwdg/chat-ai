@@ -233,9 +233,12 @@ code. Every block keeps a "Render as Typst" / "Show code" toggle regardless of t
 preference only selects the default view. The selector defaults the flag to `true` so existing
 persisted settings without the key keep rendering.
 
-**Resources and security.** The WASM modules are served from the app's own build output. typst.ts
-fetches its default text fonts from jsDelivr at runtime unless `assetUrlPrefix`/`loadFonts` is
-configured, so rendering needs network access to that CDN. Model output is untrusted: the SVG is
+**Resources and security.** The WASM modules are served from the app's own build output. The
+default text fonts are vendored in `front/public/typst-assets/` (from
+`typst/typst-assets@v0.13.1`, with its LICENSE/NOTICE) and `TypstBlock.jsx` passes
+`loadFonts([], { assets: ["text"], assetUrlPrefix: ... })` so typst.ts does not add its jsDelivr
+font loader. The `assets` option must stay set, otherwise typst.ts appends its own remote loader.
+Model output is untrusted: the SVG is
 sanitised with DOMPurify's SVG profile plus `ADD_TAGS: ["use"]` (the profile otherwise drops
 `<use>`, which Typst uses to reuse glyphs), and `data_selection.js` is disabled.
 
@@ -304,7 +307,10 @@ package is GPL-3.0+.
   page. `SafeMarkdown` is safe only because it leaves `rehype-raw` off, so react-markdown drops
   raw HTML nodes. To *show* raw HTML instead of dropping it, convert mdast `html` nodes to `text`
   (`remarkHtmlAsText` in `ThinkingBlock.jsx`) — that leaves code fences alone, since fenced and
-  inline code are their own node types.
+  inline code are their own node types. External references in rendered model output are blocked
+  by default (`html_load_external: false`): `utils/externalRefs.js` drops external URL attributes
+  during sanitisation, and `MarkdownImage` / `MermaidDiagram` apply the same policy so a reply
+  cannot make the browser contact third-party hosts unless the user opts in.
 - CONTRIBUTING.md asks that files and folders follow the structure of the existing ones; keep
   components in the folder of the screen area they belong to.
 

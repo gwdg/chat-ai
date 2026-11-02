@@ -355,7 +355,7 @@ export default {
         external_references: {
           label: "Externe Referenzen laden",
           description:
-            "Erlaubt HTML-Blöcken, Bilder und Links von externen Hosts zu laden. Für mehr Privatsphäre deaktivieren (externe Referenzen werden entfernt).",
+            "Erlaubt HTML-Blöcken, Bilder und Links von externen Hosts zu laden. Standardmäßig aus: Ist die Option deaktiviert, werden externe Referenzen entfernt, sodass der Browser nur diesen Server kontaktiert.",
         },
         sanitization: {
           label: "Bereinigung",

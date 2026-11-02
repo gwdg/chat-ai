@@ -47,7 +47,7 @@ const getDefaultState = () => {
       memory_mode: 0,
       suggest_user_prompts: false,
       html_render_mode: "render",
-      html_load_external: true,
+      html_load_external: false,
       html_sanitization: "strict",
       set_title_once: true,
       render_typst: true,
