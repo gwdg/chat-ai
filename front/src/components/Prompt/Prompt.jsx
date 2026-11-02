@@ -13,6 +13,9 @@ import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
 
 import { useSendMessage } from "../../hooks/useSendMessage";
+import { loadFileMeta } from "../../db";
+import { getFileType } from "../../utils/attachments";
+import { useModal } from "../../modals/ModalContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import UndoButton from "../Conversation/UndoButton";
 
@@ -23,6 +26,7 @@ export default function Prompt({
   modelsData,
 }) {
   const sendMessage = useSendMessage();
+  const { openModal } = useModal();
   const [shouldSend, setShouldSend] = useState(false);
   const [ignoreChanges, setIgnoreChanges] = useState(false);
   const lastMessage = localState.messages[localState.messages.length - 1];
@@ -79,11 +83,26 @@ export default function Prompt({
     debouncedSave();
   };
   
+  const hasUnprocessedFile = async () => {
+    for (const attachment of attachments) {
+      if (attachment?.type !== "file" || !attachment.fileId) continue;
+      const meta = await loadFileMeta(attachment.fileId);
+      if (!meta) continue;
+      const fileType = getFileType(meta);
+      if (fileType === "pdf" || fileType === "docx") return true;
+    }
+    return false;
+  };
+
   // Handle form submission with prompt and files
   const handleSend = async (event, nextPrompt) => {
       event.preventDefault();
       const promptToSend = typeof nextPrompt === "string" ? nextPrompt : prompt;
       if (promptToSend?.trim() === "" && attachments.length === 0) return;
+      if (await hasUnprocessedFile()) {
+        openModal("unprocessedFiles");
+        return;
+      }
       debouncedSave.cancel();
       savePrompt(promptToSend, { clearChoices: true });
       setShouldSend(true);

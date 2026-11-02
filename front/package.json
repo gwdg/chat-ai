@@ -62,7 +62,9 @@
     "@myriaddreamin/typst-ts-web-compiler": "^0.7.0",
     "@myriaddreamin/typst.ts": "^0.7.0",
     "@rod2ik/tikzjax": "1.6.0",
-    "faster-latex": "^0.1.0"
+    "faster-latex": "^0.1.0",
+    "@hyzyla/pdfium": "^3.0.0",
+    "mammoth": "^1.13.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

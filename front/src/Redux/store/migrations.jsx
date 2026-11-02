@@ -75,6 +75,23 @@ export const migrations = {
     state.interface_settings.show_tour = true;
     state.interface_settings.collapsed_topics = [];
     console.log("Migrating redux to v3")
+  },
+  4: (state) => {
+    state.user_settings = {
+      ...state.user_settings,
+      browser_document_conversion:
+        state.user_settings?.browser_document_conversion ?? true,
+    };
+    console.log("Migrating redux to v4");
+  },
+  5: (state) => {
+    const settings = state.user_settings ?? {};
+    settings.document_conversion_mode =
+      settings.document_conversion_mode ??
+      (settings.browser_document_conversion === false ? "server" : "choice");
+    delete settings.browser_document_conversion;
+    state.user_settings = settings;
+    console.log("Migrating redux to v5");
   }
-  // Future migrations here (e.g., 4: (state) => {...})
+  // Future migrations here (e.g., 6: (state) => {...})
 };

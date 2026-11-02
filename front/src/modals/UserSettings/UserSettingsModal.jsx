@@ -17,6 +17,7 @@ import UserInfoContainer from "./UserInfoContainer";
 import TimeoutSetter from "./TimeoutSetter";
 import UserMemoryContainer from "./UserMemoryContainer";
 import {
+  DocumentConversionPreference,
   MemoryPreference,
   RenderingPreferences,
   SuggestionPreference,
@@ -132,6 +133,9 @@ export default function UserSettingsModal({
           )}
           <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
             <RenderingPreferences />
+          </div>
+          <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+            <DocumentConversionPreference />
           </div>
           {choicesModule && (
             <div className="border-t border-gray-200 pt-5 dark:border-gray-700">

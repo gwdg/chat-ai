@@ -294,6 +294,18 @@ Both are data-tolerant (optional chaining), but the simple selector has no metad
 view modes. Add new model fields to `types/models.ts` and both selectors if they affect both
 variants.
 
+### 4.13 Document conversion can run in the browser or on the server
+
+`utils/browserDocumentConversion.js` converts `pdf` (PDFium WASM via `@hyzyla/pdfium`) and `docx`
+(`mammoth`) locally. `user_settings.document_conversion_mode` is `"server"`, `"browser"`, or
+`"choice"` (default). `Prompt/Attachment.jsx` renders one Process button for the fixed modes and
+two for `"choice"`; the browser path is only used when that file type is supported, otherwise it
+calls the `back` `/documents/convert/file` endpoint. Redux migration 5 maps the previous boolean
+`browser_document_conversion` flag (`false` → `"server"`, otherwise `"choice"`). PDF text extraction
+runs in the package's blob worker first; if the worker cannot be created (for example under a strict
+CSP) it retries on the main thread. The PDFium WASM is imported with `?url` so Vite emits it as an
+app asset.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

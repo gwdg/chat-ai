@@ -19,6 +19,8 @@ import {
   setHtmlLoadExternal,
   selectHtmlSanitization,
   setHtmlSanitization,
+  selectDocumentConversionMode,
+  setDocumentConversionMode,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
@@ -38,6 +40,12 @@ const HTML_RENDER_OPTIONS = [
 const HTML_SANITIZATION_OPTIONS = [
   { value: "strict", key: "strict" },
   { value: "relaxed", key: "relaxed" },
+];
+
+const DOCUMENT_CONVERSION_OPTIONS = [
+  { value: "server", key: "server" },
+  { value: "browser", key: "browser" },
+  { value: "choice", key: "choice" },
 ];
 
 export function MemoryPreference() {
@@ -266,6 +274,35 @@ function SegmentedPreference({ label, description, options, value, onChange }) {
         })}
       </div>
     </div>
+  );
+}
+
+export function DocumentConversionPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const documentConversionMode = useSelector(selectDocumentConversionMode);
+  const selectedOption =
+    DOCUMENT_CONVERSION_OPTIONS.find(
+      (option) => option.value === documentConversionMode,
+    ) ?? DOCUMENT_CONVERSION_OPTIONS[2];
+
+  return (
+    <section className="flex flex-col gap-2">
+      <SegmentedPreference
+        label={t("user_settings.chat_preferences.document_conversion.label")}
+        description={t(
+          `user_settings.chat_preferences.document_conversion.options.${selectedOption.key}.description`,
+        )}
+        options={DOCUMENT_CONVERSION_OPTIONS.map((option) => ({
+          value: option.value,
+          label: t(
+            `user_settings.chat_preferences.document_conversion.options.${option.key}.label`,
+          ),
+        }))}
+        value={documentConversionMode}
+        onChange={(value) => dispatch(setDocumentConversionMode(value))}
+      />
+    </section>
   );
 }
 
