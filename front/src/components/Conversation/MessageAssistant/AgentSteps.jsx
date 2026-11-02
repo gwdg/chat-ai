@@ -67,7 +67,7 @@ export default function AgentSteps({ agentMessages, isLoading, renderMode }) {
   flush();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1">
       {segments.map((segment, i) =>
         segment.kind === "tool" ? (
           <ToolCall key={segment.call.id ?? i} call={segment.call} result={segment.result} />

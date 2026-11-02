@@ -44,7 +44,7 @@ const ThinkingBlock = memo(
     }, [autoExpand, isStreaming, autoOpened]);
 
     return (
-      <div className="my-4 rounded-lg border border-tertiary">
+      <div className="my-1 rounded-lg border border-tertiary">
         <div className="flex items-center w-full rounded-t-lg text-xs bg-blue-50 dark:bg-blue-900/30">
           <button
             onClick={() => {
@@ -53,16 +53,16 @@ const ThinkingBlock = memo(
                 setAutoOpened(false);
               }
             }}
-            className="cursor-pointer flex flex-1 items-center p-3 rounded-tl-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
+            className="cursor-pointer flex flex-1 items-center gap-2 px-2 py-1 rounded-tl-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
             aria-expanded={isOpen}
             aria-controls="thinking-content"
             disabled={isStreaming}
           >
-            {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            <Brain size={16} className="ml-2 mr-2" />
-            <span className="flex items-center gap-2"><Trans i18nKey="conversation.reasoning" /></span>
+            {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            <Brain size={12} />
+            <span><Trans i18nKey="conversation.reasoning" /></span>
           </button>
-          <div className="shrink-0 pr-3">
+          <div className="shrink-0 pr-2 flex items-center">
             <CopyButton
               text={children || ""}
               title={t("conversation.copy_reasoning")}
@@ -73,7 +73,7 @@ const ThinkingBlock = memo(
           <div
             id="thinking-content"
             ref={contentRef}
-            className="p-3 text-xs bg-blue-50/50 dark:bg-blue-900/20 rounded-b-lg"
+            className="px-2 py-1.5 text-xs bg-blue-50/50 dark:bg-blue-900/20 rounded-b-lg"
             aria-live="polite"
             aria-busy={isStreaming ? "true" : "false"}
           >
