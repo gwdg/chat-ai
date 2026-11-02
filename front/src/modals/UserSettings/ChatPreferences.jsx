@@ -36,7 +36,6 @@ const HTML_PREVIEW_OPTIONS = ["off", "static", "ask"];
 const DOCUMENT_CONVERSION_OPTIONS = [
   { value: "server", key: "server" },
   { value: "browser", key: "browser" },
-  { value: "choice", key: "choice" },
 ];
 
 export function MemoryPreference() {

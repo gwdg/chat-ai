@@ -14,7 +14,7 @@ const initialState = {
   set_title_once: true,
   render_typst: true,
   render_latex: true,
-  document_conversion_mode: "choice",
+  document_conversion_mode: "browser",
 };
 
 const userSettingsSlice = createSlice({
@@ -93,7 +93,7 @@ const userSettingsSlice = createSlice({
 
     setDocumentConversionMode: (state, action) => {
       const mode = action.payload;
-      if (["server", "browser", "choice"].includes(mode)) {
+      if (["server", "browser"].includes(mode)) {
         state.document_conversion_mode = mode;
       }
     },
@@ -147,7 +147,8 @@ export const selectRenderLatex = (state) =>
   state.user_settings.render_latex ?? true;
 export const selectDocumentConversionMode = (state) => {
   const mode = state.user_settings.document_conversion_mode;
-  return ["server", "browser", "choice"].includes(mode) ? mode : "choice";
+  // The former per-document "choice" mode now reads as browser.
+  return mode === "server" ? "server" : "browser";
 };
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;

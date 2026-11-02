@@ -1,7 +1,7 @@
 import { Trans, useTranslation } from "react-i18next";
 import { useAttachments } from "../../hooks/useAttachments";
 import MiniAudioButton from "./MiniAudioButton";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useModal } from "../../modals/ModalContext";
 import {
   useFileMeta,
@@ -9,7 +9,7 @@ import {
   loadFile,
   saveFile,
 } from "../../db";
-import { WarningAltFilled, Close, Video, DocumentBlank } from "@carbon/icons-react";
+import { WarningAltFilled, Close, Video, DocumentBlank, Settings } from "@carbon/icons-react";
 import { useSelector } from "react-redux";
 import { processFile } from "../../apis/processFile";
 import { getFileType } from "../../utils/attachments";
@@ -43,6 +43,72 @@ export default function Attachment({
   const isAudio = file?.type?.startsWith("audio/");
   const base64 = useFileBase64((isImage || isAudio) ? attachment.fileId : null);
   const prepareStatus = usePrepareStatus(attachment.fileId);
+  // PDF/DOCX attachments are converted to markdown automatically, with the
+  // method from the settings; the card lets the user switch for this document.
+  const [conversionMethod, setConversionMethod] = useState(null);
+  const [conversionFailed, setConversionFailed] = useState(false);
+  const conversionRun = useRef(0);
+  const agentModeEarly = isAgentEnabled();
+  const needsConversion =
+    !!file && !agentModeEarly && !inHistory && ["pdf", "docx"].includes(getFileType(file));
+
+  const startConversion = async (method) => {
+    const run = ++conversionRun.current;
+    const fileType = getFileType(file);
+    setConversionMethod(method);
+    setConversionFailed(false);
+    setIsProcessing(true);
+    let response = null;
+    try {
+      const rawFile = await loadFile(attachment.fileId);
+      response =
+        method === "browser" && canConvertDocumentLocally(fileType)
+          ? await convertDocumentLocally(rawFile, fileType)
+          : await processFile(rawFile);
+    } catch (error) {
+      console.warn("Document conversion failed:", error);
+    }
+    // A newer attempt (user switched method) supersedes this one
+    if (run !== conversionRun.current) return;
+    setIsProcessing(false);
+    if (!response?.content) {
+      setConversionFailed(true);
+      notifyError(t("conversation.attachment.convert_failed"));
+      return;
+    }
+    notifySuccess("File processed successfully");
+    // Save as markdown file and replace the attachment with it
+    const processedFile = new File([response.content], file.name + ".md", {
+      type: "text/markdown",
+    });
+    const processedFileId = saveFile(
+      localState.messages[localState.messages.length - 1].id,
+      processedFile
+    );
+    // TODO handle when attachments are added/removed during processing
+    setLocalState((prev) => {
+      const messages = [...prev.messages]; // shallow copy
+      messages[messages.length - 1].content[index + 1] = {
+        type: "file",
+        fileId: processedFileId,
+      };
+      return { ...prev, messages };
+    });
+  };
+
+  useEffect(() => {
+    if (needsConversion && conversionRun.current === 0) {
+      startConversion(documentConversionMode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsConversion]);
+
+  const otherMethod = conversionMethod === "server" ? "browser" : "server";
+  const openConversionSettings = (e) => {
+    e.stopPropagation();
+    openModal("userSettings", { localState, initialTab: "chat" });
+  };
+
   if (!file) return ""; // TODO placeholder file
   const fileType = getFileType(file); // Get readable file type, e.g., "image"
   const model = localState.settings.model;
@@ -69,41 +135,6 @@ export default function Attachment({
       index,
     });
   };
-  // Handle Process File
-  const handleProcessFile = async (useBrowser = documentConversionMode !== "server") => {
-    setIsProcessing(true);
-    const rawFile = await loadFile(attachment.fileId);
-    const response =
-      useBrowser && canConvertDocumentLocally(fileType)
-        ? await convertDocumentLocally(rawFile, fileType)
-        : await processFile(rawFile);
-    setIsProcessing(false);
-    if (!response?.content) {
-      notifyError("Error processing file");
-      return;
-    } else {
-      notifySuccess("File processed successfully");
-    }
-    // Save as markdown file and add to attachments
-    const processedFile = new File([response.content], file.name + ".md", {
-      type: "text/markdown",
-    });
-    const processedFileId = saveFile(
-      localState.messages[localState.messages.length - 1].id,
-      processedFile
-    );
-    // Replace current file with processed file
-    // TODO success toast, TODO handle when attachments are added/removed during process
-    setLocalState((prev) => {
-      const messages = [...prev.messages]; // shallow copy
-      messages[messages.length - 1].content[index + 1] = {
-        type: "file",
-        fileId: processedFileId,
-      };
-      return { ...prev, messages };
-    });
-  };
-
   // Convert file size from bytes to human-readable format (e.g., KB, MB, GB)
   function formatFileSize(bytes) {
     if (!bytes) return "NaN";
@@ -226,76 +257,61 @@ export default function Attachment({
             </span>
           </div>
 
-          <div className="mt-1 flex-1">
-            {isProcessing ? (
-              <div
-                className="flex h-full min-h-5 w-full items-center justify-center gap-1 rounded-sm
-                bg-gradient-to-r from-amber-700 to-orange-700 py-0.5 text-xs leading-tight text-white"
-              >
-                <svg
-                  className="animate-spin h-3 w-3"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-              </div>
-            ) : (
-              <div
-                className={`grid gap-1 ${documentConversionMode === "choice" ? "grid-cols-2" : "grid-cols-1"}`}
-              >
-                {documentConversionMode !== "server" && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleProcessFile(true);
-                    }}
-                    className="py-0.5 leading-tight bg-gradient-to-r from-amber-500 to-orange-600
-                  hover:from-amber-600 hover:to-orange-700 text-white 
-                  rounded-sm text-[10px] font-semibold shadow-md shadow-yellow-500/30
-                  transition duration-200 ease-in-out text-center"
-                  >
-                    {t("conversation.attachment.process_browser")}
-                  </button>
-                )}
-                {documentConversionMode !== "browser" && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleProcessFile(false);
-                    }}
-                    className="py-0.5 leading-tight bg-gradient-to-r from-amber-500 to-orange-600
-                    hover:from-amber-600 hover:to-orange-700 text-white
-                    rounded-sm text-[10px] font-semibold shadow-md shadow-yellow-500/30
-                    transition duration-200 ease-in-out text-center"
-                  >
-                    {t("conversation.attachment.process_server")}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-1 flex items-center justify-between gap-1 leading-tight">
-            <span className="flex min-w-0 items-center gap-1 text-[10px] text-yellow-700 dark:text-yellow-400">
-              <WarningAltFilled size={10} className="flex-shrink-0" />
+          <div className="mt-1 flex flex-1 flex-col justify-center gap-0.5 text-[10px] leading-tight">
+            <span
+              className={`flex items-center gap-1 ${
+                conversionFailed
+                  ? "text-red-700 dark:text-red-300"
+                  : "text-yellow-800 dark:text-yellow-300"
+              }`}
+            >
+              {conversionFailed ? (
+                <WarningAltFilled size={10} className="flex-shrink-0" />
+              ) : (
+                <span className="h-2 w-2 flex-shrink-0 rounded-full bg-amber-600 animate-pulse" />
+              )}
               <span className="truncate">
-                {t("conversation.attachment.must_process")}
+                {conversionFailed
+                  ? t("conversation.attachment.convert_failed")
+                  : t(`conversation.attachment.converting_${conversionMethod ?? documentConversionMode}`)}
               </span>
             </span>
+            <span className="flex items-center gap-2">
+              {conversionFailed && (
+                <button
+                  type="button"
+                  className="font-semibold text-amber-800 underline hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startConversion(conversionMethod ?? documentConversionMode);
+                  }}
+                >
+                  {t("conversation.attachment.retry")}
+                </button>
+              )}
+              <button
+                type="button"
+                className="truncate text-amber-800 underline hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startConversion(otherMethod);
+                }}
+              >
+                {t(`conversation.attachment.use_${otherMethod}`)}
+              </button>
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-1 leading-tight">
+            <button
+              type="button"
+              className="rounded p-0.5 text-yellow-800 hover:bg-white/50 dark:text-yellow-300 dark:hover:bg-black/30"
+              onClick={openConversionSettings}
+              title={t("conversation.attachment.conversion_settings")}
+              aria-label={t("conversation.attachment.conversion_settings")}
+            >
+              <Settings size={12} />
+            </button>
             <span
               className={`shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded-full
                 bg-red-500/30 dark:bg-red-800/30 text-red-800 dark:text-red-200

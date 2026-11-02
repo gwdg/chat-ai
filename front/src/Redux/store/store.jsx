@@ -51,7 +51,7 @@ const getDefaultState = () => {
       set_title_once: true,
       render_typst: true,
       render_latex: true,
-      document_conversion_mode: "choice",
+      document_conversion_mode: "browser",
     },
   };
 };

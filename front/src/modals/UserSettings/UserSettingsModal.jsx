@@ -77,6 +77,7 @@ export default function UserSettingsModal({
   userData,
   modelsData,
   localState,
+  initialTab,
 }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
@@ -88,8 +89,8 @@ export default function UserSettingsModal({
     PROFILE_TABS.find((tab) => tab.id === activeTab) ?? PROFILE_TABS[0];
 
   useEffect(() => {
-    if (isOpen) setActiveTab("profile");
-  }, [isOpen]);
+    if (isOpen) setActiveTab(initialTab ?? "profile");
+  }, [isOpen, initialTab]);
 
   const handleExportData = async () => {
     try {

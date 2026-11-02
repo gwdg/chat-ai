@@ -199,9 +199,13 @@ export default {
       audio_unsupported: "Switch model to process audio",
       file_unsupported: "Switch model to process {{filetype}}",
       unprocessed: "Unprocessed file",
-      process_browser: "Process (browser)",
-      process_server: "Process (server)",
-      must_process: "File must be processed",
+      converting_browser: "Converting in browser…",
+      converting_server: "Converting on server…",
+      use_server: "Use server instead",
+      use_browser: "Use browser instead",
+      convert_failed: "Conversion failed",
+      retry: "Retry",
+      conversion_settings: "Document conversion settings",
       transcript_of: "Transcript of {{name}}",
       converting: "Converting…",
       transcribing: "Transcribing…",
@@ -393,11 +397,6 @@ export default {
             label: "Browser only",
             description:
               "Always process attached PDF and DOCX files locally in your browser.",
-          },
-          choice: {
-            label: "By choice",
-            description:
-              "Choose per document whether it is processed in the browser or on the server.",
           },
         },
       },

@@ -195,9 +195,13 @@ export default {
       audio_unsupported: "Modell wechseln, um Audio zu verarbeiten",
       file_unsupported: "Nur mit {{filetype}}-Modell nutzbar",
       unprocessed: "Unverarbeitete Datei",
-      process_browser: "Im Browser verarbeiten",
-      process_server: "Auf dem Server verarbeiten",
-      must_process: "Datei muss verarbeitet werden",
+      converting_browser: "Wird im Browser konvertiert…",
+      converting_server: "Wird auf dem Server konvertiert…",
+      use_server: "Stattdessen Server nutzen",
+      use_browser: "Stattdessen Browser nutzen",
+      convert_failed: "Konvertierung fehlgeschlagen",
+      retry: "Erneut versuchen",
+      conversion_settings: "Einstellungen zur Dokumentkonvertierung",
       transcript_of: "Transkript von {{name}}",
       converting: "Wird konvertiert…",
       transcribing: "Wird transkribiert…",
@@ -396,11 +400,6 @@ export default {
             label: "Nur Browser",
             description:
               "Angehängte PDF- und DOCX-Dateien immer lokal im Browser verarbeiten.",
-          },
-          choice: {
-            label: "Nach Wahl",
-            description:
-              "Legen Sie für jedes Dokument fest, ob es im Browser oder auf dem Server verarbeitet wird.",
           },
         },
       },
