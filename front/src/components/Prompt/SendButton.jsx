@@ -3,6 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { useToast } from "../../hooks/useToast";
 import { useSendMessage } from "../../hooks/useSendMessage";
 import { Send, SendFilled } from "@carbon/icons-react";
+import { isTouchInput } from "../../utils/inputMode";
 
 export default function SendButton({localState, setLocalState, handleSend, prompt}) {
     const { t, i18n } = useTranslation();
@@ -36,11 +37,11 @@ export default function SendButton({localState, setLocalState, handleSend, promp
     const isSafe = isSafeSettings(localState);
 
     return !loading && ( (prompt !== "" || attachments.length > 0)  ? (
-         <Tooltip text={t("common.send_shortcut")}>
+         <Tooltip text={t(isTouchInput() ? "common.send_shortcut" : "common.send")}>
             <SendFilled size={28} className={"cursor-pointer " + (isSafe ? "text-green-600" : "text-yellow-600")} onClick={handleSend} />
         </Tooltip>
     ) : (
-        <Tooltip text={t("common.send_shortcut")}>
+        <Tooltip text={t(isTouchInput() ? "common.send_shortcut" : "common.send")}>
             <SendFilled size={28} className={"opacity-10 " + (isSafe ? "text-green-600" : "text-yellow-600")} />
         </Tooltip>
     ))
