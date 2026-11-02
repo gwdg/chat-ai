@@ -37,6 +37,8 @@ export type ConversationRow = {
   summaryUpdatedAt?: number
   summarySourceHash?: string
   lastOpenedAt?: number
+  // Ephemeral Meta chat row: hidden from the sidebar and normal summaries.
+  isMetaChat?: boolean
 }
 
 export type HydratedConversation = ConversationRow & {

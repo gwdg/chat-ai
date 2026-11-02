@@ -315,6 +315,22 @@ only appear in their own mode; the topic-creation/unsorted rows only appear in t
 It is in `interfaceSettingsSlice`'s `initialState` and `getDefaultState()`; an old persisted state
 without the key falls back to `"topic"` in the selector, so no migration is needed.
 
+### 4.16 Meta chat works from conversation summaries, not messages
+
+The AI icon in the sidebar header navigates to `/meta`, rendered by
+`Pages/MetaChatPage.jsx`. The page reuses the normal chat shell (`Header`, `SidebarWrapper`,
+`Conversation`, `Prompt`) and provides `MetaChatSendContext`, which `useSendMessage` delegates to
+`useMetaChatSend` while inside the page. A banner above the conversation labels it as the Meta chat
+and shows an example question. The sender loads `listConversationMetas()` and `listFolders()`, keeps
+non-empty conversations, and sends each conversation's id, title, topic, summary, and last-modified
+time plus the topic tree to the default model — never the full message history. Missing summaries
+fall back to the title. The model is instructed to reference a chat as `[title](/chat/<id>)`;
+`MarkdownRenderer`'s link component navigates `/chat/...` links inside the SPA. The meta chat is
+stored as a hidden conversation row (`id: "meta-chat"`, `isMetaChat: true`), excluded from the
+sidebar, last-conversation lookup, and its own summary context. `getExportData()` emits it as
+`meta_chat` and `useImportConversation` recreates it silently. Do not make it summarize full
+conversations on the fly without accounting for the extra model calls.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

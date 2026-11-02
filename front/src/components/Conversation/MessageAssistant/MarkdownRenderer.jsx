@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { Code2, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
+import { useNavigate } from "react-router";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -36,6 +37,34 @@ const MarkdownImage = ({ src, alt, ...props }) => {
     return <span className="text-gray-500">{alt || ""}</span>;
   }
   return <img src={src} alt={alt} {...props} />;
+};
+
+// Conversation links produced by the Meta chat navigate inside the SPA.
+const MarkdownLink = ({ href, children }) => {
+  const navigate = useNavigate();
+  const className =
+    "text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline transition-colors text-sm";
+
+  if (typeof href === "string" && /^\/chat\/[A-Za-z0-9-]+$/.test(href)) {
+    return (
+      <a
+        href={href}
+        className={className}
+        onClick={(event) => {
+          event.preventDefault();
+          navigate(href);
+        }}
+      >
+        {children}
+      </a>
+    );
+  }
+
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className={className}>
+      {children}
+    </a>
+  );
 };
 
 /* --------------------------------------------
@@ -92,16 +121,7 @@ export const rendererComponents = {
   },
 
   p: ({ children }) => <div className="text-sm">{children}</div>,
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline transition-colors text-sm"
-    >
-      {children}
-    </a>
-  ),
+  a: MarkdownLink,
   h1: ({ children, id }) => (
     <h1
       className="text-xl font-bold mt-6 mb-4 text-gray-900 dark:text-gray-100"

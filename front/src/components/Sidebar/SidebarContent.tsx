@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 
 import {
+  Ai,
   ArrangeHorizontal,
   Calendar,
   Checkmark,
@@ -675,6 +676,15 @@ export default function SidebarContent({
                 title={t("sorter.button")}
               >
                 <ArrangeHorizontal size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/meta")}
+                className="flex items-center rounded-lg p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer"
+                aria-label={t("meta_chat.open")}
+                title={t("meta_chat.open")}
+              >
+                <Ai size={16} />
               </button>
               <button
                 type="button"

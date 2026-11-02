@@ -1,7 +1,9 @@
+import { useContext } from "react";
 import { useSelector, useDispatch } from "react-redux";  
 import sendMessage from "../utils/sendMessage";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "./useToast";
+import { MetaChatSendContext } from "../context/MetaChatContext";
 import {
   selectAllMemories,
   selectMemoryMode,
@@ -19,6 +21,9 @@ export function useSendMessage() {
   const memoryMode = useSelector(selectMemoryMode);
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
   const setTitleOnce = useSelector(selectSetTitleOnce);
+  const metaSendMessage = useContext(MetaChatSendContext);
+
+  if (metaSendMessage) return metaSendMessage;
 
   // Make this async
   return async ({localState, setLocalState, formSubmission}) => {

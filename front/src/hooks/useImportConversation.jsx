@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
-import { createConversation, ensureFolder, getFolder, newId, saveFile } from "../db";
+import { createConversation, deleteConversation, ensureFolder, getFolder, newId, saveFile } from "../db";
 import { dataURLtoFile } from "../utils/attachments";
 import { selectUserSettings, importUserSettings } from "../Redux/reducers/userSettingsReducer";
 
@@ -114,10 +114,21 @@ export function useImportConversation() {
     );
   }
 
-  const importConversation = async (data, silent = false, topicId = null) => {
-    const conversationId = newId();
+  const importConversation = async (
+    data,
+    silent = false,
+    topicId = null,
+    options = {},
+  ) => {
+    const conversationId = options.metaChat ? "meta-chat" : newId();
     try {
       if (data?.user_settings) dispatch(importUserSettings(data.user_settings));
+      if (data?.meta_chat) {
+        await importConversation(data.meta_chat, true, null, {
+          metaChat: true,
+        });
+        if (!Array.isArray(data.conversations)) return;
+      }
       // Handle multiple conversations import
       if (Array.isArray(data?.conversations)) {
         for (const c of data.conversations) {
@@ -333,6 +344,10 @@ export function useImportConversation() {
         }
       }
 
+      if (options.metaChat) {
+        await deleteConversation("meta-chat");
+      }
+
       // Create new conversation
       const newId = await createConversation(
         {
@@ -341,6 +356,7 @@ export function useImportConversation() {
           messages: sanitizedMessages,
           settings: settings,
           folderId: folderId ?? "__unsorted__",
+          isMetaChat: options.metaChat === true,
         },
       )
 
@@ -348,8 +364,8 @@ export function useImportConversation() {
         throw new Error("Failed to create new conversation");
       }
       console.log("Navigating to new chat");
-      if (!silent) navigate(`/chat/${newId}`, { replace: true });
-      if (!silent) notifySuccess("Chat imported successfully");
+      if (!silent && !options.metaChat) navigate(`/chat/${newId}`, { replace: true });
+      if (!silent && !options.metaChat) notifySuccess("Chat imported successfully");
     } catch (error) {
       console.error("Import error:", error);
       notifyError("Failed to import conversation")

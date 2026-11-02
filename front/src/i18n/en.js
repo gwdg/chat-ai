@@ -163,6 +163,14 @@ export default {
       creative: "Creative work",
     },
   },
+  meta_chat: {
+    title: "Meta chat",
+    open: "Ask about your chats",
+    banner_description:
+      "Ask about your past conversations and topics. For example: “Where is my chat about my food order?” or “Which topic contains my food order chats?”",
+    error: "Could not answer. Please try again.",
+    no_model: "No default model is configured.",
+  },
   // Chat settings
   settings: {
     tools_enabled: "Tools are enabled",

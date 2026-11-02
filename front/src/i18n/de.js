@@ -164,6 +164,14 @@ export default {
       creative: "Kreatives Arbeiten",
     },
   },
+  meta_chat: {
+    title: "Meta-Chat",
+    open: "Chats durchsuchen",
+    banner_description:
+      "Fragen Sie nach Ihren bisherigen Unterhaltungen und Themen. Zum Beispiel: „Wo ist mein Chat über meine Essensbestellung?“ oder „In welchem Thema sind meine Chats zur Essensbestellung?“",
+    error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    no_model: "Kein Standardmodell konfiguriert.",
+  },
   // Settings panel
   settings: {
     tools_enabled: "Werkzeuge sind aktiviert",
