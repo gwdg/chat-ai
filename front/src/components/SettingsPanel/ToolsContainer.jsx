@@ -27,7 +27,9 @@ import VideoList from "./VideoList";
 import { isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 
 // Tools the agent has no counterpart for
-const AGENT_UNAVAILABLE = new Set(["web_search", "video_generation", "arcana", "mcp"]);
+const AGENT_UNAVAILABLE = new Set(["video_generation", "mcp"]);
+// Tools the gateway runs for the agent (agent/gateway.ts); off unless switched on
+const AGENT_OPT_IN = new Set(["web_search", "arcana"]);
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
 
@@ -79,7 +81,9 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const agentMode = isAgentEnabled();
   const agentWithoutTools = agentMode && !modelSupportsTools(settings?.model);
 
-  const showArcanaBox = !agentMode && !!settings?.enable_tools && !!toolsState.arcana;
+  const showArcanaBox = agentMode
+    ? toolsState.arcana === true
+    : !!settings?.enable_tools && !!toolsState.arcana;
   const showMCPBox = !agentMode && !!settings?.enable_tools && !!toolsState.mcp;
   const showVideoList = !agentMode && !!toolsState.video_generation;
 
@@ -240,7 +244,11 @@ export default function ToolsContainer({ localState, setLocalState }) {
       >
         {TOOL_DEFS.map(({ key, Icon, label }) => {
           const unavailable = agentMode && AGENT_UNAVAILABLE.has(key);
-          const active = agentMode ? !unavailable && toolsState[key] !== false : !!toolsState[key];
+          const active = !agentMode
+            ? !!toolsState[key]
+            : AGENT_OPT_IN.has(key)
+              ? toolsState[key] === true
+              : !unavailable && toolsState[key] !== false;
           const onToggle =
             key === "web_search"
               ? () => handleToggleWebSearch(!active)

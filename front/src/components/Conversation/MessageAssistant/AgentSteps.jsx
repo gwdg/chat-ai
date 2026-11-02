@@ -13,7 +13,7 @@ function ToolCall({ call, result }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const args = call.arguments ?? {};
-  const summary = args.path ?? args.prompt ?? args.pattern ?? args.text ?? "";
+  const summary = args.path ?? args.prompt ?? args.pattern ?? args.text ?? args.query ?? "";
   const status = !result ? "…" : result.isError ? t("conversation.tool_failed") : "";
   return (
     <div className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-bg_secondary_dark">
