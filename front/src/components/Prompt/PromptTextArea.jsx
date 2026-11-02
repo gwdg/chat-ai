@@ -6,6 +6,7 @@ import { useToast } from "../../hooks/useToast";
 
 import { useAttachments } from "../../hooks/useAttachments";
 import ClearButton from "./ClearButton";
+import { isTouchInput } from "../../utils/inputMode";
 
 const MIN_HEIGHT = 56;
 const MAX_HEIGHT = 200;
@@ -158,11 +159,13 @@ export default function PromptTextArea({
             // Enter confirms an IME composition (Japanese, Chinese, Korean), don't send.
             // Safari reports isComposing false on that Enter, but keyCode is still 229.
             if (event.nativeEvent.isComposing || event.keyCode === 229) return;
-            // Enter inserts a newline; Shift+Enter sends. This also keeps soft
-            // keyboards (which have no Shift key) able to add line breaks.
+            // Desktop: Enter sends, Shift+Enter inserts a newline.
+            // Touch devices: Enter inserts a newline, Shift+Enter sends, since
+            // soft keyboards have no Shift key for adding line breaks.
+            const sendWithShift = isTouchInput();
             if (
                 event.key === "Enter" &&
-                event.shiftKey &&
+                event.shiftKey === sendWithShift &&
                 (prompt?.trim() !== "" || attachments.length > 0)
             ) {
                 event.preventDefault();
