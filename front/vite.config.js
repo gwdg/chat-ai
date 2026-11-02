@@ -17,7 +17,15 @@ const serveTikzGzip = (middlewares) => {
       return next();
     }
 
-    const file = path.join(process.cwd(), "public", url);
+    // Only serve files inside public/tikzjax/ (reject ../ traversal).
+    const root = path.resolve(process.cwd(), "public", "tikzjax");
+    let file;
+    try {
+      file = path.resolve(process.cwd(), "public", "." + decodeURIComponent(url));
+    } catch {
+      return next();
+    }
+    if (!file.startsWith(root + path.sep)) return next();
     fs.readFile(file, (error, data) => {
       if (error) return next();
       res.setHeader("Content-Type", "application/gzip");
@@ -27,12 +35,11 @@ const serveTikzGzip = (middlewares) => {
   });
 };
 
+// Dev server only. Production serves dist/ statically (nginx), which must
+// deliver /tikzjax/*.gz as raw gzip bytes (no Content-Encoding: gzip).
 const tikzAssetsPlugin = {
   name: "serve-tikzjax-gzip",
   configureServer(server) {
-    serveTikzGzip(server.middlewares);
-  },
-  configurePreviewServer(server) {
     serveTikzGzip(server.middlewares);
   },
 };
