@@ -187,6 +187,9 @@ export default {
       audio_unsupported: "Modell wechseln, um Audio zu verarbeiten",
       file_unsupported: "Nur mit {{filetype}}-Modell nutzbar",
       unprocessed: "Unverarbeitete Datei",
+      process_browser: "Im Browser verarbeiten",
+      process_server: "Auf dem Server verarbeiten",
+      must_process: "Datei muss verarbeitet werden",
     },
     reasoning: "Denkprozess",
     copy_reasoning: "Denkprozess kopieren",
@@ -387,6 +390,26 @@ export default {
         label: "LaTeX-Blöcke rendern",
         description:
           "Legt fest, ob LaTeX-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
+      },
+      document_conversion: {
+        label: "Dokumentkonvertierung",
+        options: {
+          server: {
+            label: "Nur Server",
+            description:
+              "Angehängte PDF- und DOCX-Dateien immer auf dem Server verarbeiten.",
+          },
+          browser: {
+            label: "Nur Browser",
+            description:
+              "Angehängte PDF- und DOCX-Dateien immer lokal im Browser verarbeiten.",
+          },
+          choice: {
+            label: "Nach Wahl",
+            description:
+              "Legen Sie für jedes Dokument fest, ob es im Browser oder auf dem Server verarbeitet wird.",
+          },
+        },
       },
     },
     default_model: {
@@ -620,7 +643,7 @@ export default {
     unsent_files:
       "Sie haben Dateien angehängt, die verloren gehen werden. Sind Sie sicher, dass Sie gehen wollen?",
     unprocessed_files:
-      "Bitte verarbeiten oder entfernen Sie das beigefügte PDF, um fortzufahren.",
+      "Sie haben eine unverarbeitete Datei. Bitte verarbeiten oder entfernen Sie sie zuerst.",
     migrate_data:
       "Es sieht so aus, als ob Sie eine ältere Version von Chat AI verwenden. Um fortzufahren, müssen Ihre vorherigen Gespräche und Daten aktualisiert werden. Bitte sichern Sie Ihre Daten zuerst, falls erforderlich, und drücken Sie dann auf 'Aktualisieren', um den Prozess zu starten.",
     // Hallucination warning

@@ -18,7 +18,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 3,
+  version: 5,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -52,6 +52,7 @@ const getDefaultState = () => {
       set_title_once: true,
       render_typst: true,
       render_latex: true,
+      document_conversion_mode: "choice",
     },
   };
 };

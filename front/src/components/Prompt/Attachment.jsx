@@ -1,4 +1,4 @@
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useAttachments } from "../../hooks/useAttachments";
 import MiniAudioButton from "./MiniAudioButton";
 import { useState } from "react";
@@ -10,8 +10,14 @@ import {
   saveFile,
 } from "../../db";
 import { WarningAltFilled, Close, Video, DocumentBlank } from "@carbon/icons-react";
+import { useSelector } from "react-redux";
 import { processFile } from "../../apis/processFile";
 import { getFileType } from "../../utils/attachments";
+import {
+  canConvertDocumentLocally,
+  convertDocumentLocally,
+} from "../../utils/browserDocumentConversion";
+import { selectDocumentConversionMode } from "../../Redux/reducers/userSettingsReducer";
 import { useToast } from "../../hooks/useToast";
 
 export default function Attachment({
@@ -23,11 +29,13 @@ export default function Attachment({
   inAssistant = false,
 }) {
   const { openModal } = useModal();
+  const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const { removeAttachment, clearAttachments, readFileAsBase64 } =
     useAttachments();
   const { notifySuccess, notifyError } = useToast();
+  const documentConversionMode = useSelector(selectDocumentConversionMode);
   const file = useFileMeta(attachment.fileId);
   const isImage = file?.type?.startsWith("image/");
   const isAudio = file?.type?.startsWith("audio/");
@@ -57,10 +65,13 @@ export default function Attachment({
     });
   };
   // Handle Process File
-  const handleProcessFile = async () => {
+  const handleProcessFile = async (useBrowser = documentConversionMode !== "server") => {
     setIsProcessing(true);
     const rawFile = await loadFile(attachment.fileId);
-    const response = await processFile(rawFile);
+    const response =
+      useBrowser && canConvertDocumentLocally(fileType)
+        ? await convertDocumentLocally(rawFile, fileType)
+        : await processFile(rawFile);
     setIsProcessing(false);
     if (!response?.content) {
       notifyError("Error processing file");
@@ -197,93 +208,110 @@ export default function Attachment({
     >
       {canProcess ? (
         // Container for files that need processing
-        <div className="flex flex-col w-full p-2 h-full relative">
-          <div>
-            {/* Top row */}
+        <div className="flex flex-col w-full p-1.5 h-full relative">
+          <div className="flex items-center gap-2 pr-5">
             <p
-              className="font-medium text-xs text-gray-900 dark:text-white mb-1 truncate"
+              className="min-w-0 flex-1 font-medium text-xs text-gray-900 dark:text-white truncate"
               title={file.name}
             >
               {file.name}
             </p>
+            <span className="shrink-0 text-[10px] text-gray-600 dark:text-gray-400 whitespace-nowrap">
+              {formatFileSize(file.size)}
+            </span>
+          </div>
 
-            {/* Middle row */}
-            <div className="flex items-center gap-2">
-              {isProcessing ? (
-                <div
-                  className="flex py-2 bg-gradient-to-r rounded-sm items-center justify-center gap-1 text-xs w-full
-                from-amber-700 text-white dark:from-amber-700 to-orange-700 dark:text-gray-400"
+          <div className="mt-1 flex-1">
+            {isProcessing ? (
+              <div
+                className="flex h-full min-h-5 w-full items-center justify-center gap-1 rounded-sm
+                bg-gradient-to-r from-amber-700 to-orange-700 py-0.5 text-xs leading-tight text-white"
+              >
+                <svg
+                  className="animate-spin h-3 w-3"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    className="animate-spin h-3 w-3"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              </div>
+            ) : (
+              <div
+                className={`grid gap-1 ${documentConversionMode === "choice" ? "grid-cols-2" : "grid-cols-1"}`}
+              >
+                {documentConversionMode !== "server" && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleProcessFile(true);
+                    }}
+                    className="py-0.5 leading-tight bg-gradient-to-r from-amber-500 to-orange-600
+                  hover:from-amber-600 hover:to-orange-700 text-white 
+                  rounded-sm text-[10px] font-semibold shadow-md shadow-yellow-500/30
+                  transition duration-200 ease-in-out text-center"
                   >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                </div>
-              ) : (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleProcessFile();
-                  }}
-                  className="flex-1 py-2 bg-gradient-to-r from-amber-500 to-orange-600
-                hover:from-amber-600 hover:to-orange-700 text-white 
-                rounded-sm text-xs font-semibold shadow-md shadow-yellow-500/30 
-                animate-pulse hover:animate-none
-                transition duration-200 ease-in-out text-center"
-                >
-                  Process
-                </button>
-              )}
+                    {t("conversation.attachment.process_browser")}
+                  </button>
+                )}
+                {documentConversionMode !== "browser" && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleProcessFile(false);
+                    }}
+                    className="py-0.5 leading-tight bg-gradient-to-r from-amber-500 to-orange-600
+                    hover:from-amber-600 hover:to-orange-700 text-white
+                    rounded-sm text-[10px] font-semibold shadow-md shadow-yellow-500/30
+                    transition duration-200 ease-in-out text-center"
+                  >
+                    {t("conversation.attachment.process_server")}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
-              {/* File size */}
-              <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                {formatFileSize(file.size)}
+          <div className="mt-1 flex items-center justify-between gap-1 leading-tight">
+            <span className="flex min-w-0 items-center gap-1 text-[10px] text-yellow-700 dark:text-yellow-400">
+              <WarningAltFilled size={10} className="flex-shrink-0" />
+              <span className="truncate">
+                {t("conversation.attachment.must_process")}
               </span>
-
-              {/* Badge */}
-              <span
-                className={`px-1.5 py-0.5 text-xs font-medium rounded-full
+            </span>
+            <span
+              className={`shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded-full
                 bg-red-500/30 dark:bg-red-800/30 text-red-800 dark:text-red-200
                 `}
-              >
-                {badge}
-              </span>
-              {/* Remove button - positioned at card corner */}
-              {!inHistory && (
-                <button
-                  className="absolute top-1 right-1 p-1 bg-white/30 hover:bg-white/90 dark:hover:bg-black/70 rounded-full flex-shrink-0 focus:outline-none transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemove();
-                  }}
-                  aria-label="Remove file"
-                >
-                  <Close size={16} className="opacity-70 hover:opacity-100 transition-opacity" />
-                </button>
-              )}
-            </div>
+            >
+              {badge}
+            </span>
           </div>
-          {/* Process Needed Warning*/}
-          <span className="text-[11px] text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
-            <WarningAltFilled size={12} className="flex-shrink-0" />
-            File must be processed
-          </span>
+
+          {!inHistory && (
+            <button
+              className="absolute top-1 right-1 p-1 bg-white/30 hover:bg-white/90 dark:hover:bg-black/70 rounded-full flex-shrink-0 focus:outline-none transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemove();
+              }}
+              aria-label="Remove file"
+            >
+              <Close size={16} className="opacity-70 hover:opacity-100 transition-opacity" />
+            </button>
+          )}
         </div>
       ) : (
         // Version for files that are already processed or don't need it

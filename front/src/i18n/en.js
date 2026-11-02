@@ -191,6 +191,9 @@ export default {
       audio_unsupported: "Switch model to process audio",
       file_unsupported: "Switch model to process {{filetype}}",
       unprocessed: "Unprocessed file",
+      process_browser: "Process (browser)",
+      process_server: "Process (server)",
+      must_process: "File must be processed",
     },
     reasoning: "Reasoning Process",
     copy_reasoning: "Copy reasoning process",
@@ -384,6 +387,26 @@ export default {
         label: "Render LaTeX blocks",
         description:
           "Choose whether LaTeX code blocks are rendered by default. You can still render or show code for each block.",
+      },
+      document_conversion: {
+        label: "Document conversion",
+        options: {
+          server: {
+            label: "Server only",
+            description:
+              "Always process attached PDF and DOCX files on the server.",
+          },
+          browser: {
+            label: "Browser only",
+            description:
+              "Always process attached PDF and DOCX files locally in your browser.",
+          },
+          choice: {
+            label: "By choice",
+            description:
+              "Choose per document whether it is processed in the browser or on the server.",
+          },
+        },
       },
     },
     default_model: {
@@ -616,7 +639,8 @@ export default {
     session_expired: "Your session has expired. Please refresh the webpage.",
     unsent_files:
       "You have attached files that will be lost. Are you sure you want to leave?",
-    unprocessed_files: "Please process or remove the attached PDF to continue.",
+    unprocessed_files:
+      "You have an unprocessed file. Please process or remove it first.",
     migrate_data:
       "It looks like you're using an older version of Chat AI. To continue, your previous conversations and data need to be upgraded. Please back up your data first if needed, then press 'Upgrade' to start the process.",
     // Hallucination warning
