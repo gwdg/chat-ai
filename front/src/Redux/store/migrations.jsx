@@ -105,5 +105,24 @@ export const migrations = {
       state.user_settings.conversation_summaries ?? true;
     console.log("Migrating redux to v7");
   },
-  // Future migrations here (e.g., 8: (state) => {...})
+  8: (state) => {
+    state.user_settings = state.user_settings ?? {};
+    state.user_settings.memory_groups = Array.isArray(
+      state.user_settings.memory_groups,
+    )
+      ? state.user_settings.memory_groups
+      : [];
+    state.user_settings.default_memory_group =
+      typeof state.user_settings.default_memory_group === "string"
+        ? state.user_settings.default_memory_group
+        : "default";
+    state.user_settings.memories = (
+      state.user_settings.memories ?? []
+    ).map((memory) => ({
+      ...memory,
+      groupId: memory?.groupId ?? "default",
+    }));
+    console.log("Migrating redux to v8");
+  },
+  // Future migrations here (e.g., 9: (state) => {...})
 };

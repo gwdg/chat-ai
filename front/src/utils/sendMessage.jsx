@@ -268,6 +268,7 @@ const sendMessage = async ({
   dispatch,
   timeout,
   memoryMode = 0,
+  memoryGroupId = "default",
   suggestUserPrompts = false,
   formSubmission = null,
   setTitleOnce = true,
@@ -663,9 +664,15 @@ const sendMessage = async ({
           const memoryText = jsonResponse.memory_sentence.trim();
           if (jsonResponse.replace) {
             const line_number = jsonResponse.line_number - 1;
-            dispatch(editMemory({ index: line_number, text: memoryText }));
+            dispatch(
+              editMemory({
+                index: line_number,
+                text: memoryText,
+                groupId: memoryGroupId,
+              }),
+            );
           } else {
-            dispatch(addMemory({ text: memoryText }));
+            dispatch(addMemory({ text: memoryText, groupId: memoryGroupId }));
           }
           notifySuccess("Memory updated successfully.");
         }

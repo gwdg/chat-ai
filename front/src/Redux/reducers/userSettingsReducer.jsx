@@ -3,6 +3,8 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   memories: [],
+  memory_groups: [],
+  default_memory_group: "default",
   timeout: 300000,
   memory_mode: 0,
   suggest_user_prompts: false,
@@ -23,14 +25,55 @@ const RENDER_MODES = ["render", "code", "off"];
 const SANITIZATION_MODES = ["strict", "relaxed"];
 const DOCUMENT_CONVERSION_MODES = ["server", "browser", "choice"];
 
+function ensureMemoryState(state) {
+  if (!Array.isArray(state.memories)) state.memories = [];
+  if (!Array.isArray(state.memory_groups)) state.memory_groups = [];
+  if (typeof state.default_memory_group !== "string") {
+    state.default_memory_group = "default";
+  }
+}
+
 // Apply settings from an exported backup without trusting arbitrary fields.
 function importUserSettingsState(state, incoming) {
   if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return;
+  ensureMemoryState(state);
   if (Array.isArray(incoming.memories)) {
     state.memories = incoming.memories
       .filter((memory) => memory && typeof memory === "object")
       .map((memory) => ({ ...memory }));
   }
+  if (Array.isArray(incoming.memory_groups)) {
+    state.memory_groups = incoming.memory_groups
+      .filter(
+        (group) =>
+          group &&
+          typeof group.id === "string" &&
+          group.id !== "default" &&
+          typeof group.name === "string" &&
+          group.name.trim(),
+      )
+      .map((group) => ({ id: group.id, name: group.name.trim() }));
+  }
+  if (typeof incoming.default_memory_group === "string") {
+    state.default_memory_group =
+      incoming.default_memory_group === "default" ||
+      state.memory_groups.some(
+        (group) => group.id === incoming.default_memory_group,
+      )
+        ? incoming.default_memory_group
+        : "default";
+  }
+  const validGroupIds = new Set([
+    "default",
+    ...state.memory_groups.map((group) => group.id),
+  ]);
+  state.memories = state.memories.map((memory) => {
+    const groupId = memory.groupId ?? "default";
+    return {
+      ...memory,
+      groupId: validGroupIds.has(groupId) ? groupId : "default",
+    };
+  });
   const timeout = Number(incoming.timeout);
   if (Number.isFinite(timeout)) {
     state.timeout = Math.min(Math.max(timeout, 5000), 900000);
@@ -70,20 +113,40 @@ const userSettingsSlice = createSlice({
   reducers: {
     // Add new memory
     addMemory: (state, action) => {
-      const { text } = action.payload;
+      ensureMemoryState(state);
+      const { text, groupId } = action.payload;
+      const group =
+        typeof groupId === "string" &&
+        (groupId === "default" ||
+          state.memory_groups.some((item) => item.id === groupId))
+          ? groupId
+          : "default";
       const newMemory = {
-        id: state.nextId,
+        id:
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `mem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         text: text.trim(),
         createdAt: new Date().toISOString(),
+        groupId: group,
       };
 
       state.memories.push(newMemory);
-      state.nextId += 1;
     },
 
     // Edit existing memory
     editMemory: (state, action) => {
-      const { index, text } = action.payload;
+      const { index, text, groupId } = action.payload;
+
+      if (typeof groupId === "string") {
+        const groupMemories = state.memories.filter(
+          (memory) => (memory.groupId ?? "default") === groupId,
+        );
+        if (index >= 0 && index < groupMemories.length) {
+          groupMemories[index].text = text.trim();
+        }
+        return;
+      }
 
       if (index >= 0 && index < state.memories.length) {
         state.memories[index].text = text.trim();
@@ -102,6 +165,81 @@ const userSettingsSlice = createSlice({
     // Delete all memories
     deleteAllMemories: (state) => {
       state.memories = [];
+    },
+
+    addMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const { id, name } = action.payload || {};
+      const trimmed = typeof name === "string" ? name.trim() : "";
+      if (!id || id === "default" || !trimmed) return;
+      if (state.memory_groups.some((group) => group.id === id)) return;
+      if (
+        state.memory_groups.some(
+          (group) => group.name.toLowerCase() === trimmed.toLowerCase(),
+        )
+      ) {
+        return;
+      }
+      state.memory_groups.push({ id, name: trimmed });
+    },
+
+    renameMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const { id, name } = action.payload || {};
+      const trimmed = typeof name === "string" ? name.trim() : "";
+      if (!id || !trimmed) return;
+      const group = state.memory_groups.find((item) => item.id === id);
+      if (!group) return;
+      if (
+        state.memory_groups.some(
+          (item) =>
+            item.id !== id &&
+            item.name.toLowerCase() === trimmed.toLowerCase(),
+        )
+      ) {
+        return;
+      }
+      group.name = trimmed;
+    },
+
+    deleteMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const { id } = action.payload || {};
+      if (!id || id === "default") return;
+      state.memory_groups = state.memory_groups.filter(
+        (group) => group.id !== id,
+      );
+      state.memories = state.memories.map((memory) =>
+        (memory.groupId ?? "default") === id
+          ? { ...memory, groupId: "default" }
+          : memory,
+      );
+      if (state.default_memory_group === id) {
+        state.default_memory_group = "default";
+      }
+    },
+
+    setDefaultMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const id = action.payload;
+      if (
+        id === "default" ||
+        state.memory_groups.some((group) => group.id === id)
+      ) {
+        state.default_memory_group = id;
+      }
+    },
+
+    setMemoryGroup: (state, action) => {
+      ensureMemoryState(state);
+      const { index, groupId } = action.payload || {};
+      if (index < 0 || index >= state.memories.length) return;
+      state.memories[index].groupId =
+        typeof groupId === "string" &&
+        (groupId === "default" ||
+          state.memory_groups.some((group) => group.id === groupId))
+          ? groupId
+          : "default";
     },
 
     // Set default model
@@ -191,6 +329,8 @@ const userSettingsSlice = createSlice({
 
 export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
+  addMemoryGroup, renameMemoryGroup, deleteMemoryGroup,
+  setDefaultMemoryGroup, setMemoryGroup,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
@@ -200,6 +340,10 @@ export const {
 
 // Selectors
 export const selectAllMemories = (state) => state.user_settings.memories;
+export const selectMemoryGroups = (state) =>
+  state.user_settings.memory_groups ?? [];
+export const selectDefaultMemoryGroup = (state) =>
+  state.user_settings.default_memory_group ?? "default";
 export const selectTimeout = (state) => state.user_settings.timeout;
 export const selectDefaultModel = (state) => state.user_settings.model;
 export const selectMemoryMode = (state) => {

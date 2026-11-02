@@ -26,6 +26,7 @@ export const getDefaultSettings = (userSettings = {}) => {
     top_p: 0.5,
     memory: 0,
     memory_mode_override: "default",
+    memory_group_override: "default",
     enable_tools: false,
     reasoning_effort: null,
     tools: {

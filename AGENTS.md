@@ -341,6 +341,26 @@ control is `SettingsPanel/MemoryModeContainer.jsx`; the global preference remain
 `UserSettings/ChatPreferences.jsx`. The value is stored with the conversation settings (no Dexie
 version bump) and restored by `useImportConversation`.
 
+### 4.18 Memories can be grouped; conversations choose a group
+
+`user_settings.memory_groups` holds custom groups (`{id, name}`) and `user_settings.default_memory_group`
+selects the group used by default. The implicit id `"default"` is the normal/ungrouped memory group.
+Each memory's optional `groupId` defaults to `"default"`. `UserMemoryContainer` shows the groups
+directly under User Memories and manages the default group; clicking a group opens
+`UserMemoryModal` filtered to that group, where memories can be reassigned.
+
+`ConversationSettings.memory_group_override` is `"default"` (follow the global default group) or a
+group id. `useSendMessage` resolves the effective group, filters the memories passed to
+`sendMessage`, and passes `memoryGroupId` so learned/replaced memories stay in that group. Deleting a
+group moves its memories to `"default"` and resets the global default if needed. Selecting a specific
+(non-default) group in the per-chat control also switches the per-chat mode from off to recall so
+the selection takes effect. Groups live inside
+`user_settings`, so they are exported/imported with settings; the conversation override is part of
+the conversation settings. Redux persist migration 8 initializes `memory_groups` /
+`default_memory_group` and assigns every existing memory to `"default"`; old conversations without
+`memory_group_override` follow the global default group. No Dexie version bump is needed (all fields
+are unindexed).
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
