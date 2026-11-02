@@ -224,6 +224,14 @@ Apache (enable the modules with `a2enmod headers proxy proxy_http`):
 ```
 
 Proxying is optional: `backendPath` can also be an absolute URL such as `http://api.example.org:8081`. The `back` service enables CORS, so the browser can call it cross-origin.
+### Model metadata and the model selector
+
+The interface has two model-selector variants and picks one automatically from the `/models` response:
+
+- **Extended selector** — used for SAIA / Chat AI, whose `/models` response includes extra metadata beyond the OpenAI defaults. It offers search, sorting, list/extended/grid views, and groups models into folders by the first word of their name. The `description` field is shown for each model; `releaseDate`, `company`, `contextLength`, and `external` are also displayed, and name, release date, parameter count, and context length can be used for sorting.
+- **Simple selector** — used for a plain OpenAI-compatible API that only returns the standard model fields. It offers search and the same folder grouping, but no extended metadata or view modes.
+
+The variant is chosen from the `description` field of the **first** model in the response. If you provide a custom `modelsPath` and want the extended selector, include a `description` in each entry (plus any of the optional fields above that you want to display). A model's `name` falls back to its `id` when omitted.
 
 ## Development
 You can use docker as local development setup. Alternatively, you can run Chat AI directly for which you nee `nodejs` installed.

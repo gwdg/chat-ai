@@ -103,7 +103,12 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
       groups.get(key).push(m);
     }
     return Array.from(groups.entries())
-      .sort((a, b) => a[0].localeCompare(b[0]))
+      .sort((a, b) => {
+        const aFolder = a[1].length > 1;
+        const bFolder = b[1].length > 1;
+        if (aFolder !== bFolder) return aFolder ? -1 : 1;
+        return a[0].localeCompare(b[0]);
+      })
       .map(([key, models]) => ({ key, models }));
   }, [filteredModelsList, isSearching]);
 
@@ -267,14 +272,14 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.key)}
-                      className="flex w-full items-center gap-1.5 px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl"
+                      className="flex w-full items-center gap-2 my-1 px-2 py-1 text-left cursor-pointer hover:bg-slate-100 rounded-2xl border bg-white dark:bg-bg_secondary_dark border-slate-200 dark:border-gray-500"
                     >
                       <FontAwesomeIcon
                         icon={open ? faChevronDown : faChevronRight}
                         className="text-[10px]"
                       />
                       <FontAwesomeIcon icon={faFolder} className="text-tertiary" />
-                      <span>{group.key}</span>
+                      <span className="font-medium truncate">{group.key}</span>
                       <span className="ml-auto text-[10px] font-normal text-slate-400 dark:text-slate-500">
                         {group.models.length}
                       </span>
