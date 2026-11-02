@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+ 
 import { configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore, createMigrate } from "redux-persist";
 import storage from "redux-persist/lib/storage";
@@ -18,7 +18,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 3,
+  version: 7,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -33,10 +33,13 @@ const getDefaultState = () => {
       warn_clear_history: true,
       warn_clear_memory: true,
       warn_clear_settings: true,
+      warn_regenerate: true,
+      warn_fork: true,
       count_hallucination: 0,
       count_announcement: 0,
       show_usage_in_sidebar: true,
       collapsed_topics: [],
+      conversation_sort: "created_desc",
     },
     // Conditionally preserve memories
     user_settings: {
@@ -44,6 +47,14 @@ const getDefaultState = () => {
       timeout: 300000,
       memory_mode: 0,
       suggest_user_prompts: false,
+      html_render_mode: "render",
+      html_load_external: false,
+      html_sanitization: "strict",
+      set_title_once: true,
+      render_typst: true,
+      render_latex: true,
+      document_conversion_mode: "choice",
+      conversation_summaries: true,
     },
   };
 };
@@ -112,8 +123,6 @@ initMessageListener(store);
 
 // Create the persistor object to persist the Redux store
 export const persistor = persistStore(store, null, () => {
-  // this will be invoked after rehydration is complete
-  //store.dispatch({ type: "MIGRATE" });
 });
 
 export default store;

@@ -3,10 +3,17 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   memories: [],
-  // model: "", // TODO load from file
   timeout: 300000,
   memory_mode: 0,
   suggest_user_prompts: false,
+  html_render_mode: "render",
+  html_load_external: false,
+  html_sanitization: "strict",
+  set_title_once: true,
+  render_typst: true,
+  render_latex: true,
+  document_conversion_mode: "choice",
+  conversation_summaries: true,
 };
 
 const userSettingsSlice = createSlice({
@@ -65,6 +72,47 @@ const userSettingsSlice = createSlice({
       state.suggest_user_prompts = Boolean(action.payload);
     },
 
+    setHtmlRenderMode: (state, action) => {
+      const mode = action.payload;
+      if (["render", "code", "off"].includes(mode)) {
+        state.html_render_mode = mode;
+      }
+    },
+
+    setHtmlLoadExternal: (state, action) => {
+      state.html_load_external = Boolean(action.payload);
+    },
+
+    setHtmlSanitization: (state, action) => {
+      const mode = action.payload;
+      if (["strict", "relaxed"].includes(mode)) {
+        state.html_sanitization = mode;
+      }
+    },
+
+    setSetTitleOnce: (state, action) => {
+      state.set_title_once = Boolean(action.payload);
+    },
+
+    setRenderTypst: (state, action) => {
+      state.render_typst = Boolean(action.payload);
+    },
+
+    setRenderLatex: (state, action) => {
+      state.render_latex = Boolean(action.payload);
+    },
+
+    setDocumentConversionMode: (state, action) => {
+      const mode = action.payload;
+      if (["server", "browser", "choice"].includes(mode)) {
+        state.document_conversion_mode = mode;
+      }
+    },
+
+    setConversationSummaries: (state, action) => {
+      state.conversation_summaries = Boolean(action.payload);
+    },
+
     // Timeout
     setTimeoutTime: (state, action) => {
       // Validate timeout range (5 seconds to 15 minutes)
@@ -88,12 +136,13 @@ const userSettingsSlice = createSlice({
 export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
-  setDefaultModel, setMemoryMode, setSuggestUserPrompts
+  setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
+  setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
+  setRenderLatex, setDocumentConversionMode, setConversationSummaries
 } = userSettingsSlice.actions;
 
 // Selectors
 export const selectAllMemories = (state) => state.user_settings.memories;
-export const selectMemoryByIndex = (state, index) => state.user_settings.memories[index];
 export const selectTimeout = (state) => state.user_settings.timeout;
 export const selectDefaultModel = (state) => state.user_settings.model;
 export const selectMemoryMode = (state) => {
@@ -102,5 +151,27 @@ export const selectMemoryMode = (state) => {
 };
 export const selectSuggestUserPrompts = (state) =>
   state.user_settings.suggest_user_prompts ?? false;
+export const selectHtmlRenderMode = (state) => {
+  const mode = state.user_settings.html_render_mode;
+  return ["render", "code", "off"].includes(mode) ? mode : "render";
+};
+export const selectHtmlLoadExternal = (state) =>
+  state.user_settings.html_load_external ?? false;
+export const selectHtmlSanitization = (state) => {
+  const mode = state.user_settings.html_sanitization;
+  return ["strict", "relaxed"].includes(mode) ? mode : "strict";
+};
+export const selectSetTitleOnce = (state) =>
+  state.user_settings.set_title_once ?? true;
+export const selectRenderTypst = (state) =>
+  state.user_settings.render_typst ?? true;
+export const selectRenderLatex = (state) =>
+  state.user_settings.render_latex ?? true;
+export const selectDocumentConversionMode = (state) => {
+  const mode = state.user_settings.document_conversion_mode;
+  return ["server", "browser", "choice"].includes(mode) ? mode : "choice";
+};
+export const selectConversationSummaries = (state) =>
+  state.user_settings.conversation_summaries ?? true;
 export const selectUserSettings = (state) => state.user_settings;
 export default userSettingsSlice.reducer;

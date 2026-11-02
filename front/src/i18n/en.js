@@ -16,6 +16,7 @@ export default {
     clear: "Clear",
     abort: "Abort",
     send: "Send",
+    send_shortcut: "Send (Shift+Enter)",
     stop: "Stop",
     share: "Share",
     delete: "Delete",
@@ -31,6 +32,8 @@ export default {
     record_start: "Record (click/hold)",
     record_stop: "Stop (click/release)",
     dont_show_again: "Don't show this again",
+    regenerate: "Regenerate response",
+    fork: "Continue in a new chat",
     backup_data: "Backup Data",
     skip_backup: "Skip Backup",
     upgrade_chat_ai: "Upgrade Chat AI",
@@ -56,6 +59,15 @@ export default {
     title: "Chats",
     all: "All chats",
     uncategorized: "Unsorted Chats",
+    by_date: "All chats by date",
+    modified: "Modified {{date}}",
+    dateBuckets: {
+      today: "Today",
+      yesterday: "Yesterday",
+      lastWeek: "Last week",
+      lastMonth: "Last month",
+      older: "Older",
+    },
     create_button: "New topic",
     empty_topic: "Drag a chat here.",
     search_label: "Search",
@@ -88,6 +100,61 @@ export default {
     new_folder_prompt: "Create new topic",
     create_inline: "Create",
   },
+  sorter: {
+    button: "Sort & organize",
+    title: "Sort & organize chats",
+    intro:
+      "Review the suggestions below. Nothing is changed until you apply them.",
+    ai_model_note:
+      "Chat titles, available summaries, and existing topic names are analyzed by the default ChatAI model.",
+    ai_analyzing: "Analyzing your chats with {{model}}…",
+    ai_error:
+      "The model could not analyze your chats. No changes are shown.",
+    ai_retry: "Try the model again",
+    ai_limited:
+      "Analyzed the {{analyzed}} most recent of {{total}} chats. Older chats were left unchanged.",
+    ai_default_model: "the default model",
+    assessment_title: "Model assessment",
+    preview_title: "Proposed structure",
+    include_topic_rename: "Include topic rename",
+    include_title_change: "Include title change",
+    new_topic: "New topic",
+    existing_topic: "Existing topic",
+    no_changes: "No topic changes suggested.",
+    select_all_moves: "Select all",
+    deselect_all_moves: "Deselect all",
+    deletions_title: "Suggested deletions",
+    deletions_hint:
+      "Deletions proposed by the model appear here. They are not selected by default.",
+    no_deletions: "No deletions suggested.",
+    reason_empty: "Empty chat",
+    reason_duplicate: 'Duplicate of "{{title}}"',
+    reason_duplicate_generic: "Duplicate chat",
+    select_all_deletions: "Select all deletions",
+    deselect_all_deletions: "Deselect all deletions",
+    summary_moves: "{{count}} moves",
+    summary_new_topics: "{{count}} new topics",
+    summary_titles: "{{count}} title changes",
+    summary_topic_renames: "{{count}} topic renames",
+    summary_deletions: "{{count}} deletions",
+    apply: "Apply changes",
+    applying: "Applying…",
+    error_name: "Please give every new topic a name.",
+    error_generic: "Could not apply the changes. Please try again.",
+    success: "Chats reorganized.",
+    categories: {
+      code: "Programming",
+      writing: "Writing",
+      research: "Research",
+      data: "Data & analysis",
+      planning: "Planning",
+      learning: "Learning",
+      health: "Health",
+      travel: "Travel",
+      finance: "Finance",
+      creative: "Creative work",
+    },
+  },
   // Chat settings
   settings: {
     tools_enabled: "Tools are enabled",
@@ -112,9 +179,13 @@ export default {
             label: "On",
             description: "Reasoning is switched on",
           },
+          minimal: {
+            label: "Minimal",
+            description: "Minimal reasoning effort",
+          },
           low: {
             label: "Low",
-            description: "Minimal reasoning effort",
+            description: "Low reasoning effort",
           },
           medium: {
             label: "Medium",
@@ -127,7 +198,7 @@ export default {
               "High reasoning effort",
           },
           xhigh: {
-            label: "High",
+            label: "High+",
             description:
               "High reasoning effort",
           },
@@ -184,12 +255,31 @@ export default {
       audio_unsupported: "Switch model to process audio",
       file_unsupported: "Switch model to process {{filetype}}",
       unprocessed: "Unprocessed file",
+      process_browser: "Process (browser)",
+      process_server: "Process (server)",
+      must_process: "File must be processed",
     },
     reasoning: "Reasoning Process",
+    copy_reasoning: "Copy reasoning process",
     action: "Action",
+    html_block: {
+      render: "Render HTML",
+      show_code: "Show code",
+    },
+    typst_block: {
+      render: "Render as Typst",
+      show_code: "Show code",
+    },
+    latex_block: {
+      render: "Render as LaTeX",
+      show_code: "Show code",
+    },
     sources: "Sources and References",
     references: "References",
     empty_message: "Your conversations are never stored on our servers",
+    fork_empty: "No messages found to copy.",
+    fork_created: "New conversation created.",
+    fork_failed: "Conversation could not be copied.",
     untitled: "Untitled Chat",
   },
   // Footer
@@ -239,6 +329,30 @@ export default {
       title: "Usage",
       description:
         "Monitor your monthly usage and organization budget usage.",
+      monthly: "Monthly",
+      total: "Total",
+      personal: "Personal",
+      organization: "Organization",
+      personal_monthly: "Personal monthly",
+      personal_total: "Personal total",
+      organization_monthly: "Organization monthly",
+      organization_total: "Organization total",
+      resets_at: "Resets {{time}}",
+      rate_limits: {
+        "10s": "10 s",
+        hourly: "Hourly",
+        daily: "Daily",
+        monthly: "Monthly",
+      },
+      sections: {
+        budget: "Budget",
+        rate_limits: "Rate limits",
+        requests: "Requests",
+      },
+      scopes: {
+        external: "External",
+        internal: "Internal",
+      },
     },
     monthly_usage: "Monthly Usage",
     org_usage: "Organization Budget Usage",
@@ -275,6 +389,94 @@ export default {
         label: "Suggest follow-up prompts",
         description: "Show suggested ways to continue after each response.",
         help_label: "Learn about follow-up prompts",
+        title_once: {
+          label: "Set title only on first prompt",
+          description:
+            "Only generate the conversation title once, from the first prompt.",
+        },
+      },
+      summaries: {
+        section_label: "Conversation summaries",
+        label: "Show summaries on hover",
+        description:
+          "Generate a short summary when you switch away from a chat, then show it when hovering over that chat in the sidebar.",
+      },
+      html_render: {
+        label: "Render HTML blocks",
+        description:
+          "Choose how HTML fenced blocks in responses are shown by default.",
+        options: {
+          render: {
+            label: "Render",
+            description:
+              "Render HTML blocks as live content. You can still switch to code per block.",
+          },
+          code: {
+            label: "Code",
+            description:
+              "Show HTML blocks as code by default. You can still render them per block.",
+          },
+          off: {
+            label: "Off",
+            description:
+              "Do not render HTML blocks automatically. They start as code; you can still render them per block.",
+          },
+        },
+        external_references: {
+          label: "Load external references",
+          description:
+            "Allow HTML blocks to load images and links from external hosts. Off by default: when disabled, external references are removed so the browser only contacts this server.",
+        },
+        sanitization: {
+          label: "Sanitization",
+          description:
+            "Control how strictly HTML blocks are sanitized before being rendered.",
+          options: {
+            strict: {
+              label: "Strict",
+              description:
+                "Block interactive and scriptable HTML (buttons, forms, iframes, scripts, inline styles). Safest for untrusted content.",
+            },
+            relaxed: {
+              label: "Relaxed",
+              description:
+                "Allow interactive HTML with JavaScript (buttons, forms, iframes, scripts, inline styles). Warning: model output can execute code — only enable if you trust the source.",
+            },
+          },
+        },
+      },
+      rendering: {
+        label: "Rendering",
+      },
+      typst: {
+        label: "Render Typst blocks",
+        description:
+          "Choose whether Typst code blocks are rendered by default. You can still render or show code for each block.",
+      },
+      latex: {
+        label: "Render LaTeX blocks",
+        description:
+          "Choose whether LaTeX code blocks are rendered by default. You can still render or show code for each block.",
+      },
+      document_conversion: {
+        label: "Document conversion",
+        options: {
+          server: {
+            label: "Server only",
+            description:
+              "Always process attached PDF and DOCX files on the server.",
+          },
+          browser: {
+            label: "Browser only",
+            description:
+              "Always process attached PDF and DOCX files locally in your browser.",
+          },
+          choice: {
+            label: "By choice",
+            description:
+              "Choose per document whether it is processed in the browser or on the server.",
+          },
+        },
       },
     },
     default_model: {
@@ -422,6 +624,10 @@ export default {
     change_model: "Change model",
     docs_hint_text: "Need help deciding which model fits best?",
     docs_hint_link: "Read the model overview.",
+    scope_filter: "Filter models",
+    scope_all: "All models",
+    scope_internal: "Internal only",
+    scope_external: "External only",
   },
   // Tour
   tour: {
@@ -466,8 +672,11 @@ export default {
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
     regenerate_confirm:
-      "Regenerating will delete this response and every message after it, and will apply your current settings. To keep this conversation intact, fork it into a new chat instead.",
+      "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone. To keep this conversation intact, use “Continue in a new chat” instead.",
     regenerate_yes: "Regenerate",
+    fork_confirm:
+      "This copies the conversation up to this message into a new chat. The current conversation stays as it is, so you can try a different answer or different settings without losing anything.",
+    fork_yes: "Create copy",
     regenerate_fork: "Fork",
     regenerate_fork_success: "Chat forked successfully",
     regenerate_fork_fail: "Chat could not be forked",
@@ -500,7 +709,8 @@ export default {
     session_expired: "Your session has expired. Please refresh the webpage.",
     unsent_files:
       "You have attached files that will be lost. Are you sure you want to leave?",
-    unprocessed_files: "Please process or remove the attached PDF to continue.",
+    unprocessed_files:
+      "You have an unprocessed file. Please process or remove it first.",
     migrate_data:
       "It looks like you're using an older version of Chat AI. To continue, your previous conversations and data need to be upgraded. Please back up your data first if needed, then press 'Upgrade' to start the process.",
     // Hallucination warning
@@ -550,6 +760,25 @@ export default {
       "Don't worry! You can start a new conversation by clicking the button below.",
     buttonText: "Go to chat",
   },
+  typst: {
+    rendering: "Rendering Typst document...",
+    render_error:
+      "Failed to render Typst document. Showing source instead:",
+  },
+  latex: {
+    rendering: "Rendering LaTeX document...",
+    render_error:
+      "Failed to render LaTeX document. Showing source instead:",
+  },
   // Announcement
   announcement: "",
+  // Editable tool forms
+  tool_form: {
+    submit: "Run tool",
+    sending: "Running...",
+    reset: "Reset",
+    edit: "Edit",
+    tool_call: "Tool call",
+    select_placeholder: "Select…",
+  },
 };

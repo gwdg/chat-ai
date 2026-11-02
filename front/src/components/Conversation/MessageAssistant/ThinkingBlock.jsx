@@ -1,16 +1,35 @@
 import { useState, useEffect, useRef, memo } from "react";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import { ChevronDown, ChevronRight, Brain } from "lucide-react";
 import { rendererComponents } from "./MarkdownRenderer";
+import CopyButton from "./CopyButton";
+
+// Models often draft raw HTML while reasoning. Rendering that as live markup let
+// injected <iframe>/<style> tags hit the network and restyle the whole page, so
+// show raw HTML as literal text instead. Code fences are untouched: fenced and
+// inline code are their own mdast node types, never "html".
+const remarkHtmlAsText = () => (tree) => {
+  const visit = (node) => {
+    if (!Array.isArray(node.children)) return;
+    node.children.forEach((child, i) => {
+      if (child.type === "html") {
+        node.children[i] = { type: "text", value: child.value };
+      } else {
+        visit(child);
+      }
+    });
+  };
+  visit(tree);
+};
 
 const ThinkingBlock = memo(
-  ({ children, autoExpand = false, isStreaming = false }) => {
+  ({ children, autoExpand = false, isStreaming = false, renderContent }) => {
     const [isOpen, setIsOpen] = useState(autoExpand && isStreaming);
     const [autoOpened, setAutoOpened] = useState(autoExpand && isStreaming);
     const contentRef = useRef(null);
+    const { t } = useTranslation();
 
     // Auto-open while the model is still "thinking", then collapse once done unless
     // the user has explicitly toggled it.
@@ -26,22 +45,30 @@ const ThinkingBlock = memo(
 
     return (
       <div className="my-4 rounded-lg border border-tertiary">
-        <button
-          onClick={() => {
-            if (!isStreaming) {
-              setIsOpen(!isOpen);
-              setAutoOpened(false);
-            }
-          }}
-          className="rounded-lg cursor-pointer flex items-center w-full p-3 text-xs bg-blue-50 dark:bg-blue-900/30 rounded-t-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
-          aria-expanded={isOpen}
-          aria-controls="thinking-content"
-          disabled={isStreaming}
-        >
-          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          <Brain size={16} className="ml-2 mr-2" />
-          <span className="flex items-center gap-2"><Trans i18nKey="conversation.reasoning" /></span>
-        </button>
+        <div className="flex items-center w-full rounded-t-lg text-xs bg-blue-50 dark:bg-blue-900/30">
+          <button
+            onClick={() => {
+              if (!isStreaming) {
+                setIsOpen(!isOpen);
+                setAutoOpened(false);
+              }
+            }}
+            className="cursor-pointer flex flex-1 items-center p-3 rounded-tl-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
+            aria-expanded={isOpen}
+            aria-controls="thinking-content"
+            disabled={isStreaming}
+          >
+            {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <Brain size={16} className="ml-2 mr-2" />
+            <span className="flex items-center gap-2"><Trans i18nKey="conversation.reasoning" /></span>
+          </button>
+          <div className="shrink-0 pr-3">
+            <CopyButton
+              text={children || ""}
+              title={t("conversation.copy_reasoning")}
+            />
+          </div>
+        </div>
         {isOpen && (
           <div
             id="thinking-content"
@@ -50,13 +77,16 @@ const ThinkingBlock = memo(
             aria-live="polite"
             aria-busy={isStreaming ? "true" : "false"}
           >
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
-              components={rendererComponents}
-            >
-              {children || ""}
-            </ReactMarkdown>
+            {renderContent ? (
+              renderContent(children || "")
+            ) : (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkHtmlAsText]}
+                components={rendererComponents}
+              >
+                {children || ""}
+              </ReactMarkdown>
+            )}
           </div>
         )}
       </div>

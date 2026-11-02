@@ -1,16 +1,13 @@
 
-import { useState, useMemo, useEffect, useRef, memo, use } from "react";
+import { useState, useMemo, useEffect, useRef, memo } from "react";
 import Tooltip from "../Others/Tooltip";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useSelector } from "react-redux";
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { useTranslation } from "react-i18next";
 
 import {
-  faChevronDown, faList, faTableCells, faMagnifyingGlass, faBrain,
-  faImage, faVideo, faCircleDot, faLayerGroup, faFilter,
-  faHashtag, faTriangleExclamation,
-  faShield,
+  faChevronDown, faChevronRight, faFolder, faList, faTableCells, faMagnifyingGlass, faBrain,
+  faImage, faVideo, faCircleDot, faTriangleExclamation,
   faShieldHalved,
   faMicrophone
 } from '@fortawesome/free-solid-svg-icons'
@@ -25,7 +22,6 @@ import {
   faArrowUpAZ,
   faCircleInfo
 } from "@fortawesome/free-solid-svg-icons";
-import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 const sortOptions = [
   { value: "name-asc", label: "Name (A→Z)" },
   { value: "name-desc", label: "Name (Z→A)" },
@@ -44,6 +40,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [resultViewMode, setResultViewMode] = useState("list"); // list, expanded, grid
   const [sortBy, setSortBy] = useState("name-asc"); // name-asc, name-desc, date-asc, date-desc, params-asc, params-desc
+  const [openGroups, setOpenGroups] = useState({}); // folders start closed
 
   // Dropdown close on click outside logic
   const dropdownRef = useRef(null);
@@ -104,6 +101,49 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
     }
     return result;
   }, [searchQuery, modelsData, sortBy]);
+
+  // Group models into subfolders by the first word of their name.
+  // While a search query is active the list stays flat so that search
+  // still matches against every model name.
+  const isSearching = searchQuery.trim() !== "";
+  const groupedModels = useMemo(() => {
+    if (isSearching) return null;
+    const groups = new Map();
+    for (const m of filteredModelsList) {
+      const key = (m.name || "").trim().split(/\s+/)[0] || "Other";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(m);
+    }
+    return Array.from(groups.entries())
+      .sort((a, b) => {
+        const aFolder = a[1].length > 1;
+        const bFolder = b[1].length > 1;
+        if (aFolder !== bFolder) return aFolder ? -1 : 1;
+        return a[0].localeCompare(b[0]);
+      })
+      .map(([key, models]) => ({ key, models }));
+  }, [filteredModelsList, isSearching]);
+
+  const toggleGroup = (key: string) =>
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const GroupHeader = memo(({ group }: { group: { key: string, models: ExtendedModelInfo[] } }) => {
+    const open = !!openGroups[group.key];
+    return (
+      <button
+        type="button"
+        onClick={() => toggleGroup(group.key)}
+        className="flex w-full items-center gap-2 px-2 py-1 text-left cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl border border-slate-200 dark:border-gray-500"
+      >
+        <FontAwesomeIcon icon={open ? faChevronDown : faChevronRight} className="text-[10px]" />
+        <FontAwesomeIcon icon={faFolder} className="text-tertiary" />
+        <span className="font-medium">{group.key}</span>
+        <span className="ml-auto text-[10px] font-normal text-slate-400 dark:text-slate-500">
+          {group.models.length}
+        </span>
+      </button>
+    );
+  });
 
   const SecureIndicator = memo(({ external }: { external: boolean }) => {
     return (
@@ -468,20 +508,62 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
         <div id="model-listbox" role="listbox" aria-label="Models" tabIndex={-1} className="max-h-110 overflow-auto px-2">
           {resultViewMode === 'list' && (
             <div className="rounded-xl overflow-hidden grid gap-1 py-2">
-              {filteredModelsList.map((m, idx) => (
-                <ListElement
-                  key={m.id} idx={idx} model={m}
-                  onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
-              ))}
+              {groupedModels ? (
+                groupedModels.map((group) => (
+                  <div key={group.key}>
+                    {group.models.length <= 1 ? (
+                      <ListElement
+                        key={group.models[0].id} idx={0} model={group.models[0]}
+                        onClick={() => { onChange?.(group.models[0]); setDropdownOpen(false); onSelected?.(); }} />
+                    ) : (
+                      <>
+                        <GroupHeader group={group} />
+                        {openGroups[group.key] && group.models.map((m, idx) => (
+                          <ListElement
+                            key={m.id} idx={idx} model={m}
+                            onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
+                        ))}
+                      </>
+                    )}
+                  </div>
+                ))
+              ) : (
+                filteredModelsList.map((m, idx) => (
+                  <ListElement
+                    key={m.id} idx={idx} model={m}
+                    onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
+                ))
+              )}
             </div>
           )}
           {resultViewMode === 'extended' && (
             <div className="rounded-xl overflow-hidden grid gap-1 py-2">
-              {filteredModelsList.map((m, idx) => (
-                <ExtendedListElement
-                  key={m.id} idx={idx} model={m}
-                  onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
-              ))}
+              {groupedModels ? (
+                groupedModels.map((group) => (
+                  <div key={group.key}>
+                    {group.models.length <= 1 ? (
+                      <ExtendedListElement
+                        key={group.models[0].id} idx={0} model={group.models[0]}
+                        onClick={() => { onChange?.(group.models[0]); setDropdownOpen(false); onSelected?.(); }} />
+                    ) : (
+                      <>
+                        <GroupHeader group={group} />
+                        {openGroups[group.key] && group.models.map((m, idx) => (
+                          <ExtendedListElement
+                            key={m.id} idx={idx} model={m}
+                            onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
+                        ))}
+                      </>
+                    )}
+                  </div>
+                ))
+              ) : (
+                filteredModelsList.map((m, idx) => (
+                  <ExtendedListElement
+                    key={m.id} idx={idx} model={m}
+                    onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
+                ))
+              )}
             </div>
           )}
 

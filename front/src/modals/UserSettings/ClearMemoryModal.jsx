@@ -16,17 +16,6 @@ export default function ClearMemoryModal({
   const dispatch = useDispatch();
   const memories = useSelector(selectAllMemories);
 
-  // // Checkbox change handler
-  // const handleCheckboxChange = (event) => {
-  //   setLocalState((prevState) => ({
-  //     ...prevState,
-  //     dontShow: {
-  //       ...prevState.dontShow,
-  //       dontShowAgainMemory: event.target.checked,
-  //     },
-  //   }));
-  // };
-
   // Clear all memories
   const handleDeleteAllMemories = () => {
     dispatch(deleteAllMemories());
@@ -78,24 +67,6 @@ export default function ClearMemoryModal({
         </div>
 
         {/* "Don't show again" checkbox */}
-        {/* <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="dontShowAgainMemory"
-            checked={dontShowAgainMemory || false}
-            onChange={handleCheckboxChange}
-            className="h-5 w-5 rounded-md border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer transition duration-200 ease-in-out"
-          />
-          <label
-            htmlFor="dontShowAgainMemory"
-            className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
-          >
-            <Trans
-              i18nKey="memory.dontShowAgain"
-              defaultValue="Don't show this warning again"
-            />
-          </label>
-        </div> */}
 
         {/* Buttons */}
         <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm">

@@ -1,7 +1,5 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import { faChevronUp, faChevronDown } from "@fortawesome/free-solid-svg-icons";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import VersionDisplay from "./VersionDisplay";
 import LanguageSelector from "./LanguageSelector";

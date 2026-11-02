@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+ 
 //Libraries
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";

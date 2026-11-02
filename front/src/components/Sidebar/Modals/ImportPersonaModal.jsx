@@ -7,10 +7,7 @@ import { useToast } from "../../../hooks/useToast";
 import {
   Folder,
   FolderOpen,
-  FileJson,
   Bot,
-  ChevronRight,
-  X,
   Menu,
 } from "lucide-react";
 

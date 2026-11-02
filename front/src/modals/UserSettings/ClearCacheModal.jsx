@@ -1,36 +1,21 @@
 import { Trans } from "react-i18next";
-import store, { persistor } from "../../Redux/store/store";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../hooks/useToast";
-import { useCallback, useEffect, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { useCallback, useState } from "react";
 // Hooks
 import {
   getDefaultConversation,
-  getDefaultSettings,
 } from "../../utils/conversationUtils";
 import { createConversation, resetDB } from "../../db";
 
 import BaseModal from "../BaseModal";
-import { setLastConversation } from "../../Redux/reducers/lastConversationSlice";
 
 export default function ClearCacheModal({ isOpen, onClose }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useToast();
-  // const currentConversationId = useSelector(selectCurrentConversationId);
   const [isCleared, setIsCleared] = useState(false);
-
-  // Navigate to the current conversation after clearing cache
-  // useEffect(() => {
-  //   if (!isCleared) return;
-  //   if (currentConversationId) {
-  //     navigate(`/chat/${currentConversationId}`, { replace: true });
-  //   }
-  //   notifySuccess("Chats cleared successfully");
-  //   onClose();
-  // }, [currentConversationId]);
 
   const clearData = useCallback(async () => {
     try {

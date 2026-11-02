@@ -4,13 +4,15 @@ import Typing from "./Typing";
 import CopyButton from "./CopyButton";
 import Attachment from "../../Prompt/Attachment";
 import EditButton from "./EditButton";
-import { RotateCw, GitFork } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import { useSendMessage } from "../../../hooks/useSendMessage";
 import { useForkConversation } from "../../../hooks/useForkConversation";
+import { useModal } from "../../../modals/ModalContext";
 import MetaBox from "./MetaBox";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
+import ToolForm from "./ToolForm";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -26,10 +28,11 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const loading = message?.loading || false;
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
-  const renderModes = ["Default", "Markdown", "LaTeX", "Plaintext"];
+  const renderModes = ["Default", "Markdown", "Plaintext"];
   
   const sendMessage = useSendMessage();
   const { forkConversation } = useForkConversation(localState);
+  const { confirmAction } = useModal();
   const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
 
   //Functions
@@ -45,26 +48,24 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   };
   
   const sendFeedbackFunc = async (ratingInt, commentStr, expectedStr) => {
-    // Remove messages after current index
-    let newState;
-    setLocalState((prev) => {
-      const newMessages = [...prev.messages];
-      const newMessagesWithFB = [...prev.messages];
-      newMessages.splice(message_index + 1);
+    const feedback = {
+      rating: ratingInt,
+      comment: commentStr,
+      result: expectedStr,
+    };
+    const newMessagesWithFB = [...localState.messages];
+    newMessagesWithFB[message_index] = {
+      ...newMessagesWithFB[message_index],
+      feedback,
+    };
 
-      newMessages[newMessages.length-1].feedback = {
-        rating : ratingInt,
-        comment: commentStr,
-        result : expectedStr
-      };
-      console.log("sending feedback");
-      console.log(newMessages[newMessages.length-1].feedback);
+    const newState = {
+      ...localState,
+      messages: newMessagesWithFB.slice(0, message_index + 1),
+    };
 
-      newMessagesWithFB[newMessages.length-1].feedback = newMessages[newMessages.length-1].feedback;
-      newState = { ...prev, messages: newMessages }
-      sendMessage({localState: newState});
-      return { ...prev, messages: newMessagesWithFB };
-    });
+    setLocalState({ ...localState, messages: newMessagesWithFB });
+    sendMessage({ localState: newState });
   };
 
   const [feedbackMode, setFeedbackMode] = useState(false);  
@@ -77,13 +78,6 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   };
   // Function to adjust textarea height for specific index
   const adjustHeightRefs = () => {
-    // if (textareaRefs.current[index]) {
-    //   const textarea = textareaRefs.current[index];
-    //   textarea.style.height = `${MIN_HEIGHT}px`;
-    //   const scrollHeight = textarea.scrollHeight;
-    //   const newHeight = Math.min(scrollHeight, MAX_HEIGHT);
-    //   textarea.style.height = `${Math.max(newHeight, MIN_HEIGHT)}px`;
-    // }
   };
 
   // Detect outside double clicks
@@ -139,25 +133,47 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
 
   // Function to handle resending a previous message
   const handleRetry = async () => {
-    // Remove messages after current index
+    const newMessages = [...localState.messages];
+    newMessages.splice(message_index);
+    const newState = { ...localState, messages: newMessages };
 
-    setLocalState((prev) => {
-      const newMessages = [...prev.messages];
-      newMessages.splice(message_index);
-      let newState = { ...prev, messages: newMessages };
-      sendMessage({ localState: newState, setLocalState });
-      return { ...prev, messages: newMessages };
-    });
+    setLocalState(newState);
+    await sendMessage({ localState: newState, setLocalState });
   };
 
   const handleForkConversation = useCallback(
-    () => forkConversation(message_index),
-    [forkConversation, message_index]
+    () =>
+      confirmAction(
+        {
+          warningKey: "warn_fork",
+          messageKey: "alert.fork_confirm",
+          confirmKey: "alert.fork_yes",
+        },
+        () => forkConversation(message_index)
+      ),
+    [confirmAction, forkConversation, message_index]
   );
 
   const content = message?.content?.[0]?.text ?? "";
-  const isContentEmpty = !content.trim();
+  const hasForms = Array.isArray(message?.content) && message.content.some((i) => i?.type === "form");
+  const isContentEmpty = !content.trim() && !hasForms;
   const errorMessage = message?.meta?.error || "Unknown Error";
+
+  // Update the submitted/values of a form content item on this message
+  const updateFormContent = (formIndex, patch) => {
+    setLocalState((prev) => {
+      const messages = [...prev.messages];
+      const msg = { ...messages[message_index] };
+      const contentArr = Array.isArray(msg.content) ? [...msg.content] : [];
+      const item = { ...contentArr[formIndex] };
+      item.form = { ...item.form, ...patch };
+      contentArr[formIndex] = item;
+      msg.content = contentArr;
+      messages[message_index] = msg;
+      return { ...prev, messages, flush: true };
+    });
+  };
+
   return (
     <div
       key={message_index}
@@ -287,7 +303,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-                  {message.content.slice(1).map((attachment, i) => (
+                  {message.content.slice(1).filter((a) => a?.type !== "form").map((attachment, i) => (
                     <Attachment
                       key={i}
                       localState={localState}
@@ -300,6 +316,19 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   ))}
                 </div>
               )}
+              {/* Editable tool forms */}
+              {Array.isArray(message?.content) &&
+                message.content.map((item, i) =>
+                  item?.type === "form" ? (
+                    <ToolForm
+                      key={i}
+                      form={item.form}
+                      localState={localState}
+                      setLocalState={setLocalState}
+                      onUpdate={(patch) => updateFormContent(i, patch)}
+                    />
+                  ) : null
+                )}
               {/* Bottom panel for message */}
               <div className="group flex justify-between w-full mt-1 gap-2">
                 {/* Buttons on the bottom right */}

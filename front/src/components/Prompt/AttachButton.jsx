@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import Tooltip from "../Others/Tooltip";
-import { Trans, useTranslation } from "react-i18next";
-import { abortRequest } from "../../apis/chatCompletions";
+import { useTranslation } from "react-i18next";
 import { useToast } from "../../hooks/useToast";
 import { useAttachments } from "../../hooks/useAttachments";
 import { Attachment } from "@carbon/icons-react";
