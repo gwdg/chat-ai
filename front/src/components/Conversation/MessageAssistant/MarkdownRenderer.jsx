@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, memo, useCallback, useMemo } from "react";
+import { useSelector } from "react-redux";
+import { Code2, Eye } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -11,11 +14,35 @@ import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
+import {
+  selectHtmlRenderMode,
+  selectHtmlLoadExternal,
+  selectHtmlSanitization,
+} from "../../../Redux/reducers/userSettingsReducer";
+import LatexBlock from "./LatexBlock";
+import TypstBlock from "./TypstBlock";
+import {
+  isExternalUrl,
+  sanitizeExternalRefs,
+} from "../../../utils/externalRefs";
+
+// Markdown images load automatically, so keep them on the same origin when
+// external references are disabled. Plain links are not fetched until clicked.
+const MarkdownImage = ({ src, alt, ...props }) => {
+  const loadExternal = useSelector(selectHtmlLoadExternal);
+  // react-markdown passes its AST node as a prop; never forward it to the DOM.
+  delete props.node;
+  if (!loadExternal && isExternalUrl(src)) {
+    return <span className="text-gray-500">{alt || ""}</span>;
+  }
+  return <img src={src} alt={alt} {...props} />;
+};
 
 /* --------------------------------------------
  * Shared renderer components (unchanged styles)
  * -------------------------------------------- */
 export const rendererComponents = {
+  img: MarkdownImage,
   code({ className, children, node }) {
     const match = /language-(\w+)/.exec(className || "");
     const content = String(children).replace(/\n$/, "");
@@ -33,11 +60,31 @@ export const rendererComponents = {
       );
     }
 
-    if (match && match[1] === "mermaid") {
+    const language = match ? match[1].toLowerCase() : null;
+
+    if (language === "mermaid") {
       return <MermaidDiagram content={content} />;
     }
 
-    return <Code language={match ? match[1] : null}>{content}</Code>;
+    if (language === "html") {
+      return <HtmlBlock content={content} />;
+    }
+
+    if (language === "latex" || language === "tex") {
+      return <LatexBlock content={content} language={language} />;
+    }
+
+    if (language === "typst" || language === "typ") {
+      return <TypstBlock content={content} language={language} />;
+    }
+
+    return (
+      <TypstBlock
+        content={content}
+        language={match ? match[1] : null}
+        defaultRender={false}
+      />
+    );
   },
 
   pre({ children, ...props }) {
@@ -181,19 +228,35 @@ const preprocessLaTeX = (content) => {
     }
   );
 
+  // Inline $...$ follows pandoc's tex_math_dollars rule (as markdown-it-katex
+  // does): the opening $ needs a non-space on its right, the next unescaped $
+  // closes only with a non-space on its left and no digit on its right, and
+  // the region may not cross a blank line. So "$3g=90$" is math, while
+  // "$20,000 and $30,000" is not. Escape pairs like "\$" or "\\" are consumed
+  // as a unit, so an escaped character never acts as a delimiter. Every other
+  // single $ is escaped, so remark-math, which pairs dollars by different
+  // rules, cannot turn it into a delimiter.
   const latexExpressions = [];
   processedContent = processedContent.replace(
-    /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\))/g,
+    /\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\(.*?\\\)|\\[\s\S]|\$\$|\$(?=[^\s$])(?:\\[\s\S]|[^\\$\n]|\n(?![ \t]*\n))*(?:\\\S|[^\\$\s])\$(?!\d)|\$/g,
     (match) => {
+      if (match === "$") return "\\$";
+      if (match === "$$" || (match.length === 2 && match[0] === "\\")) {
+        return match;
+      }
       latexExpressions.push(match);
       return `<<LATEX_${latexExpressions.length - 1}>>`;
     }
   );
 
-  processedContent = processedContent.replace(/\$(?=\d)/g, "\\$");
-
   processedContent = processedContent.replace(/<<LATEX_(\d+)>>/g, (_, i) => {
-    return latexExpressions[parseInt(i)];
+    // Convert \[...\] and \(...\) to the $$/$ delimiters remark-math expects
+    // here, on the matched math only, so code blocks and math bodies (e.g.
+    // the "\\[4pt]" row separator) are never rewritten.
+    const latex = latexExpressions[parseInt(i)];
+    if (latex.startsWith("\\[")) return `$$${latex.slice(2, -2)}$$`;
+    if (latex.startsWith("\\(")) return `$${latex.slice(2, -2)}$`;
+    return latex;
   });
 
   processedContent = processedContent.replace(
@@ -203,14 +266,249 @@ const preprocessLaTeX = (content) => {
     }
   );
 
-  processedContent = processedContent
-    .replace(/\\\[/g, "$$")
-    .replace(/\\\]/g, "$$")
-    .replace(/\\\(/g, "$")
-    .replace(/\\\)/g, "$");
-
   return processedContent;
 };
+
+/* ------------------------------------------------
+ * HTML sanitizer
+ *
+ * Model output is untrusted: raw HTML reaches the DOM verbatim. rehype-raw only
+ * turns raw HTML into live elements, so any raw <script>, event handler, or
+ * <iframe> fetching a local-network URL would run. Sanitize every raw HTML
+ * fragment with DOMPurify (allowlist-based) before rehype-raw parses it.
+ * ------------------------------------------------ */
+const SAFE_HTML_TAGS = [
+  "a", "abbr", "b", "bdi", "bdo", "blockquote", "br", "caption", "cite",
+  "code", "col", "colgroup", "dd", "del", "details", "dfn", "div", "dl",
+  "dt", "em", "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6",
+  "hr", "i", "img", "ins", "kbd", "li", "mark", "ol", "p", "pre", "q",
+  "s", "samp", "small", "span", "strong", "sub", "summary", "sup", "table",
+  "tbody", "td", "tfoot", "th", "thead", "tr", "u", "ul", "var",
+];
+
+const SAFE_HTML_ATTRS = [
+  "href", "src", "alt", "title", "width", "height",
+  "colspan", "rowspan", "scope", "start", "type", "value",
+  "datetime", "cite", "open",
+];
+
+// Extra tags/attributes permitted only when the user opts into relaxed
+// sanitization so interactive HTML (buttons, forms, iframes, scripts, inline
+// styles) can run. Untrusted model output can execute code with this setting.
+const RELAXED_HTML_TAGS = [
+  "button", "form", "iframe", "input", "label", "legend", "option", "select",
+  "style", "textarea", "script", "canvas", "audio", "video", "source",
+  "progress", "meter", "output", "fieldset", "datalist", "optgroup",
+];
+const RELAXED_HTML_ATTRS = [
+  "style", "class", "id", "name", "for", "action", "method", "target",
+  "placeholder", "checked", "selected", "disabled", "readonly", "required",
+  "rows", "cols", "maxlength", "min", "max", "step", "pattern", "autocomplete",
+  "contenteditable", "tabindex", "role", "aria-label", "controls", "autoplay",
+  "loop", "muted", "poster", "frameborder", "allow", "allowfullscreen",
+  "sandbox", "download", "rel", "data", "onclick", "onchange", "oninput",
+  "onkeydown", "onkeyup", "onkeypress", "onmouseover", "onmouseout",
+  "onmousedown", "onmouseup", "onfocus", "onblur", "onsubmit", "onload",
+  "onerror",
+];
+
+// Like sanitizeHtmlFragment but also permits embedded <svg> (including filters
+// and gradients) so fenced HTML blocks can render SVG diagrams. It uses
+// DOMPurify's battle-tested HTML + SVG profiles (correct geometry/presentation
+// attributes) while explicitly forbidding the dangerous elements those profiles
+// would otherwise allow — same hardening as sanitizeHtmlFragment.
+//
+// When loadExternal is false, URL-bearing attributes that point to an external
+// host are dropped for privacy, so the browser never contacts third parties.
+// This covers src, href, xlink:href, poster, action, formaction, data, srcset
+// and CSS url() inside style. Same-page anchors, relative paths, data: URIs
+// and mailto: are kept (see utils/externalRefs.js).
+const sanitizeHtmlFragment = (html, relaxed = false, loadExternal = true) =>
+  sanitizeExternalRefs(loadExternal, () =>
+    DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: relaxed ? [...SAFE_HTML_TAGS, ...RELAXED_HTML_TAGS] : SAFE_HTML_TAGS,
+      ALLOWED_ATTR: relaxed ? [...SAFE_HTML_ATTRS, ...RELAXED_HTML_ATTRS] : SAFE_HTML_ATTRS,
+      ALLOW_DATA_ATTR: relaxed,
+    })
+  );
+
+const sanitizeSvgHtml = (html, loadExternal = true, relaxed = false) =>
+  sanitizeExternalRefs(loadExternal, () =>
+    DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true, svg: true, svgFilters: true },
+    // Relaxed mode allows scripts, and the SAFE_FOR_XML mXSS heuristic
+    // force-removes any script/style whose text contains markup-like text
+    // (e.g. `</b>` inside a JS template literal), which is normal in
+    // interactive documents. The output only ever runs in the sandboxed
+    // iframe, so skip that heuristic once the user has opted into scripts.
+    SAFE_FOR_XML: !relaxed,
+    FORBID_TAGS: relaxed
+      ? []
+      : [
+          "iframe", "object", "embed", "form", "input", "textarea", "select",
+          "button", "script", "style", "link", "meta", "base", "math",
+          "foreignObject",
+        ],
+    FORBID_ATTR: relaxed ? [] : ["style"],
+    ALLOW_DATA_ATTR: relaxed,
+    ADD_TAGS: relaxed ? RELAXED_HTML_TAGS : [],
+    ADD_ATTR: relaxed ? RELAXED_HTML_ATTRS : [],
+    ALLOW_UNKNOWN_PROTOCOLS: relaxed,
+    })
+  );
+
+// remark plugin: scrub raw html nodes in the mdast tree so rehype-raw never
+// turns dangerous markup into live elements. Runs before rehype-raw parses.
+const remarkSanitizeHtml = ({ loadExternal = true } = {}) => (tree) => {
+  const visit = (node) => {
+    if (!node || !Array.isArray(node.children)) return;
+    node.children.forEach((child, i) => {
+      if (child.type === "html") {
+        node.children[i] = {
+          ...child,
+          value: sanitizeHtmlFragment(child.value, false, loadExternal),
+        };
+      } else {
+        visit(child);
+      }
+    });
+  };
+  visit(tree);
+};
+
+// DOMPurify discards <head> content entirely (it only returns body content).
+// Well-formed pages put their CSS/JS in <head>, so without this the whole
+// stylesheet would be lost. Move <style>, <script> and stylesheet <link>
+// elements out of <head> and into <body> so they survive sanitization.
+const relocateHeadAssets = (html) => {
+  const headMatch = html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i);
+  if (!headMatch) return html;
+  const assets = [];
+  headMatch[1].replace(
+    /<style\b[^>]*>[\s\S]*?<\/style>|<script\b[^>]*>[\s\S]*?<\/script>|<link\b[^>]*rel=["']stylesheet["'][^>]*\/?>/gi,
+    (m) => {
+      assets.push(m);
+      return "";
+    }
+  );
+  if (!assets.length) return html;
+  let result = html.replace(/<head\b[^>]*>[\s\S]*?<\/head>/i, "");
+  const closeIdx = result.search(/<\/body>/i);
+  const insert = assets.join("\n");
+  if (closeIdx !== -1) {
+    result = result.slice(0, closeIdx) + insert + "\n" + result.slice(closeIdx);
+  } else {
+    result = result + insert;
+  }
+  return result;
+};
+
+// Renders a ```html fenced block. By default the fenced content is shown as
+// live HTML (mirrors the mermaid fence); a button lets the user toggle between
+// the rendered output and the raw code. The starting view honors the
+// user_settings.html_render_mode preference ("render" | "code" | "off"), and
+// "off" disables rendering entirely. The content is sanitized with the same
+// DOMPurify allowlist as raw HTML before being inserted into the DOM.
+// Tiny script appended to the iframe document so it can report its content
+// height back to the parent for auto-resizing. Runs inside the sandboxed,
+// opaque-origin iframe.
+const RESIZE_PROBE =
+  "<script>" +
+  "(function(){function report(){" +
+  "var b=document.body;var d=document.documentElement;" +
+  "var h=Math.max(b.scrollHeight,d.scrollHeight);" +
+  "window.parent.postMessage({__htmlBlockResize:h},'*');" +
+  "}window.addEventListener('load',report);setTimeout(report,50);})()" +
+  "</script>";
+
+const HtmlBlock = memo(({ content, isLoading }) => {
+  const { t } = useTranslation();
+  const defaultMode = useSelector(selectHtmlRenderMode);
+  const loadExternal = useSelector(selectHtmlLoadExternal);
+  const sanitization = useSelector(selectHtmlSanitization);
+  const relaxed = sanitization === "relaxed";
+  const [showCode, setShowCode] = useState(defaultMode !== "render");
+  const [iframeHeight, setIframeHeight] = useState(500);
+
+  useEffect(() => {
+    setShowCode(defaultMode !== "render");
+  }, [defaultMode]);
+
+  const safeHtml = useMemo(() => {
+    const relocated = relocateHeadAssets(content || "");
+    return sanitizeSvgHtml(relocated, loadExternal, relaxed);
+  }, [content, loadExternal, relaxed]);
+
+  // srcdoc gives the block a real document context (its own <body>, 100vh,
+  // background and scroll) so full standalone pages render and layout
+  // correctly. The iframe is sandboxed with an opaque origin (no
+  // allow-same-origin), so embedded scripts cannot touch the parent page —
+  // safer than injecting into the main document. A probe script posts the
+  // content height back so the iframe can auto-resize.
+  const srcDoc = useMemo(
+    () => (relaxed ? `${safeHtml}\n${RESIZE_PROBE}` : safeHtml),
+    [safeHtml, relaxed]
+  );
+
+  // Listen for the height message from the sandboxed iframe.
+  useEffect(() => {
+    const onMessage = (event) => {
+      const data = event.data;
+      if (data && typeof data === "object" && data.__htmlBlockResize) {
+        setIframeHeight(Number(data.__htmlBlockResize) || 500);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  const codeContent = String(content || "").replace(/\n$/, "");
+
+  // While the message is still streaming the fenced block may be incomplete.
+  // Do not render partial HTML: show the raw code until the whole block has
+  // been received.
+  const forceCode = isLoading;
+  const codeVisible = showCode || forceCode;
+
+  return (
+    <div className="relative my-2">
+      <button
+        type="button"
+        onClick={() => setShowCode((prev) => !prev)}
+        disabled={forceCode}
+        aria-pressed={!codeVisible}
+        className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-medium text-gray-600 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+      >
+        {codeVisible ? (
+          <>
+            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("conversation.html_block.render")}
+          </>
+        ) : (
+          <>
+            <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("conversation.html_block.show_code")}
+          </>
+        )}
+      </button>
+
+      {codeVisible ? (
+        <div className="pt-3">
+          <Code language="html">{codeContent}</Code>
+        </div>
+      ) : (
+        <iframe
+          title={t("conversation.html_block.render")}
+          sandbox="allow-scripts"
+          srcDoc={srcDoc}
+          className="html-block w-full overflow-hidden rounded border border-gray-200 bg-white dark:border-gray-700"
+          style={{ height: iframeHeight, minHeight: 200 }}
+        />
+      )}
+    </div>
+  );
+});
+HtmlBlock.displayName = "HtmlBlock";
 
 /* ------------------------------------------------
  * Streaming processor (unchanged)
@@ -389,80 +687,23 @@ export const SafeMarkdown = ({
   children: markdownContent,
   components,
   enableKatex = true,
+  renderHtml = false,
+  loadExternal = true,
 }) => {
   if (!markdownContent || typeof markdownContent !== "string") return null;
 
-  // const preClean = (text) =>
-  //   text
-  //     .replace(/\[\[([^\|\]]+)\|([^\]]+)\]\]/g, "[$2]($1)")
-  //     .replace(/^\s*={2,6}\s*(.*?)\s*={2,6}\s*$/gm, (m, t) => {
-  //       const eqs = (m.match(/=/g) || []).length / 2;
-  //       const level = Math.min(6, Math.max(1, 7 - eqs));
-  //       return `${"#".repeat(level)} ${t}`;
-  //     })
-  //     .replace(/^\s*undefined\s*$/gm, "")
-  //     .replace(/,\s*\[object Object\]\s*,?/g, " ")
-  //     .replace(/\[object Object\]/g, "")
-  //     .replace(/(^|,)\s*,+/g, "$1");
-
   try {
-    const cleanContent = useMemo(() => {
-      return DOMPurify.sanitize(markdownContent, {
-        // FORBID_TAGS: [
-        //   "script",
-        //   "style",
-        //   "link",
-        //   "meta",
-        //   "title",
-        //   "head",
-        //   "html",
-        //   "body",
-        //   "object",
-        //   "embed",
-        //   "form",
-        //   "input",
-        //   "button",
-        //   "textarea",
-        //   "select",
-        //   "option",
-        //   "iframe",
-        //   "frame",
-        //   "frameset",
-        //   "base",
-        // ],
-        // FORBID_ATTR: [
-        //   "style",
-        //   "onerror",
-        //   "onload",
-        //   "onclick",
-        //   "onmouseover",
-        //   "onfocus",
-        //   "onblur",
-        //   "onchange",
-        //   "onsubmit",
-        //   "onkeydown",
-        //   "onkeyup",
-        //   "onmousedown",
-        //   "onmouseup",
-        //   "onmousemove",
-        //   "onmouseout",
-        //   "onmouseover",
-        // ],
-        ALLOWED_TAGS: ['p','pre','code','strong','em','ul','li','ol','a','blockquote','h1','h2','h3','h4'],
-        ALLOWED_ATTR: ['href','title','class'],
-        ALLOW_DATA_ATTR: false,
-        ALLOW_UNKNOWN_PROTOCOLS: false,
-        SANITIZE_DOM: true,
-        KEEP_CONTENT: true,
-        ALLOWED_URI_REGEXP:
-          /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-      });
-    }, [markdownContent]);
+    // Raw HTML is only rendered when renderHtml is set, and even then every
+    // html node is scrubbed by remarkSanitizeHtml (DOMPurify allowlist) before
+    // rehype-raw turns it into live elements — never enable rehype-raw without
+    // that sanitizer (see remarkHtmlAsText in ThinkingBlock.jsx).
     const remarkPlugins = [remarkGfm];
     if (enableKatex) remarkPlugins.push(remarkMath);
+    if (renderHtml)
+      remarkPlugins.push([remarkSanitizeHtml, { loadExternal }]);
 
     const rehypePlugins = [];
-    // if (allowRawHtml) rehypePlugins.push(rehypeRaw);
+    if (renderHtml) rehypePlugins.push(rehypeRaw);
     if (enableKatex)
       rehypePlugins.push([
         rehypeKatex,
@@ -497,13 +738,12 @@ export const SafeMarkdown = ({
  * -------------------------------------------- */
 const MarkdownRenderer = memo(
   ({ children, isDarkMode, isLoading, renderMode = "Default" }) => {
+    const loadExternal = useSelector(selectHtmlLoadExternal);
     // KaTeX styling
     useEffect(() => {
       const style = document.createElement("style");
       style.textContent = `
       .katex-display {
-        display: flex !important;
-        justify-content: center !important;
         text-align: center !important;
         margin: 1em 0 !important;
       }
@@ -620,8 +860,26 @@ const MarkdownRenderer = memo(
       return isLoading ? referencesContent : processedReferences;
     }, [isLoading, referencesContent, processedReferences]);
 
-    const renderContentByMode = () => {
-      const contentToRender = mainContent.trim();
+    const renderContentByMode = useCallback((content) => {
+      const contentToRender = content.trim();
+
+      // rendererComponents but with the html fence wired to receive isLoading
+      // so HtmlBlock can avoid rendering partial HTML while streaming.
+      const components = {
+        ...rendererComponents,
+        code(props) {
+          const match = /language-(\w+)/.exec(props.className || "");
+          if (match && match[1] === "html") {
+            return (
+              <HtmlBlock
+                content={String(props.children).replace(/\n$/, "")}
+                isLoading={isLoading}
+              />
+            );
+          }
+          return rendererComponents.code(props);
+        },
+      };
 
       switch (renderMode) {
         case "Plaintext":
@@ -636,7 +894,6 @@ const MarkdownRenderer = memo(
             <SafeMarkdown
               enableKatex={true}
               components={{
-                // ...rendererComponents,
                 // Remove markdown rendering for components
                 h1: ({ children }) => <>{children}</>,
                 h2: ({ children }) => <>{children}</>,
@@ -645,6 +902,7 @@ const MarkdownRenderer = memo(
                 strong: ({ children }) => <>{children}</>,
                 em: ({ children }) => <>{children}</>,
                 a: ({ children }) => <>{children}</>, // remove links
+                img: MarkdownImage,
                 math: ({ value }) => (
                   <div className="my-4 text-center p-4 bg-green-50 dark:bg-green-900/20 rounded border-2 border-green-200 dark:border-green-700">
                     <span className="katex-display">{value}</span>
@@ -666,24 +924,26 @@ const MarkdownRenderer = memo(
           return (
             <SafeMarkdown
               enableKatex={false}
-              components={rendererComponents}
+              components={components}
             >
               {contentToRender}
             </SafeMarkdown>
           );
 
         default:
-          // Default = Markdown + KaTeX + sanitized HTML
+          // Default = Markdown + KaTeX, raw HTML rendered but sanitized
           return (
             <SafeMarkdown
               enableKatex={true}
-              components={rendererComponents}
+              renderHtml={true}
+              loadExternal={loadExternal}
+              components={components}
             >
               {preprocessLaTeX(contentToRender)}
             </SafeMarkdown>
           );
       }
-    };
+    }, [renderMode, isLoading, loadExternal]);
 
     if (!children) return null;
 
@@ -698,12 +958,16 @@ const MarkdownRenderer = memo(
                 index === thinkingBlocks.length - 1
               }
               isStreaming={isStreaming && index === thinkingBlocks.length - 1}
+              // Default keeps the block's own rendering, other modes follow the switch
+              renderContent={
+                renderMode === "Default" ? undefined : renderContentByMode
+              }
             >
               {content}
             </ThinkingBlock>
           ))}
 
-          {renderContentByMode()}
+          {renderContentByMode(mainContent)}
         </div>
 
         {finalReferences && (

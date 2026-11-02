@@ -16,6 +16,7 @@ export default {
     clear: "Löschen",
     abort: "Abbrechen",
     send: "Senden",
+    send_shortcut: "Senden (Umschalt+Enter)",
     stop: "Anhalten",
     share: "Teilen",
     delete: "Löschen",
@@ -31,6 +32,8 @@ export default {
     record_start: "Aufnehmen (klicken/halten)",
     record_stop: "Stopp (klicken/loslassen)",
     dont_show_again: "Nicht mehr anzeigen",
+    regenerate: "Antwort neu generieren",
+    fork: "In neuem Chat fortfahren",
     backup_data: "Daten sichern",
     skip_backup: "Backup überspringen",
     upgrade_chat_ai: "Chat AI aktualisieren",
@@ -56,6 +59,15 @@ export default {
     title: "Chats",
     all: "Alle Chats",
     uncategorized: "Nicht zugeordnete Chats",
+    by_date: "Alle Chats nach Datum",
+    modified: "Geändert {{date}}",
+    dateBuckets: {
+      today: "Heute",
+      yesterday: "Gestern",
+      lastWeek: "Letzte Woche",
+      lastMonth: "Letzter Monat",
+      older: "Älter",
+    },
     create_button: "Neues Thema",
     empty_topic: "Ziehen Sie einen Chat hierher.",
     search_label: "Suche",
@@ -88,6 +100,62 @@ export default {
     new_folder_prompt: "Neues Thema anlegen",
     create_inline: "Erstellen",
   },
+  sorter: {
+    button: "Sortieren & organisieren",
+    title: "Chats sortieren & organisieren",
+    intro:
+      "Prüfen Sie die Vorschläge unten. Änderungen werden erst beim Anwenden übernommen.",
+    ai_model_note:
+      "Chat-Titel, vorhandene Zusammenfassungen und bestehende Themennamen werden vom Standard-ChatAI-Modell analysiert.",
+    ai_analyzing: "Ihre Chats werden mit {{model}} analysiert…",
+    ai_error:
+      "Das Modell konnte Ihre Chats nicht analysieren. Es werden keine Änderungen angezeigt.",
+    ai_retry: "Modell erneut versuchen",
+    ai_limited:
+      "Die {{analyzed}} neuesten von {{total}} Chats wurden analysiert. Ältere Chats bleiben unverändert.",
+    ai_default_model: "das Standardmodell",
+    assessment_title: "Einschätzung des Modells",
+    preview_title: "Vorgeschlagene Struktur",
+    include_topic_rename: "Themenumbenennung übernehmen",
+    include_title_change: "Titeländerung übernehmen",
+    new_topic: "Neues Thema",
+    existing_topic: "Bestehendes Thema",
+    no_changes: "Keine Themenänderungen vorgeschlagen.",
+    select_all_moves: "Alle auswählen",
+    deselect_all_moves: "Alle abwählen",
+    deletions_title: "Vorgeschlagene Löschungen",
+    deletions_hint:
+      "Vom Modell vorgeschlagene Löschungen werden hier angezeigt. Sie sind standardmäßig nicht ausgewählt.",
+    no_deletions: "Keine Löschungen vorgeschlagen.",
+    reason_empty: "Leerer Chat",
+    reason_duplicate: 'Duplikat von "{{title}}"',
+    reason_duplicate_generic: "Doppelter Chat",
+    select_all_deletions: "Alle Löschungen auswählen",
+    deselect_all_deletions: "Alle Löschungen abwählen",
+    summary_moves: "{{count}} Verschiebungen",
+    summary_new_topics: "{{count}} neue Themen",
+    summary_titles: "{{count}} Titeländerungen",
+    summary_topic_renames: "{{count}} Themenumbenennungen",
+    summary_deletions: "{{count}} Löschungen",
+    apply: "Änderungen anwenden",
+    applying: "Wird angewendet…",
+    error_name: "Bitte geben Sie jedem neuen Thema einen Namen.",
+    error_generic:
+      "Die Änderungen konnten nicht angewendet werden. Bitte erneut versuchen.",
+    success: "Chats wurden neu organisiert.",
+    categories: {
+      code: "Programmierung",
+      writing: "Schreiben",
+      research: "Forschung",
+      data: "Daten & Analyse",
+      planning: "Planung",
+      learning: "Lernen",
+      health: "Gesundheit",
+      travel: "Reisen",
+      finance: "Finanzen",
+      creative: "Kreatives Arbeiten",
+    },
+  },
   // Settings panel
   settings: {
     tools_enabled: "Werkzeuge sind aktiviert",
@@ -112,9 +180,13 @@ export default {
             label: "An",
             description: "Reasoning ist aktiviert"
         },
+        minimal: {
+            label: "Minimal",
+            description: "Minimaler Reasoning-Aufwand",
+          },
         low: {
             label: "Niedrig",
-            description: "Minimaler Reasoning-Aufwand"
+            description: "Niedriger Reasoning-Aufwand"
         },
         medium: {
             label: "Mittel",
@@ -125,7 +197,7 @@ export default {
             description: "Hoher Reasoning-Aufwand"
         },
         xhigh: {
-            label: "Hoch",
+            label: "Hoch‌+",
             description: "Hoher Reasoning-Aufwand"
         },
         max: {
@@ -180,13 +252,32 @@ export default {
       audio_unsupported: "Modell wechseln, um Audio zu verarbeiten",
       file_unsupported: "Nur mit {{filetype}}-Modell nutzbar",
       unprocessed: "Unverarbeitete Datei",
+      process_browser: "Im Browser verarbeiten",
+      process_server: "Auf dem Server verarbeiten",
+      must_process: "Datei muss verarbeitet werden",
     },
     reasoning: "Denkprozess",
+    copy_reasoning: "Denkprozess kopieren",
     action: "Aktion",
+    html_block: {
+      render: "HTML rendern",
+      show_code: "Code anzeigen",
+    },
+    typst_block: {
+      render: "Als Typst rendern",
+      show_code: "Code anzeigen",
+    },
+    latex_block: {
+      render: "Als LaTeX rendern",
+      show_code: "Code anzeigen",
+    },
     sources: "Quellen und Referenzen",
     references: "Referenzen",
     empty_message:
       "Ihre Gespräche werden niemals auf unseren Servern gespeichert.",
+    fork_empty: "Keine Nachrichten zum Kopieren gefunden.",
+    fork_created: "Neue Unterhaltung erstellt.",
+    fork_failed: "Unterhaltung konnte nicht kopiert werden.",
     untitled: "Unbenannter Chat",
   },
   // Footer
@@ -238,6 +329,30 @@ export default {
       title: "Nutzung",
       description:
         "Überblick über Ihre monatliche Nutzung und das Organisationsbudget.",
+      monthly: "Monatlich",
+      total: "Gesamt",
+      personal: "Persönlich",
+      organization: "Organisation",
+      personal_monthly: "Persönlich monatlich",
+      personal_total: "Persönlich gesamt",
+      organization_monthly: "Organisation monatlich",
+      organization_total: "Organisation gesamt",
+      resets_at: "Zurücksetzung {{time}}",
+      rate_limits: {
+        "10s": "10 s",
+        hourly: "Stündlich",
+        daily: "Täglich",
+        monthly: "Monatlich",
+      },
+      sections: {
+        budget: "Budget",
+        rate_limits: "Ratenlimits",
+        requests: "Anfragen",
+      },
+      scopes: {
+        external: "Extern",
+        internal: "Intern",
+      },
     },
     monthly_usage: "Monatliche Nutzung",
     org_usage: "Nutzung des Organisationsbudgets",
@@ -278,6 +393,94 @@ export default {
         description:
           "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
         help_label: "Mehr über Folgevorschläge erfahren",
+        title_once: {
+          label: "Titel nur bei der ersten Anfrage festlegen",
+          description:
+            "Den Gesprächstitel nur einmal, aus der ersten Anfrage, generieren.",
+        },
+      },
+      summaries: {
+        section_label: "Unterhaltungszusammenfassungen",
+        label: "Zusammenfassungen beim Darüberfahren anzeigen",
+        description:
+          "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",
+      },
+      html_render: {
+        label: "HTML-Blöcke rendern",
+        description:
+          "Legt fest, wie HTML-Blöcke in Antworten standardmäßig angezeigt werden.",
+        options: {
+          render: {
+            label: "Rendern",
+            description:
+              "HTML-Blöcke als Live-Inhalt rendern. Pro Block kann weiterhin auf den Code gewechselt werden.",
+          },
+          code: {
+            label: "Code",
+            description:
+              "HTML-Blöcke standardmäßig als Code anzeigen. Pro Block kann weiterhin gerendert werden.",
+          },
+          off: {
+            label: "Aus",
+            description:
+              "HTML-Blöcke nicht automatisch rendern. Sie werden zunächst als Code angezeigt; pro Block kann weiterhin gerendert werden.",
+          },
+        },
+        external_references: {
+          label: "Externe Referenzen laden",
+          description:
+            "Erlaubt HTML-Blöcken, Bilder und Links von externen Hosts zu laden. Standardmäßig aus: Ist die Option deaktiviert, werden externe Referenzen entfernt, sodass der Browser nur diesen Server kontaktiert.",
+        },
+        sanitization: {
+          label: "Bereinigung",
+          description:
+            "Legt fest, wie streng HTML-Blöcke vor dem Rendern bereinigt werden.",
+          options: {
+            strict: {
+              label: "Streng",
+              description:
+                "Blockiert interaktive und scriptfähige HTML-Elemente (Buttons, Formulare, Iframes, Skripte, Inline-Styles). Am sichersten für unvertraute Inhalte.",
+            },
+            relaxed: {
+              label: "Gelockert",
+              description:
+                "Erlaubt interaktives HTML mit JavaScript (Buttons, Formulare, Iframes, Skripte, Inline-Styles). Warnung: Modellausgaben können Code ausführen – nur aktivieren, wenn die Quelle vertrauenswürdig ist.",
+            },
+          },
+        },
+      },
+      rendering: {
+        label: "Darstellung",
+      },
+      typst: {
+        label: "Typst-Blöcke rendern",
+        description:
+          "Legt fest, ob Typst-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
+      },
+      latex: {
+        label: "LaTeX-Blöcke rendern",
+        description:
+          "Legt fest, ob LaTeX-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
+      },
+      document_conversion: {
+        label: "Dokumentkonvertierung",
+        options: {
+          server: {
+            label: "Nur Server",
+            description:
+              "Angehängte PDF- und DOCX-Dateien immer auf dem Server verarbeiten.",
+          },
+          browser: {
+            label: "Nur Browser",
+            description:
+              "Angehängte PDF- und DOCX-Dateien immer lokal im Browser verarbeiten.",
+          },
+          choice: {
+            label: "Nach Wahl",
+            description:
+              "Legen Sie für jedes Dokument fest, ob es im Browser oder auf dem Server verarbeitet wird.",
+          },
+        },
       },
     },
     default_model: {
@@ -424,6 +627,10 @@ export default {
     change_model: "Modell wechseln",
     docs_hint_text: "Unsicher, welches Modell Sie wählen sollen?",
     docs_hint_link: "Lesen Sie die Modellübersicht.",
+    scope_filter: "Modelle filtern",
+    scope_all: "Alle Modelle",
+    scope_internal: "Nur interne",
+    scope_external: "Nur externe",
   },
   // Tour
   tour: {
@@ -467,8 +674,11 @@ export default {
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
     regenerate_confirm:
-      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Um diese Unterhaltung zu behalten, können Sie in einer Kopie dieses Chats fortfahren.",
+      "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden. Um diese Unterhaltung zu behalten, verwenden Sie stattdessen „In neuem Chat fortfahren“.",
     regenerate_yes: "Regenerieren",
+    fork_confirm:
+      "Die Unterhaltung wird bis zu dieser Nachricht in einen neuen Chat kopiert. Die aktuelle Unterhaltung bleibt unverändert, Sie können also eine andere Antwort oder andere Einstellungen ausprobieren, ohne etwas zu verlieren.",
+    fork_yes: "Kopie erstellen",
     regenerate_fork: "Kopie",
     regenerate_fork_success: "Chat erfolgreich geforkt",
     regenerate_fork_fail: "Chat konnte nicht geforkt werden.",
@@ -504,7 +714,7 @@ export default {
     unsent_files:
       "Sie haben Dateien angehängt, die verloren gehen werden. Sind Sie sicher, dass Sie gehen wollen?",
     unprocessed_files:
-      "Bitte verarbeiten oder entfernen Sie das beigefügte PDF, um fortzufahren.",
+      "Sie haben eine unverarbeitete Datei. Bitte verarbeiten oder entfernen Sie sie zuerst.",
     migrate_data:
       "Es sieht so aus, als ob Sie eine ältere Version von Chat AI verwenden. Um fortzufahren, müssen Ihre vorherigen Gespräche und Daten aktualisiert werden. Bitte sichern Sie Ihre Daten zuerst, falls erforderlich, und drücken Sie dann auf 'Aktualisieren', um den Prozess zu starten.",
     // Hallucination warning
@@ -555,6 +765,25 @@ export default {
       "Keine Sorge! Sie können eine neue Unterhaltung starten, indem Sie auf den Button unten klicken.",
     buttonText: "Zum Chat gehen",
   },
+  typst: {
+    rendering: "Typst-Dokument wird gerendert...",
+    render_error:
+      "Typst-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
+  },
+  latex: {
+    rendering: "LaTeX-Dokument wird gerendert...",
+    render_error:
+      "LaTeX-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
+  },
   // Announcement
   announcement: "",
+  // Editierbare Tool-Formulare
+  tool_form: {
+    submit: "Tool ausführen",
+    sending: "Wird ausgeführt...",
+    reset: "Zurücksetzen",
+    edit: "Bearbeiten",
+    tool_call: "Tool-Aufruf",
+    select_placeholder: "Auswählen…",
+  },
 };

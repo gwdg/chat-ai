@@ -33,6 +33,10 @@ export type ConversationRow = {
   messageCount: number
   folderId?: string | null
   hasFirstPrompt?: boolean
+  summary?: string
+  summaryUpdatedAt?: number
+  summarySourceHash?: string
+  lastOpenedAt?: number
 }
 
 export type HydratedConversation = ConversationRow & {
@@ -67,21 +71,46 @@ export type FeedbackRow = {
   result?: string
 }
 
+export type FormField = {
+  name: string
+  label?: string
+  type: string            // html input type: text | number | range | checkbox | select | textarea | ...
+  value?: any
+  default?: any
+  placeholder?: string
+  min?: number
+  max?: number
+  step?: number
+  options?: { value: string; label: string }[]
+  required?: boolean
+}
+
+export type FormContent = {
+  tool_id?: string
+  title?: string
+  description?: string
+  fields: FormField[]
+  submitted?: boolean     // true once the user has sent values
+  values?: Record<string, any>  // captured input values after submit
+}
+
 export type ContentItemRow = {
   id: string
   messageId: string
   idx: number
-  type: 'text' | 'file'
+  type: 'text' | 'file' | 'form'
   text?: string // for text, file ID for files
   fileId?: string
+  form?: FormContent
   // what to do for meta?
 }
 
 export type ContentItemInput = {
-  type: 'text' | 'file'
+  type: 'text' | 'file' | 'form'
   text?: string
   file?: File
   fileId?: string
+  form?: FormContent
 }
 
 // Table: file_data
@@ -126,4 +155,5 @@ export type FolderRow = {
   // One of TopicIconId (see components/Sidebar/topicIcons.ts). Unset falls back
   // to the default icon. Neither field is indexed, so no schema bump is needed.
   icon?: string
+  sortOrder?: number
 }

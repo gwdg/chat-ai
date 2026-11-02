@@ -1,8 +1,8 @@
 // components/settings/ReasoningEffortContainer.jsx
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import getModelDefaults from "../../config/getModelDefaults";
 
 const ReasoningEffortContainer = ({ localState, setLocalState }) => {
@@ -38,16 +38,18 @@ const ReasoningEffortContainer = ({ localState, setLocalState }) => {
             onClick={() => openModal("helpReasoning")}
           />
         </div>
-        {/* <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400"> */}
-          {/* {t("settings.reasoning_effort.subtitle")} */}
-          {/* {t(`settings.reasoning_effort.options.${reasoningEffortOptions[reasoningEffortIndex]}.description`)} */}
-        {/* </p> */}
       </div>
 
       <div
         role="group"
         aria-labelledby="global-reasoning-label"
-        className={`grid min-h-10 grid-flow-col grid-rows-1 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60`}
+        className={`grid min-h-10 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60 ${
+          reasoningEffortOptions?.length <= 5
+            ? "grid-flow-col grid-rows-1"
+            : reasoningEffortOptions?.length <= 6
+                ? "grid-flow-row grid-cols-3"
+                : "grid-flow-row grid-cols-4"
+        }`}
       >
         {reasoningEffortOptions.map((option, index) => {
           const selected = index === reasoningEffortIndex;

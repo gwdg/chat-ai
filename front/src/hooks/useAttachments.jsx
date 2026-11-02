@@ -1,5 +1,4 @@
-import { useSelector, useDispatch } from "react-redux";  
-import sendMessage from "../utils/sendMessage";
+import { useDispatch } from "react-redux";  
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "./useToast";
 import { useFiles } from "../db";

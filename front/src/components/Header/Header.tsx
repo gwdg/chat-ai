@@ -19,7 +19,7 @@ function Header({ className, localState, setLocalState, modelsData, userData }) 
 
           {/* Center Section - Model Selector*/}
           <div
-            className="flex-grow min-w-0 relative w-full"
+            className="model-selector-header flex-grow min-w-0 relative w-full"
             style={{ maxWidth: "calc(100vw - 50px)" }}
             tabIndex={0}
           >

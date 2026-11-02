@@ -1,5 +1,5 @@
 import Tooltip from "../Others/Tooltip";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { abortRequest } from "../../apis/chatCompletions";
 import { useToast } from "../../hooks/useToast";
 import { StopFilled } from "@carbon/icons-react";

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";

@@ -1,5 +1,4 @@
 import { v4 as uuidv4 } from "uuid";
-import { useSelector } from "react-redux";
 import { getConversation, getFolder, listConversationMetas } from "../db";
 import { processContentItems } from "./sendMessage";
 import packageJson from "../../package.json";
@@ -49,6 +48,24 @@ export const getDefaultSettings = (userSettings = {}) => {
     ])
   );
   return mergedSettings ;
+};
+
+export const getDefaultChatAIModel = (userSettings = {}) => {
+  const settings = getDefaultSettings(userSettings);
+  return (
+    settings?.model?.id ||
+    import.meta.env.VITE_TITLE_GENERATION_MODEL ||
+    ""
+  );
+};
+
+export const getSecretDefaultChatAIModel = () => {
+  const settings = getDefaultSettings();
+  return (
+    settings?.model?.id ||
+    import.meta.env.VITE_TITLE_GENERATION_MODEL ||
+    ""
+  );
 };
 
 export const getDefaultConversation = (userSettings = {}, folderId = null) => {

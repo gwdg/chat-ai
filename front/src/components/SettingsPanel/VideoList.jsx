@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, Clock3, Download, CircleX, Trash2 } from "lucide-react";
-import { Video } from "lucide-react";
 import { useUpdateVideoList } from "../../hooks/useUpdateVideoList";
 import { downloadVideo, deleteVideo } from "../../apis/videoListApi";
 

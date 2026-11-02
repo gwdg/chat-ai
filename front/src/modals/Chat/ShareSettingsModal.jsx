@@ -11,16 +11,6 @@ export default function ShareSettingsModal({
 }) {
   const [shareArcana, setShareArcana] = useState(false);
   const [shareMcpServers, setShareMcpServers] = useState(false);
-  // Handler for "Don't Show Again" checkbox
-  // const handleCheckboxChange = (event) => {
-  //   setLocalState((prevState) => ({
-  //     ...prevState,
-  //     exportOptions: {
-  //       ...prevState.exportOptions,
-  //       dontShowAgainShare: event.target.checked,
-  //     },
-  //   }));
-  // };
 
   return (
     <BaseModal
@@ -111,7 +101,6 @@ export default function ShareSettingsModal({
           <Trans i18nKey="common.share" />
         </button>
       </div>
-      
       
     </BaseModal>
   );

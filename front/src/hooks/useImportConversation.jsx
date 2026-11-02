@@ -206,17 +206,6 @@ export function useImportConversation() {
         }
       }
 
-      // Make sure there is an user message at the end, as the prompt
-      // if (!expectUserMessage) {
-      //   sanitizedMessages.push({
-      //     "role": "assistant",
-      //     "content": [{
-      //       "type": "text",
-      //       "text": "",
-      //     }],
-      //   })
-      //   expectUserMessage = true;
-      // }
       // Push user message as prompt
       if (expectUserMessage) {
         sanitizedMessages.push({

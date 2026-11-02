@@ -1,6 +1,6 @@
 import Dexie, { Table } from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useCallback, useMemo, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid';
 
 import type { 
@@ -72,6 +72,21 @@ export class AppDB extends Dexie {
         }
       });
     });
+
+    this.version(5).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt'
+    }).upgrade(async tx => {
+      await tx.table('conversations').toCollection().modify((conv: any) => {
+        if (typeof conv.lastOpenedAt === 'undefined') {
+          conv.lastOpenedAt = conv.lastModified ?? conv.createdAt ?? Date.now();
+        }
+      });
+    });
   }
 }
 
@@ -108,8 +123,6 @@ function conversationHasPrompt(messages: Array<{ role?: MessageRole, content?: a
   }
   return false;
 }
-
-
 
 // ---------- Low-level helpers ----------
 
@@ -160,27 +173,15 @@ async function hydrateConversation(conversationId: string) {
       })
     }
     else if (ci.type === 'file') {
-      // const meta = filesById.get(ci.fileId!)
-      // if (meta) {
-      //   // Placeholder with meta only
-      //   items.push({
-      //     type: 'file',
-      //     fileId: meta.id,
-      //     file: {
-      //       name: meta.name,
-      //       type: meta.type,
-      //       size: meta.size,
-      //       width: meta.width,
-      //       height: meta.height,
-      //       duration: meta.duration,
-      //       extra: meta.extra
-      //     }
-      //   })
-      // } else {
-        // File meta missing
       items.push({
         type: 'file',
         fileId: ci.fileId,
+      })
+    }
+    else if (ci.type === 'form' && ci.form) {
+      items.push({
+        type: 'form',
+        form: { ...ci.form },
       })
     }
   }
@@ -233,6 +234,7 @@ export async function createConversation(params: {
       messageCount: 0,
       folderId,
       hasFirstPrompt,
+      lastOpenedAt: now,
     })
 
     if (messages.length > 0) {
@@ -246,12 +248,6 @@ export async function createConversation(params: {
 // Get one conversation fully hydrated (messages + file placeholders)
 export async function getConversation(conversationId: string) {
   return hydrateConversation(conversationId)
-}
-
-export async function getConversationLastModified(conversationId: string) {
-  // Find conversation
-  const convo = await db.conversations.get(conversationId);
-  return convo?.lastModified || 0;
 }
 
 async function cleanUpOrphanFiles(conversationId: string) {
@@ -348,8 +344,6 @@ export async function updateConversation(
         ? data.hasFirstPrompt
         : conversationHasPrompt(normalizedMsgs);
 
-      
-
       // Figure out message IDs to keep / delete
       const keepIds = new Set(normalizedMsgs.map(m => m.id));
       const existingMsgIds = await db.messages
@@ -362,17 +356,6 @@ export async function updateConversation(
       if (toDeleteMsgIds.length) {
         // Delete all content items for these messages
         await db.content_items.where('messageId').anyOf(toDeleteMsgIds).delete();
-
-        // // Delete orphan files (meta + data)
-        // const orphanFileIds = await db.files_meta
-        //   .where('messageId')
-        //   .anyOf(toDeleteMsgIds)
-        //   .primaryKeys();
-
-        // if (orphanFileIds.length) {
-        //   await db.files_data.bulkDelete(orphanFileIds);
-        //   await db.files_meta.bulkDelete(orphanFileIds);
-        // }
 
         // Delete the messages themselves
         await db.messages.bulkDelete(toDeleteMsgIds);
@@ -414,21 +397,6 @@ export async function updateConversation(
             await db.content_items.add(ci);
           }
           else if (item.type === 'file') {
-            //let fileId = newId(); // Get new file ID
-            //console.log("New file ", fileId);
-            // if (item?.file) {
-            //   // If item has data, store in files data and meta tables
-            //   await db.files_data.add({ id: fileId, data: item.file.data });
-            //   await db.files_meta.add({
-            //     id: fileId,
-            //     conversationId,
-            //     messageId: m.id,
-            //     name: (item.file as any).name ?? 'file', // name might need to be passed separately
-            //     type: item.file.type || 'application/octet-stream',
-            //     size: item.file.size,
-            //   });
-            // } else if (item?.fileId) {
-              // If item refers to existing file, simply add
               //fileId = item.fileId;
             //}
 
@@ -441,12 +409,21 @@ export async function updateConversation(
               fileId: item.fileId
             });
           }
+          else if (item.type === 'form' && item.form) {
+            // Add form content item
+            await db.content_items.add({
+              id: newId(),
+              messageId: m.id,
+              idx: ciIdx++,
+              type: 'form',
+              form: item.form
+            });
+          }
           else {
             console.warn('Unknown content item type: ', item);
           }
         }
       }
-      //await cleanUpOrphanFiles(conversationId);
 
       // Finally update conversation info
       const convoUpdates: Partial<ConversationRow> = {
@@ -464,83 +441,6 @@ export async function updateConversation(
   return now;
 }
 
-// Add a single message (returns its id)
-// export async function addMessage(conversationId: string, message: MessageInput): Promise<string> {
-//   const now = Date.now()
-//   const id = message.id ?? newId()
-
-//   await db.transaction('rw', db.messages, db.files_meta, db.files_data, db.conversations, async () => {
-//     // Insert files first
-//     const fileIds: string[] = []
-//     for (const f of message.files ?? []) {
-//       if ('id' in f && f.id) {
-//         fileIds.push(f.id)
-//         await upsertFileMeta({ id: f.id, name: f.name, type: f.type, size: f.size, width: f.width, height: f.height, duration: f.duration, extra: f.extra })
-//       } else {
-//         const fnew = f as Exclude<FileInput, { id: string }>
-//         const fid = await insertFile(conversationId, id, fnew)
-//         fileIds.push(fid)
-//       }
-//     }
-
-//     await db.messages.add({
-//       id,
-//       conversationId,
-//       idx: message.idx,
-//       role: message.role,
-//       text: message.text,
-//       fileIds,
-//       createdAt: message.createdAt ?? now,
-//       updatedAt: now,
-//       meta: message.meta,
-//     })
-
-//     const convo = await db.conversations.get(conversationId)
-//     if (convo) {
-//       await db.conversations.update(conversationId, {
-//         lastModified: now,
-//         messageCount: (convo.messageCount ?? 0) + 1,
-//       })
-//     }
-//   })
-
-//   return id
-// }
-
-// Update a message (text, role, idx, files meta references)
-// export async function updateMessage(messageId: string, updates: Partial<Omit<MessageRow, 'id' | 'conversationId' | 'createdAt'>>) {
-//   const now = Date.now()
-//   await db.transaction('rw', db.messages, db.conversations, async () => {
-//     const msg = await db.messages.get(messageId)
-//     if (!msg) return
-//     const next = { ...updates, updatedAt: now }
-//     await db.messages.update(messageId, next)
-
-//     await db.conversations.update(msg.conversationId, { lastModified: now })
-//   })
-// }
-
-// Delete a message and its files
-// export async function deleteMessage(messageId: string) {
-//   await db.transaction('rw', db.messages, db.files_meta, db.files_data, db.conversations, async () => {
-//     const msg = await db.messages.get(messageId)
-//     if (!msg) return
-//     if (msg.fileIds.length) {
-//       await db.files_data.bulkDelete(msg.fileIds)
-//       await db.files_meta.bulkDelete(msg.fileIds)
-//     }
-//     await db.messages.delete(messageId)
-
-//     const convo = await db.conversations.get(msg.conversationId)
-//     if (convo) {
-//       await db.conversations.update(msg.conversationId, {
-//         lastModified: Date.now(),
-//         messageCount: Math.max(0, (convo.messageCount ?? 1) - 1),
-//       })
-//     }
-//   })
-// }
-
 // ---------- Conversation List ----------
 
 export async function getLastModifiedConversationMeta(): Promise<ConversationRow | undefined> {
@@ -554,7 +454,7 @@ export async function getConversationMeta(conversationId: string): Promise<Conve
 
 // Get list of conversation Metas
 export async function listConversationMetas(): Promise<
-  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'messageCount' | 'folderId'>>
+  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'lastOpenedAt' | 'messageCount' | 'folderId' | 'summary'>>
 > {
   return db.conversations.orderBy('id').toArray()
 }
@@ -570,6 +470,18 @@ export async function updateConversationMeta(
   }
   await db.conversations.update(conversationId, payload)
   return 0;
+}
+
+export async function setConversationSummary(
+  conversationId: string,
+  summary: string,
+  sourceHash: string,
+) {
+  await db.conversations.update(conversationId, {
+    summary,
+    summaryUpdatedAt: Date.now(),
+    summarySourceHash: sourceHash,
+  });
 }
 
 // Delete entire conversation (messages + content items + files)
@@ -649,16 +561,12 @@ export function useConversationList() {
 
 // ---------- Folders ----------
 
-export async function listFolders(): Promise<FolderRow[]> {
-  return db.folders.orderBy('createdAt').reverse().toArray();
-}
-
 export async function getFolder(folderId: string): Promise<FolderRow | undefined> {
   if (!folderId) return undefined;
   return db.folders.get(folderId);
 }
 
-export async function getFolderByName(name: string): Promise<FolderRow | undefined> {
+async function getFolderByName(name: string): Promise<FolderRow | undefined> {
   if (!name?.trim()) return undefined;
   return db.folders.where('name').equals(name.trim()).first();
 }
@@ -708,6 +616,13 @@ export async function setFolderColor(folderId: string, color: string) {
 }
 
 /** Set a topic's icon — its identity in the sidebar. Not indexed, no migration. */
+export async function setFolderOrder(folderId: string, sortOrder: number) {
+  await db.folders.update(folderId, {
+    sortOrder,
+    updatedAt: Date.now(),
+  });
+}
+
 export async function setFolderIcon(folderId: string, icon: string) {
   await db.folders.update(folderId, {
     icon,
@@ -745,7 +660,15 @@ export async function ensureFolder(name: string, id?: string | null): Promise<st
 export function useFolderList() {
   return useLiveQuery(
     async () => {
-      return await db.folders.orderBy('createdAt').reverse().toArray();
+      const folders = await db.folders.toArray();
+      return folders.sort((a, b) => {
+        const aOrder = typeof a.sortOrder === 'number' ? a.sortOrder : null;
+        const bOrder = typeof b.sortOrder === 'number' ? b.sortOrder : null;
+        if (aOrder !== null && bOrder !== null) return aOrder - bOrder;
+        if (aOrder !== null) return -1;
+        if (bOrder !== null) return 1;
+        return b.createdAt - a.createdAt;
+      });
     },
     [],
     [] as FolderRow[],
@@ -795,7 +718,7 @@ export async function loadFileMeta(fileId: string): Promise<FileMetaRow | null> 
 }
 
 // Load file data */
-export async function loadFileData(fileId: string): Promise<ArrayBuffer | null> {
+async function loadFileData(fileId: string): Promise<ArrayBuffer | null> {
   console.log("Loading file:", fileId);
   const row = (await db.files_data.get(fileId)) ?? null;
   return row?.data;

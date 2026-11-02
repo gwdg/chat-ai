@@ -1,15 +1,20 @@
 import { useCallback, useRef } from "react";
 import type { DragEvent, ReactNode } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { Add, AddFilled, AddAlt, BookmarkAdd, ChevronDown, Edit, TrashCan, UserAvatar, Bot } from "@carbon/icons-react";
+import {
+  BookmarkAdd,
+  Calendar,
+  ChevronDown,
+  Edit,
+  TrashCan,
+} from "@carbon/icons-react";
 
 import type { FolderRow } from "../../db/dbTypes";
-import { topicColor, topicTint, withAlpha } from "./topicColors";
-import { topicIcon } from "./topicIcons";
+import { topicColor, withAlpha } from "./topicColors";
+import { isTopicIconId, topicIcon } from "./topicIcons";
 import ImportChatButton from "./Buttons/ImportChatButton";
 
-import ShortcutTooltip from "./ShortcutTooltip";
 import { useModal } from "../../modals/ModalContext";
 import ImportPersonaButton from "./Buttons/ImportPersonaButton";
 import NewChatButton from "./Buttons/NewChatButton";
@@ -20,8 +25,10 @@ import { selectCollapsedTopics, toggleTopic } from "../../Redux/reducers/interfa
  * grouping only — no row for it exists in the database.
  */
 export const UNSORTED_TOPIC_ID = "__unsorted__";
+export const DATE_TOPIC_ID = "__by_date__";
 
 type TopicRef = { id: string; name: string; color?: string; icon?: string };
+type DateGroup = { key: string; conversations: any[] };
 
 export default function TopicList({
   topics,
@@ -37,6 +44,7 @@ export default function TopicList({
   onDragLeaveTopic,
   onDropTopic,
   renderConversationRow,
+  dateGroups,
   isDark,
 }: {
   topics: FolderRow[];
@@ -51,7 +59,11 @@ export default function TopicList({
   onDragEnterTopic: (topicId: string) => void;
   onDragLeaveTopic: (topicId: string) => void;
   onDropTopic: (topicId: string) => void;
-  renderConversationRow: (conv: any) => ReactNode;
+  renderConversationRow: (
+    conv: any,
+    options?: { showMetadata?: boolean; showModified?: boolean },
+  ) => ReactNode;
+  dateGroups: DateGroup[];
   isDark: boolean;
 }) {
   const { t } = useTranslation();
@@ -72,9 +84,10 @@ export default function TopicList({
     conversations: any[];
     hex: string;
     Icon?: ReturnType<typeof topicIcon> | null;
+    emoji?: string | null;
     topic?: TopicRef;
   }) => {
-    const { id, label, conversations, hex, Icon, topic } = options;
+    const { id, label, conversations, hex, Icon, emoji, topic } = options;
     const isCollapsed = collapsedTopicIds.includes(id);
     const isDropTarget =
       draggingConversationId !== null && dragOverTopicId === id;
@@ -120,7 +133,15 @@ export default function TopicList({
           }`}
           // style={ isDropTarget ? { backgroundColor: topicTint(hex, isDark) } : undefined }
         >
-          {Icon ? (
+          {emoji ? (
+            <span
+              aria-hidden="true"
+              className="flex-shrink-0 pointer-events-none text-sm leading-none"
+              style={{ color: hex }}
+            >
+              {emoji}
+            </span>
+          ) : Icon ? (
             <Icon
               size={16}
               className="flex-shrink-0 pointer-events-none"
@@ -222,12 +243,15 @@ export default function TopicList({
       </div>
       {topics.map((topic) => {
         const color = topicColor(topic);
+        const emoji =
+          topic.icon && !isTopicIconId(topic.icon) ? topic.icon : null;
         return renderRow({
           id: topic.id,
           label: topic.name,
           conversations: conversationsByTopic.get(topic.id) ?? [],
           hex: color.hex,
-          Icon: topicIcon(topic),
+          Icon: emoji ? null : topicIcon(topic),
+          emoji,
           topic,
         });
       })}
@@ -239,6 +263,78 @@ export default function TopicList({
         hex: isDark ? "#94A3B8" : "#64748B",
         Icon: null,
       })}
+
+      <div>
+        {(() => {
+          const isCollapsed = collapsedTopicIds.includes(DATE_TOPIC_ID);
+          const count = dateGroups.reduce(
+            (total, group) => total + group.conversations.length,
+            0,
+          );
+          return (
+            <>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-expanded={!isCollapsed}
+                onClick={() => toggleTopicCollapse(DATE_TOPIC_ID)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleTopicCollapse(DATE_TOPIC_ID);
+                  }
+                }}
+                className="group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/40"
+              >
+                <Calendar
+                  size={16}
+                  className="flex-shrink-0 pointer-events-none"
+                  style={{ color: isDark ? "#94A3B8" : "#64748B" }}
+                />
+                <span className="flex-1 truncate select-none pointer-events-none font-medium">
+                  {t("folders.by_date")}
+                </span>
+                <span className="text-[11px] select-none pointer-events-none font-semibold text-gray-500 dark:text-gray-200">
+                  {count > 999 ? "999+" : count}
+                </span>
+                <ChevronDown
+                  size={12}
+                  className={`flex-shrink-0 pointer-events-none text-gray-400 dark:text-gray-500 transition-transform duration-200 ${
+                    isCollapsed ? "-rotate-90" : "rotate-0"
+                  }`}
+                />
+              </div>
+
+              {!isCollapsed && (
+                <div
+                  className="ml-2 pl-2 border-l flex flex-col gap-1"
+                  style={{
+                    borderColor: isDark
+                      ? "rgba(148, 163, 184, 0.5)"
+                      : "rgba(100, 116, 139, 0.35)",
+                  }}
+                >
+                  {dateGroups.map((group) => (
+                    <div key={group.key}>
+                      <div className="px-1 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        {t(`folders.dateBuckets.${group.key}`)}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {group.conversations.map((conv) =>
+                          renderConversationRow(conv, {
+                            showMetadata: false,
+                            showModified: true,
+                          }),
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })()}
+      </div>
     </div>
   );
 }

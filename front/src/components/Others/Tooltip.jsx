@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
-function Tooltip({ text, children, placement = "top", offset = 8 }) {
+function Tooltip({ text, children, placement = "top", offset = 8, className = "" }) {
   const ref = useRef(null);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null);
@@ -53,7 +53,7 @@ function Tooltip({ text, children, placement = "top", offset = 8 }) {
     <>
       <span
         ref={ref}
-        className="cursor-pointer"
+        className={`cursor-pointer ${className}`}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >

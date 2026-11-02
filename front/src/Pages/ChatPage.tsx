@@ -3,21 +3,20 @@ import { useDispatch } from "react-redux";
 import { getDefaultConversation } from "../utils/conversationUtils";
 
 import { useSyncConversation } from "../hooks/useSyncConversation";
+import { useConversationSummaries } from "../hooks/useConversationSummaries";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
-import ModelSelectorWrapper from "../components/Header/ModelSelectorWrapper";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
 import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
 
-import { Navigate, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
 
 export default function ChatPage() {
@@ -40,6 +39,8 @@ export default function ChatPage() {
     conversationId,
   });
 
+  useConversationSummaries({ localState, conversationId });
+
   // Save last conversation when current conversation changes
   useEffect(() => {
     if (conversationId) {
@@ -49,9 +50,9 @@ export default function ChatPage() {
 
   return (
     <div className="h-dvh grid grid-rows-[auto_1fr]">
-      <TourManager />
       {/* Header + optional Announcement */}
       <div className="min-w-0 overflow-hidden">
+        <TourManager />
         <AnnouncementBar />
         <Header
           className="md:hidden"

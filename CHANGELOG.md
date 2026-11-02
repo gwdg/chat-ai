@@ -1,5 +1,21 @@
 # Changelog 
 
+## Version: v1.0.2 (08.10.2026)
+Highlights:
+- Code refactor and cleanup
+- Improved usage display for org admins
+- Fixed issues with some reasoning efforts and models
+- Fixed multiple latex rendering issues and bugs
+
+## Version: v1.0.1 (24.09.2026)
+Highlights:
+- Support reasoning effort for external models
+- Internal and external filter in model selector
+- Added tour support for mobile view
+- Added fork chat button for user messages
+- Updated npm packages
+- Bug fixes
+
 ## Version: v1.0.0 (03.09.2026)
 Highlights:
 - Redesigned UI to be more intuitive and follow conventions for main elements 
