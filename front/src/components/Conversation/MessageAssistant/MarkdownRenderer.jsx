@@ -21,11 +21,28 @@ import {
 } from "../../../Redux/reducers/userSettingsReducer";
 import LatexBlock from "./LatexBlock";
 import TypstBlock from "./TypstBlock";
+import {
+  isExternalUrl,
+  sanitizeExternalRefs,
+} from "../../../utils/externalRefs";
+
+// Markdown images load automatically, so keep them on the same origin when
+// external references are disabled. Plain links are not fetched until clicked.
+const MarkdownImage = ({ src, alt, ...props }) => {
+  const loadExternal = useSelector(selectHtmlLoadExternal);
+  // react-markdown passes its AST node as a prop; never forward it to the DOM.
+  delete props.node;
+  if (!loadExternal && isExternalUrl(src)) {
+    return <span className="text-gray-500">{alt || ""}</span>;
+  }
+  return <img src={src} alt={alt} {...props} />;
+};
 
 /* --------------------------------------------
  * Shared renderer components (unchanged styles)
  * -------------------------------------------- */
 export const rendererComponents = {
+  img: MarkdownImage,
   code({ className, children, node }) {
     const match = /language-(\w+)/.exec(className || "");
     const content = String(children).replace(/\n$/, "");
@@ -295,59 +312,29 @@ const RELAXED_HTML_ATTRS = [
   "onerror",
 ];
 
-const sanitizeHtmlFragment = (html, relaxed = false) =>
-  DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: relaxed ? [...SAFE_HTML_TAGS, ...RELAXED_HTML_TAGS] : SAFE_HTML_TAGS,
-    ALLOWED_ATTR: relaxed ? [...SAFE_HTML_ATTRS, ...RELAXED_HTML_ATTRS] : SAFE_HTML_ATTRS,
-    ALLOW_DATA_ATTR: relaxed,
-  });
-
 // Like sanitizeHtmlFragment but also permits embedded <svg> (including filters
 // and gradients) so fenced HTML blocks can render SVG diagrams. It uses
 // DOMPurify's battle-tested HTML + SVG profiles (correct geometry/presentation
 // attributes) while explicitly forbidding the dangerous elements those profiles
 // would otherwise allow — same hardening as sanitizeHtmlFragment.
 //
-// When loadExternal is false, src/href/xlink:href attributes that point to an
-// external host are dropped for privacy, so the browser never contacts third
-// parties. Same-page anchors, relative paths, data: URIs and mailto: are kept.
-const isExternalUrl = (value) => {
-  const v = (value || "").trim();
-  if (!v) return false;
-  const lower = v.toLowerCase();
-  if (
-    lower.startsWith("#") ||
-    lower.startsWith("data:") ||
-    lower.startsWith("mailto:") ||
-    lower.startsWith("tel:")
-  ) {
-    return false;
-  }
-  // Protocol-relative (//host) or any scheme (http:, https:, ...) → external
-  if (/^\/\//.test(lower)) return true;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(lower)) return true;
-  return false; // relative path or bare name
-};
+// When loadExternal is false, URL-bearing attributes that point to an external
+// host are dropped for privacy, so the browser never contacts third parties.
+// This covers src, href, xlink:href, poster, action, formaction, data, srcset
+// and CSS url() inside style. Same-page anchors, relative paths, data: URIs
+// and mailto: are kept (see utils/externalRefs.js).
+const sanitizeHtmlFragment = (html, relaxed = false, loadExternal = true) =>
+  sanitizeExternalRefs(loadExternal, () =>
+    DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: relaxed ? [...SAFE_HTML_TAGS, ...RELAXED_HTML_TAGS] : SAFE_HTML_TAGS,
+      ALLOWED_ATTR: relaxed ? [...SAFE_HTML_ATTRS, ...RELAXED_HTML_ATTRS] : SAFE_HTML_ATTRS,
+      ALLOW_DATA_ATTR: relaxed,
+    })
+  );
 
-const blockExternalRefHook = (node, data) => {
-  if (
-    data.attrName === "src" ||
-    data.attrName === "href" ||
-    data.attrName === "xlink:href"
-  ) {
-    if (isExternalUrl(data.attrValue)) {
-      data.keepAttr = false;
-    }
-  }
-};
-
-const sanitizeSvgHtml = (html, loadExternal = true, relaxed = false) => {
-  // addHook/removeHook are global on the DOMPurify instance; sanitize is
-  // synchronous so add/remove around the single call is safe and reentrant.
-  if (!loadExternal) {
-    DOMPurify.addHook("uponSanitizeAttribute", blockExternalRefHook);
-  }
-  const result = DOMPurify.sanitize(html, {
+const sanitizeSvgHtml = (html, loadExternal = true, relaxed = false) =>
+  sanitizeExternalRefs(loadExternal, () =>
+    DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true, svg: true, svgFilters: true },
     // Relaxed mode allows scripts, and the SAFE_FOR_XML mXSS heuristic
     // force-removes any script/style whose text contains markup-like text
@@ -367,23 +354,19 @@ const sanitizeSvgHtml = (html, loadExternal = true, relaxed = false) => {
     ADD_TAGS: relaxed ? RELAXED_HTML_TAGS : [],
     ADD_ATTR: relaxed ? RELAXED_HTML_ATTRS : [],
     ALLOW_UNKNOWN_PROTOCOLS: relaxed,
-  });
-  if (!loadExternal) {
-    DOMPurify.removeHook("uponSanitizeAttribute", blockExternalRefHook);
-  }
-  return result;
-};
+    })
+  );
 
 // remark plugin: scrub raw html nodes in the mdast tree so rehype-raw never
 // turns dangerous markup into live elements. Runs before rehype-raw parses.
-const remarkSanitizeHtml = () => (tree) => {
+const remarkSanitizeHtml = ({ loadExternal = true } = {}) => (tree) => {
   const visit = (node) => {
-    if (!Array.isArray(node.children)) return;
+    if (!node || !Array.isArray(node.children)) return;
     node.children.forEach((child, i) => {
       if (child.type === "html") {
         node.children[i] = {
           ...child,
-          value: sanitizeHtmlFragment(child.value),
+          value: sanitizeHtmlFragment(child.value, false, loadExternal),
         };
       } else {
         visit(child);
@@ -705,6 +688,7 @@ export const SafeMarkdown = ({
   components,
   enableKatex = true,
   renderHtml = false,
+  loadExternal = true,
 }) => {
   if (!markdownContent || typeof markdownContent !== "string") return null;
 
@@ -715,7 +699,8 @@ export const SafeMarkdown = ({
     // that sanitizer (see remarkHtmlAsText in ThinkingBlock.jsx).
     const remarkPlugins = [remarkGfm];
     if (enableKatex) remarkPlugins.push(remarkMath);
-    if (renderHtml) remarkPlugins.push(remarkSanitizeHtml);
+    if (renderHtml)
+      remarkPlugins.push([remarkSanitizeHtml, { loadExternal }]);
 
     const rehypePlugins = [];
     if (renderHtml) rehypePlugins.push(rehypeRaw);
@@ -753,6 +738,7 @@ export const SafeMarkdown = ({
  * -------------------------------------------- */
 const MarkdownRenderer = memo(
   ({ children, isDarkMode, isLoading, renderMode = "Default" }) => {
+    const loadExternal = useSelector(selectHtmlLoadExternal);
     // KaTeX styling
     useEffect(() => {
       const style = document.createElement("style");
@@ -916,6 +902,7 @@ const MarkdownRenderer = memo(
                 strong: ({ children }) => <>{children}</>,
                 em: ({ children }) => <>{children}</>,
                 a: ({ children }) => <>{children}</>, // remove links
+                img: MarkdownImage,
                 math: ({ value }) => (
                   <div className="my-4 text-center p-4 bg-green-50 dark:bg-green-900/20 rounded border-2 border-green-200 dark:border-green-700">
                     <span className="katex-display">{value}</span>
@@ -949,13 +936,14 @@ const MarkdownRenderer = memo(
             <SafeMarkdown
               enableKatex={true}
               renderHtml={true}
+              loadExternal={loadExternal}
               components={components}
             >
               {preprocessLaTeX(contentToRender)}
             </SafeMarkdown>
           );
       }
-    }, [renderMode, isLoading]);
+    }, [renderMode, isLoading, loadExternal]);
 
     if (!children) return null;
 

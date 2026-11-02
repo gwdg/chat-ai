@@ -76,13 +76,28 @@ const cropSvgToContent = (container) => {
 let typstPromise;
 let renderQueue = Promise.resolve();
 
+const TYPST_ASSET_PREFIX = `${import.meta.env.BASE_URL}typst-assets/`;
+
 const loadTypst = () => {
   if (!typstPromise) {
-    typstPromise = import("@myriaddreamin/typst.ts").then(({ $typst }) => {
-      $typst.setCompilerInitOptions({ getModule: () => compilerWasmUrl });
-      $typst.setRendererInitOptions({ getModule: () => rendererWasmUrl });
-      return $typst;
-    });
+    typstPromise = import("@myriaddreamin/typst.ts").then(
+      ({ $typst, loadFonts }) => {
+        $typst.setCompilerInitOptions({
+          getModule: () => compilerWasmUrl,
+          // Serve Typst's default fonts from our own origin instead of the
+          // jsDelivr CDN the library falls back to. `assets` must be set here,
+          // otherwise typst.ts adds its own default remote loader as well.
+          beforeBuild: [
+            loadFonts([], {
+              assets: ["text"],
+              assetUrlPrefix: TYPST_ASSET_PREFIX,
+            }),
+          ],
+        });
+        $typst.setRendererInitOptions({ getModule: () => rendererWasmUrl });
+        return $typst;
+      }
+    );
   }
   return typstPromise;
 };

@@ -352,7 +352,7 @@ export default {
         external_references: {
           label: "Load external references",
           description:
-            "Allow HTML blocks to load images and links from external hosts. Turn off for more privacy (external references are removed).",
+            "Allow HTML blocks to load images and links from external hosts. Off by default: when disabled, external references are removed so the browser only contacts this server.",
         },
         sanitization: {
           label: "Sanitization",

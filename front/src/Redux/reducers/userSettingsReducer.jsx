@@ -7,7 +7,7 @@ const initialState = {
   memory_mode: 0,
   suggest_user_prompts: false,
   html_render_mode: "render",
-  html_load_external: true,
+  html_load_external: false,
   html_sanitization: "strict",
   set_title_once: true,
   render_typst: true,
@@ -143,7 +143,7 @@ export const selectHtmlRenderMode = (state) => {
   return ["render", "code", "off"].includes(mode) ? mode : "render";
 };
 export const selectHtmlLoadExternal = (state) =>
-  state.user_settings.html_load_external ?? true;
+  state.user_settings.html_load_external ?? false;
 export const selectHtmlSanitization = (state) => {
   const mode = state.user_settings.html_sanitization;
   return ["strict", "relaxed"].includes(mode) ? mode : "strict";
