@@ -1,13 +1,20 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import { chatCompletions } from "../apis/chatCompletions";
+import { useToast } from "./useToast";
+import generateMemory from "../apis/generateMemory";
 import { listConversationMetas, listFolders } from "../db";
 import { extractMessageText } from "../utils/conversationSummary";
 import { getDefaultChatAIModel } from "../utils/conversationUtils";
 import {
+  addMemory,
+  editMemory,
   selectAllMemories,
+  selectDefaultMemoryGroup,
+  selectMemoryGroups,
+  selectMemoryMode,
   selectTimeout,
   selectUserSettings,
 } from "../Redux/reducers/userSettingsReducer";
@@ -16,7 +23,7 @@ const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
 const MAX_MEMORY_CHARS = 12000;
 
-function buildSystemPrompt(conversations, topics, memories) {
+function buildSystemPrompt(conversations, topics, memories, memoryMode) {
   const topicById = new Map(
     topics.map((topic) => [topic.id, topic.name]),
   );
@@ -66,6 +73,14 @@ Use only ids from the list below. Do not link to any other URL or invent an id. 
 Answer in the same language as the user's question. Be concise and concrete.
 
 You may also receive the user's saved memories. Use them when relevant, but they may be stale. Never invent memories.
+
+${
+    memoryMode === 2
+      ? "Memory learning is enabled for this chat. The application may save relevant new personal information from the user's messages after your reply. You do not write memories yourself; never tell the user that you only have read access."
+      : memoryMode === 1
+        ? "Memory recall is enabled for this chat. Memories are read-only and new information is not saved."
+        : "Memory use is disabled for this chat. Do not claim to remember or store anything."
+  }
 
 <topics>
 ${topicLines}
@@ -121,14 +136,44 @@ async function loadMetaContext() {
 }
 
 export function useMetaChatSend() {
+  const dispatch = useDispatch();
   const timeout = useSelector(selectTimeout);
   const userSettings = useSelector(selectUserSettings);
   const memories = useSelector(selectAllMemories);
+  const memoryGroups = useSelector(selectMemoryGroups);
+  const defaultMemoryGroup = useSelector(selectDefaultMemoryGroup);
+  const memoryMode = useSelector(selectMemoryMode);
   const { t } = useTranslation();
+  const { notifySuccess } = useToast();
 
   return useCallback(
     async ({ localState, setLocalState }) => {
       if (!setLocalState) return;
+
+      const modeOverride = localState.settings?.memory_mode_override;
+      const effectiveMemoryMode =
+        modeOverride === undefined ||
+        modeOverride === null ||
+        modeOverride === "default"
+          ? memoryMode
+          : [0, 1, 2].includes(Number(modeOverride))
+            ? Number(modeOverride)
+            : memoryMode;
+
+      const groupOverride = localState.settings?.memory_group_override;
+      const requestedGroup =
+        groupOverride && groupOverride !== "default"
+          ? groupOverride
+          : defaultMemoryGroup;
+      const effectiveMemoryGroup =
+        requestedGroup === "default" ||
+        memoryGroups.some((group) => group.id === requestedGroup)
+          ? requestedGroup
+          : "default";
+      const groupMemories = (memories || []).filter(
+        (memory) =>
+          (memory.groupId ?? "default") === effectiveMemoryGroup,
+      );
 
       const modelId =
         (typeof localState.settings?.model === "string"
@@ -185,7 +230,10 @@ export function useMetaChatSend() {
             content: buildSystemPrompt(
               conversations,
               topics,
-              (memories || []).map((memory) => memory?.text || ""),
+              effectiveMemoryMode !== 0
+                ? groupMemories.map((memory) => memory?.text || "")
+                : [],
+              effectiveMemoryMode,
             ),
           },
           ...history,
@@ -193,6 +241,9 @@ export function useMetaChatSend() {
       };
 
       const conversationId = localState.id;
+      const newUserMessage = extractMessageText(
+        localState.messages[localState.messages.length - 1],
+      ).trim();
       const timeoutMs =
         timeout >= 5000 && timeout <= 900000 ? timeout : 300000;
 
@@ -253,7 +304,59 @@ export function useMetaChatSend() {
           return { ...prev, messages };
         });
       }
+
+      if (
+        effectiveMemoryMode === 2 &&
+        newUserMessage &&
+        accumulated.trim() &&
+        !errorMeta
+      ) {
+        try {
+          const memoryResponse = await generateMemory(
+            newUserMessage,
+            groupMemories,
+          );
+          const cleanedResponse = memoryResponse.replace(
+            /,(\s*[}$])/g,
+            "$1",
+          );
+          const jsonResponse = JSON.parse(cleanedResponse);
+          if (jsonResponse.store) {
+            const memoryText = jsonResponse.memory_sentence.trim();
+            if (jsonResponse.replace) {
+              const lineNumber = jsonResponse.line_number - 1;
+              dispatch(
+                editMemory({
+                  index: lineNumber,
+                  text: memoryText,
+                  groupId: effectiveMemoryGroup,
+                }),
+              );
+            } else {
+              dispatch(
+                addMemory({
+                  text: memoryText,
+                  groupId: effectiveMemoryGroup,
+                }),
+              );
+            }
+            notifySuccess("Memory updated successfully.");
+          }
+        } catch (error) {
+          console.error("Meta chat memory update failed", error);
+        }
+      }
     },
-    [timeout, userSettings, memories, t],
+    [
+      timeout,
+      userSettings,
+      memories,
+      memoryGroups,
+      defaultMemoryGroup,
+      memoryMode,
+      dispatch,
+      notifySuccess,
+      t,
+    ],
   );
 }

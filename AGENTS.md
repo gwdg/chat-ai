@@ -329,8 +329,10 @@ history. Missing summaries fall back to the title. The model is instructed to re
 `MarkdownRenderer`'s link component navigates `/chat/...` links inside the SPA. The meta chat is
 stored as a hidden conversation row (`id: "meta-chat"`, `isMetaChat: true`), excluded from the
 sidebar, last-conversation lookup, and its own summary context. `getExportData()` emits it as
-`meta_chat` and `useImportConversation` recreates it silently. Do not make it summarize full
-conversations on the fly without accounting for the extra model calls.
+`meta_chat` and `useImportConversation` recreates it silently. The Meta chat honors the
+conversation's memory mode and group override; in Learn mode it runs the same memory update path as
+normal chat and writes learned/replaced memories to the effective group. Do not make it summarize
+full conversations on the fly without accounting for the extra model calls.
 
 ### 4.17 Per-conversation memory mode overrides the global preference
 
