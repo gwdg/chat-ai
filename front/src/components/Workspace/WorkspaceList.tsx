@@ -5,14 +5,22 @@ import { Add, Bot, ChevronRight } from "@carbon/icons-react";
 import { useWorkspaceList } from "../../db/workspaceDb";
 import { useModal } from "../../modals/ModalContext";
 
-export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void }) {
+export default function WorkspaceList({
+  onNavigate,
+  modelsData,
+}: {
+  onNavigate?: () => void;
+  modelsData?: any[];
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { openModal } = useModal();
   const workspaces = useWorkspaceList();
 
-  const openCreate = () => openModal("createWorkspace");
+  // Hand the already-loaded model list to the modal so it does not depend on a
+  // second, independent `/models` request succeeding while it is open.
+  const openCreate = () => openModal("createWorkspace", { modelsData });
 
   return (
     <div className="px-3 pb-2 pt-2">

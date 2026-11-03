@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
@@ -17,10 +17,7 @@ import { getModelsData } from "../../apis/getModelsData";
 import { createWorkspace } from "../../db/workspaceDb";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import { getDefaultSettings } from "../../utils/conversationUtils";
-import {
-  DEFAULT_AGENT_MODEL,
-  pickDefaultAgentModel,
-} from "../../agent/models";
+import { pickDefaultAgentModel } from "../../agent/models";
 import { DEFAULT_WORKSPACE_PERSONA } from "../../agent/prompt";
 import { SKILL_EXPLAIN_IMAGE } from "../../agent/tools";
 import {
@@ -48,7 +45,7 @@ function validateRootPath(path) {
   }
 }
 
-export default function CreateWorkspaceModal({ isOpen, onClose }) {
+export default function CreateWorkspaceModal({ isOpen, onClose, modelsData }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const userSettings = useSelector(selectUserSettings);
@@ -60,11 +57,14 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
   const [browseOpen, setBrowseOpen] = useState(false);
   const [skills, setSkills] = useState([]);
   const [models, setModels] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState("");
   const [modelId, setModelId] = useState("");
   const [modelTouched, setModelTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
+  const modelRequestRef = useRef(0);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -79,25 +79,74 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
     setNameTouched(false);
     setBusy(false);
     setTab("local");
+    setModelsLoading(true);
+    setModelsError("");
   }, [isOpen]);
+
+  // Prefer the model list the page has already loaded. This avoids depending on
+  // a second /models request that can fail or finish after the user submits.
+  useEffect(() => {
+    if (!isOpen) return;
+    const provided = Array.isArray(modelsData)
+      ? modelsData.filter((model) => model?.id)
+      : [];
+    if (!provided.length) return;
+    modelRequestRef.current += 1;
+    setModels(provided);
+    setModelsLoading(false);
+    setModelsError("");
+  }, [isOpen, modelsData]);
+
+  const loadModels = async () => {
+    const request = modelRequestRef.current + 1;
+    modelRequestRef.current = request;
+    setModelsLoading(true);
+    setModelsError("");
+    const data = await getModelsData();
+    if (request !== modelRequestRef.current) return;
+    if (Array.isArray(data) && data.length) {
+      setModels(data);
+    } else {
+      const status = data instanceof Response ? ` (${data.status})` : "";
+      setModelsError(`${t("workspace.models_unavailable")}${status}`);
+    }
+    setModelsLoading(false);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
+    const provided = Array.isArray(modelsData)
+      ? modelsData.filter((model) => model?.id)
+      : [];
+    if (provided.length) return;
     let cancelled = false;
-    (async () => {
-      const data = await getModelsData();
-      if (cancelled || !Array.isArray(data)) return;
-      setModels(data);
-    })();
+    loadModels().catch(() => {
+      if (!cancelled) {
+        setModelsError(t("workspace.models_unavailable"));
+        setModelsLoading(false);
+      }
+    });
     return () => {
       cancelled = true;
+      modelRequestRef.current += 1;
     };
-  }, [isOpen]);
+    // Re-run only when the modal opens or the shared list changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, modelsData]);
+
+  const configuredDefaultModel = useMemo(() => {
+    const settings = getDefaultSettings(userSettings);
+    const id = settings?.model?.id;
+    return id ? { id, name: settings.model.name || id } : null;
+  }, [userSettings]);
 
   const modelOptions = useMemo(() => {
-    if (models.length) return models;
-    return [{ id: import.meta.env.VITE_AGENT_MODEL || DEFAULT_AGENT_MODEL, name: "Default agent model" }];
-  }, [models]);
+    const availableModels = models.filter((model) => model?.id);
+    if (availableModels.length) return availableModels;
+    // If `/models` is unreachable, still allow the deployment's configured
+    // model instead of creating a workspace with an invented model id.
+    return configuredDefaultModel ? [configuredDefaultModel] : [];
+  }, [models, configuredDefaultModel]);
 
   useEffect(() => {
     if (!modelTouched) {
@@ -118,7 +167,10 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
       ? t("workspace.root_not_selectable")
       : null;
   const nameError = nameTouched && !name.trim() ? t("workspace.name_required") : null;
-  const selectedModel = modelOptions.find((model) => model.id === modelId) || modelOptions[0];
+  const selectedModel =
+    modelOptions.find((model) => model.id === modelId) ||
+    modelOptions[0] ||
+    null;
 
   const handleCreate = async () => {
     setError("");
@@ -272,18 +324,40 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
           </span>
           <select
             value={selectedModel?.id || ""}
+            disabled={modelsLoading || modelOptions.length === 0}
             onChange={(event) => {
               setModelId(event.target.value);
               setModelTouched(true);
             }}
             className="select w-full border-base-300 bg-base-100"
           >
-            {modelOptions.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name || model.id}
+            {modelOptions.length ? (
+              modelOptions.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name || model.id}
+                </option>
+              ))
+            ) : (
+              <option value="">
+                {modelsLoading
+                  ? t("workspace.models_loading")
+                  : t("workspace.models_unavailable_option")}
               </option>
-            ))}
+            )}
           </select>
+          {modelsError && (
+            <div className="flex items-center gap-2 text-[11px] text-error">
+              <Warning size={13} className="shrink-0" />
+              <span className="min-w-0 flex-1">{modelsError}</span>
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs shrink-0"
+                onClick={() => loadModels()}
+              >
+                {t("common.retry")}
+              </button>
+            </div>
+          )}
           <p className="text-[11px] text-base-content/50">{t("workspace.model_hint")}</p>
         </label>
 
@@ -338,7 +412,15 @@ export default function CreateWorkspaceModal({ isOpen, onClose }) {
           type="button"
           className="btn btn-primary gap-2"
           onClick={handleCreate}
-          disabled={busy || !name.trim() || !rootPath || Boolean(nameError) || Boolean(rootError)}
+          disabled={
+            busy ||
+            !name.trim() ||
+            !rootPath ||
+            Boolean(nameError) ||
+            Boolean(rootError) ||
+            modelsLoading ||
+            !selectedModel
+          }
         >
           {busy && <span className="loading loading-spinner loading-xs" />}
           {t("workspace.create_workspace")}

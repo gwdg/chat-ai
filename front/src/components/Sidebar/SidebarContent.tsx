@@ -737,6 +737,7 @@ export default function SidebarContent({
           {!hasSearch && (
             <>
               <WorkspaceList
+                modelsData={modelsData}
                 onNavigate={() => {
                   if (!isDesktop) onClose();
                 }}

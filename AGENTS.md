@@ -372,8 +372,14 @@ path has a unique `vfs_nodes` row. Deleting a folder that contains a workspace r
 moving/renaming a folder rewrites the affected workspace roots in the same transaction.
 `workspace.modelId` is the runtime source of truth for the agent model; `workspace.settings.model`
 must be updated with it whenever the prompt-box model changes, otherwise a reload can revert the
-agent. The backend forwards client `function` tools on `/chat/completions`; `/responses` is an
-equivalent streaming proxy for runtimes that use the Responses API.
+agent. The create-workspace modal receives the sidebar's already-loaded `modelsData` and only
+fetches `/models` when that list is empty; do not substitute a hardcoded/placeholder model when the
+fetch fails. A placeholder id can be unavailable upstream, and the first turn then fails with
+"Needs attention". The modal keeps the model select disabled while loading and requires a real
+option before creating the workspace; when `/models` is unreachable it may fall back only to the
+deployment's configured default model. The backend forwards client `function` tools on
+`/chat/completions`; `/responses` is an equivalent streaming proxy for runtimes that use the
+Responses API.
 
 ## 5. Conventions
 

@@ -40,6 +40,7 @@ export default {
     backup_data: "Daten sichern",
     skip_backup: "Backup überspringen",
     upgrade_chat_ai: "Chat AI aktualisieren",
+    retry: "Erneut versuchen",
   },
   feedback:{
     thumbsup:"The response is good.",
@@ -158,6 +159,10 @@ export default {
     folder_name: "Ordnername",
     agent_model: "Agentenmodell",
     model_hint: "Agentische Modelle mit Tool-Aufrufen funktionieren am besten.",
+    models_loading: "Modelle werden geladen…",
+    models_unavailable_option: "Keine Modelle verfügbar",
+    models_unavailable:
+      "Die Modellliste konnte nicht geladen werden. Prüfe die Backend-Verbindung und versuche es erneut.",
     model_required: "Wählen Sie ein Modell",
     skills: "Fähigkeiten",
     skill_explain_image: "Bilder erklären",
