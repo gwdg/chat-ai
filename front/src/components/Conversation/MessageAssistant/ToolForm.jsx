@@ -75,10 +75,7 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
     const common = {
       id: `tf-${name}`,
       name,
-      className:
-        "w-full px-3 py-2 rounded-xl text-sm bg-base-100 " +
-        "text-base-content border border-base-300 " +
-        "outline-none focus:border-primary",
+      className: "input w-full text-sm",
       required: !!field.required,
       onChange: (e) => updateValue(name, e.target.value),
       onBlur: (e) => {
@@ -96,12 +93,12 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
             type="checkbox"
             checked={!!value}
             onChange={(e) => updateValue(name, e.target.checked)}
-            className="w-4 h-4 accent-primary cursor-pointer"
+            className="checkbox checkbox-primary checkbox-sm"
           />
         );
       case "select":
         return (
-          <select {...common} value={value ?? ""}>
+          <select {...common} className="select w-full text-sm" value={value ?? ""}>
             {!field.options?.some((o) => String(o.value) === String(value)) && (
               <option value="">{t("tool_form.select_placeholder")}</option>
             )}
@@ -116,6 +113,7 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
         return (
           <textarea
             {...common}
+            className="textarea w-full text-sm"
             rows={field.rows || 3}
             placeholder={field.placeholder}
             value={value ?? ""}
@@ -160,7 +158,7 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
                   value={opt.value}
                   checked={String(value) === String(opt.value)}
                   onChange={() => updateValue(name, opt.value)}
-                  className="accent-primary cursor-pointer"
+                  className="radio radio-primary radio-sm"
                 />
                 {opt.label ?? opt.value}
               </label>
@@ -199,7 +197,7 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
           <button
             type="button"
             onClick={handleEdit}
-            className="shrink-0 px-3 py-1.5 text-sm rounded-full border border-base-300 text-base-content/70 hover:bg-base-200 cursor-pointer"
+            className="btn btn-sm rounded-full shrink-0"
           >
             {t("tool_form.edit")}
           </button>
@@ -255,14 +253,14 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
           type="button"
           onClick={handleReset}
           disabled={sending}
-          className="px-4 py-2 text-sm rounded-full border border-base-300 text-base-content/70 hover:bg-base-200 cursor-pointer disabled:opacity-50"
+          className="btn btn-sm rounded-full"
         >
           {t("tool_form.reset")}
         </button>
         <button
           type="submit"
           disabled={sending}
-          className="px-4 py-2 text-sm rounded-full text-white bg-primary hover:opacity-90 cursor-pointer disabled:opacity-50"
+          className="btn btn-sm btn-primary rounded-full"
         >
           {sending ? t("tool_form.sending") : t("tool_form.submit")}
         </button>

@@ -508,7 +508,7 @@ export default function OrganizeChatsModal({
         <div className="max-h-[45vh] space-y-4 overflow-y-auto pr-1">
           {aiStatus === "loading" ? (
             <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-base-300 px-4 py-10 text-center">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
+              <div className="loading loading-spinner loading-md text-accent" />
               <p className="text-xs text-base-content/70">
                 {t("sorter.ai_analyzing", { model: aiModelName })}
               </p>
@@ -516,7 +516,7 @@ export default function OrganizeChatsModal({
           ) : (
             <>
               {aiStatus === "error" && (
-                <div className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-3 text-xs text-warning">
+                <div className="alert alert-warning alert-soft flex flex-col items-start gap-1 text-xs">
                   <p>{t("sorter.ai_error")}</p>
                   <button
                     type="button"
@@ -556,7 +556,7 @@ export default function OrganizeChatsModal({
                 <div className="flex items-center gap-2 text-xs">
                   <button
                     type="button"
-                    className="cursor-pointer text-accent hover:underline"
+                    className="link link-accent link-hover"
                     onClick={() =>
                       setSelectedMoves(
                         new Set(
@@ -569,7 +569,7 @@ export default function OrganizeChatsModal({
                   </button>
                   <button
                     type="button"
-                    className="cursor-pointer text-base-content/70 hover:underline dark:text-base-content/50"
+                    className="link link-hover text-base-content/70"
                     onClick={() => setSelectedMoves(new Set())}
                   >
                     {t("sorter.deselect_all_moves")}
@@ -617,7 +617,7 @@ export default function OrganizeChatsModal({
                           aria-label={t("folders.choose_icon")}
                           title={t("folders.choose_icon")}
                           aria-expanded={stylePickerTopicKey === topic.key}
-                          className="flex flex-shrink-0 cursor-pointer items-center justify-center rounded-lg p-1 transition-colors hover:bg-base-200"
+                          className="btn btn-ghost btn-xs btn-square flex-shrink-0"
                         >
                           {hasKnownIcon && TopicIcon ? (
                             <TopicIcon
@@ -641,11 +641,11 @@ export default function OrganizeChatsModal({
                               }))
                             }
                             aria-label={t("sorter.new_topic")}
-                            className="min-w-0 flex-1 rounded-lg border border-base-300 bg-base-100 px-2 py-1 text-xs text-base-content focus:outline-none focus:ring-2 focus:ring-accent/40"
+                            className="input input-xs min-w-0 flex-1"
                           />
                         ) : rename ? (
                           <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                            <span className="truncate text-[11px] text-base-content/70 line-through dark:text-base-content/50">
+                            <span className="truncate text-[11px] text-base-content/70 line-through">
                               {rename.previousName}
                             </span>
                             <span className="truncate text-xs font-semibold">
@@ -659,7 +659,7 @@ export default function OrganizeChatsModal({
                               onChange={() => toggleTopicRename(rename.folderId)}
                               aria-label={t("sorter.include_topic_rename")}
                               title={t("sorter.include_topic_rename")}
-                              className="rounded text-accent focus:ring-accent"
+                              className="checkbox checkbox-accent checkbox-xs"
                             />
                           </span>
                         ) : (
@@ -668,7 +668,7 @@ export default function OrganizeChatsModal({
                           </span>
                         )}
 
-                        <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
+                        <span className="badge badge-accent badge-soft badge-xs">
                           {topic.folderId
                             ? t("sorter.existing_topic")
                             : t("sorter.new_topic")}
@@ -702,7 +702,7 @@ export default function OrganizeChatsModal({
                                 title={option.label}
                                 className={`h-5 w-5 cursor-pointer rounded-full transition ${
                                   style.color === option.id
-                                    ? "ring-2 ring-accent ring-offset-1 dark:ring-offset-bg_dark"
+                                    ? "ring-2 ring-accent ring-offset-1 ring-offset-base-100"
                                     : "hover:scale-110"
                                 }`}
                                 style={{ backgroundColor: option.hex }}
@@ -757,7 +757,7 @@ export default function OrganizeChatsModal({
                       )}
 
                       <div
-                        className="ml-2 flex flex-col gap-0.5 border-l pl-2"
+                        className="ml-2 flex flex-col gap-0.5 border-l border-base-300 pl-2"
                         style={{
                           borderColor: withAlpha(color.hex, 0.4),
                         }}
@@ -776,7 +776,7 @@ export default function OrganizeChatsModal({
                                   type="checkbox"
                                   checked={selectedMoveIds.has(conversation.id)}
                                   onChange={() => toggleMove(conversation.id)}
-                                  className="rounded text-accent focus:ring-accent"
+                                  className="checkbox checkbox-accent checkbox-xs"
                                 />
                               ) : (
                                 <span
@@ -788,7 +788,7 @@ export default function OrganizeChatsModal({
                               <span className="min-w-0 flex-1">
                                 {titleChange ? (
                                   <span className="flex min-w-0 items-center gap-1.5">
-                                    <span className="truncate text-[11px] text-base-content/70 line-through dark:text-base-content/50">
+                                    <span className="truncate text-[11px] text-base-content/70 line-through">
                                       {titleChange.previousTitle ||
                                         titleOf(conversation)}
                                     </span>
@@ -807,7 +807,7 @@ export default function OrganizeChatsModal({
                                         "sorter.include_title_change",
                                       )}
                                       title={t("sorter.include_title_change")}
-                                      className="rounded text-accent focus:ring-accent"
+                                      className="checkbox checkbox-accent checkbox-xs"
                                     />
                                   </span>
                                 ) : (
@@ -836,7 +836,7 @@ export default function OrganizeChatsModal({
                 <div className="flex items-center gap-2 text-xs">
                   <button
                     type="button"
-                    className="cursor-pointer text-error hover:underline"
+                    className="link link-error link-hover"
                     onClick={() =>
                       setSelectedDeletes(
                         new Set(
@@ -851,7 +851,7 @@ export default function OrganizeChatsModal({
                   </button>
                   <button
                     type="button"
-                    className="cursor-pointer text-base-content/70 hover:underline dark:text-base-content/50"
+                    className="link link-hover text-base-content/70"
                     onClick={() => setSelectedDeletes(new Set())}
                   >
                     {t("sorter.deselect_all_deletions")}
@@ -888,7 +888,7 @@ export default function OrganizeChatsModal({
                             deletion.conversationId,
                           )}
                           onChange={() => toggleDelete(deletion.conversationId)}
-                          className="rounded text-error focus:ring-error"
+                          className="checkbox checkbox-error checkbox-xs"
                         />
                         <TrashCan
                           size={14}
@@ -962,14 +962,14 @@ export default function OrganizeChatsModal({
           </div>
           <div className="flex justify-end gap-2">
             <button
-              className="cursor-pointer px-4 py-2 rounded-lg border border-base-300 text-base-content hover:bg-base-200 transition"
+              className="btn"
               onClick={onClose}
               disabled={applying}
             >
               {t("common.cancel")}
             </button>
             <button
-              className="cursor-pointer px-5 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition shadow disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-accent"
               onClick={handleApply}
               disabled={!canApply}
             >

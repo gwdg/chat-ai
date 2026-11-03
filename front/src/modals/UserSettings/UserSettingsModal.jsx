@@ -193,7 +193,7 @@ export default function UserSettingsModal({
           <button
             type="button"
             onClick={() => openModal("clearCache")}
-            className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-error/30 bg-base-100 px-4 py-2.5 text-sm font-medium text-error transition-colors hover:bg-error/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/50"
+            className="btn btn-error btn-outline"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
             {t("user_settings.clear_data_button")}
