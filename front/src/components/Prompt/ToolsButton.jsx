@@ -13,7 +13,7 @@ export default function ToolsButton({ localState, setLocalState }) {
     return (
         <Popover className="relative flex">
             <Tooltip text={t("settings.tools_title")}>
-                <PopoverButton className="flex cursor-pointer focus:outline-none">
+                <PopoverButton className="flex cursor-pointer focus:outline-none" data-guide="tools">
                     <Tools size={24} className="cursor-pointer text-accent" />
                 </PopoverButton>
             </Tooltip>

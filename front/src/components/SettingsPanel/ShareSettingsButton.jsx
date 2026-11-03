@@ -93,6 +93,7 @@ export default function ShareSettingsButton({ localState }) {
     <button
       className="btn btn-success md:w-fit select-none flex gap-2"
       type="reset"
+      data-guide="share-settings"
       onClick={() =>
         openModal("shareSettings", {
           handleShareSettings,

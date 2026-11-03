@@ -18,6 +18,7 @@ export default function NewChatButton({
     return (
       <button
         onClick={() => {onNewConversation(topicId);}}
+        data-guide="new-chat"
         className="text-accent cursor-pointer flex-shrink-0 p-1.5 gap-1.5 rounded-2xl hover:bg-base-200 transition-all duration-200 flex items-center justify-center"
       >
         <AddFilled size={18} className="text-accent" />
@@ -36,6 +37,7 @@ export default function NewChatButton({
       >
         <button
           onClick={() => {onNewConversation(topicId);}}
+          data-guide="new-chat"
           className={`cursor-pointer p-2.5 hover:bg-info/10 hover:text-info rounded-2xl flex items-center justify-center`}
           aria-label={t("sidebar.new_conversation")}
         >
@@ -51,6 +53,7 @@ export default function NewChatButton({
       <>
         <button
           onClick={() => {onNewConversation(topicId);}}
+          data-guide="new-chat"
           className={`cursor-pointer w-full text-base-content font-medium touch-manipulation transition-colors
             pl-2 pr-4 py-3 rounded-2xl flex items-center justify-start gap-3 text-sm text-accent
  hover:bg-base-200

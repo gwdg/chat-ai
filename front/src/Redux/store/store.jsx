@@ -41,6 +41,9 @@ const getDefaultState = () => {
       collapsed_topics: [],
       conversation_sort: "created_desc",
       conversation_grouping: "topic",
+      completed_tutorials: [],
+      completed_use_cases: [],
+      suppressed_tutorials: [],
     },
     // Conditionally preserve memories
     user_settings: {

@@ -7,6 +7,17 @@ import { listConversationMetas, listFolders } from "../db";
 import { extractMessageText } from "../utils/conversationSummary";
 import { getDefaultChatAIModel } from "../utils/conversationUtils";
 import {
+  buildFeatureGuidePrompt,
+  findFeatureGuideForText,
+  getFeatureGuideMarker,
+  stripFeatureGuideMarkers,
+} from "../config/featureGuides";
+import {
+  buildUseCasePrompt,
+  getUseCaseMarker,
+  stripUseCaseMarkers,
+} from "../config/useCases";
+import {
   selectAllMemories,
   selectTimeout,
   selectUserSettings,
@@ -53,9 +64,11 @@ function buildSystemPrompt(conversations, topics, memories) {
     used += line.length;
   }
 
-  return `You are the Meta chat assistant for a local chat application. You help the user find and understand their past conversations and topics.
+  return `You are the Meta chat assistant and a helpful tutor for a local chat application. You help the user understand and use Chat AI, including its features and workflows, and find and understand their past conversations and topics. You are the only assistant that can start in-app tutorials.
 
-You receive metadata for the user's conversations and topics (categories). Each conversation has an id, title, topic, summary, and last-modified time. This metadata and any saved memories are your only sources. Summaries may be missing or stale. Never invent a conversation, topic, title, id, summary, or memory.
+When explaining a feature, be concrete about where it is and what happens step by step. Do not invent features, buttons, or behaviour that are not described to you. If you do not know how something works, say so and suggest contacting support or consulting the documentation instead.
+
+You receive metadata for the user's conversations and topics (categories). Each conversation has an id, title, topic, summary, and last-modified time. For questions about the user's conversations and topics, this metadata and any saved memories are your only sources. Summaries may be missing or stale. Never invent a conversation, topic, title, id, summary, or memory.
 
 Use the topic tree to answer questions about which topic or category contains something. When naming a topic, use its exact name.
 
@@ -66,6 +79,24 @@ Use only ids from the list below. Do not link to any other URL or invent an id. 
 Answer in the same language as the user's question. Be concise and concrete.
 
 You may also receive the user's saved memories. Use them when relevant, but they may be stale. Never invent memories.
+
+<features>
+${buildFeatureGuidePrompt()}
+</features>
+
+You have a skill to start in-app tutorials and use-case walkthroughs. Use it only in this Meta chat.
+
+When the user asks how to use a listed feature, give concise, concrete steps. End your answer with exactly [[GUIDE:<feature id>]] on its own line, using only an id from the features list above.
+
+When the user asks to start, show, or walk through a use case, give a short introduction and end your answer with exactly [[USE_CASE:<use case id>]] on its own line, using only an id from the use case list below. Use either [[GUIDE:...]] or [[USE_CASE:...]], never both. Do not mention the markers to the user.
+
+If the user asks what you can teach, start, or which features and use cases you know, summarise both lists above.
+
+<use_cases>
+${buildUseCasePrompt()}
+</use_cases>
+
+When the user describes a goal rather than naming a feature, suggest a concrete workflow from the use cases above and end with [[USE_CASE:<use case id>]].
 
 <topics>
 ${topicLines}
@@ -167,9 +198,20 @@ export function useMetaChatSend() {
         )
         .map((message) => ({
           role: message.role,
-          content: extractMessageText(message).trim(),
+          content: stripUseCaseMarkers(
+            stripFeatureGuideMarkers(extractMessageText(message)),
+          ).trim(),
         }))
         .filter((message) => message.content.length > 0);
+
+      const lastUserMessage = [...history]
+        .reverse()
+        .find((message) => message.role === "user")?.content;
+      const suggestedFeature = findFeatureGuideForText(lastUserMessage);
+      const wantsTutorial =
+        /\b(show me|walk me through|start (?:a )?tutorial|demonstrate|guide me)\b/i.test(
+          lastUserMessage || "",
+        );
 
       const payload = {
         settings: {
@@ -242,16 +284,44 @@ export function useMetaChatSend() {
           const index = messages.length - 2;
           if (messages[index]?.role !== "assistant") return prev;
           if (!messages[index].loading) return prev;
+          const finalText =
+            accumulated &&
+            suggestedFeature &&
+            !getFeatureGuideMarker(accumulated) &&
+            !getUseCaseMarker(accumulated)
+              ? `${accumulated}\n\n[[GUIDE:${suggestedFeature}]]`
+              : accumulated;
           messages[index] = {
             ...messages[index],
-            content: accumulated
-              ? [{ type: "text", text: accumulated }]
+            content: finalText
+              ? [{ type: "text", text: finalText }]
               : messages[index].content,
             loading: false,
             ...(errorMeta ? { meta: errorMeta } : {}),
           };
           return { ...prev, messages };
         });
+
+        const useCaseToStart = getUseCaseMarker(accumulated);
+        const featureToStart =
+          getFeatureGuideMarker(accumulated) ||
+          (!useCaseToStart ? suggestedFeature : null);
+
+        if (accumulated && wantsTutorial && useCaseToStart) {
+          window.dispatchEvent(
+            new CustomEvent("chatai:start-use-case", {
+              detail: { useCaseId: useCaseToStart },
+            }),
+          );
+        } else if (accumulated && wantsTutorial && featureToStart) {
+          window.dispatchEvent(
+            new CustomEvent("chatai:start-feature-guide", {
+              detail: { featureId: featureToStart },
+            }),
+          );
+        }
+
+        window.dispatchEvent(new Event("chatai:message-complete"));
       }
     },
     [timeout, userSettings, memories, t],

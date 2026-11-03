@@ -35,19 +35,23 @@ export function useSendMessage() {
           ? Number(override)
           : memoryMode;
 
-    await sendMessage({
-      localState,
-      setLocalState,
-      memories,
-      dispatch,
-      openModal,
-      notifyError,
-      notifySuccess,
-      timeout,
-      memoryMode: effectiveMemoryMode,
-      suggestUserPrompts,
-      formSubmission,
-      setTitleOnce,
-    });
+    try {
+      await sendMessage({
+        localState,
+        setLocalState,
+        memories,
+        dispatch,
+        openModal,
+        notifyError,
+        notifySuccess,
+        timeout,
+        memoryMode: effectiveMemoryMode,
+        suggestUserPrompts,
+        formSubmission,
+        setTitleOnce,
+      });
+    } finally {
+      window.dispatchEvent(new Event("chatai:message-complete"));
+    }
   };
 }

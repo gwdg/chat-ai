@@ -217,6 +217,7 @@ export default function MicButton({
                     : ""
                 }`}
                 type="button"
+                data-guide="mic"
                 onClick={handleAudioClick}
                 onMouseDown={handleAudioMouseDown}
                 onMouseUp={handleAudioMouseUp}

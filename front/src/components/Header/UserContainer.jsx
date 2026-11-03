@@ -48,6 +48,7 @@ export default function UserContainer({
   return userData?.username ? (
     <div
       className="cursor-pointer hover:opacity-80 transition-opacity touch-manipulation"
+      data-guide="user-settings"
       onClick={() =>
         openModal("userSettings", { localState, userData, modelsData })
       }
@@ -58,6 +59,7 @@ export default function UserContainer({
   ) : (
     <button
       className="btn btn-ghost btn-sm btn-square h-9 w-9 p-2 touch-manipulation ml-3"
+      data-guide="user-settings"
       onClick={() =>
         openModal("userSettings", { localState, userData, modelsData })
       }

@@ -73,6 +73,7 @@ export default function AttachMediaButton({
             <Tooltip text={t("conversation.prompt.attach_media")}>
             <button
                 className="h-6 w-6 cursor-pointer"
+                data-guide="attach-media"
                 onClick={() => hiddenFileInputImage.current?.click()}
                 disabled={loading}
             >

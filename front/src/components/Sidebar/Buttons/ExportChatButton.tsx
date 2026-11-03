@@ -43,6 +43,7 @@ export default function ExportChatButton({
             closeMenu();
             handleExportChat();
           }}
+          data-guide="export-chat"
           className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-200"
         >
           <Download size={14} />
@@ -57,6 +58,7 @@ export default function ExportChatButton({
       >
         <button
           onClick={handleExportChat}
+          data-guide="export-chat"
           className="btn btn-ghost btn-square hover:bg-success/10 hover:text-success"
           aria-label={t("common.export")}
         >

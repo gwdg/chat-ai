@@ -180,11 +180,355 @@ export default {
   },
   meta_chat: {
     title: "Meta chat",
-    open: "Ask about your chats",
-    banner_description:
-      "Ask about your past conversations and topics. For example: “Where is my chat about my food order?” or “Which topic contains my food order chats?”",
+    open: "Metachat: ask about your chats",
+    banner_description: "Metachat can help you in two ways:",
+    purposes: {
+      tutor: "Learn how to use Chat AI features",
+      tutor_example: "“How do I attach a file?”",
+      find: "Find your past chats and topics",
+      find_example: "“Where is my chat about my food order?”",
+    },
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
+  },
+  feature_guide: {
+    catalog: {
+      open: "Browse tutorials",
+      close: "Hide tutorials",
+      title: "Tutorials",
+      search: "Search tutorials",
+      empty: "No tutorials found.",
+      hide_completed: "Hide completed",
+      completed_successfully: "Completed successfully",
+      completed: "Completed",
+      start: "Start",
+      replay: "Replay",
+      steps: "{{count}} steps",
+    },
+    walkthrough_complete: "Walkthrough complete",
+    dont_show_again: "Don't show this again",
+    completed_title: "Tutorial complete",
+    more_tutorials: "More tutorials",
+    categories: {
+      prompt: "Prompt and chat",
+      tools: "Tools and RAG",
+      chats: "Chats and organization",
+      settings: "Settings",
+      other: "More",
+    },
+    show_me: "Show me: {{title}}",
+    show_me_short: "Show me",
+    step: "Step {{current}} of {{total}}",
+    status_title: "Tutorial progress",
+    status_waiting: "Waiting for you to complete this step",
+    status_ready: "Step complete",
+    status_manual: "Continue when ready",
+    status_done: "Tutorial complete",
+    complete_step: "Complete this step to continue.",
+    next: "Next",
+    back: "Back",
+    done: "Done",
+    close: "Close",
+    attach_media: {
+      title: "Attach media to a chat",
+      step1: "Click the image button in the prompt box.",
+      step2:
+        "Choose an image, audio, or video file if the current model supports it. The file appears above the prompt.",
+      step3: "Add a message and click Send.",
+    },
+    upload_file: {
+      title: "Attach a file to a chat",
+      step1: "Click the paperclip in the prompt box to open the file picker.",
+      step2:
+        "Choose a file. It appears above the prompt; PDF and DOCX files may need to be processed first.",
+      step3:
+        "Add your message and click Send. The model uses the file if it supports that file type.",
+    },
+    process_attachment: {
+      title: "Process an attachment",
+      step1: "Attach a PDF or DOCX file, or find its attachment card above the prompt.",
+      step2: "Choose Process in browser or Process on server.",
+      step3:
+        "Wait for the processed Markdown file, then send your message.",
+    },
+    select_model: {
+      title: "Select a model",
+      step1:
+        "Open the model selector here to see the available models and their capabilities. The header selector is used on small screens.",
+    },
+    conversation_settings: {
+      title: "Change conversation settings",
+      step1: "Click the settings icon in the prompt box.",
+      step2:
+        "Adjust the memory mode, temperature, top_p, reasoning effort, or system prompt for this chat.",
+    },
+    voice_input: {
+      title: "Record a voice message",
+      step1:
+        "Click the microphone. Allow microphone access if the browser asks for it.",
+      step2:
+        "The recording is attached to the prompt. Add text if needed and send.",
+    },
+    send_key: {
+      title: "Choose how to send messages",
+      step1: "Open your user settings.",
+      step2: "Choose the Chat tab.",
+      step3:
+        "Set Send message with to Enter or Shift+Enter. Alt+Enter always inserts a newline.",
+    },
+    arcana: {
+      title: "Use Arcana for RAG",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3: "Select Arcana.",
+      step4:
+        "Enter your Arcana ID. Use the help link to create a collection if you do not have one.",
+    },
+    web_search: {
+      title: "Use Web Search",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3: "Select Web Search and accept the disclaimer when it appears.",
+    },
+    image_generation: {
+      title: "Generate images",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3: "Select Image Generation, then describe the image you want.",
+    },
+    image_modification: {
+      title: "Modify images",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3: "Select Image Modification, then attach or describe the image.",
+    },
+    audio_generation: {
+      title: "Generate audio",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3: "Select Audio Generation, then describe the audio you want.",
+    },
+    video_generation: {
+      title: "Generate videos",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3:
+        "Select Video Generation. The video queue shows the progress of your requests.",
+    },
+    mcp_server: {
+      title: "Connect an MCP server",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3: "Select MCP Server.",
+      step4: "Enter the MCP server configuration in the field below.",
+    },
+    tools_overview: {
+      title: "Use GWDG Tools",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3:
+        "Choose a tool. Tools appear only for models that support them.",
+    },
+    search_chats: {
+      title: "Search chats",
+      step1: "Click search in the sidebar.",
+      step2: "Type part of a chat title to filter your conversations.",
+    },
+    manage_topics: {
+      title: "Organize chats with topics",
+      step1: "Click Create topic in the sidebar.",
+      step2: "Name the topic and choose an icon and color.",
+      step3:
+        "Drag chats into topics, or use the conversation menu to move them.",
+    },
+    sort_group_chats: {
+      title: "Sort and group chats",
+      step1: "Open the sort menu in the sidebar.",
+      step2: "Choose grouping by topic, date, or creation date.",
+    },
+    export_conversation: {
+      title: "Export a chat",
+      step1: "Open the conversation menu in the sidebar.",
+      step2: "Choose Export and select the export options.",
+    },
+    import_conversation: {
+      title: "Import a chat",
+      step1:
+        "Click Import in the sidebar and choose a JSON chat file. You can also import from the Data tab in user settings.",
+    },
+    share_conversation: {
+      title: "Share conversation settings",
+      step1: "Open the conversation settings panel.",
+      step2: "Click Share to copy a link with these settings.",
+    },
+    fork_conversation: {
+      title: "Fork a conversation",
+      step1:
+        "Use Fork on an assistant message to continue in a new chat from that point.",
+    },
+    summarize_conversation: {
+      title: "Summarize a chat",
+      step1: "Open the conversation menu in the sidebar.",
+      step2: "Choose Summarize.",
+    },
+    memories: {
+      title: "Manage memories",
+      step1: "Open your user settings.",
+      step2:
+        "Use the Memories tab to manage saved memories and the memory mode.",
+    },
+    chat_preferences: {
+      title: "Open chat preferences",
+      step1: "Open your user settings.",
+      step2:
+        "Choose the Chat tab to change the default model, send key, summaries, rendering, and document conversion.",
+    },
+    rendering: {
+      title: "Configure rendering",
+      step1: "Open your user settings.",
+      step2: "Choose the Chat tab.",
+      step3:
+        "Enable Typst or LaTeX rendering. HTML rendering and external references are configured here too.",
+    },
+    document_conversion: {
+      title: "Choose document conversion",
+      step1: "Open your user settings.",
+      step2: "Choose the Chat tab.",
+      step3: "Select Server only, Browser only, or By choice.",
+    },
+    data_management: {
+      title: "Manage your data",
+      step1: "Open your user settings.",
+      step2: "Choose the Data tab.",
+      step3:
+        "Export local data or clear chats, memories, settings, and attachments.",
+    },
+    dark_mode: {
+      title: "Switch theme",
+      step1: "Use the theme toggle in the footer to switch between light and dark mode.",
+    },
+    feedback: {
+      title: "Send feedback",
+      step1:
+        "Use the feedback buttons under an assistant message when the feedback module is enabled.",
+    },
+    speech_output: {
+      title: "Read answers aloud",
+      step1:
+        "Click the speaker icon under an assistant message when the speech module is enabled.",
+    },
+    meta_chat_usage: {
+      title: "Use the Meta chat",
+      step1:
+        "Click the AI icon in the sidebar to open the Meta chat. Ask it about features or where a chat is.",
+    },
+  },
+  use_cases: {
+    common: {
+      start_new_chat: "Start a new chat for this workflow.",
+    },
+    catalog: {
+      open: "Browse use cases",
+      close: "Hide use cases",
+      search: "Search use cases",
+      hide_completed: "Hide completed",
+      completed_successfully: "Completed successfully",
+      empty: "No use cases found.",
+      walk_through_again: "Walk me through again",
+      start_walkthrough: "Walk me through",
+      show_tutorial: "Show tutorial",
+    },
+    categories: {
+      research: "Research",
+      organize: "Organize",
+      create: "Create",
+      workflows: "Workflows",
+    },
+    analyze_paper: {
+      title: "Analyze a research paper",
+      description: "Upload a PDF, process it, then ask questions about its content.",
+      step1: "Attach the paper with the paperclip.",
+      step2: "Process the PDF in the browser or on the server.",
+      step3: "Ask: “What are the references?”",
+      step4: "Ask: “Summarize the methodology and main findings.”",
+    },
+    web_research: {
+      title: "Research current information",
+      description: "Enable Web Search, then ask a question that needs up-to-date sources.",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools and select Web Search.",
+      step3: "Ask about a recent development and mention that you need current sources.",
+      step4: "Follow the cited sources in the answer and ask follow-up questions.",
+    },
+    rag_documents: {
+      title: "Answer questions from your own documents",
+      description: "Use Arcana (RAG) to answer from a document collection you control.",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools and select Arcana.",
+      step3: "Enter your Arcana ID.",
+      step4: "Ask: “What does our internal policy say about this?”",
+      step5: "Ask: “Which document supports this answer?”",
+    },
+    organize_topics: {
+      title: "Organize chats by project",
+      description: "Create topics and group related chats so a project stays together.",
+      step1: "Create a topic such as “Thesis” or “Client work”.",
+      step2: "Drag related chats into the topic, or group the sidebar by topic.",
+    },
+    find_chat: {
+      title: "Find an old chat",
+      description: "Search chat titles or ask the Meta chat where a conversation is.",
+      step1: "Search the sidebar for part of the title.",
+      step2: "Or ask: “Where is my chat about the paper analysis?”",
+    },
+    summarize_chat: {
+      title: "Turn a long chat into notes",
+      description: "Summarize a long conversation for your notes.",
+      step1: "Open the conversation menu in the sidebar.",
+      step2: "Choose Summarize and review the result.",
+      step3: "Export the chat if you need a file for your notes.",
+    },
+    generate_image: {
+      title: "Create an image for a slide",
+      description: "Enable Image Generation and describe the visual you need.",
+      step1: "Open Tools and enable Image Generation.",
+      step2: "Ask: “Create a clean diagram of a three-stage research workflow.”",
+      step3: "Refine the prompt until the image fits your slide.",
+    },
+    share_setup: {
+      title: "Share a reusable setup",
+      description: "Share the system prompt, model, and settings as a link.",
+      step1: "Open conversation settings and choose Share.",
+      step2: "Send the copied link to a colleague who needs the same setup.",
+    },
+    compare_models: {
+      title: "Compare two models",
+      description: "Fork a conversation, change the model, and ask the same question.",
+      step1: "Fork the conversation from the message you want to compare.",
+      step2: "Select a different model.",
+      step3: "Send the same prompt and compare the two answers.",
+    },
+    local_conversion: {
+      title: "Keep document conversion local",
+      description: "Convert PDFs and DOCX files in the browser instead of on the server.",
+      step1: "Open Chat preferences in user settings.",
+      step2: "Choose Browser only under Document conversion.",
+      step3: "Attach a PDF or DOCX file.",
+      step4: "Process the file from the attachment card.",
+    },
+    memories: {
+      title: "Remember preferences across chats",
+      description: "Save context and preferences in memories so future chats can recall them.",
+      step1: "Open user settings and add a memory.",
+      step2: "Enable Recall or Learn for the conversations where it should be used.",
+      step3: "Ask: “What do you remember about my preferences?”",
+    },
+    read_aloud: {
+      title: "Listen to an answer",
+      description: "Use the speech button to have an assistant answer read aloud.",
+      step1: "Click the speaker icon under an assistant message.",
+      step2: "Use the stop button to end playback at any time.",
+    },
   },
   // Chat settings
   settings: {

@@ -80,14 +80,14 @@ export default function SpeakButton({
 
   return speechModule && (
     !isSpeaking ? (
-        <button onClick={handleSpeak} title="Speak" className="inline-grid h-[22px] w-[22px] cursor-pointer" disabled={isSpeaking}>
+        <button onClick={handleSpeak} data-guide="speak" title="Speak" className="inline-grid h-[22px] w-[22px] cursor-pointer" disabled={isSpeaking}>
         <Volume2
             className="opacity-20 group-hover:opacity-100 transition-opacity duration-300 h-[22px] w-[22px] cursor-pointer text-accent"
             alt="speak_icon"
         />
         </button>
       ) : (
-        <button onClick={handleStop} title="Stop" className="inline-grid h-[22px] w-[22px] cursor-pointer" disabled={!isSpeaking}>
+        <button onClick={handleStop} data-guide="speak" title="Stop" className="inline-grid h-[22px] w-[22px] cursor-pointer" disabled={!isSpeaking}>
         <Square
             className="opacity-20 group-hover:opacity-100 transition-opacity duration-300 h-[22px] w-[22px] cursor-pointer text-accent"
             alt="stop_icon"

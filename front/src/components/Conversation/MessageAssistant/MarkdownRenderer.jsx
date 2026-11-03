@@ -756,6 +756,16 @@ export const SafeMarkdown = ({
   }
 };
 
+const stripGuideMarkers = (content) => {
+  if (typeof content !== "string") return content;
+  return content
+    .replace(/\[\[GUIDE:[a-zA-Z0-9_-]+\]\]/gi, "")
+    .replace(/\[\[USE_CASE:[a-zA-Z0-9_-]+\]\]/gi, "")
+    .replace(/\[\[(?:GUIDE|USE_CASE):?[a-zA-Z0-9_-]*\]*$/i, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trimEnd();
+};
+
 /* --------------------------------------------
  * Main MarkdownRenderer
  * -------------------------------------------- */
@@ -862,12 +872,12 @@ const MarkdownRenderer = memo(
     const { main: processedMainContent, refs: processedReferences } =
       useMemo(() => {
         const contentToProcess = isLoading ? displayedText : children;
-        return separateContentAndReferences(contentToProcess);
+        return separateContentAndReferences(stripGuideMarkers(contentToProcess));
       }, [displayedText, children, isLoading, separateContentAndReferences]);
 
     const mainContent = useMemo(() => {
       return isLoading
-        ? separateContentAndReferences(mainText).main // strip refs while streaming
+        ? separateContentAndReferences(stripGuideMarkers(mainText)).main // strip refs while streaming
         : processedMainContent; // already stripped when done
     }, [
       isLoading,

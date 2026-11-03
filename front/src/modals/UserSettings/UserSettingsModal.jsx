@@ -133,16 +133,16 @@ export default function UserSettingsModal({
               {t("common.loading")}
             </p>
           )}
-          <div className="border-t border-base-300 pt-5">
+          <div className="border-t border-base-300 pt-5" data-guide="submission-preference">
             <SubmissionPreference />
           </div>
           <div className="border-t border-base-300 pt-5">
             <ConversationSummaryPreference />
           </div>
-          <div className="border-t border-base-300 pt-5">
+          <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
             <RenderingPreferences />
           </div>
-          <div className="border-t border-base-300 pt-5">
+          <div className="border-t border-base-300 pt-5" data-guide="document-conversion-preference">
             <DocumentConversionPreference />
           </div>
           {choicesModule && (
@@ -186,6 +186,7 @@ export default function UserSettingsModal({
             type="button"
             onClick={handleExportData}
             className="btn w-full"
+            data-guide="export-data"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
             {t("user_settings.export_data_button")}
@@ -225,6 +226,7 @@ export default function UserSettingsModal({
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 aria-pressed={selected}
+                data-guide={`settings-tab-${tab.id}`}
                 className={`flex min-h-10 min-w-max items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 md:w-full ${
                   selected
                     ? "bg-base-100 text-accent shadow-sm"

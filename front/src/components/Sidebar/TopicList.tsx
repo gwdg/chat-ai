@@ -248,7 +248,7 @@ export default function TopicList({
   };
 
   return (
-    <div className="flex flex-col gap-1.5 pt-1">
+    <div className="flex flex-col gap-1.5 pt-1" data-guide="topic-list">
       {grouping === "topic" && (
         <>
           <div className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200`}>
@@ -259,6 +259,7 @@ export default function TopicList({
           const rect = createButtonRef.current?.getBoundingClientRect();
           onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
         }}
+        data-guide="create-topic"
         className="w-full flex items-center text-xs text-secondary dark:text-primary font-semibold cursor-pointer"
       >
         <BookmarkAdd size={18} className="flex-shrink-0" />

@@ -22,12 +22,13 @@ import ArcanaContainer from "./ArcanaContainer";
 import MCPContainer from "./MCPContainer";
 import VideoList from "./VideoList";
 
-function MiniToolButton({ active, disabled, onClick, Icon, label }) {
+function MiniToolButton({ active, disabled, onClick, Icon, label, guideKey }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      data-guide={`tool-${guideKey}`}
       className={[
         "group w-full select-none",
         "rounded-xl border text-sm font-medium",
@@ -177,6 +178,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
               }))
             }
             disabled={isExternalModel}
+            data-guide="tools-enable"
             className="inline-flex cursor-pointer disabled:cursor-not-allowed"
             aria-label={
               toolsEnabled
@@ -209,6 +211,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
 
       {/* Compact, responsive grid */}
       <div
+        data-guide="tools-grid"
         className={[
           "grid gap-2.5 sm:gap-3",
           "grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))]",
@@ -229,6 +232,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
               onClick={onToggle}
               Icon={Icon}
               label={label}
+              guideKey={key}
             />
           );
         })}
