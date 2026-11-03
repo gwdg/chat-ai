@@ -201,6 +201,7 @@ export default function Attachment({
   return (
     <div
       key={`${file.name}-${index}`}
+      data-guide={inHistory ? undefined : "attachment-card"}
       className={`cursor-pointer flex-shrink-0 w-[200px] h-[80px] ${displayInfo.bgColor} ${displayInfo.hoverColor} ${displayInfo.borderColor} border rounded-lg transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}
       onClick={() => {
         openModal("preview", { previewFile: file, fileId: attachment.fileId });
@@ -239,6 +240,7 @@ export default function Attachment({
                       e.stopPropagation();
                       handleProcessFile(true);
                     }}
+                    data-guide="process-file"
                     className="btn btn-warning btn-xs h-auto min-h-5 py-0.5 text-[10px] leading-tight rounded-sm"
                   >
                     {t("conversation.attachment.process_browser")}
@@ -250,6 +252,7 @@ export default function Attachment({
                       e.stopPropagation();
                       handleProcessFile(false);
                     }}
+                    data-guide="process-file"
                     className="btn btn-warning btn-xs h-auto min-h-5 py-0.5 text-[10px] leading-tight rounded-sm"
                   >
                     {t("conversation.attachment.process_server")}

@@ -89,7 +89,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
   return (
     <>
-      <div className="flex relative w-full h-full flex-col items-center text-accent min-w-0 min-h-0 max-h-full">
+      <div className="flex relative w-full h-full flex-col items-center text-accent min-w-0 min-h-0 max-h-full" data-guide="conversation-settings-panel">
         {/* Settings Panel */}
         <div className="flex flex-col gap-3 p-3 lg:p-4 h-full w-full min-h-0 overflow-y-auto">
 

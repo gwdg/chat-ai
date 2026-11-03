@@ -1,13 +1,15 @@
-import { Trans } from "react-i18next";
-import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router";
 import BaseModal from "../BaseModal";
+import { createConversation } from "../../db";
 import { buildConversationForAPI } from "../../utils/sendMessage";
 import { chatCompletions } from "../../apis/chatCompletions";
 import { selectTimeout } from "../../Redux/reducers/userSettingsReducer";
 
 /**
- * status: "confirm" | "loading" | "success" | "error"
+ * status: "loading" | "success" | "error"
  * onConfirm: called when user clicks Summarize
  * onClose: called to close the modal
  * errorMessage: optional error string when status === "error"
@@ -16,21 +18,23 @@ export default function SummarizeChatModal({
   isOpen,
   onClose,
   localState,
-  setLocalState,
 }) {
-  const [status, setStatus] = useState("confirm")
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [status, setStatus] = useState("loading")
   const [errorMessage, setErrorMessage] = useState("")
+  const startedRef = useRef(false);
   const isLoading = status === "loading";
 
-  const chatLoading = localState.messages[localState.messages.length - 2]?.role === "assistant"
-    ? localState.messages[localState.messages.length - 2]?.loading || false
-    : false;
   const timeout = useSelector(selectTimeout);
 
+  useEffect(() => {
+    if (!isOpen || startedRef.current) return;
+    startedRef.current = true;
+    handleSummary();
+  }, [isOpen]);
+
   const handleSummary = async () => {
-    // Close the confirm modal first, then reopen as loading
-    await new Promise(r => setTimeout(r, 200)); // wait for close animation
-    setStatus("loading");
     try {
       // Deep-copy messages for the API payload — don't touch localState
       const messagesCopy = localState.messages.map(msg => ({
@@ -96,23 +100,40 @@ export default function SummarizeChatModal({
         throw new Error("Received empty summary from API");
       }
 
-      // SUCCESS: atomically replace conversation with summary
-      setLocalState(prev => ({
-        ...prev,
+      // Create a new conversation containing the summary. The original
+      // conversation is never modified.
+      const summaryConversationId = await createConversation({
+        title: t("common.summary_title", {
+          title: localState.title || t("conversation.untitled"),
+        }),
+        settings: { ...localState.settings },
         messages: [
-          { role: "system", content: [{ type: "text", text: originalSystemPrompt }] },
-          { role: "user", content: [{ type: "text", text: "Please summarize our conversation so far" }] },
-          { role: "assistant", content: [{ type: "text", text: summaryText }], loading: false },
+          {
+            role: "system",
+            content: [{ type: "text", text: originalSystemPrompt }],
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Please summarize our conversation so far" },
+            ],
+          },
+          {
+            role: "assistant",
+            content: [{ type: "text", text: summaryText }],
+            loading: false,
+          },
           { role: "user", content: [{ type: "text", text: "" }] },
         ],
-        flush: true,
-      }));
+        folderId: localState.folderId ?? null,
+        hasFirstPrompt: true,
+      });
 
       setStatus("success");
-      // Auto-close after a brief moment
       setTimeout(() => {
         onClose();
-      }, 1500);
+        navigate(`/chat/${summaryConversationId}`);
+      }, 1200);
     } catch (error) {
       // FAILURE: don't touch localState — original conversation preserved
       console.error("Summarization failed:", error);
@@ -130,36 +151,6 @@ export default function SummarizeChatModal({
       maxWidth="max-w-md"
       isForced={isLoading}
     >
-      {/* Confirm state */}
-      {status === "confirm" && (
-        <>
-          <div className="pt-0 pb-2">
-            <p className="text-base-content text-justify text-sm">
-              <Trans i18nKey="alert.summarize_replace" />
-            </p>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm">
-            <button
-              type="button"
-              className="btn"
-              onClick={onClose}
-            >
-              <Trans i18nKey="common.cancel" />
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-error"
-              onClick={handleSummary}
-              disabled={chatLoading}
-            >
-              <Trans i18nKey="common.summarize" />
-            </button>
-          </div>
-        </>
-      )}
-
       {/* Loading state */}
       {status === "loading" && (
         <div className="flex flex-col items-center gap-4 py-6">

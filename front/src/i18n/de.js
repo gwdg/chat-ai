@@ -13,7 +13,8 @@ export default {
     export: "Chat exportieren",
     summarize: "Zusammenfassen",
     summarizing: "Zusammenfassen...",
-    summarize_success: "Unterhaltung erfolgreich zusammengefasst.",
+    summarize_success: "Zusammenfassung in einer neuen Unterhaltung erstellt.",
+    summary_title: "Zusammenfassung von {{title}}",
     summarize_error: "Zusammenfassung fehlgeschlagen. Ihre Unterhaltung ist unverändert.",
     clear: "Löschen",
     abort: "Abbrechen",
@@ -183,11 +184,373 @@ export default {
   },
   meta_chat: {
     title: "Meta-Chat",
-    open: "Chats durchsuchen",
-    banner_description:
-      "Fragen Sie nach Ihren bisherigen Unterhaltungen und Themen. Zum Beispiel: „Wo ist mein Chat über meine Essensbestellung?“ oder „In welchem Thema sind meine Chats zur Essensbestellung?“",
+    open: "Metachat: Chats durchsuchen",
+    banner_description: "Metachat kann Ihnen auf zwei Arten helfen:",
+    purposes: {
+      tutor: "Die Funktionen von Chat AI kennenlernen",
+      tutor_example: "„Wie finde ich ein Tutorial oder prüfe meine Einstellungen?“",
+      find: "Bisherige Chats und Themen finden",
+      find_example: "„Wo ist mein Chat über meine Essensbestellung?“",
+    },
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
+  },
+  feature_guide: {
+    catalog: {
+      open: "Tutorials durchsuchen",
+      close: "Tutorials ausblenden",
+      title: "Tutorials",
+      search: "Tutorials durchsuchen",
+      empty: "Keine Tutorials gefunden.",
+      hide_completed: "Abgeschlossene ausblenden",
+      completed_successfully: "Erfolgreich abgeschlossen",
+      completed: "Abgeschlossen",
+      start: "Starten",
+      replay: "Wiederholen",
+      steps: "{{count}} Schritte",
+    },
+    walkthrough_complete: "Durchlauf abgeschlossen",
+    dont_show_again: "Nicht mehr anzeigen",
+    completed_title: "Tutorial abgeschlossen",
+    more_tutorials: "Weitere Tutorials",
+    categories: {
+      prompt: "Eingabe und Chat",
+      tools: "Tools und RAG",
+      chats: "Chats und Organisation",
+      settings: "Einstellungen",
+      other: "Mehr",
+    },
+    show_me: "Zeigen: {{title}}",
+    show_me_short: "Zeigen",
+    step: "Schritt {{current}} von {{total}}",
+    status_title: "Tutorial-Fortschritt",
+    status_waiting: "Warten auf Ihre Aktion",
+    status_ready: "Schritt abgeschlossen",
+    status_manual: "Weiter, wenn Sie bereit sind",
+    status_done: "Tutorial abgeschlossen",
+    complete_step: "Schließen Sie diesen Schritt ab, um fortzufahren.",
+    next: "Weiter",
+    back: "Zurück",
+    done: "Fertig",
+    close: "Schließen",
+    attach_media: {
+      title: "Medien an einen Chat anhängen",
+      step1: "Klicken Sie auf die Bildschaltfläche im Eingabefeld.",
+      step2:
+        "Wählen Sie eine Bild-, Audio- oder Videodatei, wenn das aktuelle Modell sie unterstützt. Die Datei erscheint über dem Eingabefeld.",
+      step3: "Geben Sie eine Nachricht ein und klicken Sie auf Senden.",
+    },
+    upload_file: {
+      title: "Eine Datei an einen Chat anhängen",
+      step1:
+        "Klicken Sie auf die Büroklammer im Eingabefeld, um die Dateiauswahl zu öffnen.",
+      step2:
+        "Wählen Sie eine Datei. Sie erscheint über dem Eingabefeld; PDF- und DOCX-Dateien müssen eventuell zuerst verarbeitet werden.",
+      step3:
+        "Geben Sie Ihre Nachricht ein und klicken Sie auf Senden. Das Modell verwendet die Datei, wenn es diesen Dateityp unterstützt.",
+    },
+    process_attachment: {
+      title: "Einen Anhang verarbeiten",
+      step1: "Hängen Sie ein PDF oder DOCX an oder suchen Sie die Anhang-Karte über dem Eingabefeld.",
+      step2: "Wählen Sie Im Browser verarbeiten oder Auf dem Server verarbeiten.",
+      step3:
+        "Warten Sie auf die verarbeitete Markdown-Datei und senden Sie dann Ihre Nachricht.",
+    },
+    select_model: {
+      title: "Ein Modell auswählen",
+      step1:
+        "Öffnen Sie hier die Modellauswahl, um verfügbare Modelle und ihre Fähigkeiten zu sehen. Auf kleinen Bildschirmen wird die Auswahl im Kopfbereich verwendet.",
+    },
+    conversation_settings: {
+      title: "Unterhaltungseinstellungen ändern",
+      step1: "Klicken Sie auf das Einstellungssymbol im Eingabefeld.",
+      step2:
+        "Passen Sie Erinnerungsmodus, Temperatur, top_p, Denkaufwand oder den System-Prompt für diesen Chat an.",
+    },
+    voice_input: {
+      title: "Eine Sprachnachricht aufnehmen",
+      step1:
+        "Klicken Sie auf das Mikrofon. Erlauben Sie den Mikrofonzugriff, wenn der Browser danach fragt.",
+      step2:
+        "Die Aufnahme wird an den Prompt angehängt. Ergänzen Sie bei Bedarf Text und senden Sie.",
+    },
+    send_key: {
+      title: "Festlegen, wie Nachrichten gesendet werden",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3:
+        "Stellen Sie Nachricht senden mit auf Eingabe oder Umschalt+Eingabe. Alt+Eingabe fügt immer einen Zeilenumbruch ein.",
+    },
+    arcana: {
+      title: "Arcana für RAG verwenden",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3: "Wählen Sie Arcana.",
+      step4:
+        "Geben Sie Ihre Arcana-ID ein. Über den Hilfe-Link können Sie eine Sammlung erstellen.",
+    },
+    web_search: {
+      title: "Websuche verwenden",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3: "Wählen Sie Websuche und akzeptieren Sie den Hinweis.",
+    },
+    image_generation: {
+      title: "Bilder erzeugen",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie Bilderzeugung und beschreiben Sie das gewünschte Bild.",
+    },
+    image_modification: {
+      title: "Bilder bearbeiten",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie Bildbearbeitung und hängen Sie das Bild an oder beschreiben Sie es.",
+    },
+    audio_generation: {
+      title: "Audio erzeugen",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie Audioerzeugung und beschreiben Sie das gewünschte Audio.",
+    },
+    video_generation: {
+      title: "Videos erzeugen",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie Videoerzeugung. Die Videowarteschlange zeigt den Fortschritt.",
+    },
+    mcp_server: {
+      title: "Einen MCP-Server verbinden",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3: "Wählen Sie MCP-Server.",
+      step4: "Geben Sie die MCP-Server-Konfiguration in das Feld unten ein.",
+    },
+    tools_overview: {
+      title: "GWDG Tools verwenden",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie ein Tool. Tools erscheinen nur bei Modellen, die sie unterstützen.",
+    },
+    search_chats: {
+      title: "Chats durchsuchen",
+      step1: "Klicken Sie in der Seitenleiste auf Suchen.",
+      step2: "Geben Sie einen Teil eines Chat-Titels ein, um zu filtern.",
+    },
+    manage_topics: {
+      title: "Chats mit Themen organisieren",
+      step1: "Klicken Sie in der Seitenleiste auf Thema erstellen.",
+      step2: "Benennen Sie das Thema und wählen Sie Symbol und Farbe.",
+      step3:
+        "Ziehen Sie Chats in Themen oder verschieben Sie sie über das Chat-Menü.",
+    },
+    sort_group_chats: {
+      title: "Chats sortieren und gruppieren",
+      step1: "Öffnen Sie das Sortiermenü in der Seitenleiste.",
+      step2: "Wählen Sie die Gruppierung nach Thema, Datum oder Erstellungsdatum.",
+    },
+    export_conversation: {
+      title: "Einen Chat exportieren",
+      step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
+      step2: "Wählen Sie Exportieren und legen Sie die Optionen fest.",
+    },
+    import_conversation: {
+      title: "Einen Chat importieren",
+      step1:
+        "Klicken Sie in der Seitenleiste auf Importieren und wählen Sie eine JSON-Chatdatei. Alternativ können Sie im Tab Daten importieren.",
+    },
+    share_conversation: {
+      title: "Unterhaltungseinstellungen teilen",
+      step1: "Öffnen Sie die Unterhaltungseinstellungen.",
+      step2: "Klicken Sie auf Teilen, um einen Link mit diesen Einstellungen zu kopieren.",
+    },
+    fork_conversation: {
+      title: "Eine Unterhaltung abzweigen",
+      step1:
+        "Verwenden Sie Abzweigen an einer Assistenten-Nachricht, um von dort in einem neuen Chat fortzufahren.",
+    },
+    summarize_conversation: {
+      title: "Einen Chat zusammenfassen",
+      step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
+      step2: "Wählen Sie Zusammenfassen. Eine neue Unterhaltung mit der Zusammenfassung wird erstellt.",
+    },
+    settings_overview: {
+      title: "Einstellungen ändern",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen über das Profil oder die Seitenleiste.",
+      step2: "Wählen Sie den Tab Chat. Erinnerungen und Daten enthalten die weiteren Einstellungen.",
+      step3: "Ändern Sie eine Einstellung wie Darstellung oder Dokumentkonvertierung. Änderungen werden automatisch gespeichert.",
+    },
+    memories: {
+      title: "Erinnerungen verwalten",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2:
+        "Verwalten Sie im Tab Erinnerungen gespeicherte Erinnerungen und den Erinnerungsmodus.",
+    },
+    chat_preferences: {
+      title: "Chat-Einstellungen öffnen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2:
+        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Darstellung und Dokumentkonvertierung zu ändern.",
+    },
+    rendering: {
+      title: "Darstellung konfigurieren",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3:
+        "Aktivieren Sie die Typst- oder LaTeX-Darstellung. Auch HTML-Darstellung und externe Verweise werden hier konfiguriert.",
+    },
+    document_conversion: {
+      title: "Dokumentkonvertierung wählen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3: "Wählen Sie Nur Server, Nur Browser oder Nach Wahl.",
+    },
+    data_management: {
+      title: "Ihre Daten verwalten",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      step3:
+        "Exportieren Sie lokale Daten oder löschen Sie Chats, Erinnerungen, Einstellungen und Anhänge.",
+    },
+    dark_mode: {
+      title: "Design wechseln",
+      step1:
+        "Verwenden Sie den Design-Schalter in der Fußzeile, um zwischen hellem und dunklem Modus zu wechseln.",
+    },
+    feedback: {
+      title: "Feedback senden",
+      step1:
+        "Verwenden Sie die Feedback-Schaltflächen unter einer Assistenten-Nachricht, wenn das Feedback-Modul aktiviert ist.",
+    },
+    speech_output: {
+      title: "Antworten vorlesen lassen",
+      step1:
+        "Klicken Sie auf das Lautsprecher-Symbol unter einer Assistenten-Nachricht, wenn das Sprachmodul aktiviert ist.",
+    },
+    meta_chat_catalogs: {
+      title: "Tutorials und Einstellungen im Metachat finden",
+      step1: "Durchsuchen Sie alle verfügbaren Tutorials und wiederholen Sie abgeschlossene.",
+      step2: "Durchsuchen Sie vollständige Abläufe, die mehrere Funktionen kombinieren. Der Metachat kann beide Optionen auch für Sie starten.",
+      step3: "Sie können mich auch bitten, ein Tutorial zu finden. Zum Beispiel: „Finde ein Tutorial zum Hochladen einer Datei.“",
+      step4: "Fragen Sie auch nach Ihren Einstellungen. Zum Beispiel: „Welche Einstellungen habe ich für Erinnerungen gewählt?“",
+    },
+    meta_chat_usage: {
+      title: "Den Metachat verwenden",
+      step1:
+        "Klicken Sie auf das KI-Symbol in der Seitenleiste, um den Metachat zu öffnen. Fragen Sie nach Funktionen oder wo ein Chat ist.",
+    },
+  },
+  use_cases: {
+    common: {
+      start_new_chat: "Starten Sie für diesen Ablauf einen neuen Chat.",
+    },
+    catalog: {
+      open: "Anwendungsfälle durchsuchen",
+      close: "Anwendungsfälle ausblenden",
+      search: "Anwendungsfälle durchsuchen",
+      hide_completed: "Abgeschlossene ausblenden",
+      completed_successfully: "Erfolgreich abgeschlossen",
+      empty: "Keine Anwendungsfälle gefunden.",
+      walk_through_again: "Noch einmal Schritt für Schritt zeigen",
+      start_walkthrough: "Schritt für Schritt zeigen",
+      show_tutorial: "Tutorial zeigen",
+    },
+    categories: {
+      research: "Recherche",
+      organize: "Organisieren",
+      create: "Erstellen",
+      workflows: "Arbeitsabläufe",
+    },
+    analyze_paper: {
+      title: "Ein wissenschaftliches Paper analysieren",
+      description: "Laden Sie ein PDF hoch, verarbeiten Sie es und stellen Sie dann Fragen zum Inhalt.",
+      step1: "Hängen Sie das Paper über die Büroklammer an.",
+      step2: "Verarbeiten Sie das PDF im Browser oder auf dem Server.",
+      step3: "Fragen Sie: „What are the references?“",
+      step4: "Fragen Sie: „Summarize the methodology and main findings.“",
+    },
+    web_research: {
+      title: "Aktuelle Informationen recherchieren",
+      description: "Aktivieren Sie die Websuche und stellen Sie eine Frage, die aktuelle Quellen benötigt.",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools und wählen Sie die Websuche.",
+      step3: "Fragen Sie nach einer aktuellen Entwicklung und erwähnen Sie, dass Sie aktuelle Quellen benötigen.",
+      step4: "Folgen Sie den zitierten Quellen und stellen Sie Rückfragen.",
+    },
+    rag_documents: {
+      title: "Fragen aus eigenen Dokumenten beantworten",
+      description: "Verwenden Sie Arcana (RAG), um aus einer eigenen Dokumentensammlung zu antworten.",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools und wählen Sie Arcana.",
+      step3: "Geben Sie Ihre Arcana-ID ein.",
+      step4: "Fragen Sie: „Was sagt unsere interne Richtlinie dazu?“",
+      step5: "Fragen Sie: „Welches Dokument belegt diese Antwort?“",
+    },
+    organize_topics: {
+      title: "Chats nach Projekt organisieren",
+      description: "Erstellen Sie Themen und gruppieren Sie zusammengehörige Chats.",
+      step1: "Erstellen Sie ein Thema wie „Abschlussarbeit“ oder „Kundenprojekt“.",
+      step2: "Ziehen Sie passende Chats in das Thema oder gruppieren Sie die Seitenleiste nach Thema.",
+    },
+    find_chat: {
+      title: "Einen alten Chat finden",
+      description: "Durchsuchen Sie Chat-Titel oder fragen Sie den Metachat, wo eine Unterhaltung ist.",
+      step1: "Suchen Sie in der Seitenleiste nach einem Teil des Titels.",
+      step2: "Oder fragen Sie: „Wo ist mein Chat über die Paper-Analyse?“",
+    },
+    summarize_chat: {
+      title: "Einen langen Chat in Notizen verwandeln",
+      description: "Erstellen Sie eine neue Unterhaltung mit einer Zusammenfassung einer langen Unterhaltung für Ihre Notizen.",
+      step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
+      step2: "Wählen Sie Zusammenfassen und prüfen Sie das Ergebnis.",
+      step3: "Exportieren Sie den Chat, wenn Sie eine Datei für Ihre Notizen benötigen.",
+    },
+    generate_image: {
+      title: "Ein Bild für eine Folie erstellen",
+      description: "Aktivieren Sie die Bilderzeugung und beschreiben Sie das gewünschte Bild.",
+      step1: "Öffnen Sie Tools und aktivieren Sie die Bilderzeugung.",
+      step2: "Fragen Sie: „Erstelle ein klares Diagramm eines dreistufigen Forschungsablaufs.“",
+      step3: "Verfeinern Sie den Prompt, bis das Bild zur Folie passt.",
+    },
+    share_setup: {
+      title: "Eine wiederverwendbare Einrichtung teilen",
+      description: "Teilen Sie System-Prompt, Modell und Einstellungen als Link.",
+      step1: "Öffnen Sie die Unterhaltungseinstellungen und wählen Sie Teilen.",
+      step2: "Senden Sie den kopierten Link an eine Person, die dieselbe Einrichtung braucht.",
+    },
+    compare_models: {
+      title: "Zwei Modelle vergleichen",
+      description: "Zweigen Sie eine Unterhaltung ab, wechseln Sie das Modell und stellen Sie dieselbe Frage.",
+      step1: "Zweigen Sie die Unterhaltung an der gewünschten Nachricht ab.",
+      step2: "Wählen Sie ein anderes Modell.",
+      step3: "Senden Sie denselben Prompt und vergleichen Sie die Antworten.",
+    },
+    local_conversion: {
+      title: "Dokumentkonvertierung lokal halten",
+      description: "Konvertieren Sie PDFs und DOCX-Dateien im Browser statt auf dem Server.",
+      step1: "Öffnen Sie die Chat-Einstellungen in den Benutzereinstellungen.",
+      step2: "Wählen Sie Nur Browser unter Dokumentkonvertierung.",
+      step3: "Hängen Sie ein PDF oder DOCX an.",
+      step4: "Verarbeiten Sie die Datei über die Anhang-Karte.",
+    },
+    memories: {
+      title: "Einstellungen chatübergreifend merken",
+      description: "Speichern Sie Kontext und Vorlieben in Erinnerungen, damit spätere Chats sie abrufen können.",
+      step1: "Öffnen Sie die Benutzereinstellungen und fügen Sie eine Erinnerung hinzu.",
+      step2: "Aktivieren Sie Abrufen oder Lernen für die passenden Unterhaltungen.",
+      step3: "Fragen Sie: „Was erinnerst du dich über meine Vorlieben?“",
+    },
+    read_aloud: {
+      title: "Eine Antwort anhören",
+      description: "Lassen Sie eine Assistentenantwort über die Sprachschaltfläche vorlesen.",
+      step1: "Klicken Sie auf das Lautsprecher-Symbol unter einer Assistenten-Nachricht.",
+      step2: "Beenden Sie die Wiedergabe jederzeit mit der Stopp-Schaltfläche.",
+    },
   },
   // Settings panel
   settings: {
@@ -759,7 +1122,7 @@ export default {
     regenerate_fork_success: "Chat erfolgreich geforkt",
     regenerate_fork_fail: "Chat konnte nicht geforkt werden.",
     summarize_replace:
-      "Dies ersetzt den aktuellen Chatverlauf durch eine Zusammenfassung. Die bisherigen Nachrichten werden aus dieser Unterhaltung entfernt. Fortfahren?",
+      "Dies erstellt einen neuen Chat mit einer Zusammenfassung. Ihr aktueller Chat bleibt unverändert. Fortfahren?",
     summarize_in_progress:
       "Ihre Unterhaltung wird zusammengefasst. Bitte warten Sie, während die Zusammenfassung erstellt wird.",
     no: "Nein, geh zurück",

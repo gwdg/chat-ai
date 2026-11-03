@@ -250,6 +250,7 @@ export default function TopicCreateBubble({
 
             <input
               ref={inputRef}
+              data-guide="topic-create-input"
               value={name}
               onChange={(e) => {
                 setName(e.target.value);

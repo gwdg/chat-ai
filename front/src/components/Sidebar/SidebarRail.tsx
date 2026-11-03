@@ -17,6 +17,7 @@ import NewChatButton from "./Buttons/NewChatButton";
 import SummarizeChatButton from "./Buttons/SummarizeChatButton";
 import ExportChatButton from "./Buttons/ExportChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
+import TutorialStatus from "../Others/TutorialStatus";
 
 export default function SidebarRail({ 
   localState,
@@ -74,6 +75,8 @@ export default function SidebarRail({
 
           {/* New chat button */}
           <NewChatButton variant="rail" topicId={localState?.folderId} onNewConversation={handleNewConversation} />
+
+          <TutorialStatus compact onExpand={onOpen} />
 
           {/* Import persona from Github button */}
           <ImportPersonaButton variant="rail" topicId={localState?.folderId} />
@@ -136,6 +139,7 @@ export default function SidebarRail({
                 }
               }}
               aria-label={t("user_settings.title")}
+              data-guide="user-settings"
               className="flex items-center px-1 pt-1 pb-4 rounded-2xl cursor-pointer hover:bg-base-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
               style={{ WebkitTapHighlightColor: "transparent" }}
             >

@@ -42,6 +42,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
         <div className="w-full flex gap-1">
           <input
             type="text"
+            data-guide="arcana-id"
             value={settings?.arcana?.id}
             onChange={handleArcanaChange()}
             placeholder={t("settings.placeholder_arcana_id")}

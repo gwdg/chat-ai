@@ -29,6 +29,7 @@ const MCPContainer = ({ localState, setLocalState }) => {
         <div className="w-full flex">
           <input
             type="text"
+            data-guide="mcp-input"
             value={settings?.mcp_servers || ""}
             onChange={handleMCPChange}
             placeholder={t("settings.placeholder_mcp_id")}

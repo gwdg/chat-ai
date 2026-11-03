@@ -29,7 +29,7 @@ export default function FeedbackButtons({
   };
 
   return (
-    <div  className="group flex justify-between mt-1 gap-2">
+    <div  className="group flex justify-between mt-1 gap-2" data-guide="feedback">
     <button onClick={sendFeedbackThumbsUp} title={i18n.t("feedback.thumbsup")}>
       <ThumbsUp
         className={`h-[22px] w-[22px] cursor-pointer ${msg?.feedback?.rating == 1 ? "text-error" : "text-accent"}`}

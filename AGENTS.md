@@ -356,6 +356,40 @@ control is `SettingsPanel/MemoryModeContainer.jsx`; the global preference remain
 `UserSettings/ChatPreferences.jsx`. The value is stored with the conversation settings (no Dexie
 version bump) and restored by `useImportConversation`.
 
+### 4.18 Tutorials and use cases are static config; only completion is persisted
+
+The UI's "tutorials" are the code's **feature guides**. Both tutorials and use cases are plain
+JavaScript object literals, not database rows or JSON files:
+
+- `front/src/config/featureGuides.js` exports `featureGuides`, keyed by feature id
+  (`upload_file`, `select_model`, …). Each entry has `titleKey`, a model-facing `prompt`,
+  `keywords`, and `steps`. Steps carry `target` selector(s), `textKey`, and optional tour logic
+  (`prepare`, `check`, `completeOnTargetClick`, `completeOnEvent`). `FEATURE_CATEGORIES` groups the
+  ids, and `buildFeatureGuidePrompt()` feeds the ids and prompts to the Meta chat.
+- `front/src/config/useCases.js` exports `useCases`, keyed by use-case id. Entries have `category`,
+  `prompt`, `keywords`, and `steps`; a step may reference a `tutorialId` to launch one of the
+  feature guides. `USE_CASE_CATEGORIES` groups them, and `buildUseCaseGuide()` turns a use case into
+  a custom tour.
+
+Visible copy is not stored in these objects: titles and step texts are i18n keys resolved from
+`front/src/i18n/en.js` and `de.js`. Element preparation lives in
+`front/src/config/featureGuideActions.js`, and the tour runtime is `FeatureGuideContext` +
+`SettingsPanel/TourManager.jsx`.
+
+The only persisted part is progress, in the Redux `interface_settings` slice:
+`completed_tutorials`, `completed_use_cases`, and `suppressed_tutorials` are id arrays, dispatched by
+`markTutorialCompleted` / `markUseCaseCompleted` / `suppressTutorial` and persisted to localStorage
+by redux-persist. The code's `featureGuides`/`useCases` definitions are never written to Dexie.
+
+When adding one, edit the relevant config file **and** its category list, add every `titleKey` /
+`textKey` to both i18n files, and target an existing `data-guide` attribute or class. Run
+`cd front && npm run validate:guides`; `front/scripts/validate-feature-guides.mjs` checks ids,
+categories, tour targets, and the en/de keys.
+
+**Every new proper user-facing feature should ship with at least one feature guide (tutorial).**
+Use cases are optional and compose existing tutorials into longer workflows; they do not replace
+the tutorial for the feature itself.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
@@ -412,6 +446,7 @@ version bump) and restored by `useImportConversation`.
 
 - [ ] `npm run build` clean in `front/` (there is no working lint — see §3)
 - [ ] new strings added to both `en.js` and `de.js`
+- [ ] new proper user-facing feature → at least one feature guide (tutorial), with its category and `npm run validate:guides`
 - [ ] Dexie schema change → version bump + `.upgrade()` backfill, existing version blocks untouched
 - [ ] new persisted Redux key → `whitelist` + `getDefaultState()` (+ a migration if the shape changed)
 - [ ] new `front.json` key → mapped in `vite.config.js`

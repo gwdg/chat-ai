@@ -23,6 +23,7 @@ export default function ThemeToggle() {
   return (
     <button
       className="btn btn-ghost btn-sm btn-square touch-manipulation px-6"
+      data-guide="theme-toggle"
       onClick={toggleDarkMode}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >

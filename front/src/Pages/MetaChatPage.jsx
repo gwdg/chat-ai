@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
+import { useSearchParams } from "react-router";
 import { Ai } from "@carbon/icons-react";
 
 import { getDefaultConversation } from "../utils/conversationUtils";
@@ -18,7 +19,11 @@ import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
 import TourManager from "../components/SettingsPanel/TourManager";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
+import FeatureGuideCard from "../components/Others/FeatureGuideCard";
+import TutorialCatalog from "../components/Others/TutorialCatalog";
+import UseCaseCatalog from "../components/Others/UseCaseCatalog";
 import { MetaChatSendContext } from "../context/MetaChatContext";
+import { useFeatureGuide } from "../context/FeatureGuideContext";
 
 export default function MetaChatPage() {
   const { t } = useTranslation();
@@ -32,10 +37,46 @@ export default function MetaChatPage() {
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
   const metaChatSend = useMetaChatSend();
+  const { startGuide, isActive } = useFeatureGuide();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [loaded, setLoaded] = useState(false);
+  const [openCatalog, setOpenCatalog] = useState(null);
+  const catalogRef = useRef(null);
   const latestStateRef = useRef(localState);
   const loadedRef = useRef(false);
+
+  useEffect(() => {
+    if (isActive) setOpenCatalog(null);
+  }, [isActive]);
+
+  useEffect(() => {
+    if (!openCatalog) return;
+
+    const closeOnOutsideClick = (event) => {
+      if (catalogRef.current?.contains(event.target)) return;
+      setOpenCatalog(null);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setOpenCatalog(null);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [openCatalog]);
+
+  useEffect(() => {
+    const requested = searchParams.get("tutorial");
+    if (!loaded || !requested) return;
+    startGuide(requested);
+    const next = new URLSearchParams(searchParams);
+    next.delete("tutorial");
+    setSearchParams(next, { replace: true });
+  }, [loaded, searchParams, setSearchParams, startGuide]);
 
   useEffect(() => {
     latestStateRef.current = localState;
@@ -169,6 +210,40 @@ export default function MetaChatPage() {
                 <p className="mt-0.5 text-[11px] leading-relaxed text-base-content/70">
                   {t("meta_chat.banner_description")}
                 </p>
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-[11px] leading-relaxed text-base-content/70">
+                  <li>
+                    <span className="font-medium text-base-content/80">
+                      {t("meta_chat.purposes.tutor")}
+                    </span>
+                    {" — "}
+                    {t("meta_chat.purposes.tutor_example")}
+                    <FeatureGuideCard featureId="meta_chat_catalogs" compact />
+                  </li>
+                  <li>
+                    <span className="font-medium text-base-content/80">
+                      {t("meta_chat.purposes.find")}
+                    </span>
+                    {" — "}
+                    {t("meta_chat.purposes.find_example")}
+                  </li>
+                </ul>
+                <div
+                  ref={catalogRef}
+                  className="mt-2 flex flex-wrap items-center gap-2"
+                >
+                  <TutorialCatalog
+                    open={openCatalog === "tutorials"}
+                    onOpenChange={(next) =>
+                      setOpenCatalog(next ? "tutorials" : null)
+                    }
+                  />
+                  <UseCaseCatalog
+                    open={openCatalog === "useCases"}
+                    onOpenChange={(next) =>
+                      setOpenCatalog(next ? "useCases" : null)
+                    }
+                  />
+                </div>
               </div>
             </div>
             <div className="min-h-0 flex-1">

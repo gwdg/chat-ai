@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import {
   Popover,
   PopoverButton,
@@ -62,6 +62,7 @@ import SummarizeChatButton from "./Buttons/SummarizeChatButton";
 import ExportChatButton from "./Buttons/ExportChatButton";
 import DeleteChatButton from "./Buttons/DeleteChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
+import TutorialStatus from "../Others/TutorialStatus";
 
 export default function SidebarContent({
   localState,
@@ -77,6 +78,7 @@ export default function SidebarContent({
   modelsData?: any;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { openModal } = useModal();
   const { t, i18n } = useTranslation();
@@ -494,6 +496,7 @@ export default function SidebarContent({
               <button
                 ref={(el) => (menuButtonRefs.current[id] = el)}
                 onClick={(e) => openMenu(e, id)}
+                data-guide="conversation-menu"
                 className={`p-1.5 hover:bg-base-300 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center 
                   hover:scale-110 active:scale-95 cursor-pointer`}
                 style={{
@@ -538,6 +541,7 @@ export default function SidebarContent({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Conversations header, with the search field it reveals */}
         <div className="sticky top-0 z-20 bg-base-100 px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+          <TutorialStatus />
           <div className="flex items-center justify-between gap-1 pb-3">
             <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
           <div className="flex items-center justify-between gap-1">
@@ -554,6 +558,7 @@ export default function SidebarContent({
                 <PopoverButton
                   aria-label={t("folders.sort_label")}
                   title={t("folders.sort_label")}
+                  data-guide="sort-chats"
                   className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
                 >
                   {conversationGrouping === "date" ? (
@@ -568,6 +573,7 @@ export default function SidebarContent({
                   anchor={{ to: "bottom end", gap: 4, padding: 8 }}
                   role="menu"
                   aria-label={t("folders.sort_label")}
+                  data-guide="sort-menu"
                   className="z-50 w-52 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
                 >
                   {({ close }) => (
@@ -658,7 +664,10 @@ export default function SidebarContent({
               <button
                 type="button"
                 onClick={() => navigate("/meta")}
-                className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+                data-guide="meta-chat"
+                className={`btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content ${
+                  location.pathname === "/meta" ? "btn-active" : ""
+                }`}
                 aria-label={t("meta_chat.open")}
                 title={t("meta_chat.open")}
               >
@@ -667,6 +676,7 @@ export default function SidebarContent({
               <button
                 type="button"
                 onClick={openSearch}
+                data-guide="search-chats"
                 className={`flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
                   searchVisible ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
@@ -687,6 +697,7 @@ export default function SidebarContent({
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 pointer-events-none" />
               <input
                 ref={searchInputRef}
+                data-guide="search-input"
                 type="text"
                 autoComplete="off"
                 autoCorrect="off"

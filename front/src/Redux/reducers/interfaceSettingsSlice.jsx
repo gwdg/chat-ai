@@ -18,6 +18,9 @@ const interfaceSettingsSlice = createSlice({
     collapsed_topics: [],
     conversation_sort: "created_desc",
     conversation_grouping: "topic",
+    completed_tutorials: [],
+    completed_use_cases: [],
+    suppressed_tutorials: [],
   },
   reducers: {
     toggleTheme: (state) => {
@@ -82,6 +85,33 @@ const interfaceSettingsSlice = createSlice({
         state.conversation_grouping = action.payload;
       }
     },
+    markTutorialCompleted: (state, action) => {
+      if (!action.payload) return;
+      if (!Array.isArray(state.completed_tutorials)) {
+        state.completed_tutorials = [];
+      }
+      if (!state.completed_tutorials.includes(action.payload)) {
+        state.completed_tutorials.push(action.payload);
+      }
+    },
+    markUseCaseCompleted: (state, action) => {
+      if (!action.payload) return;
+      if (!Array.isArray(state.completed_use_cases)) {
+        state.completed_use_cases = [];
+      }
+      if (!state.completed_use_cases.includes(action.payload)) {
+        state.completed_use_cases.push(action.payload);
+      }
+    },
+    suppressTutorial: (state, action) => {
+      if (!action.payload) return;
+      if (!Array.isArray(state.suppressed_tutorials)) {
+        state.suppressed_tutorials = [];
+      }
+      if (!state.suppressed_tutorials.includes(action.payload)) {
+        state.suppressed_tutorials.push(action.payload);
+      }
+    },
   },
 });
 
@@ -104,11 +134,18 @@ export const selectConversationGrouping = (state) => {
   const grouping = state.interface_settings.conversation_grouping;
   return ["date", "created"].includes(grouping) ? grouping : "topic";
 };
+export const selectCompletedTutorials = (state) =>
+  state.interface_settings.completed_tutorials ?? [];
+export const selectCompletedUseCases = (state) =>
+  state.interface_settings.completed_use_cases ?? [];
+export const selectSuppressedTutorials = (state) =>
+  state.interface_settings.suppressed_tutorials ?? [];
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
   setShowUsageInSidebar, setWarning, toggleTopic, setConversationSort,
-  setConversationGrouping,
+  setConversationGrouping, markTutorialCompleted, markUseCaseCompleted,
+  suppressTutorial,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

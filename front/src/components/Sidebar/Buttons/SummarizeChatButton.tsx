@@ -29,6 +29,7 @@ export default function SummarizeChatButton({
                 closeMenu();
                 handleSummarizeChat();
             }}
+            data-guide="summarize-chat"
             className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-200"
         >
             <BrainstormFilled size={14} />
@@ -43,6 +44,7 @@ export default function SummarizeChatButton({
     >
         <button
         onClick={handleSummarizeChat}
+        data-guide="summarize-chat"
         className="btn btn-ghost btn-square hover:bg-success/10 hover:text-success"
         aria-label={t("common.summarize")}
         >

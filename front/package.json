@@ -12,7 +12,8 @@
     "preview": "vite preview --host --no-open",
     "predev": "node scripts/copy-tikzjax.mjs",
     "preprod": "node scripts/copy-tikzjax.mjs",
-    "prebuild": "node scripts/copy-tikzjax.mjs"
+    "prebuild": "node scripts/copy-tikzjax.mjs",
+    "validate:guides": "node scripts/validate-feature-guides.mjs"
   },
   "author": "Gesellschaft für wissenschaftliche Datenverarbeitung mbH Göttingen",
   "license": "GPL-3.0-only",
