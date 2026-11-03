@@ -8,6 +8,10 @@ import {
   setMemoryMode,
   setSuggestUserPrompts,
 } from "../../Redux/reducers/userSettingsReducer";
+import {
+  selectDisableScreensavers,
+  setDisableScreensavers,
+} from "../../Redux/reducers/interfaceSettingsSlice";
 import { useModal } from "../ModalContext";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
 
@@ -125,6 +129,28 @@ export function SuggestionPreference() {
         )}
         checked={suggestUserPrompts}
         onChange={(checked) => dispatch(setSuggestUserPrompts(checked))}
+      />
+    </section>
+  );
+}
+
+export function ScreensaverPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const disableScreensavers = useSelector(selectDisableScreensavers);
+
+  return (
+    <section>
+      <h3 className="px-2 text-sm font-medium text-gray-900 dark:text-white">
+        {t("user_settings.chat_preferences.screensavers.section_label")}
+      </h3>
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.screensavers.label")}
+        description={t(
+          "user_settings.chat_preferences.screensavers.description",
+        )}
+        checked={disableScreensavers}
+        onChange={(checked) => dispatch(setDisableScreensavers(checked))}
       />
     </section>
   );
