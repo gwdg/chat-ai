@@ -3,6 +3,8 @@ import { useDispatch } from "react-redux";
 import { getDefaultConversation } from "../utils/conversationUtils";
 
 import { useSyncConversation } from "../hooks/useSyncConversation";
+import { useSendMessage } from "../hooks/useSendMessage";
+import { usePendingPrompt } from "../hooks/usePendingPrompt";
 import { useConversationSummaries } from "../hooks/useConversationSummaries";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
@@ -31,12 +33,22 @@ export default function ChatPage() {
 
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
+  const sendMessage = useSendMessage();
 
   // Sync localState conversation with IndexedDB
   useSyncConversation({
     localState,
     setLocalState,
     conversationId,
+  });
+
+  // A chat started from the topic master view arrives with its first prompt
+  // in router state; send it once the conversation has been hydrated.
+  usePendingPrompt({
+    conversationId,
+    localState,
+    setLocalState,
+    sendMessage,
   });
 
   useConversationSummaries({ localState, conversationId });

@@ -3,6 +3,11 @@ import type { DragEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
+import {
+  Popover,
+  PopoverButton,
+  PopoverPanel,
+} from "@headlessui/react";
 
 import {
   Ai,
@@ -119,35 +124,6 @@ export default function SidebarContent({
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchVisible = searchOpen || hasSearch;
-
-  const [groupMenuOpen, setGroupMenuOpen] = useState(false);
-  const groupMenuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!groupMenuOpen) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (
-        groupMenuRef.current &&
-        !groupMenuRef.current.contains(event.target as Node)
-      ) {
-        setGroupMenuOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setGroupMenuOpen(false);
-    };
-    // Deferred so the click that opened the menu does not close it.
-    const id = setTimeout(
-      () => document.addEventListener("mousedown", onPointerDown),
-      0,
-    );
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      clearTimeout(id);
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [groupMenuOpen]);
 
   const openSearch = useCallback(() => {
     setSearchOpen(true);
@@ -339,17 +315,11 @@ export default function SidebarContent({
     }
   };
 
-  const onNewConversation = (folderId) => {
-    // New conversations start unsorted; the user files them into a topic after.
-    handleNewConversation(folderId || null)
-      .then(() => {
-        if (orderedConversations[0]?.id) {
-          setSelectedConversationId(currentConversationId);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to start new conversation", error);
-      });
+  const handleOpenTopic = (topicId: string) => {
+    navigate(`/topic/${topicId}`);
+    if (!isDesktop) {
+      onClose();
+    }
   };
 
   const handleTitleDoubleClick = (e, conv) => {
@@ -580,12 +550,8 @@ export default function SidebarContent({
               {t("folders.title")}
             </span>
             <div className="flex items-center gap-1">
-              <div ref={groupMenuRef} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setGroupMenuOpen((open) => !open)}
-                  aria-haspopup="menu"
-                  aria-expanded={groupMenuOpen}
+              <Popover className="relative">
+                <PopoverButton
                   aria-label={t("folders.sort_label")}
                   title={t("folders.sort_label")}
                   className="flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer"
@@ -597,70 +563,82 @@ export default function SidebarContent({
                   ) : (
                     <FolderTree size={16} />
                   )}
-                </button>
-                {groupMenuOpen && (
-                  <div
-                    role="menu"
-                    aria-label={t("folders.sort_label")}
-                    className="absolute right-0 top-full z-30 mt-1 w-52 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
-                  >
-                    <button
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={conversationGrouping === "topic"}
-                      onClick={() => {
-                        dispatch(setConversationGrouping("topic"));
-                        setGroupMenuOpen(false);
-                      }}
-                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                    >
-                      <FolderTree size={14} className="shrink-0" />
-                      <span className="flex-1 truncate">
-                        {t("folders.sort_by_topic")}
-                      </span>
-                      {conversationGrouping === "topic" && (
-                        <Checkmark size={14} className="shrink-0 text-accent" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={conversationGrouping === "date"}
-                      onClick={() => {
-                        dispatch(setConversationGrouping("date"));
-                        setGroupMenuOpen(false);
-                      }}
-                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                    >
-                      <Calendar size={14} className="shrink-0" />
-                      <span className="flex-1 truncate">
-                        {t("folders.sort_by_date")}
-                      </span>
-                      {conversationGrouping === "date" && (
-                        <Checkmark size={14} className="shrink-0 text-accent" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={conversationGrouping === "created"}
-                      onClick={() => {
-                        dispatch(setConversationGrouping("created"));
-                        setGroupMenuOpen(false);
-                      }}
-                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                    >
-                      <SortAscending size={14} className="shrink-0" />
-                      <span className="flex-1 truncate">
-                        {t("folders.sort_by_created")}
-                      </span>
-                      {conversationGrouping === "created" && (
-                        <Checkmark size={14} className="shrink-0 text-accent" />
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
+                </PopoverButton>
+                <PopoverPanel
+                  anchor={{ to: "bottom end", gap: 4, padding: 8 }}
+                  role="menu"
+                  aria-label={t("folders.sort_label")}
+                  className="z-50 w-52 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
+                >
+                  {({ close }) => (
+                    <>
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={conversationGrouping === "topic"}
+                        onClick={() => {
+                          dispatch(setConversationGrouping("topic"));
+                          close();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <FolderTree size={14} className="shrink-0" />
+                        <span className="flex-1 truncate">
+                          {t("folders.sort_by_topic")}
+                        </span>
+                        {conversationGrouping === "topic" && (
+                          <Checkmark
+                            size={14}
+                            className="shrink-0 text-accent"
+                          />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={conversationGrouping === "date"}
+                        onClick={() => {
+                          dispatch(setConversationGrouping("date"));
+                          close();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Calendar size={14} className="shrink-0" />
+                        <span className="flex-1 truncate">
+                          {t("folders.sort_by_date")}
+                        </span>
+                        {conversationGrouping === "date" && (
+                          <Checkmark
+                            size={14}
+                            className="shrink-0 text-accent"
+                          />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={conversationGrouping === "created"}
+                        onClick={() => {
+                          dispatch(setConversationGrouping("created"));
+                          close();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <SortAscending size={14} className="shrink-0" />
+                        <span className="flex-1 truncate">
+                          {t("folders.sort_by_created")}
+                        </span>
+                        {conversationGrouping === "created" && (
+                          <Checkmark
+                            size={14}
+                            className="shrink-0 text-accent"
+                          />
+                        )}
+                      </button>
+                    </>
+                  )}
+                </PopoverPanel>
+              </Popover>
               <button
                 type="button"
                 onClick={() =>
@@ -778,7 +756,7 @@ export default function SidebarContent({
                 onCreateTopic={handleCreateFolder}
                 onRenameTopic={handleRenameFolder}
                 onDeleteTopic={handleDeleteFolder}
-                onNewConversation={onNewConversation}
+                onOpenTopic={handleOpenTopic}
                 draggingConversationId={draggingConversationId}
                 dragOverTopicId={dragOverTopicId}
                 onDragEnterTopic={setDragOverTopicId}

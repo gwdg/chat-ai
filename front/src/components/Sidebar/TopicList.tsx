@@ -2,6 +2,7 @@ import { useCallback, useRef } from "react";
 import type { DragEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
+import { useLocation } from "react-router";
 import {
   BookmarkAdd,
   Calendar,
@@ -14,11 +15,8 @@ import {
 import type { FolderRow } from "../../db/dbTypes";
 import { topicColor, withAlpha } from "./topicColors";
 import { isTopicIconId, topicIcon } from "./topicIcons";
-import ImportChatButton from "./Buttons/ImportChatButton";
 
 import { useModal } from "../../modals/ModalContext";
-import ImportPersonaButton from "./Buttons/ImportPersonaButton";
-import NewChatButton from "./Buttons/NewChatButton";
 import { selectCollapsedTopics, toggleTopic } from "../../Redux/reducers/interfaceSettingsSlice";
 
 /**
@@ -42,7 +40,7 @@ export default function TopicList({
   onCreateTopic,
   onRenameTopic,
   onDeleteTopic,
-  onNewConversation,
+  onOpenTopic,
   draggingConversationId,
   dragOverTopicId,
   onDragEnterTopic,
@@ -60,7 +58,7 @@ export default function TopicList({
   onCreateTopic: (anchor: { x: number; y: number }) => void;
   onRenameTopic: (topic: TopicRef) => void;
   onDeleteTopic: (topic: TopicRef) => void;
-  onNewConversation: (folderId: string | null) => void;
+  onOpenTopic: (topicId: string) => void;
   draggingConversationId: string | null;
   dragOverTopicId: string | null;
   onDragEnterTopic: (topicId: string) => void;
@@ -83,6 +81,10 @@ export default function TopicList({
   const createButtonRef = useRef<HTMLButtonElement | null>(null);
   const { openModal } = useModal();
   const dispatch = useDispatch();
+  const { pathname } = useLocation();
+  const activeTopicId = pathname.startsWith("/topic/")
+    ? decodeURIComponent(pathname.slice("/topic/".length))
+    : null;
 
   const collapsedTopicIds = useSelector(selectCollapsedTopics) || [];
 
@@ -104,14 +106,13 @@ export default function TopicList({
     const isCollapsed = collapsedTopicIds.includes(id);
     const isDropTarget =
       draggingConversationId !== null && dragOverTopicId === id;
+    const isActiveTopic = activeTopicId === id;
     const count = conversations.length;
 
     return (
       <div 
         key={id} 
-        className={`group
-          isDropTarget ? "border-accent/60" : ""
-        `}
+        className="group"
         onDragEnter={(e) => {
           if (!draggingConversationId) return;
           e.preventDefault();
@@ -133,17 +134,21 @@ export default function TopicList({
         <div
           role="button"
           tabIndex={0}
-          aria-expanded={!isCollapsed}
-          onClick={() => toggleTopicCollapse(id)}
+          aria-current={isActiveTopic ? "page" : undefined}
+          onClick={() => onOpenTopic(id)}
           onKeyDown={(e) => {
+            // Let the rename/delete/collapse buttons handle their own keys.
+            if (e.target !== e.currentTarget) return;
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              toggleTopicCollapse(id);
+              onOpenTopic(id);
             }
           }}
-          className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200 ${
-            isDropTarget ? "border-accent/60" : ""
-          }`}
+          className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border text-base-content hover:bg-base-200 ${
+            isActiveTopic
+              ? "border-accent/40 bg-base-200"
+              : "border-transparent"
+          } ${isDropTarget ? "border-accent/60" : ""}`}
           // style={ isDropTarget ? { backgroundColor: topicTint(hex, isDark) } : undefined }
         >
           {emoji ? (
@@ -205,12 +210,27 @@ export default function TopicList({
           <span className="text-[11px] select-none pointer-events-none font-semibold text-base-content/70">
             {count > 999 ? "999+" : count}
           </span>
-          <ChevronDown
-            size={12}
-            className={`flex-shrink-0 pointer-events-none text-base-content/50 transition-transform duration-200 ${
-              isCollapsed ? "-rotate-90" : "rotate-0"
-            }`}
-          />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTopicCollapse(id);
+            }}
+            aria-expanded={!isCollapsed}
+            aria-label={
+              isCollapsed
+                ? t("folders.expand_topic")
+                : t("folders.collapse_topic")
+            }
+            className="flex-shrink-0 rounded-lg p-1 text-base-content/50 transition-colors hover:bg-base-300"
+          >
+            <ChevronDown
+              size={12}
+              className={`pointer-events-none transition-transform duration-200 ${
+                isCollapsed ? "-rotate-90" : "rotate-0"
+              }`}
+            />
+          </button>
         </div>
 
         {!isCollapsed && (
@@ -221,17 +241,6 @@ export default function TopicList({
             {count > 0 && (
               conversations.map((conv) => renderConversationRow(conv))
             ) }
-            {/* New Chat / Persona / Import — sits after the list, and sticks to
-                          the bottom edge once the list is long enough to scroll under it */}
-            {id && id != UNSORTED_TOPIC_ID && (
-            <div className="sticky bottom-0 z-10 bg-base-100 pr-3">
-              <div className="flex items-center gap-1">
-                <NewChatButton topicId={id} onNewConversation={onNewConversation} />
-                <ImportPersonaButton topicId={id} />
-                <ImportChatButton topicId={id} />
-              </div>
-            </div>
-            )}
           </div>
         )}
       </div>

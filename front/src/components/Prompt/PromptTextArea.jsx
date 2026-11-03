@@ -19,6 +19,7 @@ export default function PromptTextArea({
     handleSend,
     handleChange,
     prompt,
+    placeholder,
 }) {
   const { t } = useTranslation();
   const textareaRef = useRef(null);
@@ -143,7 +144,7 @@ export default function PromptTextArea({
             autoCapitalize="off"
             spellCheck={false}
             data-1p-ignore="true"
-            placeholder={t("conversation.prompt.placeholder")}
+            placeholder={placeholder ?? t("conversation.prompt.placeholder")}
             style={{
               minHeight: `${MIN_HEIGHT}px`,
               maxHeight: `${MAX_HEIGHT}px`,

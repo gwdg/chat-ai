@@ -24,8 +24,11 @@ export default function Prompt({
   setLocalState,
   userData,
   modelsData,
+  placeholder,
+  sendMessage: sendMessageOverride,
 }) {
-  const sendMessage = useSendMessage();
+  const defaultSendMessage = useSendMessage();
+  const sendMessage = sendMessageOverride ?? defaultSendMessage;
   const { openModal } = useModal();
   const [shouldSend, setShouldSend] = useState(false);
   const [ignoreChanges, setIgnoreChanges] = useState(false);
@@ -126,6 +129,7 @@ export default function Prompt({
           handleSend={handleSend}
           handleChange={handleChange}
           prompt={prompt}
+          placeholder={placeholder}
         />
         
         {/* Buttons Section */}

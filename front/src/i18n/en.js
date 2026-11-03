@@ -77,6 +77,8 @@ export default {
       older: "Older",
     },
     create_button: "New topic",
+    expand_topic: "Expand topic",
+    collapse_topic: "Collapse topic",
     empty_topic: "Drag a chat here.",
     search_label: "Search",
     search_action: "Search chats",
@@ -107,6 +109,19 @@ export default {
     move_action: "Move",
     new_folder_prompt: "Create new topic",
     create_inline: "Create",
+  },
+  topic_view: {
+    chat_count_one: "{{count}} chat",
+    chat_count_other: "{{count}} chats",
+    empty_title: "No chats in this topic yet",
+    empty_body: "Write a prompt below to start the first chat here.",
+    composer_placeholder: "Ask anything — starts a new chat in {{name}}",
+    create_error: "Could not start a new chat. Please try again.",
+    missing_topic: "This topic no longer exists",
+    missing_topic_body:
+      "It may have been deleted. Choose another topic from the sidebar.",
+    back_to_chats: "Back to chats",
+    loading: "Loading topic…",
   },
   sorter: {
     button: "Sort & organize",
