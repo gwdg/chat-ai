@@ -185,7 +185,7 @@ export default {
     banner_description: "Metachat can help you in two ways:",
     purposes: {
       tutor: "Learn how to use Chat AI features",
-      tutor_example: "“How do I attach a file?”",
+      tutor_example: "“How do I find a tutorial or check my settings?”",
       find: "Find your past chats and topics",
       find_example: "“Where is my chat about my food order?”",
     },
@@ -423,6 +423,13 @@ export default {
       title: "Read answers aloud",
       step1:
         "Click the speaker icon under an assistant message when the speech module is enabled.",
+    },
+    meta_chat_catalogs: {
+      title: "Find tutorials and settings in Meta chat",
+      step1: "Browse all available tutorials and replay completed ones.",
+      step2: "Browse complete workflows that combine several features. The Meta chat can also start either option for you.",
+      step3: "You can also ask me to find a tutorial. For example: “Find a tutorial about uploading a file.”",
+      step4: "Ask about your settings too. For example: “What settings have I chosen for memories?”",
     },
     meta_chat_usage: {
       title: "Use the Meta chat",

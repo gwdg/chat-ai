@@ -188,7 +188,7 @@ export default {
     banner_description: "Metachat kann Ihnen auf zwei Arten helfen:",
     purposes: {
       tutor: "Die Funktionen von Chat AI kennenlernen",
-      tutor_example: "„Wie hänge ich eine Datei an?“",
+      tutor_example: "„Wie finde ich ein Tutorial oder prüfe meine Einstellungen?“",
       find: "Bisherige Chats und Themen finden",
       find_example: "„Wo ist mein Chat über meine Essensbestellung?“",
     },
@@ -431,6 +431,13 @@ export default {
       title: "Antworten vorlesen lassen",
       step1:
         "Klicken Sie auf das Lautsprecher-Symbol unter einer Assistenten-Nachricht, wenn das Sprachmodul aktiviert ist.",
+    },
+    meta_chat_catalogs: {
+      title: "Tutorials und Einstellungen im Metachat finden",
+      step1: "Durchsuchen Sie alle verfügbaren Tutorials und wiederholen Sie abgeschlossene.",
+      step2: "Durchsuchen Sie vollständige Abläufe, die mehrere Funktionen kombinieren. Der Metachat kann beide Optionen auch für Sie starten.",
+      step3: "Sie können mich auch bitten, ein Tutorial zu finden. Zum Beispiel: „Finde ein Tutorial zum Hochladen einer Datei.“",
+      step4: "Fragen Sie auch nach Ihren Einstellungen. Zum Beispiel: „Welche Einstellungen habe ich für Erinnerungen gewählt?“",
     },
     meta_chat_usage: {
       title: "Den Metachat verwenden",

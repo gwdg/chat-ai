@@ -50,6 +50,7 @@ export default function TutorialCatalog({ open: controlledOpen, onOpenChange }) 
       <button
         type="button"
         className="btn btn-accent btn-xs gap-1"
+        data-guide="browse-tutorials"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
       >

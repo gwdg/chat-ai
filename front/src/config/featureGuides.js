@@ -710,6 +710,37 @@ export const featureGuides = {
       },
     ],
   },
+  meta_chat_catalogs: {
+    titleKey: "feature_guide.meta_chat_catalogs.title",
+    prompt:
+      "Explain how to use the Meta chat to find tutorials, use cases, and the user's current settings. Browse tutorials and Browse use cases open searchable catalogs; users can also ask the Meta chat to find a tutorial or to explain settings such as the memory preference.",
+    keywords: [
+      "meta chat tutorials",
+      "meta chat use cases",
+      "browse tutorials",
+      "browse use cases",
+    ],
+    steps: [
+      {
+        target: '[data-guide="browse-tutorials"]',
+        textKey: "feature_guide.meta_chat_catalogs.step1",
+      },
+      {
+        target: '[data-guide="browse-use-cases"]',
+        textKey: "feature_guide.meta_chat_catalogs.step2",
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_catalogs.step3",
+        completeOnEvent: "message-complete",
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_catalogs.step4",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
   meta_chat_usage: {
     titleKey: "feature_guide.meta_chat_usage.title",
     prompt:
@@ -765,7 +796,7 @@ export const FEATURE_CATEGORIES = {
     "data_management",
     "dark_mode",
   ],
-  other: ["feedback", "speech_output"],
+  other: ["feedback", "speech_output", "meta_chat_catalogs"],
 };
 
 export function getFeatureCategory(featureId) {

@@ -62,6 +62,7 @@ export default function UseCaseCatalog({ open: controlledOpen, onOpenChange }) {
       <button
         type="button"
         className="btn btn-accent btn-xs gap-1"
+        data-guide="browse-use-cases"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
       >

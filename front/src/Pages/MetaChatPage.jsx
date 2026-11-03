@@ -217,7 +217,7 @@ export default function MetaChatPage() {
                     </span>
                     {" — "}
                     {t("meta_chat.purposes.tutor_example")}
-                    <FeatureGuideCard featureId="upload_file" compact />
+                    <FeatureGuideCard featureId="meta_chat_catalogs" compact />
                   </li>
                   <li>
                     <span className="font-medium text-base-content/80">
