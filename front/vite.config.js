@@ -51,6 +51,12 @@ try {
     } else if (key == "agentPath") {
       process.env["VITE_AGENT_ENDPOINT"] = value;
       console.log("Agent path:", value);
+    } else if (key == "agentGatewayTools") {
+      process.env["VITE_AGENT_GATEWAY_TOOLS"] = value;
+      console.log("Agent gateway tools:", value);
+    } else if (key == "explainImageModel") {
+      process.env["VITE_EXPLAIN_IMAGE_MODEL"] = value;
+      console.log("Explain-image model:", value);
     } else if (key == "announcement") {
       process.env["VITE_ANNOUNCEMENT"] = value;
       console.log("Announcement:", value);

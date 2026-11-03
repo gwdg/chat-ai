@@ -10,7 +10,7 @@ import { createReadTool } from "pi-coding-agent/core/tools/read.js";
 import { createWriteTool } from "pi-coding-agent/core/tools/write.js";
 import { detectSupportedImageMimeType } from "pi-coding-agent/utils/mime.js";
 import { Type, type TSchema } from "typebox";
-import { convertDocument, editImage, generateImage, generateSpeech, transcribeAudio, DEFAULT_VOICE } from "../apis/agentEndpoints";
+import { convertDocument, editImage, explainImage, generateImage, generateSpeech, transcribeAudio, DEFAULT_VOICE } from "../apis/agentEndpoints";
 import { createCodemodeTool } from "./codemode";
 import { markdownToDocx } from "./docx";
 import { enoent, normalize, type Vfs, walk } from "./vfs";
@@ -115,7 +115,25 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
     }),
   ];
 
+  // A model with vision reads images itself; one without asks the vision model through this tool.
+  const explainImageTool = tool(
+    "explain_image",
+    "Look at an image file (png, jpeg, gif, webp) and return a description. read cannot show you images; use this instead.",
+    Type.Object({
+      path: Type.String({ description: "Path of the image" }),
+      question: Type.Optional(Type.String({ description: "A specific question about the image" })),
+    }),
+    async ({ path, question }, signal) => {
+      path = normalize(path);
+      const data = await fs.readFile(path);
+      const mimeType = detectSupportedImageMimeType(data);
+      if (!mimeType) return text(`${path} is not a supported image.`);
+      return text(await explainImage(data, mimeType, question || "Describe this image in detail. Quote any text in it verbatim.", signal));
+    },
+  );
+
   const mediaTools: AgentTool<any>[] = [
+    ...(vision ? [] : [explainImageTool]),
     tool(
       "convert_document",
       "Convert a document (PDF, DOCX, PPTX, XLSX, ...) to Markdown. The result is written next to it as <path>.md and returned.",

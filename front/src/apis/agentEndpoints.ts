@@ -4,6 +4,9 @@ import getModelDefaults from "../config/getModelDefaults";
 
 export const agentEndpoint = () => (import.meta.env.VITE_AGENT_ENDPOINT || "").replace(/\/$/, "");
 export const isAgentEnabled = () => !!agentEndpoint();
+// Web search and arcana in agent mode run in the SAIA gateway. Off unless front.json sets
+// agentGatewayTools, so agent requests reach the plain chat endpoint without gateway fields.
+export const agentGatewayTools = () => import.meta.env.VITE_AGENT_GATEWAY_TOOLS === "true";
 
 // Models whose server rejected a request with tools during this session
 const toollessModels = new Set<string>();
@@ -64,6 +67,29 @@ async function readImage(response: Response): Promise<Uint8Array> {
   const b64 = result?.data?.[0]?.b64_json;
   if (!b64) throw new Error("The image endpoint returned no image");
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+export const EXPLAIN_IMAGE_MODEL = () => import.meta.env.VITE_EXPLAIN_IMAGE_MODEL || "gemma-4-31b-it";
+
+/** Asks the vision model about an image, for agent models that cannot see images themselves. */
+export async function explainImage(image: Uint8Array, mimeType: string, question: string, signal?: AbortSignal): Promise<string> {
+  let binary = "";
+  for (let i = 0; i < image.length; i += 0x8000) binary += String.fromCharCode(...image.subarray(i, i + 0x8000));
+  const body = JSON.stringify({
+    model: EXPLAIN_IMAGE_MODEL(),
+    stream: false,
+    messages: [{
+      role: "user",
+      content: [
+        { type: "text", text: question },
+        { type: "image_url", image_url: { url: `data:${mimeType};base64,${btoa(binary)}` } },
+      ],
+    }],
+  });
+  const result = await (await post("/chat/completions", body, true, signal)).json();
+  const answer = result?.choices?.[0]?.message?.content;
+  if (!answer) throw new Error("The image model returned no description");
+  return answer.trim();
 }
 
 export async function generateImage(prompt: string, size?: string, signal?: AbortSignal): Promise<Uint8Array> {

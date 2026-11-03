@@ -8,7 +8,7 @@ import "./shims/globals";
 import { Agent, type AgentMessage } from "@earendil-works/pi-agent-core";
 import { createModels, createProvider, type Model } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
-import { agentEndpoint, markToolless, modelSupportsTools } from "../apis/agentEndpoints";
+import { agentEndpoint, agentGatewayTools, markToolless, modelSupportsTools } from "../apis/agentEndpoints";
 import { onAbortRequest, reasoningParams } from "../apis/chatCompletions";
 import { loadFileMeta, saveFile } from "../db";
 import { getFileType } from "../utils/attachments";
@@ -246,7 +246,7 @@ export async function runAgentTurn({
   );
 
   const extra = { top_p: settings.top_p, ...reasoningParams(spec.id, settings) };
-  const gatewayFields = external ? {} : gatewayRequestFields(settings);
+  const gatewayFields = external || !agentGatewayTools() ? {} : gatewayRequestFields(settings);
   const onPayload = (payload: any) => {
     // Let the server pick the output limit, as the plain chat path does.
     delete payload.max_tokens;
