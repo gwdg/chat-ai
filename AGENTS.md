@@ -36,8 +36,9 @@ front/src/
   config/         getModelDefaults.jsx + models/<model-id>.json capability files
   i18n/           en.js, de.js
   utils/          sendMessage, conversationUtils, attachments, appContext, tabChangeSync
-back/service.mjs  POST /documents, GET /models, GET /user, POST /audio/speech, POST /chat/completions,
-                  /agent/* (pass-through proxy for the browser agent, front.json `agentPath`)
+back/service.mjs  POST /documents/convert/file, GET /models, GET /user, POST /audio/speech,
+                  POST /audio/transcriptions, POST /images/generations, POST /images/edits,
+                  POST /chat/completions
 secrets/          front.json + back.json (gitignored; *.sample committed)
 ```
 
@@ -159,7 +160,7 @@ restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence
 `=== "true"` comparisons.
 
 Feature modules are gated this way — `VITE_MODULE_TOOLS`, `VITE_MODULE_FEEDBACK`,
-`VITE_MODULE_CHOICES`, `VITE_MODULE_SPEECH` (JSON, with `model` and `voice`). A deployment can
+`VITE_MODULE_CHOICES`, `VITE_MODULE_AGENT` (the browser agent), `VITE_MODULE_SPEECH` (JSON, with `model` and `voice`). A deployment can
 switch these parts of the UI off, so new code in those areas must still behave with the flag off.
 
 ### 4.6 Model capabilities are data, not code
@@ -184,6 +185,9 @@ Verified in `back/service.mjs`:
   as a 200. Check the response body, never the status.
 - **If `apiKey` is empty, `Authorization` falls back to the `inference-id` request header** rather
   than erroring — that is how the deployed setup passes per-user credentials through.
+- **`/chat/completions` rebuilds the request from a fixed set of fields.** Anything else the client
+  sends is dropped. `function` tools and `tool_choice` (the browser agent's) are forwarded only
+  when `enable_tools` is unset; with `enable_tools` the request goes to the tool gateway instead.
 - **`/user` is a hard-coded placeholder** in this repo: it always returns the same `sample-user`
   object. Real user data comes from the gateway in a full deployment, so don't debug user/usage
   features against this response.

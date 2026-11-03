@@ -48,9 +48,6 @@ try {
     } else if (key == "proposalGenerationModel") {
       process.env["VITE_PROPOSAL_GENERATION_MODEL"] = value;
       console.log("Proposal generation model:", value);
-    } else if (key == "agentPath") {
-      process.env["VITE_AGENT_ENDPOINT"] = value;
-      console.log("Agent path:", value);
     } else if (key == "agentGatewayTools") {
       process.env["VITE_AGENT_GATEWAY_TOOLS"] = value;
       console.log("Agent gateway tools:", value);
@@ -66,6 +63,7 @@ try {
         process.env["VITE_MODULE_TOOLS"] = value?.tools || false;
         process.env["VITE_MODULE_FEEDBACK"] = value?.feedback  || false;
         process.env["VITE_MODULE_CHOICES"] = value?.choices  || false;
+        process.env["VITE_MODULE_AGENT"] = value?.agent  || false;
         process.env["VITE_MODULE_SPEECH"] = JSON.stringify(value?.speech) || false;
       } catch (e) {
         console.log("Error while parsing modules: ", e)

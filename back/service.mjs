@@ -40,52 +40,46 @@ try {
   console.error("Failed to read back.json. Using default values.", error);
 }
 
-// Proxy for the browser-side agent: forwards requests under /agent unchanged to the API and
-// inserts the API key. Registered before the body parsers, so bodies and SSE streams pass
-// through as they are. Only the paths the agent uses are forwarded.
-const AGENT_PATHS = [
-  "/chat/completions",
-  "/models",
-  "/documents/convert",
-  "/audio/speech",
-  "/audio/transcriptions",
-  "/images/generations",
-  "/images/edits",
-];
-// Headers that must not be copied between the two connections
-const HOP_HEADERS = new Set(["host", "connection", "content-length", "transfer-encoding", "authorization", "origin", "referer", "cookie", "accept-encoding", "content-encoding"]);
+// Authorization for upstream calls: the inference-id header only stands in for a missing apiKey
+const authHeaders = (req) => ({
+  Authorization: "Bearer " + (apiKey || req.headers["inference-id"]),
+  "inference-portal": serviceName,
+});
 
-app.use("/agent", cors(), async (req, res) => {
-  const url = new URL(req.url, "http://agent");
-  if (!AGENT_PATHS.includes(url.pathname)) return res.status(404).send("Not found");
-
-  const headers = Object.fromEntries(Object.entries(req.headers).filter(([name]) => !HOP_HEADERS.has(name)));
-  // Same rule as the other routes: the inference-id header only stands in for a missing apiKey
-  headers.authorization = "Bearer " + (apiKey || req.headers["inference-id"]);
-  headers["inference-portal"] = serviceName;
+// Forwards a parsed request to the API and streams the answer back. Cancels the upstream
+// request when the client goes away.
+async function forward(req, res, path, body, contentType) {
   const controller = new AbortController();
   res.on("close", () => controller.abort());
   try {
-    const upstream = await globalThis.fetch(apiEndpoint + url.pathname + url.search, {
-      method: req.method,
-      headers,
-      body: req.method === "GET" ? undefined : Readable.toWeb(req),
-      duplex: "half",
+    const upstream = await globalThis.fetch(apiEndpoint + path, {
+      method: "POST",
+      headers: { ...authHeaders(req), ...(contentType ? { "Content-Type": contentType } : {}) },
+      body,
       signal: controller.signal,
     });
-    for (const [name, value] of upstream.headers) {
-      if (!HOP_HEADERS.has(name) && !name.startsWith("access-control-")) res.setHeader(name, value);
-    }
     res.status(upstream.status);
+    const type = upstream.headers.get("content-type");
+    if (type) res.setHeader("Content-Type", type);
     if (upstream.body) pipeline(Readable.fromWeb(upstream.body), res, () => {});
     else res.end();
   } catch (error) {
     if (controller.signal.aborted) return;
-    console.error(`Error: ${error}`);
+    console.error(`Error in ${path}:`, error);
     if (!res.headersSent) res.status(502);
     res.end("Upstream request failed.");
   }
-});
+}
+
+// Builds a multipart body from the parsed fields and uploaded files of a request
+function multipart(req) {
+  const form = new globalThis.FormData();
+  for (const [name, value] of Object.entries(req.body ?? {})) form.append(name, String(value));
+  for (const [name, file] of Object.entries(req.files ?? {})) {
+    for (const one of [file].flat()) form.append(name, new Blob([one.data], { type: one.mimetype }), one.name);
+  }
+  return form;
+}
 
 // Global request limitations
 app.use(bodyParser.json({ limit: "50mb" }));
@@ -153,14 +147,14 @@ async function processFile(file, inference_id) {
 // Process PDF file
 app.post("/documents/convert/file", async (req, res) => {
   // Check for the presence of `document` file key
-  if (!req.files || !req.files.document) {
+  // `files` is docling's field name, which the front end and saia-engine use; `document` is older
+  if (!req.files || !(req.files.files || req.files.document)) {
     return res.status(422).json({ error: "No file provided" });
   }
 
   const inference_id = req.headers["inference-id"];
   try {
-    // Access the file using the correct key name
-    const file = req.files;
+    const file = req.files.files || req.files.document;
     const response = await processFile(file, inference_id);
     if (!response.ok) {
       return res.status(response.status).send(response.statusText);
@@ -252,6 +246,13 @@ app.post("/audio/speech", async (req, res) => {
   }
 });
 
+// Endpoints the browser agent's tools call. Bodies are forwarded as they are.
+app.post("/audio/transcriptions", (req, res) => forward(req, res, "/audio/transcriptions", multipart(req)));
+app.post("/images/edits", (req, res) => forward(req, res, "/images/edits", multipart(req)));
+app.post("/images/generations", (req, res) =>
+  forward(req, res, "/images/generations", JSON.stringify(req.body ?? {}), "application/json"),
+);
+
 // Chat Completions API
 app.post("/chat/completions", async (req, res) => {
   const {
@@ -267,6 +268,7 @@ app.post("/chat/completions", async (req, res) => {
     feedback = null,
     chat_template_kwargs = null,
     reasoning_effort = null,
+    tool_choice = null,
   } = req.body;
 
   const mcp_servers = req.body["mcp-servers"] || null;
@@ -362,6 +364,14 @@ app.post("/chat/completions", async (req, res) => {
       }
     }
     
+    // Function tools of the browser agent, which runs them itself. Without enable_tools they go
+    // to the model unchanged, and the request does not go through the tool gateway.
+    const functionTools = Array.isArray(tools) ? tools.filter((tool) => tool?.type === "function") : [];
+    if (!enable_tools && functionTools.length > 0) {
+      params.tools = functionTools;
+      if (tool_choice) params.tool_choice = tool_choice;
+    }
+
     const openai = new OpenAI({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id});
 
     // Temporary workaround as middleware doesn't support timeout yet
@@ -380,8 +390,12 @@ app.post("/chat/completions", async (req, res) => {
     }
 
     // Get chat completion response
+    // Stop generating when the client goes away (e.g. the user stops the agent)
+    const controller = new AbortController();
+    res.on("close", () => controller.abort());
     const response = await openai.chat.completions.create(params, {
-        headers
+        headers,
+        signal: controller.signal,
     }).asResponse();
 
     // Pass through headers (optional but recommended)
@@ -410,6 +424,8 @@ app.post("/chat/completions", async (req, res) => {
 
     nodeStream.pipe(res);
   } catch (err) {
+    // The client went away and the request was cancelled: nothing to answer
+    if (res.destroyed) return;
     try {
       // Well-formed error, return
       if (err?.status && err?.error) {

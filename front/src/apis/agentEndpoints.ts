@@ -1,9 +1,10 @@
-// Upstream calls used by the agent's tools. They go through the agent proxy
-// (VITE_AGENT_ENDPOINT, e.g. http://localhost:8081/agent), a route of back/ that adds the API key.
+// Upstream calls used by the agent's tools. They go to the same backend as plain chat
+// (backendPath), which adds the credentials. Agent mode is switched on by front.json modules.agent.
 import getModelDefaults from "../config/getModelDefaults";
+import { resolveBaseURL } from "./openaiClient";
 
-export const agentEndpoint = () => (import.meta.env.VITE_AGENT_ENDPOINT || "").replace(/\/$/, "");
-export const isAgentEnabled = () => !!agentEndpoint();
+export const agentEndpoint = () => resolveBaseURL().replace(/\/$/, "");
+export const isAgentEnabled = () => import.meta.env.VITE_MODULE_AGENT === "true";
 // Web search and arcana in agent mode run in the SAIA gateway. Off unless front.json sets
 // agentGatewayTools, so agent requests reach the plain chat endpoint without gateway fields.
 export const agentGatewayTools = () => import.meta.env.VITE_AGENT_GATEWAY_TOOLS === "true";
@@ -39,9 +40,13 @@ async function post(path: string, body: BodyInit, json = false, signal?: AbortSi
 /** Converts a document (PDF, DOCX, PPTX, ...) to Markdown. */
 export async function convertDocument(data: Uint8Array, name: string, signal?: AbortSignal): Promise<string> {
   const form = new FormData();
-  form.append("document", blob(data), name);
-  const result = await (await post("/documents/convert", form, false, signal)).json();
-  return result?.markdown ?? "";
+  // Same request as the chat upload (apis/processFile.jsx); saia-engine forwards it to docling as is
+  form.append("files", blob(data), name);
+  form.append("to_formats", "md");
+  form.append("image_export_mode", "placeholder");
+  form.append("include_images", "false");
+  const result = await (await post("/documents/convert/file", form, false, signal)).json();
+  return result?.document?.md_content ?? "";
 }
 
 export async function transcribeAudio(data: Uint8Array, name: string, signal?: AbortSignal): Promise<string> {

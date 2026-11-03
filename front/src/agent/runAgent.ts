@@ -19,8 +19,8 @@ import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
 
 const PROVIDER = "chat-ai";
-// pi-ai insists on a key; the agent proxy replaces it with the real one.
-const PROXY_KEY = "set-by-agent-proxy";
+// pi-ai insists on a key; the backend ignores it and adds the real one.
+const PROXY_KEY = "set-by-backend";
 
 const AGENT_PROMPT = `You have a virtual filesystem rooted at "/" that belongs to this conversation. There is no shell.
 Files the user attaches are placed under ${UPLOADS}/; documents and audio come with a converted text variant next to them.
