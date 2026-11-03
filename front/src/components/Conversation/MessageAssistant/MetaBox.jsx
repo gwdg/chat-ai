@@ -24,7 +24,7 @@ export default function MetaBox({ meta }) {
             opacity-0 sm:opacity-25 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-300">
             <p
                 className="
-                    text-xs text-gray-500 text-right dark:text-gray-400
+ text-xs text-base-content/70 text-right
                     truncate
                 "
             >

@@ -28,16 +28,16 @@ export default function DefaultModelSelector({ modelsData }) {
     <section className="flex flex-col gap-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+          <h3 className="text-sm font-medium text-base-content">
             {t("user_settings.default_model.title")}
           </h3>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-base-content/70">
             {t("user_settings.default_model.description")}
           </p>
         </div>
         {currentDefaultModel?.name && (
           <span
-            className="max-w-[45%] shrink-0 truncate rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+            className="max-w-[45%] shrink-0 truncate rounded-md bg-base-200 px-2 py-1 text-xs font-medium text-base-content/70"
             title={currentDefaultModel.name}
           >
             {currentDefaultModel.name}
@@ -48,7 +48,7 @@ export default function DefaultModelSelector({ modelsData }) {
       <div
         role="group"
         aria-label={t("user_settings.default_model.list_label")}
-        className="max-h-52 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700"
+        className="max-h-52 overflow-y-auto rounded-lg border border-base-300"
       >
         <ModelSelectorWrapper
           modelsData={modelsData}

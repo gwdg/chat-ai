@@ -33,7 +33,7 @@ export default function ConversationConflict({ isOpen, onClose, localState, setL
     >
       {/* Message */}
       <div className="pt-0 pb-2">
-        <p className="dark:text-white text-black text-justify text-sm">
+        <p className="text-base-content text-justify text-sm">
           Conversation was changed by another tab or process. Would you like to overwrite, or reload the conversation?
         </p>
       </div>
@@ -42,7 +42,7 @@ export default function ConversationConflict({ isOpen, onClose, localState, setL
       <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm mt-2">
         {/* Reload button */}
         <button
-          className="text-white p-3 bg-tertiary dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
+          className="btn btn-accent md:w-fit w-full min-w-[150px] select-none"
           onClick={handleReload}
         >
           Reload
@@ -50,7 +50,7 @@ export default function ConversationConflict({ isOpen, onClose, localState, setL
 
         {/* Overwrite button */}
         <button
-          className="text-white p-3 bg-red-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
+          className="btn btn-error md:w-fit w-full min-w-[150px] select-none"
           onClick={handleOverwrite}
         >
           Overwrite

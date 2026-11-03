@@ -180,7 +180,7 @@ const LatexBlock = memo(
           type="button"
           onClick={() => setShowCode((prev) => !prev)}
           aria-pressed={showCode}
-          className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-medium text-gray-600 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-base-300 bg-base-100 px-2 py-1 text-[11px] font-medium text-base-content/70 shadow-sm transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
         >
           {showCode ? (
             <>
@@ -200,21 +200,21 @@ const LatexBlock = memo(
             <Code language={language}>{codeContent}</Code>
           </div>
         ) : error ? (
-          <div className="pt-3 p-2 text-red-500">
+          <div className="pt-3 p-2 text-error">
             {t("latex.render_error")}
             {errorMessage && (
               <div className="mt-1 font-mono text-xs break-words">
                 {errorMessage}
               </div>
             )}
-            <pre className="mt-2 text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">
+            <pre className="mt-2 text-xs bg-base-200 p-2 rounded overflow-x-auto">
               {codeContent}
             </pre>
           </div>
         ) : loading && !output ? (
           <div className="pt-3 p-2">{t("latex.rendering")}</div>
         ) : output ? (
-          <div className="mt-2 overflow-x-auto rounded-lg bg-white p-4 text-black">
+          <div className="mt-2 overflow-x-auto rounded-lg bg-base-100 p-4 text-base-content">
             <div ref={contentRef} className="latex-document block w-full" />
           </div>
         ) : (

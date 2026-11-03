@@ -34,7 +34,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
           <p className="text-sm">{t("settings.label_arcana")}</p>
           <CircleHelp
-            className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"
+            className="h-[16px] w-[16px] cursor-pointer text-accent"
             alt="help"
             onClick={() => openModal("helpArcana")}
           />
@@ -45,7 +45,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
             value={settings?.arcana?.id}
             onChange={handleArcanaChange()}
             placeholder={t("settings.placeholder_arcana_id")}
-            className="dark:text-white text-black bg-white dark:bg-bg_secondary_dark p-4 border dark:border-border_dark outline-none rounded-lg shadow-lg dark:shadow-dark w-full max-h-[40px]"
+            className="input w-full"
           />
         </div>
       </div>
@@ -53,7 +53,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
         (settings?.enable_tools ||
           settings.model?.input?.includes("arcana") ||
           false) && (
-          <div className="text-yellow-600 text-xs w-full select-none space-y-1">
+          <div className="text-warning text-xs w-full select-none space-y-1">
             <div>
               <Trans i18nKey="alert.arcana_usage" />
             </div>

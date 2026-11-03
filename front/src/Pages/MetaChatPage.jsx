@@ -144,7 +144,7 @@ export default function MetaChatPage() {
             grid-cols-1 grid-rows-[1fr_auto]
             md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto]
             md:gap-x-2 gap-y-1 md:pt-1
-            bg-gray-50 dark:bg-bg_dark
+            bg-base-200
             overflow-hidden
           "
         >
@@ -156,17 +156,17 @@ export default function MetaChatPage() {
           />
 
           <div className="flex min-h-0 min-w-0 flex-col">
-            <div className="mx-1 mb-1 flex items-start gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-700 dark:bg-bg_secondary_dark">
+            <div className="mx-1 mb-1 flex items-start gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm">
               <Ai
                 size={16}
-                className="mt-0.5 shrink-0 text-tertiary"
+                className="mt-0.5 shrink-0 text-accent"
                 aria-hidden="true"
               />
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                <p className="text-xs font-semibold text-base-content">
                   {t("meta_chat.title")}
                 </p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                <p className="mt-0.5 text-[11px] leading-relaxed text-base-content/70">
                   {t("meta_chat.banner_description")}
                 </p>
               </div>

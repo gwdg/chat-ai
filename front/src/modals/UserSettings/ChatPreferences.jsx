@@ -67,7 +67,7 @@ export function MemoryPreference() {
         <div className="flex items-center gap-1.5">
           <h3
             id="global-memory-mode-label"
-            className="text-sm font-medium text-gray-900 dark:text-white"
+            className="text-sm font-medium text-base-content"
           >
             {t("user_settings.chat_preferences.memory.label")}
           </h3>
@@ -78,12 +78,12 @@ export function MemoryPreference() {
               "user_settings.chat_preferences.memory.help_label",
             )}
             title={t("user_settings.chat_preferences.memory.help_label")}
-            className="rounded-md p-1 text-tertiary transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:hover:bg-gray-800"
+            className="btn btn-ghost btn-xs btn-square text-accent"
           >
             <HelpCircle className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-0.5 text-xs text-base-content/70">
           {t("user_settings.chat_preferences.memory.description")}
         </p>
       </div>
@@ -91,7 +91,7 @@ export function MemoryPreference() {
       <div
         role="group"
         aria-labelledby="global-memory-mode-label"
-        className="grid min-h-10 grid-cols-3 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60"
+        className="tabs tabs-box tabs-sm grid grid-cols-3"
       >
         {MEMORY_OPTIONS.map((option) => {
           const selected = option.value === memoryMode;
@@ -101,11 +101,7 @@ export function MemoryPreference() {
               type="button"
               aria-pressed={selected}
               onClick={() => dispatch(setMemoryMode(option.value))}
-              className={`min-w-0 rounded-md px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
-                selected
-                  ? "bg-white text-tertiary shadow-sm dark:bg-gray-700 dark:text-white"
-                  : "text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white"
-              }`}
+              className={`tab min-w-0 text-xs font-medium ${selected ? "tab-active text-accent!" : ""}`}
             >
               <span className="block truncate">
                 {t(
@@ -118,7 +114,7 @@ export function MemoryPreference() {
       </div>
 
       <p
-        className="text-xs text-gray-500 dark:text-gray-400"
+        className="text-xs text-base-content/70"
         aria-live="polite"
       >
         {t(
@@ -139,7 +135,7 @@ export function SuggestionPreference() {
   return (
     <section>
       <div className="flex items-center gap-1.5 px-2">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+        <h3 className="text-sm font-medium text-base-content">
           {t("user_settings.chat_preferences.suggestions.section_label")}
         </h3>
         <button
@@ -149,7 +145,7 @@ export function SuggestionPreference() {
             "user_settings.chat_preferences.suggestions.help_label",
           )}
           title={t("user_settings.chat_preferences.suggestions.help_label")}
-          className="rounded-md p-1 text-tertiary transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:hover:bg-gray-800"
+          className="btn btn-ghost btn-xs btn-square text-accent"
         >
           <HelpCircle className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -222,7 +218,7 @@ export function ConversationSummaryPreference() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="px-2 text-sm font-medium text-gray-900 dark:text-white">
+      <h3 className="px-2 text-sm font-medium text-base-content">
         {t("user_settings.chat_preferences.summaries.section_label")}
       </h3>
       <ProfilePreferenceSwitch
@@ -305,11 +301,11 @@ function SegmentedPreference({ label, description, options, value, onChange }) {
   return (
     <div className="flex min-h-14 w-full items-center justify-between gap-4 rounded-lg px-2 py-2">
       <div className="min-w-0">
-        <span className="block text-sm font-medium text-gray-800 dark:text-gray-100">
+        <span className="block text-sm font-medium text-base-content">
           {label}
         </span>
         {description && (
-          <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+          <span className="mt-0.5 block text-xs text-base-content/70">
             {description}
           </span>
         )}
@@ -317,7 +313,7 @@ function SegmentedPreference({ label, description, options, value, onChange }) {
       <div
         role="group"
         aria-label={label}
-        className="flex shrink-0 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60"
+        className="tabs tabs-box tabs-xs shrink-0"
       >
         {options.map((option) => {
           const selected = option.value === value;
@@ -327,11 +323,7 @@ function SegmentedPreference({ label, description, options, value, onChange }) {
               type="button"
               aria-pressed={selected}
               onClick={() => onChange(option.value)}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
-                selected
-                  ? "bg-white text-tertiary shadow-sm dark:bg-gray-700 dark:text-white"
-                  : "text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white"
-              }`}
+              className={`tab text-xs font-medium ${selected ? "tab-active text-accent!" : ""}`}
             >
               {option.label}
             </button>
@@ -379,7 +371,7 @@ export function RenderingPreferences() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="px-2 text-sm font-medium text-gray-900 dark:text-white">
+      <h3 className="px-2 text-sm font-medium text-base-content">
         {t("user_settings.chat_preferences.rendering.label")}
       </h3>
       <ProfilePreferenceSwitch

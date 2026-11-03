@@ -32,19 +32,19 @@ export default function FeedbackButtons({
     <div  className="group flex justify-between mt-1 gap-2">
     <button onClick={sendFeedbackThumbsUp} title={i18n.t("feedback.thumbsup")}>
       <ThumbsUp
-        className={`h-[22px] w-[22px] cursor-pointer ${msg?.feedback?.rating == 1 ? "text-[#FF0000]" : "text-[#009EE0]"}`}
+        className={`h-[22px] w-[22px] cursor-pointer ${msg?.feedback?.rating == 1 ? "text-error" : "text-accent"}`}
         alt="feedback.thumbsup"
       />
     </button>
     <button onClick={sendFeedbackThumbsDown} title={i18n.t("feedback.thumbsdown")}>
       <ThumbsDown
-        className={`h-[22px] w-[22px] cursor-pointer ${msg?.feedback?.rating == -1 ? "text-[#FF0000]" : "text-[#009EE0]"}`}
+        className={`h-[22px] w-[22px] cursor-pointer ${msg?.feedback?.rating == -1 ? "text-error" : "text-accent"}`}
         alt="feedback.thumbsdown"
       />
     </button>
     <button onClick={editFeedback} title={i18n.t("feedback.send")}>      
       <MessageCircleReply
-        className={`h-[22px] w-[22px] cursor-pointer ${msg?.feedback?.comment ? "text-[#FF0000]" : "text-[#009EE0]"}`}
+        className={`h-[22px] w-[22px] cursor-pointer ${msg?.feedback?.comment ? "text-error" : "text-accent"}`}
         alt="feedback.send"
       />
     </button>

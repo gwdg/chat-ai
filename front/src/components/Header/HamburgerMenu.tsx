@@ -13,10 +13,10 @@ export default function HamburgerMenu() {
           if (showSettings) dispatch(toggleSettings());
           dispatch(toggleSidebar());
       }}
-      className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors p-2 touch-manipulation cursor-pointer"
+      className="hover:bg-base-200 rounded-lg transition-colors p-2 touch-manipulation cursor-pointer"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      <Menu size={24} className="text-tertiary" />
+      <Menu size={24} className="text-accent" />
     </button>
   );
 }

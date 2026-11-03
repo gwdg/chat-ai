@@ -35,10 +35,10 @@ export default function CodeCopyBtn({ children, hovered }) {
       } flex items-center transition-opacity duration-300`}
     >
       {copied ? (
-        <Check className="h-[15px] w-[15px] text-green-500" alt="copy" />
+        <Check className="h-[15px] w-[15px] text-success" alt="copy" />
       ) : (
         <Copy
-          className="h-[15px] w-[15px] cursor-pointer text-[#009EE0]"
+          className="h-[15px] w-[15px] cursor-pointer text-accent"
           alt="copy"
           onClick={() => {
             const textToCopy = extractTextFromReactNode(children);

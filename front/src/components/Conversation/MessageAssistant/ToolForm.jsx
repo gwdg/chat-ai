@@ -76,8 +76,8 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
       id: `tf-${name}`,
       name,
       className:
-        "w-full px-3 py-2 rounded-xl text-sm bg-white dark:bg-bg_secondary_dark " +
-        "text-black dark:text-white border border-gray-300 dark:border-gray-600 " +
+        "w-full px-3 py-2 rounded-xl text-sm bg-base-100 " +
+        "text-base-content border border-base-300 " +
         "outline-none focus:border-primary",
       required: !!field.required,
       onChange: (e) => updateValue(name, e.target.value),
@@ -144,7 +144,7 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
               step={field.step}
               value={value ?? field.min ?? 0}
             />
-            <span className="text-sm text-tertiary whitespace-nowrap">
+            <span className="text-sm text-accent whitespace-nowrap">
               {value ?? field.min ?? 0}
             </span>
           </div>
@@ -183,15 +183,15 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
   if (!editing) {
     // Collapsed: show the form as a tool call summary with an Edit button.
     return (
-      <div className="w-full my-1 rounded-2xl border border-gray-300 dark:border-gray-600 overflow-hidden">
+      <div className="w-full my-1 rounded-2xl border border-base-300 overflow-hidden">
         <div className="flex items-center justify-between gap-2 p-3">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-tertiary shrink-0">🛠</span>
-            <span className="font-medium text-black dark:text-white truncate">
+            <span className="text-accent shrink-0">🛠</span>
+            <span className="font-medium text-base-content truncate">
               {form?.title || form?.tool_id || t("tool_form.tool_call")}
             </span>
             {form?.tool_id && (
-              <code className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-tertiary">
+              <code className="shrink-0 text-xs px-1.5 py-0.5 rounded bg-base-200 text-accent">
                 {form.tool_id}
               </code>
             )}
@@ -199,7 +199,7 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
           <button
             type="button"
             onClick={handleEdit}
-            className="shrink-0 px-3 py-1.5 text-sm rounded-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+            className="shrink-0 px-3 py-1.5 text-sm rounded-full border border-base-300 text-base-content/70 hover:bg-base-200 cursor-pointer"
           >
             {t("tool_form.edit")}
           </button>
@@ -207,10 +207,10 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
         <div className="px-4 pb-3 flex flex-col gap-1">
           {fields.map((field, i) => (
             <div key={i} className="flex items-baseline gap-2 text-sm">
-              <span className="text-gray-500 dark:text-gray-400 shrink-0">
+              <span className="text-base-content/70 shrink-0">
                 {fieldLabel(field)}:
               </span>
-              <span className="text-black dark:text-white break-words">
+              <span className="text-base-content break-words">
                 {formatValue(field, values[field.name])}
               </span>
             </div>
@@ -223,15 +223,15 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full my-1 rounded-2xl border border-gray-300 dark:border-gray-600 overflow-hidden"
+      className="w-full my-1 rounded-2xl border border-base-300 overflow-hidden"
     >
       {(form?.title || form?.description) && (
         <div className="flex flex-col gap-1 p-4">
           {form?.title && (
-            <div className="font-semibold text-black dark:text-white">{form.title}</div>
+            <div className="font-semibold text-base-content">{form.title}</div>
           )}
           {form?.description && (
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-base-content/70">
               {form.description}
             </div>
           )}
@@ -242,7 +242,7 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
           <div key={i} className="flex flex-col gap-1">
             <label
               htmlFor={`tf-${field.name}`}
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="text-sm font-medium text-base-content"
             >
               {fieldLabel(field)}
             </label>
@@ -255,7 +255,7 @@ export default function ToolForm({ form, localState, setLocalState, onUpdate }) 
           type="button"
           onClick={handleReset}
           disabled={sending}
-          className="px-4 py-2 text-sm rounded-full border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer disabled:opacity-50"
+          className="px-4 py-2 text-sm rounded-full border border-base-300 text-base-content/70 hover:bg-base-200 cursor-pointer disabled:opacity-50"
         >
           {t("tool_form.reset")}
         </button>

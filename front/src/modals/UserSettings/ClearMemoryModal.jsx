@@ -33,7 +33,7 @@ export default function ClearMemoryModal({
       {/* Warning Message */}
       <div className="flex flex-col gap-4">
         <div className="pt-0 pb-2">
-          <p className="dark:text-white text-black text-justify mb-3">
+          <p className="text-base-content text-justify mb-3">
             <Trans
               i18nKey="memory.clearAllWarning"
               defaultValue="Are you sure you want to delete all {{count}} memories? This action cannot be undone."
@@ -42,19 +42,19 @@ export default function ClearMemoryModal({
           </p>
 
           {memories.length > 0 && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+            <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
               <div className="flex items-start gap-2">
-                <span className="text-yellow-600 dark:text-yellow-400 text-lg">
+                <span className="text-warning text-lg">
                   ⚠️
                 </span>
                 <div>
-                  <p className="text-yellow-800 dark:text-yellow-200 font-medium text-sm">
+                  <p className="text-warning font-medium text-sm">
                     <Trans
                       i18nKey="memory.warningTitle"
                       defaultValue="Warning"
                     />
                   </p>
-                  <p className="text-yellow-700 dark:text-yellow-300 text-sm mt-1">
+                  <p className="text-warning text-sm mt-1">
                     <Trans
                       i18nKey="memory.warningText"
                       defaultValue="You will lose all personal memories that help the AI understand your preferences and context. Consider exporting them first."
@@ -73,7 +73,7 @@ export default function ClearMemoryModal({
           {/* Cancel */}
           <button
             onClick={onClose}
-            className="text-gray-700 dark:text-white p-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer transition-colors"
+            className="btn md:w-fit w-full min-w-[150px] select-none"
           >
             <Trans i18nKey="memory.cancel" defaultValue="Cancel" />
           </button>
@@ -82,7 +82,7 @@ export default function ClearMemoryModal({
           <button
             onClick={handleDeleteAllMemories}
             disabled={memories.length === 0}
-            className="text-white p-3 bg-red-600 hover:bg-red-700 active:bg-red-800 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-error md:w-fit w-full min-w-[150px] select-none"
           >
             <Trans
               i18nKey="memory.clearAll"

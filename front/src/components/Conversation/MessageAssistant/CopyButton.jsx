@@ -36,12 +36,12 @@ export default function CopyButton({
     <button onClick={handleCopy} title={title} className="inline-grid h-[18px] w-[18px] cursor-pointer">
         {/* Copy: always instant */}
         <Copy
-          className={`row-start-1 col-start-1 h-[18px] w-[18px] text-[#009EE0] transition-opacity ${copied ? 'opacity-0 duration-0' : 'opacity-100 duration-0'}`}
+          className={`row-start-1 col-start-1 h-[18px] w-[18px] text-accent transition-opacity ${copied ? 'opacity-0 duration-0' : 'opacity-100 duration-0'}`}
           aria-hidden={copied}
         />
         {/* CopyCheck: instant enter, timed leave; stacked above Copy */}
         <CopyCheck
-          className={`row-start-1 col-start-1 h-[18px] w-[18px] text-green-500 transition-opacity ease-in-out ${copied ? 'opacity-100 duration-0 z-10' : 'opacity-0'}`}
+          className={`row-start-1 col-start-1 h-[18px] w-[18px] text-success transition-opacity ease-in-out ${copied ? 'opacity-100 duration-0 z-10' : 'opacity-0'}`}
           style={!copied ? { transitionDuration: `${cooldown_ms}ms` } : undefined}
           aria-hidden={!copied}
         />

@@ -34,7 +34,7 @@ const MarkdownImage = ({ src, alt, ...props }) => {
   // react-markdown passes its AST node as a prop; never forward it to the DOM.
   delete props.node;
   if (!loadExternal && isExternalUrl(src)) {
-    return <span className="text-gray-500">{alt || ""}</span>;
+    return <span className="text-base-content/70">{alt || ""}</span>;
   }
   return <img src={src} alt={alt} {...props} />;
 };
@@ -43,7 +43,7 @@ const MarkdownImage = ({ src, alt, ...props }) => {
 const MarkdownLink = ({ href, children }) => {
   const navigate = useNavigate();
   const className =
-    "text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline transition-colors text-sm";
+    "text-info hover:text-info underline transition-colors text-sm";
 
   if (typeof href === "string" && /^\/chat\/[A-Za-z0-9-]+$/.test(href)) {
     return (
@@ -83,7 +83,7 @@ export const rendererComponents = {
 
     if (isInline) {
       return (
-        <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-pink-600 dark:text-pink-400 font-mono text-xs">
+        <code className="px-1.5 py-0.5 rounded bg-base-200 text-primary font-mono text-xs">
           {content}
         </code>
       );
@@ -124,7 +124,7 @@ export const rendererComponents = {
   a: MarkdownLink,
   h1: ({ children, id }) => (
     <h1
-      className="text-xl font-bold mt-6 mb-4 text-gray-900 dark:text-gray-100"
+      className="text-xl font-bold mt-6 mb-4 text-base-content"
       id={id}
     >
       {children}
@@ -132,7 +132,7 @@ export const rendererComponents = {
   ),
   h2: ({ children, id }) => (
     <h2
-      className="text-lg font-semibold mt-5 mb-3 text-gray-900 dark:text-gray-100"
+      className="text-lg font-semibold mt-5 mb-3 text-base-content"
       id={id}
     >
       {children}
@@ -140,7 +140,7 @@ export const rendererComponents = {
   ),
   h3: ({ children, id }) => (
     <h3
-      className="text-base font-medium mt-4 mb-2 text-gray-900 dark:text-gray-100"
+      className="text-base font-medium mt-4 mb-2 text-base-content"
       id={id}
     >
       {children}
@@ -148,7 +148,7 @@ export const rendererComponents = {
   ),
   h4: ({ children, id }) => (
     <h4
-      className="text-sm font-medium mt-3 mb-2 text-gray-900 dark:text-gray-100"
+      className="text-sm font-medium mt-3 mb-2 text-base-content"
       id={id}
     >
       {children}
@@ -156,7 +156,7 @@ export const rendererComponents = {
   ),
   h5: ({ children, id }) => (
     <h5
-      className="text-xs font-medium mt-2 mb-1 text-gray-900 dark:text-gray-100"
+      className="text-xs font-medium mt-2 mb-1 text-base-content"
       id={id}
     >
       {children}
@@ -164,19 +164,19 @@ export const rendererComponents = {
   ),
   h6: ({ children, id }) => (
     <h6
-      className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-2 mb-1"
+      className="text-xs font-medium text-base-content/70 mt-2 mb-1"
       id={id}
     >
       {children}
     </h6>
   ),
   strong: ({ children }) => (
-    <strong className="font-bold text-gray-900 dark:text-gray-100 text-sm">
+    <strong className="font-bold text-base-content text-sm">
       {children}
     </strong>
   ),
   em: ({ children }) => (
-    <em className="italic text-gray-800 dark:text-gray-200 text-sm">
+    <em className="italic text-base-content text-sm">
       {children}
     </em>
   ),
@@ -187,43 +187,43 @@ export const rendererComponents = {
     <ol className="list-decimal pl-6 mb-4 space-y-1 text-sm">{children}</ol>
   ),
   li: ({ children }) => (
-    <li className="text-gray-800 dark:text-gray-200 text-sm">{children}</li>
+    <li className="text-base-content text-sm">{children}</li>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="border-l-4 border-blue-500 pl-4 py-2 my-4 italic text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 rounded-r text-sm">
+    <blockquote className="border-l-4 border-info pl-4 py-2 my-4 italic text-base-content bg-base-200/50 rounded-r text-sm">
       {children}
     </blockquote>
   ),
   table: ({ children }) => (
     <div className="w-full overflow-x-auto my-4">
-      <table className="w-full border-collapse border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden text-sm">
+      <table className="w-full border-collapse border border-base-300 rounded-lg overflow-hidden text-sm">
         {children}
       </table>
     </div>
   ),
   thead: ({ children }) => (
-    <thead className="bg-gray-100 dark:bg-gray-800">{children}</thead>
+    <thead className="bg-base-200">{children}</thead>
   ),
   tbody: ({ children }) => (
-    <tbody className="bg-white dark:bg-gray-900">{children}</tbody>
+    <tbody className="bg-base-100">{children}</tbody>
   ),
   tr: ({ children }) => (
-    <tr className="border-b border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+    <tr className="border-b border-base-300 hover:bg-base-200/50 transition-colors">
       {children}
     </tr>
   ),
   th: ({ children }) => (
-    <th className="border border-gray-300 dark:border-gray-700 px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 text-sm">
+    <th className="border border-base-300 px-4 py-3 text-left font-semibold text-base-content bg-base-200 text-sm">
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td className="border border-gray-300 dark:border-gray-700 px-4 py-2 text-gray-800 dark:text-gray-200 text-sm">
+    <td className="border border-base-300 px-4 py-2 text-base-content text-sm">
       {children}
     </td>
   ),
   hr: () => (
-    <hr className="border-t border-gray-300 dark:border-gray-700 my-6" />
+    <hr className="border-t border-base-300 my-6" />
   ),
   math: ({ value }) => (
     <div className="my-4 text-center">
@@ -500,7 +500,7 @@ const HtmlBlock = memo(({ content, isLoading }) => {
         onClick={() => setShowCode((prev) => !prev)}
         disabled={forceCode}
         aria-pressed={!codeVisible}
-        className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] font-medium text-gray-600 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-base-300 bg-base-100 px-2 py-1 text-[11px] font-medium text-base-content/70 shadow-sm transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {codeVisible ? (
           <>
@@ -524,7 +524,7 @@ const HtmlBlock = memo(({ content, isLoading }) => {
           title={t("conversation.html_block.render")}
           sandbox="allow-scripts"
           srcDoc={srcDoc}
-          className="html-block w-full overflow-hidden rounded border border-gray-200 bg-white dark:border-gray-700"
+          className="html-block w-full overflow-hidden rounded border border-base-300 bg-base-100"
           style={{ height: iframeHeight, minHeight: 200 }}
         />
       )}
@@ -749,7 +749,7 @@ export const SafeMarkdown = ({
   } catch (err) {
     console.error("Error rendering markdown:", err);
     return (
-      <div className="text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded">
+      <div className="text-error bg-error/10 p-2 rounded">
         Error rendering content
       </div>
     );
@@ -927,12 +927,12 @@ const MarkdownRenderer = memo(
                 a: ({ children }) => <>{children}</>, // remove links
                 img: MarkdownImage,
                 math: ({ value }) => (
-                  <div className="my-4 text-center p-4 bg-green-50 dark:bg-green-900/20 rounded border-2 border-green-200 dark:border-green-700">
+                  <div className="my-4 text-center p-4 bg-success/10 rounded border-2 border-success/30">
                     <span className="katex-display">{value}</span>
                   </div>
                 ),
                 inlineMath: ({ value }) => (
-                  <span className="katex bg-green-100 dark:bg-green-900/30 px-1 py-0.5 rounded border border-green-300 dark:border-green-600">
+                  <span className="katex bg-success/15 px-1 py-0.5 rounded border border-success/40">
                     {value}
                   </span>
                 ),

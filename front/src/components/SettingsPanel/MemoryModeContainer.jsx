@@ -48,12 +48,12 @@ export default function MemoryModeContainer({ localState, setLocalState }) {
           title={t("settings.memory_mode.description")}
         >
           <Brain
-            className="h-4 w-4 shrink-0 text-tertiary"
+            className="h-4 w-4 shrink-0 text-accent"
             aria-hidden="true"
           />
           <h3
             id="conversation-memory-mode-label"
-            className="text-sm font-medium text-tertiary"
+            className="text-sm font-medium text-accent"
           >
             {t("settings.memory_mode.label")}
           </h3>
@@ -62,7 +62,7 @@ export default function MemoryModeContainer({ localState, setLocalState }) {
             onClick={() => openModal("helpMemory")}
             aria-label={t("settings.memory_mode.description")}
             title={t("settings.memory_mode.description")}
-            className="rounded-md p-1 text-tertiary transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:hover:bg-gray-800"
+            className="rounded-md p-1 text-accent transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 "
           >
             <HelpCircle className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -72,7 +72,7 @@ export default function MemoryModeContainer({ localState, setLocalState }) {
       <div
         role="group"
         aria-labelledby="conversation-memory-mode-label"
-        className="grid min-h-10 grid-cols-4 gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800/60"
+        className="tabs tabs-box tabs-sm grid min-h-10 grid-cols-4"
       >
         {MEMORY_MODE_OPTIONS.map((option) => {
           const selected = option.value === normalizedValue;
@@ -90,11 +90,7 @@ export default function MemoryModeContainer({ localState, setLocalState }) {
                   },
                 }))
               }
-              className={`min-w-0 rounded-md px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 ${
-                selected
-                  ? "bg-white text-tertiary shadow-sm dark:bg-gray-700 dark:text-white"
-                  : "text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white"
-              }`}
+              className={`tab min-w-0 text-xs font-medium ${selected ? "tab-active text-accent!" : ""}`}
             >
               <span className="block truncate">
                 {t(`settings.memory_mode.options.${option.key}.label`)}
@@ -105,7 +101,7 @@ export default function MemoryModeContainer({ localState, setLocalState }) {
       </div>
 
       <p
-        className="text-xs text-gray-500 dark:text-gray-400"
+        className="text-xs text-base-content/70"
         aria-live="polite"
       >
         {description}

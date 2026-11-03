@@ -11,9 +11,9 @@ function clampPercent(percent) {
 }
 
 function getProgressColor(percent) {
-  if (percent >= 90) return "bg-red-500 dark:bg-red-500";
-  if (percent >= 70) return "bg-yellow-400 dark:bg-yellow-400";
-  return "bg-blue-500 dark:bg-blue-400";
+  if (percent >= 90) return "bg-error";
+  if (percent >= 70) return "bg-warning";
+  return "bg-info";
 }
 
 function UsageMetricRow({
@@ -32,13 +32,13 @@ function UsageMetricRow({
       <div className="flex items-baseline justify-between gap-2 min-w-0">
         {showDetail && inlineDetail ? (
           <Tooltip text={inlineDetail} className="block min-w-0 flex-1">
-            <span className="block min-w-0 truncate text-[11px] font-medium text-gray-700 dark:text-gray-200">
+            <span className="block min-w-0 truncate text-[11px] font-medium text-base-content">
               {label}
             </span>
           </Tooltip>
         ) : (
           <Tooltip text={label} className="block min-w-0 flex-1">
-            <span className="block min-w-0 truncate text-[11px] font-medium text-gray-700 dark:text-gray-200">
+            <span className="block min-w-0 truncate text-[11px] font-medium text-base-content">
               {label}
             </span>
           </Tooltip>
@@ -47,14 +47,14 @@ function UsageMetricRow({
           text={typeof value === "string" ? value : String(value ?? "")}
           className="block max-w-[62%] shrink-0"
         >
-          <span className="block truncate text-right text-[11px] tabular-nums text-gray-500 dark:text-gray-300">
+          <span className="block truncate text-right text-[11px] tabular-nums text-base-content/70">
             {value}
           </span>
         </Tooltip>
       </div>
       {clampedPercent !== null && (
         <div
-          className={`${compact ? "mt-1 h-1" : "mt-2 h-1.5"} w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700`}
+          className={`${compact ? "mt-1 h-1" : "mt-2 h-1.5"} w-full overflow-hidden rounded-full bg-base-300`}
           role="progressbar"
           aria-label={label}
           aria-valuemin={0}
@@ -69,7 +69,7 @@ function UsageMetricRow({
       )}
       {showDetail && detail && (
         <p
-          className="mt-1 truncate text-[10px] text-gray-400 dark:text-gray-500"
+          className="mt-1 truncate text-[10px] text-base-content/50"
           title={detail}
         >
           {detail}
@@ -88,13 +88,13 @@ function UsageMetricValue({ metric }) {
         text={typeof metric.value === "string" ? metric.value : String(metric.value ?? "")}
         className="block min-w-0"
       >
-        <span className="block truncate text-[11px] tabular-nums text-gray-500 dark:text-gray-300">
+        <span className="block truncate text-[11px] tabular-nums text-base-content/70">
           {metric.value}
         </span>
       </Tooltip>
       {clampedPercent !== null && (
         <div
-          className="mt-1 h-1 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+          className="mt-1 h-1 w-full overflow-hidden rounded-full bg-base-300"
           role="progressbar"
           aria-label={metric.label}
           aria-valuemin={0}
@@ -192,19 +192,19 @@ export default function UsageDetailsCard({
   if (!metrics.length) return null;
 
   return (
-    <div className="w-full min-w-0 rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
+    <div className="w-full min-w-0 rounded-xl bg-base-200 px-3 py-2">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={canExpand ? isOpen : undefined}
         className="flex w-full items-center justify-between gap-2 text-left"
       >
-        <span className="min-w-0 truncate text-[11px] font-medium text-gray-700 dark:text-gray-200">
+        <span className="min-w-0 truncate text-[11px] font-medium text-base-content">
           {label}
         </span>
         {canExpand && (
           <ChevronDown
-            className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            className={`h-3.5 w-3.5 shrink-0 text-base-content/50 transition-transform ${isOpen ? "rotate-180" : ""}`}
             aria-hidden="true"
           />
         )}
@@ -214,14 +214,14 @@ export default function UsageDetailsCard({
         expandedTable ? (
           <div className="mt-2">
             <div
-              className="grid items-baseline gap-2 border-b border-gray-200 pb-1 dark:border-gray-700"
+              className="grid items-baseline gap-2 border-b border-base-300 pb-1"
               style={tableGridStyle}
             >
               <span aria-hidden="true" />
               {groups.map((group) => (
                 <span
                   key={group.key}
-                  className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300"
+                  className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wide text-base-content/70"
                   title={group.label ?? undefined}
                 >
                   {group.label}
@@ -231,7 +231,7 @@ export default function UsageDetailsCard({
             {tableSections.map((section) => (
               <div key={section.key} className="mt-2">
                 <p
-                  className="truncate text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                  className="truncate text-[10px] font-semibold uppercase tracking-wide text-base-content/50"
                   title={section.title}
                 >
                   {section.title}
@@ -244,7 +244,7 @@ export default function UsageDetailsCard({
                       style={tableGridStyle}
                     >
                       <span
-                        className="min-w-0 truncate text-[11px] font-medium text-gray-700 dark:text-gray-200"
+                        className="min-w-0 truncate text-[11px] font-medium text-base-content"
                         title={row.label}
                       >
                         {row.label}
@@ -269,7 +269,7 @@ export default function UsageDetailsCard({
               <div key={group.key} className="min-w-0">
                 {group.label && (
                   <p
-                    className="mb-1.5 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-300"
+                    className="mb-1.5 truncate text-[10px] font-semibold uppercase tracking-wide text-base-content/70"
                     title={group.label}
                   >
                     {group.label}
@@ -279,7 +279,7 @@ export default function UsageDetailsCard({
                   {group.sections.map((section) => (
                     <div key={section.key} className="min-w-0">
                       <p
-                        className="mb-1 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                        className="mb-1 truncate text-[10px] font-semibold uppercase tracking-wide text-base-content/50"
                         title={section.title}
                       >
                         {section.title}

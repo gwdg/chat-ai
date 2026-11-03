@@ -22,14 +22,14 @@ export default function ThemeToggle() {
 
   return (
     <button
-      className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors touch-manipulation w-7 h-7 pl-6 pr-6 flex items-center justify-center cursor-pointer"
+      className="btn btn-ghost btn-sm btn-square touch-manipulation px-6"
       onClick={toggleDarkMode}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       {isDarkMode ? (
-        <Sun size={20} className="flex-shrink-0 text-tertiary" />
+        <Sun size={20} className="flex-shrink-0 text-accent" />
       ) : (
-        <Moon size={20} className="flex-shrink-0 text-tertiary" />
+        <Moon size={20} className="flex-shrink-0 text-accent" />
       )}
     </button>
   );

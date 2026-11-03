@@ -497,26 +497,26 @@ export default function OrganizeChatsModal({
       titleKey="sorter.title"
       maxWidth="max-w-2xl"
     >
-      <div className="space-y-4 text-sm text-gray-800 dark:text-gray-100">
-        <p className="text-gray-700 dark:text-gray-300">
+      <div className="space-y-4 text-sm text-base-content">
+        <p className="text-base-content">
           {t("sorter.intro")}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-base-content/70">
           {t("sorter.ai_model_note")}
         </p>
 
         <div className="max-h-[45vh] space-y-4 overflow-y-auto pr-1">
           {aiStatus === "loading" ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-4 py-10 text-center">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-tertiary/30 border-t-tertiary" />
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-base-300 px-4 py-10 text-center">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
+              <p className="text-xs text-base-content/70">
                 {t("sorter.ai_analyzing", { model: aiModelName })}
               </p>
             </div>
           ) : (
             <>
               {aiStatus === "error" && (
-                <div className="rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-3 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                <div className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-3 text-xs text-warning">
                   <p>{t("sorter.ai_error")}</p>
                   <button
                     type="button"
@@ -528,7 +528,7 @@ export default function OrganizeChatsModal({
                 </div>
               )}
               {aiMeta && aiMeta.totalCount > aiMeta.analyzedCount && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-base-content/70">
                   {t("sorter.ai_limited", {
                     analyzed: aiMeta.analyzedCount,
                     total: aiMeta.totalCount,
@@ -539,24 +539,24 @@ export default function OrganizeChatsModal({
                 <>
           {aiAssessment && (
             <section>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/70">
                 {t("sorter.assessment_title")}
               </h3>
-              <p className="whitespace-pre-line rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs leading-relaxed text-gray-700 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-200">
+              <p className="whitespace-pre-line rounded-xl border border-base-300 bg-base-200 px-3 py-2 text-xs leading-relaxed text-base-content">
                 {aiAssessment}
               </p>
             </section>
           )}
           <section>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-base-content/70">
                 {t("sorter.preview_title")}
               </h3>
               {proposal.moves.length > 0 && (
                 <div className="flex items-center gap-2 text-xs">
                   <button
                     type="button"
-                    className="cursor-pointer text-tertiary hover:underline"
+                    className="cursor-pointer text-accent hover:underline"
                     onClick={() =>
                       setSelectedMoves(
                         new Set(
@@ -569,7 +569,7 @@ export default function OrganizeChatsModal({
                   </button>
                   <button
                     type="button"
-                    className="cursor-pointer text-gray-500 hover:underline dark:text-gray-400"
+                    className="cursor-pointer text-base-content/70 hover:underline dark:text-base-content/50"
                     onClick={() => setSelectedMoves(new Set())}
                   >
                     {t("sorter.deselect_all_moves")}
@@ -579,7 +579,7 @@ export default function OrganizeChatsModal({
             </div>
 
             {proposal.topics.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-3 py-4 text-xs text-gray-500 dark:text-gray-400">
+              <p className="rounded-xl border border-dashed border-base-300 px-3 py-4 text-xs text-base-content/70">
                 {t("sorter.no_changes")}
               </p>
             ) : (
@@ -604,7 +604,7 @@ export default function OrganizeChatsModal({
                   return (
                     <div
                       key={topic.key}
-                      className="rounded-xl border border-gray-200 px-2 py-1.5 dark:border-gray-700"
+                      className="rounded-xl border border-base-300 px-2 py-1.5"
                     >
                       <div className="flex items-center gap-2 px-1 py-1 text-xs">
                         <button
@@ -617,7 +617,7 @@ export default function OrganizeChatsModal({
                           aria-label={t("folders.choose_icon")}
                           title={t("folders.choose_icon")}
                           aria-expanded={stylePickerTopicKey === topic.key}
-                          className="flex flex-shrink-0 cursor-pointer items-center justify-center rounded-lg p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                          className="flex flex-shrink-0 cursor-pointer items-center justify-center rounded-lg p-1 transition-colors hover:bg-base-200"
                         >
                           {hasKnownIcon && TopicIcon ? (
                             <TopicIcon
@@ -641,11 +641,11 @@ export default function OrganizeChatsModal({
                               }))
                             }
                             aria-label={t("sorter.new_topic")}
-                            className="min-w-0 flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-bg_dark px-2 py-1 text-xs text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-tertiary/40"
+                            className="min-w-0 flex-1 rounded-lg border border-base-300 bg-base-100 px-2 py-1 text-xs text-base-content focus:outline-none focus:ring-2 focus:ring-accent/40"
                           />
                         ) : rename ? (
                           <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                            <span className="truncate text-[11px] text-gray-500 line-through dark:text-gray-400">
+                            <span className="truncate text-[11px] text-base-content/70 line-through dark:text-base-content/50">
                               {rename.previousName}
                             </span>
                             <span className="truncate text-xs font-semibold">
@@ -659,7 +659,7 @@ export default function OrganizeChatsModal({
                               onChange={() => toggleTopicRename(rename.folderId)}
                               aria-label={t("sorter.include_topic_rename")}
                               title={t("sorter.include_topic_rename")}
-                              className="rounded text-tertiary focus:ring-tertiary"
+                              className="rounded text-accent focus:ring-accent"
                             />
                           </span>
                         ) : (
@@ -668,19 +668,19 @@ export default function OrganizeChatsModal({
                           </span>
                         )}
 
-                        <span className="rounded-full bg-tertiary/10 px-2 py-0.5 text-[10px] font-medium text-tertiary">
+                        <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
                           {topic.folderId
                             ? t("sorter.existing_topic")
                             : t("sorter.new_topic")}
                         </span>
-                        <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        <span className="text-[11px] text-base-content/70">
                           {count}/{topic.conversations.length}
                         </span>
                       </div>
 
                       {stylePickerTopicKey === topic.key && (
-                        <div className="mb-2 ml-1 rounded-xl border border-gray-200 p-2 dark:border-gray-700">
-                          <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <div className="mb-2 ml-1 rounded-xl border border-base-300 p-2">
+                          <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-base-content/70">
                             {t("folders.choose_color")}
                           </div>
                           <div className="flex flex-wrap gap-1.5">
@@ -702,14 +702,14 @@ export default function OrganizeChatsModal({
                                 title={option.label}
                                 className={`h-5 w-5 cursor-pointer rounded-full transition ${
                                   style.color === option.id
-                                    ? "ring-2 ring-tertiary ring-offset-1 dark:ring-offset-bg_dark"
+                                    ? "ring-2 ring-accent ring-offset-1 dark:ring-offset-bg_dark"
                                     : "hover:scale-110"
                                 }`}
                                 style={{ backgroundColor: option.hex }}
                               />
                             ))}
                           </div>
-                          <div className="mb-1 mt-2 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          <div className="mb-1 mt-2 text-[10px] font-medium uppercase tracking-wide text-base-content/70">
                             {t("folders.choose_icon")}
                           </div>
                           <div className="grid grid-cols-7 gap-1">
@@ -734,7 +734,7 @@ export default function OrganizeChatsModal({
                                   className={`flex h-8 cursor-pointer items-center justify-center rounded-lg transition-colors ${
                                     selected
                                       ? ""
-                                      : "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                                      : "text-base-content/70 hover:bg-base-200"
                                   }`}
                                   style={
                                     selected
@@ -769,26 +769,26 @@ export default function OrganizeChatsModal({
                           return (
                             <div
                               key={conversation.id}
-                              className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                              className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs hover:bg-base-200"
                             >
                               {proposalMoveIds.has(conversation.id) ? (
                                 <input
                                   type="checkbox"
                                   checked={selectedMoveIds.has(conversation.id)}
                                   onChange={() => toggleMove(conversation.id)}
-                                  className="rounded text-tertiary focus:ring-tertiary"
+                                  className="rounded text-accent focus:ring-accent"
                                 />
                               ) : (
                                 <span
                                   aria-hidden="true"
-                                  className="h-3.5 w-3.5 rounded-full border border-gray-300 dark:border-gray-600"
+                                  className="h-3.5 w-3.5 rounded-full border border-base-300"
                                 />
                               )}
 
                               <span className="min-w-0 flex-1">
                                 {titleChange ? (
                                   <span className="flex min-w-0 items-center gap-1.5">
-                                    <span className="truncate text-[11px] text-gray-500 line-through dark:text-gray-400">
+                                    <span className="truncate text-[11px] text-base-content/70 line-through dark:text-base-content/50">
                                       {titleChange.previousTitle ||
                                         titleOf(conversation)}
                                     </span>
@@ -807,7 +807,7 @@ export default function OrganizeChatsModal({
                                         "sorter.include_title_change",
                                       )}
                                       title={t("sorter.include_title_change")}
-                                      className="rounded text-tertiary focus:ring-tertiary"
+                                      className="rounded text-accent focus:ring-accent"
                                     />
                                   </span>
                                 ) : (
@@ -829,14 +829,14 @@ export default function OrganizeChatsModal({
 
           <section>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-base-content/70">
                 {t("sorter.deletions_title")}
               </h3>
               {proposal.deletions.length > 0 && (
                 <div className="flex items-center gap-2 text-xs">
                   <button
                     type="button"
-                    className="cursor-pointer text-red-600 hover:underline dark:text-red-400"
+                    className="cursor-pointer text-error hover:underline"
                     onClick={() =>
                       setSelectedDeletes(
                         new Set(
@@ -851,7 +851,7 @@ export default function OrganizeChatsModal({
                   </button>
                   <button
                     type="button"
-                    className="cursor-pointer text-gray-500 hover:underline dark:text-gray-400"
+                    className="cursor-pointer text-base-content/70 hover:underline dark:text-base-content/50"
                     onClick={() => setSelectedDeletes(new Set())}
                   >
                     {t("sorter.deselect_all_deletions")}
@@ -861,15 +861,15 @@ export default function OrganizeChatsModal({
             </div>
 
             {proposal.deletions.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-3 py-4 text-xs text-gray-500 dark:text-gray-400">
+              <p className="rounded-xl border border-dashed border-base-300 px-3 py-4 text-xs text-base-content/70">
                 {t("sorter.no_deletions")}
               </p>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-base-content/70">
                   {t("sorter.deletions_hint")}
                 </p>
-                <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 dark:divide-gray-800 dark:border-gray-700">
+                <div className="divide-y divide-base-300 overflow-hidden rounded-xl border border-base-300">
                   {proposal.deletions.map((deletion) => {
                     const conversation = conversationById.get(
                       deletion.conversationId,
@@ -880,7 +880,7 @@ export default function OrganizeChatsModal({
                     return (
                       <label
                         key={deletion.conversationId}
-                        className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                        className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-base-200"
                       >
                         <input
                           type="checkbox"
@@ -888,17 +888,17 @@ export default function OrganizeChatsModal({
                             deletion.conversationId,
                           )}
                           onChange={() => toggleDelete(deletion.conversationId)}
-                          className="rounded text-red-600 focus:ring-red-500"
+                          className="rounded text-error focus:ring-error"
                         />
                         <TrashCan
                           size={14}
-                          className="flex-shrink-0 text-red-500"
+                          className="flex-shrink-0 text-error"
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-xs">
                             {titleOf(conversation)}
                           </span>
-                          <span className="block text-[11px] text-gray-500 dark:text-gray-400">
+                          <span className="block text-[11px] text-base-content/70">
                             {deletion.reason === "duplicate"
                               ? deletion.duplicateOfId
                                 ? t("sorter.reason_duplicate", {
@@ -923,13 +923,13 @@ export default function OrganizeChatsModal({
         </div>
 
         {error && (
-          <p className="text-xs text-red-500" role="alert">
+          <p className="text-xs text-error" role="alert">
             {error}
           </p>
         )}
 
-        <div className="flex flex-col gap-3 border-t border-gray-100 pt-3 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
+        <div className="flex flex-col gap-3 border-t border-base-300 pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-base-content/70">
             {aiStatus === "loading" ? (
               <span>{t("sorter.ai_analyzing", { model: aiModelName })}</span>
             ) : (
@@ -962,14 +962,14 @@ export default function OrganizeChatsModal({
           </div>
           <div className="flex justify-end gap-2">
             <button
-              className="cursor-pointer px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              className="cursor-pointer px-4 py-2 rounded-lg border border-base-300 text-base-content hover:bg-base-200 transition"
               onClick={onClose}
               disabled={applying}
             >
               {t("common.cancel")}
             </button>
             <button
-              className="cursor-pointer px-5 py-2 rounded-lg bg-tertiary text-white hover:bg-tertiary/90 transition shadow disabled:opacity-50 disabled:cursor-not-allowed"
+              className="cursor-pointer px-5 py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition shadow disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleApply}
               disabled={!canApply}
             >

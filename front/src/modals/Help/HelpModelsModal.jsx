@@ -5,13 +5,13 @@ import BaseModal from "../BaseModal";
 export default function HelpModelsModal({ isOpen, onClose }) {
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="help.title">
-      <p className="dark:text-white text-black text-sm">
+      <p className="text-base-content text-sm">
         <Trans i18nKey="help.models"></Trans>{" "}
             {/* Move the link inside the paragraph */}
             <Link
               to={"https://docs.hpc.gwdg.de/services/chat-ai/index.html"}
               target="_blank"
-              className="text-tertiary underline text-sm"
+              className="text-accent underline text-sm"
             >
               Link
             </Link>

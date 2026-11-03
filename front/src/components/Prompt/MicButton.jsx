@@ -211,10 +211,10 @@ export default function MicButton({
             }
             >
             <button
-                className={`h-[30px] w-[30px] cursor-pointer transition-all duration-200 flex items-center justify-center rounded-full ${
+                className={`btn btn-circle btn-sm h-[30px] w-[30px] min-h-0 ${
                 isRecording
-                    ? "bg-red-500 border-2 border-red-600 animate-pulse"
-                    : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+                    ? "btn-error animate-pulse"
+                    : ""
                 }`}
                 type="button"
                 onClick={handleAudioClick}
@@ -227,10 +227,10 @@ export default function MicButton({
             >
                 {isRecording ? (
                 // Stop icon when recording
-                <div className="w-3 h-3 bg-white rounded-sm"></div>
+                <div className="w-3 h-3 bg-base-100 rounded-sm"></div>
                 ) : (
                 // Microphone icon when not recording
-                <Microphone size={18} className="text-tertiary" />
+                <Microphone size={18} className="text-accent" />
                 )}
             </button>
             </Tooltip>

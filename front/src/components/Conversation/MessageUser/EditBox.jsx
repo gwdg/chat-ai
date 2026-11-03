@@ -55,11 +55,11 @@ export default function EditBox({
 
   return (
     <div className="
-    flex flex-col w-full p-2.5 gap-1.5 text-black dark:text-white overflow-y-auto justify-between 
-    items-end border dark:border-border_dark rounded-xl bg-bg_chat_user dark:bg-bg_chat_user_dark p-2.5 flex flex-col gap-1.5">
+ flex flex-col w-full p-2.5 gap-1.5 text-base-content overflow-y-auto justify-between 
+ items-end border border-base-300 rounded-xl bg-base-100 p-2.5 flex flex-col gap-1.5">
       <textarea
         ref={editBox}
-        className="p-1.5 outline-none text-sm rounded-xl w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-none overflow-y-auto"
+        className="p-1.5 outline-none text-sm rounded-xl w-full text-base-content bg-base-100 resize-none overflow-y-auto"
         defaultValue={message.content[0]?.text}
         style={{
           resize: `vertical`,
@@ -93,7 +93,7 @@ export default function EditBox({
         >
           {" "}
           <X
-            className="h-[22px] w-[22px] cursor-pointer text-[#009EE0]"
+            className="h-[22px] w-[22px] cursor-pointer text-accent"
             alt="clear"
           />
         </button>
@@ -101,14 +101,14 @@ export default function EditBox({
           {/* Cancel edit button */}
           <button
             onClick={() => setEditMode(false)}
-            className="text-sm text-gray-500 dark:text-gray-400 px-1 py-1 rounded-full cursor-pointer"
+            className="text-sm text-base-content/70 px-1 py-1 rounded-full cursor-pointer"
           >
             Cancel
           </button>
           {/* Save edited message button */}
           <button
             onClick={() => handleSave()}
-            className="text-md text-primary border dark:text-tertiary rounded-full px-3 py-1 cursor-pointer"
+            className="text-md text-primary border dark:text-accent rounded-full px-3 py-1 cursor-pointer"
           >
             Save
           </button>
@@ -122,7 +122,7 @@ export default function EditBox({
             // disabled={loading || loadingResend}
           >
             <Send
-              className="cursor-pointer h-[22px] w-[22px] text-[#009EE0]"
+              className="cursor-pointer h-[22px] w-[22px] text-accent"
               alt="send"
             />
           </button>

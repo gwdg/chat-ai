@@ -29,7 +29,7 @@ export default function SummarizeChatButton({
                 closeMenu();
                 handleSummarizeChat();
             }}
-            className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-200"
         >
             <BrainstormFilled size={14} />
             {t("common.summarize")}
@@ -43,10 +43,10 @@ export default function SummarizeChatButton({
     >
         <button
         onClick={handleSummarizeChat}
-        className={`cursor-pointer p-2.5 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 rounded-2xl transition-all duration-200 flex items-center justify-center`}
+        className="btn btn-ghost btn-square hover:bg-success/10 hover:text-success"
         aria-label={t("common.summarize")}
         >
-        <BrainstormFilled size={22} className="text-tertiary" />
+        <BrainstormFilled size={22} className="text-accent" />
         </button>
     </ShortcutTooltip>
     )

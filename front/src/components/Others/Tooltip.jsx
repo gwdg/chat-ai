@@ -70,8 +70,8 @@ function Tooltip({ text, children, placement = "top", offset = 8, className = ""
               transform: pos.transform,
               zIndex: 9999
             }}
-            className="bg-gray-800 dark:bg-gray-700 text-white text-xs rounded px-2 py-1
-                       border dark:border-border_dark max-w-[200px] break-words
+            className="bg-neutral text-neutral-content text-xs rounded px-2 py-1
+                       border border-base-300 max-w-[200px] break-words
                        pointer-events-none shadow"
           >
             {text}

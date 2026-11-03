@@ -22,7 +22,7 @@ export default function DeleteFolderModal({
       maxWidth="max-w-md"
     >
       <div className="space-y-4 text-sm">
-        <p className="text-gray-700 dark:text-gray-200">
+        <p className="text-base-content">
           <Trans
             i18nKey="folders.delete_description"
             values={{ name: folderName || "" }}
@@ -30,13 +30,13 @@ export default function DeleteFolderModal({
         </p>
         <div className="flex flex-col md:flex-row gap-2 justify-end">
           <button
-            className="cursor-pointer px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            className="btn"
             onClick={onClose}
           >
             <Trans i18nKey="common.cancel" />
           </button>
           <button
-            className="cursor-pointer px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition shadow"
+            className="btn btn-error"
             onClick={handleDelete}
           >
             <Trans i18nKey="common.delete" />
