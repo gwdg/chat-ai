@@ -379,6 +379,12 @@ export default {
       step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
       step2: "Wählen Sie Zusammenfassen. Eine neue Unterhaltung mit der Zusammenfassung wird erstellt.",
     },
+    settings_overview: {
+      title: "Einstellungen ändern",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen über das Profil oder die Seitenleiste.",
+      step2: "Wählen Sie den Tab Chat. Erinnerungen und Daten enthalten die weiteren Einstellungen.",
+      step3: "Ändern Sie eine Einstellung wie Darstellung oder Dokumentkonvertierung. Änderungen werden automatisch gespeichert.",
+    },
     memories: {
       title: "Erinnerungen verwalten",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",

@@ -372,6 +372,12 @@ export default {
       step1: "Open the conversation menu in the sidebar.",
       step2: "Choose Summarize. A new conversation containing the summary is created.",
     },
+    settings_overview: {
+      title: "Change settings",
+      step1: "Open your user settings from the profile or the sidebar.",
+      step2: "Choose the Chat tab. Memories and Data contain the other settings.",
+      step3: "Change a preference such as rendering or document conversion. Changes are saved automatically.",
+    },
     memories: {
       title: "Manage memories",
       step1: "Open your user settings.",

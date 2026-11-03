@@ -27,7 +27,71 @@ const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
 const MAX_MEMORY_CHARS = 12000;
 
-function buildSystemPrompt(conversations, topics, memories) {
+function yesNo(value) {
+  return value ? "yes" : "no";
+}
+
+function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
+  const memoryMode =
+    userSettings.memory_mode === 1
+      ? "recall"
+      : userSettings.memory_mode === 2
+        ? "learn"
+        : "off";
+  const sendWithEnter =
+    userSettings.send_with_enter === null ||
+    userSettings.send_with_enter === undefined
+      ? "device default"
+      : userSettings.send_with_enter
+        ? "Enter"
+        : "Shift+Enter";
+  const documentConversion =
+    userSettings.document_conversion_mode === "browser"
+      ? "browser only (local)"
+      : userSettings.document_conversion_mode === "server"
+        ? "server only"
+        : "by choice";
+  const model = userSettings.model;
+  const modelName =
+    typeof model === "string"
+      ? model
+      : model?.name || model?.id || "not set";
+
+  return [
+    `- Default model: ${modelName}`,
+    `- Memory mode: ${memoryMode}`,
+    `- Saved memories: ${userSettings.memories?.length ?? 0} (stored in this browser)`,
+    `- Request timeout: ${Math.round((userSettings.timeout ?? 300000) / 1000)} seconds`,
+    `- Suggest follow-up prompts: ${yesNo(userSettings.suggest_user_prompts)}`,
+    `- Set title only on first prompt: ${yesNo(userSettings.set_title_once)}`,
+    `- Conversation summaries: ${yesNo(userSettings.conversation_summaries)}`,
+    `- Send message with: ${sendWithEnter}`,
+    `- HTML rendering: ${userSettings.html_render_mode ?? "off"}`,
+    `- Load external references: ${yesNo(userSettings.html_load_external)}`,
+    `- HTML sanitization: ${userSettings.html_sanitization ?? "strict"}`,
+    `- Render Typst: ${yesNo(userSettings.render_typst)}`,
+    `- Render LaTeX: ${yesNo(userSettings.render_latex)}`,
+    `- Document conversion: ${documentConversion}`,
+    `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
+    `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
+    `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,
+    `- Chat grouping: ${interfaceSettings.conversation_grouping ?? "topic"}`,
+    `- Web search disclaimer accepted: ${yesNo(interfaceSettings.agree_web_search)}`,
+    `- Show welcome tour: ${yesNo(interfaceSettings.show_tour)}`,
+    `- Confirmation warnings: clear history ${yesNo(interfaceSettings.warn_clear_history)}, share settings ${yesNo(interfaceSettings.warn_share_settings)}, regenerate ${yesNo(interfaceSettings.warn_regenerate)}, fork ${yesNo(interfaceSettings.warn_fork)}`,
+    `- Completed tutorials: ${interfaceSettings.completed_tutorials?.length ?? 0}`,
+    `- Completed use cases: ${interfaceSettings.completed_use_cases?.length ?? 0}`,
+    `- Suppressed tutorials: ${interfaceSettings.suppressed_tutorials?.length ?? 0}`,
+  ];
+}
+
+function buildSystemPrompt(
+  conversations,
+  topics,
+  memories,
+  userSettings,
+  interfaceSettings,
+) {
   const topicById = new Map(
     topics.map((topic) => [topic.id, topic.name]),
   );
@@ -72,6 +136,14 @@ You receive metadata for the user's conversations and topics (categories). Each 
 
 Use the topic tree to answer questions about which topic or category contains something. When naming a topic, use its exact name.
 
+The global user preferences and interface settings are listed in <user_settings>. Use only those values when answering questions about the user's settings. Do not invent settings that are not listed.
+
+For questions about whether settings are safe, explain the actual values and their implications:
+- "Load external references: no" and "HTML sanitization: strict" reduce third-party requests and are the safer choices.
+- "Document conversion: browser only" keeps PDF/DOCX conversion in the browser; "server only" or "by choice" may send files to the server.
+- Saved memories are stored in this browser.
+- Web Search, tools, Arcana, MCP servers, and external models are conversation-specific and can send data outside the local browser; they are not part of these global settings.
+
 When you refer to a conversation, always link to it using exactly this Markdown form:
 [<conversation title>](/chat/<conversation id>)
 Use only ids from the list below. Do not link to any other URL or invent an id. If nothing matches the user's question, say so plainly.
@@ -97,6 +169,10 @@ ${buildUseCasePrompt()}
 </use_cases>
 
 When the user describes a goal rather than naming a feature, suggest a concrete workflow from the use cases above and end with [[USE_CASE:<use case id>]].
+
+<user_settings>
+${buildSettingsLines(userSettings, interfaceSettings).join("\n")}
+</user_settings>
 
 <topics>
 ${topicLines}
@@ -154,6 +230,7 @@ async function loadMetaContext() {
 export function useMetaChatSend() {
   const timeout = useSelector(selectTimeout);
   const userSettings = useSelector(selectUserSettings);
+  const interfaceSettings = useSelector((state) => state.interface_settings);
   const memories = useSelector(selectAllMemories);
   const { t } = useTranslation();
 
@@ -228,6 +305,8 @@ export function useMetaChatSend() {
               conversations,
               topics,
               (memories || []).map((memory) => memory?.text || ""),
+              userSettings,
+              interfaceSettings,
             ),
           },
           ...history,
@@ -324,6 +403,6 @@ export function useMetaChatSend() {
         window.dispatchEvent(new Event("chatai:message-complete"));
       }
     },
-    [timeout, userSettings, memories, t],
+    [timeout, userSettings, interfaceSettings, memories, t],
   );
 }

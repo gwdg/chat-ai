@@ -521,6 +521,43 @@ export const featureGuides = {
       },
     ],
   },
+  settings_overview: {
+    titleKey: "feature_guide.settings_overview.title",
+    prompt:
+      "Open user settings to review and change global preferences, including the default model, send key, rendering, document conversion, memories, and local data.",
+    keywords: [
+      "settings overview",
+      "user settings",
+      "change settings",
+      "privacy settings",
+    ],
+    steps: [
+      {
+        target: [
+          '[data-guide="user-settings"]',
+          ".user-profile-button",
+          ".user-profile-block",
+        ],
+        textKey: "feature_guide.settings_overview.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-chat"]',
+        textKey: "feature_guide.settings_overview.step2",
+        completeOnTargetClick: true,
+        prepare: openUserSettings,
+      },
+      {
+        target: [
+          '[data-guide="rendering-preference"]',
+          '[data-guide="document-conversion-preference"]',
+        ],
+        textKey: "feature_guide.settings_overview.step3",
+        completeOnTargetClick: true,
+        prepare: () => selectSettingsTab("chat"),
+      },
+    ],
+  },
   memories: {
     titleKey: "feature_guide.memories.title",
     prompt:
@@ -720,6 +757,7 @@ export const FEATURE_CATEGORIES = {
     "meta_chat_usage",
   ],
   settings: [
+    "settings_overview",
     "memories",
     "chat_preferences",
     "rendering",
