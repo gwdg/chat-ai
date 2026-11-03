@@ -554,7 +554,7 @@ export default function SidebarContent({
                 <PopoverButton
                   aria-label={t("folders.sort_label")}
                   title={t("folders.sort_label")}
-                  className="flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer"
+                  className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
                 >
                   {conversationGrouping === "date" ? (
                     <Calendar size={16} />
@@ -649,7 +649,7 @@ export default function SidebarContent({
                     setLocalState,
                   })
                 }
-                className="flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer"
+                className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
                 aria-label={t("sorter.button")}
                 title={t("sorter.button")}
               >
@@ -658,7 +658,7 @@ export default function SidebarContent({
               <button
                 type="button"
                 onClick={() => navigate("/meta")}
-                className="flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer"
+                className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
                 aria-label={t("meta_chat.open")}
                 title={t("meta_chat.open")}
               >

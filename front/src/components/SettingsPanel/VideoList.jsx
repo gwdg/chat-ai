@@ -126,7 +126,7 @@ export default function VideoList() {
                     {job.status === "completed" && (
                       <button
                         onClick={() => onDownload(id)}
-                        className="inline-flex items-center gap-1 rounded-md bg-info px-2.5 py-2 text-xs font-semibold text-white hover:bg-info/90"
+                        className="btn btn-info btn-xs"
                       >
                         <Download className="h-3.5 w-3.5" />
                         {/* {t("settings.video_queue_download")} */}
@@ -136,7 +136,7 @@ export default function VideoList() {
                     {job.status !== "processing" && (
                       <button
                         onClick={() => onDelete(id)}
-                        className="inline-flex items-center gap-1 rounded-md bg-error px-2.5 py-2 text-xs font-semibold text-white hover:bg-error/90"
+                        className="btn btn-error btn-xs"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         {/* {t("settings.video_queue_delete")} */}
