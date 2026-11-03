@@ -833,17 +833,105 @@ export function stripFeatureGuideMarkers(text) {
     .trimEnd();
 }
 
+const germanGuideKeywords = {
+  attach_media: ["medien anhäng", "medien hochlad", "bild anhäng", "bild hochlad", "foto", "video anhäng"],
+  upload_file: ["datei anhäng", "datei hochlad", "hochladen", "hochlad", "hochgelad", "datei", "anhang", "anhäng", "anhang hinzufüg"],
+  process_attachment: ["anhang verarbeit", "datei verarbeit", "pdf konvertier", "docx konvertier", "dokument konvertier"],
+  select_model: ["modell wechsel", "modell auswähl", "modell änder", "welches modell", "modell"],
+  conversation_settings: ["unterhaltungseinstellung", "konversationseinstellung", "temperatur", "top p", "systemprompt", "system prompt", "reasoning effort", "denkaufwand"],
+  voice_input: ["mikrofon", "sprachnachricht", "sprachaufnahme", "spracheingabe", "aufnehm", "aufnimm", "diktier"],
+  send_key: ["sende taste", "senden taste", "eingabetaste", "umschalt enter", "shift enter", "enter taste"],
+  arcana: ["arcana", "rag", "retrieval", "wissensdatenbank"],
+  web_search: ["websuche", "web suche", "im internet such", "internetsuche", "online such"],
+  image_generation: ["bilder erzeug", "bild erzeug", "bild generier", "bilder generier", "bild erstell", "bilder erstell", "text zu bild"],
+  image_modification: ["bild bearbeit", "bilder bearbeit", "bild änder", "bilder änder", "bild modifizier", "bilder modifizier"],
+  audio_generation: ["audio erzeug", "audio generier", "audio", "sprache erzeug", "sprache generier", "ton erzeug"],
+  video_generation: ["videos erzeug", "video erzeug", "video generier", "video", "text zu video"],
+  mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
+  tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
+  search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],
+  manage_topics: ["thema", "themen", "topic", "themen erstell", "chats organisier"],
+  sort_group_chats: ["chats sortier", "chats gruppier", "sortier", "gruppier", "nach datum sortier"],
+  export_conversation: ["chat exportier", "unterhaltung exportier", "chat herunterlad", "chat speicher", "exportier"],
+  import_conversation: ["chat importier", "unterhaltung importier", "importier", "chat wiederherstell"],
+  share_conversation: ["chat teil", "unterhaltung teil", "einstellungen teil"],
+  fork_conversation: ["chat abzweig", "unterhaltung abzweig", "chat verzweig", "unterhaltung verzweig", "fork"],
+  summarize_conversation: ["chat zusammenfass", "unterhaltung zusammenfass", "zusammenfassung", "zusammenfass"],
+  settings_overview: ["einstellung", "benutzereinstellung", "einstellungen änder", "datenschutzeinstellung"],
+  memories: ["erinnerung", "gedächtnis", "merken", "gemerkt", "gespeicherte erinnerung"],
+  chat_preferences: ["chat einstellung", "chat-einstellung", "benutzereinstellung", "präferenzen"],
+  rendering: ["typst", "latex", "darstellung", "rendern", "code rendern"],
+  document_conversion: ["dokumentkonvertierung", "dokument konvertieren", "dokument umwandeln", "konvertierung", "browser konvertierung", "server konvertierung"],
+  data_management: ["daten verwalt", "datenverwaltung", "datenschutz", "daten lösch", "cache lösch", "daten exportier"],
+  dark_mode: ["dunkelmodus", "dunkler modus", "heller modus", "design", "theme", "farbschema"],
+  feedback: ["feedback", "antwort bewert", "bewert", "daumen hoch", "daumen runter"],
+  speech_output: ["vorles", "vorgeles", "sprachausgabe", "text zu sprache", "antwort vorles"],
+  meta_chat_catalogs: ["metachat tutorial", "metachat anleitung", "tutorials durchsuch", "anwendungsfälle durchsuch", "tutorials find", "tutorial", "anleitung", "anwendungsfälle", "katalog", "einstellungen im metachat"],
+  meta_chat_usage: ["metachat", "meta chat", "metachat verwend", "metachat öffn"],
+};
+
+const keywordStopWords = new Set([
+  "a",
+  "an",
+  "and",
+  "das",
+  "dem",
+  "den",
+  "der",
+  "des",
+  "die",
+  "ein",
+  "eine",
+  "einer",
+  "für",
+  "im",
+  "in",
+  "me",
+  "mit",
+  "my",
+  "of",
+  "on",
+  "or",
+  "the",
+  "to",
+  "und",
+  "von",
+  "zu",
+]);
+
+function tokenize(text) {
+  return String(text || "")
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((token) => token && !keywordStopWords.has(token));
+}
+
+function containsKeyword(textTokens, keyword) {
+  const tokens = tokenize(keyword);
+  if (tokens.length === 0) return false;
+  return tokens.every((token) =>
+    textTokens.some((word) =>
+      token.length <= 3 ? word === token : word.startsWith(token),
+    ),
+  );
+}
+
 export function findFeatureGuideForText(text) {
   const normalized = String(text || "").toLowerCase();
   if (!normalized.trim()) return null;
+  const textTokens = tokenize(normalized);
 
   let bestMatch = null;
   let bestLength = 0;
 
   for (const [featureId, guide] of Object.entries(featureGuides)) {
-    for (const keyword of guide.keywords || []) {
+    const keywords = [
+      ...(guide.keywords || []),
+      ...(germanGuideKeywords[featureId] || []),
+    ];
+    for (const keyword of keywords) {
       if (
-        normalized.includes(keyword) &&
+        containsKeyword(textTokens, keyword) &&
         keyword.length > bestLength
       ) {
         bestMatch = featureId;

@@ -286,7 +286,7 @@ export function useMetaChatSend() {
         .find((message) => message.role === "user")?.content;
       const suggestedFeature = findFeatureGuideForText(lastUserMessage);
       const wantsTutorial =
-        /\b(show me|walk me through|start (?:a )?tutorial|demonstrate|guide me)\b/i.test(
+        /\b(show me|walk me through|start (?:a )?tutorial|demonstrate|guide me|zeig(?:e|en)?(?: Sie)?(?: es)? mir(?: bitte)?|führ(?:e|en)?(?: Sie)? mich(?: bitte)? durch|start(?:e|en)?(?: Sie)?(?: bitte)? (?:ein |eine )?(?:tutorial|anleitung)|demonstrier(?:e|en)?(?: Sie)?|leit(?:e|en)?(?: Sie)? mich(?: bitte)? an)\b/i.test(
           lastUserMessage || "",
         );
 
