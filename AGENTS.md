@@ -126,9 +126,9 @@ These are the things that are not guessable from the file tree.
 `version` is in the root reducer but is not in the persist whitelist.
 
 Redux is persisted with a `version` + `migrations` map (`Redux/store/migrations.jsx`), and only a
-four-action whitelist is mirrored across tabs via `redux-state-sync`: `SET_ADV`, `RESET_ALL`,
-`MIGRATE`, `SET_COUNT`. Adding a persisted key means adding it to `whitelist` **and**
-`getDefaultState()` in `Redux/store/store.jsx`.
+five-action whitelist is mirrored across tabs via `redux-state-sync`: `SET_ADV`, `RESET_ALL`,
+`MIGRATE`, `SET_COUNT`, `user_settings/importUserSettings`. Adding a persisted key means adding it to
+`whitelist` **and** `getDefaultState()` in `Redux/store/store.jsx`.
 
 ### 4.2 The conversation data flow
 
@@ -306,6 +306,55 @@ calls the `back` `/documents/convert/file` endpoint. Redux migration 5 maps the 
 runs in the package's blob worker first; if the worker cannot be created (for example under a strict
 CSP) it retries on the main thread. The PDFium WASM is imported with `?url` so Vite emits it as an
 app asset.
+
+### 4.14 Prompt submission key is a user setting
+
+`user_settings.send_with_enter` controls whether plain Enter or Shift+Enter submits the prompt:
+`true` = Enter sends, `false` = Shift+Enter sends, `null` = device default. The default is
+resolved by `hooks/useSendWithEnter.ts`: Enter on desktop, Shift+Enter on mobile. `PromptTextArea`
+implements the key handling, and `SendButton` uses the same hook for its shortcut tooltip. Alt with
+Enter always inserts a newline. When adding another user setting, update
+`userSettingsReducer`'s `initialState`, the `getDefaultState()` fallback in `Redux/store/store.jsx`,
+both i18n files, and the export/import path.
+
+### 4.15 Sidebar conversation grouping is a persisted interface setting
+
+`interface_settings.conversation_grouping` is `"topic"` (default), `"date"`, or `"created"`. The
+sort menu in `SidebarContent` dispatches `setConversationGrouping`, and `TopicList` receives the
+value as `grouping` to render either topic rows or a date-bucket tree. `date` uses
+`groupConversationsByDate` (modified time); `created` uses `groupConversationsByCreationDate`. Both
+date-like modes show a non-collapsible parent label; their date buckets sit at the top level and are
+collapsible. Collapse state reuses `collapsed_topics` with `__by_date__` / `__by_created__`
+prefixes. Created-mode rows also show the creation date beside the title. The date/created labels
+only appear in their own mode; the topic-creation/unsorted rows only appear in topic mode.
+It is in `interfaceSettingsSlice`'s `initialState` and `getDefaultState()`; an old persisted state
+without the key falls back to `"topic"` in the selector, so no migration is needed.
+
+### 4.16 Meta chat works from conversation summaries, not messages
+
+The AI icon in the sidebar header navigates to `/meta`, rendered by
+`Pages/MetaChatPage.jsx`. The page reuses the normal chat shell (`Header`, `SidebarWrapper`,
+`Conversation`, `Prompt`) and provides `MetaChatSendContext`, which `useSendMessage` delegates to
+`useMetaChatSend` while inside the page. A banner above the conversation labels it as the Meta chat
+and shows an example question. The sender loads `listConversationMetas()` and `listFolders()`, keeps
+non-empty conversations, and sends each conversation's id, title, topic, summary, and last-modified
+time plus the topic tree and saved user memories to the default model — never the full message
+history. Missing summaries fall back to the title. The model is instructed to reference a chat as
+`[title](/chat/<id>)`;
+`MarkdownRenderer`'s link component navigates `/chat/...` links inside the SPA. The meta chat is
+stored as a hidden conversation row (`id: "meta-chat"`, `isMetaChat: true`), excluded from the
+sidebar, last-conversation lookup, and its own summary context. `getExportData()` emits it as
+`meta_chat` and `useImportConversation` recreates it silently. Do not make it summarize full
+conversations on the fly without accounting for the extra model calls.
+
+### 4.17 Per-conversation memory mode overrides the global preference
+
+`ConversationSettings.memory_mode_override` is `"default"`, `0` (off), `1` (recall), or `2`
+(learn). `getDefaultSettings()` defaults it to `"default"`, and `useSendMessage` resolves it at send
+time: `"default"` uses `user_settings.memory_mode`; a numeric value overrides it for that chat. The
+control is `SettingsPanel/MemoryModeContainer.jsx`; the global preference remains in
+`UserSettings/ChatPreferences.jsx`. The value is stored with the conversation settings (no Dexie
+version bump) and restored by `useImportConversation`.
 
 ## 5. Conventions
 

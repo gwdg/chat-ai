@@ -25,6 +25,7 @@ export const getDefaultSettings = (userSettings = {}) => {
     temperature: 0.5,
     top_p: 0.5,
     memory: 0,
+    memory_mode_override: "default",
     enable_tools: false,
     reasoning_effort: null,
     tools: {
@@ -169,7 +170,10 @@ const processSettings = (conversation, exportArcana = false) => {
 
 // Export all data as JSON
 export const getExportData = async () => {
-  const conversationList = await listConversationMetas()
+  const conversationList = (await listConversationMetas()).filter(
+    (conversation) =>
+      !conversation.isMetaChat && conversation.id !== "meta-chat",
+  );
   const processedConversations = [];
   // Process Messages
   for (let c = 0; c < conversationList.length; c++) {
@@ -191,5 +195,21 @@ export const getExportData = async () => {
     };
     processedConversations.push(processedConversation);
   }
-  return { conversations: processedConversations, version: packageJson.version };
+
+  const metaConversation = await getConversation("meta-chat");
+  const metaChat = metaConversation
+    ? {
+        ...metaConversation.settings,
+        title: metaConversation.title || "Meta chat",
+        settings: metaConversation.settings,
+        messages: await processMessages(metaConversation.messages, true),
+        isMetaChat: true,
+      }
+    : null;
+
+  return {
+    conversations: processedConversations,
+    ...(metaChat ? { meta_chat: metaChat } : {}),
+    version: packageJson.version,
+  };
 };

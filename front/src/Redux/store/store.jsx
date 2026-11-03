@@ -40,6 +40,7 @@ const getDefaultState = () => {
       show_usage_in_sidebar: true,
       collapsed_topics: [],
       conversation_sort: "created_desc",
+      conversation_grouping: "topic",
     },
     // Conditionally preserve memories
     user_settings: {
@@ -55,6 +56,7 @@ const getDefaultState = () => {
       render_latex: false,
       document_conversion_mode: "choice",
       conversation_summaries: true,
+      send_with_enter: null,
     },
   };
 };
@@ -101,6 +103,7 @@ const stateSyncConfig = {
     "RESET_ALL",
     "MIGRATE",
     "SET_COUNT",
+    "user_settings/importUserSettings",
   ],
   // Use localStorage for better compatibility
   broadcastChannelOption: {

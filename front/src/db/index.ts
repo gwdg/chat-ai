@@ -215,6 +215,7 @@ export async function createConversation(params: {
   id?: string, // for import
   folderId?: string | null
   hasFirstPrompt?: boolean
+  isMetaChat?: boolean
 }) {
   const id = params?.id ?? newId()
   const now = Date.now()
@@ -235,6 +236,7 @@ export async function createConversation(params: {
       folderId,
       hasFirstPrompt,
       lastOpenedAt: now,
+      ...(params.isMetaChat ? { isMetaChat: true } : {}),
     })
 
     if (messages.length > 0) {
@@ -444,7 +446,11 @@ export async function updateConversation(
 // ---------- Conversation List ----------
 
 export async function getLastModifiedConversationMeta(): Promise<ConversationRow | undefined> {
-  const conversations = await db.conversations.orderBy('lastModified').reverse().toArray();
+  const conversations = await db.conversations
+    .orderBy('lastModified')
+    .reverse()
+    .filter((conversation) => !conversation.isMetaChat && conversation.id !== 'meta-chat')
+    .toArray();
   return conversations[0];
 }
 
@@ -551,7 +557,9 @@ export function useConversationList() {
   const list = useLiveQuery(
     async () => {
       const rows = await db.conversations.orderBy('createdAt').reverse().toArray()
-      return rows //.filter(conv => conv?.hasFirstPrompt !== false)
+      return rows.filter(
+        (conversation) => !conversation.isMetaChat && conversation.id !== 'meta-chat',
+      )
     },
   [],
   [] as ConversationRow[]
@@ -564,6 +572,10 @@ export function useConversationList() {
 export async function getFolder(folderId: string): Promise<FolderRow | undefined> {
   if (!folderId) return undefined;
   return db.folders.get(folderId);
+}
+
+export async function listFolders(): Promise<FolderRow[]> {
+  return db.folders.toArray();
 }
 
 async function getFolderByName(name: string): Promise<FolderRow | undefined> {

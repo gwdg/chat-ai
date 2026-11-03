@@ -18,7 +18,8 @@ export default {
     clear: "Clear",
     abort: "Abort",
     send: "Send",
-    send_shortcut: "Send (Shift+Enter)",
+    send_shortcut: "Send (Enter)",
+    send_shortcut_shift_enter: "Send (Shift+Enter)",
     stop: "Stop",
     share: "Share",
     delete: "Delete",
@@ -62,6 +63,11 @@ export default {
     all: "All chats",
     uncategorized: "Unsorted Chats",
     by_date: "All chats by date",
+    by_created: "All chats by creation date",
+    sort_label: "Sort chats",
+    sort_by_topic: "By topic",
+    sort_by_date: "By date",
+    sort_by_created: "By creation date",
     modified: "Modified {{date}}",
     dateBuckets: {
       today: "Today",
@@ -157,8 +163,42 @@ export default {
       creative: "Creative work",
     },
   },
+  meta_chat: {
+    title: "Meta chat",
+    open: "Ask about your chats",
+    banner_description:
+      "Ask about your past conversations and topics. For example: “Where is my chat about my food order?” or “Which topic contains my food order chats?”",
+    error: "Could not answer. Please try again.",
+    no_model: "No default model is configured.",
+  },
   // Chat settings
   settings: {
+    memory_mode: {
+      label: "Memories",
+      description: "Choose how this conversation uses your saved memories.",
+      help_label: "Learn about memories",
+      options: {
+        default: {
+          label: "Default",
+          description:
+            "Use the global memory preference (currently {{mode}}).",
+        },
+        none: {
+          label: "Off",
+          description: "Do not use saved memories in this conversation.",
+        },
+        recall: {
+          label: "Recall",
+          description:
+            "Use saved memories to personalize responses in this conversation.",
+        },
+        learn: {
+          label: "Learn",
+          description:
+            "Use saved memories and learn new details from this conversation.",
+        },
+      },
+    },
     tools_enabled: "Tools are enabled",
     tools_disabled: "Tools are disabled",
     web_search_enabled: "Web search is enabled",
@@ -402,6 +442,21 @@ export default {
         label: "Show summaries on hover",
         description:
           "Generate a short summary when you switch away from a chat, then show it when hovering over that chat in the sidebar.",
+      },
+      submission: {
+        label: "Send message with",
+        options: {
+          enter: {
+            label: "Enter",
+            description:
+              "Enter sends the message. Shift+Enter adds a new line.",
+          },
+          shift_enter: {
+            label: "Shift+Enter",
+            description:
+              "Shift+Enter sends the message. Enter adds a new line. This is the default on mobile devices.",
+          },
+        },
       },
       html_render: {
         label: "Render HTML blocks",

@@ -18,7 +18,8 @@ export default {
     clear: "Löschen",
     abort: "Abbrechen",
     send: "Senden",
-    send_shortcut: "Senden (Umschalt+Enter)",
+    send_shortcut: "Senden (Enter)",
+    send_shortcut_shift_enter: "Senden (Umschalt+Enter)",
     stop: "Anhalten",
     share: "Teilen",
     delete: "Löschen",
@@ -62,6 +63,11 @@ export default {
     all: "Alle Chats",
     uncategorized: "Nicht zugeordnete Chats",
     by_date: "Alle Chats nach Datum",
+    by_created: "Alle Chats nach Erstellungsdatum",
+    sort_label: "Chats sortieren",
+    sort_by_topic: "Nach Thema",
+    sort_by_date: "Nach Datum",
+    sort_by_created: "Nach Erstellungsdatum",
     modified: "Geändert {{date}}",
     dateBuckets: {
       today: "Heute",
@@ -158,8 +164,44 @@ export default {
       creative: "Kreatives Arbeiten",
     },
   },
+  meta_chat: {
+    title: "Meta-Chat",
+    open: "Chats durchsuchen",
+    banner_description:
+      "Fragen Sie nach Ihren bisherigen Unterhaltungen und Themen. Zum Beispiel: „Wo ist mein Chat über meine Essensbestellung?“ oder „In welchem Thema sind meine Chats zur Essensbestellung?“",
+    error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    no_model: "Kein Standardmodell konfiguriert.",
+  },
   // Settings panel
   settings: {
+    memory_mode: {
+      label: "Erinnerungen",
+      description:
+        "Legen Sie fest, wie diese Unterhaltung Ihre gespeicherten Erinnerungen verwendet.",
+      help_label: "Mehr über Erinnerungen erfahren",
+      options: {
+        default: {
+          label: "Standard",
+          description:
+            "Verwendet die globale Erinnerungseinstellung (aktuell: {{mode}}).",
+        },
+        none: {
+          label: "Aus",
+          description:
+            "Gespeicherte Erinnerungen werden in dieser Unterhaltung nicht verwendet.",
+        },
+        recall: {
+          label: "Abrufen",
+          description:
+            "Gespeicherte Erinnerungen werden in dieser Unterhaltung für persönlichere Antworten verwendet.",
+        },
+        learn: {
+          label: "Lernen",
+          description:
+            "Gespeicherte Erinnerungen werden verwendet und neue Details aus dieser Unterhaltung gelernt.",
+        },
+      },
+    },
     tools_enabled: "Werkzeuge sind aktiviert",
     tools_disabled: "Werkzeuge sind deaktiviert",
     web_search_enabled: "Websuche ist erlaubt",
@@ -406,6 +448,21 @@ export default {
         label: "Zusammenfassungen beim Darüberfahren anzeigen",
         description:
           "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",
+      },
+      submission: {
+        label: "Nachricht senden mit",
+        options: {
+          enter: {
+            label: "Enter",
+            description:
+              "Enter sendet die Nachricht. Umschalt+Enter fügt einen Zeilenumbruch ein.",
+          },
+          shift_enter: {
+            label: "Umschalt+Enter",
+            description:
+              "Umschalt+Enter sendet die Nachricht. Enter fügt einen Zeilenumbruch ein. Dies ist die Standardeinstellung auf mobilen Geräten.",
+          },
+        },
       },
       html_render: {
         label: "HTML-Blöcke rendern",

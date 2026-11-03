@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { CircleHelp } from "lucide-react";
+import { CircleHelp, MessageSquareText } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
 import { useDebounce } from "../../hooks/useDebounce";
 
@@ -62,6 +62,10 @@ export default function SystemPromptContainer({ localState, setLocalState }) {
   return (
     <div className="w-full flex flex-col flex-grow gap-4">
       <div className="flex-shrink-0 flex items-center gap-2">
+        <MessageSquareText
+          className="h-4 w-4 shrink-0 text-tertiary"
+          aria-hidden="true"
+        />
         <p className="text-sm font-medium">System prompt</p>
         <CircleHelp
           className="h-[16px] w-[16px] cursor-pointer text-[#009EE0]"

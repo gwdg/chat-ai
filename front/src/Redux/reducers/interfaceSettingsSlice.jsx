@@ -17,6 +17,7 @@ const interfaceSettingsSlice = createSlice({
     show_usage_in_sidebar: true,
     collapsed_topics: [],
     conversation_sort: "created_desc",
+    conversation_grouping: "topic",
   },
   reducers: {
     toggleTheme: (state) => {
@@ -76,6 +77,11 @@ const interfaceSettingsSlice = createSlice({
     setConversationSort: (state, action) => {
       state.conversation_sort = action.payload;
     },
+    setConversationGrouping: (state, action) => {
+      if (["topic", "date", "created"].includes(action.payload)) {
+        state.conversation_grouping = action.payload;
+      }
+    },
   },
 });
 
@@ -94,10 +100,15 @@ export const selectWarning = (key) => (state) =>
 export const selectCollapsedTopics = (state) => state.interface_settings.collapsed_topics;
 export const selectConversationSort = (state) =>
   state.interface_settings.conversation_sort ?? "created_desc";
+export const selectConversationGrouping = (state) => {
+  const grouping = state.interface_settings.conversation_grouping;
+  return ["date", "created"].includes(grouping) ? grouping : "topic";
+};
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
   setShowUsageInSidebar, setWarning, toggleTopic, setConversationSort,
+  setConversationGrouping,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

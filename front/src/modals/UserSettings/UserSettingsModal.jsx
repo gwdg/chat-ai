@@ -21,6 +21,7 @@ import {
   DocumentConversionPreference,
   MemoryPreference,
   RenderingPreferences,
+  SubmissionPreference,
   SuggestionPreference,
 } from "./ChatPreferences";
 import { getExportData } from "../../utils/conversationUtils";
@@ -132,6 +133,9 @@ export default function UserSettingsModal({
               {t("common.loading")}
             </p>
           )}
+          <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+            <SubmissionPreference />
+          </div>
           <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
             <ConversationSummaryPreference />
           </div>

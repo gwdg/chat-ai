@@ -1,7 +1,9 @@
+import { useContext } from "react";
 import { useSelector, useDispatch } from "react-redux";  
 import sendMessage from "../utils/sendMessage";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "./useToast";
+import { MetaChatSendContext } from "../context/MetaChatContext";
 import {
   selectAllMemories,
   selectMemoryMode,
@@ -19,9 +21,20 @@ export function useSendMessage() {
   const memoryMode = useSelector(selectMemoryMode);
   const suggestUserPrompts = useSelector(selectSuggestUserPrompts);
   const setTitleOnce = useSelector(selectSetTitleOnce);
+  const metaSendMessage = useContext(MetaChatSendContext);
+
+  if (metaSendMessage) return metaSendMessage;
 
   // Make this async
   return async ({localState, setLocalState, formSubmission}) => {
+    const override = localState?.settings?.memory_mode_override;
+    const effectiveMemoryMode =
+      override === undefined || override === null || override === "default"
+        ? memoryMode
+        : [0, 1, 2].includes(Number(override))
+          ? Number(override)
+          : memoryMode;
+
     await sendMessage({
       localState,
       setLocalState,
@@ -31,7 +44,7 @@ export function useSendMessage() {
       notifyError,
       notifySuccess,
       timeout,
-      memoryMode,
+      memoryMode: effectiveMemoryMode,
       suggestUserPrompts,
       formSubmission,
       setTitleOnce,

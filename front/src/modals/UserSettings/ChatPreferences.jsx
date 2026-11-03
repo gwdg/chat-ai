@@ -23,8 +23,10 @@ import {
   setDocumentConversionMode,
   selectConversationSummaries,
   setConversationSummaries,
+  setSendWithEnter,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
+import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import ProfilePreferenceSwitch from "./ProfilePreferenceSwitch";
 
 const MEMORY_OPTIONS = [
@@ -170,6 +172,45 @@ export function SuggestionPreference() {
           onChange={(checked) => dispatch(setSetTitleOnce(checked))}
         />
       </div>
+    </section>
+  );
+}
+
+export function SubmissionPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const sendWithEnter = useSendWithEnter();
+
+  const options = [
+    {
+      value: true,
+      label: t("user_settings.chat_preferences.submission.options.enter.label"),
+      description: t(
+        "user_settings.chat_preferences.submission.options.enter.description",
+      ),
+    },
+    {
+      value: false,
+      label: t(
+        "user_settings.chat_preferences.submission.options.shift_enter.label",
+      ),
+      description: t(
+        "user_settings.chat_preferences.submission.options.shift_enter.description",
+      ),
+    },
+  ];
+  const selectedOption =
+    options.find((option) => option.value === sendWithEnter) ?? options[0];
+
+  return (
+    <section className="flex flex-col gap-2">
+      <SegmentedPreference
+        label={t("user_settings.chat_preferences.submission.label")}
+        description={selectedOption.description}
+        options={options}
+        value={sendWithEnter}
+        onChange={(value) => dispatch(setSendWithEnter(value))}
+      />
     </section>
   );
 }

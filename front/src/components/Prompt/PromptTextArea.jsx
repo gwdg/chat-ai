@@ -3,6 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useToast } from "../../hooks/useToast";
+import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 
 import { useAttachments } from "../../hooks/useAttachments";
 import ClearButton from "./ClearButton";
@@ -24,6 +25,7 @@ export default function PromptTextArea({
   const [isDragging, setIsDragging] = useState(false);
   const { notifySuccess, notifyError } = useToast();
   const { addAttachments, pasteAttachments } = useAttachments();
+  const sendWithEnter = useSendWithEnter();
 
   // Prompt is actually the last message's first content
   const lastMessage = localState?.messages?.[localState.messages.length - 1];
@@ -158,13 +160,17 @@ export default function PromptTextArea({
             // Enter confirms an IME composition (Japanese, Chinese, Korean), don't send.
             // Safari reports isComposing false on that Enter, but keyCode is still 229.
             if (event.nativeEvent.isComposing || event.keyCode === 229) return;
-            // Enter inserts a newline; Shift+Enter sends. This also keeps soft
-            // keyboards (which have no Shift key) able to add line breaks.
-            if (
-                event.key === "Enter" &&
-                event.shiftKey &&
-                (prompt?.trim() !== "" || attachments.length > 0)
-            ) {
+            if (event.key !== "Enter") return;
+            if (prompt?.trim() === "" && attachments.length === 0) return;
+
+            const isPlainEnter =
+              !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
+            const isShiftEnter =
+              event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
+
+            // Enter mode: plain Enter sends, Shift+Enter is a newline.
+            // Shift+Enter mode: Shift+Enter sends, plain Enter is a newline.
+            if ((sendWithEnter && isPlainEnter) || (!sendWithEnter && isShiftEnter)) {
                 event.preventDefault();
                 handleSend(event);
             }
