@@ -13,7 +13,8 @@ export default {
     export: "Export Chat",
     summarize: "Summarize",
     summarizing: "Summarizing...",
-    summarize_success: "Conversation summarized successfully.",
+    summarize_success: "Summary created in a new conversation.",
+    summary_title: "Summary of {{title}}",
     summarize_error: "Summarization failed. Your conversation is unchanged.",
     clear: "Clear",
     abort: "Abort",
@@ -369,7 +370,7 @@ export default {
     summarize_conversation: {
       title: "Summarize a chat",
       step1: "Open the conversation menu in the sidebar.",
-      step2: "Choose Summarize.",
+      step2: "Choose Summarize. A new conversation containing the summary is created.",
     },
     memories: {
       title: "Manage memories",
@@ -483,7 +484,7 @@ export default {
     },
     summarize_chat: {
       title: "Turn a long chat into notes",
-      description: "Summarize a long conversation for your notes.",
+      description: "Create a new conversation containing a summary of a long chat for your notes.",
       step1: "Open the conversation menu in the sidebar.",
       step2: "Choose Summarize and review the result.",
       step3: "Export the chat if you need a file for your notes.",
@@ -1097,7 +1098,7 @@ export default {
     regenerate_fork_success: "Chat forked successfully",
     regenerate_fork_fail: "Chat could not be forked",
     summarize_replace:
-      "This will replace your current chat history with a summary. Your existing messages will be removed from this conversation. Continue?",
+      "This will create a new chat containing a summary. Your current chat stays unchanged. Continue?",
     summarize_in_progress:
       "Your conversation is being summarized. Please wait while the summary is generated.",
     no: "No, go back",

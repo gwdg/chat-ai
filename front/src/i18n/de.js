@@ -13,7 +13,8 @@ export default {
     export: "Chat exportieren",
     summarize: "Zusammenfassen",
     summarizing: "Zusammenfassen...",
-    summarize_success: "Unterhaltung erfolgreich zusammengefasst.",
+    summarize_success: "Zusammenfassung in einer neuen Unterhaltung erstellt.",
+    summary_title: "Zusammenfassung von {{title}}",
     summarize_error: "Zusammenfassung fehlgeschlagen. Ihre Unterhaltung ist unverändert.",
     clear: "Löschen",
     abort: "Abbrechen",
@@ -376,7 +377,7 @@ export default {
     summarize_conversation: {
       title: "Einen Chat zusammenfassen",
       step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
-      step2: "Wählen Sie Zusammenfassen.",
+      step2: "Wählen Sie Zusammenfassen. Eine neue Unterhaltung mit der Zusammenfassung wird erstellt.",
     },
     memories: {
       title: "Erinnerungen verwalten",
@@ -491,7 +492,7 @@ export default {
     },
     summarize_chat: {
       title: "Einen langen Chat in Notizen verwandeln",
-      description: "Fassen Sie eine lange Unterhaltung für Ihre Notizen zusammen.",
+      description: "Erstellen Sie eine neue Unterhaltung mit einer Zusammenfassung einer langen Unterhaltung für Ihre Notizen.",
       step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
       step2: "Wählen Sie Zusammenfassen und prüfen Sie das Ergebnis.",
       step3: "Exportieren Sie den Chat, wenn Sie eine Datei für Ihre Notizen benötigen.",
@@ -1108,7 +1109,7 @@ export default {
     regenerate_fork_success: "Chat erfolgreich geforkt",
     regenerate_fork_fail: "Chat konnte nicht geforkt werden.",
     summarize_replace:
-      "Dies ersetzt den aktuellen Chatverlauf durch eine Zusammenfassung. Die bisherigen Nachrichten werden aus dieser Unterhaltung entfernt. Fortfahren?",
+      "Dies erstellt einen neuen Chat mit einer Zusammenfassung. Ihr aktueller Chat bleibt unverändert. Fortfahren?",
     summarize_in_progress:
       "Ihre Unterhaltung wird zusammengefasst. Bitte warten Sie, während die Zusammenfassung erstellt wird.",
     no: "Nein, geh zurück",
