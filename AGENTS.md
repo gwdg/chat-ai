@@ -325,6 +325,9 @@ app asset.
   `BaseModal.jsx`; that is the pattern every existing modal in the repo follows.
 - **Upstream calls** each get their own file in `apis/`. Components, hooks and modals import them
   directly — there is no enforced layer between them.
+- **Redux persistence storage:** import `redux-persist/es/storage`, not
+  `redux-persist/lib/storage`. The `lib` path is CommonJS; Vite 8 wraps its default import, so
+  `storage.getItem` / `storage.setItem` are undefined and the app fails on load.
 - **Never enable `rehype-raw` without a sanitizer.** Model output is untrusted: it reaches the DOM
   verbatim, and so does any imported or shared conversation. `rehype-raw` in `ThinkingBlock.jsx`
   once turned HTML the model drafted while reasoning into live markup — `<iframe>` tags fetched
