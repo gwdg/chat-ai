@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import {
   Route,
   Routes,
@@ -8,7 +9,8 @@ import LandingPage from "../Pages/LandingPage";
 import ChatPage from "../Pages/ChatPage";
 import MetaChatPage from "../Pages/MetaChatPage";
 import TopicMasterPage from "../Pages/TopicMasterPage";
-import WorkspacePage from "../Pages/WorkspacePage";
+
+const WorkspacePage = lazy(() => import("../Pages/WorkspacePage"));
 
 const PublicRoute = () => {
   return (
@@ -17,7 +19,20 @@ const PublicRoute = () => {
       <Route path="/notfound" element={<NotFoundPage />} />
       <Route path="/meta" element={<MetaChatPage />} />
       <Route path="/topic/:topicId" element={<TopicMasterPage />} />
-      <Route path="/workspace/:workspaceId" element={<WorkspacePage />} />
+      <Route
+        path="/workspace/:workspaceId"
+        element={
+          <Suspense
+            fallback={
+              <div className="grid h-dvh place-items-center bg-base-200">
+                <span className="loading loading-spinner loading-md text-primary" />
+              </div>
+            }
+          >
+            <WorkspacePage />
+          </Suspense>
+        }
+      />
       <Route path="/chat/:conversationId?" element={<ChatPage />}/>
       <Route path="/chat" element={<ChatPage />} />
       <Route path="*" element={<ChatPage />} />

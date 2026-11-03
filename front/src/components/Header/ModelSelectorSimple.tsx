@@ -75,10 +75,10 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
     let result = modelsData.slice(); // copy list
     if (q && q !== "") {
       result = modelsData.filter((m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.id.toLowerCase().includes(q) ||
-        m.input.some(input => input.toLowerCase().includes(q)) ||
-        m.output.some(output => output.toLowerCase().includes(q))
+        String(m.name ?? "").toLowerCase().includes(q) ||
+        String(m.id ?? "").toLowerCase().includes(q) ||
+        (m.input ?? []).some(input => String(input).toLowerCase().includes(q)) ||
+        (m.output ?? []).some(output => String(output).toLowerCase().includes(q))
       );
     }
 

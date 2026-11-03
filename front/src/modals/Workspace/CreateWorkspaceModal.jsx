@@ -17,7 +17,7 @@ import { getModelsData } from "../../apis/getModelsData";
 import { createWorkspace } from "../../db/workspaceDb";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import { getDefaultSettings } from "../../utils/conversationUtils";
-import { pickDefaultAgentModel } from "../../agent/models";
+import { pickDefaultAgentModel } from "../../agent/modelSelection";
 import { DEFAULT_WORKSPACE_PERSONA } from "../../agent/prompt";
 import { SKILL_EXPLAIN_IMAGE } from "../../agent/tools";
 import {
