@@ -132,7 +132,13 @@ ls front/dist                # index.html, assets/, chat-ai.ico, ...
 
 Use `docker compose logs -f front` if you started it detached; the build output and any errors are in that log. A failed build exits non-zero, and `restart: on-failure` makes Compose retry it, so fix the error before rerunning.
 
-The container exiting is expected: in this mode nothing is served by Docker. Point your web server's document root at `front/dist/` (or copy it there). The directory is gitignored, so never commit it.
+The container exiting is expected: in this mode nothing is served by Docker. Copy the contents of `front/dist/` into your web server's document root — the examples below assume Debian/Ubuntu's default `/var/www/html`:
+
+```bash
+sudo cp -a front/dist/. /var/www/html/
+```
+
+The directory that contains `index.html` is the one to use both as the document root and in the `<Directory>` blocks. If you prefer to serve `front/dist` in place, substitute its absolute path for `/var/www/html` everywhere below. `front/dist` is gitignored, so never commit it.
 
 Without Docker, the same bundle comes from `cd front && npm i && npm run build`, run from `front/` so the default `CONFIG_LOCATION=../secrets/front.json` resolves (or set `CONFIG_LOCATION` explicitly).
 
@@ -156,7 +162,7 @@ server {
     listen 80;
     server_name chat.example.org;
 
-    root /var/www/chat-ai/dist;
+    root /var/www/html;
     index index.html;
 
     # Attachments are capped at 50 MB by the back service.
@@ -193,9 +199,9 @@ Apache (enable the modules with `a2enmod headers proxy proxy_http`):
 ```apache
 <VirtualHost *:80>
     ServerName chat.example.org
-    DocumentRoot /var/www/chat-ai/dist
+    DocumentRoot /var/www/html
 
-    <Directory /var/www/chat-ai/dist>
+    <Directory /var/www/html>
         Options -Indexes +FollowSymLinks
         AllowOverride None
         Require all granted
@@ -203,7 +209,7 @@ Apache (enable the modules with `a2enmod headers proxy proxy_http`):
     </Directory>
 
     # Missing hashed assets must 404 instead of returning the SPA shell.
-    <Directory /var/www/chat-ai/dist/assets>
+    <Directory /var/www/html/assets>
         FallbackResource disabled
         Header set Cache-Control "public, max-age=31536000, immutable"
     </Directory>
