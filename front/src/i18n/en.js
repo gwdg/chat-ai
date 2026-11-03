@@ -40,7 +40,6 @@ export default {
     backup_data: "Backup Data",
     skip_backup: "Skip Backup",
     upgrade_chat_ai: "Upgrade Chat AI",
-    retry: "Retry",
   },
   feedback:{
     thumbsup:"The response is good.",
@@ -156,10 +155,6 @@ export default {
     folder_name: "Folder name",
     agent_model: "Agent model",
     model_hint: "Agentic models with tool calling work best.",
-    models_loading: "Loading models…",
-    models_unavailable_option: "No models available",
-    models_unavailable:
-      "Could not load the model list. Check the backend connection and retry.",
     model_required: "Choose a model",
     skills: "Skills",
     skill_explain_image: "Explain images",

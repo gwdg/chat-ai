@@ -298,11 +298,6 @@ Both are data-tolerant (optional chaining), but the simple selector has no metad
 view modes. Add new model fields to `types/models.ts` and both selectors if they affect both
 variants.
 
-`getModelsData` accepts either an OpenAI list (`{ data: [...] }`) or a top-level array and normalises
-every entry before the selectors see it: `name` falls back to `id`, and missing `input` / `output`
-capability fields become empty arrays. A custom `/models` route may provide `description` (which
-selects the extended view) without those arrays; dereferencing them directly blanks the whole app.
-
 ### 4.13 Document conversion can run in the browser or on the server
 
 `utils/browserDocumentConversion.js` converts `pdf` (PDFium WASM via `@hyzyla/pdfium`) and `docx`
@@ -377,16 +372,8 @@ path has a unique `vfs_nodes` row. Deleting a folder that contains a workspace r
 moving/renaming a folder rewrites the affected workspace roots in the same transaction.
 `workspace.modelId` is the runtime source of truth for the agent model; `workspace.settings.model`
 must be updated with it whenever the prompt-box model changes, otherwise a reload can revert the
-agent. `WorkspacePage` is lazy-loaded and `CreateWorkspaceModal` imports the lightweight
-`agent/modelSelection` helper, so the pi-agent / pi-ai runtime stays out of the normal chat startup
-path. The create-workspace modal receives the sidebar's already-loaded `modelsData` and only
-fetches `/models` when that list is empty; do not substitute a hardcoded/placeholder model when the
-fetch fails. A placeholder id can be unavailable upstream, and the first turn then fails with
-"Needs attention". The modal keeps the model select disabled while loading and requires a real
-option before creating the workspace; when `/models` is unreachable it may fall back only to the
-deployment's configured default model. The backend forwards client `function` tools on
-`/chat/completions`; `/responses` is an equivalent streaming proxy for runtimes that use the
-Responses API.
+agent. The backend forwards client `function` tools on `/chat/completions`; `/responses` is an
+equivalent streaming proxy for runtimes that use the Responses API.
 
 ## 5. Conventions
 

@@ -18,8 +18,6 @@ export default function WorkspaceList({
   const { openModal } = useModal();
   const workspaces = useWorkspaceList();
 
-  // Hand the already-loaded model list to the modal so it does not depend on a
-  // second, independent `/models` request succeeding while it is open.
   const openCreate = () => openModal("createWorkspace", { modelsData });
 
   return (

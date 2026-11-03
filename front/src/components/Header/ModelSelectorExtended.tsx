@@ -65,10 +65,10 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
     if (q && q !== "") {
       result = modelsData.filter((m) =>
-        String(m.name ?? "").toLowerCase().includes(q) ||
-        String(m.id ?? "").toLowerCase().includes(q) ||
-        (m.input ?? []).some(input => String(input).toLowerCase().includes(q)) ||
-        (m.output ?? []).some(output => String(output).toLowerCase().includes(q))
+        m.name.toLowerCase().includes(q) ||
+        m.id.toLowerCase().includes(q) ||
+        m.input.some(input => input.toLowerCase().includes(q)) ||
+        m.output.some(output => output.toLowerCase().includes(q))
       );
     }
     const digitsOnly = str => parseFloat(str ? str.replace(/\D/g, "") : 0);
@@ -213,10 +213,10 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               Param {model.numParameters && model.numParameters !== "" ? model.numParameters : "-"}
             </span>*/}
             <div className="flex items-center gap-1 text-accent">
-              {model.input?.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
-              {model.input?.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
-              {model.input?.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
-              {model.output?.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+              {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
+              {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
+              {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
+              {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
               
             </div>
           </div>
@@ -252,10 +252,10 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             Context {model.contextLength && model.contextLength !== "" ? model.contextLength : "-"}
           </span>
           <div className="flex items-center gap-1 text-accent">
-            {model.input?.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
-            {model.input?.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
-            {model.input?.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
-            {model.output?.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+            {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
+            {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
+            {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
+            {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
           </div>
           {/*
             <span className="text-xs text-base-content/70">
@@ -304,28 +304,28 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             </span>*/}
           </div>
           <div className="flex items-center gap-1">
-            {model.output?.includes("thought") && (
+            {model.output.includes("thought") && (
               <Tooltip text={"Thinking"}>
                 <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faBrain} />
                 </div>
               </Tooltip>
             )}
-            {model.input?.includes("image") && (
+            {model.input.includes("image") && (
               <Tooltip text={"Image Input"}>
                 <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faImage} />
                 </div>
               </Tooltip>
             )}
-            {model.input?.includes("video") && (
+            {model.input.includes("video") && (
               <Tooltip text={"Video Input"}>
                 <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faVideo} />
                 </div>
               </Tooltip>
             )}
-            {model.input?.includes("audio") && (
+            {model.input.includes("audio") && (
               <Tooltip text={"Audio Input"}>
                 <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faMicrophone} />
@@ -377,9 +377,9 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
           <div className="flex items-center gap-2">
             <div className="ml-2 flex items-center gap-1 text-accent">
-              {selectedModel?.input?.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
-              {selectedModel?.input?.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
-              {selectedModel?.output?.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
+              {selectedModel?.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
+              {selectedModel?.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
+              {selectedModel?.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
 
             </div>
             <FontAwesomeIcon icon={faChevronDown} />

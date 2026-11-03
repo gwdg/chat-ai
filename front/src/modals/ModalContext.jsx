@@ -1,5 +1,5 @@
 // ModalContext.jsx
-import { createContext, useContext, useState } from "react";
+import { createContext, lazy, Suspense, useContext, useState } from "react";
 
 // Import your modal components
 import HelpToolsModal from "./Help/HelpToolsModal";
@@ -44,7 +44,8 @@ import WelcomeModal from "./Help/WelcomeModal";
 import HelpMCPModal from "./Help/HelpMCPModal";
 import ImportSettingsDisclaimerModal from "./Alert/ImportSettingsDisclaimerModal";
 import HelpReasoningModal from "./Help/HelpReasoningModal";
-import CreateWorkspaceModal from "./Workspace/CreateWorkspaceModal";
+
+const CreateWorkspaceModal = lazy(() => import("./Workspace/CreateWorkspaceModal"));
 
 const ModalContext = createContext();
 
@@ -173,7 +174,9 @@ export function ModalProvider({ children }) {
         <ConfirmActionModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "createWorkspace" && (
-        <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
+        <Suspense fallback={null}>
+          <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
+        </Suspense>
       )}
       {/* General Modals */}
       {modalType === "exportChat" && (
