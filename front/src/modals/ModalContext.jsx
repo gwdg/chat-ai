@@ -44,6 +44,7 @@ import WelcomeModal from "./Help/WelcomeModal";
 import HelpMCPModal from "./Help/HelpMCPModal";
 import ImportSettingsDisclaimerModal from "./Alert/ImportSettingsDisclaimerModal";
 import HelpReasoningModal from "./Help/HelpReasoningModal";
+import CreateWorkspaceModal from "./Workspace/CreateWorkspaceModal";
 
 const ModalContext = createContext();
 
@@ -170,6 +171,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "confirmAction" && (
         <ConfirmActionModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "createWorkspace" && (
+        <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {/* General Modals */}
       {modalType === "exportChat" && (

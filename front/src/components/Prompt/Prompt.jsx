@@ -26,6 +26,8 @@ export default function Prompt({
   modelsData,
   placeholder,
   sendMessage: sendMessageOverride,
+  loading = false,
+  onAbort,
 }) {
   const defaultSendMessage = useSendMessage();
   const sendMessage = sendMessageOverride ?? defaultSendMessage;
@@ -188,6 +190,8 @@ export default function Prompt({
             <AbortButton
               localState={localState}
               setLocalState={setLocalState}
+              loading={loading}
+              onAbort={onAbort}
             />
             {/* If not loading, show send button */}
             <SendButton
@@ -195,6 +199,7 @@ export default function Prompt({
               setLocalState={setLocalState}
               handleSend={handleSend}
               prompt={prompt}
+              loading={loading}
             />
           </div>
         </div>

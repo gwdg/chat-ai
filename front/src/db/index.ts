@@ -15,7 +15,11 @@ import type {
   MessageRole,
   ContentItemInput,
   FolderRow,
-  FeedbackRow
+  FeedbackRow,
+  WorkspaceRow,
+  WorkspaceMessageRow,
+  VfsNodeRow,
+  VfsBlobRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -27,6 +31,10 @@ export class AppDB extends Dexie {
   files_meta!: Table<FileMetaRow, string>
   files_data!: Table<FileDataRow, string>
   folders!: Table<FolderRow, string>
+  workspaces!: Table<WorkspaceRow, string>
+  workspace_messages!: Table<WorkspaceMessageRow, string>
+  vfs_nodes!: Table<VfsNodeRow, string>
+  vfs_blobs!: Table<VfsBlobRow, string>
 
   constructor() {
     super('app-conversations-db')
@@ -86,6 +94,21 @@ export class AppDB extends Dexie {
           conv.lastOpenedAt = conv.lastModified ?? conv.createdAt ?? Date.now();
         }
       });
+    });
+
+    // v6 adds the local-agent workspace feature. These are new tables only:
+    // existing conversations, messages, folders and attachments are untouched.
+    this.version(6).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, name, createdAt, lastModified, rootPath',
+      workspace_messages: 'id, workspaceId, [workspaceId+idx], idx, createdAt',
+      vfs_nodes: 'id, &path, parentPath, type, name, updatedAt',
+      vfs_blobs: 'id',
     });
   }
 }

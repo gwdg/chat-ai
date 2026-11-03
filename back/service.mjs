@@ -316,6 +316,55 @@ app.post("/audio/speech", async (req, res) => {
   }
 });
 
+// OpenAI Responses API proxy. The local-agent runtime can use either
+// /chat/completions or /responses; this route forwards the request unchanged
+// (including client-side tool definitions) and streams the response back.
+app.post("/responses", async (req, res) => {
+  const inference_id = req.headers["inference-id"];
+  const uid = req.headers["oidc_claim_uid"];
+  const headers = {
+    "Content-Type": "application/json",
+    "inference-portal": serviceName,
+    Authorization: `Bearer ${apiKey ? apiKey : inference_id}`,
+    ...(req.body?.model ? { "inference-service": req.body.model } : {}),
+    ...(inference_id ? { "inference-id": inference_id } : {}),
+    ...(uid ? { user: uid } : {}),
+  };
+
+  try {
+    const response = await fetch(apiEndpoint + "/responses", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(req.body ?? {}),
+    });
+
+    res.status(response.status);
+    res.setHeader(
+      "Content-Type",
+      response.headers.get("content-type") || "application/json",
+    );
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    if (!response.body) {
+      res.end();
+      return;
+    }
+    if (typeof response.body.pipe === "function") {
+      response.body.pipe(res);
+    } else {
+      Readable.fromWeb(response.body).pipe(res);
+    }
+  } catch (error) {
+    console.error("Responses proxy error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to proxy responses request." });
+    } else {
+      res.end();
+    }
+  }
+});
+
 // Build a sophisticated JSON form for a requested tool in test mode. The shape
 // matches what the frontend's ToolForm component renders: { tool_id, title,
 // description, fields[] } with declarative HTML input types.
@@ -457,6 +506,15 @@ app.post("/chat/completions", async (req, res) => {
   } = req.body;
 
   const mcp_servers = req.body["mcp-servers"] || null;
+  // Client-executed function tools (used by the local-agent workspace runtime).
+  // These must be forwarded as-is; the enable_tools block below builds the
+  // separate set of server-run SAIA tools and would otherwise drop them.
+  const clientTools = Array.isArray(req.body.tools)
+    ? req.body.tools.filter(
+        (tool) => tool?.type === "function" && tool?.function?.name,
+      )
+    : null;
+  const clientToolChoice = req.body.tool_choice || null;
   const inference_id = req.headers["inference-id"];
   const uid = req.headers["oidc_claim_uid"];
   if (!Array.isArray(messages)) {
@@ -640,6 +698,14 @@ app.post("/chat/completions", async (req, res) => {
           }
         }
       }
+    }
+
+    // Forward client-side tool definitions when server tools were not asked
+    // for. This keeps normal chat requests (which do not send function tools)
+    // on the existing path.
+    if (!enable_tools && clientTools && clientTools.length > 0) {
+      params.tools = clientTools;
+      if (clientToolChoice) params.tool_choice = clientToolChoice;
     }
     
     const openai = new OpenAI({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id});

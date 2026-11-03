@@ -7,17 +7,21 @@ import { StopFilled } from "@carbon/icons-react";
 export default function AbortButton({
     localState,
     setLocalState,
+    loading: loadingOverride,
+    onAbort,
 }) {
     const { t, i18n } = useTranslation();
     const { notifySuccess, notifyError } = useToast();
 
-    const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
+    const internalLoading = localState.messages[localState.messages.length - 2]?.role === "assistant"
     ? localState.messages[localState.messages.length - 2]?.loading || false
     : false;
+    const loading = loadingOverride ?? internalLoading;
 
     // Handle cancellation of ongoing request
     const handleAbort = () => {
-        abortRequest(notifyError);
+        if (onAbort) onAbort();
+        else abortRequest(notifyError);
     };
 
     return loading && (

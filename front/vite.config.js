@@ -81,6 +81,12 @@ try {
     } else if (key == "proposalGenerationModel") {
       process.env["VITE_PROPOSAL_GENERATION_MODEL"] = value;
       console.log("Proposal generation model:", value);
+    } else if (key == "agentModel") {
+      process.env["VITE_AGENT_MODEL"] = value;
+      console.log("Default agent model:", value);
+    } else if (key == "explainImageModel") {
+      process.env["VITE_EXPLAIN_IMAGE_MODEL"] = value;
+      console.log("Explain-image model:", value);
     } else if (key == "announcement") {
       process.env["VITE_ANNOUNCEMENT"] = value;
       console.log("Announcement:", value);

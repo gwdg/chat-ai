@@ -62,6 +62,7 @@ import SummarizeChatButton from "./Buttons/SummarizeChatButton";
 import ExportChatButton from "./Buttons/ExportChatButton";
 import DeleteChatButton from "./Buttons/DeleteChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
+import WorkspaceList from "../Workspace/WorkspaceList";
 
 export default function SidebarContent({
   localState,
@@ -733,6 +734,16 @@ export default function SidebarContent({
           className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
+          {!hasSearch && (
+            <>
+              <WorkspaceList
+                onNavigate={() => {
+                  if (!isDesktop) onClose();
+                }}
+              />
+              <div className="mx-3 border-t border-base-300" />
+            </>
+          )}
           {/* Conversations, grouped by topic */}
           <div className="pl-3 pr-2 pt-2 pb-1 space-y-1">
             {hasSearch ? (

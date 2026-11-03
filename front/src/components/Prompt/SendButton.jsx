@@ -5,7 +5,7 @@ import { useSendMessage } from "../../hooks/useSendMessage";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import { Send, SendFilled } from "@carbon/icons-react";
 
-export default function SendButton({localState, setLocalState, handleSend, prompt}) {
+export default function SendButton({localState, setLocalState, handleSend, prompt, loading: loadingOverride}) {
     const { t, i18n } = useTranslation();
     const { notifySuccess, notifyError } = useToast();
     const sendWithEnter = useSendWithEnter();
@@ -34,9 +34,10 @@ export default function SendButton({localState, setLocalState, handleSend, promp
         return !(isExternalModel || webSearchEnabled || mcpEnabled);
     }
 
-    const loading = localState.messages[localState.messages.length - 2]?.role === "assistant"
+    const internalLoading = localState.messages[localState.messages.length - 2]?.role === "assistant"
     ? localState.messages[localState.messages.length - 2]?.loading || false
     : false;
+    const loading = loadingOverride ?? internalLoading;
     const attachments = localState.messages[localState.messages.length - 1].content.slice(1);
     const isSafe = isSafeSettings(localState);
 

@@ -20,6 +20,7 @@ export default function ConfirmActionModal({
   isOpen,
   onClose,
   messageKey,
+  messageValues,
   confirmKey,
   warningKey,
   danger = false,
@@ -40,7 +41,7 @@ export default function ConfirmActionModal({
       {/* Message */}
       <div className="pt-0 pb-2">
         <p className="text-base-content text-justify text-sm">
-          <Trans i18nKey={messageKey} />
+          <Trans i18nKey={messageKey} values={messageValues} />
         </p>
       </div>
 

@@ -159,3 +159,54 @@ export type FolderRow = {
   icon?: string
   sortOrder?: number
 }
+
+// ---------- Workspaces ----------
+
+// A workspace points at a folder inside the browser-backed virtual file system.
+// `rootPath` is always an absolute VFS path and is never the VFS root ("/").
+export type WorkspaceRow = {
+  id: string
+  name: string
+  rootPath: string
+  mode: 'local'
+  modelId: string
+  modelName?: string
+  skills: string[]
+  settings: ConversationSettings
+  createdAt: number
+  lastModified: number
+}
+
+// One row per agent transcript message. `data` is a pi-agent `AgentMessage`
+// (system | user | assistant | toolResult) kept verbatim so the runtime can be
+// restored after a reload.
+export type WorkspaceMessageRow = {
+  id: string
+  workspaceId: string
+  idx: number
+  data: any
+  createdAt: number
+}
+
+// ---------- Virtual file system ----------
+
+export type VfsNodeType = 'file' | 'folder'
+
+// Files and folders share one tree. The VFS root ("/") is virtual and never has
+// a row; every other absolute path does. Paths are unique.
+export type VfsNodeRow = {
+  id: string
+  path: string
+  parentPath: string
+  name: string
+  type: VfsNodeType
+  size?: number
+  mimeType?: string
+  createdAt: number
+  updatedAt: number
+}
+
+export type VfsBlobRow = {
+  id: string
+  blob: Blob
+}
