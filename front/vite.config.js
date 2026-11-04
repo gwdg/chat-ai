@@ -25,6 +25,9 @@ try {
     );
   }
 
+  // The browser agent is on unless front.json sets modules.agent to false
+  process.env["VITE_MODULE_AGENT"] = "true";
+
   // Inject VITE_ variables into the environment
   for (const [key, value] of Object.entries(config)) {
     if (key == "modelsPath") {
@@ -63,7 +66,7 @@ try {
         process.env["VITE_MODULE_TOOLS"] = value?.tools || false;
         process.env["VITE_MODULE_FEEDBACK"] = value?.feedback  || false;
         process.env["VITE_MODULE_CHOICES"] = value?.choices  || false;
-        process.env["VITE_MODULE_AGENT"] = value?.agent  || false;
+        process.env["VITE_MODULE_AGENT"] = value?.agent ?? true;
         process.env["VITE_MODULE_SPEECH"] = JSON.stringify(value?.speech) || false;
       } catch (e) {
         console.log("Error while parsing modules: ", e)
