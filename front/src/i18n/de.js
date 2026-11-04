@@ -155,6 +155,8 @@ export default {
     label_codemode: "Codemode",
     label_create_docx: "Word-Dokument",
     tools_agent_unavailable: "Im Agentenmodus nicht verfügbar",
+    label_tool_limit: "Werkzeugaufrufe pro Antwort begrenzen",
+    tool_limit_hint: "Maximale Werkzeugaufrufe pro Antwort; gemeinsam ausgeführte Aufrufe zählen einmal",
     tools_agent_external: "Dieses Modell läuft ohne Werkzeuge",
     placeholder_arcana_id: "Arcana-ID",
     placeholder_mcp_id: "Server-ID",

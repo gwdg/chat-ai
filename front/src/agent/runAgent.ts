@@ -245,6 +245,27 @@ export async function runAgentTurn({
     }),
   );
 
+  // Tool invocations per response: one model message with tool calls counts once, however many
+  // calls it batches. Past the limit the next batch is blocked; after that, tools are withdrawn.
+  const maxInvocations = settings.max_tool_calls ?? DEFAULT_MAX_TOOL_CALLS;
+  let invocations = 0;
+  let lastBatch: unknown;
+  let blockedBatch: unknown;
+  let toolsRevoked = false;
+  const beforeToolCall = async ({ assistantMessage }: { assistantMessage: unknown }) => {
+    if (assistantMessage !== lastBatch) {
+      lastBatch = assistantMessage;
+      if (maxInvocations > 0 && invocations >= maxInvocations) {
+        blockedBatch = assistantMessage;
+        toolsRevoked = true;
+      } else {
+        invocations++;
+      }
+    }
+    if (assistantMessage === blockedBatch) return { block: true, reason: TOOL_LIMIT_REASON };
+    return undefined;
+  };
+
   const extra = { top_p: settings.top_p, ...reasoningParams(spec.id, settings) };
   const gatewayFields = external || !agentGatewayTools() ? {} : gatewayRequestFields(settings);
   const onPayload = (payload: any) => {
@@ -253,7 +274,7 @@ export async function runAgentTurn({
     delete payload.max_completion_tokens;
     Object.assign(payload, extra);
     addGatewayFields(payload, gatewayFields);
-    if (!useTools) {
+    if (!useTools || toolsRevoked) {
       delete payload.tools;
       payload.messages = flattenToolHistory(payload.messages);
     }
@@ -298,6 +319,7 @@ export async function runAgentTurn({
       tools: useTools ? createTools(workspace, { vision, enabled: settings.tools }) : [],
       messages: conversation,
     },
+    beforeToolCall,
     transformContext: async (messages) => nameResults(messages.flatMap((message) => [...(before.get(message) ?? []), message])),
     streamFn: (m, context, options) => {
       gatewayMessages = [];
@@ -381,6 +403,9 @@ export async function runAgentTurn({
   }
   return { ...snapshot(), usage, error };
 }
+
+const DEFAULT_MAX_TOOL_CALLS = 10;
+const TOOL_LIMIT_REASON = "Tool limit exceeded for this response. The user can increase tool limits.";
 
 const NO_TOOL_CALLING = /tool[- ]choice|tool-call-parser|does not support tools|tools? (is|are) not supported/i;
 
