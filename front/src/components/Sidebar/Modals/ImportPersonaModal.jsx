@@ -229,7 +229,18 @@ export default function ImportPersonaModal({
       const cleaned = rawText.replace(/,(\s*[}$])/g, "$1");
       const parsed = JSON.parse(cleaned);
 
-      await importConversation(parsed, false, topicId);
+      await importConversation(parsed, false, topicId, {
+        persona: {
+          title: parsed?.title || file.title,
+          description:
+            parsed?.subtitle || parsed?.description || file.subtitle || "",
+          category:
+            typeof file.path === "string"
+              ? file.path.split("/").slice(0, -1).join("/")
+              : "",
+          path: file.path,
+        },
+      });
       onClose();
     } catch (err) {
       console.error("Import error:", err);
@@ -258,7 +269,12 @@ export default function ImportPersonaModal({
         );
       }
       try {
-        await importConversation(parsed);
+        await importConversation(parsed, false, topicId, {
+          persona: {
+            title: parsed?.title,
+            description: parsed?.subtitle || parsed?.description || "",
+          },
+        });
       } catch (err) {
         console.error("Import error:", err);
         throw new Error(

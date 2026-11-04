@@ -4,8 +4,10 @@ export default {
     loading: "Loading...",
     undo: "Undo",
     scroll: "Scroll to bottom",
+    scroll_to_top: "Scroll to top",
     scroll_to_message: "Jump to start of message",
     next_message: "Scroll to next message",
+    previous_message: "Scroll to previous message",
     rename: "Rename",
     create: "Create",
     save: "Save",
@@ -189,6 +191,7 @@ export default {
       find: "Find your past chats and topics",
       find_example: "“Where is my chat about my food order?”",
     },
+    clear_chat: "Clear chat",
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
   },
@@ -347,6 +350,11 @@ export default {
       title: "Sort and group chats",
       step1: "Open the sort menu in the sidebar.",
       step2: "Choose grouping by topic, date, or creation date.",
+    },
+    close_chat: {
+      title: "Close a chat",
+      step1:
+        "Use the close button at the top right. It removes the chat from your conversations; in the Meta chat it clears the conversation instead.",
     },
     export_conversation: {
       title: "Export a chat",
@@ -668,6 +676,7 @@ export default {
 
   // Conversation
   conversation: {
+    close_chat: "Close chat",
     prompt: {
       placeholder: "Ask me",
       attach: "Attach File",
@@ -975,6 +984,8 @@ export default {
       "Select a category from the sidebar to view personas",
     emptyFolder: "This folder is empty",
     categoryCount: "{{folders}} categories • {{files}} personas",
+    chat_label: "Persona chat",
+    category_label: "Category",
     startChat: "Start chat",
     startChatWith: "Start a chat with {{title}}",
     startingChat: "Starting…",
@@ -1115,6 +1126,9 @@ export default {
       "Caution! Clearing data will erase all your conversations, history, and settings. Are you sure?",
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
+    close_chat:
+      "Close this chat? It will be removed from your conversations.",
+    close_chat_yes: "Close chat",
     regenerate_confirm:
       "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone. To keep this conversation intact, use “Continue in a new chat” instead.",
     regenerate_yes: "Regenerate",

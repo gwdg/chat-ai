@@ -356,6 +356,25 @@ export function useImportConversation() {
         await deleteConversation("meta-chat");
       }
 
+      // Persona chats keep their title and description so the chat can show
+      // a banner with the persona information.
+      const explicitPersona = options.persona || data?.persona || null;
+      const personaDescription =
+        String(explicitPersona?.description || "").trim() ||
+        String(data?.subtitle || "").trim() ||
+        String(data?.description || "").trim();
+      const personaTitle =
+        String(explicitPersona?.title || "").trim() ||
+        String(data?.title || "").trim();
+      const personaInfo =
+        explicitPersona || personaDescription
+          ? {
+              ...(explicitPersona || {}),
+              title: personaTitle,
+              description: personaDescription,
+            }
+          : null;
+
       // Create new conversation
       const newId = await createConversation(
         {
@@ -365,6 +384,7 @@ export function useImportConversation() {
           settings: settings,
           folderId: folderId ?? "__unsorted__",
           isMetaChat: options.metaChat === true,
+          persona: personaInfo,
         },
       )
 

@@ -11,6 +11,13 @@ export type ModelSpec = {
   [k: string]: any
 }
 
+export type PersonaInfo = {
+  title?: string
+  description?: string
+  category?: string
+  path?: string
+}
+
 export type ConversationSettings = {
   model: ModelSpec | string
   temperature: number
@@ -39,6 +46,8 @@ export type ConversationRow = {
   lastOpenedAt?: number
   // Ephemeral Meta chat row: hidden from the sidebar and normal summaries.
   isMetaChat?: boolean
+  // Metadata for chats started from a persona, shown as a banner above the chat.
+  persona?: PersonaInfo | null
 }
 
 export type HydratedConversation = ConversationRow & {

@@ -15,7 +15,8 @@ import type {
   MessageRole,
   ContentItemInput,
   FolderRow,
-  FeedbackRow
+  FeedbackRow,
+  PersonaInfo
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -216,6 +217,7 @@ export async function createConversation(params: {
   folderId?: string | null
   hasFirstPrompt?: boolean
   isMetaChat?: boolean
+  persona?: PersonaInfo | null
 }) {
   const id = params?.id ?? newId()
   const now = Date.now()
@@ -237,6 +239,7 @@ export async function createConversation(params: {
       hasFirstPrompt,
       lastOpenedAt: now,
       ...(params.isMetaChat ? { isMetaChat: true } : {}),
+      ...(params.persona ? { persona: params.persona } : {}),
     })
 
     if (messages.length > 0) {

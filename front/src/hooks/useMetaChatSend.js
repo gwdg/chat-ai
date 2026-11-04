@@ -7,6 +7,7 @@ import { listConversationMetas, listFolders } from "../db";
 import { extractMessageText } from "../utils/conversationSummary";
 import {
   getPersonaMarkers,
+  hasPersonaStartLink,
   loadPersonaCatalog,
   stripPersonaMarkers,
 } from "../utils/personaCatalog";
@@ -84,7 +85,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Chat grouping: ${interfaceSettings.conversation_grouping ?? "topic"}`,
     `- Web search disclaimer accepted: ${yesNo(interfaceSettings.agree_web_search)}`,
     `- Show welcome tour: ${yesNo(interfaceSettings.show_tour)}`,
-    `- Confirmation warnings: clear history ${yesNo(interfaceSettings.warn_clear_history)}, share settings ${yesNo(interfaceSettings.warn_share_settings)}, regenerate ${yesNo(interfaceSettings.warn_regenerate)}, fork ${yesNo(interfaceSettings.warn_fork)}`,
+    `- Confirmation warnings: clear history ${yesNo(interfaceSettings.warn_clear_history)}, close chat ${yesNo(interfaceSettings.warn_close_chat)}, share settings ${yesNo(interfaceSettings.warn_share_settings)}, regenerate ${yesNo(interfaceSettings.warn_regenerate)}, fork ${yesNo(interfaceSettings.warn_fork)}`,
     `- Completed tutorials: ${interfaceSettings.completed_tutorials?.length ?? 0}`,
     `- Completed use cases: ${interfaceSettings.completed_use_cases?.length ?? 0}`,
     `- Suppressed tutorials: ${interfaceSettings.suppressed_tutorials?.length ?? 0}`,
@@ -163,7 +164,7 @@ For questions about whether settings are safe, explain the actual values and the
 
 When you refer to a conversation, always link to it using exactly this Markdown form:
 [<conversation title>](/chat/<conversation id>)
-Use only ids from the list below. Do not link to any other URL or invent an id. If nothing matches the user's question, say so plainly.
+Use only ids from the list below. Do not link to any other conversation or invent an id. If nothing matches the user's question, say so plainly.
 
 Answer in the same language as the user's question. Be concise and concrete.
 
@@ -171,7 +172,7 @@ You may also receive the user's saved memories. Use them when relevant, but they
 
 You can also recommend personas from the persona catalog below. A persona is a ready-made chat setup with its own title and description. Recommend a persona only when its title or description clearly matches what the user asks for. Never invent a persona or claim that one exists if it is not listed. When you recommend a persona, name it and briefly explain why it fits.
 
-To let the user start a chat with a recommended persona, end your answer with exactly [[PERSONA:<persona id>]] on its own line, using only an id from the persona list. You may recommend more than one persona; put each marker on its own line. Do not mention these markers to the user. Do not combine a [[PERSONA:...]] marker with a [[GUIDE:...]] or [[USE_CASE:...]] marker in the same answer.
+To let the user start a chat with a recommended persona, include an inline Markdown link using exactly this URL form: [<short label>](/persona/<persona id>). For example: [Start chat with <persona title>](/persona/<persona id>). Use only ids from the persona list and keep the link inline in your sentence or at the end of your answer. You may recommend more than one persona; give each one its own link. Do not use [[PERSONA:...]] markers, and do not combine a persona link with a [[GUIDE:...]] or [[USE_CASE:...]] marker in the same answer.
 
 <personas>
 ${personaLines.join("\n") || "(no personas available)"}
@@ -393,11 +394,13 @@ export function useMetaChatSend() {
           const index = messages.length - 2;
           if (messages[index]?.role !== "assistant") return prev;
           if (!messages[index].loading) return prev;
-          const personaMarkers = getPersonaMarkers(accumulated);
+          const hasPersona =
+            getPersonaMarkers(accumulated).length > 0 ||
+            hasPersonaStartLink(accumulated);
           const finalText =
             accumulated &&
             suggestedFeature &&
-            personaMarkers.length === 0 &&
+            !hasPersona &&
             !getFeatureGuideMarker(accumulated) &&
             !getUseCaseMarker(accumulated)
               ? `${accumulated}\n\n[[GUIDE:${suggestedFeature}]]`
@@ -417,13 +420,11 @@ export function useMetaChatSend() {
         const featureToStart =
           getFeatureGuideMarker(accumulated) ||
           (!useCaseToStart ? suggestedFeature : null);
+        const hasPersona =
+          getPersonaMarkers(accumulated).length > 0 ||
+          hasPersonaStartLink(accumulated);
 
-        if (
-          accumulated &&
-          wantsTutorial &&
-          getPersonaMarkers(accumulated).length === 0 &&
-          useCaseToStart
-        ) {
+        if (accumulated && wantsTutorial && !hasPersona && useCaseToStart) {
           window.dispatchEvent(
             new CustomEvent("chatai:start-use-case", {
               detail: { useCaseId: useCaseToStart },
@@ -432,7 +433,7 @@ export function useMetaChatSend() {
         } else if (
           accumulated &&
           wantsTutorial &&
-          getPersonaMarkers(accumulated).length === 0 &&
+          !hasPersona &&
           featureToStart
         ) {
           window.dispatchEvent(

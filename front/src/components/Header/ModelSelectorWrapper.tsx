@@ -1,8 +1,11 @@
 
 import { memo, useEffect } from 'react'
+import { useSelector } from 'react-redux';
 import ModelSelectorSimple from "./ModelSelectorSimple";
 import ModelSelectorExtended from "./ModelSelectorExtended";
 import { useModal } from '../../modals/ModalContext';
+import { selectUserSettings } from '../../Redux/reducers/userSettingsReducer';
+import { getDefaultChatAIModel } from '../../utils/conversationUtils';
 import type { ModelInfo } from '../../types/models';
 
 function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader = false, listOnly = false, onSelected, selectedModel: selectedModelOverride, onChange}: {modelsData: [ModelInfo], localState: any, setLocalState: any, inHeader: boolean, listOnly?: boolean, onSelected?: () => void, selectedModel?: ModelInfo | null, onChange?: (model: ModelInfo) => void}) {
@@ -12,6 +15,7 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
   ModelSelectorSimple.
   */
   const { openModal } = useModal();
+  const userSettings = useSelector(selectUserSettings);
 
   // When called with an explicit selectedModel/onChange (e.g. the settings
   // panel), drive the selector directly. Otherwise derive from localState.
@@ -59,10 +63,15 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
     if (foundModel){
       setModel(foundModel);
     } else {
-      // fallback to first model
-      setModel(modelsData[0]);
+      // The imported or stored model is unavailable. Fall back to the user's
+      // configured default model, and only then to the first available model.
+      const defaultModelId = getDefaultChatAIModel(userSettings);
+      const fallbackModel =
+        modelsData.find((model) => model.id === defaultModelId) ||
+        modelsData[0];
+      setModel(fallbackModel);
     }
-  }, [currentModelId, modelsData, currentConversationId]);
+  }, [currentModelId, modelsData, currentConversationId, userSettings]);
 
   return (
     <>

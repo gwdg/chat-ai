@@ -41,8 +41,15 @@ export default function PersonaCard({ path }) {
     if (starting) return;
     setStarting(true);
     try {
-      const { data } = await fetchPersona(path);
-      await importConversation(data, false, null);
+      const { entry, data } = await fetchPersona(path);
+      await importConversation(data, false, null, {
+        persona: {
+          title: entry.title,
+          description: entry.description,
+          category: entry.category,
+          path: entry.path,
+        },
+      });
     } catch (error) {
       console.error("Failed to start persona chat", error);
       notifyError(t("persona.startError"));

@@ -21,6 +21,7 @@ import {
   selectHtmlSanitization,
 } from "../../../Redux/reducers/userSettingsReducer";
 import LatexBlock from "./LatexBlock";
+import PersonaStartLink from "../../Others/PersonaStartLink";
 import TypstBlock from "./TypstBlock";
 import {
   isExternalUrl,
@@ -59,6 +60,18 @@ const MarkdownLink = ({ href, children }) => {
         {children}
       </a>
     );
+  }
+
+  const personaMatch =
+    typeof href === "string" && href.match(/^\/persona\/(.+\.json)$/i);
+  if (personaMatch) {
+    let path = personaMatch[1];
+    try {
+      path = decodeURIComponent(path);
+    } catch {
+      // Keep the original path if it is not valid percent-encoding.
+    }
+    return <PersonaStartLink path={path}>{children}</PersonaStartLink>;
   }
 
   return (

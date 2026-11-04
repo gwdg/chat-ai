@@ -14,6 +14,9 @@ export const PERSONA_REPO = {
 export const PERSONA_MARKER_PATTERN =
   /\[\[PERSONA:([a-zA-Z0-9_./-]+\.json)\]\]/i;
 
+export const PERSONA_LINK_PATTERN =
+  /\(\/persona\/([a-zA-Z0-9_./-]+\.json)\)/i;
+
 let catalogCache = null;
 let catalogPromise = null;
 const personaCache = new Map();
@@ -164,6 +167,10 @@ export async function loadPersonaCatalog({ force = false } = {}) {
   } finally {
     catalogPromise = null;
   }
+}
+
+export function hasPersonaStartLink(text) {
+  return PERSONA_LINK_PATTERN.test(String(text || ""));
 }
 
 export function getPersonaMarkers(text) {

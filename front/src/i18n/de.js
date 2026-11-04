@@ -4,8 +4,10 @@ export default {
     loading: "Lädt...",
     undo: "Rückgängig",
     scroll: "Nach unten scrollen",
+    scroll_to_top: "Nach oben scrollen",
     scroll_to_message: "Zum Anfang der Nachricht springen",
     next_message: "Zur nächsten Nachricht scrollen",
+    previous_message: "Zur vorherigen Nachricht scrollen",
     rename: "Umbenennen",
     create: "Erstellen",
     save: "Speichern",
@@ -192,6 +194,7 @@ export default {
       find: "Bisherige Chats und Themen finden",
       find_example: "„Wo ist mein Chat über meine Essensbestellung?“",
     },
+    clear_chat: "Chat leeren",
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
   },
@@ -354,6 +357,11 @@ export default {
       title: "Chats sortieren und gruppieren",
       step1: "Öffnen Sie das Sortiermenü in der Seitenleiste.",
       step2: "Wählen Sie die Gruppierung nach Thema, Datum oder Erstellungsdatum.",
+    },
+    close_chat: {
+      title: "Einen Chat schließen",
+      step1:
+        "Verwenden Sie die Schließen-Schaltfläche oben rechts. Sie entfernt den Chat aus Ihren Unterhaltungen; im Metachat wird stattdessen die Unterhaltung geleert.",
     },
     export_conversation: {
       title: "Einen Chat exportieren",
@@ -674,6 +682,7 @@ export default {
 
   // Conversation
   conversation: {
+    close_chat: "Chat schließen",
     prompt: {
       placeholder: "Frag mich",
       attach: "Datei anhängen",
@@ -988,6 +997,8 @@ export default {
       "Wählen Sie eine Kategorie aus der Seitenleiste, um Personas anzuzeigen",
     emptyFolder: "Dieser Ordner ist leer",
     categoryCount: "{{folders}} Kategorien • {{files}} Personas",
+    chat_label: "Persona-Chat",
+    category_label: "Kategorie",
     startChat: "Chat starten",
     startChatWith: "Chat mit {{title}} starten",
     startingChat: "Wird gestartet…",
@@ -1126,6 +1137,9 @@ export default {
     clear_data: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
+    close_chat:
+      "Diesen Chat schließen? Er wird aus Ihren Unterhaltungen entfernt.",
+    close_chat_yes: "Chat schließen",
     regenerate_confirm:
       "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden. Um diese Unterhaltung zu behalten, verwenden Sie stattdessen „In neuem Chat fortfahren“.",
     regenerate_yes: "Regenerieren",
