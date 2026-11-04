@@ -73,7 +73,7 @@ export default function FolderEditorModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey={isRename ? "folders.rename_title" : "folders.create_title"}
+      titleKey={isRename ? "folders.edit_title" : "folders.create_title"}
       maxWidth="max-w-md"
     >
       <div className="flex flex-col gap-3">

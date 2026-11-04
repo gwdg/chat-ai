@@ -89,8 +89,14 @@ export default {
     search_no_results: 'No matches for "{{query}}"',
     clear_search: "Clear search",
     create_title: "Create topic",
-    rename_title: "Rename topic",
+    edit_title: "Edit topic",
     delete_title: "Delete topic",
+    topic_options: "Topic options",
+    pinned: "Pinned",
+    pin_action: "Pin chat",
+    unpin_action: "Unpin chat",
+    pin_topic_action: "Pin topic",
+    unpin_topic_action: "Unpin topic",
     delete_description:
       'Delete topic "{{name}}"? Chats remain available and move to "Unsorted Chats".',
     name_label: "Topic name",
@@ -206,6 +212,10 @@ export default {
     apply_failed: "Could not apply the changes.",
     rename_summary: "Rename “{{from}}” to “{{to}}”",
     move_summary: "Move “{{title}}” to “{{topic}}”",
+    pin_summary: "Pin “{{title}}”",
+    unpin_summary: "Unpin “{{title}}”",
+    pin_topic_summary: "Pin topic “{{topic}}”",
+    unpin_topic_summary: "Unpin topic “{{topic}}”",
     setting_summary: "Change {{setting}} from “{{from}}” to “{{to}}”",
     setting_temperature: "Temperature",
     setting_top_p: "Top-p",
@@ -389,6 +399,18 @@ export default {
       step1: "Open the sort menu in the sidebar.",
       step2: "Choose grouping by topic, date, or creation date.",
     },
+    pin_chat: {
+      title: "Pin a chat",
+      step1: "Open the conversation menu of a chat in the sidebar.",
+      step2:
+        "Choose Pin chat. Pinned chats stay in their own area at the top, regardless of the selected grouping.",
+    },
+    pin_topic: {
+      title: "Pin a topic",
+      step1: "Open the options menu of a topic in the sidebar.",
+      step2:
+        "Choose Pin topic. Pinned topics stay in the pinned area at the top, regardless of the selected grouping.",
+    },
     close_chat: {
       title: "Close a chat",
       step1:
@@ -502,6 +524,14 @@ export default {
         "Ask it to find something from your chats, for example: “Find where we decided the pricing model” or “What are the action items?”",
       step3:
         "Click a cited message to jump to the exact message and highlight it.",
+    },
+    meta_chat_pins: {
+      title: "Pin chats and topics with the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2:
+        "Ask it to pin or unpin a chat or topic, for example: “Pin the Pricing discussion chat” or “Unpin the Research topic.”",
+      step3:
+        "Review the proposed pin change and click Accept changes. Nothing is applied before you accept.",
     },
     meta_chat_navigation: {
       title: "Navigate and search with the Meta chat",

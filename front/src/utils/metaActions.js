@@ -1,5 +1,5 @@
 const ACTION_TYPES =
-  "RENAME_CHAT|MOVE_CHAT|SET_SETTING|SET_CONVERSATION_SETTING|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
+  "RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
 const ACTION_SOURCE = `\\[\\[(${ACTION_TYPES}):\\s*(\\{[\\s\\S]*?\\})\\]\\]`;
 
 const BARE_CLEAR_SOURCE =
@@ -149,6 +149,23 @@ export function getMetaActionProposals(text) {
       continue;
     }
 
+    if (type === "PIN_TOPIC") {
+      const topicId = String(
+        payload.id || payload.topicId || payload.topic_id || "",
+      ).trim();
+      if (!topicId) continue;
+      const hasPinned = Object.prototype.hasOwnProperty.call(payload, "pinned");
+      const hasValue = Object.prototype.hasOwnProperty.call(payload, "value");
+      const raw = hasPinned ? payload.pinned : payload.value;
+      if ((!hasPinned && !hasValue) || typeof raw !== "boolean") continue;
+      proposals.set(`pin-topic:${topicId}`, {
+        type: "pin_topic",
+        topicId,
+        pinned: raw,
+      });
+      continue;
+    }
+
     const conversationId = String(
       payload.id || payload.conversationId || payload.conversation_id || "",
     ).trim();
@@ -161,6 +178,19 @@ export function getMetaActionProposals(text) {
         type: "rename",
         conversationId,
         title,
+      });
+      continue;
+    }
+
+    if (type === "PIN_CHAT") {
+      const hasPinned = Object.prototype.hasOwnProperty.call(payload, "pinned");
+      const hasValue = Object.prototype.hasOwnProperty.call(payload, "value");
+      const raw = hasPinned ? payload.pinned : payload.value;
+      if ((!hasPinned && !hasValue) || typeof raw !== "boolean") continue;
+      proposals.set(`pin:${conversationId}`, {
+        type: "pin",
+        conversationId,
+        pinned: raw,
       });
       continue;
     }
@@ -186,7 +216,7 @@ export function stripMetaActionMarkers(text) {
     .replace(new RegExp(ACTION_SOURCE, "gi"), "")
     .replace(new RegExp(BARE_CLEAR_SOURCE, "gi"), "")
     .replace(
-      /\[\[(?:RENAME_CHAT|MOVE_CHAT|SET_SETTING|SET_CONVERSATION_SETTING|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|CLEAR_ALL_MEMORIES|DELETE_ALL_MEMORIES):[\s\S]*$/i,
+      /\[\[(?:RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|CLEAR_ALL_MEMORIES|DELETE_ALL_MEMORIES):[\s\S]*$/i,
       "",
     )
     .replace(/\n{3,}/g, "\n\n")

@@ -78,6 +78,16 @@ const interfaceSettingsSlice = createSlice({
         state.collapsed_topics.push(action.payload);
       }
     },
+    collapseTopics: (state, action) => {
+      const ids = Array.isArray(action.payload)
+        ? action.payload
+        : [action.payload];
+      for (const id of ids) {
+        if (id && !state.collapsed_topics.includes(id)) {
+          state.collapsed_topics.push(id);
+        }
+      }
+    },
     setConversationSort: (state, action) => {
       state.conversation_sort = action.payload;
     },
@@ -145,8 +155,8 @@ export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
-  setShowUsageInSidebar, setWarning, toggleTopic, setConversationSort,
-  setConversationGrouping, markTutorialCompleted, markUseCaseCompleted,
+  setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics,
+  setConversationSort, setConversationGrouping, markTutorialCompleted, markUseCaseCompleted,
   suppressTutorial,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

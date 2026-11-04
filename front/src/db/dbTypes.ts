@@ -39,6 +39,8 @@ export type ConversationRow = {
   settings: ConversationSettings
   messageCount: number
   folderId?: string | null
+  // Pinned chats appear in their own sidebar area, independent of grouping.
+  pinned?: boolean
   hasFirstPrompt?: boolean
   summary?: string
   summaryUpdatedAt?: number
@@ -166,5 +168,7 @@ export type FolderRow = {
   // One of TopicIconId (see components/Sidebar/topicIcons.ts). Unset falls back
   // to the default icon. Neither field is indexed, so no schema bump is needed.
   icon?: string
+  // Pinned topics appear in the sidebar's pinned area, independent of grouping.
+  pinned?: boolean
   sortOrder?: number
 }

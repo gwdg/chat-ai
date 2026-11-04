@@ -156,9 +156,13 @@ function buildSystemPrompt(
   const topicById = new Map(
     topics.map((topic) => [topic.id, topic.name]),
   );
-  const topicLines = topics
-    .map((topic) => `- id: ${topic.id}\n  name: ${topic.name}`)
-    .join("\n") || "(no topics available)";
+  const topicLines =
+    topics
+      .map(
+        (topic) =>
+          `- id: ${topic.id}\n  name: ${topic.name}\n  pinned: ${topic.pinned ? "yes" : "no"}`,
+      )
+      .join("\n") || "(no topics available)";
   let used = topicLines.length;
   const lines = [];
 
@@ -210,7 +214,7 @@ function buildSystemPrompt(
     const topicId = conversation.folderId
       ? ` (id: ${conversation.folderId})`
       : "";
-    const line = `- id: ${conversation.id}\n  title: ${conversation.title}\n  topic: ${topicName}${topicId}\n  summary: ${summary}\n  per-chat settings: ${conversation.settingsSummary}\n  last modified: ${modified}`;
+    const line = `- id: ${conversation.id}\n  title: ${conversation.title}\n  topic: ${topicName}${topicId}\n  pinned: ${conversation.pinned ? "yes" : "no"}\n  summary: ${summary}\n  per-chat settings: ${conversation.settingsSummary}\n  last modified: ${modified}`;
     if (used + line.length > MAX_CONTEXT_CHARS) break;
     lines.push(line);
     used += line.length;
@@ -220,7 +224,7 @@ function buildSystemPrompt(
 
 When explaining a feature, be concrete about where it is and what happens step by step. Do not invent features, buttons, or behaviour that are not described to you. If you do not know how something works, say so and suggest contacting support or consulting the documentation instead.
 
-You receive metadata for the user's conversations and topics (categories). Each conversation has an id, title, topic, summary, per-chat settings, and last-modified time. The per-chat settings are local to that conversation and may differ from the global preferences in <user_settings>; use them for questions about models, temperature, top_p, reasoning effort, memory-mode overrides, tools, Arcana, and MCP. For questions about the user's conversations and topics, this metadata and any saved memories are your only sources. Summaries may be missing or stale. Never invent a conversation, topic, title, id, summary, setting, or memory.
+You receive metadata for the user's conversations and topics (categories). Each conversation has an id, title, topic, pinned state, summary, per-chat settings, and last-modified time. Each topic has an id, name, and pinned state. Pinned chats and topics appear in a separate area at the top of the sidebar, regardless of the selected grouping. The per-chat settings are local to that conversation and may differ from the global preferences in <user_settings>; use them for questions about models, temperature, top_p, reasoning effort, memory-mode overrides, tools, Arcana, and MCP. For questions about the user's conversations and topics, this metadata and any saved memories are your only sources. Summaries may be missing or stale. Never invent a conversation, topic, title, id, summary, setting, or memory.
 
 Use the topic tree to answer questions about which topic or category contains something. When naming a topic, use its exact name.
 
@@ -268,6 +272,8 @@ To propose changes, include one marker per change on its own line at the end of 
 [[RENAME_CHAT:{"id":"<conversation id>","title":"<new title>"}]]
 [[MOVE_CHAT:{"id":"<conversation id>","folderId":"<existing topic id>"}]]
 [[MOVE_CHAT:{"id":"<conversation id>","folderId":null,"folderName":"<new topic name>"}]]
+[[PIN_CHAT:{"id":"<conversation id>","pinned":true}]]
+[[PIN_TOPIC:{"id":"<topic id>","pinned":true}]]
 [[SET_SETTING:{"key":"render_typst","value":true}]]
 [[SET_CONVERSATION_SETTING:{"target":"all","key":"temperature","value":0.7}]]
 [[SET_CONVERSATION_SETTING:{"id":"<conversation id>","key":"temperature","value":0.7}]]
@@ -276,7 +282,7 @@ To propose changes, include one marker per change on its own line at the end of 
 [[DELETE_MEMORY:{"index":0}]]
 [[CLEAR_MEMORIES:{}]]
 
-Use only conversation ids from <conversations>, topic ids from <topics>, and memory indices from <memories>. Use "folderId": null for Unsorted, or provide a new folderName to create a topic.
+Use only conversation ids from <conversations>, topic ids from <topics>, and memory indices from <memories>. Use "folderId": null for Unsorted, or provide a new folderName to create a topic. Use "pinned": true to pin a chat or topic and "pinned": false to unpin it.
 
 Supported setting keys and values:
 - memory_mode: 0 (none), 1 (recall), 2 (learn)
@@ -381,6 +387,7 @@ async function loadMetaContext(query = "") {
       title: (row.title || "").trim() || "Untitled Chat",
       summary: (row.summary || "").trim(),
       folderId: row.folderId ?? null,
+      pinned: row.pinned === true,
       lastModified: row.lastModified ?? row.createdAt ?? 0,
       settingsSummary: buildConversationSettingsSummary(row.settings),
     }));
@@ -388,6 +395,7 @@ async function loadMetaContext(query = "") {
   const topics = (folders || []).map((folder) => ({
     id: folder.id,
     name: (folder.name || "").trim() || "Untitled topic",
+    pinned: folder.pinned === true,
   }));
 
   const topicNames = new Map(topics.map((topic) => [topic.id, topic.name]));

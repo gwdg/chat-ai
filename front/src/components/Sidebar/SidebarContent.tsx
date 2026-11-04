@@ -19,17 +19,22 @@ import {
   FolderMoveTo,
   FolderTree,
   OverflowMenuVertical,
+  Pin,
+  PinFilled,
   Search,
   SortAscending,
 } from "@carbon/icons-react";
 import {
   assignConversationToFolder,
+  setConversationPinned,
+  setFolderPinned,
   useConversationList,
   useFolderList,
 } from "../../db";
 import { useModal } from "../../modals/ModalContext";
 
 import {
+  collapseTopics,
   selectConversationGrouping,
   selectConversationSort,
   selectDarkMode,
@@ -48,7 +53,12 @@ import {
   groupConversationsByCreationDate,
   groupConversationsByDate,
 } from "../../utils/conversationDates";
-import TopicList, { UNSORTED_TOPIC_ID } from "./TopicList";
+import TopicList, {
+  CREATED_TOPIC_ID,
+  DATE_TOPIC_ID,
+  UNSORTED_TOPIC_ID,
+  dateBucketCollapseId,
+} from "./TopicList";
 import TopicCreateBubble from "./TopicCreateBubble";
 import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
@@ -106,6 +116,36 @@ export default function SidebarContent({
     [conversations, conversationSort, t],
   );
   
+  const pinnedConversations = useMemo(
+    () => orderedConversations.filter((conv) => conv.pinned),
+    [orderedConversations],
+  );
+  const groupableConversations = useMemo(
+    () => orderedConversations.filter((conv) => !conv.pinned),
+    [orderedConversations],
+  );
+  const pinnedTopics = useMemo(
+    () => folders.filter((folder) => folder.pinned),
+    [folders],
+  );
+  const unpinnedFolders = useMemo(
+    () => folders.filter((folder) => !folder.pinned),
+    [folders],
+  );
+  const pinnedTopicIds = useMemo(
+    () => new Set(pinnedTopics.map((folder) => folder.id)),
+    [pinnedTopics],
+  );
+  // Conversations inside a pinned topic are shown with that topic in the
+  // pinned area, so they must not appear a second time in date buckets.
+  const dateGroupableConversations = useMemo(
+    () =>
+      groupableConversations.filter(
+        (conv) => !conv.folderId || !pinnedTopicIds.has(conv.folderId),
+      ),
+    [groupableConversations, pinnedTopicIds],
+  );
+
   // have an own state of selected Conversation id to update the ui smoothly
   const [selectedConversationId, setSelectedConversationId] = useState(currentConversationId);
   const [hoveredId, setHoveredId] = useState(null);
@@ -157,31 +197,58 @@ export default function SidebarContent({
   const conversationsByTopic = useMemo(() => {
     const grouped = new Map<string, any[]>();
     folders.forEach((folder) => grouped.set(folder.id, []));
-    orderedConversations.forEach((conv) => {
+    groupableConversations.forEach((conv) => {
       const bucket = conv.folderId ? grouped.get(conv.folderId) : undefined;
       if (bucket) bucket.push(conv);
     });
     return grouped;
-  }, [orderedConversations, folders]);
+  }, [groupableConversations, folders]);
 
   // Conversations with no topic — plus any whose topic has since disappeared,
   // so a stale folderId can never hide a conversation from the sidebar.
   const unsortedConversations = useMemo(() => {
     const known = new Set(folders.map((folder) => folder.id));
-    return orderedConversations.filter(
+    return groupableConversations.filter(
       (conv) => !conv.folderId || !known.has(conv.folderId),
     );
-  }, [orderedConversations, folders]);
+  }, [groupableConversations, folders]);
 
   const dateGroups = useMemo(
-    () => groupConversationsByDate(conversations),
-    [conversations],
+    () => groupConversationsByDate(dateGroupableConversations),
+    [dateGroupableConversations],
   );
 
   const creationDateGroups = useMemo(
-    () => groupConversationsByCreationDate(conversations),
-    [conversations],
+    () => groupConversationsByCreationDate(dateGroupableConversations),
+    [dateGroupableConversations],
   );
+
+  // Date-based groupings start with every bucket collapsed when the user opens
+  // them, while later chat updates keep the user's expand/collapse choices.
+  const collapsedGroupingRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (conversationGrouping === "topic") {
+      collapsedGroupingRef.current = null;
+      return;
+    }
+    const groups =
+      conversationGrouping === "date" ? dateGroups : creationDateGroups;
+    if (groups.length === 0) return;
+    if (collapsedGroupingRef.current === conversationGrouping) return;
+    const parentId =
+      conversationGrouping === "date" ? DATE_TOPIC_ID : CREATED_TOPIC_ID;
+    dispatch(
+      collapseTopics(
+        groups.map((group) => dateBucketCollapseId(parentId, group.key)),
+      ),
+    );
+    collapsedGroupingRef.current = conversationGrouping;
+  }, [
+    conversationGrouping,
+    dateGroups,
+    creationDateGroups,
+    dispatch,
+  ]);
 
   const noSearchResults = hasSearch && visibleConversations.length === 0;
 
@@ -270,6 +337,41 @@ export default function SidebarContent({
       folderId: folder.id,
       folderName: folder.name,
     });
+  };
+
+  const handleTogglePinned = async (conv: { id: string; pinned?: boolean }) => {
+    if (!conv) return;
+    try {
+      await setConversationPinned(conv.id, !conv.pinned);
+    } catch (error) {
+      console.error("Failed to update pinned state", error);
+      notifyError(t("folders.error_generic"));
+    }
+  };
+
+  const handleToggleTopicPinned = async (topic: {
+    id: string;
+    pinned?: boolean;
+  }) => {
+    if (!topic) return;
+    try {
+      await setFolderPinned(topic.id, !topic.pinned);
+    } catch (error) {
+      console.error("Failed to update topic pinned state", error);
+      notifyError(t("folders.error_generic"));
+    }
+  };
+
+  const handleGroupingChange = (grouping: "topic" | "date" | "created") => {
+    dispatch(setConversationGrouping(grouping));
+    if (grouping === "topic") return;
+    const groups = grouping === "date" ? dateGroups : creationDateGroups;
+    const parentId = grouping === "date" ? DATE_TOPIC_ID : CREATED_TOPIC_ID;
+    dispatch(
+      collapseTopics(
+        groups.map((group) => dateBucketCollapseId(parentId, group.key)),
+      ),
+    );
   };
 
   const handleMoveConversation = (conv) => {
@@ -512,6 +614,10 @@ export default function SidebarContent({
     );
   };
 
+  const activeConversation = orderedConversations.find(
+    (conv) => conv.id === activeMenu,
+  );
+
   return (
     <div
       className="flex flex-col select-none h-full w-full transition-all duration-200 ease-in-out"
@@ -583,7 +689,7 @@ export default function SidebarContent({
                         role="menuitemradio"
                         aria-checked={conversationGrouping === "topic"}
                         onClick={() => {
-                          dispatch(setConversationGrouping("topic"));
+                          handleGroupingChange("topic");
                           close();
                         }}
                         className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
@@ -604,7 +710,7 @@ export default function SidebarContent({
                         role="menuitemradio"
                         aria-checked={conversationGrouping === "date"}
                         onClick={() => {
-                          dispatch(setConversationGrouping("date"));
+                          handleGroupingChange("date");
                           close();
                         }}
                         className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
@@ -625,7 +731,7 @@ export default function SidebarContent({
                         role="menuitemradio"
                         aria-checked={conversationGrouping === "created"}
                         onClick={() => {
-                          dispatch(setConversationGrouping("created"));
+                          handleGroupingChange("created");
                           close();
                         }}
                         className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
@@ -762,12 +868,15 @@ export default function SidebarContent({
               </div>
             ) : (
               <TopicList
-                topics={folders}
+                topics={unpinnedFolders}
+                pinnedTopics={pinnedTopics}
+                pinnedConversations={pinnedConversations}
                 conversationsByTopic={conversationsByTopic}
                 unsortedConversations={unsortedConversations}
                 onCreateTopic={handleCreateFolder}
                 onRenameTopic={handleRenameFolder}
                 onDeleteTopic={handleDeleteFolder}
+                onToggleTopicPinned={handleToggleTopicPinned}
                 onOpenTopic={handleOpenTopic}
                 draggingConversationId={draggingConversationId}
                 dragOverTopicId={dragOverTopicId}
@@ -828,6 +937,27 @@ export default function SidebarContent({
           />
 
           <div className="p-1 bg-base-100 rounded-lg relative">
+            {/* Pin/unpin chat menu item */}
+            {activeConversation && (
+              <button
+                data-guide="pin-chat-menu-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTogglePinned(activeConversation);
+                  closeMenu();
+                }}
+                className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
+              >
+                {activeConversation.pinned ? (
+                  <PinFilled size={14} />
+                ) : (
+                  <Pin size={14} />
+                )}
+                {activeConversation.pinned
+                  ? t("folders.unpin_action")
+                  : t("folders.pin_action")}
+              </button>
+            )}
             {/* Rename chat menu item */}
             <RenameChatButton
               localState={localState}

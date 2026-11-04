@@ -5,6 +5,7 @@ import {
   Brain,
   Folder,
   PencilLine,
+  Pin,
   Settings,
   SlidersHorizontal,
   TriangleAlert,
@@ -16,6 +17,8 @@ import {
   ensureFolder,
   getConversationMeta,
   getFolder,
+  setConversationPinned,
+  setFolderPinned,
   updateConversationMeta,
   useConversationList,
   useFolderList,
@@ -164,6 +167,23 @@ export default function MetaActionCard({
         topic: topicFor(action),
       });
     }
+    if (action.type === "pin") {
+      return t(
+        action.pinned ? "meta_chat.pin_summary" : "meta_chat.unpin_summary",
+        { title: titleFor(action.conversationId) },
+      );
+    }
+    if (action.type === "pin_topic") {
+      return t(
+        action.pinned
+          ? "meta_chat.pin_topic_summary"
+          : "meta_chat.unpin_topic_summary",
+        {
+          topic:
+            folderById.get(action.topicId)?.name || action.topicId,
+        },
+      );
+    }
     if (action.type === "setting") {
       return t("meta_chat.setting_summary", {
         setting: t(settingLabels[action.key] || action.key, {
@@ -285,6 +305,20 @@ export default function MetaActionCard({
           continue;
         }
 
+        if (action.type === "pin_topic") {
+          const folder =
+            folderById.get(action.topicId) ||
+            (await getFolder(action.topicId));
+          if (!folder) {
+            throw new Error("Topic not found");
+          }
+          prepared.push({
+            ...action,
+            previousPinned: folder.pinned === true,
+          });
+          continue;
+        }
+
         const conversation = await getConversationMeta(
           action.conversationId,
         );
@@ -296,6 +330,14 @@ export default function MetaActionCard({
           prepared.push({
             ...action,
             previousTitle: conversation.title || "",
+          });
+          continue;
+        }
+
+        if (action.type === "pin") {
+          prepared.push({
+            ...action,
+            previousPinned: conversation.pinned === true,
           });
           continue;
         }
@@ -388,21 +430,38 @@ export default function MetaActionCard({
       }
 
       previousState.current = {
-        chats: prepared.map((action) =>
-          action.type === "rename"
-            ? {
-                type: "rename",
-                conversationId: action.conversationId,
-                expectedTitle: action.title,
-                previousTitle: action.previousTitle,
-              }
-            : {
-                type: "move",
-                conversationId: action.conversationId,
-                expectedFolderId: action.resolvedFolderId ?? null,
-                previousFolderId: action.previousFolderId ?? null,
-              },
-        ),
+        chats: prepared.map((action) => {
+          if (action.type === "rename") {
+            return {
+              type: "rename",
+              conversationId: action.conversationId,
+              expectedTitle: action.title,
+              previousTitle: action.previousTitle,
+            };
+          }
+          if (action.type === "pin") {
+            return {
+              type: "pin",
+              conversationId: action.conversationId,
+              expectedPinned: action.pinned === true,
+              previousPinned: action.previousPinned === true,
+            };
+          }
+          if (action.type === "pin_topic") {
+            return {
+              type: "pin_topic",
+              topicId: action.topicId,
+              expectedPinned: action.pinned === true,
+              previousPinned: action.previousPinned === true,
+            };
+          }
+          return {
+            type: "move",
+            conversationId: action.conversationId,
+            expectedFolderId: action.resolvedFolderId ?? null,
+            previousFolderId: action.previousFolderId ?? null,
+          };
+        }),
         settings: Object.fromEntries(
           Object.entries(settingUpdates).map(([key, expected]) => [
             key,
@@ -432,6 +491,21 @@ export default function MetaActionCard({
           setLocalState?.((previous) =>
             previous?.id === action.conversationId
               ? { ...previous, title: action.title }
+              : previous,
+          );
+          continue;
+        }
+
+        if (action.type === "pin_topic") {
+          await setFolderPinned(action.topicId, action.pinned);
+          continue;
+        }
+
+        if (action.type === "pin") {
+          await setConversationPinned(action.conversationId, action.pinned);
+          setLocalState?.((previous) =>
+            previous?.id === action.conversationId
+              ? { ...previous, pinned: action.pinned }
               : previous,
           );
           continue;
@@ -512,11 +586,26 @@ export default function MetaActionCard({
       const snapshot = previousState.current;
 
       for (const chat of snapshot.chats) {
+        if (chat.type === "pin_topic") {
+          const folder = await getFolder(chat.topicId);
+          if (
+            !folder ||
+            (folder.pinned === true) !== chat.expectedPinned
+          ) {
+            throw new Error("Topic pinned state changed");
+          }
+          continue;
+        }
+
         const current = await getConversationMeta(chat.conversationId);
         if (!current) throw new Error("Conversation not found");
         if (chat.type === "rename") {
           if ((current.title || "") !== chat.expectedTitle) {
             throw new Error("Conversation title changed");
+          }
+        } else if (chat.type === "pin") {
+          if ((current.pinned === true) !== chat.expectedPinned) {
+            throw new Error("Conversation pinned state changed");
           }
         } else if (
           (current.folderId ?? null) !== (chat.expectedFolderId ?? null)
@@ -549,6 +638,11 @@ export default function MetaActionCard({
       }
 
       for (const chat of snapshot.chats) {
+        if (chat.type === "pin_topic") {
+          await setFolderPinned(chat.topicId, chat.previousPinned);
+          continue;
+        }
+
         if (chat.type === "rename") {
           await updateConversationMeta(chat.conversationId, {
             title: chat.previousTitle,
@@ -556,6 +650,16 @@ export default function MetaActionCard({
           setLocalState?.((previous) =>
             previous?.id === chat.conversationId
               ? { ...previous, title: chat.previousTitle }
+              : previous,
+          );
+          continue;
+        }
+
+        if (chat.type === "pin") {
+          await setConversationPinned(chat.conversationId, chat.previousPinned);
+          setLocalState?.((previous) =>
+            previous?.id === chat.conversationId
+              ? { ...previous, pinned: chat.previousPinned }
               : previous,
           );
           continue;
@@ -632,7 +736,7 @@ export default function MetaActionCard({
           <ul className="mt-1.5 space-y-0.5 text-[11px] leading-snug text-base-content">
             {actions.map((action, index) => (
               <li
-                key={`${action.type}:${action.conversationId}:${index}`}
+                key={`${action.type}:${action.conversationId || action.topicId}:${index}`}
                 className="flex items-start gap-1.5"
               >
                 {action.type === "rename" ? (
@@ -643,6 +747,13 @@ export default function MetaActionCard({
                   />
                 ) : action.type === "move" ? (
                   <Folder
+                    size={12}
+                    className="mt-0.5 shrink-0 text-warning"
+                    aria-hidden="true"
+                  />
+                ) : action.type === "pin" ||
+                  action.type === "pin_topic" ? (
+                  <Pin
                     size={12}
                     className="mt-0.5 shrink-0 text-warning"
                     aria-hidden="true"

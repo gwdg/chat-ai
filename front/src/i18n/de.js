@@ -89,8 +89,14 @@ export default {
     search_no_results: 'Keine Treffer für "{{query}}"',
     clear_search: "Suche löschen",
     create_title: "Thema erstellen",
-    rename_title: "Thema umbenennen",
+    edit_title: "Thema bearbeiten",
     delete_title: "Thema löschen",
+    topic_options: "Thema-Optionen",
+    pinned: "Angeheftet",
+    pin_action: "Chat anheften",
+    unpin_action: "Nicht mehr anheften",
+    pin_topic_action: "Thema anheften",
+    unpin_topic_action: "Thema nicht mehr anheften",
     delete_description:
       'Thema "{{name}}" löschen? Chats bleiben erhalten und erscheinen unter "Nicht zugeordnete Chats".',
     name_label: "Themenname",
@@ -209,6 +215,10 @@ export default {
     apply_failed: "Die Änderungen konnten nicht übernommen werden.",
     rename_summary: "„{{from}}“ in „{{to}}“ umbenennen",
     move_summary: "„{{title}}“ nach „{{topic}}“ verschieben",
+    pin_summary: "„{{title}}“ anheften",
+    unpin_summary: "„{{title}}“ nicht mehr anheften",
+    pin_topic_summary: "Thema „{{topic}}“ anheften",
+    unpin_topic_summary: "Thema „{{topic}}“ nicht mehr anheften",
     setting_summary: "{{setting}} von „{{from}}“ auf „{{to}}“ ändern",
     setting_temperature: "Temperatur",
     setting_top_p: "Top-p",
@@ -397,6 +407,18 @@ export default {
       step1: "Öffnen Sie das Sortiermenü in der Seitenleiste.",
       step2: "Wählen Sie die Gruppierung nach Thema, Datum oder Erstellungsdatum.",
     },
+    pin_chat: {
+      title: "Einen Chat anheften",
+      step1: "Öffnen Sie das Chat-Menü eines Chats in der Seitenleiste.",
+      step2:
+        "Wählen Sie „Chat anheften“. Angeheftete Chats bleiben unabhängig von der Gruppierung in einem eigenen Bereich oben.",
+    },
+    pin_topic: {
+      title: "Ein Thema anheften",
+      step1: "Öffnen Sie das Optionenmenü eines Themas in der Seitenleiste.",
+      step2:
+        "Wählen Sie „Thema anheften“. Angeheftete Themen bleiben unabhängig von der Gruppierung im Bereich „Angeheftet“ oben.",
+    },
     close_chat: {
       title: "Einen Chat schließen",
       step1:
@@ -511,6 +533,14 @@ export default {
         "Bitten Sie ihn, etwas in Ihren Chats zu finden, zum Beispiel: „Finde, wo wir das Preismodell entschieden haben“ oder „Welche Aufgaben gibt es?“",
       step3:
         "Klicken Sie auf eine zitierte Nachricht, um zur genauen Nachricht zu springen und sie hervorzuheben.",
+    },
+    meta_chat_pins: {
+      title: "Chats und Themen mit dem Metachat anheften",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2:
+        "Bitten Sie ihn, einen Chat oder ein Thema anzuheften oder nicht mehr anzuheften, zum Beispiel: „Hefte den Chat Preisdiskussion an“ oder „Hefte das Thema Forschung nicht mehr an“.",
+      step3:
+        "Prüfen Sie die vorgeschlagene Änderung und klicken Sie auf „Änderungen übernehmen“. Erst dann wird sie angewendet.",
     },
     meta_chat_navigation: {
       title: "Navigieren und suchen mit dem Metachat",

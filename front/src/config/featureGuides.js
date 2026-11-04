@@ -12,6 +12,7 @@ import {
   openSortMenu,
   openTools,
   openTopicCreate,
+  openTopicMenu,
   openUserSettings,
   searchHasQuery,
   selectSettingsTab,
@@ -467,6 +468,44 @@ export const featureGuides = {
       },
     ],
   },
+  pin_chat: {
+    titleKey: "feature_guide.pin_chat.title",
+    prompt:
+      "Pin a chat from the conversation menu so it stays in the pinned area at the top of the sidebar, regardless of how chats are grouped.",
+    keywords: ["pin chat", "pinned", "unpin", "keep chat on top"],
+    steps: [
+      {
+        target: '[data-guide="conversation-menu"]',
+        textKey: "feature_guide.pin_chat.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="pin-chat-menu-item"]',
+        prepare: openConversationMenu,
+        textKey: "feature_guide.pin_chat.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  pin_topic: {
+    titleKey: "feature_guide.pin_topic.title",
+    prompt:
+      "Pin a topic from its options menu so it stays in the pinned area at the top of the sidebar, regardless of how chats are grouped.",
+    keywords: ["pin topic", "pinned topic", "unpin topic", "keep topic on top"],
+    steps: [
+      {
+        target: '[data-guide="topic-menu"]',
+        textKey: "feature_guide.pin_topic.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="pin-topic-menu-item"]',
+        prepare: openTopicMenu,
+        textKey: "feature_guide.pin_topic.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   export_conversation: {
     titleKey: "feature_guide.export_conversation.title",
     prompt:
@@ -885,6 +924,35 @@ export const featureGuides = {
       },
     ],
   },
+  meta_chat_pins: {
+    titleKey: "feature_guide.meta_chat_pins.title",
+    prompt:
+      "Ask the Meta chat to pin or unpin a chat or topic. Pinned items appear in the pinned area at the top of the sidebar. The change is proposed in a warning card and applied only after the user accepts it.",
+    keywords: [
+      "meta chat pin",
+      "pin chat with meta chat",
+      "unpin chat",
+      "pin topic",
+      "pinned chats",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_pins.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_pins.step2",
+        completeOnEvent: "message-complete",
+      },
+      {
+        target: '[data-guide="meta-action-accept"]',
+        textKey: "feature_guide.meta_chat_pins.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   meta_chat_navigation: {
     titleKey: "feature_guide.meta_chat_navigation.title",
     prompt:
@@ -937,6 +1005,7 @@ export const FEATURE_CATEGORIES = {
     "meta_chat_search",
     "meta_chat_navigation",
     "meta_chat_actions",
+    "meta_chat_pins",
   ],
   prompt: [
     "attach_media",
@@ -962,6 +1031,8 @@ export const FEATURE_CATEGORIES = {
     "manage_topics",
     "sort_group_chats",
     "sort_organize",
+    "pin_chat",
+    "pin_topic",
     "import_conversation",
     "export_conversation",
     "share_conversation",
@@ -1056,6 +1127,7 @@ const germanGuideKeywords = {
   meta_chat_search: ["metachat suche", "metachat durchsuch", "volltextsuche", "nachrichten durchsuchen", "nachricht finden", "entscheidung finden", "aufgaben finden", "zitat"],
   meta_chat_navigation: ["metachat navigation", "nachricht finden", "entscheidung finden", "aufgaben finden", "zum chat springen", "zur einstellung", "deep link", "zitat"],
   meta_chat_actions: ["metachat umbenennen", "meta chat umbenennen", "chat umbenennen", "chat verschieben", "chat in thema verschieben", "änderungen übernehmen", "vorschlag bestätigen"],
+  meta_chat_pins: ["metachat anheften", "chat anheften", "chat nicht mehr anheften", "thema anheften", "angeheftete chats", "anheften metachat"],
   meta_chat_usage: ["metachat", "meta chat", "metachat verwend", "metachat öffn"],
 };
 
