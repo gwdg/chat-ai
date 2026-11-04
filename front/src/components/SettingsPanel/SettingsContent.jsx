@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 //Components
 
+import AudioSettingsContainer from "./AudioSettingsContainer";
 import ShareSettingsButton from "./ShareSettingsButton";
 import SystemPromptContainer from "./SystemPromptContainer";
 import TemperatureSlider from "./TemperatureSlider";
@@ -22,8 +23,10 @@ import {DataSafetyText} from "../Header/WarningExternalModel";
 import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import ReasoningEffortContainer from "./ReasoningEffortContainer";
+import { getSpeechModule } from "../../utils/speechAudio";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
+const SPEECH_MODULE_ENABLED = Boolean(getSpeechModule());
 
 const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const conversations = useConversationList();
@@ -95,6 +98,12 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
+          {SPEECH_MODULE_ENABLED && (
+            <AudioSettingsContainer
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          )}
           <MemoryModeContainer
             localState={localState}
             setLocalState={setLocalState}

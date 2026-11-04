@@ -26,7 +26,7 @@ export function useSendMessage() {
   if (metaSendMessage) return metaSendMessage;
 
   // Make this async
-  return async ({localState, setLocalState, formSubmission}) => {
+  return async ({localState, setLocalState, formSubmission, speechMode = false}) => {
     const override = localState?.settings?.memory_mode_override;
     const effectiveMemoryMode =
       override === undefined || override === null || override === "default"
@@ -49,6 +49,7 @@ export function useSendMessage() {
         suggestUserPrompts,
         formSubmission,
         setTitleOnce,
+        speechMode,
       });
     } finally {
       window.dispatchEvent(new Event("chatai:message-complete"));

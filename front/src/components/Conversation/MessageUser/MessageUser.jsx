@@ -66,6 +66,7 @@ export default React.memo(({
                     attachment={attachment}
                     index={i}
                     inHistory={true}
+                    suppressUnsupportedWarning={message.meta?.speechAudio === true}
                 />
             ))}
             </div>

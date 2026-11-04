@@ -27,6 +27,7 @@ export default function Attachment({
   index,
   inHistory = false,
   inAssistant = false,
+  suppressUnsupportedWarning = false,
 }) {
   const { openModal } = useModal();
   const { t } = useTranslation();
@@ -347,7 +348,7 @@ export default function Attachment({
             </div>
           </div>
           {/* Process Needed Warning*/}
-          {!inAssistant && (!isFileSupported || fileType === "pdf") && (
+          {!inAssistant && !suppressUnsupportedWarning && (!isFileSupported || fileType === "pdf") && (
             <span className="text-[11px] text-warning flex items-center gap-1">
               <WarningAltFilled size={12} className="flex-shrink-0" />
               {!isFileSupported
