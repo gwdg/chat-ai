@@ -183,6 +183,11 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
             ${loading ? "pb-4" : "pb-3"}`}
         >
           {loading && <Typing />}
+          {hasToolCalls && (
+            <div className="mt-2">
+              <AgentSteps agentMessages={message.meta.agent} />
+            </div>
+          )}
           {!loading && (
             <div className="flex flex-col items-center justify-start gap-3 py-1">
               <div className="text-red-500 dark:text-red-400 text-sm font-medium text-center">
@@ -293,13 +298,10 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              {hasToolCalls ? (
-                <AgentSteps agentMessages={message.meta.agent} isLoading={loading} renderMode={renderMode} />
-              ) : (
-                <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                  {message.content[0]?.text}
-                </MarkdownRenderer>
-              )}
+              <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+                {message.content[0]?.text}
+              </MarkdownRenderer>
+              {hasToolCalls && <AgentSteps agentMessages={message.meta.agent} />}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
