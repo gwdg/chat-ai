@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import DocumentPanelLayout from "../components/DocumentPanel/DocumentPanelLayout";
 import { useDispatch } from "react-redux";
 import { getDefaultConversation } from "../utils/conversationUtils";
 
@@ -107,7 +108,7 @@ export default function ChatPage() {
           modelsData={modelsData}
         />
 
-        <div className="flex min-h-0 min-w-0 flex-col">
+        <DocumentPanelLayout conversationId={localState?.id} messages={localState?.messages}>
           {localState?.persona && (
             <PersonaChatBanner persona={localState.persona} />
           )}
@@ -119,7 +120,7 @@ export default function ChatPage() {
               modelsData={modelsData}
             />
           </div>
-        </div>
+        </DocumentPanelLayout>
 
         <CollapsibleFooter
           className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3"

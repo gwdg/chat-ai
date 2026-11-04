@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import DocumentPanelLayout from "../components/DocumentPanel/DocumentPanelLayout";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router";
@@ -198,7 +199,7 @@ export default function MetaChatPage() {
             modelsData={modelsData}
           />
 
-          <div className="flex min-h-0 min-w-0 flex-col">
+          <DocumentPanelLayout conversationId={localState?.id} messages={localState?.messages}>
             <div className="mx-1 mb-1 flex items-start gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm">
               <Ai
                 size={16}
@@ -256,7 +257,7 @@ export default function MetaChatPage() {
                 modelsData={modelsData}
               />
             </div>
-          </div>
+          </DocumentPanelLayout>
 
           <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3" />
         </div>

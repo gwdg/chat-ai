@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Papa from "papaparse";
-import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
-import AudioPlayer from "./AudioPlayer";
+import AudioPlayer from "../../modals/Chat/AudioPlayer";
 import { useFile, useFileBase64, useFileContent } from "../../db";
-import { X } from "lucide-react";
 import { getFileType } from "../../utils/attachments";
 
 // --------------------
@@ -43,7 +41,7 @@ const CSVTable = ({ content }) => {
   const headers = Object.keys(parsedData[0]);
 
   return (
-    <div className="overflow-auto max-h-[85vh] w-full">
+    <div className="overflow-auto w-full">
       <table className="min-w-full border-collapse">
         <thead className="bg-base-200 sticky top-0 z-10">
           <tr>
@@ -77,22 +75,28 @@ const CSVTable = ({ content }) => {
 };
 
 // Renders a .docx in the browser; docx-preview is loaded on first use.
-const DocxViewer = ({ data }) => {
+// `data` may change (live preview): each version renders off-screen and then
+// replaces the shown one, so updates do not flash the loading state.
+export const DocxViewer = ({ data }) => {
   const { t } = useTranslation();
   const ref = useRef(null);
+  const outerRef = useRef(null);
   const [status, setStatus] = useState("loading");
+  const [renders, setRenders] = useState(0);
 
   useEffect(() => {
     if (!data || !ref.current) return;
     let cancelled = false;
     const container = ref.current;
-    setStatus("loading");
+    const next = document.createElement("div");
     import("docx-preview")
-      .then(({ renderAsync }) => {
-        container.innerHTML = "";
-        return renderAsync(data, container, undefined, { inWrapper: true });
+      .then(({ renderAsync }) => renderAsync(data, next, undefined, { inWrapper: true }))
+      .then(() => {
+        if (cancelled) return;
+        container.replaceChildren(...next.childNodes);
+        setStatus("done");
+        setRenders((count) => count + 1);
       })
-      .then(() => !cancelled && setStatus("done"))
       .catch((err) => {
         console.error("DOCX preview failed:", err);
         if (!cancelled) setStatus("error");
@@ -102,8 +106,26 @@ const DocxViewer = ({ data }) => {
     };
   }, [data]);
 
+  // Keep the pages at their paper size and scale the whole document down to
+  // the available width (never up). `zoom` also shrinks the layout height.
+  useEffect(() => {
+    const outer = outerRef.current;
+    const inner = ref.current;
+    if (!renders || !outer || !inner) return;
+    inner.style.zoom = "1";
+    const natural = inner.scrollWidth;
+    const fit = () => {
+      // 1px slack: a fractional zoom can otherwise round up into a 1px overflow
+      if (natural) inner.style.zoom = String(Math.min(1, (outer.clientWidth - 1) / natural));
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(outer);
+    return () => observer.disconnect();
+  }, [renders]);
+
   return (
-    <div className="max-h-[85vh] w-full overflow-auto">
+    <div ref={outerRef} className="w-full overflow-x-hidden">
       {status === "loading" && (
         <div className="p-4 text-base-content/70">
           {t("common.loading")}
@@ -119,36 +141,20 @@ const DocxViewer = ({ data }) => {
   );
 };
 
-export default function PreviewModal({ isOpen, onClose, fileId }) {
+/** Renders a stored file (by fileId) for the document side panel. */
+export default function FilePreview({ fileId }) {
   const { t } = useTranslation();
 
   const [loadError, setLoadError] = useState(null);
   const {file, data} = useFile(fileId);
   const base64 = useFileBase64(fileId); // TODO only load if important
   const textContent = useFileContent(fileId);
-  if (!file) return null;
-
-  const handleSave = () => {
-    try {
-      // Create file as is
-      const fileToSave = new File([data], file?.name || "Save", { type: file.type })     
-
-      // Create and use download link
-      const downloadUrl = URL.createObjectURL(fileToSave);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = file?.name || "Save";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      // Clean up
-      setTimeout(() => URL.revokeObjectURL(downloadUrl), 300);
-    } catch (err) {
-      console.error("Download failed:", err);
-      alert(t("file_preview.save_failed"));
-    }
-  };
+  if (!file)
+    return (
+      <div className="flex justify-center py-12">
+        <span className="loading loading-spinner loading-md text-primary" />
+      </div>
+    );
 
   const renderContent = () => {
     try {
@@ -181,7 +187,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
             <img
               src={base64}
               alt={file.name}
-              className="max-h-[85vh] max-w-full object-contain"
+              className="max-w-full object-contain"
               onError={() => setLoadError(t("file_preview.image_failed"))}
             />
           </div>
@@ -194,7 +200,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
             <video
               src={base64}
               controls
-              className="max-h-[85vh] max-w-full"
+              className="max-w-full"
               onError={() => setLoadError(t("file_preview.video_failed"))}
             >
               {t("file_preview.video_unsupported")}
@@ -237,7 +243,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         // If we have a valid PDF URL for preview (original PDF) AND not processed
         if (base64 && !isMobile) {
           return (
-            <div className="w-full h-[85vh] flex flex-col">
+            <div className="w-full h-full flex flex-col">
               {/* Show processing status if not processed */}
               <div className="bg-info/10 border border-info/30 rounded-lg p-3 mb-4 mx-4">
                 <div className="flex items-center gap-2">
@@ -268,8 +274,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
               <iframe
                 src={base64}
                 className="w-full flex-1"
-                style={{ minWidth: "800px" }}
-                title={file.name}
+                                title={file.name}
                 onError={() => setLoadError(t("file_preview.pdf_failed"))}
               />
             </div>
@@ -318,7 +323,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         fileType === "txt"
       ) {
         return (
-          <pre className="bg-base-200 p-6 rounded-lg overflow-auto max-h-[85vh] w-full font-mono text-sm text-base-content">
+          <pre className="bg-base-200 p-6 rounded-lg overflow-auto w-full whitespace-pre-wrap break-words font-mono text-sm text-base-content">
             {textContent || t("file_preview.no_content")}
           </pre>
         );
@@ -327,7 +332,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       // Code Viewer
       if (fileType === "code") {
         return (
-          <pre className="bg-base-200 p-6 rounded-lg overflow-auto max-h-[85vh] w-full">
+          <pre className="bg-base-200 p-6 rounded-lg overflow-auto w-full">
             <code className="font-mono text-sm whitespace-pre-wrap text-base-content">
               {textContent || t("file_preview.no_content")}
             </code>
@@ -338,7 +343,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       // Default display for any other file type
       if (textContent && typeof textContent === "string") {
         return (
-          <div className="bg-base-100 p-6 overflow-auto max-h-[80vh] w-full whitespace-pre-wrap text-base-content">
+          <div className="bg-base-100 p-6 overflow-auto w-full whitespace-pre-wrap text-base-content">
             {textContent}
           </div>
         );
@@ -360,43 +365,5 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
     }
   };
 
-  return (
-    <BaseModal
-      isOpen={isOpen}
-      onClose={onClose}
-      minimal={true}
-      titleKey={null} // We'll pass custom header
-      maxWidth="max-w-[1000px]"
-    >
-      {/* Custom Header with Filename + Actions */}
-      <div className="flex justify-between items-center mb-4 px-2">
-        <p className="text-lg font-medium text-accent truncate max-w-[70%]">
-          {file.name}
-        </p>
-        <div className="flex items-center gap-4">
-          {/* Download File Button */}
-          <button
-            onClick={handleSave}
-            className="btn btn-sm btn-info"
-            aria-label={t("file_preview.download_aria")}
-          >
-            {t("file_preview.save")}
-          </button>
-          {/* Close Button */}
-          <button onClick={onClose} aria-label={t("file_preview.close_aria")}>
-            <X
-              className="h-[20px] w-[20px] cursor-pointer text-accent"
-              alt="cross"
-              onClick={onClose}
-            />{" "}
-          </button>
-        </div>
-      </div>
-
-      {/* Rendered File Content */}
-      <div className="relative flex-1 min-h-0 overflow-auto">
-        {renderContent()}
-      </div>
-    </BaseModal>
-  );
+  return renderContent();
 }
