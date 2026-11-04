@@ -1351,6 +1351,12 @@ export default {
       "Don't worry! You can start a new conversation by clicking the button below.",
     buttonText: "Go to chat",
   },
+  document_panel: {
+    writing: "Writing…",
+    untitled: "Untitled document",
+    back_to_chat: "Back to chat",
+    resize: "Resize document panel",
+  },
   file_preview: {
     no_file: "No file to preview",
     no_data: "No data available",

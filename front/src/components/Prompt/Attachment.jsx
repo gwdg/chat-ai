@@ -3,6 +3,7 @@ import { useAttachments } from "../../hooks/useAttachments";
 import MiniAudioButton from "./MiniAudioButton";
 import { useState } from "react";
 import { useModal } from "../../modals/ModalContext";
+import { useOpenDocument } from "../DocumentPanel/DocumentPanelContext";
 import {
   useFileMeta,
   useFileBase64,
@@ -32,6 +33,7 @@ export default function Attachment({
   suppressUnsupportedWarning = false,
 }) {
   const { openModal } = useModal();
+  const openDocument = useOpenDocument();
   const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -210,7 +212,7 @@ export default function Attachment({
       data-guide={inHistory ? undefined : "attachment-card"}
       className={`cursor-pointer flex-shrink-0 w-[200px] h-[80px] ${displayInfo.bgColor} ${displayInfo.hoverColor} ${displayInfo.borderColor} border rounded-lg transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md`}
       onClick={() => {
-        openModal("preview", { previewFile: file, fileId: attachment.fileId });
+        openDocument?.(attachment.fileId);
       }}
     >
       {canProcess ? (

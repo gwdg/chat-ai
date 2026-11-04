@@ -1366,6 +1366,12 @@ export default {
       "Keine Sorge! Sie können eine neue Unterhaltung starten, indem Sie auf den Button unten klicken.",
     buttonText: "Zum Chat gehen",
   },
+  document_panel: {
+    writing: "Wird geschrieben…",
+    untitled: "Unbenanntes Dokument",
+    back_to_chat: "Zurück zum Chat",
+    resize: "Dokumentbereich anpassen",
+  },
   file_preview: {
     no_file: "Keine Datei zur Vorschau",
     no_data: "Keine Daten verfügbar",
