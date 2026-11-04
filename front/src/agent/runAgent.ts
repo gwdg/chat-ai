@@ -308,7 +308,7 @@ export async function runAgentTurn({
         systemPrompt,
         useTools ? AGENT_PROMPT : NO_TOOLS_PROMPT,
         useTools && mounts.length ? `The user's local folders are mounted at: ${mounts.join(", ")}.` : "",
-        useTools && settings.tools?.write_access === false
+        useTools && settings.tools?.write_access !== true
           ? "The user has turned off writing and editing files: you can read files but not change them."
           : "",
         `Current date: ${new Date().toLocaleString()}`,

@@ -28,8 +28,9 @@ import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../api
 
 // Tools the agent has no counterpart for
 const AGENT_UNAVAILABLE = new Set(["video_generation", "mcp", ...(agentGatewayTools() ? [] : ["web_search", "arcana"])]);
-// Tools the gateway runs for the agent (agent/gateway.ts); off unless switched on
-const AGENT_OPT_IN = new Set(["web_search", "arcana"]);
+// Agent tools that are off unless switched on: the ones the gateway runs (agent/gateway.ts),
+// and writing files (agent/tools.ts)
+const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access"]);
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
 

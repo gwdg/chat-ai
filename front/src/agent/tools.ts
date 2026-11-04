@@ -215,7 +215,9 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
     ),
   ];
 
-  const off = new Set(Object.entries(TOGGLES).flatMap(([key, names]) => (enabled[key] === false ? names : [])));
+  // Writing is opt-in: off unless switched on. The other toggles are on unless switched off.
+  const isOff = (key: string) => (key === "write_access" ? enabled[key] !== true : enabled[key] === false);
+  const off = new Set(Object.entries(TOGGLES).flatMap(([key, names]) => (isOff(key) ? names : [])));
   const on = (tool: AgentTool<any>) => !off.has(tool.name);
   // Scripts get the same file tools, so they cannot write either when writing is off
   const codemode = createCodemodeTool(fileTools.filter(on));

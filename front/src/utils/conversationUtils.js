@@ -36,7 +36,7 @@ export const getDefaultSettings = (userSettings = {}) => {
       "arcana": true,
       "mcp": false,
       // Agent mode only
-      "write_access": true,
+      "write_access": false,
       "codemode": true,
       "create_docx": true,
     },
