@@ -4,8 +4,10 @@ export default {
     loading: "Lädt...",
     undo: "Rückgängig",
     scroll: "Nach unten scrollen",
+    scroll_to_top: "Nach oben scrollen",
     scroll_to_message: "Zum Anfang der Nachricht springen",
     next_message: "Zur nächsten Nachricht scrollen",
+    previous_message: "Zur vorherigen Nachricht scrollen",
     rename: "Umbenennen",
     create: "Erstellen",
     save: "Speichern",
@@ -192,6 +194,7 @@ export default {
       find: "Bisherige Chats und Themen finden",
       find_example: "„Wo ist mein Chat über meine Essensbestellung?“",
     },
+    clear_chat: "Chat leeren",
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
   },
@@ -214,6 +217,7 @@ export default {
     completed_title: "Tutorial abgeschlossen",
     more_tutorials: "Weitere Tutorials",
     categories: {
+      personas: "Personas",
       prompt: "Eingabe und Chat",
       tools: "Tools und RAG",
       chats: "Chats und Organisation",
@@ -354,6 +358,11 @@ export default {
       step1: "Öffnen Sie das Sortiermenü in der Seitenleiste.",
       step2: "Wählen Sie die Gruppierung nach Thema, Datum oder Erstellungsdatum.",
     },
+    close_chat: {
+      title: "Einen Chat schließen",
+      step1:
+        "Verwenden Sie die Schließen-Schaltfläche oben rechts. Sie entfernt den Chat aus Ihren Unterhaltungen; im Metachat wird stattdessen die Unterhaltung geleert.",
+    },
     export_conversation: {
       title: "Einen Chat exportieren",
       step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
@@ -363,6 +372,15 @@ export default {
       title: "Einen Chat importieren",
       step1:
         "Klicken Sie in der Seitenleiste auf Importieren und wählen Sie eine JSON-Chatdatei. Alternativ können Sie im Tab Daten importieren.",
+    },
+    chat_with_persona: {
+      title: "Mit Persona chatten",
+      step1:
+        "Klicken Sie in der Seitenleiste auf „Mit Persona chatten“, um die Persona-Bibliothek zu öffnen.",
+      step2:
+        "Wählen Sie links eine Kategorie oder nutzen Sie den Schnellimport, um direkt zu starten.",
+      step3:
+        "Klicken Sie auf eine Persona, um einen neuen Chat mit Titel, Modell und Systemprompt zu starten.",
     },
     share_conversation: {
       title: "Unterhaltungseinstellungen teilen",
@@ -436,8 +454,16 @@ export default {
       title: "Tutorials und Einstellungen im Metachat finden",
       step1: "Durchsuchen Sie alle verfügbaren Tutorials und wiederholen Sie abgeschlossene.",
       step2: "Durchsuchen Sie vollständige Abläufe, die mehrere Funktionen kombinieren. Der Metachat kann beide Optionen auch für Sie starten.",
-      step3: "Sie können mich auch bitten, ein Tutorial zu finden. Zum Beispiel: „Finde ein Tutorial zum Hochladen einer Datei.“",
-      step4: "Fragen Sie auch nach Ihren Einstellungen. Zum Beispiel: „Welche Einstellungen habe ich für Erinnerungen gewählt?“",
+      step3: "Sie können mich auch bitten, ein Tutorial zu finden oder eine Persona zu empfehlen. Zum Beispiel: „Finde ein Tutorial zum Hochladen einer Datei.“",
+      step4: "Fragen Sie nach Einstellungen oder lassen Sie sich zu einem Chat, einer Nachricht, einem Thema oder einer Einstellung führen. Ich kann auch nach Entscheidungen und Aufgaben in Ihren Chats suchen.",
+    },
+    meta_chat_navigation: {
+      title: "Navigieren und suchen mit dem Metachat",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2:
+        "Bitten Sie ihn, Sie irgendwohin zu führen, zum Beispiel: „Bring mich zu den Chat-Einstellungen“ oder „Öffne den Chat über die Preise“.",
+      step3:
+        "Bitten Sie ihn, Ihre Chats zu durchsuchen, zum Beispiel: „Finde, wo wir das Preismodell entschieden haben“ oder „Welche Aufgaben gibt es?“. Klicken Sie auf eine zitierte Nachricht, um dorthin zu springen.",
     },
     meta_chat_usage: {
       title: "Den Metachat verwenden",
@@ -664,6 +690,7 @@ export default {
 
   // Conversation
   conversation: {
+    close_chat: "Chat schließen",
     prompt: {
       placeholder: "Frag mich",
       attach: "Datei anhängen",
@@ -978,6 +1005,12 @@ export default {
       "Wählen Sie eine Kategorie aus der Seitenleiste, um Personas anzuzeigen",
     emptyFolder: "Dieser Ordner ist leer",
     categoryCount: "{{folders}} Kategorien • {{files}} Personas",
+    chat_label: "Persona-Chat",
+    category_label: "Kategorie",
+    startChat: "Chat starten",
+    startChatWith: "Chat mit {{title}} starten",
+    startingChat: "Wird gestartet…",
+    startError: "Diese Persona konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
   },
   // Memory Modal
   memory: {
@@ -1112,6 +1145,9 @@ export default {
     clear_data: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
+    close_chat:
+      "Diesen Chat schließen? Er wird aus Ihren Unterhaltungen entfernt.",
+    close_chat_yes: "Chat schließen",
     regenerate_confirm:
       "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden. Um diese Unterhaltung zu behalten, verwenden Sie stattdessen „In neuem Chat fortfahren“.",
     regenerate_yes: "Regenerieren",

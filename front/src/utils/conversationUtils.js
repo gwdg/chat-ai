@@ -191,6 +191,7 @@ export const getExportData = async () => {
       folderId: conversation?.folderId ?? null,
       folderName: folderRow?.name ?? null,
       messages: await processMessages(conversation.messages, true),
+      ...(conversation.persona ? { persona: conversation.persona } : {}),
       ...conversation.settings,
     };
     processedConversations.push(processedConversation);

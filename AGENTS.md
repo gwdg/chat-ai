@@ -293,7 +293,9 @@ a plain OpenAI-compatible `/models` response does not, so it gets `ModelSelector
 **first** model is inspected, so a mixed or reordered response silently selects the wrong variant.
 Both are data-tolerant (optional chaining), but the simple selector has no metadata columns or
 view modes. Add new model fields to `types/models.ts` and both selectors if they affect both
-variants.
+variants. When a conversation's stored model id is not in `modelsData` (for example an imported
+persona references a model this deployment does not offer), the wrapper replaces it with the user's
+default model and only falls back to `modelsData[0]` if that default is unavailable too.
 
 ### 4.13 Document conversion can run in the browser or on the server
 
@@ -346,6 +348,25 @@ stored as a hidden conversation row (`id: "meta-chat"`, `isMetaChat: true`), exc
 sidebar, last-conversation lookup, and its own summary context. `getExportData()` emits it as
 `meta_chat` and `useImportConversation` recreates it silently. Do not make it summarize full
 conversations on the fly without accounting for the extra model calls.
+
+The Meta chat also loads the persona catalog from `gwdg/chat-ai-personas`
+(`utils/personaCatalog.js`, cached in memory and `sessionStorage`) and includes each persona's id,
+title, category, and description ("subtitle") in the system prompt. The model links to a persona
+inline with `[label](/persona/<path>)`; `MarkdownRenderer` routes that link to `PersonaStartLink`,
+which fetches the persona JSON and starts a new chat through `useImportConversation`. The legacy
+`[[PERSONA:<path>]]` marker still renders a `PersonaCard` below the message. The catalog is
+metadata only: the full persona JSON is fetched when the user clicks. GitHub's tree API can fail or
+rate-limit; the Meta chat must keep working without personas in that case.
+
+For navigation and message-level search, `useMetaChatSend` runs `searchMessages` from `db/index.ts`
+with the latest user message and includes matching excerpts plus message ids in
+`<message_search_results>`. Decision/action-item/comparison questions also append recent excerpts
+from `getRecentMessageExcerpts`. The model cites exact messages as
+`/chat/<conversation id>?message=<message id>`; `Conversation` reads that query parameter, scrolls
+to the message, and highlights it briefly. `MarkdownLink` routes `/chat/...`, `/topic/...`, and
+`/settings/<tab>` internally; settings links dispatch `chatai:open-settings`, handled by
+`useSettingsDeepLink` in `ChatPage`/`MetaChatPage`, and `UserSettingsModal` opens the requested tab
+with a brief highlight. Module flags in `<user_settings>` let the model explain disabled features.
 
 ### 4.17 Per-conversation memory mode overrides the global preference
 

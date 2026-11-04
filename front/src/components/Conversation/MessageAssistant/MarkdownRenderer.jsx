@@ -4,6 +4,7 @@ import { Code2, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router";
+import { Folder, MessageCircle, MessageSquare, Settings } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -21,11 +22,13 @@ import {
   selectHtmlSanitization,
 } from "../../../Redux/reducers/userSettingsReducer";
 import LatexBlock from "./LatexBlock";
+import PersonaStartLink from "../../Others/PersonaStartLink";
 import TypstBlock from "./TypstBlock";
 import {
   isExternalUrl,
   sanitizeExternalRefs,
 } from "../../../utils/externalRefs";
+import { stripPersonaMarkers } from "../../../utils/personaCatalog";
 
 // Markdown images load automatically, so keep them on the same origin when
 // external references are disabled. Plain links are not fetched until clicked.
@@ -44,20 +47,64 @@ const MarkdownLink = ({ href, children }) => {
   const navigate = useNavigate();
   const className =
     "text-info hover:text-info underline transition-colors text-sm";
+  const actionLinkClassName =
+    "btn btn-accent btn-sm ml-1 inline-flex w-fit gap-2 align-middle";
 
-  if (typeof href === "string" && /^\/chat\/[A-Za-z0-9-]+$/.test(href)) {
+  if (
+    typeof href === "string" &&
+    (href.startsWith("/chat/") || href.startsWith("/topic/"))
+  ) {
+    const isMessage = href.includes("?message=");
+    const isTopic = href.startsWith("/topic/");
+    const Icon = isTopic ? Folder : isMessage ? MessageSquare : MessageCircle;
     return (
       <a
         href={href}
-        className={className}
+        className={actionLinkClassName}
         onClick={(event) => {
           event.preventDefault();
           navigate(href);
         }}
       >
+        <Icon size={16} aria-hidden="true" />
         {children}
       </a>
     );
+  }
+
+  const settingsMatch =
+    typeof href === "string" &&
+    href.match(/^\/settings\/(profile|chat|memories|data)$/);
+  if (settingsMatch) {
+    return (
+      <a
+        href={href}
+        className={actionLinkClassName}
+        onClick={(event) => {
+          event.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("chatai:open-settings", {
+              detail: { tab: settingsMatch[1] },
+            }),
+          );
+        }}
+      >
+        <Settings size={16} aria-hidden="true" />
+        {children}
+      </a>
+    );
+  }
+
+  const personaMatch =
+    typeof href === "string" && href.match(/^\/persona\/(.+\.json)$/i);
+  if (personaMatch) {
+    let path = personaMatch[1];
+    try {
+      path = decodeURIComponent(path);
+    } catch {
+      // Keep the original path if it is not valid percent-encoding.
+    }
+    return <PersonaStartLink path={path}>{children}</PersonaStartLink>;
   }
 
   return (
@@ -758,10 +805,10 @@ export const SafeMarkdown = ({
 
 const stripGuideMarkers = (content) => {
   if (typeof content !== "string") return content;
-  return content
+  return stripPersonaMarkers(content)
     .replace(/\[\[GUIDE:[a-zA-Z0-9_-]+\]\]/gi, "")
     .replace(/\[\[USE_CASE:[a-zA-Z0-9_-]+\]\]/gi, "")
-    .replace(/\[\[(?:GUIDE|USE_CASE):?[a-zA-Z0-9_-]*\]*$/i, "")
+    .replace(/\[\[(?:GUIDE|USE_CASE|PERSONA):?[a-zA-Z0-9_./-]*\]*$/i, "")
     .replace(/\n{3,}/g, "\n\n")
     .trimEnd();
 };

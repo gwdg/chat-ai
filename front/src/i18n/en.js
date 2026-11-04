@@ -4,8 +4,10 @@ export default {
     loading: "Loading...",
     undo: "Undo",
     scroll: "Scroll to bottom",
+    scroll_to_top: "Scroll to top",
     scroll_to_message: "Jump to start of message",
     next_message: "Scroll to next message",
+    previous_message: "Scroll to previous message",
     rename: "Rename",
     create: "Create",
     save: "Save",
@@ -189,6 +191,7 @@ export default {
       find: "Find your past chats and topics",
       find_example: "“Where is my chat about my food order?”",
     },
+    clear_chat: "Clear chat",
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
   },
@@ -211,6 +214,7 @@ export default {
     completed_title: "Tutorial complete",
     more_tutorials: "More tutorials",
     categories: {
+      personas: "Personas",
       prompt: "Prompt and chat",
       tools: "Tools and RAG",
       chats: "Chats and organization",
@@ -347,6 +351,11 @@ export default {
       step1: "Open the sort menu in the sidebar.",
       step2: "Choose grouping by topic, date, or creation date.",
     },
+    close_chat: {
+      title: "Close a chat",
+      step1:
+        "Use the close button at the top right. It removes the chat from your conversations; in the Meta chat it clears the conversation instead.",
+    },
     export_conversation: {
       title: "Export a chat",
       step1: "Open the conversation menu in the sidebar.",
@@ -356,6 +365,15 @@ export default {
       title: "Import a chat",
       step1:
         "Click Import in the sidebar and choose a JSON chat file. You can also import from the Data tab in user settings.",
+    },
+    chat_with_persona: {
+      title: "Chat with Persona",
+      step1:
+        "Click Chat with Persona in the sidebar to open the persona library.",
+      step2:
+        "Choose a category on the left, or use Quick Import to start right away.",
+      step3:
+        "Click a persona to start a new chat with its title, model, and system prompt.",
     },
     share_conversation: {
       title: "Share conversation settings",
@@ -428,8 +446,16 @@ export default {
       title: "Find tutorials and settings in Meta chat",
       step1: "Browse all available tutorials and replay completed ones.",
       step2: "Browse complete workflows that combine several features. The Meta chat can also start either option for you.",
-      step3: "You can also ask me to find a tutorial. For example: “Find a tutorial about uploading a file.”",
-      step4: "Ask about your settings too. For example: “What settings have I chosen for memories?”",
+      step3: "You can also ask me to find a tutorial or recommend a persona. For example: “Find a tutorial about uploading a file.”",
+      step4: "Ask about settings, or ask me to take you to a chat, message, topic, or setting. I can also search your chats for decisions and action items.",
+    },
+    meta_chat_navigation: {
+      title: "Navigate and search with the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2:
+        "Ask it to take you somewhere, for example: “Take me to chat settings” or “Open the chat about pricing.”",
+      step3:
+        "Ask it to search your chats, for example: “Find where we decided the pricing model” or “What are the action items?”. Click a cited message to jump to it.",
     },
     meta_chat_usage: {
       title: "Use the Meta chat",
@@ -658,6 +684,7 @@ export default {
 
   // Conversation
   conversation: {
+    close_chat: "Close chat",
     prompt: {
       placeholder: "Ask me",
       attach: "Attach File",
@@ -965,6 +992,12 @@ export default {
       "Select a category from the sidebar to view personas",
     emptyFolder: "This folder is empty",
     categoryCount: "{{folders}} categories • {{files}} personas",
+    chat_label: "Persona chat",
+    category_label: "Category",
+    startChat: "Start chat",
+    startChatWith: "Start a chat with {{title}}",
+    startingChat: "Starting…",
+    startError: "Could not load this persona. Please try again.",
   },
   // Memory Modal
   memory: {
@@ -1101,6 +1134,9 @@ export default {
       "Caution! Clearing data will erase all your conversations, history, and settings. Are you sure?",
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
+    close_chat:
+      "Close this chat? It will be removed from your conversations.",
+    close_chat_yes: "Close chat",
     regenerate_confirm:
       "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone. To keep this conversation intact, use “Continue in a new chat” instead.",
     regenerate_yes: "Regenerate",

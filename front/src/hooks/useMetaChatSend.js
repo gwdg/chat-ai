@@ -3,8 +3,19 @@ import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 
 import { chatCompletions } from "../apis/chatCompletions";
-import { listConversationMetas, listFolders } from "../db";
+import {
+  getRecentMessageExcerpts,
+  listConversationMetas,
+  listFolders,
+  searchMessages,
+} from "../db";
 import { extractMessageText } from "../utils/conversationSummary";
+import {
+  getPersonaMarkers,
+  hasPersonaStartLink,
+  loadPersonaCatalog,
+  stripPersonaMarkers,
+} from "../utils/personaCatalog";
 import { getDefaultChatAIModel } from "../utils/conversationUtils";
 import {
   buildFeatureGuidePrompt,
@@ -26,6 +37,8 @@ import {
 const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
 const MAX_MEMORY_CHARS = 12000;
+const MAX_PERSONA_CHARS = 16000;
+const MAX_SEARCH_CHARS = 16000;
 
 function yesNo(value) {
   return value ? "yes" : "no";
@@ -72,13 +85,14 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Render Typst: ${yesNo(userSettings.render_typst)}`,
     `- Render LaTeX: ${yesNo(userSettings.render_latex)}`,
     `- Document conversion: ${documentConversion}`,
+    `- Modules: tools ${import.meta.env.VITE_MODULE_TOOLS === "true" ? "enabled" : "disabled"}, feedback ${import.meta.env.VITE_MODULE_FEEDBACK === "true" ? "enabled" : "disabled"}, choices ${import.meta.env.VITE_MODULE_CHOICES === "true" ? "enabled" : "disabled"}, speech ${import.meta.env.VITE_MODULE_SPEECH === "true" ? "enabled" : "disabled"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,
     `- Chat grouping: ${interfaceSettings.conversation_grouping ?? "topic"}`,
     `- Web search disclaimer accepted: ${yesNo(interfaceSettings.agree_web_search)}`,
     `- Show welcome tour: ${yesNo(interfaceSettings.show_tour)}`,
-    `- Confirmation warnings: clear history ${yesNo(interfaceSettings.warn_clear_history)}, share settings ${yesNo(interfaceSettings.warn_share_settings)}, regenerate ${yesNo(interfaceSettings.warn_regenerate)}, fork ${yesNo(interfaceSettings.warn_fork)}`,
+    `- Confirmation warnings: clear history ${yesNo(interfaceSettings.warn_clear_history)}, close chat ${yesNo(interfaceSettings.warn_close_chat)}, share settings ${yesNo(interfaceSettings.warn_share_settings)}, regenerate ${yesNo(interfaceSettings.warn_regenerate)}, fork ${yesNo(interfaceSettings.warn_fork)}`,
     `- Completed tutorials: ${interfaceSettings.completed_tutorials?.length ?? 0}`,
     `- Completed use cases: ${interfaceSettings.completed_use_cases?.length ?? 0}`,
     `- Suppressed tutorials: ${interfaceSettings.suppressed_tutorials?.length ?? 0}`,
@@ -88,6 +102,8 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
 function buildSystemPrompt(
   conversations,
   topics,
+  persons,
+  messageMatches,
   memories,
   userSettings,
   interfaceSettings,
@@ -100,6 +116,28 @@ function buildSystemPrompt(
     .join("\n") || "(no topics available)";
   let used = topicLines.length;
   const lines = [];
+
+  const personaLines = [];
+  let personaUsed = 0;
+  for (const persona of persons) {
+    const description = persona.description || "(no description)";
+    const line = `- id: ${persona.id}\n  title: ${persona.title}\n  category: ${persona.category || "uncategorized"}\n  description: ${description}`;
+    if (personaUsed + line.length > MAX_PERSONA_CHARS) break;
+    personaLines.push(line);
+    personaUsed += line.length;
+  }
+
+  const searchLines = [];
+  let searchUsed = 0;
+  for (const match of messageMatches) {
+    const date = match.createdAt
+      ? new Date(match.createdAt).toISOString()
+      : "unknown";
+    const line = `- conversation id: ${match.conversationId}\n  conversation title: ${match.conversationTitle}\n  topic: ${match.topicName || "Unsorted"}\n  message id: ${match.messageId}\n  role: ${match.role}\n  date: ${date}\n  excerpt: ${match.snippet}`;
+    if (searchUsed + line.length > MAX_SEARCH_CHARS) break;
+    searchLines.push(line);
+    searchUsed += line.length;
+  }
 
   const memoryLines = [];
   let memoryUsed = 0;
@@ -144,13 +182,35 @@ For questions about whether settings are safe, explain the actual values and the
 - Saved memories are stored in this browser.
 - Web Search, tools, Arcana, MCP servers, and external models are conversation-specific and can send data outside the local browser; they are not part of these global settings.
 
-When you refer to a conversation, always link to it using exactly this Markdown form:
-[<conversation title>](/chat/<conversation id>)
-Use only ids from the list below. Do not link to any other URL or invent an id. If nothing matches the user's question, say so plainly.
+You can help the user navigate the app with these deep links:
+- Conversation: [<conversation title>](/chat/<conversation id>)
+- Exact message: [<conversation title>, message](/chat/<conversation id>?message=<message id>)
+- Topic: [<topic name>](/topic/<topic id>)
+- Settings tab: [Open settings](/settings/<tab>), where <tab> is one of profile, chat, memories, data.
+
+Use only ids from the lists below. When the user asks to be taken to a chat, message, topic, or setting, give the matching link and briefly say what it opens. Never invent an id. If nothing matches the user's question, say so plainly.
 
 Answer in the same language as the user's question. Be concise and concrete.
 
 You may also receive the user's saved memories. Use them when relevant, but they may be stale. Never invent memories.
+
+You can also recommend personas from the persona catalog below. A persona is a ready-made chat setup with its own title and description. Recommend a persona only when its title or description clearly matches what the user asks for. Never invent a persona or claim that one exists if it is not listed. When you recommend a persona, name it and briefly explain why it fits.
+
+To let the user start a chat with a recommended persona, include an inline Markdown link using exactly this URL form: [<short label>](/persona/<persona id>). For example: [Start chat with <persona title>](/persona/<persona id>). Use only ids from the persona list and keep the link inline in your sentence or at the end of your answer. You may recommend more than one persona; give each one its own link. Do not use [[PERSONA:...]] markers, and do not combine a persona link with a [[GUIDE:...]] or [[USE_CASE:...]] marker in the same answer.
+
+<personas>
+${personaLines.join("\n") || "(no personas available)"}
+</personas>
+
+<message_search_results>
+${searchLines.join("\n") || "(no message matches for the current question)"}
+</message_search_results>
+
+The message search results above are exact excerpts selected from the user's stored messages. Use them when the user asks where something was said, decided, or agreed. Cite each point with the exact message link, for example [<conversation title>, message](/chat/<conversation id>?message=<message id>). Never invent a message, id, or quote. If the excerpts are insufficient, say so.
+
+When the user asks to compare conversations or extract decisions and action items, base the answer only on the summaries and message excerpts provided, attribute each point to its conversation or message, and clearly mark uncertain or inferred items.
+
+The module flags in <user_settings> show which optional UI areas this deployment provides. If the user asks for a feature that is disabled, explain that this deployment disables that module. Conversation-specific tools may also be unavailable for the selected model or switched off in the conversation; do not claim a hidden feature exists.
 
 <features>
 ${buildFeatureGuidePrompt()}
@@ -191,10 +251,20 @@ ${memoryLines.join("\n")}
   }`;
 }
 
-async function loadMetaContext() {
-  const [rows, folders] = await Promise.all([
+async function loadMetaContext(query = "") {
+  const wantsSurvey =
+    /\b(decisions?|action items?|next steps?|todos?|compare|comparison|agreed|beschlossen|entscheid|aufgaben|nächste schritte|vereinbart|vergleich)\b/i.test(
+      query || "",
+    );
+
+  const [rows, folders, persons, matches, recent] = await Promise.all([
     listConversationMetas(),
     listFolders(),
+    loadPersonaCatalog().catch(() => []),
+    searchMessages(query).catch(() => []),
+    wantsSurvey
+      ? getRecentMessageExcerpts().catch(() => [])
+      : Promise.resolve([]),
   ]);
 
   const conversations = (rows || [])
@@ -224,7 +294,23 @@ async function loadMetaContext() {
     name: (folder.name || "").trim() || "Untitled topic",
   }));
 
-  return { conversations, topics };
+  const topicNames = new Map(topics.map((topic) => [topic.id, topic.name]));
+  const seenMessages = new Set();
+  const messageMatches = [...(matches || []), ...(recent || [])]
+    .filter((match) => {
+      if (!match?.messageId || seenMessages.has(match.messageId)) return false;
+      seenMessages.add(match.messageId);
+      return true;
+    })
+    .slice(0, 20)
+    .map((match) => ({
+      ...match,
+      topicName: match.folderId
+        ? topicNames.get(match.folderId) || "Unsorted"
+        : "Unsorted",
+    }));
+
+  return { conversations, topics, persons, messageMatches };
 }
 
 export function useMetaChatSend() {
@@ -260,14 +346,6 @@ export function useMetaChatSend() {
         return;
       }
 
-      let conversations = [];
-      let topics = [];
-      try {
-        ({ conversations, topics } = await loadMetaContext());
-      } catch (error) {
-        console.error("Failed to load conversation summaries", error);
-      }
-
       const history = localState.messages
         .filter(
           (message) =>
@@ -275,8 +353,10 @@ export function useMetaChatSend() {
         )
         .map((message) => ({
           role: message.role,
-          content: stripUseCaseMarkers(
-            stripFeatureGuideMarkers(extractMessageText(message)),
+          content: stripPersonaMarkers(
+            stripUseCaseMarkers(
+              stripFeatureGuideMarkers(extractMessageText(message)),
+            ),
           ).trim(),
         }))
         .filter((message) => message.content.length > 0);
@@ -284,6 +364,18 @@ export function useMetaChatSend() {
       const lastUserMessage = [...history]
         .reverse()
         .find((message) => message.role === "user")?.content;
+
+      let conversations = [];
+      let topics = [];
+      let persons = [];
+      let messageMatches = [];
+      try {
+        ({ conversations, topics, persons, messageMatches } =
+          await loadMetaContext(lastUserMessage));
+      } catch (error) {
+        console.error("Failed to load conversation context", error);
+      }
+
       const suggestedFeature = findFeatureGuideForText(lastUserMessage);
       const wantsTutorial =
         /\b(show me|walk me through|start (?:a )?tutorial|demonstrate|guide me|zeig(?:e|en)?(?: Sie)?(?: es)? mir(?: bitte)?|führ(?:e|en)?(?: Sie)? mich(?: bitte)? durch|start(?:e|en)?(?: Sie)?(?: bitte)? (?:ein |eine )?(?:tutorial|anleitung)|demonstrier(?:e|en)?(?: Sie)?|leit(?:e|en)?(?: Sie)? mich(?: bitte)? an)\b/i.test(
@@ -304,6 +396,8 @@ export function useMetaChatSend() {
             content: buildSystemPrompt(
               conversations,
               topics,
+              persons,
+              messageMatches,
               (memories || []).map((memory) => memory?.text || ""),
               userSettings,
               interfaceSettings,
@@ -363,9 +457,13 @@ export function useMetaChatSend() {
           const index = messages.length - 2;
           if (messages[index]?.role !== "assistant") return prev;
           if (!messages[index].loading) return prev;
+          const hasPersona =
+            getPersonaMarkers(accumulated).length > 0 ||
+            hasPersonaStartLink(accumulated);
           const finalText =
             accumulated &&
             suggestedFeature &&
+            !hasPersona &&
             !getFeatureGuideMarker(accumulated) &&
             !getUseCaseMarker(accumulated)
               ? `${accumulated}\n\n[[GUIDE:${suggestedFeature}]]`
@@ -385,14 +483,22 @@ export function useMetaChatSend() {
         const featureToStart =
           getFeatureGuideMarker(accumulated) ||
           (!useCaseToStart ? suggestedFeature : null);
+        const hasPersona =
+          getPersonaMarkers(accumulated).length > 0 ||
+          hasPersonaStartLink(accumulated);
 
-        if (accumulated && wantsTutorial && useCaseToStart) {
+        if (accumulated && wantsTutorial && !hasPersona && useCaseToStart) {
           window.dispatchEvent(
             new CustomEvent("chatai:start-use-case", {
               detail: { useCaseId: useCaseToStart },
             }),
           );
-        } else if (accumulated && wantsTutorial && featureToStart) {
+        } else if (
+          accumulated &&
+          wantsTutorial &&
+          !hasPersona &&
+          featureToStart
+        ) {
           window.dispatchEvent(
             new CustomEvent("chatai:start-feature-guide", {
               detail: { featureId: featureToStart },

@@ -22,6 +22,7 @@ export default function ImportPersonaButton({
               topicId: topicId,
             });
           }}
+          data-guide="import-persona"
           aria-label={t("sidebar.import_persona")}
           className="cursor-pointer flex-shrink-0 p-1.5 rounded-2xl hover:bg-base-200 transition-all duration-200 flex items-center justify-center"
           style={{ WebkitTapHighlightColor: "transparent" }}
@@ -41,6 +42,7 @@ export default function ImportPersonaButton({
               topicId: topicId,
             });
           }}
+          data-guide="import-persona"
           aria-label={t("sidebar.import_persona")}
           className={`cursor-pointer p-2.5 hover:bg-success/10 hover:text-success rounded-2xl transition-all duration-200 flex items-center justify-center`}
           style={{ WebkitTapHighlightColor: "transparent" }}
@@ -62,6 +64,7 @@ export default function ImportPersonaButton({
               topicId: topicId,
             });
           }}
+          data-guide="import-persona"
           aria-label={t("sidebar.import_persona")}
           className="cursor-pointer flex-shrink-0 p-2 rounded-2xl transition-all duration-200 flex items-center justify-center
  hover:bg-base-200 text-base-content"

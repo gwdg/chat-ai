@@ -15,7 +15,8 @@ import type {
   MessageRole,
   ContentItemInput,
   FolderRow,
-  FeedbackRow
+  FeedbackRow,
+  PersonaInfo
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -216,6 +217,7 @@ export async function createConversation(params: {
   folderId?: string | null
   hasFirstPrompt?: boolean
   isMetaChat?: boolean
+  persona?: PersonaInfo | null
 }) {
   const id = params?.id ?? newId()
   const now = Date.now()
@@ -237,6 +239,7 @@ export async function createConversation(params: {
       hasFirstPrompt,
       lastOpenedAt: now,
       ...(params.isMetaChat ? { isMetaChat: true } : {}),
+      ...(params.persona ? { persona: params.persona } : {}),
     })
 
     if (messages.length > 0) {
@@ -463,6 +466,207 @@ export async function listConversationMetas(): Promise<
   Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'lastOpenedAt' | 'messageCount' | 'folderId' | 'summary'>>
 > {
   return db.conversations.orderBy('id').toArray()
+}
+
+// ---------- Message search (Meta chat) ----------
+
+const SEARCH_STOPWORDS = new Set([
+  "a", "an", "and", "are", "as", "at", "be", "been", "but", "by", "can",
+  "could", "did", "do", "does", "for", "from", "had", "has", "have", "he",
+  "her", "him", "his", "how", "i", "if", "in", "into", "is", "it", "its",
+  "me", "my", "of", "on", "or", "our", "she", "should", "so", "that", "the",
+  "their", "them", "then", "there", "these", "they", "this", "to", "us",
+  "was", "we", "were", "what", "when", "where", "which", "who", "why",
+  "will", "with", "would", "you", "your",
+  "action", "actions", "chat", "chats", "compare", "conversation",
+  "conversations", "decision", "decisions", "explain", "find", "give", "go",
+  "item", "items", "message", "messages", "next", "open", "search", "setting",
+  "settings", "show", "step", "steps", "take", "tell", "todo", "todos", "topic",
+  "topics",
+  "aber", "also", "an", "auf", "aus", "bei", "das", "dem", "den", "der",
+  "des", "die", "ein", "eine", "einer", "einem", "einen", "es", "für", "hat",
+  "hier", "ich", "im", "in", "ist", "mit", "nicht", "oder", "sich", "sie",
+  "sind", "und", "von", "war", "was", "welche", "welcher", "welches", "wie",
+  "wo", "zu", "zum", "zur",
+  "aufgabe", "aufgaben", "chat", "chats", "entscheidung", "entscheidungen",
+  "erklär", "erkläre", "einstellung", "einstellungen", "finden", "nachricht",
+  "nachrichten", "nächste", "schritt", "schritte", "suche", "thema", "themen",
+  "unterhaltung", "unterhaltungen", "vergleich", "vergleiche", "zeig", "zeige",
+]);
+
+export type MessageSearchResult = {
+  conversationId: string
+  conversationTitle: string
+  folderId: string | null
+  messageId: string
+  role: string
+  createdAt: number
+  snippet: string
+}
+
+function searchTerms(query: string): string[] {
+  const matches = String(query || "").toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+  return [...new Set(
+    matches.filter((term) => term.length >= 2 && !SEARCH_STOPWORDS.has(term)),
+  )];
+}
+
+function makeSnippet(text: string, query: string, terms: string[]): string {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  const lower = clean.toLowerCase();
+  let index = query ? lower.indexOf(query.toLowerCase()) : -1;
+  if (index < 0) {
+    for (const term of terms) {
+      const found = lower.indexOf(term);
+      if (found >= 0 && (index < 0 || found < index)) index = found;
+    }
+  }
+  if (index < 0) index = 0;
+  const start = Math.max(0, index - 100);
+  const end = Math.min(clean.length, start + 320);
+  return `${start > 0 ? "…" : ""}${clean.slice(start, end).trim()}${end < clean.length ? "…" : ""}`;
+}
+
+function scoreText(text: string, query: string, terms: string[]): number {
+  const lower = text.toLowerCase();
+  let score = 0;
+  const normalizedQuery = query.toLowerCase().trim();
+  if (normalizedQuery && lower.includes(normalizedQuery)) score += 12;
+  for (const term of terms) {
+    let from = 0;
+    let count = 0;
+    while (count < 5) {
+      const found = lower.indexOf(term, from);
+      if (found < 0) break;
+      count += 1;
+      from = found + term.length;
+    }
+    score += count;
+  }
+  return score;
+}
+
+export async function searchMessages(
+  query: string,
+  limit = 12,
+): Promise<MessageSearchResult[]> {
+  const terms = searchTerms(query);
+  if (terms.length === 0) return [];
+
+  const [conversations, messages, contentItems] = await Promise.all([
+    db.conversations.toArray(),
+    db.messages.toArray(),
+    db.content_items.where('type').equals('text').toArray(),
+  ]);
+
+  const conversationById = new Map(
+    conversations
+      .filter((conversation) => !conversation.isMetaChat && conversation.id !== 'meta-chat')
+      .map((conversation) => [conversation.id, conversation]),
+  );
+  const messageById = new Map(messages.map((message) => [message.id, message]));
+  const bestByMessage = new Map<string, MessageSearchResult & { score: number }>();
+
+  for (const item of contentItems) {
+    if (!item.text) continue;
+    const message = messageById.get(item.messageId);
+    if (!message) continue;
+    if (!['user', 'assistant', 'info'].includes(message.role)) continue;
+    const conversation = conversationById.get(message.conversationId);
+    if (!conversation) continue;
+
+    const score = scoreText(item.text, query, terms);
+    if (score <= 0) continue;
+
+    const result: MessageSearchResult & { score: number } = {
+      conversationId: conversation.id,
+      conversationTitle: (conversation.title || '').trim() || 'Untitled Chat',
+      folderId: conversation.folderId ?? null,
+      messageId: message.id,
+      role: message.role,
+      createdAt: message.createdAt ?? conversation.lastModified ?? 0,
+      snippet: makeSnippet(item.text, query, terms),
+      score,
+    };
+    const previous = bestByMessage.get(message.id);
+    if (!previous || result.score > previous.score) {
+      bestByMessage.set(message.id, result);
+    }
+  }
+
+  return [...bestByMessage.values()]
+    .sort((first, second) => second.score - first.score || second.createdAt - first.createdAt)
+    .slice(0, Math.max(1, limit))
+    .map(({ score: _score, ...result }) => result);
+}
+
+export async function getRecentMessageExcerpts(
+  conversationLimit = 4,
+  messagesPerConversation = 4,
+): Promise<MessageSearchResult[]> {
+  const allConversations = await db.conversations.toArray();
+  const conversations = allConversations
+    .filter(
+      (conversation) =>
+        !conversation.isMetaChat && conversation.id !== 'meta-chat',
+    )
+    .sort(
+      (first, second) =>
+        (second.lastModified ?? second.createdAt ?? 0) -
+        (first.lastModified ?? first.createdAt ?? 0),
+    )
+    .slice(0, conversationLimit);
+  if (conversations.length === 0) return [];
+
+  const messages = await db.messages
+    .where('conversationId')
+    .anyOf(conversations.map((conversation) => conversation.id))
+    .toArray();
+  const messageIds = messages.map((message) => message.id);
+  if (messageIds.length === 0) return [];
+
+  const textItems = await db.content_items
+    .where('messageId')
+    .anyOf(messageIds)
+    .and((item) => item.type === 'text' && Boolean(item.text))
+    .toArray();
+  const textByMessage = new Map<string, string>();
+  for (const item of textItems) {
+    textByMessage.set(
+      item.messageId,
+      `${textByMessage.get(item.messageId) || ''}\n${item.text}`.trim(),
+    );
+  }
+
+  const results: MessageSearchResult[] = [];
+  for (const conversation of conversations) {
+    const conversationMessages = messages
+      .filter(
+        (message) =>
+          message.conversationId === conversation.id &&
+          ['user', 'assistant', 'info'].includes(message.role) &&
+          textByMessage.has(message.id),
+      )
+      .sort((first, second) => first.idx - second.idx)
+      .slice(-messagesPerConversation);
+
+    for (const message of conversationMessages) {
+      const text = textByMessage.get(message.id) || '';
+      results.push({
+        conversationId: conversation.id,
+        conversationTitle:
+          (conversation.title || '').trim() || 'Untitled Chat',
+        folderId: conversation.folderId ?? null,
+        messageId: message.id,
+        role: message.role,
+        createdAt: message.createdAt ?? conversation.lastModified ?? 0,
+        snippet:
+          text.length > 400 ? `${text.slice(0, 400).trim()}…` : text.trim(),
+      });
+    }
+  }
+
+  return results.sort((first, second) => second.createdAt - first.createdAt);
 }
 
 // Rename conversation or update settings

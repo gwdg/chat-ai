@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
-import { ChevronDown } from "lucide-react";
+import { useSearchParams } from "react-router";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 // Hooks
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
@@ -13,6 +14,7 @@ import MessageUser from "./MessageUser/MessageUser";
 import Motto from "./Motto";
 import UndoButton from "./UndoButton";
 import Tooltip from "../Others/Tooltip";
+import CloseChatButton from "./CloseChatButton";
 
 export default function Conversation({
   localState,
@@ -22,6 +24,8 @@ export default function Conversation({
 }) {
   const showSettings = useSelector(selectShowSettings);
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const targetMessageId = searchParams.get("message");
 
   // UI
   const [copied, setCopied] = useState(false);
@@ -31,7 +35,9 @@ export default function Conversation({
   const [autoFollow, setAutoFollow] = useState(true); // << explicit follow switch
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [showJumpToStartButton, setShowJumpToStartButton] = useState(false);
+  const [showTopScrollButtons, setShowTopScrollButtons] = useState(false);
+  const [showCloseButton, setShowCloseButton] = useState(true);
+  const [highlightedMessageId, setHighlightedMessageId] = useState(null);
 
   // Refs
   const containerRef = useRef(null);
@@ -56,27 +62,6 @@ export default function Conversation({
     return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
   }, []);
 
-  const getTopMessage = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return null;
-    const containerTop = el.getBoundingClientRect().top;
-    let topElement = null;
-    let top = null;
-
-    Object.keys(messageRefs.current).forEach((key) => {
-      const element = messageRefs.current[key];
-      if (!element) return;
-      const rect = element.getBoundingClientRect();
-      if (rect.height === 0) return;
-      if (rect.top <= containerTop + 8) {
-        topElement = element;
-        top = rect.top;
-      }
-    });
-
-    return topElement ? { element: topElement, top } : null;
-  }, []);
-
   const updateArrow = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -90,14 +75,24 @@ export default function Conversation({
       prev !== shouldShowBottom ? shouldShowBottom : prev
     );
 
-    const topMessage = getTopMessage();
     const containerTop = el.getBoundingClientRect().top;
-    const shouldShowTop =
-      overflow && Boolean(topMessage) && topMessage.top < containerTop - 2;
-    setShowJumpToStartButton((prev) =>
+    const shouldShowTop = overflow && el.scrollTop > 8;
+    setShowTopScrollButtons((prev) =>
       prev !== shouldShowTop ? shouldShowTop : prev
     );
-  }, [checkIfAtBottom, getTopMessage, hasOverflow]);
+
+    const firstMessage = Object.keys(messageRefs.current)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((index) => messageRefs.current[index])
+      .find((element) => element && element.getBoundingClientRect().height > 0);
+    const isOnFirstMessage =
+      !firstMessage ||
+      firstMessage.getBoundingClientRect().bottom > containerTop + 8;
+    setShowCloseButton((prev) =>
+      prev !== isOnFirstMessage ? isOnFirstMessage : prev
+    );
+  }, [checkIfAtBottom, hasOverflow]);
 
   const scrollToBottom = useCallback((behavior = "auto") => {
     const el = containerRef.current;
@@ -136,10 +131,68 @@ export default function Conversation({
     [hasOverflow, updateArrow]
   );
 
-  const handleJumpToStart = useCallback(() => {
-    const topMessage = getTopMessage();
-    if (topMessage?.element) scrollElementToTop(topMessage.element);
-  }, [getTopMessage, scrollElementToTop]);
+  const scrollToTop = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    setAutoFollow(false);
+    setShowScrollButton(hasOverflow());
+
+    const guardMs = 400;
+    programmaticGuardUntil.current = Date.now() + guardMs;
+    el.scrollTo({ top: 0, behavior: "smooth" });
+
+    clearTimeout(jumpTimer.current);
+    jumpTimer.current = setTimeout(updateArrow, guardMs + 50);
+  }, [hasOverflow, updateArrow]);
+
+  const handlePreviousMessage = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const containerTop = el.getBoundingClientRect().top;
+    let previousElement = null;
+    let previousTop = -Infinity;
+
+    Object.keys(messageRefs.current).forEach((key) => {
+      const element = messageRefs.current[key];
+      if (!element) return;
+      const rect = element.getBoundingClientRect();
+      if (rect.height === 0) return;
+      if (rect.top < containerTop - 8 && rect.top > previousTop) {
+        previousTop = rect.top;
+        previousElement = element;
+      }
+    });
+
+    if (previousElement) {
+      scrollElementToTop(previousElement);
+      return;
+    }
+
+    scrollToTop();
+  }, [scrollElementToTop, scrollToTop]);
+
+  useEffect(() => {
+    if (!targetMessageId || localState.messages.length <= 2) return undefined;
+
+    setHighlightedMessageId(targetMessageId);
+    const frame = requestAnimationFrame(() => {
+      const element = Array.from(
+        document.querySelectorAll("[data-message-id]"),
+      ).find(
+        (candidate) =>
+          candidate.getAttribute("data-message-id") === targetMessageId,
+      );
+      if (element) scrollElementToTop(element);
+    });
+    const timer = setTimeout(() => setHighlightedMessageId(null), 3000);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, [targetMessageId, localState.messages.length, scrollElementToTop]);
 
   const handleNextMessage = useCallback(() => {
     const el = containerRef.current;
@@ -322,6 +375,10 @@ export default function Conversation({
       className={`w-full flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
+      {showCloseButton && (
+        <CloseChatButton localState={localState} setLocalState={setLocalState} />
+      )}
+
       {/* Empty conversation */}
       <div
         className={`flex flex-col space-y-16 md:max-h-[45vh] xl:max_h-[45vh] justify-end
@@ -370,7 +427,12 @@ export default function Conversation({
             {localState.messages.slice(0, -1)?.map((message, message_index) => (
               <div
                 key={message_index}
-                className="flex flex-col"
+                className={`flex flex-col transition-shadow duration-300 ${
+                  message.id === highlightedMessageId
+                    ? "ring-2 ring-accent ring-offset-2 ring-offset-base-200 rounded-2xl"
+                    : ""
+                }`}
+                data-message-id={message.id}
                 ref={(node) => {
                   messageRefs.current[message_index] = node;
                 }}
@@ -403,13 +465,22 @@ export default function Conversation({
           </div>
           </div>
 
-          {/* Floating jump-to-start button at the top of the message area */}
-          {showJumpToStartButton && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
-              <Tooltip text={t("common.scroll_to_message")}>
+          {/* Floating previous-message / scroll-to-top buttons */}
+          {showTopScrollButtons && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
+              <Tooltip text={t("common.previous_message")}>
                 <button
-                  onClick={handleJumpToStart}
-                  aria-label={t("common.scroll_to_message")}
+                  onClick={handlePreviousMessage}
+                  aria-label={t("common.previous_message")}
+                  className="btn btn-circle shadow-lg"
+                >
+                  <ChevronUp className="w-5 h-5" />
+                </button>
+              </Tooltip>
+              <Tooltip text={t("common.scroll_to_top")}>
+                <button
+                  onClick={scrollToTop}
+                  aria-label={t("common.scroll_to_top")}
                   className="btn btn-circle shadow-lg"
                 >
                   <svg

@@ -470,6 +470,54 @@ export const featureGuides = {
       },
     ],
   },
+  close_chat: {
+    titleKey: "feature_guide.close_chat.title",
+    prompt:
+      "Use the close button at the top right of the chat. It removes the chat from the conversation list; in the Meta chat it clears the conversation instead.",
+    keywords: [
+      "close chat",
+      "delete chat",
+      "remove chat",
+      "clear meta chat",
+      "clear chat",
+    ],
+    steps: [
+      {
+        target: '[data-guide="close-chat"]',
+        textKey: "feature_guide.close_chat.step1",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  chat_with_persona: {
+    titleKey: "feature_guide.chat_with_persona.title",
+    prompt:
+      "Open the persona library with the Chat with Persona button in the sidebar. Choose a category, then select a persona to start a new chat with its title, model, and system prompt.",
+    keywords: [
+      "persona",
+      "personas",
+      "chat with persona",
+      "persona library",
+      "start persona chat",
+    ],
+    steps: [
+      {
+        target: '[data-guide="import-persona"]',
+        textKey: "feature_guide.chat_with_persona.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="persona-categories"]',
+        textKey: "feature_guide.chat_with_persona.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="persona-files"]',
+        textKey: "feature_guide.chat_with_persona.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   share_conversation: {
     titleKey: "feature_guide.share_conversation.title",
     prompt:
@@ -713,12 +761,20 @@ export const featureGuides = {
   meta_chat_catalogs: {
     titleKey: "feature_guide.meta_chat_catalogs.title",
     prompt:
-      "Explain how to use the Meta chat to find tutorials, use cases, and the user's current settings. Browse tutorials and Browse use cases open searchable catalogs; users can also ask the Meta chat to find a tutorial or to explain settings such as the memory preference.",
+      "Explain how to use the Meta chat to find tutorials, use cases, personas, settings, chats, messages, and topics. Browse tutorials and Browse use cases open searchable catalogs; users can also ask the Meta chat to find a tutorial, recommend a persona, explain settings, navigate to a chat/message/topic/settings tab, search message contents, compare conversations, or extract decisions and action items.",
     keywords: [
       "meta chat tutorials",
       "meta chat use cases",
+      "meta chat personas",
+      "meta chat search",
+      "find a decision",
+      "compare conversations",
+      "take me to a setting",
+      "navigate to a message",
       "browse tutorials",
       "browse use cases",
+      "persona",
+      "recommend persona",
     ],
     steps: [
       {
@@ -741,6 +797,36 @@ export const featureGuides = {
       },
     ],
   },
+  meta_chat_navigation: {
+    titleKey: "feature_guide.meta_chat_navigation.title",
+    prompt:
+      "Use the Meta chat to navigate to chats, messages, topics, and settings, and to search across message contents. Ask it where something was decided or what action items exist; answers include links that jump to the exact source and highlight it.",
+    keywords: [
+      "meta chat navigation",
+      "find a message",
+      "find a decision",
+      "action items",
+      "take me to a setting",
+      "deep link",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_navigation.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_navigation.step2",
+        completeOnEvent: "message-complete",
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_navigation.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
   meta_chat_usage: {
     titleKey: "feature_guide.meta_chat_usage.title",
     prompt:
@@ -757,6 +843,7 @@ export const featureGuides = {
 };
 
 export const FEATURE_CATEGORIES = {
+  personas: ["chat_with_persona"],
   prompt: [
     "attach_media",
     "upload_file",
@@ -782,10 +869,12 @@ export const FEATURE_CATEGORIES = {
     "sort_group_chats",
     "export_conversation",
     "import_conversation",
+    "close_chat",
     "share_conversation",
     "fork_conversation",
     "summarize_conversation",
     "meta_chat_usage",
+    "meta_chat_navigation",
   ],
   settings: [
     "settings_overview",
@@ -854,6 +943,8 @@ const germanGuideKeywords = {
   sort_group_chats: ["chats sortier", "chats gruppier", "sortier", "gruppier", "nach datum sortier"],
   export_conversation: ["chat exportier", "unterhaltung exportier", "chat herunterlad", "chat speicher", "exportier"],
   import_conversation: ["chat importier", "unterhaltung importier", "importier", "chat wiederherstell"],
+  chat_with_persona: ["persona", "personas", "mit persona chatten", "persona bibliothek", "persona auswähl", "persona starten"],
+  close_chat: ["chat schließ", "chat lösch", "unterhaltung schließ", "unterhaltung lösch", "chat entfern", "metachat leer", "chat leeren"],
   share_conversation: ["chat teil", "unterhaltung teil", "einstellungen teil"],
   fork_conversation: ["chat abzweig", "unterhaltung abzweig", "chat verzweig", "unterhaltung verzweig", "fork"],
   summarize_conversation: ["chat zusammenfass", "unterhaltung zusammenfass", "zusammenfassung", "zusammenfass"],
@@ -866,7 +957,8 @@ const germanGuideKeywords = {
   dark_mode: ["dunkelmodus", "dunkler modus", "heller modus", "design", "theme", "farbschema"],
   feedback: ["feedback", "antwort bewert", "bewert", "daumen hoch", "daumen runter"],
   speech_output: ["vorles", "vorgeles", "sprachausgabe", "text zu sprache", "antwort vorles"],
-  meta_chat_catalogs: ["metachat tutorial", "metachat anleitung", "tutorials durchsuch", "anwendungsfälle durchsuch", "tutorials find", "tutorial", "anleitung", "anwendungsfälle", "katalog", "einstellungen im metachat"],
+  meta_chat_catalogs: ["metachat tutorial", "metachat anleitung", "tutorials durchsuch", "anwendungsfälle durchsuch", "tutorials find", "tutorial", "anleitung", "anwendungsfälle", "katalog", "einstellungen im metachat", "persona", "personas", "persona empfehl", "persona finden", "mit persona chatten", "metachat suche", "entscheidung finden", "aufgaben finden", "chats vergleichen", "zum chat", "zur nachricht", "zum thema", "einstellung öffnen"],
+  meta_chat_navigation: ["metachat navigation", "nachricht finden", "entscheidung finden", "aufgaben finden", "zum chat springen", "zur einstellung", "deep link", "zitat"],
   meta_chat_usage: ["metachat", "meta chat", "metachat verwend", "metachat öffn"],
 };
 

@@ -9,11 +9,13 @@ import { useConversationSummaries } from "../hooks/useConversationSummaries";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
+import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
+import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
 import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
@@ -34,6 +36,8 @@ export default function ChatPage() {
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
   const sendMessage = useSendMessage();
+
+  useSettingsDeepLink({ localState, userData, modelsData });
 
   // Sync localState conversation with IndexedDB
   useSyncConversation({
@@ -93,12 +97,19 @@ export default function ChatPage() {
           modelsData={modelsData}
         />
 
-        <Conversation
-          localState={localState}
-          setLocalState={setLocalState}
-          userData={userData}
-          modelsData={modelsData}
-        />
+        <div className="flex min-h-0 min-w-0 flex-col">
+          {localState?.persona && (
+            <PersonaChatBanner persona={localState.persona} />
+          )}
+          <div className="min-h-0 flex-1">
+            <Conversation
+              localState={localState}
+              setLocalState={setLocalState}
+              userData={userData}
+              modelsData={modelsData}
+            />
+          </div>
+        </div>
 
         <CollapsibleFooter
           className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3"
