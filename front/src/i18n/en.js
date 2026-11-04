@@ -164,6 +164,12 @@ export default {
     tools_agent_external: "This model runs without tools",
     placeholder_arcana_id: "Arcana id",
     placeholder_mcp_id: "Server id",
+    placeholder_mcp_url: "http://localhost:3000/mcp",
+    placeholder_mcp_auth: "Authorization header (optional)",
+    mcp_add: "Add MCP server",
+    mcp_remove: "Remove server",
+    mcp_toggle: "Use this server",
+    mcp_gateway_first: "Without agent mode only the first server is used, as a gateway server id.",
     video_queue_title: "Video generation queue",
     video_queue_subtitle: "List of video generation tasks.",
     video_queue_job_label: "Video request #{{count}}",
@@ -484,6 +490,7 @@ export default {
   },
   // Alerts and warnings
   alert: {
+    mcp_unreachable: "MCP server {{url}} is not reachable. Make sure it is running, or turn it off in the tool settings to continue.",
     folder_access:
       "The assistant wants to use the local folder <strong>{{name}}</strong> again. Your browser needs you to allow access after a reload.",
     title: "Warning",

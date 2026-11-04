@@ -3,6 +3,7 @@ import { useModal } from "../../modals/ModalContext";
 import { Share } from "lucide-react";
 import { useToast } from "../../hooks/useToast";
 import { encodeBase64UrlUtf8 } from "../../utils/base64url";
+import { hasMcpServerValue, withoutHeaders } from "../../agent/mcp";
 
 export default function ShareSettingsButton({ localState }) {
   const { openModal } = useModal();
@@ -24,8 +25,7 @@ export default function ShareSettingsButton({ localState }) {
         video_generation: rawTools.video_generation ?? false,
       };
       const mcpServers = localState?.settings?.mcp_servers;
-      const hasMcpServers =
-        typeof mcpServers === "string" && mcpServers.trim().length > 0;
+      const hasMcpServers = hasMcpServerValue(mcpServers);
       const shouldShareMcpServers =
         !!shareMcpServers && hasMcpServers;
 
@@ -52,7 +52,7 @@ export default function ShareSettingsButton({ localState }) {
         // tools
         enable_tools: localState?.settings?.enable_tools,
         tools: tools,
-        ...(shouldShareMcpServers && { mcp_servers: mcpServers }),
+        ...(shouldShareMcpServers && { mcp_servers: withoutHeaders(mcpServers) }),
         // Include arcana settings if enabled
         ...(shareArcana && {
             arcana: {
@@ -98,8 +98,7 @@ export default function ShareSettingsButton({ localState }) {
           handleShareSettings,
           showArcanaOption: !!localState?.settings?.arcana?.id,
           showMcpServersOption:
-            typeof localState?.settings?.mcp_servers === "string" &&
-            localState.settings.mcp_servers.trim().length > 0,
+            hasMcpServerValue(localState?.settings?.mcp_servers),
         })
       }
     >

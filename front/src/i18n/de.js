@@ -160,6 +160,12 @@ export default {
     tools_agent_external: "Dieses Modell läuft ohne Werkzeuge",
     placeholder_arcana_id: "Arcana-ID",
     placeholder_mcp_id: "Server-ID",
+    placeholder_mcp_url: "http://localhost:3000/mcp",
+    placeholder_mcp_auth: "Authorization-Header (optional)",
+    mcp_add: "MCP-Server hinzufügen",
+    mcp_remove: "Server entfernen",
+    mcp_toggle: "Diesen Server verwenden",
+    mcp_gateway_first: "Ohne Agentenmodus wird nur der erste Server verwendet, als Gateway-Server-ID.",
     video_queue_title: "Videogenerierungs-Warteschlange",
     video_queue_subtitle: "Liste der Video-Generation Aufgaben",
     video_queue_job_label: "Videoanfrage #{{count}}",
@@ -486,6 +492,7 @@ export default {
   },
   // Alerts and warnings
   alert: {
+    mcp_unreachable: "Der MCP-Server {{url}} ist nicht erreichbar. Stellen Sie sicher, dass er läuft, oder schalten Sie ihn in den Werkzeugeinstellungen aus, um fortzufahren.",
     folder_access:
       "Der Assistent möchte den lokalen Ordner <strong>{{name}}</strong> wieder verwenden. Nach einem Neuladen muss der Zugriff erneut erlaubt werden.",
     title: "Warning",

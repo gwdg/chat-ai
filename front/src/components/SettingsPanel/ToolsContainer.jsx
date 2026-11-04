@@ -27,10 +27,10 @@ import VideoList from "./VideoList";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 
 // Tools the agent has no counterpart for
-const AGENT_UNAVAILABLE = new Set(["video_generation", "mcp", ...(agentGatewayTools() ? [] : ["web_search", "arcana"])]);
+const AGENT_UNAVAILABLE = new Set(["video_generation", ...(agentGatewayTools() ? [] : ["web_search", "arcana"])]);
 // Agent tools that are off unless switched on: the ones the gateway runs (agent/gateway.ts),
-// and writing files (agent/tools.ts)
-const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access"]);
+// writing files (agent/tools.ts) and MCP servers (agent/mcp.ts)
+const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access", "mcp"]);
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
 
@@ -124,7 +124,9 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const showArcanaBox = agentMode
     ? agentGatewayTools() && toolsState.arcana === true
     : !!settings?.enable_tools && !!toolsState.arcana;
-  const showMCPBox = !agentMode && !!settings?.enable_tools && !!toolsState.mcp;
+  const showMCPBox = agentMode
+    ? !agentWithoutTools && toolsState.mcp === true
+    : !!settings?.enable_tools && !!toolsState.mcp;
   const showVideoList = !agentMode && !!toolsState.video_generation;
 
   // Tool list (labels are translated)

@@ -1,6 +1,14 @@
 import getModelDefaults from "../config/getModelDefaults";
 import { createBackendClient } from "./openaiClient";
 
+// Older conversations hold the id as a string; the server list holds {url, enabled}
+const gatewayMcpServer = (servers) =>
+  typeof servers === "string"
+    ? servers.trim()
+    : Array.isArray(servers)
+      ? (servers.find((server) => server?.enabled && server?.url?.trim())?.url ?? "").trim()
+      : "";
+
 // Request fields that set the reasoning effort for `model`, from its defaults and the conversation settings
 export function reasoningParams(model, settings) {
   const params = {};
@@ -79,8 +87,10 @@ async function* chatCompletions (
       params.feedback = conversation.settings.feedback;
     }
 
-    if (conversation.settings?.mcp_servers && conversation.settings.mcp_servers.length > 0) {
-      params["mcp-servers"] = [conversation.settings.mcp_servers];
+    // The gateway takes one server id; from the server list (agent/mcp.ts) the first enabled one
+    const mcpServer = gatewayMcpServer(conversation.settings?.mcp_servers);
+    if (mcpServer) {
+      params["mcp-servers"] = [mcpServer];
     }
 
     // Define openai object to call backend

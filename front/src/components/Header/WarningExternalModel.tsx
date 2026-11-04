@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { Locked, WarningAltFilled, Close } from "@carbon/icons-react";
 import { isAgentEnabled } from "../../apis/agentEndpoints";
+import { activeMcpServers } from "../../agent/mcp";
 
 function isSafeSettings(localState) {
   const modelName = localState?.settings?.model?.name;
@@ -10,7 +11,7 @@ function isSafeSettings(localState) {
     typeof modelName === "string" &&
     modelName.toLowerCase().includes("external");
 
-  // The agent does not use web search or MCP
+  // The agent does not use the gateway web search; it calls MCP servers itself (agent/mcp.ts)
   const toolsEnabled = !!localState?.settings?.enable_tools && !isAgentEnabled();
   const tools = localState?.settings?.tools || {};
 
@@ -21,7 +22,7 @@ function isSafeSettings(localState) {
       !!tools.web_search ||
       !!tools.fetch_url);
 
-  const mcpEnabled = toolsEnabled && !!tools.mcp;
+  const mcpEnabled = isAgentEnabled() ? activeMcpServers(localState?.settings).length > 0 : toolsEnabled && !!tools.mcp;
 
   return !(isExternalModel || webSearchEnabled || mcpEnabled);
 }

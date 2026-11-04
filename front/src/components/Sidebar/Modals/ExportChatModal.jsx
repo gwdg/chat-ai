@@ -9,6 +9,7 @@ import { useToast } from "../../../hooks/useToast";
 import { jsPDF } from "jspdf";
 import Logo from "../../../assets/logos/chat_ai.png"
 import { processContentItems } from "../../../utils/sendMessage";
+import { hasMcpServerValue, withoutHeaders } from "../../../agent/mcp";
 
 export default function ExportChatModal({
   isOpen,
@@ -55,12 +56,7 @@ export default function ExportChatModal({
   const messages = conversation?.messages
   const arcana = conversation?.settings?.arcana
   const mcpServers = conversation?.settings?.mcp_servers;
-  const hasMcpServers =
-    typeof mcpServers === "string"
-      ? mcpServers.trim().length > 0
-      : Array.isArray(mcpServers)
-      ? mcpServers.length > 0
-      : false;
+  const hasMcpServers = hasMcpServerValue(mcpServers);
 
   // Function to generate timestamped filename for exports
   const generateFileName = (extension) => {
@@ -131,7 +127,7 @@ export default function ExportChatModal({
     if (conversation?.title) settings.title = conversation.title;
     if (conversation?.settings?.temperature !== undefined && conversation?.settings?.temperature !== null) settings.temperature = conversation.settings.temperature;
     if (conversation?.settings?.enable_tools) settings.enable_tools = conversation.settings.enable_tools;
-    if (exportMcpServers && hasMcpServers) settings.mcp_servers = conversation.settings.mcp_servers;
+    if (exportMcpServers && hasMcpServers) settings.mcp_servers = withoutHeaders(conversation.settings.mcp_servers);
     if (conversation?.settings?.top_p) settings.top_p = conversation.settings.top_p;
     if (conversation?.settings?.tools) settings.tools = Object.keys(conversation.settings.tools)
         .filter(t => conversation.settings.tools[t] === true)
@@ -182,7 +178,7 @@ export default function ExportChatModal({
       if (exportSettings) {
         let settings = processSettings();
         const mcpServersText = Array.isArray(settings?.mcp_servers)
-          ? settings.mcp_servers.join(", ")
+          ? settings.mcp_servers.map((server) => server?.url ?? server).join(", ")
           : settings?.mcp_servers;
         const additionalText =
         `\n\nConversation settings\ntitle: ${
@@ -463,7 +459,7 @@ export default function ExportChatModal({
 
         if (exportMcpServers && hasMcpServers && settings?.mcp_servers) {
           const mcpServersText = Array.isArray(settings.mcp_servers)
-            ? settings.mcp_servers.join(", ")
+            ? settings.mcp_servers.map((server) => server?.url ?? server).join(", ")
             : settings.mcp_servers;
           doc.text(`MCP server: ${mcpServersText}`, margin, y);
           y += lineHeight;

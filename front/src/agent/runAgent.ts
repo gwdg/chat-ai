@@ -14,6 +14,8 @@ import { loadFileMeta, saveFile } from "../db";
 import { getFileType } from "../utils/attachments";
 import { prepareAttachment, UPLOADS, uploadPath } from "./prepare";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
+import i18n from "../i18n";
+import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpTools } from "./mcp";
 import { createTools } from "./tools";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
@@ -301,6 +303,21 @@ export async function runAgentTurn({
     gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
   );
 
+  const tools = useTools ? createTools(workspace, { vision, enabled: settings.tools }) : [];
+  // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it
+  const servers = useTools ? activeMcpServers(settings) : [];
+  let mcp: McpTools | undefined;
+  if (servers.length) {
+    try {
+      mcp = await connectMcpServers(servers, new Set(tools.map((tool) => tool.name)));
+    } catch (error) {
+      if (!(error instanceof McpUnavailableError)) throw error;
+      console.error(error);
+      throw new Error(i18n.t("alert.mcp_unreachable", { url: error.url }));
+    }
+    tools.push(...mcp.tools);
+  }
+
   const mounts = listMounts(conversationId);
   const agent = new Agent({
     initialState: {
@@ -316,7 +333,7 @@ export async function runAgentTurn({
         .filter(Boolean)
         .join("\n\n"),
       model,
-      tools: useTools ? createTools(workspace, { vision, enabled: settings.tools }) : [],
+      tools,
       messages: conversation,
     },
     beforeToolCall,
@@ -383,6 +400,7 @@ export async function runAgentTurn({
     await agent.prompt(prompt);
   } finally {
     stopListening();
+    await mcp?.close();
   }
   await saveWritten();
 
