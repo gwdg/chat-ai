@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, MagicWand, Idea, Warning, Close, StopFilled } from "@carbon/icons-react";
+import { Warning, Close, StopFilled } from "@carbon/icons-react";
 import { useTranslation } from "react-i18next";
 
+import EmptyConversation from "../Conversation/EmptyConversation";
+import Typing from "../Conversation/MessageAssistant/Typing";
 import WorkspaceMessage from "./WorkspaceMessage";
 
 type ToolResultInfo = { toolName: string; text: string; isError: boolean };
@@ -94,45 +96,36 @@ export default function WorkspaceConversation({
     <div
       ref={scrollRef}
       onScroll={handleScroll}
-      className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-6"
+      className="min-h-0 flex-1 overflow-y-auto"
     >
-      <div className="mx-auto flex w-full max-w-3xl flex-col">
+      <div className="mx-auto flex h-full w-full flex-col gap-1.5 p-1.5 md:max-w-[85vw] xl:max-w-[1300px]">
         {status === "loading" && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 py-20 text-base-content/50">
-            <span className="loading loading-spinner loading-md text-primary" />
-            <p className="text-sm">{t("workspace.starting_agent")}</p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 py-20">
+            <Typing />
+            <p className="text-sm text-base-content/50">{t("workspace.starting_agent")}</p>
           </div>
         )}
 
         {showEmpty && (
-          <div className="flex flex-col items-center justify-center px-2 py-10 text-center md:py-16">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-primary/15 via-secondary/10 to-accent/15 text-primary shadow-sm ring-1 ring-base-300">
-              <Bot size={30} />
-            </div>
-            <h2 className="text-lg font-semibold text-base-content">
+          <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 text-center">
+            <EmptyConversation />
+            <h2 className="mt-4 text-lg font-semibold text-base-content">
               {t("workspace.empty_title", { name: workspaceName })}
             </h2>
             <p className="mt-1 max-w-md text-sm text-base-content/60">
               {t("workspace.empty_body")}
             </p>
-            <code className="mt-2 rounded-full bg-base-100 px-3 py-1 text-[11px] text-base-content/50 ring-1 ring-base-300">
+            <code className="mt-2 rounded-full bg-base-200 px-3 py-1 text-[11px] text-base-content/50">
               {rootPath}
             </code>
-            <div className="mt-6 grid w-full max-w-xl gap-2 sm:grid-cols-3">
-              {suggestions.map((suggestion, index) => (
+            <div className="mt-6 flex w-full max-w-xl flex-wrap justify-center gap-2">
+              {suggestions.map((suggestion) => (
                 <button
                   key={suggestion}
                   type="button"
                   onClick={() => onSuggestion(suggestion)}
-                  className="group flex min-h-20 flex-col items-start gap-2 rounded-2xl border border-base-300 bg-base-100 p-3 text-left text-xs text-base-content/80 transition hover:border-primary/40 hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="rounded-full border border-base-300 bg-base-100 px-3 py-1.5 text-xs text-base-content/70 transition hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
-                  {index === 0 ? (
-                    <MagicWand size={16} className="text-accent" />
-                  ) : index === 1 ? (
-                    <Idea size={16} className="text-primary" />
-                  ) : (
-                    <Bot size={16} className="text-secondary" />
-                  )}
                   <span>{suggestion}</span>
                 </button>
               ))}
@@ -157,7 +150,7 @@ export default function WorkspaceConversation({
         )}
 
         {status === "tool" && activity && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-xs text-base-content/70 shadow-sm">
+          <div className="mt-1 flex items-center gap-2 px-3 py-2 text-xs text-base-content/60">
             <span className="loading loading-spinner loading-xs text-primary" />
             <span>
               {t("workspace.running_tool", {
@@ -168,9 +161,8 @@ export default function WorkspaceConversation({
         )}
 
         {status === "thinking" && !streamingMessage && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-base-content/50">
-            <span className="loading loading-dots loading-sm text-primary" />
-            <span>{t("workspace.thinking")}</span>
+          <div className="px-3 pt-1">
+            <Typing />
           </div>
         )}
 

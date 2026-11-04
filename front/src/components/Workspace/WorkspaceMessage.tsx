@@ -1,8 +1,6 @@
 import { useMemo } from "react";
 import {
-  Bot,
   Checkmark,
-  ChevronDown,
   ChevronRight,
   Terminal,
   Warning,
@@ -10,6 +8,8 @@ import {
 import { useTranslation } from "react-i18next";
 
 import MarkdownRenderer from "../Conversation/MessageAssistant/MarkdownRenderer";
+import CopyButton from "../Conversation/MessageAssistant/CopyButton";
+import Typing from "../Conversation/MessageAssistant/Typing";
 
 type ToolResultInfo = {
   toolName: string;
@@ -42,6 +42,15 @@ function assistantMarkdown(content: any): string {
     }
   }
   return parts.join("\n\n").trim();
+}
+
+function assistantText(content: any): string {
+  if (!Array.isArray(content)) return "";
+  return content
+    .filter((block) => block?.type === "text" && block.text)
+    .map((block) => block.text)
+    .join("\n\n")
+    .trim();
 }
 
 function describeToolArgs(name: string, args: any): string {
@@ -134,8 +143,12 @@ export default function WorkspaceMessage({
     const images = imagesFromContent(message.content);
     return (
       <div className="flex w-full justify-end pt-2">
-        <div className="max-w-[85%] rounded-2xl rounded-br-md bg-chat px-4 py-3 text-sm text-base-content shadow-sm ring-1 ring-base-300">
-          {text && <p className="whitespace-pre-wrap break-words">{text}</p>}
+        <div className="flex w-fit max-w-[85%] items-start gap-1.5 overflow-y-auto rounded-xl border border-base-300 bg-chat p-2.5 text-sm text-base-content">
+          {text && (
+            <pre className="min-w-0 flex-grow whitespace-pre-wrap break-words font-sans text-sm">
+              {text}
+            </pre>
+          )}
           {images.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {images.map((image, index) => (
@@ -161,46 +174,42 @@ export default function WorkspaceMessage({
   const failed = message.stopReason === "error";
 
   return (
-    <div className="flex w-full gap-2 pt-3">
-      <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-        <Bot size={16} />
-      </span>
-      <div className="min-w-0 flex-1">
-        {markdown ? (
-          <div className="rounded-2xl rounded-tl-md bg-base-100 px-4 py-3 text-sm shadow-sm ring-1 ring-base-300">
-            <MarkdownRenderer isLoading={isStreaming}>{markdown}</MarkdownRenderer>
-            {isStreaming && (
-              <span className="ml-1 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-primary align-text-bottom" />
-            )}
+    <div className="overflow-hidden px-3 pt-3 text-base-content">
+      {markdown ? (
+        <MarkdownRenderer isLoading={isStreaming}>{markdown}</MarkdownRenderer>
+      ) : (
+        isStreaming && (
+          <div className="pb-3">
+            <Typing />
           </div>
-        ) : (
-          isStreaming && (
-            <div className="flex items-center gap-2 rounded-2xl rounded-tl-md bg-base-100 px-4 py-3 text-sm text-base-content/60 shadow-sm ring-1 ring-base-300">
-              <span className="loading loading-dots loading-sm text-primary" />
-            </div>
-          )
-        )}
+        )
+      )}
 
-        {toolCalls.length > 0 && (
-          <div className="mt-1">
-            {toolCalls.map((call: any) => (
-              <ToolCallRow
-                key={call.id}
-                name={call.name}
-                args={call.arguments}
-                result={toolResults?.get(call.id)}
-              />
-            ))}
-          </div>
-        )}
+      {toolCalls.length > 0 && (
+        <div className="mt-2">
+          {toolCalls.map((call: any) => (
+            <ToolCallRow
+              key={call.id}
+              name={call.name}
+              args={call.arguments}
+              result={toolResults?.get(call.id)}
+            />
+          ))}
+        </div>
+      )}
 
-        {failed && message.errorMessage && (
-          <div className="mt-2 flex items-start gap-2 rounded-xl border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
-            <Warning size={14} className="mt-0.5 shrink-0" />
-            <span>{message.errorMessage}</span>
-          </div>
-        )}
-      </div>
+      {!isStreaming && assistantText(message.content) && (
+        <div className="mt-1 flex justify-start opacity-25 transition-opacity hover:opacity-100">
+          <CopyButton text={assistantText(message.content)} />
+        </div>
+      )}
+
+      {failed && message.errorMessage && (
+        <div className="mt-2 flex items-start gap-2 rounded-xl border border-error/30 bg-error/10 px-3 py-2 text-xs text-error">
+          <Warning size={14} className="mt-0.5 shrink-0" />
+          <span>{message.errorMessage}</span>
+        </div>
+      )}
     </div>
   );
 }
