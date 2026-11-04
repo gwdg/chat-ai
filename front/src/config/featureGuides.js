@@ -296,31 +296,6 @@ export const featureGuides = {
       },
     ],
   },
-  video_generation: {
-    titleKey: "feature_guide.video_generation.title",
-    prompt:
-      "Generate videos with GWDG Tools. Open Tools, enable tools, then select Video Generation. The video queue shows progress.",
-    keywords: ["video generation", "generate video", "text to video"],
-    steps: [
-      {
-        target: '[data-guide="tools"]',
-        textKey: "feature_guide.video_generation.step1",
-        completeOnTargetClick: true,
-      },
-      {
-        target: '[data-guide="tools-enable"]',
-        prepare: openTools,
-        textKey: "feature_guide.video_generation.step2",
-        check: toolsAreEnabled,
-      },
-      {
-        target: '[data-guide="tool-video_generation"]',
-        prepare: ensureToolsEnabled,
-        textKey: "feature_guide.video_generation.step3",
-        check: () => isToolActive("video_generation"),
-      },
-    ],
-  },
   mcp_server: {
     titleKey: "feature_guide.mcp_server.title",
     prompt:
@@ -1023,7 +998,6 @@ export const FEATURE_CATEGORIES = {
     "image_generation",
     "image_modification",
     "audio_generation",
-    "video_generation",
     "mcp_server",
   ],
   chats: [
@@ -1100,7 +1074,6 @@ const germanGuideKeywords = {
   image_generation: ["bilder erzeug", "bild erzeug", "bild generier", "bilder generier", "bild erstell", "bilder erstell", "text zu bild"],
   image_modification: ["bild bearbeit", "bilder bearbeit", "bild änder", "bilder änder", "bild modifizier", "bilder modifizier"],
   audio_generation: ["audio erzeug", "audio generier", "audio", "sprache erzeug", "sprache generier", "ton erzeug"],
-  video_generation: ["videos erzeug", "video erzeug", "video generier", "video", "text zu video"],
   mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],

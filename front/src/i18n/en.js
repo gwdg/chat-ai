@@ -353,13 +353,6 @@ export default {
       step2: "Enable tools.",
       step3: "Select Audio Generation, then describe the audio you want.",
     },
-    video_generation: {
-      title: "Generate videos",
-      step1: "Open GWDG Tools from the prompt box.",
-      step2: "Enable tools.",
-      step3:
-        "Select Video Generation. The video queue shows the progress of your requests.",
-    },
     mcp_server: {
       title: "Connect an MCP server",
       step1: "Open GWDG Tools from the prompt box.",

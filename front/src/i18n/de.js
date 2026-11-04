@@ -361,13 +361,6 @@ export default {
       step3:
         "Wählen Sie Audioerzeugung und beschreiben Sie das gewünschte Audio.",
     },
-    video_generation: {
-      title: "Videos erzeugen",
-      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
-      step2: "Aktivieren Sie die Tools.",
-      step3:
-        "Wählen Sie Videoerzeugung. Die Videowarteschlange zeigt den Fortschritt.",
-    },
     mcp_server: {
       title: "Einen MCP-Server verbinden",
       step1: "Öffnen Sie GWDG Tools im Eingabefeld.",

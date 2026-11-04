@@ -407,23 +407,6 @@ function buildTestForm(toolType) {
         ]},
       ],
     },
-    video_generation: {
-      tool_id: "video_generation",
-      title: "Video generation settings",
-      description: "Configure the video the tool will generate.",
-      fields: [
-        { name: "prompt", label: "Prompt", type: "textarea", rows: 3, value: "A city timelapse from day to night" },
-        { name: "duration", label: "Duration (s)", type: "number", value: 5, min: 1, max: 30, step: 1 },
-        { name: "resolution", label: "Resolution", type: "select", value: "1080p", options: [
-          { value: "720p", label: "720p" },
-          { value: "1080p", label: "1080p" },
-          { value: "4k", label: "4K" },
-        ]},
-        { name: "fps", label: "Frames per second", type: "number", value: 30, min: 12, max: 60, step: 6 },
-        { name: "motion", label: "Motion strength", type: "range", value: 0.5, min: 0, max: 1, step: 0.1 },
-        { name: "loop", label: "Loop video", type: "checkbox", value: false },
-      ],
-    },
     audio_generation: {
       tool_id: "audio_generation",
       title: "Audio generation settings",
@@ -666,9 +649,6 @@ app.post("/chat/completions", async (req, res) => {
           }
           if (tool.type === "image_generation") {
             params.tools.push({type: "image_generation"});
-          }
-          if (tool.type === "video_generation") {
-            params.tools.push({type: "video_create"});
           }
           if (tool.type === "image_modify" || tool.type === "image_modification") {
             params.tools.push({type: "image_modify"});
