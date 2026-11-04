@@ -398,17 +398,6 @@ const sendMessage = async ({
                 process_block += "";
               }
             }
-            if (delta.tool_calls[0]?.function?.name === "video.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "begin") {
-                process_block += `Generating video: "${arg.query}" \n\n`;
-              } if (arg.event === "error") {
-                process_block += "Video generation failed: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
-            }
             if (delta.tool_calls[0]?.function?.name === "audio.event") {
               let arg = delta.tool_calls[0].function.arguments;
               if (typeof arg === "string") arg = JSON.parse(arg);

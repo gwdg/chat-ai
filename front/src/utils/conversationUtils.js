@@ -32,7 +32,6 @@ export const getDefaultSettings = (userSettings = {}) => {
       "image_generation": true,
       "image_modification": true,
       "audio_generation": true,
-      "video_generation": false,
       "arcana": true,
       "mcp": false,
       // Agent mode only

@@ -11,7 +11,6 @@ import {
   CircleHelp,
   Globe,
   Image as ImageIcon,
-  Video,
   Wand2,
   AudioLines,
   Server, // MCP
@@ -23,11 +22,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import ArcanaContainer from "./ArcanaContainer";
 import MCPContainer from "./MCPContainer";
-import VideoList from "./VideoList";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 
 // Tools the agent has no counterpart for
-const AGENT_UNAVAILABLE = new Set(["video_generation", ...(agentGatewayTools() ? [] : ["web_search", "arcana"])]);
+const AGENT_UNAVAILABLE = new Set([...(agentGatewayTools() ? [] : ["web_search", "arcana"])]);
 // Agent tools that are off unless switched on: the ones the gateway runs (agent/gateway.ts),
 // writing files (agent/tools.ts) and MCP servers (agent/mcp.ts)
 const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access", "mcp"]);
@@ -127,7 +125,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const showMCPBox = agentMode
     ? !agentWithoutTools && toolsState.mcp === true
     : !!settings?.enable_tools && !!toolsState.mcp;
-  const showVideoList = !agentMode && !!toolsState.video_generation;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
@@ -150,11 +147,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
         key: "audio_generation",
         Icon: AudioLines,
         label: t("settings.label_audio_generation"),
-      },
-      {
-        key: "video_generation",
-        Icon: Video,
-        label: t("settings.label_video_generation"),
       },
       {
         key: "arcana",
@@ -313,12 +305,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
       </div>
       {agentMode && !agentWithoutTools && (
         <ToolLimit localState={localState} setLocalState={setLocalState} />
-      )}
-      {showVideoList && (
-          <VideoList
-          jobs={[]}
-          onDownload={() => {}}
-        />
       )}
       {/* Arcana box (only when enabled AND has an ID) */}
       {showArcanaBox && (

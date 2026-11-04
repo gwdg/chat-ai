@@ -22,7 +22,6 @@ export default function ShareSettingsButton({ localState }) {
       const rawTools = localState?.settings?.tools || {};
       const tools = {
         ...rawTools,
-        video_generation: rawTools.video_generation ?? false,
       };
       const mcpServers = localState?.settings?.mcp_servers;
       const hasMcpServers = hasMcpServerValue(mcpServers);
