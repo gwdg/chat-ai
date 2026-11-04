@@ -96,6 +96,12 @@ export function openConversationMenu() {
   }
 }
 
+export function openTopicMenu() {
+  if (!find('[data-guide="pin-topic-menu-item"]')) {
+    click('[data-guide="topic-menu"]');
+  }
+}
+
 export function openSearch() {
   if (!find('[data-guide="search-input"]')) {
     click('[data-guide="search-chats"]');

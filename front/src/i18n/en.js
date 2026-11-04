@@ -89,8 +89,14 @@ export default {
     search_no_results: 'No matches for "{{query}}"',
     clear_search: "Clear search",
     create_title: "Create topic",
-    rename_title: "Rename topic",
+    edit_title: "Edit topic",
     delete_title: "Delete topic",
+    topic_options: "Topic options",
+    pinned: "Pinned",
+    pin_action: "Pin chat",
+    unpin_action: "Unpin chat",
+    pin_topic_action: "Pin topic",
+    unpin_topic_action: "Unpin topic",
     delete_description:
       'Delete topic "{{name}}"? Chats remain available and move to "Unsorted Chats".',
     name_label: "Topic name",
@@ -192,6 +198,39 @@ export default {
       find_example: "“Where is my chat about my food order?”",
     },
     clear_chat: "Clear chat",
+    proposed_changes: "Proposed changes",
+    mutation_warning:
+      "These changes modify your chats, settings, or memories. Review them before applying.",
+    accept_changes: "Accept changes",
+    applying_changes: "Applying…",
+    changes_applied: "Changes applied",
+    revert_changes: "Revert changes",
+    reverting: "Reverting…",
+    changes_reverted: "Changes reverted",
+    revert_mismatch:
+      "Cannot revert because the current state no longer matches the applied change.",
+    apply_failed: "Could not apply the changes.",
+    rename_summary: "Rename “{{from}}” to “{{to}}”",
+    move_summary: "Move “{{title}}” to “{{topic}}”",
+    pin_summary: "Pin “{{title}}”",
+    unpin_summary: "Unpin “{{title}}”",
+    pin_topic_summary: "Pin topic “{{topic}}”",
+    unpin_topic_summary: "Unpin topic “{{topic}}”",
+    setting_summary: "Change {{setting}} from “{{from}}” to “{{to}}”",
+    setting_temperature: "Temperature",
+    setting_top_p: "Top-p",
+    conversation_setting_all_summary:
+      "Set {{setting}} to “{{value}}” for all chats",
+    conversation_setting_summary: "Set {{setting}} to “{{value}}” in “{{title}}”",
+    add_memory_summary: "Add memory “{{text}}”",
+    update_memory_summary: "Update memory “{{from}}” to “{{to}}”",
+    delete_memory_summary: "Delete memory “{{text}}”",
+    clear_memories_summary: "Delete all saved memories",
+    memory_item: "Memory {{index}}",
+    setting_on: "on",
+    setting_off: "off",
+    setting_device_default: "device default",
+    unsorted_topic: "Unsorted",
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
   },
@@ -214,10 +253,11 @@ export default {
     completed_title: "Tutorial complete",
     more_tutorials: "More tutorials",
     categories: {
-      personas: "Personas",
+      meta_chat: "Using the Meta chat",
       prompt: "Prompt and chat",
       tools: "Tools and RAG",
       chats: "Chats and organization",
+      personas: "Personas",
       settings: "Settings",
       other: "More",
     },
@@ -346,10 +386,30 @@ export default {
       step3:
         "Drag chats into topics, or use the conversation menu to move them.",
     },
+    sort_organize: {
+      title: "Sort & organize chats",
+      step1: "Click Sort & organize in the sidebar header.",
+      step2:
+        "Review the suggested topics, titles, and deletions. Nothing changes until you apply them.",
+      step3:
+        "Select the suggestions you want and click Apply to reorganize your chats.",
+    },
     sort_group_chats: {
       title: "Sort and group chats",
       step1: "Open the sort menu in the sidebar.",
       step2: "Choose grouping by topic, date, or creation date.",
+    },
+    pin_chat: {
+      title: "Pin a chat",
+      step1: "Open the conversation menu of a chat in the sidebar.",
+      step2:
+        "Choose Pin chat. Pinned chats stay in their own area at the top, regardless of the selected grouping.",
+    },
+    pin_topic: {
+      title: "Pin a topic",
+      step1: "Open the options menu of a topic in the sidebar.",
+      step2:
+        "Choose Pin topic. Pinned topics stay in the pinned area at the top, regardless of the selected grouping.",
     },
     close_chat: {
       title: "Close a chat",
@@ -448,6 +508,30 @@ export default {
       step2: "Browse complete workflows that combine several features. The Meta chat can also start either option for you.",
       step3: "You can also ask me to find a tutorial or recommend a persona. For example: “Find a tutorial about uploading a file.”",
       step4: "Ask about settings, or ask me to take you to a chat, message, topic, or setting. I can also search your chats for decisions and action items.",
+    },
+    meta_chat_actions: {
+      title: "Rename and organize chats with the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2:
+        "Ask it to rename a chat or move it to another topic. For example: “Rename ‘Pricing discussion’ to ‘Pricing strategy’.”",
+      step3:
+        "Review the proposed changes and click Accept changes. Nothing is applied before you accept.",
+    },
+    meta_chat_search: {
+      title: "Search message contents with the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2:
+        "Ask it to find something from your chats, for example: “Find where we decided the pricing model” or “What are the action items?”",
+      step3:
+        "Click a cited message to jump to the exact message and highlight it.",
+    },
+    meta_chat_pins: {
+      title: "Pin chats and topics with the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2:
+        "Ask it to pin or unpin a chat or topic, for example: “Pin the Pricing discussion chat” or “Unpin the Research topic.”",
+      step3:
+        "Review the proposed pin change and click Accept changes. Nothing is applied before you accept.",
     },
     meta_chat_navigation: {
       title: "Navigate and search with the Meta chat",

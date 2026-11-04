@@ -12,6 +12,7 @@ import { useForkConversation } from "../../../hooks/useForkConversation";
 import { useModal } from "../../../modals/ModalContext";
 import MetaBox from "./MetaBox";
 import PersonaCard from "../../Others/PersonaCard";
+import MetaActionCard from "./MetaActionCard";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
@@ -19,12 +20,13 @@ import ToolForm from "./ToolForm";
 import { getFeatureGuideMarker } from "../../../config/featureGuides";
 import { getUseCaseMarker } from "../../../config/useCases";
 import { getPersonaMarkers } from "../../../utils/personaCatalog";
+import { getMetaActionProposals } from "../../../utils/metaActions";
 
 // Constants
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
-export default React.memo(({ localState, setLocalState, message_index }) => {
+export default React.memo(({ localState, setLocalState, message_index, modelsData }) => {
   //Refs
   const assistantMessage = useRef(null);
   const editBox = useRef(null);
@@ -41,6 +43,9 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const personaPaths = loading
     ? []
     : getPersonaMarkers(message?.content?.[0]?.text);
+  const metaActions = loading
+    ? []
+    : getMetaActionProposals(message?.content?.[0]?.text);
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
   const renderModes = ["Default", "Markdown", "Plaintext"];
@@ -324,6 +329,14 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               {personaPaths.map((path) => (
                 <PersonaCard key={path} path={path} />
               ))}
+              {metaActions.length > 0 && (
+                <MetaActionCard
+                  actions={metaActions}
+                  localState={localState}
+                  setLocalState={setLocalState}
+                  modelsData={modelsData}
+                />
+              )}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">

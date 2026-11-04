@@ -37,7 +37,7 @@ export default function MetaChatPage() {
 
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
-  const metaChatSend = useMetaChatSend();
+  const metaChatSend = useMetaChatSend(modelsData);
   useSettingsDeepLink({ localState, userData, modelsData });
   const { startGuide, isActive } = useFeatureGuide();
   const [searchParams, setSearchParams] = useSearchParams();

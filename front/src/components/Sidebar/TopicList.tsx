@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -8,6 +8,9 @@ import {
   Calendar,
   ChevronDown,
   Edit,
+  OverflowMenuVertical,
+  Pin,
+  PinFilled,
   SortAscending,
   TrashCan,
 } from "@carbon/icons-react";
@@ -27,19 +30,28 @@ export const UNSORTED_TOPIC_ID = "__unsorted__";
 export const DATE_TOPIC_ID = "__by_date__";
 export const CREATED_TOPIC_ID = "__by_created__";
 
-type TopicRef = { id: string; name: string; color?: string; icon?: string };
+type TopicRef = {
+  id: string;
+  name: string;
+  color?: string;
+  icon?: string;
+  pinned?: boolean;
+};
 type DateGroup = { key: string; conversations: any[] };
 
-const dateBucketCollapseId = (parentId: string, key: string) =>
+export const dateBucketCollapseId = (parentId: string, key: string) =>
   `${parentId}:${key}`;
 
 export default function TopicList({
   topics,
+  pinnedTopics,
+  pinnedConversations,
   conversationsByTopic,
   unsortedConversations,
   onCreateTopic,
   onRenameTopic,
   onDeleteTopic,
+  onToggleTopicPinned,
   onOpenTopic,
   draggingConversationId,
   dragOverTopicId,
@@ -53,11 +65,14 @@ export default function TopicList({
   grouping,
 }: {
   topics: FolderRow[];
+  pinnedTopics: FolderRow[];
+  pinnedConversations: any[];
   conversationsByTopic: Map<string, any[]>;
   unsortedConversations: any[];
   onCreateTopic: (anchor: { x: number; y: number }) => void;
   onRenameTopic: (topic: TopicRef) => void;
   onDeleteTopic: (topic: TopicRef) => void;
+  onToggleTopicPinned: (topic: TopicRef) => void;
   onOpenTopic: (topicId: string) => void;
   draggingConversationId: string | null;
   dragOverTopicId: string | null;
@@ -88,10 +103,64 @@ export default function TopicList({
 
   const collapsedTopicIds = useSelector(selectCollapsedTopics) || [];
 
+  const [menuTopicId, setMenuTopicId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
   const toggleTopicCollapse = useCallback((topicId: string) => {
     console.log("Dispatching topic toggle", topicId);
     dispatch(toggleTopic(topicId));
   }, []);
+
+  const closeTopicMenu = useCallback(() => {
+    setMenuTopicId(null);
+  }, []);
+
+  const toggleTopicMenu = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>, topicId: string) => {
+      event.stopPropagation();
+      event.preventDefault();
+      const rect = event.currentTarget.getBoundingClientRect();
+      setMenuTopicId((previous) => {
+        if (previous === topicId) return null;
+        setMenuPosition({ x: rect.right + 5, y: rect.top - 5 });
+        return topicId;
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!menuTopicId) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const clickedOnButton = Object.values(menuButtonRefs.current).some(
+        (ref) => ref && ref.contains(event.target as Node),
+      );
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        !clickedOnButton
+      ) {
+        closeTopicMenu();
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeTopicMenu();
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuTopicId, closeTopicMenu]);
 
   const renderRow = (options: {
     id: string;
@@ -137,7 +206,7 @@ export default function TopicList({
           aria-current={isActiveTopic ? "page" : undefined}
           onClick={() => onOpenTopic(id)}
           onKeyDown={(e) => {
-            // Let the rename/delete/collapse buttons handle their own keys.
+            // Let the collapse/options buttons handle their own keys.
             if (e.target !== e.currentTarget) return;
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
@@ -151,6 +220,28 @@ export default function TopicList({
           } ${isDropTarget ? "border-accent/60" : ""}`}
           // style={ isDropTarget ? { backgroundColor: topicTint(hex, isDark) } : undefined }
         >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleTopicCollapse(id);
+            }}
+            aria-expanded={!isCollapsed}
+            aria-label={
+              isCollapsed
+                ? t("folders.expand_topic")
+                : t("folders.collapse_topic")
+            }
+            className="flex-shrink-0 rounded-lg p-1 text-base-content/50 transition-colors hover:bg-base-300"
+          >
+            <ChevronDown
+              size={12}
+              className={`pointer-events-none transition-transform duration-200 ${
+                isCollapsed ? "-rotate-90" : "rotate-0"
+              }`}
+            />
+          </button>
+
           {emoji ? (
             <span
               aria-hidden="true"
@@ -180,57 +271,33 @@ export default function TopicList({
             {label}
           </span>
 
-          {topic && (
-            <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRenameTopic(topic);
-                }}
-                aria-label={t("folders.rename_title")}
-                className="p-1 rounded-lg hover:bg-base-300 transition"
-              >
-                <Edit size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteTopic(topic);
-                }}
-                aria-label={t("folders.delete_title")}
-                className="p-1 rounded-lg hover:bg-error/10 text-error transition"
-              >
-                <TrashCan size={14} />
-              </button>
-            </span>
-          )}
-
           <span className="text-[11px] select-none pointer-events-none font-semibold text-base-content/70">
             {count > 999 ? "999+" : count}
           </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleTopicCollapse(id);
-            }}
-            aria-expanded={!isCollapsed}
-            aria-label={
-              isCollapsed
-                ? t("folders.expand_topic")
-                : t("folders.collapse_topic")
-            }
-            className="flex-shrink-0 rounded-lg p-1 text-base-content/50 transition-colors hover:bg-base-300"
-          >
-            <ChevronDown
-              size={12}
-              className={`pointer-events-none transition-transform duration-200 ${
-                isCollapsed ? "-rotate-90" : "rotate-0"
+
+          {topic && (
+            <button
+              type="button"
+              ref={(el) => {
+                menuButtonRefs.current[id] = el;
+              }}
+              onClick={(e) => toggleTopicMenu(e, id)}
+              data-guide="topic-menu"
+              aria-label={t("folders.topic_options")}
+              aria-haspopup="menu"
+              aria-expanded={menuTopicId === id}
+              className={`flex-shrink-0 rounded-lg p-1 hover:bg-base-300 transition ${
+                menuTopicId === id || window.innerWidth < 1024
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100"
               }`}
-            />
-          </button>
+            >
+              <OverflowMenuVertical
+                size={16}
+                className="text-base-content/70"
+              />
+            </button>
+          )}
         </div>
 
         {!isCollapsed && (
@@ -249,6 +316,34 @@ export default function TopicList({
 
   return (
     <div className="flex flex-col gap-1.5 pt-1" data-guide="topic-list">
+      {(pinnedTopics.length > 0 || pinnedConversations.length > 0) && (
+        <div
+          data-guide="pinned-chats"
+          className="flex flex-col gap-1 pb-1 mb-1 border-b border-base-300"
+        >
+          <div className="flex items-center gap-2 px-2 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-base-content/70">
+            <PinFilled size={12} className="flex-shrink-0" />
+            <span className="truncate">{t("folders.pinned")}</span>
+          </div>
+          {pinnedTopics.map((topic) => {
+            const color = topicColor(topic);
+            const emoji =
+              topic.icon && !isTopicIconId(topic.icon) ? topic.icon : null;
+            return renderRow({
+              id: topic.id,
+              label: topic.name,
+              conversations: conversationsByTopic.get(topic.id) ?? [],
+              hex: color.hex,
+              Icon: emoji ? null : topicIcon(topic),
+              emoji,
+              topic,
+            });
+          })}
+          {pinnedConversations.map((conv) =>
+            renderConversationRow(conv, { showModified: true }),
+          )}
+        </div>
+      )}
       {grouping === "topic" && (
         <>
           <div className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200`}>
@@ -355,6 +450,91 @@ export default function TopicList({
           })()}
         </div>
       )}
+
+      {menuTopicId &&
+        (() => {
+          const topic =
+            pinnedTopics.find((item) => item.id === menuTopicId) ||
+            topics.find((item) => item.id === menuTopicId);
+          if (!topic) return null;
+          return (
+            <div
+              ref={menuRef}
+              role="menu"
+              className="fixed w-40 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-base-300"
+              style={{
+                left: `${menuPosition.x}px`,
+                top: `${menuPosition.y}px`,
+                zIndex: 999999,
+                backgroundColor: "rgb(255, 255, 255)",
+              }}
+            >
+              <div
+                className="absolute inset-0 bg-base-100 rounded-lg"
+                style={{ zIndex: -1 }}
+              />
+              <div className="p-1 bg-base-100 rounded-lg relative">
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-guide="pin-topic-menu-item"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleTopicPinned({
+                      id: topic.id,
+                      name: topic.name,
+                      color: topic.color,
+                      icon: topic.icon,
+                      pinned: topic.pinned,
+                    });
+                    closeTopicMenu();
+                  }}
+                  className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
+                >
+                  {topic.pinned ? (
+                    <PinFilled size={14} />
+                  ) : (
+                    <Pin size={14} />
+                  )}
+                  {topic.pinned
+                    ? t("folders.unpin_topic_action")
+                    : t("folders.pin_topic_action")}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRenameTopic({
+                      id: topic.id,
+                      name: topic.name,
+                      color: topic.color,
+                      icon: topic.icon,
+                    });
+                    closeTopicMenu();
+                  }}
+                  className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
+                >
+                  <Edit size={14} />
+                  {t("folders.edit_title")}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteTopic({ id: topic.id, name: topic.name });
+                    closeTopicMenu();
+                  }}
+                  className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-error transition-colors hover:bg-error/10"
+                >
+                  <TrashCan size={14} />
+                  {t("common.delete")}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }

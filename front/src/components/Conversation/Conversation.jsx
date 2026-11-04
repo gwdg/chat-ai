@@ -449,6 +449,7 @@ export default function Conversation({
                     localState={localState}
                     setLocalState={setLocalState}
                     message_index={message_index}
+                    modelsData={modelsData}
                   />
                 )}
                 {message.role === "info" && (

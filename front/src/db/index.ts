@@ -463,7 +463,7 @@ export async function getConversationMeta(conversationId: string): Promise<Conve
 
 // Get list of conversation Metas
 export async function listConversationMetas(): Promise<
-  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'lastOpenedAt' | 'messageCount' | 'folderId' | 'summary'>>
+  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'lastOpenedAt' | 'messageCount' | 'folderId' | 'pinned' | 'summary'>>
 > {
   return db.conversations.orderBy('id').toArray()
 }
@@ -682,6 +682,13 @@ export async function updateConversationMeta(
   return 0;
 }
 
+export async function setConversationPinned(
+  conversationId: string,
+  pinned: boolean,
+) {
+  await db.conversations.update(conversationId, { pinned })
+}
+
 export async function setConversationSummary(
   conversationId: string,
   summary: string,
@@ -842,6 +849,13 @@ export async function setFolderOrder(folderId: string, sortOrder: number) {
 export async function setFolderIcon(folderId: string, icon: string) {
   await db.folders.update(folderId, {
     icon,
+    updatedAt: Date.now(),
+  });
+}
+
+export async function setFolderPinned(folderId: string, pinned: boolean) {
+  await db.folders.update(folderId, {
+    pinned,
     updatedAt: Date.now(),
   });
 }
