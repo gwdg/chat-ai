@@ -77,19 +77,26 @@ export default function UserSettingsModal({
   userData,
   modelsData,
   localState,
+  initialTab = null,
 }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
   const userSettings = useSelector(selectUserSettings);
   const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState(initialTab || "profile");
+  const [highlightActiveTab, setHighlightActiveTab] = useState(false);
   const activeTabConfig =
     PROFILE_TABS.find((tab) => tab.id === activeTab) ?? PROFILE_TABS[0];
 
   useEffect(() => {
-    if (isOpen) setActiveTab("profile");
-  }, [isOpen]);
+    if (!isOpen) return undefined;
+    setActiveTab(initialTab || "profile");
+    setHighlightActiveTab(Boolean(initialTab));
+    if (!initialTab) return undefined;
+    const timer = setTimeout(() => setHighlightActiveTab(false), 1800);
+    return () => clearTimeout(timer);
+  }, [isOpen, initialTab]);
 
   const handleExportData = async () => {
     try {
@@ -231,6 +238,10 @@ export default function UserSettingsModal({
                   selected
                     ? "bg-base-100 text-accent shadow-sm"
                     : "text-base-content/70 hover:bg-base-100/70 hover:text-base-content"
+                } ${
+                  selected && highlightActiveTab
+                    ? "ring-2 ring-accent ring-offset-2 ring-offset-base-200"
+                    : ""
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />

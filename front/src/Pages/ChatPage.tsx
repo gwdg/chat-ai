@@ -9,6 +9,7 @@ import { useConversationSummaries } from "../hooks/useConversationSummaries";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
+import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
@@ -35,6 +36,8 @@ export default function ChatPage() {
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
   const sendMessage = useSendMessage();
+
+  useSettingsDeepLink({ localState, userData, modelsData });
 
   // Sync localState conversation with IndexedDB
   useSyncConversation({

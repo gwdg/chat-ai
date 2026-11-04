@@ -3,7 +3,12 @@ import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 
 import { chatCompletions } from "../apis/chatCompletions";
-import { listConversationMetas, listFolders } from "../db";
+import {
+  getRecentMessageExcerpts,
+  listConversationMetas,
+  listFolders,
+  searchMessages,
+} from "../db";
 import { extractMessageText } from "../utils/conversationSummary";
 import {
   getPersonaMarkers,
@@ -33,6 +38,7 @@ const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
 const MAX_MEMORY_CHARS = 12000;
 const MAX_PERSONA_CHARS = 16000;
+const MAX_SEARCH_CHARS = 16000;
 
 function yesNo(value) {
   return value ? "yes" : "no";
@@ -79,6 +85,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Render Typst: ${yesNo(userSettings.render_typst)}`,
     `- Render LaTeX: ${yesNo(userSettings.render_latex)}`,
     `- Document conversion: ${documentConversion}`,
+    `- Modules: tools ${import.meta.env.VITE_MODULE_TOOLS === "true" ? "enabled" : "disabled"}, feedback ${import.meta.env.VITE_MODULE_FEEDBACK === "true" ? "enabled" : "disabled"}, choices ${import.meta.env.VITE_MODULE_CHOICES === "true" ? "enabled" : "disabled"}, speech ${import.meta.env.VITE_MODULE_SPEECH === "true" ? "enabled" : "disabled"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,
@@ -96,6 +103,7 @@ function buildSystemPrompt(
   conversations,
   topics,
   persons,
+  messageMatches,
   memories,
   userSettings,
   interfaceSettings,
@@ -117,6 +125,18 @@ function buildSystemPrompt(
     if (personaUsed + line.length > MAX_PERSONA_CHARS) break;
     personaLines.push(line);
     personaUsed += line.length;
+  }
+
+  const searchLines = [];
+  let searchUsed = 0;
+  for (const match of messageMatches) {
+    const date = match.createdAt
+      ? new Date(match.createdAt).toISOString()
+      : "unknown";
+    const line = `- conversation id: ${match.conversationId}\n  conversation title: ${match.conversationTitle}\n  topic: ${match.topicName || "Unsorted"}\n  message id: ${match.messageId}\n  role: ${match.role}\n  date: ${date}\n  excerpt: ${match.snippet}`;
+    if (searchUsed + line.length > MAX_SEARCH_CHARS) break;
+    searchLines.push(line);
+    searchUsed += line.length;
   }
 
   const memoryLines = [];
@@ -162,9 +182,13 @@ For questions about whether settings are safe, explain the actual values and the
 - Saved memories are stored in this browser.
 - Web Search, tools, Arcana, MCP servers, and external models are conversation-specific and can send data outside the local browser; they are not part of these global settings.
 
-When you refer to a conversation, always link to it using exactly this Markdown form:
-[<conversation title>](/chat/<conversation id>)
-Use only ids from the list below. Do not link to any other conversation or invent an id. If nothing matches the user's question, say so plainly.
+You can help the user navigate the app with these deep links:
+- Conversation: [<conversation title>](/chat/<conversation id>)
+- Exact message: [<conversation title>, message](/chat/<conversation id>?message=<message id>)
+- Topic: [<topic name>](/topic/<topic id>)
+- Settings tab: [Open settings](/settings/<tab>), where <tab> is one of profile, chat, memories, data.
+
+Use only ids from the lists below. When the user asks to be taken to a chat, message, topic, or setting, give the matching link and briefly say what it opens. Never invent an id. If nothing matches the user's question, say so plainly.
 
 Answer in the same language as the user's question. Be concise and concrete.
 
@@ -177,6 +201,16 @@ To let the user start a chat with a recommended persona, include an inline Markd
 <personas>
 ${personaLines.join("\n") || "(no personas available)"}
 </personas>
+
+<message_search_results>
+${searchLines.join("\n") || "(no message matches for the current question)"}
+</message_search_results>
+
+The message search results above are exact excerpts selected from the user's stored messages. Use them when the user asks where something was said, decided, or agreed. Cite each point with the exact message link, for example [<conversation title>, message](/chat/<conversation id>?message=<message id>). Never invent a message, id, or quote. If the excerpts are insufficient, say so.
+
+When the user asks to compare conversations or extract decisions and action items, base the answer only on the summaries and message excerpts provided, attribute each point to its conversation or message, and clearly mark uncertain or inferred items.
+
+The module flags in <user_settings> show which optional UI areas this deployment provides. If the user asks for a feature that is disabled, explain that this deployment disables that module. Conversation-specific tools may also be unavailable for the selected model or switched off in the conversation; do not claim a hidden feature exists.
 
 <features>
 ${buildFeatureGuidePrompt()}
@@ -217,11 +251,20 @@ ${memoryLines.join("\n")}
   }`;
 }
 
-async function loadMetaContext() {
-  const [rows, folders, persons] = await Promise.all([
+async function loadMetaContext(query = "") {
+  const wantsSurvey =
+    /\b(decisions?|action items?|next steps?|todos?|compare|comparison|agreed|beschlossen|entscheid|aufgaben|nächste schritte|vereinbart|vergleich)\b/i.test(
+      query || "",
+    );
+
+  const [rows, folders, persons, matches, recent] = await Promise.all([
     listConversationMetas(),
     listFolders(),
     loadPersonaCatalog().catch(() => []),
+    searchMessages(query).catch(() => []),
+    wantsSurvey
+      ? getRecentMessageExcerpts().catch(() => [])
+      : Promise.resolve([]),
   ]);
 
   const conversations = (rows || [])
@@ -251,7 +294,23 @@ async function loadMetaContext() {
     name: (folder.name || "").trim() || "Untitled topic",
   }));
 
-  return { conversations, topics, persons };
+  const topicNames = new Map(topics.map((topic) => [topic.id, topic.name]));
+  const seenMessages = new Set();
+  const messageMatches = [...(matches || []), ...(recent || [])]
+    .filter((match) => {
+      if (!match?.messageId || seenMessages.has(match.messageId)) return false;
+      seenMessages.add(match.messageId);
+      return true;
+    })
+    .slice(0, 20)
+    .map((match) => ({
+      ...match,
+      topicName: match.folderId
+        ? topicNames.get(match.folderId) || "Unsorted"
+        : "Unsorted",
+    }));
+
+  return { conversations, topics, persons, messageMatches };
 }
 
 export function useMetaChatSend() {
@@ -287,15 +346,6 @@ export function useMetaChatSend() {
         return;
       }
 
-      let conversations = [];
-      let topics = [];
-      let persons = [];
-      try {
-        ({ conversations, topics, persons } = await loadMetaContext());
-      } catch (error) {
-        console.error("Failed to load conversation summaries", error);
-      }
-
       const history = localState.messages
         .filter(
           (message) =>
@@ -314,6 +364,18 @@ export function useMetaChatSend() {
       const lastUserMessage = [...history]
         .reverse()
         .find((message) => message.role === "user")?.content;
+
+      let conversations = [];
+      let topics = [];
+      let persons = [];
+      let messageMatches = [];
+      try {
+        ({ conversations, topics, persons, messageMatches } =
+          await loadMetaContext(lastUserMessage));
+      } catch (error) {
+        console.error("Failed to load conversation context", error);
+      }
+
       const suggestedFeature = findFeatureGuideForText(lastUserMessage);
       const wantsTutorial =
         /\b(show me|walk me through|start (?:a )?tutorial|demonstrate|guide me|zeig(?:e|en)?(?: Sie)?(?: es)? mir(?: bitte)?|führ(?:e|en)?(?: Sie)? mich(?: bitte)? durch|start(?:e|en)?(?: Sie)?(?: bitte)? (?:ein |eine )?(?:tutorial|anleitung)|demonstrier(?:e|en)?(?: Sie)?|leit(?:e|en)?(?: Sie)? mich(?: bitte)? an)\b/i.test(
@@ -335,6 +397,7 @@ export function useMetaChatSend() {
               conversations,
               topics,
               persons,
+              messageMatches,
               (memories || []).map((memory) => memory?.text || ""),
               userSettings,
               interfaceSettings,

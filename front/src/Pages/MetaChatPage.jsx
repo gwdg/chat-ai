@@ -12,6 +12,7 @@ import { createConversation, getConversation, updateConversation } from "../db";
 import { useMetaChatSend } from "../hooks/useMetaChatSend";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
+import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
@@ -37,6 +38,7 @@ export default function MetaChatPage() {
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
   const metaChatSend = useMetaChatSend();
+  useSettingsDeepLink({ localState, userData, modelsData });
   const { startGuide, isActive } = useFeatureGuide();
   const [searchParams, setSearchParams] = useSearchParams();
 

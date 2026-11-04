@@ -4,6 +4,7 @@ import { Code2, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router";
+import { Folder, MessageCircle, MessageSquare, Settings } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -46,17 +47,49 @@ const MarkdownLink = ({ href, children }) => {
   const navigate = useNavigate();
   const className =
     "text-info hover:text-info underline transition-colors text-sm";
+  const actionLinkClassName =
+    "btn btn-accent btn-sm ml-1 inline-flex w-fit gap-2 align-middle";
 
-  if (typeof href === "string" && /^\/chat\/[A-Za-z0-9-]+$/.test(href)) {
+  if (
+    typeof href === "string" &&
+    (href.startsWith("/chat/") || href.startsWith("/topic/"))
+  ) {
+    const isMessage = href.includes("?message=");
+    const isTopic = href.startsWith("/topic/");
+    const Icon = isTopic ? Folder : isMessage ? MessageSquare : MessageCircle;
     return (
       <a
         href={href}
-        className={className}
+        className={actionLinkClassName}
         onClick={(event) => {
           event.preventDefault();
           navigate(href);
         }}
       >
+        <Icon size={16} aria-hidden="true" />
+        {children}
+      </a>
+    );
+  }
+
+  const settingsMatch =
+    typeof href === "string" &&
+    href.match(/^\/settings\/(profile|chat|memories|data)$/);
+  if (settingsMatch) {
+    return (
+      <a
+        href={href}
+        className={actionLinkClassName}
+        onClick={(event) => {
+          event.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("chatai:open-settings", {
+              detail: { tab: settingsMatch[1] },
+            }),
+          );
+        }}
+      >
+        <Settings size={16} aria-hidden="true" />
         {children}
       </a>
     );

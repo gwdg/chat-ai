@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
+import { useSearchParams } from "react-router";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 // Hooks
@@ -23,6 +24,8 @@ export default function Conversation({
 }) {
   const showSettings = useSelector(selectShowSettings);
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const targetMessageId = searchParams.get("message");
 
   // UI
   const [copied, setCopied] = useState(false);
@@ -34,6 +37,7 @@ export default function Conversation({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showTopScrollButtons, setShowTopScrollButtons] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(true);
+  const [highlightedMessageId, setHighlightedMessageId] = useState(null);
 
   // Refs
   const containerRef = useRef(null);
@@ -168,6 +172,27 @@ export default function Conversation({
 
     scrollToTop();
   }, [scrollElementToTop, scrollToTop]);
+
+  useEffect(() => {
+    if (!targetMessageId || localState.messages.length <= 2) return undefined;
+
+    setHighlightedMessageId(targetMessageId);
+    const frame = requestAnimationFrame(() => {
+      const element = Array.from(
+        document.querySelectorAll("[data-message-id]"),
+      ).find(
+        (candidate) =>
+          candidate.getAttribute("data-message-id") === targetMessageId,
+      );
+      if (element) scrollElementToTop(element);
+    });
+    const timer = setTimeout(() => setHighlightedMessageId(null), 3000);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, [targetMessageId, localState.messages.length, scrollElementToTop]);
 
   const handleNextMessage = useCallback(() => {
     const el = containerRef.current;
@@ -402,7 +427,12 @@ export default function Conversation({
             {localState.messages.slice(0, -1)?.map((message, message_index) => (
               <div
                 key={message_index}
-                className="flex flex-col"
+                className={`flex flex-col transition-shadow duration-300 ${
+                  message.id === highlightedMessageId
+                    ? "ring-2 ring-accent ring-offset-2 ring-offset-base-200 rounded-2xl"
+                    : ""
+                }`}
+                data-message-id={message.id}
                 ref={(node) => {
                   messageRefs.current[message_index] = node;
                 }}

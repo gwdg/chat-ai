@@ -447,7 +447,15 @@ export default {
       step1: "Browse all available tutorials and replay completed ones.",
       step2: "Browse complete workflows that combine several features. The Meta chat can also start either option for you.",
       step3: "You can also ask me to find a tutorial or recommend a persona. For example: “Find a tutorial about uploading a file.”",
-      step4: "Ask about your settings too. For example: “What settings have I chosen for memories?”",
+      step4: "Ask about settings, or ask me to take you to a chat, message, topic, or setting. I can also search your chats for decisions and action items.",
+    },
+    meta_chat_navigation: {
+      title: "Navigate and search with the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2:
+        "Ask it to take you somewhere, for example: “Take me to chat settings” or “Open the chat about pricing.”",
+      step3:
+        "Ask it to search your chats, for example: “Find where we decided the pricing model” or “What are the action items?”. Click a cited message to jump to it.",
     },
     meta_chat_usage: {
       title: "Use the Meta chat",

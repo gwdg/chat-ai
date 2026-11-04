@@ -358,6 +358,16 @@ which fetches the persona JSON and starts a new chat through `useImportConversat
 metadata only: the full persona JSON is fetched when the user clicks. GitHub's tree API can fail or
 rate-limit; the Meta chat must keep working without personas in that case.
 
+For navigation and message-level search, `useMetaChatSend` runs `searchMessages` from `db/index.ts`
+with the latest user message and includes matching excerpts plus message ids in
+`<message_search_results>`. Decision/action-item/comparison questions also append recent excerpts
+from `getRecentMessageExcerpts`. The model cites exact messages as
+`/chat/<conversation id>?message=<message id>`; `Conversation` reads that query parameter, scrolls
+to the message, and highlights it briefly. `MarkdownLink` routes `/chat/...`, `/topic/...`, and
+`/settings/<tab>` internally; settings links dispatch `chatai:open-settings`, handled by
+`useSettingsDeepLink` in `ChatPage`/`MetaChatPage`, and `UserSettingsModal` opens the requested tab
+with a brief highlight. Module flags in `<user_settings>` let the model explain disabled features.
+
 ### 4.17 Per-conversation memory mode overrides the global preference
 
 `ConversationSettings.memory_mode_override` is `"default"`, `0` (off), `1` (recall), or `2`
