@@ -10,6 +10,7 @@ import {
   searchMessages,
 } from "../db";
 import { extractMessageText } from "../utils/conversationSummary";
+import { stripMetaActionMarkers } from "../utils/metaActions";
 import {
   getPersonaMarkers,
   hasPersonaStartLink,
@@ -99,6 +100,48 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
   ];
 }
 
+function buildConversationSettingsSummary(settings = {}) {
+  const model =
+    typeof settings.model === "string"
+      ? settings.model
+      : settings.model?.name || settings.model?.id || "not set";
+  const tools = settings.tools || {};
+  const enabledTools = Object.entries(tools)
+    .filter(([, enabled]) => enabled)
+    .map(([name]) => name);
+  const memoryOverride =
+    settings.memory_mode_override === "default" ||
+    settings.memory_mode_override === undefined
+      ? "default"
+      : ["off", "recall", "learn"][Number(settings.memory_mode_override)] ||
+        String(settings.memory_mode_override);
+  const reasoning =
+    settings.reasoning_effort === null ||
+    settings.reasoning_effort === undefined
+      ? "default"
+      : settings.reasoning_effort;
+  const arcanaId = settings.arcana?.id || "";
+  const hasMcp =
+    (typeof settings.mcp_servers === "string" &&
+      settings.mcp_servers.trim().length > 0) ||
+    (Array.isArray(settings.mcp_servers) && settings.mcp_servers.length > 0);
+
+  return [
+    `model ${model}`,
+    `temperature ${settings.temperature ?? "default"}`,
+    `top_p ${settings.top_p ?? "default"}`,
+    `reasoning effort ${reasoning}`,
+    `memory mode override ${memoryOverride}`,
+    `tools ${settings.enable_tools ? "enabled" : "disabled"}${
+      settings.enable_tools && enabledTools.length
+        ? ` (${enabledTools.join(", ")})`
+        : ""
+    }`,
+    `arcana ${arcanaId || "none"}`,
+    `MCP ${hasMcp ? "configured" : "none"}`,
+  ].join("; ");
+}
+
 function buildSystemPrompt(
   conversations,
   topics,
@@ -107,6 +150,8 @@ function buildSystemPrompt(
   memories,
   userSettings,
   interfaceSettings,
+  metaChatSettings,
+  availableModels,
 ) {
   const topicById = new Map(
     topics.map((topic) => [topic.id, topic.name]),
@@ -127,6 +172,11 @@ function buildSystemPrompt(
     personaUsed += line.length;
   }
 
+  const modelLines =
+    availableModels
+      .map((model) => `- id: ${model.id}\n  name: ${model.name || model.id}`)
+      .join("\n") || "(no models available)";
+
   const searchLines = [];
   let searchUsed = 0;
   for (const match of messageMatches) {
@@ -141,11 +191,11 @@ function buildSystemPrompt(
 
   const memoryLines = [];
   let memoryUsed = 0;
-  for (const memory of memories) {
+  for (const [index, memory] of memories.entries()) {
     const text = String(memory || "").trim();
     if (!text) continue;
     if (memoryUsed + text.length > MAX_MEMORY_CHARS) break;
-    memoryLines.push(`- ${text}`);
+    memoryLines.push(`- index: ${index}\n  text: ${text}`);
     memoryUsed += text.length;
   }
 
@@ -160,7 +210,7 @@ function buildSystemPrompt(
     const topicId = conversation.folderId
       ? ` (id: ${conversation.folderId})`
       : "";
-    const line = `- id: ${conversation.id}\n  title: ${conversation.title}\n  topic: ${topicName}${topicId}\n  summary: ${summary}\n  last modified: ${modified}`;
+    const line = `- id: ${conversation.id}\n  title: ${conversation.title}\n  topic: ${topicName}${topicId}\n  summary: ${summary}\n  per-chat settings: ${conversation.settingsSummary}\n  last modified: ${modified}`;
     if (used + line.length > MAX_CONTEXT_CHARS) break;
     lines.push(line);
     used += line.length;
@@ -170,7 +220,7 @@ function buildSystemPrompt(
 
 When explaining a feature, be concrete about where it is and what happens step by step. Do not invent features, buttons, or behaviour that are not described to you. If you do not know how something works, say so and suggest contacting support or consulting the documentation instead.
 
-You receive metadata for the user's conversations and topics (categories). Each conversation has an id, title, topic, summary, and last-modified time. For questions about the user's conversations and topics, this metadata and any saved memories are your only sources. Summaries may be missing or stale. Never invent a conversation, topic, title, id, summary, or memory.
+You receive metadata for the user's conversations and topics (categories). Each conversation has an id, title, topic, summary, per-chat settings, and last-modified time. The per-chat settings are local to that conversation and may differ from the global preferences in <user_settings>; use them for questions about models, temperature, top_p, reasoning effort, memory-mode overrides, tools, Arcana, and MCP. For questions about the user's conversations and topics, this metadata and any saved memories are your only sources. Summaries may be missing or stale. Never invent a conversation, topic, title, id, summary, setting, or memory.
 
 Use the topic tree to answer questions about which topic or category contains something. When naming a topic, use its exact name.
 
@@ -212,6 +262,42 @@ When the user asks to compare conversations or extract decisions and action item
 
 The module flags in <user_settings> show which optional UI areas this deployment provides. If the user asks for a feature that is disabled, explain that this deployment disables that module. Conversation-specific tools may also be unavailable for the selected model or switched off in the conversation; do not claim a hidden feature exists.
 
+You can propose changes to the user's chats, settings, and saved memories, but only when the user explicitly asks you to change them. Never apply a change yourself and never say it is done: every change is only a proposal until the user accepts it in the interface.
+
+To propose changes, include one marker per change on its own line at the end of your answer, using exactly one of these JSON shapes:
+[[RENAME_CHAT:{"id":"<conversation id>","title":"<new title>"}]]
+[[MOVE_CHAT:{"id":"<conversation id>","folderId":"<existing topic id>"}]]
+[[MOVE_CHAT:{"id":"<conversation id>","folderId":null,"folderName":"<new topic name>"}]]
+[[SET_SETTING:{"key":"render_typst","value":true}]]
+[[SET_CONVERSATION_SETTING:{"target":"all","key":"temperature","value":0.7}]]
+[[SET_CONVERSATION_SETTING:{"id":"<conversation id>","key":"temperature","value":0.7}]]
+[[ADD_MEMORY:{"text":"<new memory>"}]]
+[[UPDATE_MEMORY:{"index":0,"text":"<updated memory>"}]]
+[[DELETE_MEMORY:{"index":0}]]
+[[CLEAR_MEMORIES:{}]]
+
+Use only conversation ids from <conversations>, topic ids from <topics>, and memory indices from <memories>. Use "folderId": null for Unsorted, or provide a new folderName to create a topic.
+
+Supported setting keys and values:
+- memory_mode: 0 (none), 1 (recall), 2 (learn)
+- suggest_user_prompts, html_load_external, set_title_once, render_typst, render_latex, conversation_summaries: true or false
+- html_render_mode: "render", "code", or "off"
+- html_sanitization: "strict" or "relaxed"
+- document_conversion_mode: "server", "browser", or "choice"
+- send_with_enter: true, false, or null
+- timeout: milliseconds (5000-900000)
+
+Supported per-chat setting keys and values:
+- model: a model id from <available_models>
+- temperature, top_p: number from 0 to 2
+- reasoning_effort: number or null
+- memory_mode_override: "default", 0, 1, or 2
+- enable_tools, enable_web_search: true or false
+
+Use SET_CONVERSATION_SETTING with "target":"all" only when the user explicitly asks to change all chats; otherwise use a conversation id from <conversations>. These markers change per-chat settings, not global preferences. The Meta chat's own settings are read-only and must not be changed with these markers.
+
+For any other setting, do not propose a marker; give the relevant settings deep link instead. For memories, use ADD_MEMORY for a new memory, UPDATE_MEMORY or DELETE_MEMORY with the index from <memories>, and CLEAR_MEMORIES to delete all memories. You may include multiple markers, including chat, setting, and memory changes together. Do not use these markers for advice or tutorials, and do not combine them with persona markers.
+
 <features>
 ${buildFeatureGuidePrompt()}
 </features>
@@ -233,6 +319,16 @@ When the user describes a goal rather than naming a feature, suggest a concrete 
 <user_settings>
 ${buildSettingsLines(userSettings, interfaceSettings).join("\n")}
 </user_settings>
+
+<meta_chat_settings>
+${buildConversationSettingsSummary(metaChatSettings)}
+</meta_chat_settings>
+
+<available_models>
+${modelLines}
+</available_models>
+
+The Meta chat's own settings are in <meta_chat_settings>. They are read-only here; use them when the user asks what settings the Meta chat uses, and do not confuse them with global preferences or other chats.
 
 <topics>
 ${topicLines}
@@ -271,7 +367,6 @@ async function loadMetaContext(query = "") {
     .filter(
       (row) =>
         row?.id &&
-        row?.hasFirstPrompt !== false &&
         !row.isMetaChat &&
         row.id !== "meta-chat",
     )
@@ -287,6 +382,7 @@ async function loadMetaContext(query = "") {
       summary: (row.summary || "").trim(),
       folderId: row.folderId ?? null,
       lastModified: row.lastModified ?? row.createdAt ?? 0,
+      settingsSummary: buildConversationSettingsSummary(row.settings),
     }));
 
   const topics = (folders || []).map((folder) => ({
@@ -313,7 +409,7 @@ async function loadMetaContext(query = "") {
   return { conversations, topics, persons, messageMatches };
 }
 
-export function useMetaChatSend() {
+export function useMetaChatSend(modelsData = []) {
   const timeout = useSelector(selectTimeout);
   const userSettings = useSelector(selectUserSettings);
   const interfaceSettings = useSelector((state) => state.interface_settings);
@@ -353,9 +449,11 @@ export function useMetaChatSend() {
         )
         .map((message) => ({
           role: message.role,
-          content: stripPersonaMarkers(
-            stripUseCaseMarkers(
-              stripFeatureGuideMarkers(extractMessageText(message)),
+          content: stripMetaActionMarkers(
+            stripPersonaMarkers(
+              stripUseCaseMarkers(
+                stripFeatureGuideMarkers(extractMessageText(message)),
+              ),
             ),
           ).trim(),
         }))
@@ -401,6 +499,8 @@ export function useMetaChatSend() {
               (memories || []).map((memory) => memory?.text || ""),
               userSettings,
               interfaceSettings,
+              localState.settings,
+              modelsData,
             ),
           },
           ...history,
@@ -509,6 +609,6 @@ export function useMetaChatSend() {
         window.dispatchEvent(new Event("chatai:message-complete"));
       }
     },
-    [timeout, userSettings, interfaceSettings, memories, t],
+    [timeout, userSettings, interfaceSettings, memories, modelsData, t],
   );
 }

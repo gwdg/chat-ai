@@ -419,6 +419,35 @@ export const featureGuides = {
       },
     ],
   },
+  sort_organize: {
+    titleKey: "feature_guide.sort_organize.title",
+    prompt:
+      "Use Sort & organize in the sidebar header to let the model suggest topics, titles, and cleanup for your chats. Review the proposal, select what you want, and apply it. Nothing changes before you apply.",
+    keywords: [
+      "sort and organize",
+      "sort & organize",
+      "organize chats",
+      "clean up chats",
+      "ai organization",
+      "suggested topics",
+      "duplicate chats",
+    ],
+    steps: [
+      {
+        target: '[data-guide="sort-organize"]',
+        textKey: "feature_guide.sort_organize.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="sort-organize-review"]',
+        textKey: "feature_guide.sort_organize.step2",
+      },
+      {
+        target: '[data-guide="sort-organize-apply"]',
+        textKey: "feature_guide.sort_organize.step3",
+      },
+    ],
+  },
   sort_group_chats: {
     titleKey: "feature_guide.sort_group_chats.title",
     prompt:
@@ -797,6 +826,65 @@ export const featureGuides = {
       },
     ],
   },
+  meta_chat_actions: {
+    titleKey: "feature_guide.meta_chat_actions.title",
+    prompt:
+      "Use the Meta chat to propose renaming a chat or moving it to another topic. Review the warning card below the message and click Accept changes; nothing is applied before that.",
+    keywords: [
+      "meta chat rename",
+      "meta chat move chat",
+      "rename chat with meta chat",
+      "move chat to topic",
+      "accept changes",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_actions.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_actions.step2",
+        completeOnEvent: "message-complete",
+      },
+      {
+        target: '[data-guide="meta-action-accept"]',
+        textKey: "feature_guide.meta_chat_actions.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  meta_chat_search: {
+    titleKey: "feature_guide.meta_chat_search.title",
+    prompt:
+      "Use the Meta chat to search the full text of your stored messages across conversations and topics. Ask where something was decided or what the action items are, then open the cited messages to jump to the exact source.",
+    keywords: [
+      "meta chat search",
+      "full text search",
+      "search messages",
+      "find a message",
+      "find a decision",
+      "action items",
+      "cite a message",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_search.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_search.step2",
+        completeOnEvent: "message-complete",
+      },
+      {
+        target: '[data-guide="message-citation"]',
+        textKey: "feature_guide.meta_chat_search.step3",
+      },
+    ],
+  },
   meta_chat_navigation: {
     titleKey: "feature_guide.meta_chat_navigation.title",
     prompt:
@@ -843,7 +931,13 @@ export const featureGuides = {
 };
 
 export const FEATURE_CATEGORIES = {
-  personas: ["chat_with_persona"],
+  meta_chat: [
+    "meta_chat_usage",
+    "meta_chat_catalogs",
+    "meta_chat_search",
+    "meta_chat_navigation",
+    "meta_chat_actions",
+  ],
   prompt: [
     "attach_media",
     "upload_file",
@@ -867,25 +961,25 @@ export const FEATURE_CATEGORIES = {
     "search_chats",
     "manage_topics",
     "sort_group_chats",
-    "export_conversation",
+    "sort_organize",
     "import_conversation",
-    "close_chat",
+    "export_conversation",
     "share_conversation",
     "fork_conversation",
     "summarize_conversation",
-    "meta_chat_usage",
-    "meta_chat_navigation",
+    "close_chat",
   ],
+  personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
-    "memories",
     "chat_preferences",
+    "memories",
     "rendering",
     "document_conversion",
     "data_management",
     "dark_mode",
   ],
-  other: ["feedback", "speech_output", "meta_chat_catalogs"],
+  other: ["feedback", "speech_output"],
 };
 
 export function getFeatureCategory(featureId) {
@@ -941,6 +1035,7 @@ const germanGuideKeywords = {
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],
   manage_topics: ["thema", "themen", "topic", "themen erstell", "chats organisier"],
   sort_group_chats: ["chats sortier", "chats gruppier", "sortier", "gruppier", "nach datum sortier"],
+  sort_organize: ["sortieren", "organisieren", "sort & organize", "chats aufräum", "chats organisier", "themen vorschlag", "ki organisation", "duplikate finden", "chats umbenenn", "sortieren und organisieren"],
   export_conversation: ["chat exportier", "unterhaltung exportier", "chat herunterlad", "chat speicher", "exportier"],
   import_conversation: ["chat importier", "unterhaltung importier", "importier", "chat wiederherstell"],
   chat_with_persona: ["persona", "personas", "mit persona chatten", "persona bibliothek", "persona auswähl", "persona starten"],
@@ -958,7 +1053,9 @@ const germanGuideKeywords = {
   feedback: ["feedback", "antwort bewert", "bewert", "daumen hoch", "daumen runter"],
   speech_output: ["vorles", "vorgeles", "sprachausgabe", "text zu sprache", "antwort vorles"],
   meta_chat_catalogs: ["metachat tutorial", "metachat anleitung", "tutorials durchsuch", "anwendungsfälle durchsuch", "tutorials find", "tutorial", "anleitung", "anwendungsfälle", "katalog", "einstellungen im metachat", "persona", "personas", "persona empfehl", "persona finden", "mit persona chatten", "metachat suche", "entscheidung finden", "aufgaben finden", "chats vergleichen", "zum chat", "zur nachricht", "zum thema", "einstellung öffnen"],
+  meta_chat_search: ["metachat suche", "metachat durchsuch", "volltextsuche", "nachrichten durchsuchen", "nachricht finden", "entscheidung finden", "aufgaben finden", "zitat"],
   meta_chat_navigation: ["metachat navigation", "nachricht finden", "entscheidung finden", "aufgaben finden", "zum chat springen", "zur einstellung", "deep link", "zitat"],
+  meta_chat_actions: ["metachat umbenennen", "meta chat umbenennen", "chat umbenennen", "chat verschieben", "chat in thema verschieben", "änderungen übernehmen", "vorschlag bestätigen"],
   meta_chat_usage: ["metachat", "meta chat", "metachat verwend", "metachat öffn"],
 };
 

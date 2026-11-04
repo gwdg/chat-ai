@@ -349,6 +349,16 @@ sidebar, last-conversation lookup, and its own summary context. `getExportData()
 `meta_chat` and `useImportConversation` recreates it silently. Do not make it summarize full
 conversations on the fly without accounting for the extra model calls.
 
+Conversation context also includes a compact summary of each chat's per-chat settings (model,
+temperature, top_p, reasoning effort, memory-mode override, enabled tools, Arcana, MCP), so the
+model can answer questions about per-chat configuration without confusing it with global
+`<user_settings>`. The Meta chat's own settings are sent separately in `<meta_chat_settings>` and
+are read-only. `SET_CONVERSATION_SETTING` proposals can target all conversations or one id and
+change model, temperature, top_p, reasoning effort, memory-mode override, tool/web-search flags;
+they are applied only after confirmation and can be reverted like other mutations. Model proposals
+resolve an id from the available model list, and revert compares the model id rather than the full
+model object because the 30-second model refresh can update metadata such as status.
+
 The Meta chat also loads the persona catalog from `gwdg/chat-ai-personas`
 (`utils/personaCatalog.js`, cached in memory and `sessionStorage`) and includes each persona's id,
 title, category, and description ("subtitle") in the system prompt. The model links to a persona
@@ -367,6 +377,16 @@ to the message, and highlights it briefly. `MarkdownLink` routes `/chat/...`, `/
 `/settings/<tab>` internally; settings links dispatch `chatai:open-settings`, handled by
 `useSettingsDeepLink` in `ChatPage`/`MetaChatPage`, and `UserSettingsModal` opens the requested tab
 with a brief highlight. Module flags in `<user_settings>` let the model explain disabled features.
+
+Mutating chat actions are proposals, never applied by the model. It emits `RENAME_CHAT` /
+`MOVE_CHAT`, `SET_SETTING`, and memory markers (`utils/metaActions.js`), which `MetaActionCard`
+renders below the message with a warning icon and an explicit Accept button. Only that click calls
+`updateConversationMeta` / `assignConversationToFolder` or dispatches `importUserSettings`; markers
+are stripped from rendered markdown and from Meta-chat history. Memory indices come from the
+numbered `<memories>` list in the system prompt. After applying, the card stores a snapshot and
+offers a revert action; it only reverts if the current chats/settings/memories still match the
+values that were applied. A successful revert returns the card to the unapplied state, so the same
+proposal can be accepted again.
 
 ### 4.17 Per-conversation memory mode overrides the global preference
 

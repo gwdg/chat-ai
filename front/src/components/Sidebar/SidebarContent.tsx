@@ -655,6 +655,7 @@ export default function SidebarContent({
                     setLocalState,
                   })
                 }
+                data-guide="sort-organize"
                 className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
                 aria-label={t("sorter.button")}
                 title={t("sorter.button")}

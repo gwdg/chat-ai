@@ -505,7 +505,10 @@ export default function OrganizeChatsModal({
           {t("sorter.ai_model_note")}
         </p>
 
-        <div className="max-h-[45vh] space-y-4 overflow-y-auto pr-1">
+        <div
+          data-guide="sort-organize-review"
+          className="max-h-[45vh] space-y-4 overflow-y-auto pr-1"
+        >
           {aiStatus === "loading" ? (
             <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-base-300 px-4 py-10 text-center">
               <div className="loading loading-spinner loading-md text-accent" />
@@ -969,6 +972,7 @@ export default function OrganizeChatsModal({
               {t("common.cancel")}
             </button>
             <button
+              data-guide="sort-organize-apply"
               className="btn btn-accent"
               onClick={handleApply}
               disabled={!canApply}

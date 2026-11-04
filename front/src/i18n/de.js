@@ -195,6 +195,36 @@ export default {
       find_example: "„Wo ist mein Chat über meine Essensbestellung?“",
     },
     clear_chat: "Chat leeren",
+    proposed_changes: "Vorgeschlagene Änderungen",
+    mutation_warning:
+      "Diese Änderungen bearbeiten Ihre Chats, Einstellungen oder Erinnerungen. Prüfen Sie sie vor dem Übernehmen.",
+    accept_changes: "Änderungen übernehmen",
+    applying_changes: "Wird übernommen…",
+    changes_applied: "Änderungen übernommen",
+    revert_changes: "Änderungen zurücksetzen",
+    reverting: "Wird zurückgesetzt…",
+    changes_reverted: "Änderungen zurückgesetzt",
+    revert_mismatch:
+      "Ein Zurücksetzen ist nicht möglich, weil der aktuelle Zustand nicht mehr der übernommenen Änderung entspricht.",
+    apply_failed: "Die Änderungen konnten nicht übernommen werden.",
+    rename_summary: "„{{from}}“ in „{{to}}“ umbenennen",
+    move_summary: "„{{title}}“ nach „{{topic}}“ verschieben",
+    setting_summary: "{{setting}} von „{{from}}“ auf „{{to}}“ ändern",
+    setting_temperature: "Temperatur",
+    setting_top_p: "Top-p",
+    conversation_setting_all_summary:
+      "{{setting}} für alle Chats auf „{{value}}“ setzen",
+    conversation_setting_summary:
+      "{{setting}} in „{{title}}“ auf „{{value}}“ setzen",
+    add_memory_summary: "Erinnerung „{{text}}“ hinzufügen",
+    update_memory_summary: "Erinnerung „{{from}}“ in „{{to}}“ ändern",
+    delete_memory_summary: "Erinnerung „{{text}}“ löschen",
+    clear_memories_summary: "Alle gespeicherten Erinnerungen löschen",
+    memory_item: "Erinnerung {{index}}",
+    setting_on: "an",
+    setting_off: "aus",
+    setting_device_default: "Gerätestandard",
+    unsorted_topic: "Nicht zugeordnet",
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
   },
@@ -217,10 +247,11 @@ export default {
     completed_title: "Tutorial abgeschlossen",
     more_tutorials: "Weitere Tutorials",
     categories: {
-      personas: "Personas",
+      meta_chat: "Den Metachat verwenden",
       prompt: "Eingabe und Chat",
       tools: "Tools und RAG",
       chats: "Chats und Organisation",
+      personas: "Personas",
       settings: "Einstellungen",
       other: "Mehr",
     },
@@ -353,6 +384,14 @@ export default {
       step3:
         "Ziehen Sie Chats in Themen oder verschieben Sie sie über das Chat-Menü.",
     },
+    sort_organize: {
+      title: "Chats sortieren & organisieren",
+      step1: "Klicken Sie in der Kopfzeile der Seitenleiste auf „Sortieren & organisieren“.",
+      step2:
+        "Prüfen Sie die vorgeschlagenen Themen, Titel und Löschungen. Änderungen werden erst beim Anwenden übernommen.",
+      step3:
+        "Wählen Sie die gewünschten Vorschläge aus und klicken Sie auf „Änderungen anwenden“.",
+    },
     sort_group_chats: {
       title: "Chats sortieren und gruppieren",
       step1: "Öffnen Sie das Sortiermenü in der Seitenleiste.",
@@ -456,6 +495,22 @@ export default {
       step2: "Durchsuchen Sie vollständige Abläufe, die mehrere Funktionen kombinieren. Der Metachat kann beide Optionen auch für Sie starten.",
       step3: "Sie können mich auch bitten, ein Tutorial zu finden oder eine Persona zu empfehlen. Zum Beispiel: „Finde ein Tutorial zum Hochladen einer Datei.“",
       step4: "Fragen Sie nach Einstellungen oder lassen Sie sich zu einem Chat, einer Nachricht, einem Thema oder einer Einstellung führen. Ich kann auch nach Entscheidungen und Aufgaben in Ihren Chats suchen.",
+    },
+    meta_chat_actions: {
+      title: "Chats mit dem Metachat umbenennen und organisieren",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2:
+        "Bitten Sie ihn, einen Chat umzubenennen oder in ein anderes Thema zu verschieben. Zum Beispiel: „Benenne ‚Preisdiskussion‘ in ‚Preisstrategie‘ um.“",
+      step3:
+        "Prüfen Sie die vorgeschlagenen Änderungen und klicken Sie auf „Änderungen übernehmen“. Erst dann werden sie angewendet.",
+    },
+    meta_chat_search: {
+      title: "Nachrichteninhalte mit dem Metachat durchsuchen",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2:
+        "Bitten Sie ihn, etwas in Ihren Chats zu finden, zum Beispiel: „Finde, wo wir das Preismodell entschieden haben“ oder „Welche Aufgaben gibt es?“",
+      step3:
+        "Klicken Sie auf eine zitierte Nachricht, um zur genauen Nachricht zu springen und sie hervorzuheben.",
     },
     meta_chat_navigation: {
       title: "Navigieren und suchen mit dem Metachat",
