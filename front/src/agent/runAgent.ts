@@ -400,7 +400,6 @@ export async function runAgentTurn({
     await agent.prompt(prompt);
   } finally {
     stopListening();
-    await mcp?.close();
   }
   await saveWritten();
 

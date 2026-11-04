@@ -67,64 +67,113 @@ function toResult(result: any): AgentToolResult<any> {
   return { content, details: undefined };
 }
 
-export interface McpTools {
-  tools: AgentTool<any>[];
-  close: () => Promise<void>;
+type Connection = { client: any; tools: any[]; prefix: string };
+
+// Open connections by server (URL + headers). They are opened ahead of the first message
+// (prefetchMcpServers) and kept across turns; one that fails is dropped and opened again
+// on the next use, so only then does a turn wait for the connection.
+const connections = new Map<string, Promise<Connection>>();
+const keyOf = (server: McpServer) => JSON.stringify([server.url, server.headers ?? {}]);
+
+function drop(key: string, connection?: Promise<Connection>) {
+  const current = connections.get(key);
+  if (!current || (connection && current !== connection)) return;
+  connections.delete(key);
+  current.then(({ client }) => client.close()).catch(() => {});
 }
 
-/**
- * Connects to every server and returns their tools as agent tools, named `<server>__<tool>`.
- * Throws McpUnavailableError for the first server that cannot be reached; the turn stops then.
- */
-export async function connectMcpServers(servers: McpServer[], taken: Set<string>): Promise<McpTools> {
+async function open(server: McpServer): Promise<Connection> {
   const [{ Client }, { StreamableHTTPClientTransport }] = await Promise.all([
     import("@modelcontextprotocol/sdk/client/index.js"),
     import("@modelcontextprotocol/sdk/client/streamableHttp.js"),
   ]);
-  const clients: InstanceType<typeof Client>[] = [];
-  const close = async () => {
-    await Promise.allSettled(clients.map((client) => client.close()));
-  };
-  const names = new Set(taken);
-  const tools: AgentTool<any>[] = [];
+  const client = new Client({ name: "chat-ai", version: "1.0.0" });
+  const transport = new StreamableHTTPClientTransport(new URL(server.url), {
+    requestInit: server.headers ? { headers: server.headers } : undefined,
+  });
   try {
-    for (const server of servers) {
-      const client = new Client({ name: "chat-ai", version: "1.0.0" });
-      let listed;
+    await client.connect(transport);
+    const tools = [];
+    let cursor: string | undefined;
+    do {
+      const page = await client.listTools(cursor ? { cursor } : undefined);
+      tools.push(...page.tools);
+      cursor = page.nextCursor;
+    } while (cursor);
+    const prefix = toName(client.getServerVersion()?.name || new URL(server.url).host);
+    return { client, tools, prefix };
+  } catch (error) {
+    client.close().catch(() => {});
+    throw error;
+  }
+}
+
+function connect(server: McpServer): Promise<Connection> {
+  const key = keyOf(server);
+  let connection = connections.get(key);
+  if (!connection) {
+    connection = open(server);
+    connections.set(key, connection);
+    const opened = connection;
+    // A failed attempt is not kept: the next use tries again
+    opened.catch(() => drop(key, opened));
+  }
+  return connection;
+}
+
+/** Opens the connections to these servers in the background and closes all others. */
+export function prefetchMcpServers(servers: McpServer[]) {
+  const keep = new Set(servers.map(keyOf));
+  for (const key of [...connections.keys()]) if (!keep.has(key)) drop(key);
+  for (const server of servers) connect(server).catch(() => {});
+}
+
+export interface McpTools {
+  tools: AgentTool<any>[];
+}
+
+/**
+ * The tools of all servers as agent tools, named `<server>__<tool>`. Connects to the servers
+ * at the same time, reusing open connections. Throws McpUnavailableError for a server that
+ * cannot be reached; the turn stops then.
+ */
+export async function connectMcpServers(servers: McpServer[], taken: Set<string>): Promise<McpTools> {
+  const opened = await Promise.all(
+    servers.map(async (server) => {
       try {
-        const transport = new StreamableHTTPClientTransport(new URL(server.url), {
-          requestInit: server.headers ? { headers: server.headers } : undefined,
-        });
-        await client.connect(transport);
-        clients.push(client);
-        listed = [];
-        let cursor: string | undefined;
-        do {
-          const page = await client.listTools(cursor ? { cursor } : undefined);
-          listed.push(...page.tools);
-          cursor = page.nextCursor;
-        } while (cursor);
+        return { server, connection: await connect(server) };
       } catch (error) {
         throw new McpUnavailableError(server.url, error);
       }
-      const prefix = toName(client.getServerVersion()?.name || new URL(server.url).host);
-      for (const tool of listed) {
-        let name = `${prefix}__${toName(tool.name)}`.slice(0, MAX_NAME);
-        for (let i = 2; names.has(name); i++) name = `${name.slice(0, MAX_NAME - String(i).length - 1)}_${i}`;
-        names.add(name);
-        tools.push({
-          name,
-          label: tool.title || tool.name,
-          description: `${tool.description ?? ""} (MCP server ${server.url})`.trim(),
-          parameters: (tool.inputSchema ?? { type: "object", properties: {} }) as any,
-          execute: async (_id, args, signal) =>
-            toResult(await client.callTool({ name: tool.name, arguments: args ?? {} }, undefined, { signal })),
-        });
-      }
+    }),
+  );
+  const names = new Set(taken);
+  const tools: AgentTool<any>[] = [];
+  for (const { server, connection } of opened) {
+    const key = keyOf(server);
+    const current = connections.get(key);
+    for (const tool of connection.tools) {
+      let name = `${connection.prefix}__${toName(tool.name)}`.slice(0, MAX_NAME);
+      for (let i = 2; names.has(name); i++) name = `${name.slice(0, MAX_NAME - String(i).length - 1)}_${i}`;
+      names.add(name);
+      tools.push({
+        name,
+        label: tool.title || tool.name,
+        description: `${tool.description ?? ""} (MCP server ${server.url})`.trim(),
+        parameters: (tool.inputSchema ?? { type: "object", properties: {} }) as any,
+        execute: async (_id, args, signal) => {
+          let result;
+          try {
+            result = await connection.client.callTool({ name: tool.name, arguments: args ?? {} }, undefined, { signal });
+          } catch (error) {
+            // The connection may be gone (server restarted, session expired): open a new one next time
+            if (!signal?.aborted) drop(key, current);
+            throw error;
+          }
+          return toResult(result);
+        },
+      });
     }
-  } catch (error) {
-    await close();
-    throw error;
   }
-  return { tools, close };
+  return { tools };
 }
