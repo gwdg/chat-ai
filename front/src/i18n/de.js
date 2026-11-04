@@ -4,6 +4,10 @@ export default {
     loading: "Lädt...",
     undo: "Rückgängig",
     scroll: "Nach unten scrollen",
+    scroll_to_top: "Nach oben scrollen",
+    scroll_to_message: "Zum Anfang der Nachricht springen",
+    next_message: "Zur nächsten Nachricht scrollen",
+    previous_message: "Zur vorherigen Nachricht scrollen",
     rename: "Umbenennen",
     create: "Erstellen",
     save: "Speichern",
@@ -11,11 +15,14 @@ export default {
     export: "Chat exportieren",
     summarize: "Zusammenfassen",
     summarizing: "Zusammenfassen...",
-    summarize_success: "Unterhaltung erfolgreich zusammengefasst.",
+    summarize_success: "Zusammenfassung in einer neuen Unterhaltung erstellt.",
+    summary_title: "Zusammenfassung von {{title}}",
     summarize_error: "Zusammenfassung fehlgeschlagen. Ihre Unterhaltung ist unverändert.",
     clear: "Löschen",
     abort: "Abbrechen",
     send: "Senden",
+    send_shortcut: "Senden (Enter)",
+    send_shortcut_shift_enter: "Senden (Umschalt+Enter)",
     stop: "Anhalten",
     share: "Teilen",
     delete: "Löschen",
@@ -58,7 +65,23 @@ export default {
     title: "Chats",
     all: "Alle Chats",
     uncategorized: "Nicht zugeordnete Chats",
+    by_date: "Alle Chats nach Datum",
+    by_created: "Alle Chats nach Erstellungsdatum",
+    sort_label: "Chats sortieren",
+    sort_by_topic: "Nach Thema",
+    sort_by_date: "Nach Datum",
+    sort_by_created: "Nach Erstellungsdatum",
+    modified: "Geändert {{date}}",
+    dateBuckets: {
+      today: "Heute",
+      yesterday: "Gestern",
+      lastWeek: "Letzte Woche",
+      lastMonth: "Letzter Monat",
+      older: "Älter",
+    },
     create_button: "Neues Thema",
+    expand_topic: "Thema ausklappen",
+    collapse_topic: "Thema einklappen",
     empty_topic: "Ziehen Sie einen Chat hierher.",
     search_label: "Suche",
     search_action: "Chats durchsuchen",
@@ -66,8 +89,14 @@ export default {
     search_no_results: 'Keine Treffer für "{{query}}"',
     clear_search: "Suche löschen",
     create_title: "Thema erstellen",
-    rename_title: "Thema umbenennen",
+    edit_title: "Thema bearbeiten",
     delete_title: "Thema löschen",
+    topic_options: "Thema-Optionen",
+    pinned: "Angeheftet",
+    pin_action: "Chat anheften",
+    unpin_action: "Nicht mehr anheften",
+    pin_topic_action: "Thema anheften",
+    unpin_topic_action: "Thema nicht mehr anheften",
     delete_description:
       'Thema "{{name}}" löschen? Chats bleiben erhalten und erscheinen unter "Nicht zugeordnete Chats".',
     name_label: "Themenname",
@@ -90,8 +119,580 @@ export default {
     new_folder_prompt: "Neues Thema anlegen",
     create_inline: "Erstellen",
   },
+  topic_view: {
+    chat_count_one: "{{count}} Chat",
+    chat_count_other: "{{count}} Chats",
+    empty_title: "Noch keine Chats in diesem Thema",
+    empty_body:
+      "Schreiben Sie unten eine Eingabe, um den ersten Chat hier zu starten.",
+    composer_placeholder: "Fragen Sie etwas — startet einen neuen Chat in {{name}}",
+    create_error:
+      "Neuer Chat konnte nicht gestartet werden. Bitte erneut versuchen.",
+    missing_topic: "Dieses Thema existiert nicht mehr",
+    missing_topic_body:
+      "Es wurde möglicherweise gelöscht. Wählen Sie ein anderes Thema in der Seitenleiste.",
+    back_to_chats: "Zurück zu den Chats",
+    loading: "Thema wird geladen…",
+  },
+  sorter: {
+    button: "Sortieren & organisieren",
+    title: "Chats sortieren & organisieren",
+    intro:
+      "Prüfen Sie die Vorschläge unten. Änderungen werden erst beim Anwenden übernommen.",
+    ai_model_note:
+      "Chat-Titel, vorhandene Zusammenfassungen und bestehende Themennamen werden vom Standard-ChatAI-Modell analysiert.",
+    ai_analyzing: "Ihre Chats werden mit {{model}} analysiert…",
+    ai_error:
+      "Das Modell konnte Ihre Chats nicht analysieren. Es werden keine Änderungen angezeigt.",
+    ai_retry: "Modell erneut versuchen",
+    ai_limited:
+      "Die {{analyzed}} neuesten von {{total}} Chats wurden analysiert. Ältere Chats bleiben unverändert.",
+    ai_default_model: "das Standardmodell",
+    assessment_title: "Einschätzung des Modells",
+    preview_title: "Vorgeschlagene Struktur",
+    include_topic_rename: "Themenumbenennung übernehmen",
+    include_title_change: "Titeländerung übernehmen",
+    new_topic: "Neues Thema",
+    existing_topic: "Bestehendes Thema",
+    no_changes: "Keine Themenänderungen vorgeschlagen.",
+    select_all_moves: "Alle auswählen",
+    deselect_all_moves: "Alle abwählen",
+    deletions_title: "Vorgeschlagene Löschungen",
+    deletions_hint:
+      "Vom Modell vorgeschlagene Löschungen werden hier angezeigt. Sie sind standardmäßig nicht ausgewählt.",
+    no_deletions: "Keine Löschungen vorgeschlagen.",
+    reason_empty: "Leerer Chat",
+    reason_duplicate: 'Duplikat von "{{title}}"',
+    reason_duplicate_generic: "Doppelter Chat",
+    select_all_deletions: "Alle Löschungen auswählen",
+    deselect_all_deletions: "Alle Löschungen abwählen",
+    summary_moves: "{{count}} Verschiebungen",
+    summary_new_topics: "{{count}} neue Themen",
+    summary_titles: "{{count}} Titeländerungen",
+    summary_topic_renames: "{{count}} Themenumbenennungen",
+    summary_deletions: "{{count}} Löschungen",
+    apply: "Änderungen anwenden",
+    applying: "Wird angewendet…",
+    error_name: "Bitte geben Sie jedem neuen Thema einen Namen.",
+    error_generic:
+      "Die Änderungen konnten nicht angewendet werden. Bitte erneut versuchen.",
+    success: "Chats wurden neu organisiert.",
+    categories: {
+      code: "Programmierung",
+      writing: "Schreiben",
+      research: "Forschung",
+      data: "Daten & Analyse",
+      planning: "Planung",
+      learning: "Lernen",
+      health: "Gesundheit",
+      travel: "Reisen",
+      finance: "Finanzen",
+      creative: "Kreatives Arbeiten",
+    },
+  },
+  meta_chat: {
+    title: "Meta-Chat",
+    open: "Metachat: Chats durchsuchen",
+    banner_description: "Metachat kann Ihnen auf zwei Arten helfen:",
+    purposes: {
+      tutor: "Die Funktionen von Chat AI kennenlernen",
+      tutor_example: "„Wie finde ich ein Tutorial oder prüfe meine Einstellungen?“",
+      find: "Bisherige Chats und Themen finden",
+      find_example: "„Wo ist mein Chat über meine Essensbestellung?“",
+    },
+    clear_chat: "Chat leeren",
+    proposed_changes: "Vorgeschlagene Änderungen",
+    mutation_warning:
+      "Diese Änderungen bearbeiten Ihre Chats, Einstellungen oder Erinnerungen. Prüfen Sie sie vor dem Übernehmen.",
+    accept_changes: "Änderungen übernehmen",
+    applying_changes: "Wird übernommen…",
+    changes_applied: "Änderungen übernommen",
+    revert_changes: "Änderungen zurücksetzen",
+    reverting: "Wird zurückgesetzt…",
+    changes_reverted: "Änderungen zurückgesetzt",
+    revert_mismatch:
+      "Ein Zurücksetzen ist nicht möglich, weil der aktuelle Zustand nicht mehr der übernommenen Änderung entspricht.",
+    apply_failed: "Die Änderungen konnten nicht übernommen werden.",
+    rename_summary: "„{{from}}“ in „{{to}}“ umbenennen",
+    move_summary: "„{{title}}“ nach „{{topic}}“ verschieben",
+    pin_summary: "„{{title}}“ anheften",
+    unpin_summary: "„{{title}}“ nicht mehr anheften",
+    pin_topic_summary: "Thema „{{topic}}“ anheften",
+    unpin_topic_summary: "Thema „{{topic}}“ nicht mehr anheften",
+    setting_summary: "{{setting}} von „{{from}}“ auf „{{to}}“ ändern",
+    setting_temperature: "Temperatur",
+    setting_top_p: "Top-p",
+    conversation_setting_all_summary:
+      "{{setting}} für alle Chats auf „{{value}}“ setzen",
+    conversation_setting_summary:
+      "{{setting}} in „{{title}}“ auf „{{value}}“ setzen",
+    add_memory_summary: "Erinnerung „{{text}}“ hinzufügen",
+    update_memory_summary: "Erinnerung „{{from}}“ in „{{to}}“ ändern",
+    delete_memory_summary: "Erinnerung „{{text}}“ löschen",
+    clear_memories_summary: "Alle gespeicherten Erinnerungen löschen",
+    memory_item: "Erinnerung {{index}}",
+    setting_on: "an",
+    setting_off: "aus",
+    setting_device_default: "Gerätestandard",
+    unsorted_topic: "Nicht zugeordnet",
+    error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    no_model: "Kein Standardmodell konfiguriert.",
+  },
+  feature_guide: {
+    catalog: {
+      open: "Tutorials durchsuchen",
+      close: "Tutorials ausblenden",
+      title: "Tutorials",
+      search: "Tutorials durchsuchen",
+      empty: "Keine Tutorials gefunden.",
+      hide_completed: "Abgeschlossene ausblenden",
+      completed_successfully: "Erfolgreich abgeschlossen",
+      completed: "Abgeschlossen",
+      start: "Starten",
+      replay: "Wiederholen",
+      steps: "{{count}} Schritte",
+    },
+    walkthrough_complete: "Durchlauf abgeschlossen",
+    dont_show_again: "Nicht mehr anzeigen",
+    completed_title: "Tutorial abgeschlossen",
+    more_tutorials: "Weitere Tutorials",
+    categories: {
+      meta_chat: "Den Metachat verwenden",
+      prompt: "Eingabe und Chat",
+      tools: "Tools und RAG",
+      chats: "Chats und Organisation",
+      personas: "Personas",
+      settings: "Einstellungen",
+      other: "Mehr",
+    },
+    show_me: "Zeigen: {{title}}",
+    show_me_short: "Zeigen",
+    step: "Schritt {{current}} von {{total}}",
+    status_title: "Tutorial-Fortschritt",
+    status_waiting: "Warten auf Ihre Aktion",
+    status_ready: "Schritt abgeschlossen",
+    status_manual: "Weiter, wenn Sie bereit sind",
+    status_done: "Tutorial abgeschlossen",
+    complete_step: "Schließen Sie diesen Schritt ab, um fortzufahren.",
+    next: "Weiter",
+    back: "Zurück",
+    done: "Fertig",
+    close: "Schließen",
+    attach_media: {
+      title: "Medien an einen Chat anhängen",
+      step1: "Klicken Sie auf die Bildschaltfläche im Eingabefeld.",
+      step2:
+        "Wählen Sie eine Bild-, Audio- oder Videodatei, wenn das aktuelle Modell sie unterstützt. Die Datei erscheint über dem Eingabefeld.",
+      step3: "Geben Sie eine Nachricht ein und klicken Sie auf Senden.",
+    },
+    upload_file: {
+      title: "Eine Datei an einen Chat anhängen",
+      step1:
+        "Klicken Sie auf die Büroklammer im Eingabefeld, um die Dateiauswahl zu öffnen.",
+      step2:
+        "Wählen Sie eine Datei. Sie erscheint über dem Eingabefeld; PDF- und DOCX-Dateien müssen eventuell zuerst verarbeitet werden.",
+      step3:
+        "Geben Sie Ihre Nachricht ein und klicken Sie auf Senden. Das Modell verwendet die Datei, wenn es diesen Dateityp unterstützt.",
+    },
+    process_attachment: {
+      title: "Einen Anhang verarbeiten",
+      step1: "Hängen Sie ein PDF oder DOCX an oder suchen Sie die Anhang-Karte über dem Eingabefeld.",
+      step2: "Wählen Sie Im Browser verarbeiten oder Auf dem Server verarbeiten.",
+      step3:
+        "Warten Sie auf die verarbeitete Markdown-Datei und senden Sie dann Ihre Nachricht.",
+    },
+    select_model: {
+      title: "Ein Modell auswählen",
+      step1:
+        "Öffnen Sie hier die Modellauswahl, um verfügbare Modelle und ihre Fähigkeiten zu sehen. Auf kleinen Bildschirmen wird die Auswahl im Kopfbereich verwendet.",
+    },
+    conversation_settings: {
+      title: "Unterhaltungseinstellungen ändern",
+      step1: "Klicken Sie auf das Einstellungssymbol im Eingabefeld.",
+      step2:
+        "Passen Sie Erinnerungsmodus, Temperatur, top_p, Denkaufwand oder den System-Prompt für diesen Chat an.",
+    },
+    voice_input: {
+      title: "Eine Sprachnachricht aufnehmen",
+      step1:
+        "Klicken Sie auf das Mikrofon. Erlauben Sie den Mikrofonzugriff, wenn der Browser danach fragt.",
+      step2:
+        "Die Aufnahme wird an den Prompt angehängt. Ergänzen Sie bei Bedarf Text und senden Sie.",
+    },
+    send_key: {
+      title: "Festlegen, wie Nachrichten gesendet werden",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3:
+        "Stellen Sie Nachricht senden mit auf Eingabe oder Umschalt+Eingabe. Alt+Eingabe fügt immer einen Zeilenumbruch ein.",
+    },
+    arcana: {
+      title: "Arcana für RAG verwenden",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3: "Wählen Sie Arcana.",
+      step4:
+        "Geben Sie Ihre Arcana-ID ein. Über den Hilfe-Link können Sie eine Sammlung erstellen.",
+    },
+    web_search: {
+      title: "Websuche verwenden",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3: "Wählen Sie Websuche und akzeptieren Sie den Hinweis.",
+    },
+    image_generation: {
+      title: "Bilder erzeugen",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie Bilderzeugung und beschreiben Sie das gewünschte Bild.",
+    },
+    image_modification: {
+      title: "Bilder bearbeiten",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie Bildbearbeitung und hängen Sie das Bild an oder beschreiben Sie es.",
+    },
+    audio_generation: {
+      title: "Audio erzeugen",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie Audioerzeugung und beschreiben Sie das gewünschte Audio.",
+    },
+    video_generation: {
+      title: "Videos erzeugen",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie Videoerzeugung. Die Videowarteschlange zeigt den Fortschritt.",
+    },
+    mcp_server: {
+      title: "Einen MCP-Server verbinden",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3: "Wählen Sie MCP-Server.",
+      step4: "Geben Sie die MCP-Server-Konfiguration in das Feld unten ein.",
+    },
+    tools_overview: {
+      title: "GWDG Tools verwenden",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie ein Tool. Tools erscheinen nur bei Modellen, die sie unterstützen.",
+    },
+    search_chats: {
+      title: "Chats durchsuchen",
+      step1: "Klicken Sie in der Seitenleiste auf Suchen.",
+      step2: "Geben Sie einen Teil eines Chat-Titels ein, um zu filtern.",
+    },
+    manage_topics: {
+      title: "Chats mit Themen organisieren",
+      step1: "Klicken Sie in der Seitenleiste auf Thema erstellen.",
+      step2: "Benennen Sie das Thema und wählen Sie Symbol und Farbe.",
+      step3:
+        "Ziehen Sie Chats in Themen oder verschieben Sie sie über das Chat-Menü.",
+    },
+    sort_organize: {
+      title: "Chats sortieren & organisieren",
+      step1: "Klicken Sie in der Kopfzeile der Seitenleiste auf „Sortieren & organisieren“.",
+      step2:
+        "Prüfen Sie die vorgeschlagenen Themen, Titel und Löschungen. Änderungen werden erst beim Anwenden übernommen.",
+      step3:
+        "Wählen Sie die gewünschten Vorschläge aus und klicken Sie auf „Änderungen anwenden“.",
+    },
+    sort_group_chats: {
+      title: "Chats sortieren und gruppieren",
+      step1: "Öffnen Sie das Sortiermenü in der Seitenleiste.",
+      step2: "Wählen Sie die Gruppierung nach Thema, Datum oder Erstellungsdatum.",
+    },
+    pin_chat: {
+      title: "Einen Chat anheften",
+      step1: "Öffnen Sie das Chat-Menü eines Chats in der Seitenleiste.",
+      step2:
+        "Wählen Sie „Chat anheften“. Angeheftete Chats bleiben unabhängig von der Gruppierung in einem eigenen Bereich oben.",
+    },
+    pin_topic: {
+      title: "Ein Thema anheften",
+      step1: "Öffnen Sie das Optionenmenü eines Themas in der Seitenleiste.",
+      step2:
+        "Wählen Sie „Thema anheften“. Angeheftete Themen bleiben unabhängig von der Gruppierung im Bereich „Angeheftet“ oben.",
+    },
+    close_chat: {
+      title: "Einen Chat schließen",
+      step1:
+        "Verwenden Sie die Schließen-Schaltfläche oben rechts. Sie entfernt den Chat aus Ihren Unterhaltungen; im Metachat wird stattdessen die Unterhaltung geleert.",
+    },
+    export_conversation: {
+      title: "Einen Chat exportieren",
+      step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
+      step2: "Wählen Sie Exportieren und legen Sie die Optionen fest.",
+    },
+    import_conversation: {
+      title: "Einen Chat importieren",
+      step1:
+        "Klicken Sie in der Seitenleiste auf Importieren und wählen Sie eine JSON-Chatdatei. Alternativ können Sie im Tab Daten importieren.",
+    },
+    chat_with_persona: {
+      title: "Mit Persona chatten",
+      step1:
+        "Klicken Sie in der Seitenleiste auf „Mit Persona chatten“, um die Persona-Bibliothek zu öffnen.",
+      step2:
+        "Wählen Sie links eine Kategorie oder nutzen Sie den Schnellimport, um direkt zu starten.",
+      step3:
+        "Klicken Sie auf eine Persona, um einen neuen Chat mit Titel, Modell und Systemprompt zu starten.",
+    },
+    share_conversation: {
+      title: "Unterhaltungseinstellungen teilen",
+      step1: "Öffnen Sie die Unterhaltungseinstellungen.",
+      step2: "Klicken Sie auf Teilen, um einen Link mit diesen Einstellungen zu kopieren.",
+    },
+    fork_conversation: {
+      title: "Eine Unterhaltung abzweigen",
+      step1:
+        "Verwenden Sie Abzweigen an einer Assistenten-Nachricht, um von dort in einem neuen Chat fortzufahren.",
+    },
+    summarize_conversation: {
+      title: "Einen Chat zusammenfassen",
+      step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
+      step2: "Wählen Sie Zusammenfassen. Eine neue Unterhaltung mit der Zusammenfassung wird erstellt.",
+    },
+    settings_overview: {
+      title: "Einstellungen ändern",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen über das Profil oder die Seitenleiste.",
+      step2: "Wählen Sie den Tab Chat. Erinnerungen und Daten enthalten die weiteren Einstellungen.",
+      step3: "Ändern Sie eine Einstellung wie Darstellung oder Dokumentkonvertierung. Änderungen werden automatisch gespeichert.",
+    },
+    memories: {
+      title: "Erinnerungen verwalten",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2:
+        "Verwalten Sie im Tab Erinnerungen gespeicherte Erinnerungen und den Erinnerungsmodus.",
+    },
+    chat_preferences: {
+      title: "Chat-Einstellungen öffnen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2:
+        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Darstellung und Dokumentkonvertierung zu ändern.",
+    },
+    rendering: {
+      title: "Darstellung konfigurieren",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3:
+        "Aktivieren Sie die Typst- oder LaTeX-Darstellung. Auch HTML-Darstellung und externe Verweise werden hier konfiguriert.",
+    },
+    document_conversion: {
+      title: "Dokumentkonvertierung wählen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3: "Wählen Sie Nur Server, Nur Browser oder Nach Wahl.",
+    },
+    data_management: {
+      title: "Ihre Daten verwalten",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Daten.",
+      step3:
+        "Exportieren Sie lokale Daten oder löschen Sie Chats, Erinnerungen, Einstellungen und Anhänge.",
+    },
+    dark_mode: {
+      title: "Design wechseln",
+      step1:
+        "Verwenden Sie den Design-Schalter in der Fußzeile, um zwischen hellem und dunklem Modus zu wechseln.",
+    },
+    feedback: {
+      title: "Feedback senden",
+      step1:
+        "Verwenden Sie die Feedback-Schaltflächen unter einer Assistenten-Nachricht, wenn das Feedback-Modul aktiviert ist.",
+    },
+    speech_output: {
+      title: "Antworten vorlesen lassen",
+      step1:
+        "Klicken Sie auf das Lautsprecher-Symbol unter einer Assistenten-Nachricht, wenn das Sprachmodul aktiviert ist.",
+    },
+    meta_chat_catalogs: {
+      title: "Tutorials und Einstellungen im Metachat finden",
+      step1: "Durchsuchen Sie alle verfügbaren Tutorials und wiederholen Sie abgeschlossene.",
+      step2: "Durchsuchen Sie vollständige Abläufe, die mehrere Funktionen kombinieren. Der Metachat kann beide Optionen auch für Sie starten.",
+      step3: "Sie können mich auch bitten, ein Tutorial zu finden oder eine Persona zu empfehlen. Zum Beispiel: „Finde ein Tutorial zum Hochladen einer Datei.“",
+      step4: "Fragen Sie nach Einstellungen oder lassen Sie sich zu einem Chat, einer Nachricht, einem Thema oder einer Einstellung führen. Ich kann auch nach Entscheidungen und Aufgaben in Ihren Chats suchen.",
+    },
+    meta_chat_actions: {
+      title: "Chats mit dem Metachat umbenennen und organisieren",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2:
+        "Bitten Sie ihn, einen Chat umzubenennen oder in ein anderes Thema zu verschieben. Zum Beispiel: „Benenne ‚Preisdiskussion‘ in ‚Preisstrategie‘ um.“",
+      step3:
+        "Prüfen Sie die vorgeschlagenen Änderungen und klicken Sie auf „Änderungen übernehmen“. Erst dann werden sie angewendet.",
+    },
+    meta_chat_search: {
+      title: "Nachrichteninhalte mit dem Metachat durchsuchen",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2:
+        "Bitten Sie ihn, etwas in Ihren Chats zu finden, zum Beispiel: „Finde, wo wir das Preismodell entschieden haben“ oder „Welche Aufgaben gibt es?“",
+      step3:
+        "Klicken Sie auf eine zitierte Nachricht, um zur genauen Nachricht zu springen und sie hervorzuheben.",
+    },
+    meta_chat_pins: {
+      title: "Chats und Themen mit dem Metachat anheften",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2:
+        "Bitten Sie ihn, einen Chat oder ein Thema anzuheften oder nicht mehr anzuheften, zum Beispiel: „Hefte den Chat Preisdiskussion an“ oder „Hefte das Thema Forschung nicht mehr an“.",
+      step3:
+        "Prüfen Sie die vorgeschlagene Änderung und klicken Sie auf „Änderungen übernehmen“. Erst dann wird sie angewendet.",
+    },
+    meta_chat_navigation: {
+      title: "Navigieren und suchen mit dem Metachat",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2:
+        "Bitten Sie ihn, Sie irgendwohin zu führen, zum Beispiel: „Bring mich zu den Chat-Einstellungen“ oder „Öffne den Chat über die Preise“.",
+      step3:
+        "Bitten Sie ihn, Ihre Chats zu durchsuchen, zum Beispiel: „Finde, wo wir das Preismodell entschieden haben“ oder „Welche Aufgaben gibt es?“. Klicken Sie auf eine zitierte Nachricht, um dorthin zu springen.",
+    },
+    meta_chat_usage: {
+      title: "Den Metachat verwenden",
+      step1:
+        "Klicken Sie auf das KI-Symbol in der Seitenleiste, um den Metachat zu öffnen. Fragen Sie nach Funktionen oder wo ein Chat ist.",
+    },
+  },
+  use_cases: {
+    common: {
+      start_new_chat: "Starten Sie für diesen Ablauf einen neuen Chat.",
+    },
+    catalog: {
+      open: "Anwendungsfälle durchsuchen",
+      close: "Anwendungsfälle ausblenden",
+      search: "Anwendungsfälle durchsuchen",
+      hide_completed: "Abgeschlossene ausblenden",
+      completed_successfully: "Erfolgreich abgeschlossen",
+      empty: "Keine Anwendungsfälle gefunden.",
+      walk_through_again: "Noch einmal Schritt für Schritt zeigen",
+      start_walkthrough: "Schritt für Schritt zeigen",
+      show_tutorial: "Tutorial zeigen",
+    },
+    categories: {
+      research: "Recherche",
+      organize: "Organisieren",
+      create: "Erstellen",
+      workflows: "Arbeitsabläufe",
+    },
+    analyze_paper: {
+      title: "Ein wissenschaftliches Paper analysieren",
+      description: "Laden Sie ein PDF hoch, verarbeiten Sie es und stellen Sie dann Fragen zum Inhalt.",
+      step1: "Hängen Sie das Paper über die Büroklammer an.",
+      step2: "Verarbeiten Sie das PDF im Browser oder auf dem Server.",
+      step3: "Fragen Sie: „What are the references?“",
+      step4: "Fragen Sie: „Summarize the methodology and main findings.“",
+    },
+    web_research: {
+      title: "Aktuelle Informationen recherchieren",
+      description: "Aktivieren Sie die Websuche und stellen Sie eine Frage, die aktuelle Quellen benötigt.",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools und wählen Sie die Websuche.",
+      step3: "Fragen Sie nach einer aktuellen Entwicklung und erwähnen Sie, dass Sie aktuelle Quellen benötigen.",
+      step4: "Folgen Sie den zitierten Quellen und stellen Sie Rückfragen.",
+    },
+    rag_documents: {
+      title: "Fragen aus eigenen Dokumenten beantworten",
+      description: "Verwenden Sie Arcana (RAG), um aus einer eigenen Dokumentensammlung zu antworten.",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools und wählen Sie Arcana.",
+      step3: "Geben Sie Ihre Arcana-ID ein.",
+      step4: "Fragen Sie: „Was sagt unsere interne Richtlinie dazu?“",
+      step5: "Fragen Sie: „Welches Dokument belegt diese Antwort?“",
+    },
+    organize_topics: {
+      title: "Chats nach Projekt organisieren",
+      description: "Erstellen Sie Themen und gruppieren Sie zusammengehörige Chats.",
+      step1: "Erstellen Sie ein Thema wie „Abschlussarbeit“ oder „Kundenprojekt“.",
+      step2: "Ziehen Sie passende Chats in das Thema oder gruppieren Sie die Seitenleiste nach Thema.",
+    },
+    find_chat: {
+      title: "Einen alten Chat finden",
+      description: "Durchsuchen Sie Chat-Titel oder fragen Sie den Metachat, wo eine Unterhaltung ist.",
+      step1: "Suchen Sie in der Seitenleiste nach einem Teil des Titels.",
+      step2: "Oder fragen Sie: „Wo ist mein Chat über die Paper-Analyse?“",
+    },
+    summarize_chat: {
+      title: "Einen langen Chat in Notizen verwandeln",
+      description: "Erstellen Sie eine neue Unterhaltung mit einer Zusammenfassung einer langen Unterhaltung für Ihre Notizen.",
+      step1: "Öffnen Sie das Chat-Menü in der Seitenleiste.",
+      step2: "Wählen Sie Zusammenfassen und prüfen Sie das Ergebnis.",
+      step3: "Exportieren Sie den Chat, wenn Sie eine Datei für Ihre Notizen benötigen.",
+    },
+    generate_image: {
+      title: "Ein Bild für eine Folie erstellen",
+      description: "Aktivieren Sie die Bilderzeugung und beschreiben Sie das gewünschte Bild.",
+      step1: "Öffnen Sie Tools und aktivieren Sie die Bilderzeugung.",
+      step2: "Fragen Sie: „Erstelle ein klares Diagramm eines dreistufigen Forschungsablaufs.“",
+      step3: "Verfeinern Sie den Prompt, bis das Bild zur Folie passt.",
+    },
+    share_setup: {
+      title: "Eine wiederverwendbare Einrichtung teilen",
+      description: "Teilen Sie System-Prompt, Modell und Einstellungen als Link.",
+      step1: "Öffnen Sie die Unterhaltungseinstellungen und wählen Sie Teilen.",
+      step2: "Senden Sie den kopierten Link an eine Person, die dieselbe Einrichtung braucht.",
+    },
+    compare_models: {
+      title: "Zwei Modelle vergleichen",
+      description: "Zweigen Sie eine Unterhaltung ab, wechseln Sie das Modell und stellen Sie dieselbe Frage.",
+      step1: "Zweigen Sie die Unterhaltung an der gewünschten Nachricht ab.",
+      step2: "Wählen Sie ein anderes Modell.",
+      step3: "Senden Sie denselben Prompt und vergleichen Sie die Antworten.",
+    },
+    local_conversion: {
+      title: "Dokumentkonvertierung lokal halten",
+      description: "Konvertieren Sie PDFs und DOCX-Dateien im Browser statt auf dem Server.",
+      step1: "Öffnen Sie die Chat-Einstellungen in den Benutzereinstellungen.",
+      step2: "Wählen Sie Nur Browser unter Dokumentkonvertierung.",
+      step3: "Hängen Sie ein PDF oder DOCX an.",
+      step4: "Verarbeiten Sie die Datei über die Anhang-Karte.",
+    },
+    memories: {
+      title: "Einstellungen chatübergreifend merken",
+      description: "Speichern Sie Kontext und Vorlieben in Erinnerungen, damit spätere Chats sie abrufen können.",
+      step1: "Öffnen Sie die Benutzereinstellungen und fügen Sie eine Erinnerung hinzu.",
+      step2: "Aktivieren Sie Abrufen oder Lernen für die passenden Unterhaltungen.",
+      step3: "Fragen Sie: „Was erinnerst du dich über meine Vorlieben?“",
+    },
+    read_aloud: {
+      title: "Eine Antwort anhören",
+      description: "Lassen Sie eine Assistentenantwort über die Sprachschaltfläche vorlesen.",
+      step1: "Klicken Sie auf das Lautsprecher-Symbol unter einer Assistenten-Nachricht.",
+      step2: "Beenden Sie die Wiedergabe jederzeit mit der Stopp-Schaltfläche.",
+    },
+  },
   // Settings panel
   settings: {
+    memory_mode: {
+      label: "Erinnerungen",
+      description:
+        "Legen Sie fest, wie diese Unterhaltung Ihre gespeicherten Erinnerungen verwendet.",
+      help_label: "Mehr über Erinnerungen erfahren",
+      options: {
+        default: {
+          label: "Standard",
+          description:
+            "Verwendet die globale Erinnerungseinstellung (aktuell: {{mode}}).",
+        },
+        none: {
+          label: "Aus",
+          description:
+            "Gespeicherte Erinnerungen werden in dieser Unterhaltung nicht verwendet.",
+        },
+        recall: {
+          label: "Abrufen",
+          description:
+            "Gespeicherte Erinnerungen werden in dieser Unterhaltung für persönlichere Antworten verwendet.",
+        },
+        learn: {
+          label: "Lernen",
+          description:
+            "Gespeicherte Erinnerungen werden verwendet und neue Details aus dieser Unterhaltung gelernt.",
+        },
+      },
+    },
     tools_enabled: "Werkzeuge sind aktiviert",
     tools_disabled: "Werkzeuge sind deaktiviert",
     web_search_enabled: "Websuche ist erlaubt",
@@ -140,6 +741,26 @@ export default {
         }
       }
     },
+    audio_title: "Sprachausgabe",
+    audio_description: "Stimme und Sprache für den Sprachmodus und das Vorlesen.",
+    audio_unavailable: "Die Sprachausgabe ist nicht konfiguriert.",
+    label_audio_voice: "Stimme",
+    label_audio_language: "Sprache",
+    audio_option_auto: "Automatisch",
+    audio_language_english: "Englisch",
+    audio_language_german: "Deutsch",
+    audio_preview: "Stimme anhören",
+    audio_preview_stop: "Vorschau stoppen",
+    audio_sample_text_en: "Hi, this is how I sound in a conversation.",
+    audio_sample_text_de: "Hallo, so klinge ich in einem Gespräch.",
+    audio_voice_af_bella: "Bella — US-Englisch, weiblich",
+    audio_voice_af_nicole: "Nicole — US-Englisch, weiblich",
+    audio_voice_af_sarah: "Sarah — US-Englisch, weiblich",
+    audio_voice_am_adam: "Adam — US-Englisch, männlich",
+    audio_voice_am_michael: "Michael — US-Englisch, männlich",
+    audio_voice_bf_emma: "Emma — UK-Englisch, weiblich",
+    audio_voice_bm_george: "George — UK-Englisch, männlich",
+    audio_voice_bm_lewis: "Lewis — UK-Englisch, männlich",
     reset_default: "Standard zurücksetzen",
     default: "Standard",
     tools_title: "GWDG-Werkzeuge",
@@ -172,6 +793,31 @@ export default {
     mount_folder: "Dem Assistenten Zugriff auf einen lokalen Ordner geben",
     folder_mounted: "Ordner für den Assistenten unter {{path}} verfügbar",
     tool_failed: "fehlgeschlagen",
+    close_chat: "Chat schließen",
+    speech_mode_title: "Sprachgespräch",
+    speech_mode_button: "Sprachgespräch starten",
+    speech_mode_close: "Sprachgespräch beenden",
+    speech_mode_listening: "Ich höre zu",
+    speech_mode_capturing: "Ich höre zu",
+    speech_mode_thinking: "Ich denke nach",
+    speech_mode_speaking: "Ich spreche",
+    speech_mode_error: "Sprachmodus benötigt Aufmerksamkeit",
+    speech_mode_hint_listening: "Sprechen Sie einfach. Wenn Sie pausieren, sende ich die Nachricht.",
+    speech_mode_hint_capturing: "Pausieren Sie am Ende oder senden Sie jetzt.",
+    speech_mode_hint_interrupt: "Sprechen Sie jederzeit, um zu unterbrechen.",
+    speech_mode_hint_error: "Prüfen Sie den Mikrofonzugriff und versuchen Sie es erneut.",
+    speech_mode_hint_start: "Mikrofon ist aktiv",
+    speech_mode_send_now: "Jetzt senden",
+    speech_mode_interrupt: "Unterbrechen",
+    speech_mode_retry: "Erneut versuchen",
+    speech_mode_didnt_catch: "Das habe ich nicht verstanden. Bitte versuchen Sie es erneut.",
+    speech_mode_output_unavailable: "Die Sprachausgabe ist nicht verfügbar, die Antwort steht aber im Chat.",
+    speech_mode_error_insecure: "Mikrofonzugriff erfordert HTTPS oder localhost.",
+    speech_mode_error_permission: "Der Mikrofonzugriff wurde verweigert. Erlauben Sie ihn und versuchen Sie es erneut.",
+    speech_mode_error_no_microphone: "Es wurde kein Mikrofon gefunden.",
+    speech_mode_error_microphone: "Das Mikrofon konnte nicht gestartet werden.",
+    speech_mode_error_timeout: "Die Antwort hat zu lange gedauert. Bitte versuchen Sie es erneut.",
+    speech_mode_error_conversation: "Diese Unterhaltung ist nicht mehr verfügbar.",
     prompt: {
       placeholder: "Frag mich",
       attach: "Datei anhängen",
@@ -187,9 +833,25 @@ export default {
       transcript_of: "Transkript von {{name}}",
       converting: "Wird konvertiert…",
       transcribing: "Wird transkribiert…",
+      process_browser: "Im Browser verarbeiten",
+      process_server: "Auf dem Server verarbeiten",
+      must_process: "Datei muss verarbeitet werden",
     },
     reasoning: "Denkprozess",
+    copy_reasoning: "Denkprozess kopieren",
     action: "Aktion",
+    html_block: {
+      render: "HTML rendern",
+      show_code: "Code anzeigen",
+    },
+    typst_block: {
+      render: "Als Typst rendern",
+      show_code: "Code anzeigen",
+    },
+    latex_block: {
+      render: "Als LaTeX rendern",
+      show_code: "Code anzeigen",
+    },
     sources: "Quellen und Referenzen",
     references: "Referenzen",
     empty_message:
@@ -248,6 +910,30 @@ export default {
       title: "Nutzung",
       description:
         "Überblick über Ihre monatliche Nutzung und das Organisationsbudget.",
+      monthly: "Monatlich",
+      total: "Gesamt",
+      personal: "Persönlich",
+      organization: "Organisation",
+      personal_monthly: "Persönlich monatlich",
+      personal_total: "Persönlich gesamt",
+      organization_monthly: "Organisation monatlich",
+      organization_total: "Organisation gesamt",
+      resets_at: "Zurücksetzung {{time}}",
+      rate_limits: {
+        "10s": "10 s",
+        hourly: "Stündlich",
+        daily: "Täglich",
+        monthly: "Monatlich",
+      },
+      sections: {
+        budget: "Budget",
+        rate_limits: "Ratenlimits",
+        requests: "Anfragen",
+      },
+      scopes: {
+        external: "Extern",
+        internal: "Intern",
+      },
     },
     monthly_usage: "Monatliche Nutzung",
     org_usage: "Nutzung des Organisationsbudgets",
@@ -288,6 +974,109 @@ export default {
         description:
           "Zeigt nach jeder Antwort passende Vorschläge zum Fortsetzen des Chats.",
         help_label: "Mehr über Folgevorschläge erfahren",
+        title_once: {
+          label: "Titel nur bei der ersten Anfrage festlegen",
+          description:
+            "Den Gesprächstitel nur einmal, aus der ersten Anfrage, generieren.",
+        },
+      },
+      summaries: {
+        section_label: "Unterhaltungszusammenfassungen",
+        label: "Zusammenfassungen beim Darüberfahren anzeigen",
+        description:
+          "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",
+      },
+      submission: {
+        label: "Nachricht senden mit",
+        options: {
+          enter: {
+            label: "Enter",
+            description:
+              "Enter sendet die Nachricht. Umschalt+Enter fügt einen Zeilenumbruch ein.",
+          },
+          shift_enter: {
+            label: "Umschalt+Enter",
+            description:
+              "Umschalt+Enter sendet die Nachricht. Enter fügt einen Zeilenumbruch ein. Dies ist die Standardeinstellung auf mobilen Geräten.",
+          },
+        },
+      },
+      html_render: {
+        label: "HTML-Blöcke rendern",
+        description:
+          "Legt fest, wie HTML-Blöcke in Antworten standardmäßig angezeigt werden.",
+        options: {
+          render: {
+            label: "Rendern",
+            description:
+              "HTML-Blöcke als Live-Inhalt rendern. Pro Block kann weiterhin auf den Code gewechselt werden.",
+          },
+          code: {
+            label: "Code",
+            description:
+              "HTML-Blöcke standardmäßig als Code anzeigen. Pro Block kann weiterhin gerendert werden.",
+          },
+          off: {
+            label: "Aus",
+            description:
+              "HTML-Blöcke nicht automatisch rendern. Sie werden zunächst als Code angezeigt; pro Block kann weiterhin gerendert werden.",
+          },
+        },
+        external_references: {
+          label: "Externe Referenzen laden",
+          description:
+            "Erlaubt HTML-Blöcken, Bilder und Links von externen Hosts zu laden. Standardmäßig aus: Ist die Option deaktiviert, werden externe Referenzen entfernt, sodass der Browser nur diesen Server kontaktiert.",
+        },
+        sanitization: {
+          label: "Bereinigung",
+          description:
+            "Legt fest, wie streng HTML-Blöcke vor dem Rendern bereinigt werden.",
+          options: {
+            strict: {
+              label: "Streng",
+              description:
+                "Blockiert interaktive und scriptfähige HTML-Elemente (Buttons, Formulare, Iframes, Skripte, Inline-Styles). Am sichersten für unvertraute Inhalte.",
+            },
+            relaxed: {
+              label: "Gelockert",
+              description:
+                "Erlaubt interaktives HTML mit JavaScript (Buttons, Formulare, Iframes, Skripte, Inline-Styles). Warnung: Modellausgaben können Code ausführen – nur aktivieren, wenn die Quelle vertrauenswürdig ist.",
+            },
+          },
+        },
+      },
+      rendering: {
+        label: "Darstellung",
+      },
+      typst: {
+        label: "Typst-Blöcke rendern",
+        description:
+          "Legt fest, ob Typst-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
+      },
+      latex: {
+        label: "LaTeX-Blöcke rendern",
+        description:
+          "Legt fest, ob LaTeX-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
+      },
+      document_conversion: {
+        label: "Dokumentkonvertierung",
+        options: {
+          server: {
+            label: "Nur Server",
+            description:
+              "Angehängte PDF- und DOCX-Dateien immer auf dem Server verarbeiten.",
+          },
+          browser: {
+            label: "Nur Browser",
+            description:
+              "Angehängte PDF- und DOCX-Dateien immer lokal im Browser verarbeiten.",
+          },
+          choice: {
+            label: "Nach Wahl",
+            description:
+              "Legen Sie für jedes Dokument fest, ob es im Browser oder auf dem Server verarbeitet wird.",
+          },
+        },
       },
     },
     default_model: {
@@ -346,6 +1135,12 @@ export default {
       "Wählen Sie eine Kategorie aus der Seitenleiste, um Personas anzuzeigen",
     emptyFolder: "Dieser Ordner ist leer",
     categoryCount: "{{folders}} Kategorien • {{files}} Personas",
+    chat_label: "Persona-Chat",
+    category_label: "Kategorie",
+    startChat: "Chat starten",
+    startChatWith: "Chat mit {{title}} starten",
+    startingChat: "Wird gestartet…",
+    startError: "Diese Persona konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
   },
   // Memory Modal
   memory: {
@@ -483,6 +1278,9 @@ export default {
     clear_data: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
+    close_chat:
+      "Diesen Chat schließen? Er wird aus Ihren Unterhaltungen entfernt.",
+    close_chat_yes: "Chat schließen",
     regenerate_confirm:
       "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden. Um diese Unterhaltung zu behalten, verwenden Sie stattdessen „In neuem Chat fortfahren“.",
     regenerate_yes: "Regenerieren",
@@ -493,7 +1291,7 @@ export default {
     regenerate_fork_success: "Chat erfolgreich geforkt",
     regenerate_fork_fail: "Chat konnte nicht geforkt werden.",
     summarize_replace:
-      "Dies ersetzt den aktuellen Chatverlauf durch eine Zusammenfassung. Die bisherigen Nachrichten werden aus dieser Unterhaltung entfernt. Fortfahren?",
+      "Dies erstellt einen neuen Chat mit einer Zusammenfassung. Ihr aktueller Chat bleibt unverändert. Fortfahren?",
     summarize_in_progress:
       "Ihre Unterhaltung wird zusammengefasst. Bitte warten Sie, während die Zusammenfassung erstellt wird.",
     no: "Nein, geh zurück",
@@ -524,7 +1322,7 @@ export default {
     unsent_files:
       "Sie haben Dateien angehängt, die verloren gehen werden. Sind Sie sicher, dass Sie gehen wollen?",
     unprocessed_files:
-      "Bitte verarbeiten oder entfernen Sie das beigefügte PDF, um fortzufahren.",
+      "Sie haben eine unverarbeitete Datei. Bitte verarbeiten oder entfernen Sie sie zuerst.",
     migrate_data:
       "Es sieht so aus, als ob Sie eine ältere Version von Chat AI verwenden. Um fortzufahren, müssen Ihre vorherigen Gespräche und Daten aktualisiert werden. Bitte sichern Sie Ihre Daten zuerst, falls erforderlich, und drücken Sie dann auf 'Aktualisieren', um den Prozess zu starten.",
     // Hallucination warning
@@ -599,6 +1397,25 @@ export default {
     download_aria: "Datei herunterladen",
     close_aria: "Schließen",
   },
+  typst: {
+    rendering: "Typst-Dokument wird gerendert...",
+    render_error:
+      "Typst-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
+  },
+  latex: {
+    rendering: "LaTeX-Dokument wird gerendert...",
+    render_error:
+      "LaTeX-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
+  },
   // Announcement
   announcement: "",
+  // Editierbare Tool-Formulare
+  tool_form: {
+    submit: "Tool ausführen",
+    sending: "Wird ausgeführt...",
+    reset: "Zurücksetzen",
+    edit: "Bearbeiten",
+    tool_call: "Tool-Aufruf",
+    select_placeholder: "Auswählen…",
+  },
 };

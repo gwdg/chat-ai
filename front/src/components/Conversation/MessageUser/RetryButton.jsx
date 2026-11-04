@@ -40,7 +40,7 @@ export default function RetryButton({
     <Tooltip text={t("common.regenerate")}>
       <button onClick={handleRetry} className="flex">
         <RotateCw
-          className="h-[20px] w-[20px] cursor-pointer text-[#009EE0]"
+          className="h-[20px] w-[20px] cursor-pointer text-accent"
           alt="icon_retry"
         />
       </button>

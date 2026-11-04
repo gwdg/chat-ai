@@ -3,14 +3,19 @@ import { useDispatch } from "react-redux";
 import { getDefaultConversation } from "../utils/conversationUtils";
 
 import { useSyncConversation } from "../hooks/useSyncConversation";
+import { useSendMessage } from "../hooks/useSendMessage";
+import { usePendingPrompt } from "../hooks/usePendingPrompt";
+import { useConversationSummaries } from "../hooks/useConversationSummaries";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
+import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
+import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
 import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
 import { activeMcpServers, prefetchMcpServers } from "../agent/mcp";
@@ -32,6 +37,9 @@ export default function ChatPage() {
 
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
+  const sendMessage = useSendMessage();
+
+  useSettingsDeepLink({ localState, userData, modelsData });
 
   // Sync localState conversation with IndexedDB
   useSyncConversation({
@@ -47,6 +55,17 @@ export default function ChatPage() {
     const timer = setTimeout(() => prefetchMcpServers(JSON.parse(mcpServers)), 500);
     return () => clearTimeout(timer);
   }, [mcpServers]);
+
+  // A chat started from the topic master view arrives with its first prompt
+  // in router state; send it once the conversation has been hydrated.
+  usePendingPrompt({
+    conversationId,
+    localState,
+    setLocalState,
+    sendMessage,
+  });
+
+  useConversationSummaries({ localState, conversationId });
 
   // Save last conversation when current conversation changes
   useEffect(() => {
@@ -77,7 +96,7 @@ export default function ChatPage() {
           grid-cols-1 grid-rows-[1fr_auto]
           md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto]
           md:gap-x-2 gap-y-1 md:pt-1
-          bg-gray-50 dark:bg-bg_dark
+          bg-base-200
           overflow-hidden
         "
       >
@@ -88,12 +107,19 @@ export default function ChatPage() {
           modelsData={modelsData}
         />
 
-        <Conversation
-          localState={localState}
-          setLocalState={setLocalState}
-          userData={userData}
-          modelsData={modelsData}
-        />
+        <div className="flex min-h-0 min-w-0 flex-col">
+          {localState?.persona && (
+            <PersonaChatBanner persona={localState.persona} />
+          )}
+          <div className="min-h-0 flex-1">
+            <Conversation
+              localState={localState}
+              setLocalState={setLocalState}
+              userData={userData}
+              modelsData={modelsData}
+            />
+          </div>
+        </div>
 
         <CollapsibleFooter
           className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3"

@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
-import { createConversation, ensureFolder, getFolder, newId, saveFile } from "../db";
+import { createConversation, deleteConversation, ensureFolder, getFolder, newId, saveFile } from "../db";
 import { dataURLtoFile } from "../utils/attachments";
-import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
+import { selectUserSettings, importUserSettings } from "../Redux/reducers/userSettingsReducer";
 
 /**
  * useImportConversation
@@ -114,9 +114,21 @@ export function useImportConversation() {
     );
   }
 
-  const importConversation = async (data, silent = false, topicId = null) => {
-    const conversationId = newId();
+  const importConversation = async (
+    data,
+    silent = false,
+    topicId = null,
+    options = {},
+  ) => {
+    const conversationId = options.metaChat ? "meta-chat" : newId();
     try {
+      if (data?.user_settings) dispatch(importUserSettings(data.user_settings));
+      if (data?.meta_chat) {
+        await importConversation(data.meta_chat, true, null, {
+          metaChat: true,
+        });
+        if (!Array.isArray(data.conversations)) return;
+      }
       // Handle multiple conversations import
       if (Array.isArray(data?.conversations)) {
         for (const c of data.conversations) {
@@ -291,6 +303,14 @@ export function useImportConversation() {
       if (memory && typeof memory === "number" && [0, 1, 2].some(v => v == memory))
         settings.memory = [0,1,2].find(v => v == memory);
 
+      // per-conversation memory mode
+      const memory_mode_override = extractParameter(data, "memory_mode_override");
+      if (memory_mode_override === "default") {
+        settings.memory_mode_override = "default";
+      } else if ([0, 1, 2].includes(Number(memory_mode_override))) {
+        settings.memory_mode_override = Number(memory_mode_override);
+      }
+
       // arcana
       let arcana = {};
       const arcana_id = extractParameter(data, "arcana");
@@ -332,6 +352,29 @@ export function useImportConversation() {
         }
       }
 
+      if (options.metaChat) {
+        await deleteConversation("meta-chat");
+      }
+
+      // Persona chats keep their title and description so the chat can show
+      // a banner with the persona information.
+      const explicitPersona = options.persona || data?.persona || null;
+      const personaDescription =
+        String(explicitPersona?.description || "").trim() ||
+        String(data?.subtitle || "").trim() ||
+        String(data?.description || "").trim();
+      const personaTitle =
+        String(explicitPersona?.title || "").trim() ||
+        String(data?.title || "").trim();
+      const personaInfo =
+        explicitPersona || personaDescription
+          ? {
+              ...(explicitPersona || {}),
+              title: personaTitle,
+              description: personaDescription,
+            }
+          : null;
+
       // Create new conversation
       const newId = await createConversation(
         {
@@ -340,6 +383,8 @@ export function useImportConversation() {
           messages: sanitizedMessages,
           settings: settings,
           folderId: folderId ?? "__unsorted__",
+          isMetaChat: options.metaChat === true,
+          persona: personaInfo,
         },
       )
 
@@ -347,8 +392,8 @@ export function useImportConversation() {
         throw new Error("Failed to create new conversation");
       }
       console.log("Navigating to new chat");
-      if (!silent) navigate(`/chat/${newId}`, { replace: true });
-      if (!silent) notifySuccess("Chat imported successfully");
+      if (!silent && !options.metaChat) navigate(`/chat/${newId}`, { replace: true });
+      if (!silent && !options.metaChat) notifySuccess("Chat imported successfully");
     } catch (error) {
       console.error("Import error:", error);
       notifyError("Failed to import conversation")

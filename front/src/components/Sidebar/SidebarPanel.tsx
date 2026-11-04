@@ -6,7 +6,7 @@ export default function SidebarPanel({ children }: { children: ReactNode }) {
   */
   return (
     <div
-      className={`h-full bg-white dark:bg-bg_secondary_dark
+      className={`h-full bg-base-100
               rounded-xl shadow-md
               overflow-hidden`}
     >

@@ -43,7 +43,7 @@ export default function BaseModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 backdrop-blur-sm bg-black/5 dark:bg-gray-700/5" />
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/5" />
         </Transition.Child>
 
         {/* Centered Modal */}
@@ -59,11 +59,11 @@ export default function BaseModal({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel
-                className={`rounded-2xl bg-white dark:bg-bg_dark w-full ${maxWidth} shadow-lg`}
+                className={`rounded-box bg-base-100 text-base-content w-full ${maxWidth} shadow-lg`}
               >
                 {/* Header */}
                 <div className="flex justify-between items-center p-5 pb-3">
-                  <Dialog.Title className="font-semibold text-sm text-tertiary">
+                  <Dialog.Title className="font-semibold text-sm text-accent">
                     <Trans i18nKey={titleKey} />
                   </Dialog.Title>
 
@@ -71,7 +71,7 @@ export default function BaseModal({
                   {!minimal && !isForced && (
                   <button
                     onClick={onClose}
-                    className="cursor-pointer p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+                    className="btn btn-ghost btn-sm btn-square"
                     aria-label="Close dialog"
                   >
                     <img

@@ -93,13 +93,15 @@ docker compose restart back
 
 Note that in some cases rebuilding the docker image might be necessary.
 
+In `build` mode the container runs the build and exits, so `docker compose restart front` (or `docker compose up front`) runs it again and picks up the new `front.json`. The result is a snapshot, though: if you copied `front/dist` to a web root, copy the new files again (see [Serving a Static Build](#serving-a-static-build-apache--nginx)).
+
 ## Configuration
 
 You can set the port numbers for both the `front` and `back` services in the `front.json` and `back.json` files.
 
 The `front` service uses the following configurable attributes in `front.json`:
-- `mode`: Set to `dev` to enable development environment and `prod` for production.
-- `port`: Port number to listen on. Default: 8080
+- `mode`: `dev` runs the Vite development server, `prod` builds and serves the app with `vite preview`, and `build` only creates the static bundle for you to serve with your own web server (see [Serving a Static Build](#serving-a-static-build-apache--nginx)).
+- `port`: Port number to listen on in `dev` and `prod` mode. Default: 8080. Ignored in `build` mode.
 - `backendPath`: Path to `back` service, used for sending messages and processing PDF files, e.g. `http://localhost:8081/` or `/backend`
 - `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure
 - `userDataPath`: (Optional) Path to get user data. Simply set to `<backendPath>/user` if unsure
@@ -117,6 +119,125 @@ The `back` service listens to requests from `front` and interacts with an OpenAI
 If you wish to avoid using different ports for the `front` and `back` services, you must set up a reverse proxy or virtual host to route paths such as `/models` and `/backend` to the backend service listening on its own distinguished port. This can be done with popular server software such as Apache or Nginx.
 
 If you wish to customize the list of available models, you must create a path that returns an OpenAI-style JSON response containing the model ids and names, and set the `modelsPath` in `front.json` accordingly. If configured correctly, your custom list will be displayed in the dropdown menu in the interface, instead of the list from your API provider.
+
+## Serving a Static Build (Apache / Nginx)
+
+Setting `"mode": "build"` in `secrets/front.json` makes the front container run `npm run build` (`vite build`) instead of starting a server. Because `docker-compose.yml` mounts `./front` into the container, the generated bundle is written to `front/dist/` on the host:
+
+```bash
+# set "mode": "build" in secrets/front.json first
+docker compose up front      # runs the build, then the container exits
+ls front/dist                # index.html, assets/, chat-ai.ico, ...
+```
+
+Use `docker compose logs -f front` if you started it detached; the build output and any errors are in that log. A failed build exits non-zero, and `restart: on-failure` makes Compose retry it, so fix the error before rerunning.
+
+The container exiting is expected: in this mode nothing is served by Docker. Copy the contents of `front/dist/` into your web server's document root — the examples below assume Debian/Ubuntu's default `/var/www/html`:
+
+```bash
+sudo cp -a front/dist/. /var/www/html/
+```
+
+The directory that contains `index.html` is the one to use both as the document root and in the `<Directory>` blocks. If you prefer to serve `front/dist` in place, substitute its absolute path for `/var/www/html` everywhere below. `front/dist` is gitignored, so never commit it.
+
+Without Docker, the same bundle comes from `cd front && npm i && npm run build`, run from `front/` so the default `CONFIG_LOCATION=../secrets/front.json` resolves (or set `CONFIG_LOCATION` explicitly).
+
+Two things matter when serving it:
+
+- Every `VITE_*` value — including `backendPath`, `modelsPath` and `userDataPath` — is compiled into the JavaScript during the build, so `front/dist` is a snapshot. After changing `front.json`, rerun the build (`docker compose up front` or `docker compose restart front` both re-run the entrypoint) and redeploy the new files; editing the config does not change an already-built or already-copied bundle.
+- The app uses client-side routing (`/chat/<id>`, `/landing`, ...) and Vite's `base` is `"/"`. Unknown paths must fall back to `index.html`, and the bundle must be served from the domain root. For a sub-path deployment, change `base` in `front/vite.config.js` and rebuild.
+
+To keep the browser on a single origin, proxy the `back` service under the same host. With such a setup, the relevant parts of `front.json` are:
+
+```json
+"backendPath": "/backend",
+"modelsPath": "/backend/models",
+"userDataPath": "/backend/user",
+```
+
+Nginx:
+
+```nginx
+server {
+    listen 80;
+    server_name chat.example.org;
+
+    root /var/www/html;
+    index index.html;
+
+    # Attachments are capped at 50 MB by the back service.
+    client_max_body_size 50m;
+
+    # Vite fingerprints these file names, so they can be cached forever.
+    location /assets/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Client-side routes fall back to the SPA shell.
+    location / {
+        try_files $uri /index.html;
+        add_header Cache-Control "no-cache";
+    }
+
+    # /backend/... -> http://127.0.0.1:8081/... (trailing slash strips the prefix)
+    location /backend/ {
+        proxy_pass http://127.0.0.1:8081/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;          # stream chat responses token by token
+        proxy_read_timeout 3600s;
+    }
+}
+```
+
+Apache (enable the modules with `a2enmod headers proxy proxy_http`):
+
+```apache
+<VirtualHost *:80>
+    ServerName chat.example.org
+    DocumentRoot /var/www/html
+
+    <Directory /var/www/html>
+        Options -Indexes +FollowSymLinks
+        AllowOverride None
+        Require all granted
+        FallbackResource /index.html
+    </Directory>
+
+    # Missing hashed assets must 404 instead of returning the SPA shell.
+    <Directory /var/www/html/assets>
+        FallbackResource disabled
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </Directory>
+
+    <FilesMatch "index\.html$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+
+    ProxyPreserveHost On
+    ProxyPass        /backend/ http://127.0.0.1:8081/
+    ProxyPassReverse /backend/ http://127.0.0.1:8081/
+
+    # Stream chat responses instead of buffering them.
+    <Location /backend/>
+        ProxySet flushpackets=on
+    </Location>
+</VirtualHost>
+```
+
+Proxying is optional: `backendPath` can also be an absolute URL such as `http://api.example.org:8081`. The `back` service enables CORS, so the browser can call it cross-origin.
+### Model metadata and the model selector
+
+The interface has two model-selector variants and picks one automatically from the `/models` response:
+
+- **Extended selector** — used for SAIA / Chat AI, whose `/models` response includes extra metadata beyond the OpenAI defaults. It offers search, sorting, list/extended/grid views, and groups models into folders by the first word of their name. The `description` field is shown for each model; `releaseDate`, `company`, `contextLength`, and `external` are also displayed, and name, release date, parameter count, and context length can be used for sorting.
+- **Simple selector** — used for a plain OpenAI-compatible API that only returns the standard model fields. It offers search and the same folder grouping, but no extended metadata or view modes.
+
+The variant is chosen from the `description` field of the **first** model in the response. If you provide a custom `modelsPath` and want the extended selector, include a `description` in each entry (plus any of the optional fields above that you want to display). A model's `name` falls back to its `id` when omitted.
 
 ## Development
 You can use docker as local development setup. Alternatively, you can run Chat AI directly for which you nee `nodejs` installed.

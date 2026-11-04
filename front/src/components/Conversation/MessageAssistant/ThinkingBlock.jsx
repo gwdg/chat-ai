@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, memo } from "react";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChevronDown, ChevronRight, Brain } from "lucide-react";
 import { rendererComponents } from "./MarkdownRenderer";
+import CopyButton from "./CopyButton";
 
 // Models often draft raw HTML while reasoning. Rendering that as live markup let
 // injected <iframe>/<style> tags hit the network and restyle the whole page, so
@@ -28,6 +29,7 @@ const ThinkingBlock = memo(
     const [isOpen, setIsOpen] = useState(autoExpand && isStreaming);
     const [autoOpened, setAutoOpened] = useState(autoExpand && isStreaming);
     const contentRef = useRef(null);
+    const { t } = useTranslation();
 
     // Auto-open while the model is still "thinking", then collapse once done unless
     // the user has explicitly toggled it.
@@ -42,28 +44,36 @@ const ThinkingBlock = memo(
     }, [autoExpand, isStreaming, autoOpened]);
 
     return (
-      <div className="thinking-block my-1 rounded-lg border border-tertiary">
-        <button
-          onClick={() => {
-            if (!isStreaming) {
-              setIsOpen(!isOpen);
-              setAutoOpened(false);
-            }
-          }}
-          className="rounded-lg cursor-pointer flex items-center w-full px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/30 rounded-t-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-70"
-          aria-expanded={isOpen}
-          aria-controls="thinking-content"
-          disabled={isStreaming}
-        >
-          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          <Brain size={14} className="ml-1.5 mr-1.5" />
-          <span className="flex items-center gap-2"><Trans i18nKey="conversation.reasoning" /></span>
-        </button>
+      <div className="my-1 rounded-lg border border-accent">
+        <div className="flex items-center w-full rounded-t-lg text-xs bg-info/10">
+          <button
+            onClick={() => {
+              if (!isStreaming) {
+                setIsOpen(!isOpen);
+                setAutoOpened(false);
+              }
+            }}
+            className="cursor-pointer flex flex-1 items-center px-2 py-1 rounded-tl-lg hover:bg-info/20 disabled:opacity-70"
+            aria-expanded={isOpen}
+            aria-controls="thinking-content"
+            disabled={isStreaming}
+          >
+            {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <Brain size={14} className="ml-1.5 mr-1.5" />
+            <span className="flex items-center gap-2"><Trans i18nKey="conversation.reasoning" /></span>
+          </button>
+          <div className="shrink-0 pr-2">
+            <CopyButton
+              text={children || ""}
+              title={t("conversation.copy_reasoning")}
+            />
+          </div>
+        </div>
         {isOpen && (
           <div
             id="thinking-content"
             ref={contentRef}
-            className="px-2.5 py-1.5 text-xs bg-blue-50/50 dark:bg-blue-900/20 rounded-b-lg"
+            className="px-2.5 py-1.5 text-xs bg-info/5 rounded-b-lg"
             aria-live="polite"
             aria-busy={isStreaming ? "true" : "false"}
           >

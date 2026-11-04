@@ -1,11 +1,15 @@
 import { useState, useEffect, memo } from "react";
+import { useSelector } from "react-redux";
 import mermaid from "mermaid";
 import DOMPurify from "dompurify";
+import { selectHtmlLoadExternal } from "../../../Redux/reducers/userSettingsReducer";
+import { sanitizeExternalRefs } from "../../../utils/externalRefs";
 
 // Initialize mermaid once
 mermaid.initialize({ startOnLoad: false, theme: "forest" });
 
 const MermaidDiagram = memo(({ content }) => {
+  const loadExternal = useSelector(selectHtmlLoadExternal);
   const [svg, setSvg] = useState(null);
   const [error, setError] = useState(false);
 
@@ -29,9 +33,11 @@ const MermaidDiagram = memo(({ content }) => {
         const { svg } = await mermaid.render(id, content);
         if (cancelled) return;
         // Sanitize SVG to avoid injection via <svg> attributes/scripts
-        const cleanSvg = DOMPurify.sanitize(svg, {
-          USE_PROFILES: { svg: true, svgFilters: true },
-        });
+        const cleanSvg = sanitizeExternalRefs(loadExternal, () =>
+          DOMPurify.sanitize(svg, {
+            USE_PROFILES: { svg: true, svgFilters: true },
+          })
+        );
         setSvg(cleanSvg);
       } catch (err) {
         console.error("Mermaid rendering error:", err);
@@ -46,13 +52,13 @@ const MermaidDiagram = memo(({ content }) => {
     return () => {
       cancelled = true;
     };
-  }, [content]);
+  }, [content, loadExternal]);
 
   if (error) {
     return (
-      <div className="p-2 text-red-500">
+      <div className="p-2 text-error">
         Failed to render diagram. Showing raw code instead:
-        <pre className="mt-2 text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded">
+        <pre className="mt-2 text-xs bg-base-200 p-2 rounded">
           {content}
         </pre>
       </div>

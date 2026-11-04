@@ -25,6 +25,7 @@ export const getDefaultSettings = (userSettings = {}) => {
     temperature: 0.5,
     top_p: 0.5,
     memory: 0,
+    memory_mode_override: "default",
     enable_tools: false,
     reasoning_effort: null,
     tools: {
@@ -39,6 +40,10 @@ export const getDefaultSettings = (userSettings = {}) => {
       "codemode": true,
       "create_docx": true,
     },
+    audio: {
+      voice: "auto",
+      language: "auto",
+    },
     enable_web_search: false,
     arcana: {id: "",},
   };
@@ -51,6 +56,24 @@ export const getDefaultSettings = (userSettings = {}) => {
     ])
   );
   return mergedSettings ;
+};
+
+export const getDefaultChatAIModel = (userSettings = {}) => {
+  const settings = getDefaultSettings(userSettings);
+  return (
+    settings?.model?.id ||
+    import.meta.env.VITE_TITLE_GENERATION_MODEL ||
+    ""
+  );
+};
+
+export const getSecretDefaultChatAIModel = () => {
+  const settings = getDefaultSettings();
+  return (
+    settings?.model?.id ||
+    import.meta.env.VITE_TITLE_GENERATION_MODEL ||
+    ""
+  );
 };
 
 export const getDefaultConversation = (userSettings = {}, folderId = null) => {
@@ -154,7 +177,10 @@ const processSettings = (conversation, exportArcana = false) => {
 
 // Export all data as JSON
 export const getExportData = async () => {
-  const conversationList = await listConversationMetas()
+  const conversationList = (await listConversationMetas()).filter(
+    (conversation) =>
+      !conversation.isMetaChat && conversation.id !== "meta-chat",
+  );
   const processedConversations = [];
   // Process Messages
   for (let c = 0; c < conversationList.length; c++) {
@@ -172,9 +198,26 @@ export const getExportData = async () => {
       folderId: conversation?.folderId ?? null,
       folderName: folderRow?.name ?? null,
       messages: await processMessages(conversation.messages, true),
+      ...(conversation.persona ? { persona: conversation.persona } : {}),
       ...conversation.settings,
     };
     processedConversations.push(processedConversation);
   }
-  return { conversations: processedConversations, version: packageJson.version };
+
+  const metaConversation = await getConversation("meta-chat");
+  const metaChat = metaConversation
+    ? {
+        ...metaConversation.settings,
+        title: metaConversation.title || "Meta chat",
+        settings: metaConversation.settings,
+        messages: await processMessages(metaConversation.messages, true),
+        isMetaChat: true,
+      }
+    : null;
+
+  return {
+    conversations: processedConversations,
+    ...(metaChat ? { meta_chat: metaChat } : {}),
+    version: packageJson.version,
+  };
 };

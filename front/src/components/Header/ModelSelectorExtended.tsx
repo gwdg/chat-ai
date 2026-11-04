@@ -6,7 +6,7 @@ import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import { useTranslation } from "react-i18next";
 
 import {
-  faChevronDown, faList, faTableCells, faMagnifyingGlass, faBrain,
+  faChevronDown, faChevronRight, faFolder, faList, faTableCells, faMagnifyingGlass, faBrain,
   faImage, faVideo, faCircleDot, faTriangleExclamation,
   faShieldHalved,
   faMicrophone
@@ -40,6 +40,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [resultViewMode, setResultViewMode] = useState("list"); // list, expanded, grid
   const [sortBy, setSortBy] = useState("name-asc"); // name-asc, name-desc, date-asc, date-desc, params-asc, params-desc
+  const [openGroups, setOpenGroups] = useState({}); // folders start closed
 
   // Dropdown close on click outside logic
   const dropdownRef = useRef(null);
@@ -101,17 +102,60 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
     return result;
   }, [searchQuery, modelsData, sortBy]);
 
+  // Group models into subfolders by the first word of their name.
+  // While a search query is active the list stays flat so that search
+  // still matches against every model name.
+  const isSearching = searchQuery.trim() !== "";
+  const groupedModels = useMemo(() => {
+    if (isSearching) return null;
+    const groups = new Map();
+    for (const m of filteredModelsList) {
+      const key = (m.name || "").trim().split(/\s+/)[0] || "Other";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(m);
+    }
+    return Array.from(groups.entries())
+      .sort((a, b) => {
+        const aFolder = a[1].length > 1;
+        const bFolder = b[1].length > 1;
+        if (aFolder !== bFolder) return aFolder ? -1 : 1;
+        return a[0].localeCompare(b[0]);
+      })
+      .map(([key, models]) => ({ key, models }));
+  }, [filteredModelsList, isSearching]);
+
+  const toggleGroup = (key: string) =>
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const GroupHeader = memo(({ group }: { group: { key: string, models: ExtendedModelInfo[] } }) => {
+    const open = !!openGroups[group.key];
+    return (
+      <button
+        type="button"
+        onClick={() => toggleGroup(group.key)}
+        className="flex w-full items-center gap-2 px-2 py-1 text-left cursor-pointer hover:bg-base-200 rounded-2xl border border-base-300"
+      >
+        <FontAwesomeIcon icon={open ? faChevronDown : faChevronRight} className="text-[10px]" />
+        <FontAwesomeIcon icon={faFolder} className="text-accent" />
+        <span className="font-medium">{group.key}</span>
+        <span className="ml-auto text-[10px] font-normal text-base-content/50">
+          {group.models.length}
+        </span>
+      </button>
+    );
+  });
+
   const SecureIndicator = memo(({ external }: { external: boolean }) => {
     return (
       <>
         {external == true ? (
           <Tooltip text={"External Model"}>
-            <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-600" />
+            <FontAwesomeIcon icon={faTriangleExclamation} className="text-warning" />
           </Tooltip>
 
         ) : (
           <Tooltip text={"Internal Model"}>
-            <FontAwesomeIcon icon={faShieldHalved} className="text-green-700" />
+            <FontAwesomeIcon icon={faShieldHalved} className="text-success" />
           </Tooltip>
         )}
       </>
@@ -119,17 +163,17 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
   });
 
   const Chip = memo(({ text, colorPreset }: { text: string | undefined, colorPreset?: string }) => {
-    let color = "bg-tertiary/20 dark:bg-indigo-600 text-indigo-700 dark:text-white border border-indigo-100 dark:border-indigo-600 text-xs font-medium"
+    let color = "badge badge-sm badge-accent"
     switch (colorPreset) {
       case "orange":
-        color = "bg-amber-100 dark:bg-amber-600 text-amber-700 dark:text-white border-amber-100 dark:border-amber-600 text-xs font-medium";
+        color = "badge badge-sm badge-warning";
         break;
       case "green":
-        color = "bg-green-100 dark:bg-green-600 text-green-700 dark:text-white border-green-100 dark:border-green-600 text-xs font-medium";
+        color = "badge badge-sm badge-success";
         break;
     }
     return (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-full ${color}`}>
+      <span className={color}>
         {/** If text is empty, show a dash "-" **/}
         {text && text !== "" ? text : "-"}
       </span>
@@ -142,7 +186,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
       <div
         onClick={onClick}
         tabIndex={idx} data-index={idx} data-id={model.id}
-        className="item cursor-pointer px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl border border-slate-200 dark:border-gray-500"
+        className="item cursor-pointer px-2 py-1 hover:bg-base-200 rounded-2xl border border-base-300"
       >
         <div className="flex justify-between md:flex-row flex-col ">
           <div className="flex items-center md:gap-2 gap-1">
@@ -155,20 +199,20 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
           </div>
           <div className="grid grid-cols-[6rem_6rem_4.5rem] items-center gap-2">
-            <span className="text-xs text-slate-500 dark:text-slate-300">
+            <span className="text-xs text-base-content/70">
               <FontAwesomeIcon icon={faCalendar} className="mr-1" />
               {model.releaseDate && model.releaseDate !== "" ? model.releaseDate : "-"}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-300">
+            <span className="text-xs text-base-content/70">
               <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
               Context {model.contextLength && model.contextLength !== "" ? model.contextLength : "-"}
             </span>
             {/*
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-base-content/70">
               <FontAwesomeIcon icon={faHashtag} className="mr-1" />
               Param {model.numParameters && model.numParameters !== "" ? model.numParameters : "-"}
             </span>*/}
-            <div className="flex items-center gap-1 text-tertiary">
+            <div className="flex items-center gap-1 text-accent">
               {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
               {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
               {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
@@ -186,7 +230,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
       <div
         onClick={onClick}
         tabIndex={idx} data-index={idx} data-id={model.id}
-        className="item cursor-pointer px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl border border-slate-200 dark:border-gray-500"
+        className="item cursor-pointer px-4 py-3 hover:bg-base-200 rounded-2xl border border-base-300"
       >
         <div className="flex items-center md:gap-2 gap-1">
           <div className="pl-1">
@@ -194,7 +238,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
           </div>
           <span className="font-medium">{model.name}</span>
           <SecureIndicator external={model.external} />
-          <span className="text-xs text-slate-500 dark:text-slate-300">
+          <span className="text-xs text-base-content/70">
             <FontAwesomeIcon icon={faCalendar} className="mr-1" />
             {model.releaseDate && model.releaseDate !== "" ? model.releaseDate : "-"}
           </span>
@@ -203,24 +247,24 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
         <div className="flex items-center gap-2 mt-1">
           <Chip text={model.company} />
 
-          <span className="text-xs text-slate-500 dark:text-slate-300">
+          <span className="text-xs text-base-content/70">
             <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
             Context {model.contextLength && model.contextLength !== "" ? model.contextLength : "-"}
           </span>
-          <div className="flex items-center gap-1 text-tertiary">
+          <div className="flex items-center gap-1 text-accent">
             {model.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
             {model.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
             {model.input.includes("audio") && <Tooltip text={"Audio Input"}><FontAwesomeIcon icon={faMicrophone} /></Tooltip>}
             {model.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
           </div>
           {/*
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-base-content/70">
               <FontAwesomeIcon icon={faHashtag} className="mr-1" />
               Param {model.numParameters && model.numParameters !== "" ? model.numParameters : "-"}
             </span>*/}
 
         </div>
-        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{model.description}</p>
+        <p className="mt-2 text-sm text-base-content">{model.description}</p>
 
       </div>
     );
@@ -231,7 +275,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
       <div
         onClick={onClick}
         tabIndex={idx} data-index={idx} data-id={model.id}
-        className="group rounded-2xl border border-slate-200 p-3 h-full hover:bg-slate-100 dark:hover:bg-slate-700 hover:shadow-md transition dark:border-slate-700  focus-within:ring-2 focus-within:ring-indigo-500 flex flex-col justify-between"
+        className="group rounded-2xl border border-base-300 p-3 h-full hover:bg-base-200 hover:shadow-md transition focus-within:ring-2 focus-within:ring-primary flex flex-col justify-between"
       >
         <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
           <div className="">
@@ -247,7 +291,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
           </div>
           <DemandIndicator demand={model.demand} status={model?.status} />
         </div>
-        <div className="mt-2 text-sm text-slate-700 dark:text-slate-200 flex flex-wrap gap-x-1 justify-between">
+        <div className="mt-2 text-sm text-base-content flex flex-wrap gap-x-1 justify-between">
           <div className="flex items-center gap-x-3">
             <span className="flex items-center">
               <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
@@ -262,28 +306,28 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
           <div className="flex items-center gap-1">
             {model.output.includes("thought") && (
               <Tooltip text={"Thinking"}>
-                <div className="text-tertiary size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-500" aria-label="Text input">
+                <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faBrain} />
                 </div>
               </Tooltip>
             )}
             {model.input.includes("image") && (
               <Tooltip text={"Image Input"}>
-                <div className="text-tertiary size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-500" aria-label="Text input">
+                <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faImage} />
                 </div>
               </Tooltip>
             )}
             {model.input.includes("video") && (
               <Tooltip text={"Video Input"}>
-                <div className="text-tertiary size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-500" aria-label="Text input">
+                <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faVideo} />
                 </div>
               </Tooltip>
             )}
             {model.input.includes("audio") && (
               <Tooltip text={"Audio Input"}>
-                <div className="text-tertiary size-9 inline-grid place-items-center rounded-xl border border-slate-200 dark:border-slate-500" aria-label="Text input">
+                <div className="text-accent size-9 inline-grid place-items-center rounded-xl border border-base-300" aria-label="Text input">
                   <FontAwesomeIcon icon={faMicrophone} />
                 </div>
               </Tooltip>
@@ -297,7 +341,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
   return (
 
-    <div ref={dropdownRef} className="w-full relative dark:text-white">
+    <div ref={dropdownRef} className="w-full relative">
 
 
 
@@ -305,7 +349,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
       {!listOnly && (
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="h-13 min-h-[4rem] w-full text-left desktop:w-full border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md bg-white dark:bg-bg_secondary_dark px-3 py-2.5 shadow-sm hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30">
+        className="h-13 min-h-[4rem] w-full text-left desktop:w-full border border-base-300 rounded-2xl shadow-md bg-base-100 px-3 py-2.5 shadow-sm hover:border-primary/60 focus:ring-2 focus:ring-primary/30">
         
         {/** Selected Model View **/}
         <div className="flex justify-between">
@@ -316,23 +360,23 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             <span className="font-medium">{selectedModel?.name}</span>
             {selectedModel?.external == true && (<Chip text={"External"} colorPreset={"orange"} />)}
             <Chip text={selectedModel?.company} />
-            <span className="text-xs text-slate-500 dark:text-slate-300 hidden sm:inline-block">
+            <span className="text-xs text-base-content/70 hidden sm:inline-block">
               <FontAwesomeIcon icon={faCalendar} />
               {selectedModel?.releaseDate}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-300 hidden sm:inline-block">
+            <span className="text-xs text-base-content/70 hidden sm:inline-block">
               <FontAwesomeIcon icon={faCircleDot} className="mr-1" />
               Context {selectedModel?.contextLength !== "" ? selectedModel?.contextLength : "-"}
             </span>
             {/*
-            <span className="text-xs text-slate-500 hidden sm:inline-block">
+            <span className="text-xs text-base-content/70 hidden sm:inline-block">
               <FontAwesomeIcon icon={faLayerGroup} className="mr-1" />
               Param {selectedModel?.numParameters !== "" ? selectedModel?.numParameters : "-"}
             </span>*/}
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="ml-2 flex items-center gap-1 text-tertiary">
+            <div className="ml-2 flex items-center gap-1 text-accent">
               {selectedModel?.input.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
               {selectedModel?.input.includes("video") && <Tooltip text={"Video Input"}><FontAwesomeIcon icon={faVideo} /></Tooltip>}
               {selectedModel?.output.includes("thought") && <Tooltip text={"Thinking"}><FontAwesomeIcon icon={faBrain} /></Tooltip>}
@@ -347,16 +391,16 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
 
       {/** Dropdown Panel — rendered inline when there is no trigger **/}
       <div className={listOnly
-        ? "bg-white dark:bg-bg_secondary_dark w-full rounded-2xl pb-2"
-        : `${dropdownOpen ? "" : "hidden"} bg-white dark:bg-bg_secondary_dark absolute z-50 mt-1 w-full rounded-2xl border border-slate-200 dark:border-gray-500 shadow-2xl dark:shadow-dark pb-4`}>
+        ? "bg-base-100 w-full rounded-2xl pb-2"
+        : `${dropdownOpen ? "" : "hidden"} bg-base-100 absolute z-50 mt-1 w-full rounded-2xl border border-base-300 shadow-2xl dark:shadow-dark pb-4`}>
 
         <div className="px-4 pt-4 pb-2">
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-200">
-            <FontAwesomeIcon icon={faCircleInfo} className="text-tertiary" />
+          <div className="flex items-center gap-2 rounded-xl border border-base-300 bg-base-200 px-3 py-2 text-xs text-base-content/70">
+            <FontAwesomeIcon icon={faCircleInfo} className="text-accent" />
             <span>
               {t("model_selector.docs_hint_text")}{" "}
               <a
-                className="text-tertiary underline font-medium"
+                className="text-accent underline font-medium"
                 href="https://docs.hpc.gwdg.de/services/chat-ai/models/index.html"
                 target="_blank"
                 rel="noreferrer noopener"
@@ -367,59 +411,59 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
           </div>
         </div>
         {/** Search Controls **/}
-        <div className="text-sm flex items-center gap-2 p-2 border-b border-slate-100 dark:border-gray-500 to-white">
+        <div className="text-sm flex items-center gap-2 p-2 border-b border-base-300 to-white">
           <div className="relative flex-1">
-            <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50" />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              type="text" placeholder="Search models…" autoComplete="off" className="w-full rounded-xl border border-slate-200 dark:border-gray-500 pl-9 pr-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30" />
+              type="text" placeholder="Search models…" autoComplete="off" className="input w-full pl-9 text-sm" />
           </div>
 
           {/** View tabs (kept; default is List) **/}
-          <div className=" rounded-xl border border-slate-200 overflow-hidden" role="tablist" aria-label="View mode">
+          <div className=" rounded-xl border border-base-300 overflow-hidden" role="tablist" aria-label="View mode">
             <button
               onClick={() => setResultViewMode("list")}
-              data-view="simple" className="view-btn px-3 py-2 text-sm hover:bg-tertiary/30 aria-selected:bg-tertiary aria-selected:text-white" role="tab" aria-selected={resultViewMode === "list"} title="List">
+              data-view="simple" className="view-btn px-3 py-2 text-sm hover:bg-accent/30 aria-selected:bg-accent aria-selected:text-white" role="tab" aria-selected={resultViewMode === "list"} title="List">
               <FontAwesomeIcon icon={faList} />
             </button>
             <button
               onClick={() => setResultViewMode("extended")}
-              data-view="extended" className="view-btn px-3 py-2 text-sm hover:bg-tertiary/30 aria-selected:bg-tertiary aria-selected:text-white" role="tab" aria-selected={resultViewMode === "extended"} title="Extended">
+              data-view="extended" className="view-btn px-3 py-2 text-sm hover:bg-accent/30 aria-selected:bg-accent aria-selected:text-white" role="tab" aria-selected={resultViewMode === "extended"} title="Extended">
               <FontAwesomeIcon icon={faRectangleList} />
             </button>
             <button
               onClick={() => setResultViewMode("grid")}
-              data-view="grid" className="view-btn px-3 py-2 text-sm hover:bg-tertiary/30 aria-selected:bg-tertiary aria-selected:text-white" role="tab" aria-selected={resultViewMode === "grid"} title="Grid">
+              data-view="grid" className="view-btn px-3 py-2 text-sm hover:bg-accent/30 aria-selected:bg-accent aria-selected:text-white" role="tab" aria-selected={resultViewMode === "grid"} title="Grid">
               <FontAwesomeIcon icon={faTableCells} />
             </button>
           </div>
 
           {/** Grouping 
           <div className="hidden sm:flex items-center gap-2 ml-1" title="Group by family">
-            <FontAwesomeIcon icon={faLayerGroup} className="text-slate-500" />
+            <FontAwesomeIcon icon={faLayerGroup} className="text-base-content/70" />
             <label className="relative inline-flex items-center cursor-pointer select-none">
               <input id="group-toggle" type="checkbox" className="sr-only peer" checked={false} />
-              <div className="w-11 h-6 bg-slate-200 rounded-full transition-colors peer-checked:bg-indigo-500"></div>
-              <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+              <div className="w-11 h-6 bg-base-300 rounded-full transition-colors peer-checked:bg-primary"></div>
+              <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-base-100 rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
             </label>
           </div>**/}
 
           {/** Filter 
           <Menu as="div" className="relative inline-block text-left ">
 
-            <MenuButton className="h-10 inline-flex w-full justify-between items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+            <MenuButton className="h-10 inline-flex w-full justify-between items-center rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm font-medium text-base-content/70 shadow-sm hover:bg-base-200 focus:outline-none focus:ring-2 focus:ring-primary/40">
               <FontAwesomeIcon size="sm" icon={faFilter} />
             </MenuButton>
 
-            <MenuItems className="absolute right-0 mt-2 w-40 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-50">
+            <MenuItems className="absolute right-0 mt-2 w-40 origin-top-right rounded-xl bg-base-100 shadow-lg ring-1 ring-black/5 focus:outline-none z-50">
               <MenuItem >
-                <label className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer" onClick={(event)=>{event.preventDefault()}}>
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-base-200 cursor-pointer" onClick={(event)=>{event.preventDefault()}}>
                   <input type="checkbox" className="filter-out" data-out="thought" checked /> Fast
                 </label>
               </MenuItem>
               <MenuItem>
-                <label className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-base-200 cursor-pointer">
                   <input type="checkbox" className="filter-out" data-out="thought" /> Reasoning
                 </label>
               </MenuItem>
@@ -430,7 +474,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
           {/** Sort **/}
           <Menu as="div" className="relative inline-block text-left">
             
-            <MenuButton className="inline-flex w-full justify-between items-center rounded-xl border border-slate-200 bg-white dark:bg-bg_secondary_dark px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-200 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+            <MenuButton className="inline-flex w-full justify-between items-center rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-sm font-medium text-base-content/70 shadow-sm hover:bg-base-200 focus:outline-none focus:ring-2 focus:ring-primary/40">
               <span className="hidden sm:block">
                 {sortOptions.find((opt) => opt.value === sortBy)?.label || "Sort by"}
                 <FontAwesomeIcon size="sm" icon={faChevronDown} />
@@ -440,14 +484,14 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               </span>
             </MenuButton>
 
-            <MenuItems className="absolute right-0 mt-2 w-40 origin-top-right rounded-xl bg-white dark:bg-bg_secondary_dark shadow-lg ring-1 ring-black/5 focus:outline-none z-50">
+            <MenuItems className="absolute right-0 mt-2 w-40 origin-top-right rounded-xl bg-base-100 shadow-lg ring-1 ring-black/5 focus:outline-none z-50">
               <div className="py-1">
                 {sortOptions.map((option) => (
                   <MenuItem key={option.value}>
                     {({ close }) => (
                       <button
                         onClick={() => {setSortBy(option.value); close()}}
-                        className="data-focus:bg-tertiary/10 dark:data-focus:bg-secondary rounded-xl text-slate-700 dark:text-slate-200 block w-full px-4 py-2 text-left text-sm"
+                        className="data-focus:bg-accent/10 dark:data-focus:bg-secondary rounded-xl text-base-content block w-full px-4 py-2 text-left text-sm"
                       >
                         {option.label}
 
@@ -464,20 +508,62 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
         <div id="model-listbox" role="listbox" aria-label="Models" tabIndex={-1} className="max-h-110 overflow-auto px-2">
           {resultViewMode === 'list' && (
             <div className="rounded-xl overflow-hidden grid gap-1 py-2">
-              {filteredModelsList.map((m, idx) => (
-                <ListElement
-                  key={m.id} idx={idx} model={m}
-                  onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
-              ))}
+              {groupedModels ? (
+                groupedModels.map((group) => (
+                  <div key={group.key}>
+                    {group.models.length <= 1 ? (
+                      <ListElement
+                        key={group.models[0].id} idx={0} model={group.models[0]}
+                        onClick={() => { onChange?.(group.models[0]); setDropdownOpen(false); onSelected?.(); }} />
+                    ) : (
+                      <>
+                        <GroupHeader group={group} />
+                        {openGroups[group.key] && group.models.map((m, idx) => (
+                          <ListElement
+                            key={m.id} idx={idx} model={m}
+                            onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
+                        ))}
+                      </>
+                    )}
+                  </div>
+                ))
+              ) : (
+                filteredModelsList.map((m, idx) => (
+                  <ListElement
+                    key={m.id} idx={idx} model={m}
+                    onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
+                ))
+              )}
             </div>
           )}
           {resultViewMode === 'extended' && (
             <div className="rounded-xl overflow-hidden grid gap-1 py-2">
-              {filteredModelsList.map((m, idx) => (
-                <ExtendedListElement
-                  key={m.id} idx={idx} model={m}
-                  onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
-              ))}
+              {groupedModels ? (
+                groupedModels.map((group) => (
+                  <div key={group.key}>
+                    {group.models.length <= 1 ? (
+                      <ExtendedListElement
+                        key={group.models[0].id} idx={0} model={group.models[0]}
+                        onClick={() => { onChange?.(group.models[0]); setDropdownOpen(false); onSelected?.(); }} />
+                    ) : (
+                      <>
+                        <GroupHeader group={group} />
+                        {openGroups[group.key] && group.models.map((m, idx) => (
+                          <ExtendedListElement
+                            key={m.id} idx={idx} model={m}
+                            onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
+                        ))}
+                      </>
+                    )}
+                  </div>
+                ))
+              ) : (
+                filteredModelsList.map((m, idx) => (
+                  <ExtendedListElement
+                    key={m.id} idx={idx} model={m}
+                    onClick={() => { onChange?.(m); setDropdownOpen(false); onSelected?.(); }} />
+                ))
+              )}
             </div>
           )}
 

@@ -23,6 +23,7 @@ import ImportPersonaModal from "../components/Sidebar/Modals/ImportPersonaModal"
 import FolderEditorModal from "../components/Sidebar/Modals/FolderEditorModal";
 import DeleteFolderModal from "../components/Sidebar/Modals/DeleteFolderModal";
 import MoveChatModal from "../components/Sidebar/Modals/MoveChatModal";
+import OrganizeChatsModal from "../components/Sidebar/Modals/OrganizeChatsModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
 import ConfirmActionModal from "./Alert/ConfirmActionModal";
 import FolderAccessModal from "./Alert/FolderAccessModal";
@@ -180,6 +181,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "moveChat" && (
         <MoveChatModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "organizeChats" && (
+        <OrganizeChatsModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "preview" && (
         <PreviewModal isOpen onClose={closeModal} {...modalProps} />

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
-function Tooltip({ text, children, placement = "top", offset = 8 }) {
+function Tooltip({ text, children, placement = "top", offset = 8, className = "" }) {
   const ref = useRef(null);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null);
@@ -53,7 +53,7 @@ function Tooltip({ text, children, placement = "top", offset = 8 }) {
     <>
       <span
         ref={ref}
-        className="cursor-pointer"
+        className={`cursor-pointer ${className}`}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
@@ -70,8 +70,8 @@ function Tooltip({ text, children, placement = "top", offset = 8 }) {
               transform: pos.transform,
               zIndex: 9999
             }}
-            className="bg-gray-800 dark:bg-gray-700 text-white text-xs rounded px-2 py-1
-                       border dark:border-border_dark max-w-[200px] break-words
+            className="bg-neutral text-neutral-content text-xs rounded px-2 py-1
+                       border border-base-300 max-w-[200px] break-words
                        pointer-events-none shadow"
           >
             {text}

@@ -15,8 +15,8 @@ export default function ToolsButton({ localState, setLocalState }) {
     return (
         <Popover className="relative flex">
             <Tooltip text={t("settings.tools_title")}>
-                <PopoverButton className="flex cursor-pointer focus:outline-none">
-                    <Tools size={24} className="cursor-pointer text-tertiary" />
+                <PopoverButton className="flex cursor-pointer focus:outline-none" data-guide="tools">
+                    <Tools size={24} className="cursor-pointer text-accent" />
                 </PopoverButton>
             </Tooltip>
 
@@ -31,7 +31,7 @@ export default function ToolsButton({ localState, setLocalState }) {
             >
                 <PopoverPanel
                     anchor="top"
-                    className="z-50 mb-2 w-[26rem] max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark shadow-xl dark:shadow-dark p-4"
+                    className="z-50 mb-2 w-[26rem] max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-2xl border border-base-300 bg-base-100 shadow-xl dark:shadow-dark p-4"
                 >
                     <ToolsContainer localState={localState} setLocalState={setLocalState} />
                 </PopoverPanel>

@@ -16,7 +16,8 @@ import type {
   MessageRole,
   ContentItemInput,
   FolderRow,
-  FeedbackRow
+  FeedbackRow,
+  PersonaInfo
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -70,6 +71,21 @@ export class AppDB extends Dexie {
       await tx.table('conversations').toCollection().modify((conv: any) => {
         if (typeof conv.hasFirstPrompt === 'undefined') {
           conv.hasFirstPrompt = true;
+        }
+      });
+    });
+
+    this.version(5).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt'
+    }).upgrade(async tx => {
+      await tx.table('conversations').toCollection().modify((conv: any) => {
+        if (typeof conv.lastOpenedAt === 'undefined') {
+          conv.lastOpenedAt = conv.lastModified ?? conv.createdAt ?? Date.now();
         }
       });
     });
@@ -164,6 +180,12 @@ async function hydrateConversation(conversationId: string) {
         fileId: ci.fileId,
       })
     }
+    else if (ci.type === 'form' && ci.form) {
+      items.push({
+        type: 'form',
+        form: { ...ci.form },
+      })
+    }
   }
 
   // Build hydrated messages
@@ -195,6 +217,8 @@ export async function createConversation(params: {
   id?: string, // for import
   folderId?: string | null
   hasFirstPrompt?: boolean
+  isMetaChat?: boolean
+  persona?: PersonaInfo | null
 }) {
   const id = params?.id ?? newId()
   const now = Date.now()
@@ -214,6 +238,9 @@ export async function createConversation(params: {
       messageCount: 0,
       folderId,
       hasFirstPrompt,
+      lastOpenedAt: now,
+      ...(params.isMetaChat ? { isMetaChat: true } : {}),
+      ...(params.persona ? { persona: params.persona } : {}),
     })
 
     if (messages.length > 0) {
@@ -388,6 +415,16 @@ export async function updateConversation(
               fileId: item.fileId
             });
           }
+          else if (item.type === 'form' && item.form) {
+            // Add form content item
+            await db.content_items.add({
+              id: newId(),
+              messageId: m.id,
+              idx: ciIdx++,
+              type: 'form',
+              form: item.form
+            });
+          }
           else {
             console.warn('Unknown content item type: ', item);
           }
@@ -413,7 +450,11 @@ export async function updateConversation(
 // ---------- Conversation List ----------
 
 export async function getLastModifiedConversationMeta(): Promise<ConversationRow | undefined> {
-  const conversations = await db.conversations.orderBy('lastModified').reverse().toArray();
+  const conversations = await db.conversations
+    .orderBy('lastModified')
+    .reverse()
+    .filter((conversation) => !conversation.isMetaChat && conversation.id !== 'meta-chat')
+    .toArray();
   return conversations[0];
 }
 
@@ -423,9 +464,210 @@ export async function getConversationMeta(conversationId: string): Promise<Conve
 
 // Get list of conversation Metas
 export async function listConversationMetas(): Promise<
-  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'messageCount' | 'folderId'>>
+  Array<Pick<ConversationRow, 'id' | 'title' | 'createdAt' | 'lastModified' | 'lastOpenedAt' | 'messageCount' | 'folderId' | 'pinned' | 'summary'>>
 > {
   return db.conversations.orderBy('id').toArray()
+}
+
+// ---------- Message search (Meta chat) ----------
+
+const SEARCH_STOPWORDS = new Set([
+  "a", "an", "and", "are", "as", "at", "be", "been", "but", "by", "can",
+  "could", "did", "do", "does", "for", "from", "had", "has", "have", "he",
+  "her", "him", "his", "how", "i", "if", "in", "into", "is", "it", "its",
+  "me", "my", "of", "on", "or", "our", "she", "should", "so", "that", "the",
+  "their", "them", "then", "there", "these", "they", "this", "to", "us",
+  "was", "we", "were", "what", "when", "where", "which", "who", "why",
+  "will", "with", "would", "you", "your",
+  "action", "actions", "chat", "chats", "compare", "conversation",
+  "conversations", "decision", "decisions", "explain", "find", "give", "go",
+  "item", "items", "message", "messages", "next", "open", "search", "setting",
+  "settings", "show", "step", "steps", "take", "tell", "todo", "todos", "topic",
+  "topics",
+  "aber", "also", "an", "auf", "aus", "bei", "das", "dem", "den", "der",
+  "des", "die", "ein", "eine", "einer", "einem", "einen", "es", "für", "hat",
+  "hier", "ich", "im", "in", "ist", "mit", "nicht", "oder", "sich", "sie",
+  "sind", "und", "von", "war", "was", "welche", "welcher", "welches", "wie",
+  "wo", "zu", "zum", "zur",
+  "aufgabe", "aufgaben", "chat", "chats", "entscheidung", "entscheidungen",
+  "erklär", "erkläre", "einstellung", "einstellungen", "finden", "nachricht",
+  "nachrichten", "nächste", "schritt", "schritte", "suche", "thema", "themen",
+  "unterhaltung", "unterhaltungen", "vergleich", "vergleiche", "zeig", "zeige",
+]);
+
+export type MessageSearchResult = {
+  conversationId: string
+  conversationTitle: string
+  folderId: string | null
+  messageId: string
+  role: string
+  createdAt: number
+  snippet: string
+}
+
+function searchTerms(query: string): string[] {
+  const matches = String(query || "").toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+  return [...new Set(
+    matches.filter((term) => term.length >= 2 && !SEARCH_STOPWORDS.has(term)),
+  )];
+}
+
+function makeSnippet(text: string, query: string, terms: string[]): string {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  const lower = clean.toLowerCase();
+  let index = query ? lower.indexOf(query.toLowerCase()) : -1;
+  if (index < 0) {
+    for (const term of terms) {
+      const found = lower.indexOf(term);
+      if (found >= 0 && (index < 0 || found < index)) index = found;
+    }
+  }
+  if (index < 0) index = 0;
+  const start = Math.max(0, index - 100);
+  const end = Math.min(clean.length, start + 320);
+  return `${start > 0 ? "…" : ""}${clean.slice(start, end).trim()}${end < clean.length ? "…" : ""}`;
+}
+
+function scoreText(text: string, query: string, terms: string[]): number {
+  const lower = text.toLowerCase();
+  let score = 0;
+  const normalizedQuery = query.toLowerCase().trim();
+  if (normalizedQuery && lower.includes(normalizedQuery)) score += 12;
+  for (const term of terms) {
+    let from = 0;
+    let count = 0;
+    while (count < 5) {
+      const found = lower.indexOf(term, from);
+      if (found < 0) break;
+      count += 1;
+      from = found + term.length;
+    }
+    score += count;
+  }
+  return score;
+}
+
+export async function searchMessages(
+  query: string,
+  limit = 12,
+): Promise<MessageSearchResult[]> {
+  const terms = searchTerms(query);
+  if (terms.length === 0) return [];
+
+  const [conversations, messages, contentItems] = await Promise.all([
+    db.conversations.toArray(),
+    db.messages.toArray(),
+    db.content_items.where('type').equals('text').toArray(),
+  ]);
+
+  const conversationById = new Map(
+    conversations
+      .filter((conversation) => !conversation.isMetaChat && conversation.id !== 'meta-chat')
+      .map((conversation) => [conversation.id, conversation]),
+  );
+  const messageById = new Map(messages.map((message) => [message.id, message]));
+  const bestByMessage = new Map<string, MessageSearchResult & { score: number }>();
+
+  for (const item of contentItems) {
+    if (!item.text) continue;
+    const message = messageById.get(item.messageId);
+    if (!message) continue;
+    if (!['user', 'assistant', 'info'].includes(message.role)) continue;
+    const conversation = conversationById.get(message.conversationId);
+    if (!conversation) continue;
+
+    const score = scoreText(item.text, query, terms);
+    if (score <= 0) continue;
+
+    const result: MessageSearchResult & { score: number } = {
+      conversationId: conversation.id,
+      conversationTitle: (conversation.title || '').trim() || 'Untitled Chat',
+      folderId: conversation.folderId ?? null,
+      messageId: message.id,
+      role: message.role,
+      createdAt: message.createdAt ?? conversation.lastModified ?? 0,
+      snippet: makeSnippet(item.text, query, terms),
+      score,
+    };
+    const previous = bestByMessage.get(message.id);
+    if (!previous || result.score > previous.score) {
+      bestByMessage.set(message.id, result);
+    }
+  }
+
+  return [...bestByMessage.values()]
+    .sort((first, second) => second.score - first.score || second.createdAt - first.createdAt)
+    .slice(0, Math.max(1, limit))
+    .map(({ score: _score, ...result }) => result);
+}
+
+export async function getRecentMessageExcerpts(
+  conversationLimit = 4,
+  messagesPerConversation = 4,
+): Promise<MessageSearchResult[]> {
+  const allConversations = await db.conversations.toArray();
+  const conversations = allConversations
+    .filter(
+      (conversation) =>
+        !conversation.isMetaChat && conversation.id !== 'meta-chat',
+    )
+    .sort(
+      (first, second) =>
+        (second.lastModified ?? second.createdAt ?? 0) -
+        (first.lastModified ?? first.createdAt ?? 0),
+    )
+    .slice(0, conversationLimit);
+  if (conversations.length === 0) return [];
+
+  const messages = await db.messages
+    .where('conversationId')
+    .anyOf(conversations.map((conversation) => conversation.id))
+    .toArray();
+  const messageIds = messages.map((message) => message.id);
+  if (messageIds.length === 0) return [];
+
+  const textItems = await db.content_items
+    .where('messageId')
+    .anyOf(messageIds)
+    .and((item) => item.type === 'text' && Boolean(item.text))
+    .toArray();
+  const textByMessage = new Map<string, string>();
+  for (const item of textItems) {
+    textByMessage.set(
+      item.messageId,
+      `${textByMessage.get(item.messageId) || ''}\n${item.text}`.trim(),
+    );
+  }
+
+  const results: MessageSearchResult[] = [];
+  for (const conversation of conversations) {
+    const conversationMessages = messages
+      .filter(
+        (message) =>
+          message.conversationId === conversation.id &&
+          ['user', 'assistant', 'info'].includes(message.role) &&
+          textByMessage.has(message.id),
+      )
+      .sort((first, second) => first.idx - second.idx)
+      .slice(-messagesPerConversation);
+
+    for (const message of conversationMessages) {
+      const text = textByMessage.get(message.id) || '';
+      results.push({
+        conversationId: conversation.id,
+        conversationTitle:
+          (conversation.title || '').trim() || 'Untitled Chat',
+        folderId: conversation.folderId ?? null,
+        messageId: message.id,
+        role: message.role,
+        createdAt: message.createdAt ?? conversation.lastModified ?? 0,
+        snippet:
+          text.length > 400 ? `${text.slice(0, 400).trim()}…` : text.trim(),
+      });
+    }
+  }
+
+  return results.sort((first, second) => second.createdAt - first.createdAt);
 }
 
 // Rename conversation or update settings
@@ -439,6 +681,25 @@ export async function updateConversationMeta(
   }
   await db.conversations.update(conversationId, payload)
   return 0;
+}
+
+export async function setConversationPinned(
+  conversationId: string,
+  pinned: boolean,
+) {
+  await db.conversations.update(conversationId, { pinned })
+}
+
+export async function setConversationSummary(
+  conversationId: string,
+  summary: string,
+  sourceHash: string,
+) {
+  await db.conversations.update(conversationId, {
+    summary,
+    summaryUpdatedAt: Date.now(),
+    summarySourceHash: sourceHash,
+  });
 }
 
 // Delete entire conversation (messages + content items + files)
@@ -511,7 +772,9 @@ export function useConversationList() {
   const list = useLiveQuery(
     async () => {
       const rows = await db.conversations.orderBy('createdAt').reverse().toArray()
-      return rows //.filter(conv => conv?.hasFirstPrompt !== false)
+      return rows.filter(
+        (conversation) => !conversation.isMetaChat && conversation.id !== 'meta-chat',
+      )
     },
   [],
   [] as ConversationRow[]
@@ -524,6 +787,10 @@ export function useConversationList() {
 export async function getFolder(folderId: string): Promise<FolderRow | undefined> {
   if (!folderId) return undefined;
   return db.folders.get(folderId);
+}
+
+export async function listFolders(): Promise<FolderRow[]> {
+  return db.folders.toArray();
 }
 
 async function getFolderByName(name: string): Promise<FolderRow | undefined> {
@@ -576,9 +843,23 @@ export async function setFolderColor(folderId: string, color: string) {
 }
 
 /** Set a topic's icon — its identity in the sidebar. Not indexed, no migration. */
+export async function setFolderOrder(folderId: string, sortOrder: number) {
+  await db.folders.update(folderId, {
+    sortOrder,
+    updatedAt: Date.now(),
+  });
+}
+
 export async function setFolderIcon(folderId: string, icon: string) {
   await db.folders.update(folderId, {
     icon,
+    updatedAt: Date.now(),
+  });
+}
+
+export async function setFolderPinned(folderId: string, pinned: boolean) {
+  await db.folders.update(folderId, {
+    pinned,
     updatedAt: Date.now(),
   });
 }
@@ -613,7 +894,15 @@ export async function ensureFolder(name: string, id?: string | null): Promise<st
 export function useFolderList() {
   return useLiveQuery(
     async () => {
-      return await db.folders.orderBy('createdAt').reverse().toArray();
+      const folders = await db.folders.toArray();
+      return folders.sort((a, b) => {
+        const aOrder = typeof a.sortOrder === 'number' ? a.sortOrder : null;
+        const bOrder = typeof b.sortOrder === 'number' ? b.sortOrder : null;
+        if (aOrder !== null && bOrder !== null) return aOrder - bOrder;
+        if (aOrder !== null) return -1;
+        if (bOrder !== null) return 1;
+        return b.createdAt - a.createdAt;
+      });
     },
     [],
     [] as FolderRow[],
@@ -622,38 +911,41 @@ export function useFolderList() {
 
 // ---------- Files ----------
 
-// Insert file meta+data; returns the new id
+async function persistFile(id: string, file: File, conversationId: string) {
+  const arrayBuffer = await file.arrayBuffer();
+  const meta: FileMetaRow = {
+    id,
+    conversationId,
+    name: file.name,
+    type: file.type || "application/octet-stream",
+    size: file.size,
+  };
+  const data: FileDataRow = {
+    id,
+    data: arrayBuffer,
+  };
+  await db.files_meta.add(meta);
+  await db.files_data.add(data);
+}
+
+// Insert file meta+data; returns the new id. The write continues in the
+// background, so callers that need the file immediately should use
+// saveFileReady instead.
 export function saveFile(conversationId: string, file: File): string {
   const id = newId();
+  persistFile(id, file, conversationId).catch((err) =>
+    console.error("Failed to save file:", err)
+  );
+  return id;
+}
 
-  async function saveFileDB(id: string, file: File, conversationId: string) {
-    // Read file data into an ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-    const meta: FileMetaRow = {
-      id,
-      conversationId,
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      // Optional: width, height, duration extraction later
-    };
-
-    const data: FileDataRow = {
-      id,
-      data: arrayBuffer
-    };
-
-    // Store in IndexedDB
-    await db.files_meta.add(meta);
-    await db.files_data.add(data);
-    console.log("File saved successfully")
-  }
-
-  // Fire and forget, but handle errors
-  saveFileDB(id, file, conversationId)
-    .catch(err => console.error("Failed to save file:", err));
-
-  //TODO this may be a problem if a file cannot be saved it still returns an id
+// Insert file meta+data and resolve only after the file is readable.
+export async function saveFileReady(
+  conversationId: string,
+  file: File
+): Promise<string> {
+  const id = newId();
+  await persistFile(id, file, conversationId);
   return id;
 }
 

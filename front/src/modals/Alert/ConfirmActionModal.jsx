@@ -39,7 +39,7 @@ export default function ConfirmActionModal({
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="alert.title">
       {/* Message */}
       <div className="pt-0 pb-2">
-        <p className="dark:text-white text-black text-justify text-sm">
+        <p className="text-base-content text-justify text-sm">
           <Trans i18nKey={messageKey} />
         </p>
       </div>
@@ -51,11 +51,11 @@ export default function ConfirmActionModal({
           id={`dontShowAgain-${warningKey}`}
           checked={dontShowAgain}
           onChange={(event) => setDontShowAgain(event.target.checked)}
-          className="h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out"
+          className="checkbox checkbox-accent checkbox-sm"
         />
         <label
           htmlFor={`dontShowAgain-${warningKey}`}
-          className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+          className="text-sm text-base-content cursor-pointer select-none"
         >
           <Trans i18nKey="common.dont_show_again" />
         </label>
@@ -65,7 +65,7 @@ export default function ConfirmActionModal({
       <div className="flex flex-col md:flex-row gap-2 justify-between w-full text-sm mt-4">
         {/* Cancel button */}
         <button
-          className="text-black dark:text-white p-3 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[130px] select-none cursor-pointer"
+          className="btn md:w-fit w-full min-w-[130px] select-none"
           onClick={onClose}
         >
           <Trans i18nKey="common.cancel" />
@@ -73,8 +73,8 @@ export default function ConfirmActionModal({
 
         {/* Confirm button */}
         <button
-          className={`text-white p-3 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[130px] select-none cursor-pointer ${
-            danger ? "bg-red-600" : "bg-tertiary"
+          className={`btn md:w-fit w-full min-w-[130px] select-none ${
+            danger ? "btn-error" : "btn-accent"
           }`}
           onClick={handleConfirm}
         >

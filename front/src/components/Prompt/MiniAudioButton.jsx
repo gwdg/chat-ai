@@ -69,17 +69,17 @@ export default function MiniAudioButton({ src }) {
   return (
     <button
       onClick={toggle}
-      className="relative w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center"
+      className="btn btn-info btn-circle relative"
     >
       <audio ref={audioRef} src={src} preload="metadata" />
 
       {/* Progress ring */}
-      <svg className="absolute inset-0" width="40" height="40">
+      <svg className="absolute inset-0 text-info-content" width="40" height="40">
         <circle
           cx="20"
           cy="20"
           r={radius}
-          stroke="rgba(255,255,255,0.25)"
+          stroke="currentColor" strokeOpacity="0.35"
           strokeWidth="3"
           fill="none"
         />
@@ -87,7 +87,7 @@ export default function MiniAudioButton({ src }) {
           cx="20"
           cy="20"
           r={radius}
-          stroke="white"
+          stroke="currentColor"
           strokeWidth="3"
           fill="none"
           strokeDasharray={circumference}
@@ -99,11 +99,11 @@ export default function MiniAudioButton({ src }) {
 
       {/* Play / Pause icon */}
       {isPlaying ? (
-        <svg className="w-4 h-4 text-white relative z-10" viewBox="0 0 24 24" fill="currentColor">
+        <svg className="w-4 h-4 text-info-content relative z-10" viewBox="0 0 24 24" fill="currentColor">
           <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
         </svg>
       ) : (
-        <svg className="w-4 h-4 text-white relative z-10 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+        <svg className="w-4 h-4 text-info-content relative z-10 ml-0.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8 5v14l11-7z" />
         </svg>
       )}

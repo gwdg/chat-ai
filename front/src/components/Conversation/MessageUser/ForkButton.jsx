@@ -25,7 +25,7 @@ export default function ForkButton({ localState, message_index }) {
     <Tooltip text={t("common.fork")}>
       <button onClick={handleFork} disabled={forking} className="flex">
         <Workflow
-          className="h-[20px] w-[20px] cursor-pointer text-[#009EE0]"
+          className="h-[20px] w-[20px] cursor-pointer text-accent"
           alt="icon_fork"
         />
       </button>

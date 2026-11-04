@@ -3,6 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useToast } from "../../hooks/useToast";
+import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 
 import { useAttachments } from "../../hooks/useAttachments";
 import ClearButton from "./ClearButton";
@@ -18,12 +19,14 @@ export default function PromptTextArea({
     handleSend,
     handleChange,
     prompt,
+    placeholder,
 }) {
   const { t } = useTranslation();
   const textareaRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const { notifySuccess, notifyError } = useToast();
   const { addAttachments, pasteAttachments } = useAttachments();
+  const sendWithEnter = useSendWithEnter();
 
   // Prompt is actually the last message's first content
   const lastMessage = localState?.messages?.[localState.messages.length - 1];
@@ -105,10 +108,10 @@ export default function PromptTextArea({
               }}
               title={choice}
               className="shrink-0 max-w-[75vw] sm:max-w-[22rem]
-                         inline-flex items-center cursor-pointer rounded-full border border-gray-200 dark:border-gray-700 choice-chip-enter
-                         bg-gray-50 dark:bg-gray-900/30 px-3 py-2 text-xs font-medium
-                         text-gray-700 dark:text-gray-200
-                         hover:bg-gray-100 dark:hover:bg-gray-800
+ inline-flex items-center cursor-pointer rounded-full border border-base-300 choice-chip-enter
+ bg-base-200 px-3 py-2 text-xs font-medium
+ text-base-content
+ hover:bg-base-200
                          active:scale-95 transition"
               style={{ animationDelay: `${Math.min(index, 6) * 45}ms` }}
             >
@@ -131,7 +134,7 @@ export default function PromptTextArea({
         <textarea
             autoFocus
             ref={textareaRef}
-            className={`p-4 md:p-5 transition-opacity duration-300 ease-in-out outline-none text-base w-full dark:text-white text-black bg-white dark:bg-bg_secondary_dark overflow-y-auto ${
+            className={`p-4 md:p-5 transition-opacity duration-300 ease-in-out outline-none text-base w-full text-base-content bg-base-100 overflow-y-auto ${
               choices.length > 0 ? "" : "rounded-t-2xl"
             }`}
             value={prompt}
@@ -139,8 +142,9 @@ export default function PromptTextArea({
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
+            spellCheck={false}
             data-1p-ignore="true"
-            placeholder={t("conversation.prompt.placeholder")}
+            placeholder={placeholder ?? t("conversation.prompt.placeholder")}
             style={{
               minHeight: `${MIN_HEIGHT}px`,
               maxHeight: `${MAX_HEIGHT}px`,
@@ -157,11 +161,17 @@ export default function PromptTextArea({
             // Enter confirms an IME composition (Japanese, Chinese, Korean), don't send.
             // Safari reports isComposing false on that Enter, but keyCode is still 229.
             if (event.nativeEvent.isComposing || event.keyCode === 229) return;
-            if (
-                event.key === "Enter" &&
-                !event.shiftKey &&
-                (prompt?.trim() !== "" || attachments.length > 0)
-            ) {
+            if (event.key !== "Enter") return;
+            if (prompt?.trim() === "" && attachments.length === 0) return;
+
+            const isPlainEnter =
+              !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
+            const isShiftEnter =
+              event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
+
+            // Enter mode: plain Enter sends, Shift+Enter is a newline.
+            // Shift+Enter mode: Shift+Enter sends, plain Enter is a newline.
+            if ((sendWithEnter && isPlainEnter) || (!sendWithEnter && isShiftEnter)) {
                 event.preventDefault();
                 handleSend(event);
             }

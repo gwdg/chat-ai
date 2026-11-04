@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import FeatureGuideCard from "../../Others/FeatureGuideCard";
+import UseCaseGuideCard from "../../Others/UseCaseGuideCard";
 import Typing from "./Typing";
 import CopyButton from "./CopyButton";
 import Attachment from "../../Prompt/Attachment";
@@ -9,16 +11,23 @@ import { useSendMessage } from "../../../hooks/useSendMessage";
 import { useForkConversation } from "../../../hooks/useForkConversation";
 import { useModal } from "../../../modals/ModalContext";
 import MetaBox from "./MetaBox";
+import PersonaCard from "../../Others/PersonaCard";
+import MetaActionCard from "./MetaActionCard";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
 import AgentSteps from "./AgentSteps";
+import ToolForm from "./ToolForm";
+import { getFeatureGuideMarker } from "../../../config/featureGuides";
+import { getUseCaseMarker } from "../../../config/useCases";
+import { getPersonaMarkers } from "../../../utils/personaCatalog";
+import { getMetaActionProposals } from "../../../utils/metaActions";
 
 // Constants
 const MAX_HEIGHT = 200;
 const MIN_HEIGHT = 56;
 
-export default React.memo(({ localState, setLocalState, message_index }) => {
+export default React.memo(({ localState, setLocalState, message_index, modelsData }) => {
   //Refs
   const assistantMessage = useRef(null);
   const editBox = useRef(null);
@@ -26,9 +35,21 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const textareaRefs = useRef([]);
   const message = localState.messages[message_index];
   const loading = message?.loading || false;
+  const guideFeatureId = loading
+    ? null
+    : getFeatureGuideMarker(message?.content?.[0]?.text);
+  const guideUseCaseId = loading
+    ? null
+    : getUseCaseMarker(message?.content?.[0]?.text);
+  const personaPaths = loading
+    ? []
+    : getPersonaMarkers(message?.content?.[0]?.text);
+  const metaActions = loading
+    ? []
+    : getMetaActionProposals(message?.content?.[0]?.text);
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
-  const renderModes = ["Default", "Markdown", "LaTeX", "Plaintext"];
+  const renderModes = ["Default", "Markdown", "Plaintext"];
   
   const sendMessage = useSendMessage();
   const { forkConversation } = useForkConversation(localState);
@@ -48,26 +69,24 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   };
   
   const sendFeedbackFunc = async (ratingInt, commentStr, expectedStr) => {
-    // Remove messages after current index
-    let newState;
-    setLocalState((prev) => {
-      const newMessages = [...prev.messages];
-      const newMessagesWithFB = [...prev.messages];
-      newMessages.splice(message_index + 1);
+    const feedback = {
+      rating: ratingInt,
+      comment: commentStr,
+      result: expectedStr,
+    };
+    const newMessagesWithFB = [...localState.messages];
+    newMessagesWithFB[message_index] = {
+      ...newMessagesWithFB[message_index],
+      feedback,
+    };
 
-      newMessages[newMessages.length-1].feedback = {
-        rating : ratingInt,
-        comment: commentStr,
-        result : expectedStr
-      };
-      console.log("sending feedback");
-      console.log(newMessages[newMessages.length-1].feedback);
+    const newState = {
+      ...localState,
+      messages: newMessagesWithFB.slice(0, message_index + 1),
+    };
 
-      newMessagesWithFB[newMessages.length-1].feedback = newMessages[newMessages.length-1].feedback;
-      newState = { ...prev, messages: newMessages }
-      sendMessage({localState: newState});
-      return { ...prev, messages: newMessagesWithFB };
-    });
+    setLocalState({ ...localState, messages: newMessagesWithFB });
+    sendMessage({ localState: newState });
   };
 
   const [feedbackMode, setFeedbackMode] = useState(false);  
@@ -140,15 +159,12 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
 
   // Function to handle resending a previous message
   const handleRetry = async () => {
-    // Remove messages after current index
+    const newMessages = [...localState.messages];
+    newMessages.splice(message_index);
+    const newState = { ...localState, messages: newMessages };
 
-    setLocalState((prev) => {
-      const newMessages = [...prev.messages];
-      newMessages.splice(message_index);
-      let newState = { ...prev, messages: newMessages };
-      sendMessage({ localState: newState, setLocalState });
-      return { ...prev, messages: newMessages };
-    });
+    setLocalState(newState);
+    await sendMessage({ localState: newState, setLocalState });
   };
 
   const handleForkConversation = useCallback(
@@ -168,13 +184,31 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   // Agent turns that used tools are shown step by step
   const hasToolCalls = Array.isArray(message?.meta?.agent)
     && message.meta.agent.some((m) => m.role === "toolResult" || m.content?.some?.((b) => b.type === "toolCall"));
-  const isContentEmpty = !content.trim();
+  
+  const hasForms = Array.isArray(message?.content) && message.content.some((i) => i?.type === "form");
+  const isContentEmpty = !content.trim() && !hasForms;
   const errorMessage = message?.meta?.error || "Unknown Error";
+
+  // Update the submitted/values of a form content item on this message
+  const updateFormContent = (formIndex, patch) => {
+    setLocalState((prev) => {
+      const messages = [...prev.messages];
+      const msg = { ...messages[message_index] };
+      const contentArr = Array.isArray(msg.content) ? [...msg.content] : [];
+      const item = { ...contentArr[formIndex] };
+      item.form = { ...item.form, ...patch };
+      contentArr[formIndex] = item;
+      msg.content = contentArr;
+      messages[message_index] = msg;
+      return { ...prev, messages, flush: true };
+    });
+  };
+
   return (
     <div
       key={message_index}
       ref={assistantMessage}
-      className={`text-black dark:text-white overflow-hidden
+      className={`text-base-content overflow-hidden
           ${editMode ? "px-1 pt-1" : "px-3 pt-3"}`}
     >
       {isContentEmpty ? (
@@ -185,12 +219,12 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
           {loading && <Typing />}
           {!loading && (
             <div className="flex flex-col items-center justify-start gap-3 py-1">
-              <div className="text-red-500 dark:text-red-400 text-sm font-medium text-center">
+              <div className="text-error text-sm font-medium text-center">
               {errorMessage}
               </div>
               <button
                 onClick={handleRetry}
-                className="cursor-pointer flex items-center gap-2 px-4 py-3 text-sm opacity-100 text-black dark:text-white bg-red-500/40 rounded-full hover:bg-red-400/100 transition-all"
+                className="btn btn-error btn-soft rounded-full text-sm"
                 disabled={loading}
               >
                 <RotateCw className="w-4 h-4" />
@@ -221,7 +255,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     setEditMode(false);
                   }
                 }}
-                className="p-2 outline-none rounded-sm w-full text-sm dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-y-auto"
+                className="p-2 outline-none rounded-sm w-full text-sm text-base-content bg-base-100 resize-y overflow-y-auto"
                 placeholder="Edit response..."
                 style={{
                   minHeight: `${MIN_HEIGHT}px`,
@@ -231,13 +265,13 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               <div className="flex gap-4 justify-end w-full gap-2 pt-1 pb-2 px-2">
                 <button
                   onClick={() => setEditMode(false)}
-                  className="text-sm text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full cursor-pointer"
+                  className="text-sm text-base-content/70 px-2 py-1 rounded-full cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleSave()}
-                  className="text-md text-primary border dark:text-tertiary rounded-full px-3 py-1 cursor-pointer"
+                  className="text-md text-primary border dark:text-accent rounded-full px-3 py-1 cursor-pointer"
                 >
                   Save
                 </button>
@@ -267,7 +301,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     setFeedbackMode(false);
                   }
                 }}
-                className="p-2 outline-none rounded-sm w-full text-sm dark:text-white text-black bg-white dark:bg-bg_secondary_dark resize-y overflow-y-auto"
+                className="p-2 outline-none rounded-sm w-full text-sm text-base-content bg-base-100 resize-y overflow-y-auto"
                 placeholder="Provide feedback..."
                 style={{
                   minHeight: `${MIN_HEIGHT}px`,
@@ -277,13 +311,13 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               <div className="flex gap-4 justify-end w-full gap-2 pt-1 pb-2 px-2">
                 <button
                   onClick={() => setFeedbackMode(false)}
-                  className="text-sm text-gray-500 dark:text-gray-400 px-2 py-1 rounded-full cursor-pointer"
+                  className="text-sm text-base-content/70 px-2 py-1 rounded-full cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleSaveFB()}
-                  className="text-md text-primary border dark:text-tertiary rounded-full px-3 py-1 cursor-pointer"
+                  className="text-md text-primary border dark:text-accent rounded-full px-3 py-1 cursor-pointer"
                 >
                   Save & Send FB
                 </button>
@@ -300,10 +334,27 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   {message.content[0]?.text}
                 </MarkdownRenderer>
               )}
+              {guideFeatureId && (
+                <FeatureGuideCard featureId={guideFeatureId} />
+              )}
+              {guideUseCaseId && (
+                <UseCaseGuideCard useCaseId={guideUseCaseId} />
+              )}
+              {personaPaths.map((path) => (
+                <PersonaCard key={path} path={path} />
+              ))}
+              {metaActions.length > 0 && (
+                <MetaActionCard
+                  actions={metaActions}
+                  localState={localState}
+                  setLocalState={setLocalState}
+                  modelsData={modelsData}
+                />
+              )}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-                  {message.content.slice(1).map((attachment, i) => (
+                  {message.content.slice(1).filter((a) => a?.type !== "form").map((attachment, i) => (
                     <Attachment
                       key={i}
                       localState={localState}
@@ -316,6 +367,19 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   ))}
                 </div>
               )}
+              {/* Editable tool forms */}
+              {Array.isArray(message?.content) &&
+                message.content.map((item, i) =>
+                  item?.type === "form" ? (
+                    <ToolForm
+                      key={i}
+                      form={item.form}
+                      localState={localState}
+                      setLocalState={setLocalState}
+                      onUpdate={(patch) => updateFormContent(i, patch)}
+                    />
+                  ) : null
+                )}
               {/* Bottom panel for message */}
               <div className="group flex justify-between w-full mt-1 gap-2">
                 {/* Buttons on the bottom right */}
@@ -325,9 +389,9 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                   <ForkButton handleForkConversation={handleForkConversation} />
                   <EditButton setEditMode={setEditMode} />
                   {/* Vertical seperator like | */}
-                  <div className="hidden md:flex w-px h-6 bg-gray-200 dark:bg-gray-600 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="hidden md:flex w-px h-6 bg-base-300 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>
                   {/* Render Mode Selector on the bottom left*/}
-                  <div className="hidden md:flex h-6 bg-gray-200 dark:bg-gray-600 dark:bg-gray-700  rounded-xl overflow-hidden opacity-25 group-hover:opacity-100 transition-opacity duration-300 ">
+                  <div className="hidden md:flex h-6 bg-base-300 rounded-xl overflow-hidden opacity-25 group-hover:opacity-100 transition-opacity duration-300 ">
                     {renderModes.map((mode) => (
                       <button
                         key={mode}
@@ -336,8 +400,8 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     ${loading ? "cursor-not-allowed opacity-25" : ""}
                     ${
                       renderMode === mode
-                        ? "bg-tertiary text-white rounded-xl"
-                        : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        ? "bg-accent text-accent-content rounded-xl"
+                        : "bg-base-300 text-base-content/70 hover:bg-base-300"
                     }
                     `}
                         disabled={loading}
@@ -347,7 +411,7 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
                     ))}
                   </div>
                   { /* Show message metadata */
-                  message?.meta && (<div className="w-px h-6 bg-gray-200 dark:bg-gray-600 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>)}
+                  message?.meta && (<div className="w-px h-6 bg-base-300 opacity-25 group-hover:opacity-100 transition-opacity duration-300"></div>)}
                   {
                   message?.meta && (
                     <MetaBox meta={message.meta} /> 

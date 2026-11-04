@@ -5,10 +5,10 @@ export default function HelpArcanaModal({ isOpen, onClose }) {
   const { t } = useTranslation();
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="common.notice">
-      <p className="dark:text-white text-black text-sm">
+      <p className="text-base-content text-sm">
         <Trans i18nKey="help.arcana" />
       </p>
-      <p className="dark:text-white text-black text-sm mt-2">
+      <p className="text-base-content text-sm mt-2">
         {t("alert.arcana_create_collection_prefix") + " "}
         <a
           href="https://chat-ai.academiccloud.de/arcanas/"

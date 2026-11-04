@@ -22,7 +22,7 @@ export default function AnnouncementBar() {
   };
 
   return showAnnouncement ? (
-    <div className="bg-orange-500 text-white select-none">
+    <div className="bg-warning text-warning-content select-none">
       <div className="px-2 sm:px-4 flex items-center justify-between">
         <p
           className="announcement-text text-xs sm:text-sm md:text-base font-medium py-1.5 sm:py-2 leading-tight sm:leading-normal"
@@ -30,10 +30,10 @@ export default function AnnouncementBar() {
         />
         <button
           onClick={handleClose}
-          className="p-0.5 sm:p-1 hover:bg-orange-600 rounded-full transition-colors flex-shrink-0 ml-2 cursor-pointer"
+          className="p-0.5 sm:p-1 hover:bg-warning/90 rounded-full transition-colors flex-shrink-0 ml-2 cursor-pointer"
           aria-label="Close announcement"
         >
-          <Close size={20} className="sm:h-[24px] sm:w-[24px] md:h-[30px] md:w-[30px] cursor-pointer text-tertiary" />
+          <Close size={20} className="sm:h-[24px] sm:w-[24px] md:h-[30px] md:w-[30px] cursor-pointer text-accent" />
         </button>
       </div>
     </div>

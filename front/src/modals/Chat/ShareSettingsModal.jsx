@@ -19,7 +19,7 @@ export default function ShareSettingsModal({
       titleKey="common.notice"
     >
       {/* Intro Text */}
-      <p className="dark:text-white text-black text-justify text-sm">
+      <p className="text-base-content text-justify text-sm">
         <Trans i18nKey="share_settings.description" />
       </p>
 
@@ -27,12 +27,12 @@ export default function ShareSettingsModal({
       {(shareArcana || shareMcpServers) && (
         <div className="mt-2 space-y-2">
           {shareArcana && (
-            <p className="bg-red-600/50 rounded-lg p-2 text-white text-sm">
+            <p className="bg-error/20 rounded-lg p-2 text-error text-sm">
               <Trans i18nKey="share_settings.warn_arcana" />
             </p>
           )}
           {shareMcpServers && (
-            <p className="bg-red-600/50 rounded-lg p-2 text-white text-sm">
+            <p className="bg-error/20 rounded-lg p-2 text-error text-sm">
               <Trans i18nKey="share_settings.warn_mcp" />
             </p>
           )}
@@ -54,14 +54,14 @@ export default function ShareSettingsModal({
                     onChange={() => {
                       setShareArcana(!shareArcana);
                     }}
-                    className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
-                      !showArcanaOption ? "bg-gray-400 cursor-not-allowed" : ""
+                    className={`checkbox checkbox-accent checkbox-sm ${
+                      !showArcanaOption ? "cursor-not-allowed" : ""
                     }`}
                     disabled={!showArcanaOption}
                   />
                   <label
                     htmlFor="exportArcana"
-                    className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                    className="text-sm text-base-content cursor-pointer select-none"
                   >
                     <Trans i18nKey="export_conversation.export_arcana" />
                   </label>
@@ -77,14 +77,14 @@ export default function ShareSettingsModal({
                     onChange={() => {
                       setShareMcpServers(!shareMcpServers);
                     }}
-                    className={`h-5 w-5 rounded-md border-gray-300 text-tertiary focus:ring-tertiary cursor-pointer transition duration-200 ease-in-out ${
-                      !showMcpServersOption ? "bg-gray-400 cursor-not-allowed" : ""
+                    className={`checkbox checkbox-accent checkbox-sm ${
+                      !showMcpServersOption ? "cursor-not-allowed" : ""
                     }`}
                     disabled={!showMcpServersOption}
                   />
                   <label
                     htmlFor="exportMcpServers"
-                    className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none"
+                    className="text-sm text-base-content cursor-pointer select-none"
                   >
                     <Trans i18nKey="export_conversation.export_mcp_servers" />
                   </label>
@@ -95,7 +95,7 @@ export default function ShareSettingsModal({
         </div>
         {/* Share settings button */}
         <button
-          className="text-white p-3 bg-green-600 dark:border-border_dark rounded-2xl justify-center items-center md:w-fit shadow-lg dark:shadow-dark border w-full min-w-[150px] select-none cursor-pointer"
+          className="btn btn-success md:w-fit w-full min-w-[150px] select-none"
           onClick={() => handleShareSettings(shareArcana, shareMcpServers)}
         >
           <Trans i18nKey="common.share" />

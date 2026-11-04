@@ -23,7 +23,7 @@ export default function ModelButton({ localState, setLocalState, modelsData }) {
       <PopoverButton
         title={t("model_selector.change_model")}
         aria-label={t("model_selector.change_model")}
-        className="flex justify-between min-w-[12rem] max-w-[12rem] lg:min-w-[17rem] lg:max-w-[17rem] cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark px-2 py-1 text-sm text-black dark:text-white hover:border-tertiary focus:outline-none transition-colors"
+        className="flex justify-between min-w-[12rem] max-w-[12rem] lg:min-w-[17rem] lg:max-w-[17rem] cursor-pointer items-center gap-1.5 rounded-xl border border-base-300 bg-base-100 px-2 py-1 text-sm text-base-content hover:border-accent focus:outline-none transition-colors"
       >
         <span className="flex-shrink-0 flex items-center">
           <DemandIndicator
@@ -32,7 +32,7 @@ export default function ModelButton({ localState, setLocalState, modelsData }) {
           />
         </span>
         <span className="truncate font-medium">{selectedModel?.name}</span>
-        <ChevronDown size={16} className="flex-shrink-0 text-tertiary" />
+        <ChevronDown size={16} className="flex-shrink-0 text-accent" />
       </PopoverButton>
 
       <Transition
@@ -46,7 +46,7 @@ export default function ModelButton({ localState, setLocalState, modelsData }) {
       >
         <PopoverPanel
           anchor="top"
-          className="z-50 mb-2 flex w-[26rem] max-w-[90vw] flex-col rounded-2xl border border-slate-200 dark:border-gray-600 bg-white dark:bg-bg_secondary_dark shadow-xl dark:shadow-dark"
+          className="z-50 mb-2 flex w-[26rem] max-w-[90vw] flex-col rounded-2xl border border-base-300 bg-base-100 shadow-xl dark:shadow-dark"
         >
           {({ close }) => (
             <ModelSelectorWrapper

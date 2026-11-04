@@ -6,10 +6,12 @@ import { useDispatch, useSelector } from "react-redux";
 
 //Components
 
+import AudioSettingsContainer from "./AudioSettingsContainer";
 import ShareSettingsButton from "./ShareSettingsButton";
 import SystemPromptContainer from "./SystemPromptContainer";
 import TemperatureSlider from "./TemperatureSlider";
 import TopPSlider from "./TopPSlider";
+import MemoryModeContainer from "./MemoryModeContainer";
 
 //Redux
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
@@ -21,8 +23,10 @@ import {DataSafetyText} from "../Header/WarningExternalModel";
 import { useConversationList } from "../../db";
 import { getDefaultSettings } from "../../utils/conversationUtils";
 import ReasoningEffortContainer from "./ReasoningEffortContainer";
+import { getSpeechModule } from "../../utils/speechAudio";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
+const SPEECH_MODULE_ENABLED = Boolean(getSpeechModule());
 
 const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
   const conversations = useConversationList();
@@ -88,12 +92,22 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
 
   return (
     <>
-      <div className="flex relative w-full h-full flex-col items-center text-tertiary min-w-0 min-h-0 max-h-full">
+      <div className="flex relative w-full h-full flex-col items-center text-accent min-w-0 min-h-0 max-h-full" data-guide="conversation-settings-panel">
         {/* Settings Panel */}
         <div className="flex flex-col gap-3 p-3 lg:p-4 h-full w-full min-h-0 overflow-y-auto">
 
           {/* Warning for external models */}
           <DataSafetyText localState={localState} userData={userData} />
+          {SPEECH_MODULE_ENABLED && (
+            <AudioSettingsContainer
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          )}
+          <MemoryModeContainer
+            localState={localState}
+            setLocalState={setLocalState}
+          />
           {/* temperature Slider */}
           <TemperatureSlider
             localState={localState}
@@ -118,7 +132,7 @@ const SettingsPanel = ({ localState, setLocalState, userData, modelsData }) => {
             />
             {/* Reset Default Button */}
             <button
-              className="text-black p-3 bg-bg_reset_default active:bg-bg_reset_default_pressed dark:border-border_dark rounded-lg justify-center items-center md:w-fit shadow-lg dark:shadow-dark border select-none cursor-pointer"
+              className="btn md:w-fit select-none"
               type="reset"
               onClick={resetDefault}
             >

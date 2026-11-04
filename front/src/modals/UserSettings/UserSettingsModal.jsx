@@ -17,7 +17,11 @@ import UserInfoContainer from "./UserInfoContainer";
 import TimeoutSetter from "./TimeoutSetter";
 import UserMemoryContainer from "./UserMemoryContainer";
 import {
+  ConversationSummaryPreference,
+  DocumentConversionPreference,
   MemoryPreference,
+  RenderingPreferences,
+  SubmissionPreference,
   SuggestionPreference,
 } from "./ChatPreferences";
 import { getExportData } from "../../utils/conversationUtils";
@@ -73,19 +77,26 @@ export default function UserSettingsModal({
   userData,
   modelsData,
   localState,
+  initialTab = null,
 }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const { notifySuccess, notifyError } = useToast();
   const userSettings = useSelector(selectUserSettings);
   const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState(initialTab || "profile");
+  const [highlightActiveTab, setHighlightActiveTab] = useState(false);
   const activeTabConfig =
     PROFILE_TABS.find((tab) => tab.id === activeTab) ?? PROFILE_TABS[0];
 
   useEffect(() => {
-    if (isOpen) setActiveTab("profile");
-  }, [isOpen]);
+    if (!isOpen) return undefined;
+    setActiveTab(initialTab || "profile");
+    setHighlightActiveTab(Boolean(initialTab));
+    if (!initialTab) return undefined;
+    const timer = setTimeout(() => setHighlightActiveTab(false), 1800);
+    return () => clearTimeout(timer);
+  }, [isOpen, initialTab]);
 
   const handleExportData = async () => {
     try {
@@ -113,7 +124,7 @@ export default function UserSettingsModal({
       return userData ? (
         <UserInfoContainer userData={userData} />
       ) : (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-base-content/70">
           {t("common.loading")}
         </p>
       );
@@ -125,16 +136,28 @@ export default function UserSettingsModal({
           {modelsData ? (
             <DefaultModelSelector modelsData={modelsData} />
           ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-base-content/70">
               {t("common.loading")}
             </p>
           )}
+          <div className="border-t border-base-300 pt-5" data-guide="submission-preference">
+            <SubmissionPreference />
+          </div>
+          <div className="border-t border-base-300 pt-5">
+            <ConversationSummaryPreference />
+          </div>
+          <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
+            <RenderingPreferences />
+          </div>
+          <div className="border-t border-base-300 pt-5" data-guide="document-conversion-preference">
+            <DocumentConversionPreference />
+          </div>
           {choicesModule && (
-            <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+            <div className="border-t border-base-300 pt-5">
               <SuggestionPreference />
             </div>
           )}
-          <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+          <div className="border-t border-base-300 pt-5">
             <TimeoutSetter />
           </div>
         </div>
@@ -145,7 +168,7 @@ export default function UserSettingsModal({
       return (
         <div className="flex flex-col gap-5">
           <MemoryPreference />
-          <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+          <div className="border-t border-base-300 pt-5">
             <UserMemoryContainer localState={localState} />
           </div>
         </div>
@@ -155,10 +178,10 @@ export default function UserSettingsModal({
     return (
       <div className="flex flex-col gap-5">
         <div>
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+          <h3 className="text-sm font-medium text-base-content">
             {t("user_settings.data.title")}
           </h3>
-          <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs leading-relaxed text-base-content/70">
             {t("user_settings.data.description")}
           </p>
         </div>
@@ -169,7 +192,8 @@ export default function UserSettingsModal({
           <button
             type="button"
             onClick={handleExportData}
-            className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+            className="btn w-full"
+            data-guide="export-data"
           >
             <Download className="h-4 w-4" aria-hidden="true" />
             {t("user_settings.export_data_button")}
@@ -177,7 +201,7 @@ export default function UserSettingsModal({
           <button
             type="button"
             onClick={() => openModal("clearCache")}
-            className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:border-red-900/70 dark:bg-gray-800 dark:text-red-300 dark:hover:bg-red-950/30"
+            className="btn btn-error btn-outline"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
             {t("user_settings.clear_data_button")}
@@ -195,10 +219,10 @@ export default function UserSettingsModal({
       maxWidth="max-w-5xl"
       contentClassName="min-h-0 p-0"
     >
-      <div className="flex h-[min(72dvh,650px)] min-h-0 flex-col overflow-hidden border-t border-gray-200 dark:border-gray-700 md:flex-row">
+      <div className="flex h-[min(72dvh,650px)] min-h-0 flex-col overflow-hidden border-t border-base-300 md:flex-row">
         <nav
           aria-label={t("user_settings.tabs.navigation_label")}
-          className="flex shrink-0 gap-1 overflow-x-auto border-b border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900 md:w-56 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 md:p-3"
+          className="flex shrink-0 gap-1 overflow-x-auto border-b border-base-300 bg-base-200 p-2 md:w-56 md:flex-col md:overflow-y-auto md:border-r md:border-b-0 md:p-3"
         >
           {PROFILE_TABS.map((tab) => {
             const Icon = tab.icon;
@@ -209,10 +233,15 @@ export default function UserSettingsModal({
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 aria-pressed={selected}
-                className={`flex min-h-10 min-w-max items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50 md:w-full ${
+                data-guide={`settings-tab-${tab.id}`}
+                className={`flex min-h-10 min-w-max items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 md:w-full ${
                   selected
-                    ? "bg-white text-tertiary shadow-sm dark:bg-gray-800 dark:text-white"
-                    : "text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800/70 dark:hover:text-white"
+                    ? "bg-base-100 text-accent shadow-sm"
+                    : "text-base-content/70 hover:bg-base-100/70 hover:text-base-content"
+                } ${
+                  selected && highlightActiveTab
+                    ? "ring-2 ring-accent ring-offset-2 ring-offset-base-200"
+                    : ""
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -225,14 +254,14 @@ export default function UserSettingsModal({
         <section
           key={activeTab}
           aria-label={t(activeTabConfig.titleKey)}
-          className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-white dark:bg-bg_dark"
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-base-100"
         >
           <div className="mx-auto w-full max-w-3xl p-4 sm:p-6">
-            <header className="border-b border-gray-200 pb-4 dark:border-gray-700">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+            <header className="border-b border-base-300 pb-4">
+              <h2 className="text-base font-semibold text-base-content">
                 {t(activeTabConfig.titleKey)}
               </h2>
-              <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs leading-relaxed text-base-content/70">
                 {t(activeTabConfig.descriptionKey)}
               </p>
             </header>

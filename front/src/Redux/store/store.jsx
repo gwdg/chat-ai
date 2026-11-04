@@ -1,7 +1,7 @@
  
 import { configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore, createMigrate } from "redux-persist";
-import storage from "redux-persist/lib/storage";
+import storage from "redux-persist/es/storage";
 import rootReducer from "../reducers/index";
 import {
   createStateSyncMiddleware,
@@ -18,7 +18,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 3,
+  version: 7,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -31,6 +31,7 @@ const getDefaultState = () => {
       show_sidebar: true,
       show_tour: true,
       warn_clear_history: true,
+      warn_close_chat: true,
       warn_clear_memory: true,
       warn_clear_settings: true,
       warn_regenerate: true,
@@ -39,6 +40,11 @@ const getDefaultState = () => {
       count_announcement: 0,
       show_usage_in_sidebar: true,
       collapsed_topics: [],
+      conversation_sort: "created_desc",
+      conversation_grouping: "topic",
+      completed_tutorials: [],
+      completed_use_cases: [],
+      suppressed_tutorials: [],
     },
     // Conditionally preserve memories
     user_settings: {
@@ -46,6 +52,15 @@ const getDefaultState = () => {
       timeout: 300000,
       memory_mode: 0,
       suggest_user_prompts: false,
+      html_render_mode: "off",
+      html_load_external: false,
+      html_sanitization: "strict",
+      set_title_once: true,
+      render_typst: false,
+      render_latex: false,
+      document_conversion_mode: "choice",
+      conversation_summaries: true,
+      send_with_enter: null,
     },
   };
 };
@@ -92,6 +107,7 @@ const stateSyncConfig = {
     "RESET_ALL",
     "MIGRATE",
     "SET_COUNT",
+    "user_settings/importUserSettings",
   ],
   // Use localStorage for better compatibility
   broadcastChannelOption: {

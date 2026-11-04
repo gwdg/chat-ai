@@ -17,6 +17,7 @@ import NewChatButton from "./Buttons/NewChatButton";
 import SummarizeChatButton from "./Buttons/SummarizeChatButton";
 import ExportChatButton from "./Buttons/ExportChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
+import TutorialStatus from "../Others/TutorialStatus";
 
 export default function SidebarRail({ 
   localState,
@@ -46,7 +47,7 @@ export default function SidebarRail({
 
   const { isTouch } = useWindowSize();
   return (
-    <div className="bg-white dark:bg-bg_secondary_dark rounded-xl shadow-md
+    <div className="bg-base-100 rounded-xl shadow-md
           overflow-hidden h-full flex flex-col items-center justify-between gap-2"
     >
         {/* Top - Logo and new chat */}
@@ -64,16 +65,18 @@ export default function SidebarRail({
             <ShortcutTooltip label={t("sidebar.expand") }>
               <button
                 onClick={() => onOpen?.()}
-                className="absolute h-10 w-10 inset-0 grid place-items-center rounded-xl transition duration-200 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
+                className="absolute h-10 w-10 inset-0 grid place-items-center rounded-xl transition duration-200 opacity-0 group-hover:opacity-100 hover:bg-info/10 cursor-pointer"
                 aria-label={t("sidebar.expand")}
               >
-                <ChevronRight size={40} className="text-tertiary" />
+                <ChevronRight size={40} className="text-accent" />
               </button>
             </ShortcutTooltip>
           </div>
 
           {/* New chat button */}
           <NewChatButton variant="rail" topicId={localState?.folderId} onNewConversation={handleNewConversation} />
+
+          <TutorialStatus compact onExpand={onOpen} />
 
           {/* Import persona from Github button */}
           <ImportPersonaButton variant="rail" topicId={localState?.folderId} />
@@ -83,7 +86,7 @@ export default function SidebarRail({
         </div>
 
         {/* Center - Expand sidebar button */}
-        <div id="placeholder" className="group flex-1 w-full hover:bg-gray-100/50 dark:hover:bg-dark_hover cursor-pointer grid place-items-center"
+        <div id="placeholder" className="group flex-1 w-full hover:bg-base-200 cursor-pointer grid place-items-center"
           onClick={() => onOpen?.()}
         >
           <ShortcutTooltip label={t("sidebar.expand") }>
@@ -91,11 +94,11 @@ export default function SidebarRail({
               className={`
                 h-10 w-10 inset-0 grid place-items-center rounded-xl
                 transition duration-200 opacity-0 
-                group-hover:opacity-100 hover:bg-gray-200 dark:hover:bg-dark_hover cursor-pointer
+ group-hover:opacity-100 hover:bg-base-300 cursor-pointer
                 ${true || isTouch ? "opacity-100" : "opacity-0"}`}
               aria-label={t("sidebar.expand")}
             >
-              <ChevronRight size={20} className="text-tertiary" />
+              <ChevronRight size={20} className="text-accent" />
             </button>
           </ShortcutTooltip>
         </div>
@@ -123,7 +126,7 @@ export default function SidebarRail({
             setLocalState={setLocalState}
             variant={"rail"}
           />
-          <HorizontalLineSolid size={30} className="text-gray-200 dark:text-gray-600" />
+          <HorizontalLineSolid size={30} className="text-base-content/30" />
           {/* User card */}
           <div
               role="button"
@@ -136,7 +139,8 @@ export default function SidebarRail({
                 }
               }}
               aria-label={t("user_settings.title")}
-              className="flex items-center px-1 pt-1 pb-4 rounded-2xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50"
+              data-guide="user-settings"
+              className="flex items-center px-1 pt-1 pb-4 rounded-2xl cursor-pointer hover:bg-base-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
               style={{ WebkitTapHighlightColor: "transparent" }}
             >
             <UserContainer

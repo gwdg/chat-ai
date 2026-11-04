@@ -12,7 +12,9 @@ if [ "$MODE" == "dev" ]; then
   npm run dev
 elif [ "$MODE" == "prod" ]; then
   npm run prod
+elif [ "$MODE" == "build" ]; then
+  npm run build
 else
-  echo "Invalid mode in front.json. Must be 'dev' or 'prod'."
+  echo "Invalid mode in front.json. Must be 'dev' or 'prod' or 'build'."
   exit 1
 fi

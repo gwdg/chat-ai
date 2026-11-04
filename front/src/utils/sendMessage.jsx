@@ -25,10 +25,19 @@ export async function processContentItems({
   const output = [];
   for (const item of items) {
     if (item.type === 'text') {
-      if (item.text && items.length === 1) {
-        return item.text
+      const textValue = typeof item.text === "string" ? item.text : "";
+      if (!textValue.trim() && items.length > 1) {
+        continue;
       }
-      output.push(item)
+      if (textValue && items.length === 1) {
+        return textValue
+      }
+      output.push({ ...item, text: textValue })
+      continue;
+    }
+
+    if (item.type === 'form') {
+      // Forms are UI-only; never forward to the model
       continue;
     }
 
@@ -154,22 +163,55 @@ function receiveFile(base64Data, mimeType, filename = null, conversationId = nul
 }
 
 // Build OpenAI standard conversation from localState
-export async function buildConversationForAPI(localState) {
+export async function buildConversationForAPI(localState, { forceAudioInput = false } = {}) {
   // Determine supported file types from model
   const model = localState.settings.model;
-  const ignoreAudio = !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));
+  const ignoreAudio = forceAudioInput
+    ? false
+    : !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));
   const ignoreVideo = !(localState.settings.enable_tools || (model?.input?.includes("video") || false));
   const ignoreImages = !(localState.settings.enable_tools || (model?.input?.includes("image") || false));
   // Convert to API standard, ignore unsupported files and system message
+  const lastUserIndex = localState.messages.reduce(
+    (lastIndex, message, index) => (message.role === "user" ? index : lastIndex),
+    -1
+  );
   const processedMessages = await Promise.all(
-    localState.messages.map(async (message) => {
+    localState.messages.map(async (message, index) => {
       if (Array.isArray(message.content)) {
+        const itemsForApi = [...message.content];
+        const hasVisibleText = itemsForApi.some(
+          (item) => item?.type === "text" && typeof item?.text === "string" && item.text.trim()
+        );
+        let addedHiddenText = false;
+        if (!hasVisibleText) {
+          const hiddenText =
+            message.role === "user"
+              ? message.meta?.speechTranscript
+              : message.meta?.speechAssistantText;
+          if (typeof hiddenText === "string" && hiddenText.trim()) {
+            itemsForApi.unshift({ type: "text", text: hiddenText.trim() });
+            addedHiddenText = true;
+          }
+        }
+        if (
+          !hasVisibleText &&
+          !addedHiddenText &&
+          forceAudioInput &&
+          message.role === "user" &&
+          index !== lastUserIndex
+        ) {
+          itemsForApi.unshift({ type: "text", text: "[voice message]" });
+        }
+        const ignoreAudioForMessage =
+          ignoreAudio ||
+          (forceAudioInput && (message.role !== "user" || index !== lastUserIndex));
         return {
           role: message.role,
           content: await processContentItems({
-            items: message.content,
+            items: itemsForApi,
             ignoreImages,
-            ignoreAudio,
+            ignoreAudio: ignoreAudioForMessage,
             ignoreVideo,
         })
         };
@@ -185,6 +227,70 @@ export async function buildConversationForAPI(localState) {
   };
 }
 
+// Map a tool event name to a human-readable text fragment (appended to the
+// "thinking" block) or a form object (rendered as an editable form).
+// Returns { text } or { form }.
+function handleToolEvent(name, arg) {
+  const text = (s) => ({ text: s });
+  switch (name) {
+    case "tools.event": {
+      if (arg.event === "error") return text("Could not use tools: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "mcp.event": {
+      if (arg.event === "call") {
+        return text("Calling MCP server: " + String(arg?.server)
+          + "\n\nfunction: `" + String(arg?.function)
+          + "` with args: `" + String(arg?.arguments) + "`\n\n");
+      }
+      if (arg.event === "result") return text("MCP response received of type `" + String(arg?.type) + "`\n\n");
+      return {};
+    }
+    case "rscript.event": {
+      if (arg.event === "preparing_script") return text("Running R Script:\n```r\n" + String(arg?.script) + "\n```\n\n");
+      if (arg.event === "error") return text("Cannot use Rscript: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "websearch.event": {
+      if (arg.event === "begin") return text("Searching for \"" + arg.query + "\" on ");
+      if (arg.event === "config") return text(String(arg?.["search-engine"]) + "\n\n");
+      if (arg.event === "websearch_done") return text("Web search completed. Used " + String(arg.selected) + " relevant sources.\n\n");
+      if (arg.event === "websearch_page_cache" || arg.event === "fetch") return text("Reading source: " + String(arg?.url) + "\n\n");
+      if (arg.event === "error") return text("Websearch Error: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "arcana.event": {
+      if (arg.event === "accessing") return text(`Reading arcana "${arg.arcana}" \n\n`);
+      return {};
+    }
+    case "image.event": {
+      if (arg.event === "image_creation_begin") return text(`Generating image: "${arg.query}" \n\n`);
+      if (arg.event === "image_modify_begin") return text("Modifying image: " + String(arg?.query) + "\n\n");
+      if (arg.event === "error") return text("Image generation failed: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "audio.event": {
+      if (arg.event === "audio_creation_begin") return text(`Generating audio: "${arg.query}" \n\n`);
+      if (arg.event === "error") return text("Audio generation failed: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    case "audio_transcription.event": {
+      if (arg.event === "begin") return text(`Transcribing audio: `);
+      if (arg.event === "done") return text(arg.transcription + "\n\n");
+      if (arg.event === "error") return text("Audio transcription failed: " + String(arg?.msg) + "\n\n");
+      return {};
+    }
+    default: {
+      // Any tool can return an editable form: event name "<tool>.form"
+      if (typeof name === "string" && name.endsWith(".form") && Array.isArray(arg?.fields)) {
+        const { tool_id, title, description, fields } = arg;
+        return { form: { tool_id, title, description, fields } };
+      }
+      return {};
+    }
+  }
+}
+
 const sendMessage = async ({
   localState,
   setLocalState,
@@ -196,8 +302,15 @@ const sendMessage = async ({
   timeout,
   memoryMode = 0,
   suggestUserPrompts = false,
+  formSubmission = null,
+  setTitleOnce = true,
+  speechMode = false,
 }) => {
   const conversationId = localState.id
+  // Index of the assistant placeholder this turn will stream into. Using a
+  // fixed index keeps updates correct when a barge-in starts another turn
+  // before this one has fully unwound.
+  const assistantIndex = localState.messages.length
 
   try {
     const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
@@ -211,7 +324,9 @@ const sendMessage = async ({
     const isArcanaSupported = isToolsEnabled && !!localState.settings.tools.arcana   
   
     let finalConversationForState; // For local state updates
-    let conversationForAPI = await buildConversationForAPI(localState);
+    let conversationForAPI = await buildConversationForAPI(localState, {
+      forceAudioInput: speechMode,
+    });
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content[0].text
@@ -221,23 +336,32 @@ const sendMessage = async ({
       const memorySection = `\n\n--- Begin User Memory ---\n${memoryExplanation}\n\n${memoryContext}\n--- End User Memory ---`;
       systemPromptAPI = systemPromptAPI + memorySection;
     }
+    if (speechMode) {
+      systemPromptAPI = `${systemPromptAPI}\n\nYou are in a live voice conversation. Reply naturally and concisely in plain spoken language. Avoid markdown, lists, code blocks, emojis, and long explanations unless the user explicitly asks for them.`;
+    }
     
     // Handle tools
-    if (isToolsEnabled) {
+    if (isToolsEnabled || speechMode) {
       // Inject the current date and time to the system prompt in human-readable format
       const currentDate = new Date().toLocaleString();
       systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
       // Convert tools dictionary to OpenAI-compatible tools list
-      conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
-                .filter(([_, enabled]) => enabled)
-                .map(([toolKey]) => ({ type: toolKey }));
-      if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
-        conversationForAPI.settings.arcana.limit = 3;
+      if (isToolsEnabled) {
+        conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
+                  .filter(([_, enabled]) => enabled)
+                  .map(([toolKey]) => ({ type: toolKey }));
+        if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
+          conversationForAPI.settings.arcana.limit = 3;
+        }
+        if (!localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
+        if (!localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
+      } else {
+        conversationForAPI.settings.tools = [];
+        conversationForAPI.settings.enable_tools = true;
       }
-      if (!localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
-      if (!localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
-      // Always inject audio_transcription tool for now
-      conversationForAPI.settings.tools.push({ type: "audio_transcription" });
+      if (!conversationForAPI.settings.tools.some((tool) => tool.type === "audio_transcription")) {
+        conversationForAPI.settings.tools.push({ type: "audio_transcription" });
+      }
     } else {
       delete conversationForAPI.settings.enable_tools;
       delete conversationForAPI.settings.tools;
@@ -252,6 +376,29 @@ const sendMessage = async ({
         || message.role === "assistant"
       ),
     };
+
+    // If a form was submitted, append the tool call (MCP/OpenAI function-calling
+    // shape) the gateway executes with the user's chosen values.
+    if (formSubmission?.tool_id) {
+      const toolCallId = `call_${Date.now()}`;
+      conversationForAPI.messages.push(
+        {
+          role: "user",
+          content: "Please run the tool with my chosen settings.",
+          tool_calls: [
+            {
+              id: toolCallId,
+              type: "function",
+              function: {
+                name: formSubmission.tool_id,
+                arguments: JSON.stringify(formSubmission.values || {}),
+              },
+            },
+          ],
+        },
+        { role: "assistant", content: null }
+      );
+    }
 
     // Set system prompt in conversationForAPI
     if (systemPromptAPI) {
@@ -309,10 +456,12 @@ const sendMessage = async ({
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
       let currentContent = [{"type": "text", "text": ""}];
+      let collectedForms = [];
       let usage = null;
       let process_block = "";
       let inThinking = false;
       let message_text = "";
+      let capturedSpeechTranscript = "";
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
         const delta = chunk?.choices[0]?.delta;
         if (chunk?.usage) usage = chunk.usage;
@@ -323,106 +472,40 @@ const sendMessage = async ({
         // Check if tool calls exist
         if (Array.isArray(delta?.tool_calls) && delta.tool_calls.length > 0) {
           try {
-            if (delta.tool_calls[0]?.function?.name === "tools.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "error") {
-                process_block += "Could not use tools: " + String(arg?.msg) + "\n\n";
-              } 
+            const name = delta.tool_calls[0]?.function?.name;
+            let arg = delta.tool_calls[0]?.function?.arguments;
+            if (typeof arg === "string") arg = JSON.parse(arg);
+            if (
+              speechMode &&
+              name === "audio_transcription.event" &&
+              arg?.event === "done" &&
+              typeof arg?.transcription === "string" &&
+              arg.transcription.trim()
+            ) {
+              const transcript = arg.transcription.trim();
+              capturedSpeechTranscript = transcript;
+              setLocalState((prev) => {
+                if (prev.id !== conversationId) return prev;
+                const userIndex = assistantIndex - 1;
+                const userMessage = prev.messages[userIndex];
+                if (!userMessage || userMessage.role !== "user") return prev;
+                const messages = [...prev.messages];
+                messages[userIndex] = {
+                  ...userMessage,
+                  meta: { ...(userMessage.meta || {}), speechTranscript: transcript },
+                };
+                return { ...prev, messages, flush: true };
+              });
             }
-            if (delta.tool_calls[0]?.function?.name === "mcp.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "call") {
-                process_block += "Calling MCP server: " + String(arg?.server) 
-                + "\n\nfunction: `" 
-                + String(arg?.function) 
-                + "` with args: `"
-                + String(arg?.arguments)
-                + "`\n\n";
-              } else if (arg.event === "result") {
-                process_block += "MCP response received of type `" + String(arg?.type) + "`\n\n";
-              }
+            const handled =
+              speechMode && name === "audio_transcription.event"
+                ? {}
+                : handleToolEvent(name, arg);
+            if (handled?.text) {
+              process_block += handled.text;
             }
-            if (delta.tool_calls[0]?.function?.name === "rscript.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "preparing_script") {
-                process_block += "Running R Script:\n```r\n" + String(arg?.script) + "\n```\n\n";
-              } 
-              if (arg.event === "error") {
-                process_block += "Cannot use Rscript: " + String(arg?.msg) + "\n\n";
-              } 
-            }
-            // Handle web search events
-            if (delta.tool_calls[0]?.function?.name === "websearch.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "begin") {
-                process_block += "Searching for \"" + arg.query + "\" on ";
-              } else if (arg.event === "config") {
-                process_block += String(arg?.["search-engine"]) + "\n\n";
-              } else if (arg.event === "websearch_done") {
-                process_block += "Web search completed. Used " + String(arg.selected) + " relevant sources.\n\n";
-              } else if (arg.event === "websearch_page_cache" || arg.event === "fetch") {
-                process_block += "Reading source: " + String(arg?.url) + "\n\n";
-              } else if (arg.event === "error") {
-                process_block += "Websearch Error: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "arcana.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "accessing") {
-                process_block += `Reading arcana "${arg.arcana}" \n\n`;
-              } else if (arg.event === "done") {
-                process_block += "";// "Arcana retrieval completed.";
-              } else {
-                process_block += "";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "image.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "image_creation_begin") {
-                process_block += `Generating image: "${arg.query}" \n\n`;
-              } else if (arg.event === "image_modify_begin") {
-                process_block += "Modifying image: " + String(arg?.query) + "\n\n";
-              } else if (arg.event === "done") {
-                process_block += "";// "Image generation completed.";
-              } if (arg.event === "error") {
-                process_block += "Image generation failed: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "audio.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "audio_creation_begin") {
-                process_block += `Generating audio: "${arg.query}" \n\n`;
-              } else if (arg.event === "done") {
-                process_block += "";// "Audio generation completed.";
-              } if (arg.event === "error") {
-                process_block += "Audio generation failed: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
-            }
-            if (delta.tool_calls[0]?.function?.name === "audio_transcription.event") {
-              let arg = delta.tool_calls[0].function.arguments;
-              if (typeof arg === "string") arg = JSON.parse(arg);
-              if (arg.event === "begin") {
-                process_block += `Transcribing audio: `;
-              } else if (arg.event === "done") {
-                process_block += arg.transcription + "\n\n";// "Audio transcription completed.";
-              } if (arg.event === "error") {
-                process_block += "Audio transcription failed: " + String(arg?.msg) + "\n\n";
-              } else {
-                process_block += "";
-              }
+            if (handled?.form) {
+              collectedForms.push({ type: "form", form: handled.form });
             }
           } catch (err) {
             console.warn("Didn't understand: ", delta)
@@ -476,7 +559,8 @@ const sendMessage = async ({
               return prev;
             }
             const messages = [...prev.messages];
-            messages[messages.length - 2] = {
+            if (!messages[assistantIndex]) return prev;
+            messages[assistantIndex] = {
               role: "assistant",
               content: currentContent,
               loading: true,
@@ -507,7 +591,8 @@ const sendMessage = async ({
             return prev;
           }
           const messages = [...prev.messages];
-          messages[messages.length - 2] = {
+          if (!messages[assistantIndex]) return prev;
+          messages[assistantIndex] = {
             role: "assistant",
             content: currentContent,
             loading: true,
@@ -520,9 +605,13 @@ const sendMessage = async ({
         inThinking = false;
         currentContent[0].text = message_text
       }
+      if (collectedForms.length > 0) {
+        currentContent.push(...collectedForms);
+      }
       return {
         answer: currentContent,
-        usage
+        usage,
+        speechTranscript: capturedSpeechTranscript,
       }
     }
 
@@ -563,6 +652,7 @@ const sendMessage = async ({
     let responseContent = "";
     let usage = null;
     let chatChunk = null;
+    let speechTranscriptForTurn = "";
     let meta = undefined;
     let choicesProposed = [];
     try {
@@ -572,6 +662,7 @@ const sendMessage = async ({
         : await getChatChunk(conversationId);
       responseContent = chatChunk?.answer || ""
       usage = chatChunk?.usage;
+      speechTranscriptForTurn = chatChunk?.speechTranscript || "";
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",
         usage,
@@ -625,7 +716,8 @@ const sendMessage = async ({
         }
         const choices = choicesProposed;
         const messages = [...prev.messages];
-        messages[messages.length - 2] = {
+        if (!messages[assistantIndex]) return prev;
+        messages[assistantIndex] = {
           role: "assistant",
           content: responseContent,
           loading: false,
@@ -647,7 +739,12 @@ const sendMessage = async ({
     let newUserMessage = undefined;
     try {
       newUserMessage = conversationForAPI.messages.at(-1).content;
-      if (Array.isArray(newUserMessage)) newUserMessage = newUserMessage[0].text;
+      if (Array.isArray(newUserMessage)) {
+        newUserMessage = newUserMessage.find((item) => item?.type === "text")?.text;
+      }
+      if (!newUserMessage && speechMode) {
+        newUserMessage = speechTranscriptForTurn;
+      }
     } catch (error) {
       console.log("Warning: couldn't find new user message. Memory will not be updated");
     }
@@ -660,7 +757,8 @@ const sendMessage = async ({
         { role: "assistant", content: responseContent },
         { role: "user", content: "" }
       ];
-      if (conversationForAPI.messages.length <= 4) {
+      // Only generate the title on the first prompt when setTitleOnce is enabled
+      if (!setTitleOnce || conversationForAPI.messages.length <= 4) {
         const title = await generateTitle(conversationForAPI.messages);
         console.log("Generated title is ", title)
         setLocalState(prev => {

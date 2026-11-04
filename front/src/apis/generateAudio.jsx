@@ -65,11 +65,17 @@ export default async function generateAudio(
     const base64 = btoa(
       String.fromCharCode(...new Uint8Array(arrayBuffer))
     );
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    const format = contentType.includes("wav")
+      ? "wav"
+      : contentType.includes("ogg")
+      ? "ogg"
+      : "mp3";
 
     audioPayload = {
       data: base64,
-      format: "mp3",
-      filename: `speech.mp3`,
+      format,
+      filename: `speech.${format}`,
     };
   } catch (error) {
     if (error?.name === "AbortError") {

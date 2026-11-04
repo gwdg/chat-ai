@@ -7,6 +7,7 @@ const interfaceSettingsSlice = createSlice({
     show_sidebar: true,
     show_settings: false,
     warn_clear_history: true,
+    warn_close_chat: true,
     warn_share_settings: true,
     warn_regenerate: true,
     warn_fork: true,
@@ -16,6 +17,11 @@ const interfaceSettingsSlice = createSlice({
     agree_web_search: false,
     show_usage_in_sidebar: true,
     collapsed_topics: [],
+    conversation_sort: "created_desc",
+    conversation_grouping: "topic",
+    completed_tutorials: [],
+    completed_use_cases: [],
+    suppressed_tutorials: [],
   },
   reducers: {
     toggleTheme: (state) => {
@@ -72,6 +78,51 @@ const interfaceSettingsSlice = createSlice({
         state.collapsed_topics.push(action.payload);
       }
     },
+    collapseTopics: (state, action) => {
+      const ids = Array.isArray(action.payload)
+        ? action.payload
+        : [action.payload];
+      for (const id of ids) {
+        if (id && !state.collapsed_topics.includes(id)) {
+          state.collapsed_topics.push(id);
+        }
+      }
+    },
+    setConversationSort: (state, action) => {
+      state.conversation_sort = action.payload;
+    },
+    setConversationGrouping: (state, action) => {
+      if (["topic", "date", "created"].includes(action.payload)) {
+        state.conversation_grouping = action.payload;
+      }
+    },
+    markTutorialCompleted: (state, action) => {
+      if (!action.payload) return;
+      if (!Array.isArray(state.completed_tutorials)) {
+        state.completed_tutorials = [];
+      }
+      if (!state.completed_tutorials.includes(action.payload)) {
+        state.completed_tutorials.push(action.payload);
+      }
+    },
+    markUseCaseCompleted: (state, action) => {
+      if (!action.payload) return;
+      if (!Array.isArray(state.completed_use_cases)) {
+        state.completed_use_cases = [];
+      }
+      if (!state.completed_use_cases.includes(action.payload)) {
+        state.completed_use_cases.push(action.payload);
+      }
+    },
+    suppressTutorial: (state, action) => {
+      if (!action.payload) return;
+      if (!Array.isArray(state.suppressed_tutorials)) {
+        state.suppressed_tutorials = [];
+      }
+      if (!state.suppressed_tutorials.includes(action.payload)) {
+        state.suppressed_tutorials.push(action.payload);
+      }
+    },
   },
 });
 
@@ -88,10 +139,24 @@ export const selectShowUsageInSidebar = (state) =>
 export const selectWarning = (key) => (state) =>
   state.interface_settings[key] ?? true;
 export const selectCollapsedTopics = (state) => state.interface_settings.collapsed_topics;
+export const selectConversationSort = (state) =>
+  state.interface_settings.conversation_sort ?? "created_desc";
+export const selectConversationGrouping = (state) => {
+  const grouping = state.interface_settings.conversation_grouping;
+  return ["date", "created"].includes(grouping) ? grouping : "topic";
+};
+export const selectCompletedTutorials = (state) =>
+  state.interface_settings.completed_tutorials ?? [];
+export const selectCompletedUseCases = (state) =>
+  state.interface_settings.completed_use_cases ?? [];
+export const selectSuppressedTutorials = (state) =>
+  state.interface_settings.suppressed_tutorials ?? [];
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
-  setShowUsageInSidebar, setWarning, toggleTopic,
+  setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics,
+  setConversationSort, setConversationGrouping, markTutorialCompleted, markUseCaseCompleted,
+  suppressTutorial,
 } = interfaceSettingsSlice.actions;
 export default interfaceSettingsSlice.reducer;

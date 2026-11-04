@@ -3,6 +3,7 @@ import { Trans } from "react-i18next";
 import BaseModal from "../../../modals/BaseModal";
 import { useImportConversation } from "../../../hooks/useImportConversation";
 import i18n from "../../../i18n";
+import { PERSONA_REPO } from "../../../utils/personaCatalog";
 import { useToast } from "../../../hooks/useToast";
 import {
   Folder,
@@ -16,9 +17,9 @@ export default function ImportPersonaModal({
   onClose,
   onFileSelect,
   onError,
-  repoOwner = "gwdg",
-  repoName = "chat-ai-personas",
-  branch = "main",
+  repoOwner = PERSONA_REPO.owner,
+  repoName = PERSONA_REPO.name,
+  branch = PERSONA_REPO.branch,
   topicId = null,
 }) {
   const [selectedPath, setSelectedPath] = useState(null);
@@ -228,7 +229,18 @@ export default function ImportPersonaModal({
       const cleaned = rawText.replace(/,(\s*[}$])/g, "$1");
       const parsed = JSON.parse(cleaned);
 
-      await importConversation(parsed, false, topicId);
+      await importConversation(parsed, false, topicId, {
+        persona: {
+          title: parsed?.title || file.title,
+          description:
+            parsed?.subtitle || parsed?.description || file.subtitle || "",
+          category:
+            typeof file.path === "string"
+              ? file.path.split("/").slice(0, -1).join("/")
+              : "",
+          path: file.path,
+        },
+      });
       onClose();
     } catch (err) {
       console.error("Import error:", err);
@@ -257,7 +269,12 @@ export default function ImportPersonaModal({
         );
       }
       try {
-        await importConversation(parsed);
+        await importConversation(parsed, false, topicId, {
+          persona: {
+            title: parsed?.title,
+            description: parsed?.subtitle || parsed?.description || "",
+          },
+        });
       } catch (err) {
         console.error("Import error:", err);
         throw new Error(
@@ -291,10 +308,10 @@ export default function ImportPersonaModal({
     <div
       key={file.sha}
       onClick={() => handleFileImport(file)}
-      className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded transition-colors group"
+      className="flex items-center gap-2 px-3 py-1.5 hover:bg-base-200 cursor-pointer rounded transition-colors group"
     >
-      <Bot className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-      <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">
+      <Bot className="w-4 h-4 text-success flex-shrink-0" />
+      <span className="text-xs text-base-content truncate flex-1">
         {file.title || file.name.replace(".json", "")}
       </span>
     </div>
@@ -304,15 +321,15 @@ export default function ImportPersonaModal({
     if (loadingFolder) {
       return (
         <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-info"></div>
         </div>
       );
     }
 
     if (!selectedPath) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-          <Folder className="w-16 h-16 mb-4 text-gray-300 dark:text-gray-600" />
+        <div className="flex flex-col items-center justify-center h-full text-base-content/70">
+          <Folder className="w-16 h-16 mb-4 text-base-content/30" />
           <p className="text-sm font-medium">
             <Trans i18nKey="persona.selectFolder" />
           </p>
@@ -325,8 +342,8 @@ export default function ImportPersonaModal({
 
     if (currentFolderContents.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
-          <FolderOpen className="w-16 h-16 mb-4 text-gray-300 dark:text-gray-600" />
+        <div className="flex flex-col items-center justify-center h-full text-base-content/70">
+          <FolderOpen className="w-16 h-16 mb-4 text-base-content/30" />
           <p className="text-sm">
             <Trans i18nKey="persona.emptyFolder" />
           </p>
@@ -335,18 +352,21 @@ export default function ImportPersonaModal({
     }
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4">
+      <div
+        data-guide="persona-files"
+        className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4"
+      >
         {currentFolderContents.map((file) => (
           <div
             key={file.sha}
             onClick={() => handleFileImport(file)}
-            className="flex flex-col items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-all hover:shadow-md group"
+            className="flex flex-col items-center p-3 hover:bg-base-200 rounded-lg cursor-pointer transition-all hover:shadow-md group"
           >
-            <Bot className="w-10 h-10 mb-2 text-blue-500 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-            <p className="text-xs font-medium text-gray-900 dark:text-white text-center line-clamp-2">
+            <Bot className="w-10 h-10 mb-2 text-info group-hover:scale-110 transition-transform" />
+            <p className="text-xs font-medium text-base-content text-center line-clamp-2">
               {file.title}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center line-clamp-1">
+            <p className="text-xs text-base-content/70 mt-1 text-center line-clamp-1">
               {file.subtitle}
             </p>
           </div>
@@ -363,19 +383,19 @@ export default function ImportPersonaModal({
       maxWidth="max-w-4xl"
     >
       {/* Header */}
-      <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b dark:border-gray-700">
+      <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-base-300">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="sm:hidden p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+            className="sm:hidden p-1 hover:bg-base-200 rounded transition-colors"
           >
-            <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <Menu className="w-5 h-5 text-base-content/70" />
           </button>
           <div>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-base sm:text-lg font-semibold text-base-content">
               <Trans i18nKey="persona.personaLibrary" />
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-base-content/70">
               <Trans i18nKey="persona.browsePersonas" />
             </p>
           </div>
@@ -391,20 +411,20 @@ export default function ImportPersonaModal({
           sm:translate-x-0 transition-transform duration-200 ease-in-out
           absolute sm:relative z-50 sm:z-auto
           w-56 sm:w-60 h-full
-          border-r dark:border-gray-700 
-          bg-gray-50 dark:bg-gray-900 
+          border-r border-base-300 
+ bg-base-200 
           overflow-y-auto
         `}
         >
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-info"></div>
             </div>
           ) : (
             <div className="p-3">
               {/* Folders Section */}
-              <div className="mb-4">
-                <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
+              <div className="mb-4" data-guide="persona-categories">
+                <h3 className="text-xs font-semibold text-base-content/70 uppercase tracking-wider mb-2 px-1">
                   <Trans i18nKey="persona.categories" />
                 </h3>
                 {rootContents.folders.map((folder) => (
@@ -413,14 +433,14 @@ export default function ImportPersonaModal({
                     onClick={() => handleFolderClick(folder)}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded cursor-pointer transition-colors ${
                       selectedPath === folder.path
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                        : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                        ? "bg-info/10 text-info"
+                        : "hover:bg-base-200 text-base-content"
                     }`}
                   >
                     {selectedPath === folder.path ? (
-                      <FolderOpen className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                      <FolderOpen className="w-4 h-4 text-info flex-shrink-0" />
                     ) : (
-                      <Folder className="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" />
+                      <Folder className="w-4 h-4 text-info flex-shrink-0" />
                     )}
                     <span className="text-xs font-medium truncate flex-1">
                       {folder.name}
@@ -431,8 +451,8 @@ export default function ImportPersonaModal({
 
               {/* Direct Files Section */}
               {rootContents.files.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
+                <div data-guide="persona-quick-import">
+                  <h3 className="text-xs font-semibold text-base-content/70 uppercase tracking-wider mb-2 px-1">
                     <Trans i18nKey="persona.quickImport" />
                   </h3>
                   {rootContents.files.map(renderSidebarFile)}
@@ -443,7 +463,7 @@ export default function ImportPersonaModal({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 bg-white dark:bg-gray-900 overflow-y-auto relative">
+        <div className="flex-1 bg-base-100 overflow-y-auto relative">
           {/* Mobile Sidebar Overlay - only on content area */}
           {sidebarOpen && (
             <div
@@ -456,13 +476,13 @@ export default function ImportPersonaModal({
       </div>
 
       {/* Footer */}
-      <div className="px-4 sm:px-6 py-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <div className="px-4 sm:px-6 py-3 border-t border-base-300 bg-base-200">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex gap-3">
             <button
               onClick={handleInsertFromClipboard}
               disabled={loading}
-              className="cursor-pointer px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-xs"
+              className="btn btn-info btn-sm text-xs"
             >
               <Trans i18nKey="persona.importFromClipboard" />
             </button>
@@ -473,12 +493,12 @@ export default function ImportPersonaModal({
                   "_blank"
                 )
               }
-              className="cursor-pointer px-3 py-1.5 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-xs"
+              className="cursor-pointer px-3 py-1.5 bg-base-300 hover:bg-base-300 text-base-content rounded-lg transition-colors text-xs"
             >
               <Trans i18nKey="persona.createOwn" />
             </button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-base-content/70">
             <Trans
               i18nKey="persona.categoryCount"
               values={{

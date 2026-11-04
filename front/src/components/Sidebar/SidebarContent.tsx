@@ -2,36 +2,68 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
+import {
+  Popover,
+  PopoverButton,
+  PopoverPanel,
+} from "@headlessui/react";
 
 import {
+  Ai,
+  ArrangeHorizontal,
+  Calendar,
+  Checkmark,
   ChevronLeft,
-  FolderMoveTo,
-  OverflowMenuVertical,
-  Search,
   Close,
+  FolderMoveTo,
+  FolderTree,
+  OverflowMenuVertical,
+  Pin,
+  PinFilled,
+  Search,
+  SortAscending,
 } from "@carbon/icons-react";
 import {
   assignConversationToFolder,
+  setConversationPinned,
+  setFolderPinned,
   useConversationList,
   useFolderList,
 } from "../../db";
 import { useModal } from "../../modals/ModalContext";
 
 import {
+  collapseTopics,
+  selectConversationGrouping,
+  selectConversationSort,
   selectDarkMode,
   selectShowUsageInSidebar,
+  setConversationGrouping,
   toggleSidebar,
 } from "../../Redux/reducers/interfaceSettingsSlice";
+import { selectConversationSummaries } from "../../Redux/reducers/userSettingsReducer";
 
 import { useWindowSize } from "../../hooks/useWindowSize";
-import TopicList, { UNSORTED_TOPIC_ID } from "./TopicList";
+import { sortConversations } from "../../utils/conversationSort";
+import {
+  formatCompactDate,
+  formatModifiedTime,
+  formatRelativeTime,
+  groupConversationsByCreationDate,
+  groupConversationsByDate,
+} from "../../utils/conversationDates";
+import TopicList, {
+  CREATED_TOPIC_ID,
+  DATE_TOPIC_ID,
+  UNSORTED_TOPIC_ID,
+  dateBucketCollapseId,
+} from "./TopicList";
 import TopicCreateBubble from "./TopicCreateBubble";
 import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
 import { useToast } from "../../hooks/useToast";
-import UserLimitsDisplay from "../../modals/UserSettings/UserLimitsDisplay";
-import OrgLimitsDisplay from "../../modals/UserSettings/OrgLimitsDisplay";
+import SidebarUsageSummary from "../../modals/UserSettings/SidebarUsageSummary";
 import ShortcutTooltip from "./ShortcutTooltip";
 import ImportChatButton from "./Buttons/ImportChatButton";
 import ImportPersonaButton from "./Buttons/ImportPersonaButton";
@@ -40,6 +72,7 @@ import SummarizeChatButton from "./Buttons/SummarizeChatButton";
 import ExportChatButton from "./Buttons/ExportChatButton";
 import DeleteChatButton from "./Buttons/DeleteChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
+import TutorialStatus from "../Others/TutorialStatus";
 
 export default function SidebarContent({
   localState,
@@ -55,13 +88,17 @@ export default function SidebarContent({
   modelsData?: any;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { openModal } = useModal();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { notifyError } = useToast();
   const currentConversationId = localState?.id;
   const showUsageInSidebar = useSelector(selectShowUsageInSidebar);
   const isDark = useSelector(selectDarkMode);
+  const conversationSort = useSelector(selectConversationSort);
+  const conversationGrouping = useSelector(selectConversationGrouping);
+  const summariesEnabled = useSelector(selectConversationSummaries);
 
   const { isDesktop, windowWidth } = useWindowSize();
   // Below this the sidebar is an overlay drawer (see Sidebar.jsx), which leaves
@@ -69,7 +106,46 @@ export default function SidebarContent({
   const sidebarIsDocked = windowWidth >= 1081;
   const conversations = useConversationList() || [];
   const folders = useFolderList() || [];
+  const orderedConversations = useMemo(
+    () =>
+      sortConversations(
+        conversations,
+        conversationSort,
+        t("conversation.untitled", { defaultValue: "Untitled Chat" }),
+      ),
+    [conversations, conversationSort, t],
+  );
   
+  const pinnedConversations = useMemo(
+    () => orderedConversations.filter((conv) => conv.pinned),
+    [orderedConversations],
+  );
+  const groupableConversations = useMemo(
+    () => orderedConversations.filter((conv) => !conv.pinned),
+    [orderedConversations],
+  );
+  const pinnedTopics = useMemo(
+    () => folders.filter((folder) => folder.pinned),
+    [folders],
+  );
+  const unpinnedFolders = useMemo(
+    () => folders.filter((folder) => !folder.pinned),
+    [folders],
+  );
+  const pinnedTopicIds = useMemo(
+    () => new Set(pinnedTopics.map((folder) => folder.id)),
+    [pinnedTopics],
+  );
+  // Conversations inside a pinned topic are shown with that topic in the
+  // pinned area, so they must not appear a second time in date buckets.
+  const dateGroupableConversations = useMemo(
+    () =>
+      groupableConversations.filter(
+        (conv) => !conv.folderId || !pinnedTopicIds.has(conv.folderId),
+      ),
+    [groupableConversations, pinnedTopicIds],
+  );
+
   // have an own state of selected Conversation id to update the ui smoothly
   const [selectedConversationId, setSelectedConversationId] = useState(currentConversationId);
   const [hoveredId, setHoveredId] = useState(null);
@@ -109,33 +185,70 @@ export default function SidebarContent({
   const menuButtonRefs = useRef({}); // Add refs for menu buttons
 
   const visibleConversations = useMemo(() => {
-    if (!hasSearch) return conversations;
-    return conversations.filter((conv) => {
+    if (!hasSearch) return orderedConversations;
+    return orderedConversations.filter((conv) => {
       const title =
         conv.title ||
         t("conversation.untitled", { defaultValue: "Untitled Chat" });
       return title.toLowerCase().includes(normalizedSearch);
     });
-  }, [conversations, hasSearch, normalizedSearch, t]);
+  }, [orderedConversations, hasSearch, normalizedSearch, t]);
 
   const conversationsByTopic = useMemo(() => {
     const grouped = new Map<string, any[]>();
     folders.forEach((folder) => grouped.set(folder.id, []));
-    conversations.forEach((conv) => {
+    groupableConversations.forEach((conv) => {
       const bucket = conv.folderId ? grouped.get(conv.folderId) : undefined;
       if (bucket) bucket.push(conv);
     });
     return grouped;
-  }, [conversations, folders]);
+  }, [groupableConversations, folders]);
 
   // Conversations with no topic — plus any whose topic has since disappeared,
   // so a stale folderId can never hide a conversation from the sidebar.
   const unsortedConversations = useMemo(() => {
     const known = new Set(folders.map((folder) => folder.id));
-    return conversations.filter(
+    return groupableConversations.filter(
       (conv) => !conv.folderId || !known.has(conv.folderId),
     );
-  }, [conversations, folders]);
+  }, [groupableConversations, folders]);
+
+  const dateGroups = useMemo(
+    () => groupConversationsByDate(dateGroupableConversations),
+    [dateGroupableConversations],
+  );
+
+  const creationDateGroups = useMemo(
+    () => groupConversationsByCreationDate(dateGroupableConversations),
+    [dateGroupableConversations],
+  );
+
+  // Date-based groupings start with every bucket collapsed when the user opens
+  // them, while later chat updates keep the user's expand/collapse choices.
+  const collapsedGroupingRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (conversationGrouping === "topic") {
+      collapsedGroupingRef.current = null;
+      return;
+    }
+    const groups =
+      conversationGrouping === "date" ? dateGroups : creationDateGroups;
+    if (groups.length === 0) return;
+    if (collapsedGroupingRef.current === conversationGrouping) return;
+    const parentId =
+      conversationGrouping === "date" ? DATE_TOPIC_ID : CREATED_TOPIC_ID;
+    dispatch(
+      collapseTopics(
+        groups.map((group) => dateBucketCollapseId(parentId, group.key)),
+      ),
+    );
+    collapsedGroupingRef.current = conversationGrouping;
+  }, [
+    conversationGrouping,
+    dateGroups,
+    creationDateGroups,
+    dispatch,
+  ]);
 
   const noSearchResults = hasSearch && visibleConversations.length === 0;
 
@@ -158,7 +271,7 @@ export default function SidebarContent({
     async (targetId: string) => {
       if (!draggingConversationId) return;
 
-      const conversation = conversations.find(
+      const conversation = orderedConversations.find(
         (conv) => conv.id === draggingConversationId,
       );
       if (!conversation) {
@@ -185,7 +298,7 @@ export default function SidebarContent({
         setDragOverTopicId(null);
       }
     },
-    [conversations, draggingConversationId, notifyError, t],
+    [orderedConversations, draggingConversationId, notifyError, t],
   );
 
   function onClose() {
@@ -226,6 +339,41 @@ export default function SidebarContent({
     });
   };
 
+  const handleTogglePinned = async (conv: { id: string; pinned?: boolean }) => {
+    if (!conv) return;
+    try {
+      await setConversationPinned(conv.id, !conv.pinned);
+    } catch (error) {
+      console.error("Failed to update pinned state", error);
+      notifyError(t("folders.error_generic"));
+    }
+  };
+
+  const handleToggleTopicPinned = async (topic: {
+    id: string;
+    pinned?: boolean;
+  }) => {
+    if (!topic) return;
+    try {
+      await setFolderPinned(topic.id, !topic.pinned);
+    } catch (error) {
+      console.error("Failed to update topic pinned state", error);
+      notifyError(t("folders.error_generic"));
+    }
+  };
+
+  const handleGroupingChange = (grouping: "topic" | "date" | "created") => {
+    dispatch(setConversationGrouping(grouping));
+    if (grouping === "topic") return;
+    const groups = grouping === "date" ? dateGroups : creationDateGroups;
+    const parentId = grouping === "date" ? DATE_TOPIC_ID : CREATED_TOPIC_ID;
+    dispatch(
+      collapseTopics(
+        groups.map((group) => dateBucketCollapseId(parentId, group.key)),
+      ),
+    );
+  };
+
   const handleMoveConversation = (conv) => {
     if (!conv) return;
     openModal("moveChat", {
@@ -252,7 +400,7 @@ export default function SidebarContent({
         return (
           <mark
             key={`highlight-${index}`}
-            className="bg-yellow-200 dark:bg-yellow-600/60 text-black dark:text-white px-0.5 rounded-sm"
+            className="bg-warning/30 text-base-content px-0.5 rounded-sm"
           >
             {part}
           </mark>
@@ -271,17 +419,11 @@ export default function SidebarContent({
     }
   };
 
-  const onNewConversation = (folderId) => {
-    // New conversations start unsorted; the user files them into a topic after.
-    handleNewConversation(folderId || null)
-      .then(() => {
-        if (conversations[0]?.id) {
-          setSelectedConversationId(currentConversationId);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to start new conversation", error);
-      });
+  const handleOpenTopic = (topicId: string) => {
+    navigate(`/topic/${topicId}`);
+    if (!isDesktop) {
+      onClose();
+    }
   };
 
   const handleTitleDoubleClick = (e, conv) => {
@@ -373,69 +515,108 @@ export default function SidebarContent({
     }
   }, [activeMenu]);
 
-  const renderConversationRow = (conv) => {
+  const renderConversationRow = (conv, options = {}) => {
     if (!conv) return null;
     const id = conv.id;
     const isActive = id === selectedConversationId;
     const isHovered = hoveredId === id;
     const isMenuOpen = activeMenu === id;
     const isDragging = draggingConversationId === id;
+    const summary = summariesEnabled ? (conv.summary ?? "").trim() : "";
+    const showSummary = summary.length > 0;
+    const showCreated = options.showCreated === true;
+    const showDateModified = options.showModified === true;
+    const showDates =
+      !showCreated &&
+      (showDateModified || (isActive && options.showMetadata !== false));
+    const modifiedTimestamp = conv.lastModified ?? conv.createdAt;
+    const modified = showDateModified
+      ? formatModifiedTime(modifiedTimestamp, i18n.language)
+      : formatRelativeTime(modifiedTimestamp, i18n.language);
 
     return (
-      <div
+      <ShortcutTooltip
         key={id}
-        onClick={() => handleSelectConversation(id)}
-        draggable
-        onDragStart={(event) => handleConversationDragStart(event, id)}
-        onDragEnd={handleConversationDragEnd}
-        className={`sidebar-wrapper group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
-          isActive
-            ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white shadow-sm"
-            : "text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-100"
-        } ${isDragging ? "border-tertiary/60 bg-tertiary/10 dark:bg-tertiary/20" : ""}`}
-        data-current={isActive ? "true" : "false"}
-        style={{
-          WebkitTapHighlightColor: "transparent",
-          minHeight: "16px",
-        }}
+        label={summary}
+        position="right"
+        enterDelay={350}
+        multiline
+        disabled={!showSummary}
+        containerClassName="block w-full"
       >
-        {/* Title container */}
-        <div className="flex items-center h-full w-full group">
-          <div
-            className="flex-1 overflow-hidden min-w-0"
-            title={conv.title || "Untitled Chat"}
-            onDoubleClick={(e) => handleTitleDoubleClick(e, conv)}
-            style={{ cursor: isDesktop ? "text" : "pointer" }}
-          >
-            <div className="truncate text-xs leading-relaxed cursor-pointer">
-              {highlightText(conv.title)}
+        <div
+          onClick={() => handleSelectConversation(id)}
+          draggable
+          onMouseEnter={() => setHoveredId(id)}
+          onMouseLeave={() => setHoveredId(null)}
+          onDragStart={(event) => handleConversationDragStart(event, id)}
+          onDragEnd={handleConversationDragEnd}
+          className={`sidebar-wrapper group relative px-2 py-1 rounded-xl touch-manipulation border border-transparent ${
+            isActive
+              ? "bg-base-200 text-base-content shadow-sm"
+              : "text-base-content hover:bg-base-200 transition-all duration-100"
+          } ${isDragging ? "border-accent/60 bg-accent/10 dark:bg-accent/20" : ""}`}
+          data-current={isActive ? "true" : "false"}
+          style={{
+            WebkitTapHighlightColor: "transparent",
+            minHeight: "16px",
+          }}
+        >
+          {/* Title container */}
+          <div className="flex items-center h-full w-full group">
+            <div
+              className="flex-1 overflow-hidden min-w-0"
+              title={showSummary ? undefined : conv.title || "Untitled Chat"}
+              onDoubleClick={(e) => handleTitleDoubleClick(e, conv)}
+              style={{ cursor: isDesktop ? "text" : "pointer" }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="truncate text-xs leading-relaxed cursor-pointer flex-1">
+                  {highlightText(conv.title)}
+                </div>
+                {showCreated && conv.createdAt ? (
+                  <span className="shrink-0 text-[10px] leading-tight text-base-content/70">
+                    {formatCompactDate(conv.createdAt, i18n.language)}
+                  </span>
+                ) : null}
+              </div>
+              {showDates && (
+                <div className="truncate text-[10px] leading-tight text-base-content/70">
+                  {t("folders.modified", { date: modified })}
+                </div>
+              )}
+            </div>
+
+            {/* Dropdown Menu Button */}
+            <div
+              className={`transition-opacity duration-200 ${
+                window.innerWidth < 1024 || isHovered || isActive || isMenuOpen
+                  ? "opacity-100"
+                  : "opacity-0"
+              } group-hover:opacity-100`}
+            >
+              <button
+                ref={(el) => (menuButtonRefs.current[id] = el)}
+                onClick={(e) => openMenu(e, id)}
+                data-guide="conversation-menu"
+                className={`p-1.5 hover:bg-base-300 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center 
+                  hover:scale-110 active:scale-95 cursor-pointer`}
+                style={{
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <OverflowMenuVertical size={16} className="text-base-content/70" />
+              </button>
             </div>
           </div>
-
-          {/* Dropdown Menu Button */}
-          <div
-            className={`transition-opacity duration-200 ${
-              window.innerWidth < 1024 || isHovered || isActive || isMenuOpen
-                ? "opacity-100"
-                : "opacity-0"
-            } group-hover:opacity-100`}
-          >
-            <button
-              ref={(el) => (menuButtonRefs.current[id] = el)}
-              onClick={(e) => openMenu(e, id)}
-              className={`p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 touch-manipulation flex items-center justify-center 
-                hover:scale-110 active:scale-95 cursor-pointer`}
-              style={{
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <OverflowMenuVertical size={16} className="text-gray-500 dark:text-gray-400" />
-            </button>
-          </div>
         </div>
-      </div>
+      </ShortcutTooltip>
     );
   };
+
+  const activeConversation = orderedConversations.find(
+    (conv) => conv.id === activeMenu,
+  );
 
   return (
     <div
@@ -456,7 +637,7 @@ export default function SidebarContent({
             type="button"
             onClick={onClose}
             aria-label={t("sidebar.close_sidebar")}
-            className="cursor-pointer p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-200 flex items-center justify-center text-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tertiary/50"
+            className="cursor-pointer p-2.5 hover:bg-base-300 rounded-2xl transition-all duration-200 flex items-center justify-center text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
           >
             <ChevronLeft size={20} />
           </button>
@@ -465,7 +646,8 @@ export default function SidebarContent({
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Conversations header, with the search field it reveals */}
-        <div className="sticky top-0 z-20 bg-white dark:bg-bg_secondary_dark px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+        <div className="sticky top-0 z-20 bg-base-100 px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+          <TutorialStatus />
           <div className="flex items-center justify-between gap-1 pb-3">
             <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
           <div className="flex items-center justify-between gap-1">
@@ -474,19 +656,142 @@ export default function SidebarContent({
           </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] uppercase tracking-wide text-base-content/70">
               {t("folders.title")}
             </span>
-            <button
-              type="button"
-              onClick={openSearch}
-              className={`flex items-center rounded-lg p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer ${
-                searchVisible ? "opacity-0 pointer-events-none" : "opacity-100"
-              }`}
-              aria-label={t("folders.search_label")}
-            >
-              <Search size={16} />
-            </button>
+            <div className="flex items-center gap-1">
+              <Popover className="relative">
+                <PopoverButton
+                  aria-label={t("folders.sort_label")}
+                  title={t("folders.sort_label")}
+                  data-guide="sort-chats"
+                  className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+                >
+                  {conversationGrouping === "date" ? (
+                    <Calendar size={16} />
+                  ) : conversationGrouping === "created" ? (
+                    <SortAscending size={16} />
+                  ) : (
+                    <FolderTree size={16} />
+                  )}
+                </PopoverButton>
+                <PopoverPanel
+                  anchor={{ to: "bottom end", gap: 4, padding: 8 }}
+                  role="menu"
+                  aria-label={t("folders.sort_label")}
+                  data-guide="sort-menu"
+                  className="z-50 w-52 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
+                >
+                  {({ close }) => (
+                    <>
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={conversationGrouping === "topic"}
+                        onClick={() => {
+                          handleGroupingChange("topic");
+                          close();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <FolderTree size={14} className="shrink-0" />
+                        <span className="flex-1 truncate">
+                          {t("folders.sort_by_topic")}
+                        </span>
+                        {conversationGrouping === "topic" && (
+                          <Checkmark
+                            size={14}
+                            className="shrink-0 text-accent"
+                          />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={conversationGrouping === "date"}
+                        onClick={() => {
+                          handleGroupingChange("date");
+                          close();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Calendar size={14} className="shrink-0" />
+                        <span className="flex-1 truncate">
+                          {t("folders.sort_by_date")}
+                        </span>
+                        {conversationGrouping === "date" && (
+                          <Checkmark
+                            size={14}
+                            className="shrink-0 text-accent"
+                          />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={conversationGrouping === "created"}
+                        onClick={() => {
+                          handleGroupingChange("created");
+                          close();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <SortAscending size={14} className="shrink-0" />
+                        <span className="flex-1 truncate">
+                          {t("folders.sort_by_created")}
+                        </span>
+                        {conversationGrouping === "created" && (
+                          <Checkmark
+                            size={14}
+                            className="shrink-0 text-accent"
+                          />
+                        )}
+                      </button>
+                    </>
+                  )}
+                </PopoverPanel>
+              </Popover>
+              <button
+                type="button"
+                onClick={() =>
+                  openModal("organizeChats", {
+                    conversations,
+                    folders,
+                    localState,
+                    setLocalState,
+                  })
+                }
+                data-guide="sort-organize"
+                className="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+                aria-label={t("sorter.button")}
+                title={t("sorter.button")}
+              >
+                <ArrangeHorizontal size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/meta")}
+                data-guide="meta-chat"
+                className={`btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content ${
+                  location.pathname === "/meta" ? "btn-active" : ""
+                }`}
+                aria-label={t("meta_chat.open")}
+                title={t("meta_chat.open")}
+              >
+                <Ai size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={openSearch}
+                data-guide="search-chats"
+                className={`flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
+                  searchVisible ? "opacity-0 pointer-events-none" : "opacity-100"
+                }`}
+                aria-label={t("folders.search_label")}
+              >
+                <Search size={16} />
+              </button>
+            </div>
           </div>
           <div
             className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
@@ -495,10 +800,11 @@ export default function SidebarContent({
                 : "max-h-0 opacity-0 pt-0 pb-0 -translate-y-1 pointer-events-none"
             }`}
           >
-            <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40  transition">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
+            <div className="relative rounded-xl border border-base-300 bg-base-200 transition">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 pointer-events-none" />
               <input
                 ref={searchInputRef}
+                data-guide="search-input"
                 type="text"
                 autoComplete="off"
                 autoCorrect="off"
@@ -516,12 +822,12 @@ export default function SidebarContent({
                   }
                 }}
                 placeholder={t("folders.search_placeholder")}
-                className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none"
+                className="w-full bg-transparent pl-9 pr-9 py-2 text-xs text-base-content placeholder:text-base-content/50 focus:outline-none"
               />
               {searchQuery.length > 0 ? (
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-base-content/50 hover:text-base-content/70"
                   aria-label={t("folders.clear_search")}
                   onClick={() => setSearchQuery("")}
                 >
@@ -530,7 +836,7 @@ export default function SidebarContent({
               ) : (
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-base-content/50 hover:text-base-content/70"
                   aria-label={t("common.cancel")}
                   onClick={closeSearch}
                 >
@@ -550,7 +856,7 @@ export default function SidebarContent({
             {hasSearch ? (
               <div className="space-y-1">
                 {noSearchResults ? (
-                  <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-4">
+                  <div className="text-center text-xs text-base-content/70 py-4">
                     <Trans
                       i18nKey="folders.search_no_results"
                       values={{ query: searchQuery }}
@@ -562,13 +868,16 @@ export default function SidebarContent({
               </div>
             ) : (
               <TopicList
-                topics={folders}
+                topics={unpinnedFolders}
+                pinnedTopics={pinnedTopics}
+                pinnedConversations={pinnedConversations}
                 conversationsByTopic={conversationsByTopic}
                 unsortedConversations={unsortedConversations}
                 onCreateTopic={handleCreateFolder}
                 onRenameTopic={handleRenameFolder}
                 onDeleteTopic={handleDeleteFolder}
-                onNewConversation={onNewConversation}
+                onToggleTopicPinned={handleToggleTopicPinned}
+                onOpenTopic={handleOpenTopic}
                 draggingConversationId={draggingConversationId}
                 dragOverTopicId={dragOverTopicId}
                 onDragEnterTopic={setDragOverTopicId}
@@ -579,20 +888,20 @@ export default function SidebarContent({
                 }
                 onDropTopic={handleTopicDrop}
                 renderConversationRow={renderConversationRow}
+                dateGroups={dateGroups}
+                creationDateGroups={creationDateGroups}
                 isDark={isDark}
+                grouping={conversationGrouping}
               />
             )}
           </div>
         </div>
 
         {/* Pinned footer: the user block */}
-        <div className="sticky bottom-0 bg-white dark:bg-bg_secondary_dark pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
+        <div className="sticky bottom-0 bg-base-100 pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
           <div className="flex flex-col gap-3 mx-3">
-            {showUsageInSidebar && userData?.limits && (
-              <div className="flex flex-col gap-2">
-                <UserLimitsDisplay limits={userData.limits} variant="sidebar" />
-                <OrgLimitsDisplay limits={userData.limits} variant="sidebar" />
-              </div>
+            {showUsageInSidebar && userData && (
+              <SidebarUsageSummary data={userData} />
             )}
             <SidebarUserCard
               localState={localState}
@@ -613,7 +922,7 @@ export default function SidebarContent({
       {activeMenu && (
         <div
           ref={menuRef}
-          className="fixed w-40 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-gray-200 dark:border-gray-700"
+          className="fixed w-40 rounded-lg shadow-2xl ring-1 ring-black/10 dark:ring-white/10 border border-base-300"
           style={{
             left: `${menuPosition.x}px`,
             top: `${menuPosition.y}px`,
@@ -623,11 +932,32 @@ export default function SidebarContent({
         >
           {/* Solid background overlay to hide text */}
           <div
-            className="absolute inset-0 bg-white dark:bg-gray-800 rounded-lg"
+            className="absolute inset-0 bg-base-100 rounded-lg"
             style={{ zIndex: -1 }}
           />
 
-          <div className="p-1 bg-white dark:bg-gray-800 rounded-lg relative">
+          <div className="p-1 bg-base-100 rounded-lg relative">
+            {/* Pin/unpin chat menu item */}
+            {activeConversation && (
+              <button
+                data-guide="pin-chat-menu-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTogglePinned(activeConversation);
+                  closeMenu();
+                }}
+                className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
+              >
+                {activeConversation.pinned ? (
+                  <PinFilled size={14} />
+                ) : (
+                  <Pin size={14} />
+                )}
+                {activeConversation.pinned
+                  ? t("folders.unpin_action")
+                  : t("folders.pin_action")}
+              </button>
+            )}
             {/* Rename chat menu item */}
             <RenameChatButton
               localState={localState}
@@ -635,19 +965,19 @@ export default function SidebarContent({
               variant={"menu"}
               closeMenu={closeMenu}
               convId={activeMenu}
-              conversations={conversations}
+              conversations={orderedConversations}
             />
             {/* Move chat menu item */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const conv = conversations.find((c) => c.id === activeMenu);
+                const conv = orderedConversations.find((c) => c.id === activeMenu);
                 if (conv) {
                   handleMoveConversation(conv);
                   closeMenu();
                 }
               }}
-              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs font-medium text-base-content transition-colors hover:bg-base-300"
             >
               <FolderMoveTo size={14} />
               <Trans i18nKey="folders.move_action" />
@@ -679,7 +1009,7 @@ export default function SidebarContent({
               variant={"menu"}
               closeMenu={closeMenu}
               convId={activeMenu}
-              conversations={conversations}
+              conversations={orderedConversations}
             />
           </div>
         </div>

@@ -10,7 +10,7 @@ export default function EditButton({ setEditMode }) {
         <button onClick={handleEdit} title="Edit message" className=" h-[18px] w-[18px] cursor-pointer">
             {" "}
             <Edit
-                className="opacity-25 group-hover:opacity-100 transition-opacity duration-300 h-[18px] w-[18px] cursor-pointer text-[#009EE0]"
+                className="opacity-25 group-hover:opacity-100 transition-opacity duration-300 h-[18px] w-[18px] cursor-pointer text-accent"
                 alt="edit_icon"
             />
         </button>
