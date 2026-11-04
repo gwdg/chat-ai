@@ -67,7 +67,8 @@ export default function AgentSteps({ agentMessages, isLoading, renderMode }) {
   flush();
 
   return (
-    <div className="flex flex-col gap-2">
+    // Steps are spaced by the gap alone: a reasoning block at the edge of a segment drops its margin
+    <div className="flex flex-col gap-1 [&_.thinking-block:first-child]:mt-0 [&_.thinking-block:last-child]:mb-0">
       {segments.map((segment, i) =>
         segment.kind === "tool" ? (
           <ToolCall key={segment.call.id ?? i} call={segment.call} result={segment.result} />
