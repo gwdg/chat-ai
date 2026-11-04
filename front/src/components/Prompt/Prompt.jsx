@@ -11,10 +11,14 @@ import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
+import SpeechModeButton from "./SpeechModeButton";
+import SpeechModePanel from "./SpeechModePanel";
 
 import { useSendMessage } from "../../hooks/useSendMessage";
+import { useSpeechSession } from "../../hooks/useSpeechSession";
 import { loadFileMeta } from "../../db";
 import { getFileType } from "../../utils/attachments";
+import { getSpeechModule } from "../../utils/speechAudio";
 import { useModal } from "../../modals/ModalContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import UndoButton from "../Conversation/UndoButton";
@@ -30,8 +34,16 @@ export default function Prompt({
   const defaultSendMessage = useSendMessage();
   const sendMessage = sendMessageOverride ?? defaultSendMessage;
   const { openModal } = useModal();
+  const speechModeAvailable = Boolean(getSpeechModule()) && !sendMessageOverride;
+  const speechSession = useSpeechSession({
+    localState,
+    setLocalState,
+    sendMessage,
+    enabled: speechModeAvailable,
+  });
   const [shouldSend, setShouldSend] = useState(false);
   const [ignoreChanges, setIgnoreChanges] = useState(false);
+  const [speechModeOpen, setSpeechModeOpen] = useState(false);
   const lastMessage = localState.messages[localState.messages.length - 1];
   if (lastMessage?.content == undefined){
     // return to a valid conversation
@@ -111,7 +123,30 @@ export default function Prompt({
       setShouldSend(true);
   };
   
+  const openSpeechMode = () => {
+    setSpeechModeOpen(true);
+    void speechSession.start();
+  };
+
+  const closeSpeechMode = () => {
+    speechSession.stop();
+    setSpeechModeOpen(false);
+  };
+
   return (
+    <>
+    {speechModeOpen && (
+      <SpeechModePanel
+        phase={speechSession.phase}
+        level={speechSession.level}
+        error={speechSession.error}
+        notice={speechSession.notice}
+        onClose={closeSpeechMode}
+        onInterrupt={speechSession.interrupt}
+        onSendNow={speechSession.sendNow}
+        onRetry={speechSession.retry}
+      />
+    )}
     <div className="prompt-area overflow-x-hidden w-full flex flex-shrink-0 flex-col 
  bg-base-100 text-base-content mobile:h-fit justify-center 
     sm:overflow-y-auto rounded-2xl shadow-bottom dark:shadow-darkBottom
@@ -146,6 +181,7 @@ export default function Prompt({
               localState={localState}
               setLocalState={setLocalState}
             />
+            {speechModeAvailable && <SpeechModeButton onClick={openSpeechMode} />}
             
           </div>
           {/* Buttons in the center */}
@@ -200,5 +236,6 @@ export default function Prompt({
         </div>
       </div>
       </div>
+    </>
   );
 }

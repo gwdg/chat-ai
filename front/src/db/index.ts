@@ -907,38 +907,41 @@ export function useFolderList() {
 
 // ---------- Files ----------
 
-// Insert file meta+data; returns the new id
+async function persistFile(id: string, file: File, conversationId: string) {
+  const arrayBuffer = await file.arrayBuffer();
+  const meta: FileMetaRow = {
+    id,
+    conversationId,
+    name: file.name,
+    type: file.type || "application/octet-stream",
+    size: file.size,
+  };
+  const data: FileDataRow = {
+    id,
+    data: arrayBuffer,
+  };
+  await db.files_meta.add(meta);
+  await db.files_data.add(data);
+}
+
+// Insert file meta+data; returns the new id. The write continues in the
+// background, so callers that need the file immediately should use
+// saveFileReady instead.
 export function saveFile(conversationId: string, file: File): string {
   const id = newId();
+  persistFile(id, file, conversationId).catch((err) =>
+    console.error("Failed to save file:", err)
+  );
+  return id;
+}
 
-  async function saveFileDB(id: string, file: File, conversationId: string) {
-    // Read file data into an ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-    const meta: FileMetaRow = {
-      id,
-      conversationId,
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      // Optional: width, height, duration extraction later
-    };
-
-    const data: FileDataRow = {
-      id,
-      data: arrayBuffer
-    };
-
-    // Store in IndexedDB
-    await db.files_meta.add(meta);
-    await db.files_data.add(data);
-    console.log("File saved successfully")
-  }
-
-  // Fire and forget, but handle errors
-  saveFileDB(id, file, conversationId)
-    .catch(err => console.error("Failed to save file:", err));
-
-  //TODO this may be a problem if a file cannot be saved it still returns an id
+// Insert file meta+data and resolve only after the file is readable.
+export async function saveFileReady(
+  conversationId: string,
+  file: File
+): Promise<string> {
+  const id = newId();
+  await persistFile(id, file, conversationId);
   return id;
 }
 

@@ -24,10 +24,14 @@ export async function processContentItems({
   const output = [];
   for (const item of items) {
     if (item.type === 'text') {
-      if (item.text && items.length === 1) {
-        return item.text
+      const textValue = typeof item.text === "string" ? item.text : "";
+      if (!textValue.trim() && items.length > 1) {
+        continue;
       }
-      output.push(item)
+      if (textValue && items.length === 1) {
+        return textValue
+      }
+      output.push({ ...item, text: textValue })
       continue;
     }
 
@@ -158,22 +162,55 @@ function receiveFile(base64Data, mimeType, filename = null, conversationId = nul
 }
 
 // Build OpenAI standard conversation from localState
-export async function buildConversationForAPI(localState) {
+export async function buildConversationForAPI(localState, { forceAudioInput = false } = {}) {
   // Determine supported file types from model
   const model = localState.settings.model;
-  const ignoreAudio = !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));
+  const ignoreAudio = forceAudioInput
+    ? false
+    : !(localState.settings.enable_tools || (model?.input?.includes("audio") || false));
   const ignoreVideo = !(localState.settings.enable_tools || (model?.input?.includes("video") || false));
   const ignoreImages = !(localState.settings.enable_tools || (model?.input?.includes("image") || false));
   // Convert to API standard, ignore unsupported files and system message
+  const lastUserIndex = localState.messages.reduce(
+    (lastIndex, message, index) => (message.role === "user" ? index : lastIndex),
+    -1
+  );
   const processedMessages = await Promise.all(
-    localState.messages.map(async (message) => {
+    localState.messages.map(async (message, index) => {
       if (Array.isArray(message.content)) {
+        const itemsForApi = [...message.content];
+        const hasVisibleText = itemsForApi.some(
+          (item) => item?.type === "text" && typeof item?.text === "string" && item.text.trim()
+        );
+        let addedHiddenText = false;
+        if (!hasVisibleText) {
+          const hiddenText =
+            message.role === "user"
+              ? message.meta?.speechTranscript
+              : message.meta?.speechAssistantText;
+          if (typeof hiddenText === "string" && hiddenText.trim()) {
+            itemsForApi.unshift({ type: "text", text: hiddenText.trim() });
+            addedHiddenText = true;
+          }
+        }
+        if (
+          !hasVisibleText &&
+          !addedHiddenText &&
+          forceAudioInput &&
+          message.role === "user" &&
+          index !== lastUserIndex
+        ) {
+          itemsForApi.unshift({ type: "text", text: "[voice message]" });
+        }
+        const ignoreAudioForMessage =
+          ignoreAudio ||
+          (forceAudioInput && (message.role !== "user" || index !== lastUserIndex));
         return {
           role: message.role,
           content: await processContentItems({
-            items: message.content,
+            items: itemsForApi,
             ignoreImages,
-            ignoreAudio,
+            ignoreAudio: ignoreAudioForMessage,
             ignoreVideo,
         })
         };
@@ -271,8 +308,13 @@ const sendMessage = async ({
   suggestUserPrompts = false,
   formSubmission = null,
   setTitleOnce = true,
+  speechMode = false,
 }) => {
   const conversationId = localState.id
+  // Index of the assistant placeholder this turn will stream into. Using a
+  // fixed index keeps updates correct when a barge-in starts another turn
+  // before this one has fully unwound.
+  const assistantIndex = localState.messages.length
 
   try {
     const feedbackModule = import.meta.env.VITE_MODULE_FEEDBACK === "true";
@@ -286,7 +328,9 @@ const sendMessage = async ({
     const isArcanaSupported = isToolsEnabled && !!localState.settings.tools.arcana   
   
     let finalConversationForState; // For local state updates
-    let conversationForAPI = await buildConversationForAPI(localState);
+    let conversationForAPI = await buildConversationForAPI(localState, {
+      forceAudioInput: speechMode,
+    });
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content[0].text
@@ -296,23 +340,32 @@ const sendMessage = async ({
       const memorySection = `\n\n--- Begin User Memory ---\n${memoryExplanation}\n\n${memoryContext}\n--- End User Memory ---`;
       systemPromptAPI = systemPromptAPI + memorySection;
     }
+    if (speechMode) {
+      systemPromptAPI = `${systemPromptAPI}\n\nYou are in a live voice conversation. Reply naturally and concisely in plain spoken language. Avoid markdown, lists, code blocks, emojis, and long explanations unless the user explicitly asks for them.`;
+    }
     
     // Handle tools
-    if (isToolsEnabled) {
+    if (isToolsEnabled || speechMode) {
       // Inject the current date and time to the system prompt in human-readable format
       const currentDate = new Date().toLocaleString();
       systemPromptAPI = `\n\n--- Begin System Context ---\nCurrent Date: ${currentDate}\n--- End System Context ---` + systemPromptAPI;
       // Convert tools dictionary to OpenAI-compatible tools list
-      conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
-                .filter(([_, enabled]) => enabled)
-                .map(([toolKey]) => ({ type: toolKey }));
-      if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
-        conversationForAPI.settings.arcana.limit = 3;
+      if (isToolsEnabled) {
+        conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
+                  .filter(([_, enabled]) => enabled)
+                  .map(([toolKey]) => ({ type: toolKey }));
+        if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
+          conversationForAPI.settings.arcana.limit = 3;
+        }
+        if (!localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
+        if (!localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
+      } else {
+        conversationForAPI.settings.tools = [];
+        conversationForAPI.settings.enable_tools = true;
       }
-      if (!localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
-      if (!localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
-      // Always inject audio_transcription tool for now
-      conversationForAPI.settings.tools.push({ type: "audio_transcription" });
+      if (!conversationForAPI.settings.tools.some((tool) => tool.type === "audio_transcription")) {
+        conversationForAPI.settings.tools.push({ type: "audio_transcription" });
+      }
     } else {
       delete conversationForAPI.settings.enable_tools;
       delete conversationForAPI.settings.tools;
@@ -412,6 +465,7 @@ const sendMessage = async ({
       let process_block = "";
       let inThinking = false;
       let message_text = "";
+      let capturedSpeechTranscript = "";
       for await (const chunk of chatCompletions(conversationForAPI, timeoutAPI)) {
         const delta = chunk?.choices[0]?.delta;
         if (chunk?.usage) usage = chunk.usage;
@@ -425,7 +479,32 @@ const sendMessage = async ({
             const name = delta.tool_calls[0]?.function?.name;
             let arg = delta.tool_calls[0]?.function?.arguments;
             if (typeof arg === "string") arg = JSON.parse(arg);
-            const handled = handleToolEvent(name, arg);
+            if (
+              speechMode &&
+              name === "audio_transcription.event" &&
+              arg?.event === "done" &&
+              typeof arg?.transcription === "string" &&
+              arg.transcription.trim()
+            ) {
+              const transcript = arg.transcription.trim();
+              capturedSpeechTranscript = transcript;
+              setLocalState((prev) => {
+                if (prev.id !== conversationId) return prev;
+                const userIndex = assistantIndex - 1;
+                const userMessage = prev.messages[userIndex];
+                if (!userMessage || userMessage.role !== "user") return prev;
+                const messages = [...prev.messages];
+                messages[userIndex] = {
+                  ...userMessage,
+                  meta: { ...(userMessage.meta || {}), speechTranscript: transcript },
+                };
+                return { ...prev, messages, flush: true };
+              });
+            }
+            const handled =
+              speechMode && name === "audio_transcription.event"
+                ? {}
+                : handleToolEvent(name, arg);
             if (handled?.text) {
               process_block += handled.text;
             }
@@ -484,7 +563,8 @@ const sendMessage = async ({
               return prev;
             }
             const messages = [...prev.messages];
-            messages[messages.length - 2] = {
+            if (!messages[assistantIndex]) return prev;
+            messages[assistantIndex] = {
               role: "assistant",
               content: currentContent,
               loading: true,
@@ -515,7 +595,8 @@ const sendMessage = async ({
             return prev;
           }
           const messages = [...prev.messages];
-          messages[messages.length - 2] = {
+          if (!messages[assistantIndex]) return prev;
+          messages[assistantIndex] = {
             role: "assistant",
             content: currentContent,
             loading: true,
@@ -533,13 +614,15 @@ const sendMessage = async ({
       }
       return {
         answer: currentContent,
-        usage
+        usage,
+        speechTranscript: capturedSpeechTranscript,
       }
     }
 
     let responseContent = "";
     let usage = null;
     let chatChunk = null;
+    let speechTranscriptForTurn = "";
     let meta = undefined;
     let choicesProposed = [];
     try {
@@ -547,6 +630,7 @@ const sendMessage = async ({
       chatChunk = await getChatChunk(conversationId);
       responseContent = chatChunk?.answer || ""
       usage = chatChunk?.usage;
+      speechTranscriptForTurn = chatChunk?.speechTranscript || "";
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",
         usage
@@ -599,7 +683,8 @@ const sendMessage = async ({
         }
         const choices = choicesProposed;
         const messages = [...prev.messages];
-        messages[messages.length - 2] = {
+        if (!messages[assistantIndex]) return prev;
+        messages[assistantIndex] = {
           role: "assistant",
           content: responseContent,
           loading: false,
@@ -621,7 +706,12 @@ const sendMessage = async ({
     let newUserMessage = undefined;
     try {
       newUserMessage = conversationForAPI.messages.at(-1).content;
-      if (Array.isArray(newUserMessage)) newUserMessage = newUserMessage[0].text;
+      if (Array.isArray(newUserMessage)) {
+        newUserMessage = newUserMessage.find((item) => item?.type === "text")?.text;
+      }
+      if (!newUserMessage && speechMode) {
+        newUserMessage = speechTranscriptForTurn;
+      }
     } catch (error) {
       console.log("Warning: couldn't find new user message. Memory will not be updated");
     }
