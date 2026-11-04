@@ -211,6 +211,7 @@ export default {
     completed_title: "Tutorial complete",
     more_tutorials: "More tutorials",
     categories: {
+      personas: "Personas",
       prompt: "Prompt and chat",
       tools: "Tools and RAG",
       chats: "Chats and organization",
@@ -357,6 +358,15 @@ export default {
       step1:
         "Click Import in the sidebar and choose a JSON chat file. You can also import from the Data tab in user settings.",
     },
+    chat_with_persona: {
+      title: "Chat with Persona",
+      step1:
+        "Click Chat with Persona in the sidebar to open the persona library.",
+      step2:
+        "Choose a category on the left, or use Quick Import to start right away.",
+      step3:
+        "Click a persona to start a new chat with its title, model, and system prompt.",
+    },
     share_conversation: {
       title: "Share conversation settings",
       step1: "Open the conversation settings panel.",
@@ -428,7 +438,7 @@ export default {
       title: "Find tutorials and settings in Meta chat",
       step1: "Browse all available tutorials and replay completed ones.",
       step2: "Browse complete workflows that combine several features. The Meta chat can also start either option for you.",
-      step3: "You can also ask me to find a tutorial. For example: “Find a tutorial about uploading a file.”",
+      step3: "You can also ask me to find a tutorial or recommend a persona. For example: “Find a tutorial about uploading a file.”",
       step4: "Ask about your settings too. For example: “What settings have I chosen for memories?”",
     },
     meta_chat_usage: {
@@ -965,6 +975,10 @@ export default {
       "Select a category from the sidebar to view personas",
     emptyFolder: "This folder is empty",
     categoryCount: "{{folders}} categories • {{files}} personas",
+    startChat: "Start chat",
+    startChatWith: "Start a chat with {{title}}",
+    startingChat: "Starting…",
+    startError: "Could not load this persona. Please try again.",
   },
   // Memory Modal
   memory: {

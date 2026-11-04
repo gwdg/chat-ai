@@ -214,6 +214,7 @@ export default {
     completed_title: "Tutorial abgeschlossen",
     more_tutorials: "Weitere Tutorials",
     categories: {
+      personas: "Personas",
       prompt: "Eingabe und Chat",
       tools: "Tools und RAG",
       chats: "Chats und Organisation",
@@ -364,6 +365,15 @@ export default {
       step1:
         "Klicken Sie in der Seitenleiste auf Importieren und wählen Sie eine JSON-Chatdatei. Alternativ können Sie im Tab Daten importieren.",
     },
+    chat_with_persona: {
+      title: "Mit Persona chatten",
+      step1:
+        "Klicken Sie in der Seitenleiste auf „Mit Persona chatten“, um die Persona-Bibliothek zu öffnen.",
+      step2:
+        "Wählen Sie links eine Kategorie oder nutzen Sie den Schnellimport, um direkt zu starten.",
+      step3:
+        "Klicken Sie auf eine Persona, um einen neuen Chat mit Titel, Modell und Systemprompt zu starten.",
+    },
     share_conversation: {
       title: "Unterhaltungseinstellungen teilen",
       step1: "Öffnen Sie die Unterhaltungseinstellungen.",
@@ -436,7 +446,7 @@ export default {
       title: "Tutorials und Einstellungen im Metachat finden",
       step1: "Durchsuchen Sie alle verfügbaren Tutorials und wiederholen Sie abgeschlossene.",
       step2: "Durchsuchen Sie vollständige Abläufe, die mehrere Funktionen kombinieren. Der Metachat kann beide Optionen auch für Sie starten.",
-      step3: "Sie können mich auch bitten, ein Tutorial zu finden. Zum Beispiel: „Finde ein Tutorial zum Hochladen einer Datei.“",
+      step3: "Sie können mich auch bitten, ein Tutorial zu finden oder eine Persona zu empfehlen. Zum Beispiel: „Finde ein Tutorial zum Hochladen einer Datei.“",
       step4: "Fragen Sie auch nach Ihren Einstellungen. Zum Beispiel: „Welche Einstellungen habe ich für Erinnerungen gewählt?“",
     },
     meta_chat_usage: {
@@ -978,6 +988,10 @@ export default {
       "Wählen Sie eine Kategorie aus der Seitenleiste, um Personas anzuzeigen",
     emptyFolder: "Dieser Ordner ist leer",
     categoryCount: "{{folders}} Kategorien • {{files}} Personas",
+    startChat: "Chat starten",
+    startChatWith: "Chat mit {{title}} starten",
+    startingChat: "Wird gestartet…",
+    startError: "Diese Persona konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
   },
   // Memory Modal
   memory: {

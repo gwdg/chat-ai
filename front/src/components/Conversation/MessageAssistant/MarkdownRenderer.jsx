@@ -26,6 +26,7 @@ import {
   isExternalUrl,
   sanitizeExternalRefs,
 } from "../../../utils/externalRefs";
+import { stripPersonaMarkers } from "../../../utils/personaCatalog";
 
 // Markdown images load automatically, so keep them on the same origin when
 // external references are disabled. Plain links are not fetched until clicked.
@@ -758,10 +759,10 @@ export const SafeMarkdown = ({
 
 const stripGuideMarkers = (content) => {
   if (typeof content !== "string") return content;
-  return content
+  return stripPersonaMarkers(content)
     .replace(/\[\[GUIDE:[a-zA-Z0-9_-]+\]\]/gi, "")
     .replace(/\[\[USE_CASE:[a-zA-Z0-9_-]+\]\]/gi, "")
-    .replace(/\[\[(?:GUIDE|USE_CASE):?[a-zA-Z0-9_-]*\]*$/i, "")
+    .replace(/\[\[(?:GUIDE|USE_CASE|PERSONA):?[a-zA-Z0-9_./-]*\]*$/i, "")
     .replace(/\n{3,}/g, "\n\n")
     .trimEnd();
 };

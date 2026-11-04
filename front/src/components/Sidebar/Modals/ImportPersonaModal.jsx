@@ -3,6 +3,7 @@ import { Trans } from "react-i18next";
 import BaseModal from "../../../modals/BaseModal";
 import { useImportConversation } from "../../../hooks/useImportConversation";
 import i18n from "../../../i18n";
+import { PERSONA_REPO } from "../../../utils/personaCatalog";
 import { useToast } from "../../../hooks/useToast";
 import {
   Folder,
@@ -16,9 +17,9 @@ export default function ImportPersonaModal({
   onClose,
   onFileSelect,
   onError,
-  repoOwner = "gwdg",
-  repoName = "chat-ai-personas",
-  branch = "main",
+  repoOwner = PERSONA_REPO.owner,
+  repoName = PERSONA_REPO.name,
+  branch = PERSONA_REPO.branch,
   topicId = null,
 }) {
   const [selectedPath, setSelectedPath] = useState(null);
@@ -335,7 +336,10 @@ export default function ImportPersonaModal({
     }
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4">
+      <div
+        data-guide="persona-files"
+        className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4"
+      >
         {currentFolderContents.map((file) => (
           <div
             key={file.sha}
@@ -403,7 +407,7 @@ export default function ImportPersonaModal({
           ) : (
             <div className="p-3">
               {/* Folders Section */}
-              <div className="mb-4">
+              <div className="mb-4" data-guide="persona-categories">
                 <h3 className="text-xs font-semibold text-base-content/70 uppercase tracking-wider mb-2 px-1">
                   <Trans i18nKey="persona.categories" />
                 </h3>
@@ -431,7 +435,7 @@ export default function ImportPersonaModal({
 
               {/* Direct Files Section */}
               {rootContents.files.length > 0 && (
-                <div>
+                <div data-guide="persona-quick-import">
                   <h3 className="text-xs font-semibold text-base-content/70 uppercase tracking-wider mb-2 px-1">
                     <Trans i18nKey="persona.quickImport" />
                   </h3>

@@ -347,6 +347,14 @@ sidebar, last-conversation lookup, and its own summary context. `getExportData()
 `meta_chat` and `useImportConversation` recreates it silently. Do not make it summarize full
 conversations on the fly without accounting for the extra model calls.
 
+The Meta chat also loads the persona catalog from `gwdg/chat-ai-personas`
+(`utils/personaCatalog.js`, cached in memory and `sessionStorage`) and includes each persona's id,
+title, category, and description ("subtitle") in the system prompt. A recommendation is marked
+with `[[PERSONA:<path>]]`; `MessageAssistant` renders a `PersonaCard` per marker, which fetches the
+persona JSON and starts a new chat through `useImportConversation`. The catalog is metadata only:
+the full persona JSON is fetched when the user clicks. GitHub's tree API can fail or rate-limit;
+the Meta chat must keep working without personas in that case.
+
 ### 4.17 Per-conversation memory mode overrides the global preference
 
 `ConversationSettings.memory_mode_override` is `"default"`, `0` (off), `1` (recall), or `2`

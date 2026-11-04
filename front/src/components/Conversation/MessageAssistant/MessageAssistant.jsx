@@ -11,12 +11,14 @@ import { useSendMessage } from "../../../hooks/useSendMessage";
 import { useForkConversation } from "../../../hooks/useForkConversation";
 import { useModal } from "../../../modals/ModalContext";
 import MetaBox from "./MetaBox";
+import PersonaCard from "../../Others/PersonaCard";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
 import ToolForm from "./ToolForm";
 import { getFeatureGuideMarker } from "../../../config/featureGuides";
 import { getUseCaseMarker } from "../../../config/useCases";
+import { getPersonaMarkers } from "../../../utils/personaCatalog";
 
 // Constants
 const MAX_HEIGHT = 200;
@@ -36,6 +38,9 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
   const guideUseCaseId = loading
     ? null
     : getUseCaseMarker(message?.content?.[0]?.text);
+  const personaPaths = loading
+    ? []
+    : getPersonaMarkers(message?.content?.[0]?.text);
   const [renderMode, setRenderMode] = useState("Default");
   // Define render modes with better styling
   const renderModes = ["Default", "Markdown", "Plaintext"];
@@ -316,6 +321,9 @@ export default React.memo(({ localState, setLocalState, message_index }) => {
               {guideUseCaseId && (
                 <UseCaseGuideCard useCaseId={guideUseCaseId} />
               )}
+              {personaPaths.map((path) => (
+                <PersonaCard key={path} path={path} />
+              ))}
               {/* Attachments Section */}
               {Array.isArray(message?.content) && message?.content.length > 1 && (
                 <div className="flex flex-wrap gap-2 pr-1 pb-1 max-h-24 sm:max-h-28 md:max-h-40 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">

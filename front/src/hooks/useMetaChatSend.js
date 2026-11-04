@@ -5,6 +5,11 @@ import { useSelector } from "react-redux";
 import { chatCompletions } from "../apis/chatCompletions";
 import { listConversationMetas, listFolders } from "../db";
 import { extractMessageText } from "../utils/conversationSummary";
+import {
+  getPersonaMarkers,
+  loadPersonaCatalog,
+  stripPersonaMarkers,
+} from "../utils/personaCatalog";
 import { getDefaultChatAIModel } from "../utils/conversationUtils";
 import {
   buildFeatureGuidePrompt,
@@ -26,6 +31,7 @@ import {
 const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
 const MAX_MEMORY_CHARS = 12000;
+const MAX_PERSONA_CHARS = 16000;
 
 function yesNo(value) {
   return value ? "yes" : "no";
@@ -88,6 +94,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
 function buildSystemPrompt(
   conversations,
   topics,
+  persons,
   memories,
   userSettings,
   interfaceSettings,
@@ -100,6 +107,16 @@ function buildSystemPrompt(
     .join("\n") || "(no topics available)";
   let used = topicLines.length;
   const lines = [];
+
+  const personaLines = [];
+  let personaUsed = 0;
+  for (const persona of persons) {
+    const description = persona.description || "(no description)";
+    const line = `- id: ${persona.id}\n  title: ${persona.title}\n  category: ${persona.category || "uncategorized"}\n  description: ${description}`;
+    if (personaUsed + line.length > MAX_PERSONA_CHARS) break;
+    personaLines.push(line);
+    personaUsed += line.length;
+  }
 
   const memoryLines = [];
   let memoryUsed = 0;
@@ -152,6 +169,14 @@ Answer in the same language as the user's question. Be concise and concrete.
 
 You may also receive the user's saved memories. Use them when relevant, but they may be stale. Never invent memories.
 
+You can also recommend personas from the persona catalog below. A persona is a ready-made chat setup with its own title and description. Recommend a persona only when its title or description clearly matches what the user asks for. Never invent a persona or claim that one exists if it is not listed. When you recommend a persona, name it and briefly explain why it fits.
+
+To let the user start a chat with a recommended persona, end your answer with exactly [[PERSONA:<persona id>]] on its own line, using only an id from the persona list. You may recommend more than one persona; put each marker on its own line. Do not mention these markers to the user. Do not combine a [[PERSONA:...]] marker with a [[GUIDE:...]] or [[USE_CASE:...]] marker in the same answer.
+
+<personas>
+${personaLines.join("\n") || "(no personas available)"}
+</personas>
+
 <features>
 ${buildFeatureGuidePrompt()}
 </features>
@@ -192,9 +217,10 @@ ${memoryLines.join("\n")}
 }
 
 async function loadMetaContext() {
-  const [rows, folders] = await Promise.all([
+  const [rows, folders, persons] = await Promise.all([
     listConversationMetas(),
     listFolders(),
+    loadPersonaCatalog().catch(() => []),
   ]);
 
   const conversations = (rows || [])
@@ -224,7 +250,7 @@ async function loadMetaContext() {
     name: (folder.name || "").trim() || "Untitled topic",
   }));
 
-  return { conversations, topics };
+  return { conversations, topics, persons };
 }
 
 export function useMetaChatSend() {
@@ -262,8 +288,9 @@ export function useMetaChatSend() {
 
       let conversations = [];
       let topics = [];
+      let persons = [];
       try {
-        ({ conversations, topics } = await loadMetaContext());
+        ({ conversations, topics, persons } = await loadMetaContext());
       } catch (error) {
         console.error("Failed to load conversation summaries", error);
       }
@@ -275,8 +302,10 @@ export function useMetaChatSend() {
         )
         .map((message) => ({
           role: message.role,
-          content: stripUseCaseMarkers(
-            stripFeatureGuideMarkers(extractMessageText(message)),
+          content: stripPersonaMarkers(
+            stripUseCaseMarkers(
+              stripFeatureGuideMarkers(extractMessageText(message)),
+            ),
           ).trim(),
         }))
         .filter((message) => message.content.length > 0);
@@ -304,6 +333,7 @@ export function useMetaChatSend() {
             content: buildSystemPrompt(
               conversations,
               topics,
+              persons,
               (memories || []).map((memory) => memory?.text || ""),
               userSettings,
               interfaceSettings,
@@ -363,9 +393,11 @@ export function useMetaChatSend() {
           const index = messages.length - 2;
           if (messages[index]?.role !== "assistant") return prev;
           if (!messages[index].loading) return prev;
+          const personaMarkers = getPersonaMarkers(accumulated);
           const finalText =
             accumulated &&
             suggestedFeature &&
+            personaMarkers.length === 0 &&
             !getFeatureGuideMarker(accumulated) &&
             !getUseCaseMarker(accumulated)
               ? `${accumulated}\n\n[[GUIDE:${suggestedFeature}]]`
@@ -386,13 +418,23 @@ export function useMetaChatSend() {
           getFeatureGuideMarker(accumulated) ||
           (!useCaseToStart ? suggestedFeature : null);
 
-        if (accumulated && wantsTutorial && useCaseToStart) {
+        if (
+          accumulated &&
+          wantsTutorial &&
+          getPersonaMarkers(accumulated).length === 0 &&
+          useCaseToStart
+        ) {
           window.dispatchEvent(
             new CustomEvent("chatai:start-use-case", {
               detail: { useCaseId: useCaseToStart },
             }),
           );
-        } else if (accumulated && wantsTutorial && featureToStart) {
+        } else if (
+          accumulated &&
+          wantsTutorial &&
+          getPersonaMarkers(accumulated).length === 0 &&
+          featureToStart
+        ) {
           window.dispatchEvent(
             new CustomEvent("chatai:start-feature-guide", {
               detail: { featureId: featureToStart },
