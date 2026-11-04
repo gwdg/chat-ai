@@ -1,4 +1,4 @@
-// Server-side tools of the SAIA gateway (web search, arcana) in the browser agent.
+// Server-side tools of the SAIA gateway (arcana) in the browser agent.
 //
 // The gateway runs its own tools and passes the agent's tools through: calls to the agent's
 // tools come back as normal tool calls. Its own tool use is streamed as status events, which
@@ -12,9 +12,8 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 export function gatewayRequestFields(settings: any) {
   const tools = settings?.tools ?? {};
   const fields: Record<string, unknown> = {};
-  // Opt-in, unlike the agent's own tools: web search needs the user's consent (the toggle
-  // asks for it), and both send conversation data to further services.
-  if (tools.web_search === true) fields.selectors = [{ type: "web_search" }, { type: "fetch_url" }];
+  // Opt-in: arcana sends conversation data to a further service. Web search is an agent
+  // tool (agent/tools.ts), not a gateway selector.
   const arcana = settings?.arcana;
   if (tools.arcana === true && arcana?.id) fields.arcana = arcana;
   return fields;

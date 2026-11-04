@@ -363,6 +363,7 @@ app.post("/images/edits", (req, res) => forward(req, res, "/images/edits", multi
 app.post("/images/generations", (req, res) =>
   forward(req, res, "/images/generations", JSON.stringify(req.body ?? {}), "application/json"),
 );
+app.post("/websearch", (req, res) => forward(req, res, "/websearch", JSON.stringify(req.body ?? {}), "application/json"));
 
 // Build a sophisticated JSON form for a requested tool in test mode. The shape
 // matches what the frontend's ToolForm component renders: { tool_id, title,

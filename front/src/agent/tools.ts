@@ -10,7 +10,7 @@ import { createReadTool } from "pi-coding-agent/core/tools/read.js";
 import { createWriteTool } from "pi-coding-agent/core/tools/write.js";
 import { detectSupportedImageMimeType } from "pi-coding-agent/utils/mime.js";
 import { Type, type TSchema } from "typebox";
-import { convertDocument, editImage, explainImage, generateImage, generateSpeech, transcribeAudio, DEFAULT_VOICE } from "../apis/agentEndpoints";
+import { convertDocument, editImage, explainImage, generateImage, generateSpeech, transcribeAudio, webSearch, DEFAULT_VOICE } from "../apis/agentEndpoints";
 import { createCodemodeTool } from "./codemode";
 import { markdownToDocx } from "./docx";
 import { enoent, normalize, type Vfs, walk } from "./vfs";
@@ -52,6 +52,7 @@ const TOGGLES: Record<string, string[]> = {
   image_generation: ["generate_image"],
   image_modification: ["edit_image"],
   audio_generation: ["generate_speech"],
+  web_search: ["web_search"],
 };
 
 export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): AgentTool<any>[] {
@@ -132,7 +133,31 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
     },
   );
 
+  // createTools runs once per agent run, so this allows one search per run (each is billed)
+  let searched = false;
+  const webSearchTool = tool(
+    "web_search",
+    "Search the web. Returns up to `count` results with title, URL and snippet. Operators such as site:, filetype: and \"quotes\" go into the query. Only one search per answer is allowed, so make the query count.",
+    Type.Object({
+      query: Type.String({ description: "Search query" }),
+      count: Type.Optional(Type.Integer({ minimum: 1, maximum: 10, description: "Number of results, 1-10, default 10" })),
+      page: Type.Optional(Type.Integer({ minimum: 0, maximum: 8, description: "0-based page of `count` results, for more results" })),
+      language: Type.Optional(Type.String({ pattern: "^[a-z]{2}$", description: "ISO 639-1 code; only results in this language" })),
+      country: Type.Optional(Type.String({ pattern: "^[a-z]{2}$", description: "ISO 3166-1 alpha-2 code; prefers results from this country" })),
+      freshness: Type.Optional(Type.Union([Type.Literal("day"), Type.Literal("week"), Type.Literal("month"), Type.Literal("year")], { description: "Only results from the last day/week/month/year" })),
+    }),
+    async ({ query, count, page, language, country, freshness }, signal) => {
+      if (searched) return text("Web search was already used for this answer; only one search is allowed. Answer with the results you have.");
+      searched = true;
+      const result = await webSearch(query, { count, page, language: language?.toLowerCase(), country: country?.toLowerCase(), freshness }, signal);
+      if (!result.results?.length) return text(`No results for "${query}".`);
+      const lines = result.results.map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}${r.snippet ? `\n   ${r.snippet.replace(/\s+/g, " ")}` : ""}`);
+      return text(`${lines.join("\n\n")}${result.has_more ? `\n\n[more results: page ${(page ?? 0) + 1}]` : ""}`);
+    },
+  );
+
   const mediaTools: AgentTool<any>[] = [
+    webSearchTool,
     ...(vision ? [] : [explainImageTool]),
     tool(
       "convert_document",
@@ -215,8 +240,10 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
     ),
   ];
 
-  // Writing is opt-in: off unless switched on. The other toggles are on unless switched off.
-  const isOff = (key: string) => (key === "write_access" ? enabled[key] !== true : enabled[key] === false);
+  // Writing and web search (needs the user's consent, and is billed) are opt-in: off unless
+  // switched on. The other toggles are on unless switched off.
+  const OPT_IN = ["write_access", "web_search"];
+  const isOff = (key: string) => (OPT_IN.includes(key) ? enabled[key] !== true : enabled[key] === false);
   const off = new Set(Object.entries(TOGGLES).flatMap(([key, names]) => (isOff(key) ? names : [])));
   const on = (tool: AgentTool<any>) => !off.has(tool.name);
   // Scripts get the same file tools, so they cannot write either when writing is off

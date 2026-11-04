@@ -25,9 +25,9 @@ import MCPContainer from "./MCPContainer";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 
 // Tools the agent has no counterpart for
-const AGENT_UNAVAILABLE = new Set([...(agentGatewayTools() ? [] : ["web_search", "arcana"])]);
-// Agent tools that are off unless switched on: the ones the gateway runs (agent/gateway.ts),
-// writing files (agent/tools.ts) and MCP servers (agent/mcp.ts)
+const AGENT_UNAVAILABLE = new Set([...(agentGatewayTools() ? [] : ["arcana"])]);
+// Agent tools that are off unless switched on: web search and writing files (agent/tools.ts),
+// arcana, which the gateway runs (agent/gateway.ts), and MCP servers (agent/mcp.ts)
 const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access", "mcp"]);
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);

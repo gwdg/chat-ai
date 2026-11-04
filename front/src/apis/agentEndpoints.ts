@@ -5,8 +5,9 @@ import { resolveBaseURL } from "./openaiClient";
 
 export const agentEndpoint = () => resolveBaseURL().replace(/\/$/, "");
 export const isAgentEnabled = () => import.meta.env.VITE_MODULE_AGENT === "true";
-// Web search and arcana in agent mode run in the SAIA gateway. Off unless front.json sets
-// agentGatewayTools, so agent requests reach the plain chat endpoint without gateway fields.
+// Arcana in agent mode runs in the SAIA gateway. Off unless front.json sets agentGatewayTools,
+// so agent requests reach the plain chat endpoint without gateway fields. Web search is an
+// agent tool of its own (agent/tools.ts) and does not need the gateway.
 export const agentGatewayTools = () => import.meta.env.VITE_AGENT_GATEWAY_TOOLS === "true";
 
 // Models whose server rejected a request with tools during this session
@@ -107,4 +108,29 @@ export async function editImage(image: Uint8Array, name: string, prompt: string,
   form.append("image", blob(image, "image/png"), name);
   form.append("prompt", prompt);
   return readImage(await post("/images/edits", form, false, signal));
+}
+
+export interface WebSearchOptions {
+  count?: number;
+  page?: number;
+  language?: string;
+  country?: string;
+  safesearch?: "off" | "strict";
+  freshness?: "day" | "week" | "month" | "year";
+}
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
+/** Web search through saia-engine's /websearch (POST /v1/websearch for API keys). One query is one billed unit. */
+export async function webSearch(
+  query: string,
+  options: WebSearchOptions = {},
+  signal?: AbortSignal,
+): Promise<{ query: string; results: WebSearchResult[]; has_more: boolean }> {
+  // The endpoint forbids unknown and null fields
+  const body = Object.fromEntries(Object.entries({ query, ...options }).filter(([, value]) => value !== undefined && value !== null && value !== ""));
+  return (await post("/websearch", JSON.stringify(body), true, signal)).json();
 }
