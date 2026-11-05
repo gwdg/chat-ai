@@ -786,7 +786,7 @@ export default {
     label_audio_generation: "Audiogenerierung",
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",
-    label_write_access: "Dateien schreiben",
+    label_write_access: "Schreiben erlauben",
     label_codemode: "Codemode",
     label_create_docx: "Word-Dokument",
     tools_agent_unavailable: "Im Agentenmodus nicht verfügbar",

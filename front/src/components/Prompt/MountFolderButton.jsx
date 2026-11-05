@@ -1,11 +1,12 @@
 import { Fragment, useEffect } from "react";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
-import { Check, Pencil, Server } from "lucide-react";
+import { Check, Code, FileText, Pencil, Server } from "lucide-react";
 import { FolderAdd, ToolBox } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
 import MCPContainer from "../SettingsPanel/MCPContainer";
 import MiniToolButton from "../SettingsPanel/MiniToolButton";
+import ToolLimit from "../SettingsPanel/ToolLimit";
 import { useToast } from "../../hooks/useToast";
 import { isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 import { hasMcpServerValue } from "../../agent/mcp";
@@ -23,6 +24,8 @@ export default function MountFolderButton({ localState, setLocalState }) {
   const canMount = agent && canMountLocalDirectory();
   const writeAccess = localState?.settings?.tools?.write_access === true;
   const mcpEnabled = localState?.settings?.tools?.mcp === true;
+  const createDocxEnabled = localState?.settings?.tools?.create_docx !== false;
+  const codemodeEnabled = localState?.settings?.tools?.codemode !== false;
   const mcpDisabled = !modelSupportsTools(localState?.settings?.model);
   const showMcpConfig = mcpEnabled && !mcpDisabled;
   const hasMcpServers = hasMcpServerValue(localState?.settings?.mcp_servers);
@@ -82,6 +85,30 @@ export default function MountFolderButton({ localState, setLocalState }) {
   const toggleMcp = () => {
     if (mcpDisabled) return;
     setMcp(!mcpEnabled);
+  };
+
+  const toggleCreateDocx = () => {
+    if (mcpDisabled) return;
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        tools: { ...prev.settings?.tools, create_docx: !createDocxEnabled },
+      },
+      flush: true,
+    }));
+  };
+
+  const toggleCodemode = () => {
+    if (mcpDisabled) return;
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        tools: { ...prev.settings?.tools, codemode: !codemodeEnabled },
+      },
+      flush: true,
+    }));
   };
 
   return (
@@ -159,7 +186,36 @@ export default function MountFolderButton({ localState, setLocalState }) {
                   guideKey="mcp"
                   warning={hasMcpServers}
                 />
+                <MiniToolButton
+                  active={createDocxEnabled}
+                  disabled={mcpDisabled}
+                  onClick={toggleCreateDocx}
+                  Icon={FileText}
+                  label={t("settings.label_create_docx")}
+                  title={
+                    mcpDisabled
+                      ? `${t("settings.label_create_docx")}: ${t("settings.tools_agent_unavailable")}`
+                      : undefined
+                  }
+                  guideKey="create_docx"
+                />
+                <MiniToolButton
+                  active={codemodeEnabled}
+                  disabled={mcpDisabled}
+                  onClick={toggleCodemode}
+                  Icon={Code}
+                  label={t("settings.label_codemode")}
+                  title={
+                    mcpDisabled
+                      ? `${t("settings.label_codemode")}: ${t("settings.tools_agent_unavailable")}`
+                      : undefined
+                  }
+                  guideKey="codemode"
+                />
               </div>
+              {!mcpDisabled && (
+                <ToolLimit localState={localState} setLocalState={setLocalState} />
+              )}
               {!canMount && (
                 <button
                   type="button"

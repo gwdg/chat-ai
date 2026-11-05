@@ -773,7 +773,7 @@ export default {
     label_audio_generation: "Audio Generation",
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",
-    label_write_access: "Write files",
+    label_write_access: "Allow write",
     label_codemode: "Codemode",
     label_create_docx: "Word document",
     tools_agent_unavailable: "Not available in agent mode",

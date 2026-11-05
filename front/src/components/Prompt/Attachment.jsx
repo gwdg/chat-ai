@@ -9,7 +9,7 @@ import {
   loadFile,
   saveFile,
 } from "../../db";
-import { WarningAltFilled, Close, Video, DocumentBlank } from "@carbon/icons-react";
+import { WarningAltFilled, Close, Download, Video, DocumentBlank } from "@carbon/icons-react";
 import { useSelector } from "react-redux";
 import { processFile } from "../../apis/processFile";
 import { getFileType } from "../../utils/attachments";
@@ -69,6 +69,25 @@ export default function Attachment({
       setLocalState,
       index,
     });
+  };
+
+  const handleDownload = async (event) => {
+    event.stopPropagation();
+    try {
+      const bytes = await loadFile(attachment.fileId);
+      const blob = new Blob([bytes], { type: file.type || "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.name || "download";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 300);
+    } catch (error) {
+      console.error("Download failed:", error);
+      notifyError(t("file_preview.save_failed"));
+    }
   };
   // Handle Process File
   const handleProcessFile = async (useBrowser = documentConversionMode !== "server") => {
@@ -332,6 +351,17 @@ export default function Attachment({
                 >
                   {badge}
                 </span>
+                {/* Download button - positioned at card corner */}
+                {(inHistory || inAssistant) && (
+                  <button
+                    className="btn btn-ghost btn-xs btn-circle absolute top-1 right-1 bg-base-100/30 hover:bg-base-100/90"
+                    onClick={handleDownload}
+                    aria-label={t("file_preview.download_aria")}
+                    title={t("file_preview.download_aria")}
+                  >
+                    <Download size={16} className="opacity-70 hover:opacity-100 transition-opacity" />
+                  </button>
+                )}
                 {/* Remove button - positioned at card corner */}
                 {!inHistory && (
                   <button
