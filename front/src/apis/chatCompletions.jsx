@@ -1,13 +1,30 @@
 import getModelDefaults from "../config/getModelDefaults";
+import { normalizeMcpUrl } from "../agent/mcp";
 import { createBackendClient } from "./openaiClient";
 
-// Older conversations hold the id as a string; the server list holds {url, enabled}
-const gatewayMcpServer = (servers) =>
-  typeof servers === "string"
-    ? servers.trim()
-    : Array.isArray(servers)
-      ? (servers.find((server) => server?.enabled && server?.url?.trim())?.url ?? "").trim()
-      : "";
+// Remote entries carry a server id; local entries carry a URL. Older conversations keep the
+// id as a string in mcp_servers.
+const gatewayMcpServers = (settings) => {
+  const servers = settings?.mcp_servers;
+  if (Array.isArray(servers)) {
+    const remote = servers
+      .filter(
+        (server) =>
+          server &&
+          typeof server.id === "string" &&
+          typeof server.url !== "string" &&
+          server.enabled !== false,
+      )
+      .map((server) => server.id.trim())
+      .filter(Boolean);
+    if (remote.length) return remote;
+    const local = normalizeMcpUrl(
+      servers.find((server) => server?.enabled && server?.url?.trim())?.url,
+    );
+    return local ? [local] : [];
+  }
+  return typeof servers === "string" && servers.trim() ? [servers.trim()] : [];
+};
 
 // Request fields that set the reasoning effort for `model`, from its defaults and the conversation settings
 export function reasoningParams(model, settings) {
@@ -87,10 +104,10 @@ async function* chatCompletions (
       params.feedback = conversation.settings.feedback;
     }
 
-    // The gateway takes one server id; from the server list (agent/mcp.ts) the first enabled one
-    const mcpServer = gatewayMcpServer(conversation.settings?.mcp_servers);
-    if (mcpServer) {
-      params["mcp-servers"] = [mcpServer];
+    // Remote server ids, or the first enabled local server as the gateway server id
+    const mcpServers = gatewayMcpServers(conversation.settings);
+    if (mcpServers.length) {
+      params["mcp-servers"] = mcpServers;
     }
 
     // Define openai object to call backend

@@ -178,7 +178,7 @@ export default function ExportChatModal({
       if (exportSettings) {
         let settings = processSettings();
         const mcpServersText = Array.isArray(settings?.mcp_servers)
-          ? settings.mcp_servers.map((server) => server?.url ?? server).join(", ")
+          ? settings.mcp_servers.map((server) => server?.url ?? server?.id ?? server).join(", ")
           : settings?.mcp_servers;
         const additionalText =
         `\n\nConversation settings\ntitle: ${
@@ -433,7 +433,7 @@ export default function ExportChatModal({
           lineHeight *
             (6 +
               (exportArcana && isArcanaSupported && settings?.arcana?.id ? 1 : 0) +
-              (exportMcpServers && hasMcpServers && settings?.mcp_servers ? 1 : 0))
+              (exportMcpServers && hasMcpServers ? 1 : 0))
         );
         y += lineHeight * 2;
 
@@ -457,10 +457,10 @@ export default function ExportChatModal({
           y += lineHeight;
         }
 
-        if (exportMcpServers && hasMcpServers && settings?.mcp_servers) {
-          const mcpServersText = Array.isArray(settings.mcp_servers)
-            ? settings.mcp_servers.map((server) => server?.url ?? server).join(", ")
-            : settings.mcp_servers;
+        if (exportMcpServers && hasMcpServers) {
+          const mcpServersText = Array.isArray(settings?.mcp_servers)
+            ? settings.mcp_servers.map((server) => server?.url ?? server?.id ?? server).join(", ")
+            : settings?.mcp_servers;
           doc.text(`MCP server: ${mcpServersText}`, margin, y);
           y += lineHeight;
         }

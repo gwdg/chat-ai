@@ -5,7 +5,6 @@ import { useSendMessage } from "../../hooks/useSendMessage";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import { Send, SendFilled } from "@carbon/icons-react";
 import { isAgentEnabled } from "../../apis/agentEndpoints";
-import { activeMcpServers } from "../../agent/mcp";
 
 export default function SendButton({localState, setLocalState, handleSend, prompt}) {
     const { t, i18n } = useTranslation();
@@ -32,7 +31,7 @@ export default function SendButton({localState, setLocalState, handleSend, promp
             !!tools.web_search ||
             !!tools.fetch_url);
 
-        const mcpEnabled = isAgentEnabled() ? activeMcpServers(localState?.settings).length > 0 : toolsEnabled && !!tools.mcp;
+        const mcpEnabled = !!tools.mcp;
 
         return !(isExternalModel || webSearchEnabled || mcpEnabled);
     }

@@ -2,6 +2,8 @@
 // lists their tools and offers them to the agent; a call goes to the server as tools/call.
 // The SDK is loaded only when a server is enabled.
 import type { AgentTool, AgentToolResult } from "@earendil-works/pi-agent-core";
+import i18n from "../i18n";
+import { requestMcpConfirmation } from "./mcpConfirmation";
 
 export interface McpServer {
   url: string;
@@ -10,14 +12,22 @@ export interface McpServer {
   headers?: Record<string, string>;
 }
 
-const isUrl = (value: unknown) => {
+const LOCAL_HOST = /^(localhost|127(?:\.\d{1,3}){3}|\[?::1\]?|0\.0\.0\.0)(?::\d+)?(?:[/?#]|$)/i;
+
+/** A server URL with a scheme; bare hosts like `localhost:9000` default to http on this machine. */
+export function normalizeMcpUrl(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw)
+    ? raw
+    : `${LOCAL_HOST.test(raw) ? "http" : "https"}://${raw}`;
   try {
-    const url = new URL(String(value));
-    return url.protocol === "http:" || url.protocol === "https:";
+    const url = new URL(candidate);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : "";
   } catch {
-    return false;
+    return "";
   }
-};
+}
 
 /**
  * The servers in `settings.mcp_servers`. Older conversations hold a gateway server id
@@ -31,11 +41,19 @@ export function mcpServers(settings: any): McpServer[] {
 
 /** The servers the agent uses this turn. */
 export const activeMcpServers = (settings: any) =>
-  settings?.tools?.mcp === true ? mcpServers(settings).filter((server) => server.enabled && isUrl(server.url)) : [];
+  settings?.tools?.mcp === true
+    ? mcpServers(settings)
+        .filter((server) => server.enabled)
+        .map((server) => ({ ...server, url: normalizeMcpUrl(server.url) }))
+        .filter((server) => server.url)
+    : [];
 
 /** Whether `settings.mcp_servers` holds anything: a gateway id or a server with a URL. */
 export const hasMcpServerValue = (value: unknown) =>
-  typeof value === "string" ? value.trim().length > 0 : Array.isArray(value) && value.some((server) => server?.url?.trim?.());
+  typeof value === "string"
+    ? value.trim().length > 0
+    : Array.isArray(value) &&
+      value.some((server) => server?.url?.trim?.() || server?.id?.trim?.());
 
 /** The servers without their headers, for sharing and exporting. */
 export const withoutHeaders = (servers: unknown) =>
@@ -161,7 +179,21 @@ export async function connectMcpServers(servers: McpServer[], taken: Set<string>
         label: tool.title || tool.name,
         description: `${tool.description ?? ""} (MCP server ${server.url})`.trim(),
         parameters: (tool.inputSchema ?? { type: "object", properties: {} }) as any,
-        execute: async (_id, args, signal) => {
+        execute: async (toolCallId, args, signal) => {
+          const allowed = await requestMcpConfirmation(
+            {
+              id: String(toolCallId),
+              server: server.url,
+              tool: tool.name,
+              args: args ?? {},
+            },
+            signal,
+          );
+          if (!allowed) {
+            throw new Error(
+              i18n.t("mcp_confirmation.denied", { tool: tool.name, server: server.url }),
+            );
+          }
           let result;
           try {
             result = await connection.client.callTool({ name: tool.name, arguments: args ?? {} }, undefined, { signal });

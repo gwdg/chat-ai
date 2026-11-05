@@ -177,8 +177,6 @@ export default function Prompt({
               localState={localState}
               setLocalState={setLocalState}
             />
-            {/* Local folder for the agent */}
-            <MountFolderButton localState={localState} />
                {/* Mic Button */}
             <MicButton
               localState={localState}
@@ -189,7 +187,11 @@ export default function Prompt({
           </div>
           {/* Buttons in the center */}
           <div className="flex gap-4 items-center justify-center">
-            
+            {/* Local folder and write access for the agent */}
+            <MountFolderButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
             {/* Tools Button */}
             <ToolsButton
               localState={localState}

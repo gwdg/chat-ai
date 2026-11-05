@@ -234,6 +234,14 @@ export default {
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
   },
+  mcp_confirmation: {
+    title: "Run MCP tool?",
+    description:
+      "The assistant wants to run “{{tool}}” on {{server}}. Only allow this if you trust the server and the arguments.",
+    allow: "Run tool",
+    deny: "Deny",
+    denied: "The user denied running the MCP tool “{{tool}}” on {{server}}.",
+  },
   feature_guide: {
     catalog: {
       open: "Browse tutorials",
@@ -776,7 +784,8 @@ export default {
 
   // Conversation
   conversation: {
-    mount_folder: "Give the assistant access to a local folder",
+    local_tools: "Connect tools on your computer",
+    mount_folder: "Share local folder",
     folder_mounted: "Folder available to the assistant at {{path}}",
     tool_failed: "failed",
     close_chat: "Close chat",

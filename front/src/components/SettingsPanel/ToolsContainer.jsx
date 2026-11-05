@@ -14,7 +14,6 @@ import {
   Wand2,
   AudioLines,
   Server, // MCP
-  Pencil,
   Code,
   FileText,
 } from "lucide-react";
@@ -22,7 +21,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import ArcanaContainer from "./ArcanaContainer";
 import MCPContainer from "./MCPContainer";
+import MiniToolButton from "./MiniToolButton";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
+import { hasMcpServerValue } from "../../agent/mcp";
 
 // Tools the agent has no counterpart for
 const AGENT_UNAVAILABLE = new Set([...(agentGatewayTools() ? [] : ["arcana"])]);
@@ -31,36 +32,6 @@ const AGENT_UNAVAILABLE = new Set([...(agentGatewayTools() ? [] : ["arcana"])]);
 const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access", "mcp"]);
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
-
-function MiniToolButton({ active, disabled, onClick, Icon, label, title, guideKey }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      data-guide={`tool-${guideKey}`}
-      className={[
-        "group w-full select-none",
-        "rounded-xl border text-sm font-medium",
-        "px-3 py-2 md:px-3.5 md:py-2.5",
-        "flex flex-col items-center justify-center gap-2",
-        "transition-all",
-        disabled
-          ? "opacity-50 cursor-not-allowed"
-          : active
-          ? "border-success bg-success/10 text-success cursor-pointer"
-          : "border-base-300 bg-base-100 text-base-content hover:bg-base-200 cursor-pointer",
-        active ? "shadow-sm" : "shadow-none",
-      ].join(" ")}
-      title={title || label}
-    >
-      <Icon className="h-6 w-6 md:h-7 md:w-7 shrink-0" aria-hidden="true" />
-      <span className="leading-none text-xs text-center">
-        {label}
-      </span>
-    </button>
-  );
-}
 
 // Tool invocations per agent response; batched calls count once. Stored as
 // settings.max_tool_calls: missing = 10, 0 = no limit (agent/runAgent.ts).
@@ -115,6 +86,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
 
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools && !isExternalModel;
+  const hasMcpServers = hasMcpServerValue(settings.mcp_servers);
   // In agent mode every tool is switched on its own and a missing key counts as on
   // (as in agent/tools.ts); the master switch and the server-side tools do not apply.
   const agentMode = isAgentEnabled();
@@ -123,14 +95,12 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const showArcanaBox = agentMode
     ? agentGatewayTools() && toolsState.arcana === true
     : !!settings?.enable_tools && !!toolsState.arcana;
-  const showMCPBox = agentMode
-    ? !agentWithoutTools && toolsState.mcp === true
-    : !!settings?.enable_tools && !!toolsState.mcp;
+  const showMCPBox =
+    (agentMode ? !agentWithoutTools : !!settings?.enable_tools) && !!toolsState.mcp;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
     () => [
-      { key: "write_access", Icon: Pencil, label: t("settings.label_write_access") },
       { key: "codemode", Icon: Code, label: t("settings.label_codemode") },
       { key: "create_docx", Icon: FileText, label: t("settings.label_create_docx") },
       { key: "web_search", Icon: Globe, label: t("settings.label_web_search") },
@@ -303,6 +273,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
               label={label}
               title={unavailable ? `${label}: ${t("settings.tools_agent_unavailable")}` : label}
               guideKey={key}
+              warning={key === "web_search" || (key === "mcp" && hasMcpServers)}
             />
           );
         })}
@@ -322,6 +293,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
         <MCPContainer
           localState={localState}
           setLocalState={setLocalState}
+          remote
         />
       )}
     </div>

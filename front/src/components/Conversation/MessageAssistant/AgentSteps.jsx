@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import McpConfirmationCard from "./McpConfirmationCard";
 
 const resultText = (result) =>
   (result?.content ?? [])
@@ -27,6 +28,7 @@ function ToolCall({ call, result }) {
         <span className="truncate opacity-70">{String(summary).slice(0, 120)}</span>
         <span className={result?.isError ? "text-red-500" : ""}>{status}</span>
       </button>
+      {call.id && <McpConfirmationCard callId={call.id} />}
       {open && (
         <div className="px-2 pb-2 flex flex-col gap-1">
           <pre className="whitespace-pre-wrap break-all font-mono opacity-80">{JSON.stringify(args, null, 2)}</pre>

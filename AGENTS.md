@@ -475,6 +475,10 @@ the tutorial for the feature itself.
   by default (`html_load_external: false`): `utils/externalRefs.js` drops external URL attributes
   during sanitisation, and `MarkdownImage` / `MermaidDiagram` apply the same policy so a reply
   cannot make the browser contact third-party hosts unless the user opts in.
+- **Mark data-transfer risk visibly.** Any option or feature that can send user data outside
+  GWDG (external models, web search, MCP servers, external references, …) must show the yellow
+  warning triangle (`faTriangleExclamation` / `TriangleAlert`) in its row or card, so the risk is
+  visible before the user opens a disclaimer or starts the action.
 - CONTRIBUTING.md asks that files and folders follow the structure of the existing ones; keep
   components in the folder of the screen area they belong to.
 

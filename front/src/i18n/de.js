@@ -238,6 +238,14 @@ export default {
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
   },
+  mcp_confirmation: {
+    title: "MCP-Werkzeug ausführen?",
+    description:
+      "Der Assistent möchte „{{tool}}“ auf {{server}} ausführen. Erlauben Sie dies nur, wenn Sie dem Server und den Argumenten vertrauen.",
+    allow: "Werkzeug ausführen",
+    deny: "Ablehnen",
+    denied: "Der Benutzer hat die Ausführung des MCP-Werkzeugs „{{tool}}“ auf {{server}} abgelehnt.",
+  },
   feature_guide: {
     catalog: {
       open: "Tutorials durchsuchen",
@@ -783,7 +791,8 @@ export default {
 
   // Conversation
   conversation: {
-    mount_folder: "Dem Assistenten Zugriff auf einen lokalen Ordner geben",
+    local_tools: "Werkzeuge auf deinem Computer verbinden",
+    mount_folder: "Lokalen Ordner teilen",
     folder_mounted: "Ordner für den Assistenten unter {{path}} verfügbar",
     tool_failed: "fehlgeschlagen",
     close_chat: "Chat schließen",

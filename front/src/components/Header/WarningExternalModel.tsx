@@ -3,7 +3,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { Locked, WarningAltFilled, Close } from "@carbon/icons-react";
 import { isAgentEnabled } from "../../apis/agentEndpoints";
-import { activeMcpServers } from "../../agent/mcp";
 
 function isSafeSettings(localState) {
   const modelName = localState?.settings?.model?.name;
@@ -22,7 +21,7 @@ function isSafeSettings(localState) {
       !!tools.web_search ||
       !!tools.fetch_url);
 
-  const mcpEnabled = isAgentEnabled() ? activeMcpServers(localState?.settings).length > 0 : toolsEnabled && !!tools.mcp;
+  const mcpEnabled = !!tools.mcp;
 
   return !(isExternalModel || webSearchEnabled || mcpEnabled);
 }
