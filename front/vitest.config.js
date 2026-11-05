@@ -30,5 +30,16 @@ export default defineConfig({
     restoreMocks: true,
     clearMocks: true,
     css: false,
+    coverage: {
+      provider: "v8",
+      reporter: ["text-summary", "text"],
+      include: ["src/**/*.{js,jsx,ts,tsx}"],
+      exclude: [
+        "src/**/*.{test,spec}.{js,jsx,ts,tsx}",
+        "src/**/__tests__/**",
+        "src/test/**",
+        "src/**/*.d.ts",
+      ],
+    },
   },
 });

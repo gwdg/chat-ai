@@ -104,6 +104,7 @@ sub-path deployment needs `base` changed plus a rebuild.
 cd front && npm run build    # vite build — works, ~6s
 cd front && npm test         # vitest run — unit/component tests (jsdom + Testing Library)
 cd front && npm run test:watch
+cd front && npm run test:coverage   # v8 text coverage report
 ```
 
 **`npm run lint` does not currently run.** The script invokes `eslint`, but neither `eslint` nor the
