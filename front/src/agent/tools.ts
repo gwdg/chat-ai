@@ -84,9 +84,42 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
     },
   };
 
+  const writeBase = createWriteTool(CWD, { operations: { writeFile, mkdir: (dir) => fs.mkdir(dir) } });
+  const write: AgentTool<any> = {
+    ...writeBase,
+    description:
+      "Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories. For binary files (PNG, PDF, ZIP, ...), set encoding to \"base64\" and put the base64 data in content.",
+    parameters: Type.Object({
+      path: Type.String({ description: "Path to the file to write (relative or absolute)" }),
+      content: Type.String({
+        description: "Text content, or base64-encoded bytes when encoding is base64",
+      }),
+      encoding: Type.Optional(
+        Type.Union(
+          [Type.Literal("utf8"), Type.Literal("base64")],
+          { description: "Set to base64 to write binary data" },
+        ),
+      ),
+    }),
+    execute: async (id, args, signal, onUpdate) => {
+      const raw = String(args.content ?? "");
+      const dataUrl = /^data:[^,]*;base64,/i.test(raw);
+      if (args.encoding === "base64" || dataUrl) {
+        const path = normalize(args.path ?? "");
+        const base64 = dataUrl ? raw.replace(/^data:[^,]*;base64,/i, "") : raw;
+        const bytes = Buffer.from(base64, "base64");
+        const dir = path.split("/").slice(0, -1).join("/") || "/";
+        await fs.mkdir(dir);
+        await fs.writeFile(path, bytes);
+        return text(`Wrote ${bytes.length} bytes to ${path}`);
+      }
+      return writeBase.execute(id, { path: args.path, content: args.content }, signal, onUpdate);
+    },
+  };
+
   const fileTools: AgentTool<any>[] = [
     readWithHints,
-    createWriteTool(CWD, { operations: { writeFile, mkdir: (dir) => fs.mkdir(dir) } }),
+    write,
     createEditTool(CWD, { operations: { readFile, writeFile, access } }),
     createLsTool(CWD, {
       operations: {
