@@ -222,6 +222,13 @@ export default {
     conversation_setting_all_summary:
       "Set {{setting}} to “{{value}}” for all chats",
     conversation_setting_summary: "Set {{setting}} to “{{value}}” in “{{title}}”",
+    mcp_target_all: "all chats",
+    mcp_add_local_summary: "Add local MCP server {{name}} to {{target}}",
+    mcp_add_remote_summary: "Add remote MCP server {{name}} to {{target}}",
+    mcp_remove_local_summary: "Remove local MCP server {{name}} from {{target}}",
+    mcp_remove_remote_summary: "Remove remote MCP server {{name}} from {{target}}",
+    mcp_update_local_summary: "Update local MCP server {{name}} in {{target}}",
+    mcp_update_remote_summary: "Update remote MCP server {{name}} in {{target}}",
     add_memory_summary: "Add memory “{{text}}”",
     update_memory_summary: "Update memory “{{from}}” to “{{to}}”",
     delete_memory_summary: "Delete memory “{{text}}”",

@@ -226,6 +226,19 @@ export default {
       "{{setting}} für alle Chats auf „{{value}}“ setzen",
     conversation_setting_summary:
       "{{setting}} in „{{title}}“ auf „{{value}}“ setzen",
+    mcp_target_all: "alle Chats",
+    mcp_add_local_summary:
+      "Lokalen MCP-Server {{name}} zu {{target}} hinzufügen",
+    mcp_add_remote_summary:
+      "Entfernten MCP-Server {{name}} zu {{target}} hinzufügen",
+    mcp_remove_local_summary:
+      "Lokalen MCP-Server {{name}} aus {{target}} entfernen",
+    mcp_remove_remote_summary:
+      "Entfernten MCP-Server {{name}} aus {{target}} entfernen",
+    mcp_update_local_summary:
+      "Lokalen MCP-Server {{name}} in {{target}} aktualisieren",
+    mcp_update_remote_summary:
+      "Entfernten MCP-Server {{name}} in {{target}} aktualisieren",
     add_memory_summary: "Erinnerung „{{text}}“ hinzufügen",
     update_memory_summary: "Erinnerung „{{from}}“ in „{{to}}“ ändern",
     delete_memory_summary: "Erinnerung „{{text}}“ löschen",

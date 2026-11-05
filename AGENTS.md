@@ -385,15 +385,22 @@ to the message, and highlights it briefly. `MarkdownLink` routes `/chat/...`, `/
 with a brief highlight. Module flags in `<user_settings>` let the model explain disabled features.
 
 Mutating chat actions are proposals, never applied by the model. It emits `RENAME_CHAT` /
-`MOVE_CHAT`, `PIN_CHAT`, `PIN_TOPIC`, `SET_SETTING`, and memory markers (`utils/metaActions.js`),
-which `MetaActionCard` renders below the message with a warning icon and an explicit Accept button.
-Only that click calls `updateConversationMeta` / `assignConversationToFolder` /
-`setConversationPinned` / `setFolderPinned` or dispatches `importUserSettings`; markers
+`MOVE_CHAT`, `PIN_CHAT`, `PIN_TOPIC`, `SET_SETTING`, `MCP_SERVER`, and memory markers
+(`utils/metaActions.js`), which `MetaActionCard` renders below the message with a warning icon and
+an explicit Accept button. `MCP_SERVER` adds, updates, or removes per-chat MCP servers (local URL
+entries or remote gateway ids). Only that click calls `updateConversationMeta` /
+`assignConversationToFolder` / `setConversationPinned` / `setFolderPinned` or dispatches
+`importUserSettings`; markers
 are stripped from rendered markdown and from Meta-chat history. Memory indices come from the
 numbered `<memories>` list in the system prompt. After applying, the card stores a snapshot and
 offers a revert action; it only reverts if the current chats/settings/memories still match the
 values that were applied. A successful revert returns the card to the unapplied state, so the same
 proposal can be accepted again.
+
+**Every new setting must be reachable from the Meta chat.** When adding a global, per-chat, or
+feature-specific setting, include its current value in the Meta chat context/system prompt and add a
+confirmable mutation marker with `MetaActionCard` apply/revert support. Do not ship a setting that
+the Meta chat cannot read or propose to change.
 
 ### 4.17 Per-conversation memory mode overrides the global preference
 
@@ -501,6 +508,7 @@ the tutorial for the feature itself.
 - [ ] new proper user-facing feature → at least one feature guide (tutorial), with its category and `npm run validate:guides`
 - [ ] Dexie schema change → version bump + `.upgrade()` backfill, existing version blocks untouched
 - [ ] new persisted Redux key → `whitelist` + `getDefaultState()` (+ a migration if the shape changed)
+- [ ] new setting → exposed in the Meta chat context and propose/apply/revert support (§4.16)
 - [ ] new `front.json` key → mapped in `vite.config.js`
 - [ ] touched a `VITE_MODULE_*` area → still correct with the module off
 - [ ] conversation write → `lastModified` threaded through and `-1` handled

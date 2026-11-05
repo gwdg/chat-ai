@@ -121,10 +121,19 @@ function buildConversationSettingsSummary(settings = {}) {
       ? "default"
       : settings.reasoning_effort;
   const arcanaId = settings.arcana?.id || "";
-  const hasMcp =
-    (typeof settings.mcp_servers === "string" &&
-      settings.mcp_servers.trim().length > 0) ||
-    (Array.isArray(settings.mcp_servers) && settings.mcp_servers.length > 0);
+  const mcpServers = Array.isArray(settings.mcp_servers)
+    ? settings.mcp_servers
+    : typeof settings.mcp_servers === "string" && settings.mcp_servers.trim()
+      ? [{ id: settings.mcp_servers.trim(), enabled: true }]
+      : [];
+  const mcpDescription = mcpServers
+    .map((server) => {
+      const enabled = server?.enabled === false ? "disabled" : "enabled";
+      if (typeof server?.url === "string") return `local ${server.url} (${enabled})`;
+      if (typeof server?.id === "string") return `remote ${server.id} (${enabled})`;
+      return `unknown ${JSON.stringify(server)}`;
+    })
+    .join(", ");
 
   return [
     `model ${model}`,
@@ -138,7 +147,7 @@ function buildConversationSettingsSummary(settings = {}) {
         : ""
     }`,
     `arcana ${arcanaId || "none"}`,
-    `MCP ${hasMcp ? "configured" : "none"}`,
+    `MCP ${mcpDescription || "none"}`,
   ].join("; ");
 }
 
@@ -302,7 +311,14 @@ Supported per-chat setting keys and values:
 
 Use SET_CONVERSATION_SETTING with "target":"all" only when the user explicitly asks to change all chats; otherwise use a conversation id from <conversations>. These markers change per-chat settings, not global preferences. The Meta chat's own settings are read-only and must not be changed with these markers.
 
-For any other setting, do not propose a marker; give the relevant settings deep link instead. For memories, use ADD_MEMORY for a new memory, UPDATE_MEMORY or DELETE_MEMORY with the index from <memories>, and CLEAR_MEMORIES to delete all memories. You may include multiple markers, including chat, setting, and memory changes together. Do not use these markers for advice or tutorials, and do not combine them with persona markers.
+MCP servers are per-chat. "local" servers are added to Local tools with a URL; "remote" servers are added to GWDG Tools with a gateway server id. To propose an MCP change, use one of these markers:
+[[MCP_SERVER:{"op":"add","server":"local","target":"all","url":"localhost:9000","enabled":true}]]
+[[MCP_SERVER:{"op":"add","server":"remote","target":"<conversation id>","serverId":"<server id>","enabled":true,"authorization":"<optional>"}]]
+[[MCP_SERVER:{"op":"update","server":"local","target":"all","url":"localhost:9000","enabled":false}]]
+[[MCP_SERVER:{"op":"remove","server":"remote","target":"<conversation id>","serverId":"<server id>"}]]
+The target is "all" or a conversation id from <conversations>; use "all" when the user does not name a chat. For a local server, provide its URL (for example localhost:9000). For a remote server, provide its server id as serverId. authorization is optional and must only contain a value the user gave you; never invent credentials. The per-chat settings above list the current MCP servers.
+
+For any other setting, do not propose a marker; give the relevant settings deep link instead. For memories, use ADD_MEMORY for a new memory, UPDATE_MEMORY or DELETE_MEMORY with the index from <memories>, and CLEAR_MEMORIES to delete all memories. You may include multiple markers, including chat, setting, memory, and MCP changes together. Do not use these markers for advice or tutorials, and do not combine them with persona markers.
 
 <features>
 ${buildFeatureGuidePrompt()}
