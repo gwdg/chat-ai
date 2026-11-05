@@ -192,6 +192,7 @@ export default {
   },
   meta_chat: {
     title: "Meta-Chat",
+    prompt_placeholder: "Frag den Meta-Chat!",
     open: "Metachat: Chats durchsuchen",
     banner_description: "Metachat kann Ihnen auf zwei Arten helfen:",
     purposes: {

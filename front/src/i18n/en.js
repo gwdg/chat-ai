@@ -189,6 +189,7 @@ export default {
   },
   meta_chat: {
     title: "Meta chat",
+    prompt_placeholder: "Ask the meta chat!",
     open: "Metachat: ask about your chats",
     banner_description: "Metachat can help you in two ways:",
     purposes: {

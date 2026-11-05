@@ -1,4 +1,5 @@
-import { useState, useEffect} from "react";
+import { useContext, useState, useEffect} from "react";
+import { useTranslation } from "react-i18next";
 
 import AbortButton from "./AbortButton";
 import SendButton from "./SendButton";
@@ -23,6 +24,7 @@ import { getSpeechModule } from "../../utils/speechAudio";
 import { useModal } from "../../modals/ModalContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import UndoButton from "../Conversation/UndoButton";
+import { MetaChatSendContext } from "../../context/MetaChatContext";
 
 export default function Prompt({
   localState,
@@ -32,6 +34,8 @@ export default function Prompt({
   placeholder,
   sendMessage: sendMessageOverride,
 }) {
+  const { t } = useTranslation();
+  const metaChatSend = useContext(MetaChatSendContext);
   const defaultSendMessage = useSendMessage();
   const sendMessage = sendMessageOverride ?? defaultSendMessage;
   const { openModal } = useModal();
@@ -165,7 +169,9 @@ export default function Prompt({
           handleSend={handleSend}
           handleChange={handleChange}
           prompt={prompt}
-          placeholder={placeholder}
+          placeholder={
+            placeholder ?? (metaChatSend ? t("meta_chat.prompt_placeholder") : undefined)
+          }
         />
         
         {/* Buttons Section */}
@@ -187,16 +193,20 @@ export default function Prompt({
           </div>
           {/* Buttons in the center */}
           <div className="flex gap-4 items-center justify-center">
-            {/* Local folder and write access for the agent */}
-            <MountFolderButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
-            {/* Tools Button */}
-            <ToolsButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
+            {!metaChatSend && (
+              <>
+                {/* Local folder and write access for the agent */}
+                <MountFolderButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+                {/* Tools Button */}
+                <ToolsButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
+              </>
+            )}
             {/* Settings Button */}
             <SettingsButton
               localState={localState}
