@@ -349,6 +349,7 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
                   localState={localState}
                   setLocalState={setLocalState}
                   modelsData={modelsData}
+                  message_index={message_index}
                 />
               )}
               {/* Attachments Section */}

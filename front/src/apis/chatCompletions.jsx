@@ -96,6 +96,12 @@ async function* chatCompletions (
       params.tools = conversation?.settings?.tools || [];
     }
 
+    // Function tools run by the caller (e.g. the Meta chat's local tools)
+    if (Array.isArray(conversation.settings?.function_tools) && conversation.settings.function_tools.length > 0) {
+      params.tools = conversation.settings.function_tools;
+      if (conversation.settings.tool_choice) params.tool_choice = conversation.settings.tool_choice;
+    }
+
     if (conversation.settings?.arcana && conversation.settings.arcana.id !== "") {
       params.arcana = conversation.settings.arcana;
     }

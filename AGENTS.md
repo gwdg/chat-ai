@@ -343,46 +343,43 @@ The AI icon in the sidebar header navigates to `/meta`, rendered by
 `Pages/MetaChatPage.jsx`. The page reuses the normal chat shell (`Header`, `SidebarWrapper`,
 `Conversation`, `Prompt`) and provides `MetaChatSendContext`, which `useSendMessage` delegates to
 `useMetaChatSend` while inside the page. A banner above the conversation labels it as the Meta chat
-and shows an example question. The sender loads `listConversationMetas()` and `listFolders()`, keeps
-non-empty conversations, and sends each conversation's id, title, topic, summary, and last-modified
-time plus the topic tree and saved user memories to the default model — never the full message
-history. Missing summaries fall back to the title. The model is instructed to reference a chat as
-`[title](/chat/<id>)`;
-`MarkdownRenderer`'s link component navigates `/chat/...` links inside the SPA. The meta chat is
-stored as a hidden conversation row (`id: "meta-chat"`, `isMetaChat: true`), excluded from the
-sidebar, last-conversation lookup, and its own summary context. `getExportData()` emits it as
-`meta_chat` and `useImportConversation` recreates it silently. Do not make it summarize full
-conversations on the fly without accounting for the extra model calls.
+and shows an example question.
 
-Conversation context also includes each chat's pinned state, each topic's pinned state, and a compact
-summary of the chat's per-chat settings (model, temperature, top_p, reasoning effort, memory-mode
-override, enabled tools, Arcana, MCP), so the
-model can answer questions about per-chat configuration without confusing it with global
-`<user_settings>`. The Meta chat's own settings are sent separately in `<meta_chat_settings>` and
-are read-only. `SET_CONVERSATION_SETTING` proposals can target all conversations or one id and
-change model, temperature, top_p, reasoning effort, memory-mode override, tool/web-search flags;
-they are applied only after confirmation and can be reverted like other mutations. Model proposals
-resolve an id from the available model list, and revert compares the model id rather than the full
-model object because the 30-second model refresh can update metadata such as status.
+The Meta chat does not embed the chat list, topics, settings, personas, tutorials, use cases, or
+message excerpts in its system prompt. It runs a function-tool loop: `utils/metaTools.js` defines
+`list_chats`, `list_topics`, `get_chat`, `search_messages`, `list_memories`, `get_user_settings`,
+`list_models`, `list_personas`, `list_tutorials`, `start_tutorial`, and `start_use_case`.
+`useMetaChatSend` sends them as `settings.function_tools`; `apis/chatCompletions.jsx` forwards them,
+and `back/service.mjs` passes function tools through when `enable_tools` is false. The model must
+call the relevant tool for current data because the interface state can change between user
+messages. `list_chats` returns summaries and per-chat settings (model, temperature, top_p, reasoning
+effort, memory-mode override, enabled tools, Arcana, MCP); missing summaries fall back to the title.
 
-The Meta chat also loads the persona catalog from `gwdg/chat-ai-personas`
-(`utils/personaCatalog.js`, cached in memory and `sessionStorage`) and includes each persona's id,
-title, category, and description ("subtitle") in the system prompt. The model links to a persona
-inline with `[label](/persona/<path>)`; `MarkdownRenderer` routes that link to `PersonaStartLink`,
-which fetches the persona JSON and starts a new chat through `useImportConversation`. The legacy
-`[[PERSONA:<path>]]` marker still renders a `PersonaCard` below the message. The catalog is
-metadata only: the full persona JSON is fetched when the user clicks. GitHub's tree API can fail or
-rate-limit; the Meta chat must keep working without personas in that case.
+The meta chat is stored as a hidden conversation row (`id: "meta-chat"`, `isMetaChat: true`),
+excluded from the sidebar, last-conversation lookup, and its own summary context. `getExportData()`
+emits it as `meta_chat` and `useImportConversation` recreates it silently. Do not make it summarize
+full conversations on the fly without accounting for the extra model calls.
 
-For navigation and message-level search, `useMetaChatSend` runs `searchMessages` from `db/index.ts`
-with the latest user message and includes matching excerpts plus message ids in
-`<message_search_results>`. Decision/action-item/comparison questions also append recent excerpts
-from `getRecentMessageExcerpts`. The model cites exact messages as
+Personas come from `list_personas` (`gwdg/chat-ai-personas` via `utils/personaCatalog.js`, cached in
+memory and `sessionStorage`). The model links to one inline with `[label](/persona/<path>)`;
+`MarkdownRenderer` routes that link to `PersonaStartLink`, which fetches the persona JSON and starts
+a new chat through `useImportConversation`. The legacy `[[PERSONA:<path>]]` marker still renders a
+`PersonaCard` below the message. The catalog is metadata only: the full persona JSON is fetched when
+the user clicks, and the Meta chat must keep working if GitHub’s tree API fails or is rate-limited.
+
+For navigation and message search, the model calls `search_messages`; results include exact
+conversation and message ids. It cites messages as
 `/chat/<conversation id>?message=<message id>`; `Conversation` reads that query parameter, scrolls
 to the message, and highlights it briefly. `MarkdownLink` routes `/chat/...`, `/topic/...`, and
 `/settings/<tab>` internally; settings links dispatch `chatai:open-settings`, handled by
 `useSettingsDeepLink` in `ChatPage`/`MetaChatPage`, and `UserSettingsModal` opens the requested tab
-with a brief highlight. Module flags in `<user_settings>` let the model explain disabled features.
+with a brief highlight. `get_user_settings` returns the module flags and global preferences.
+
+Tutorials and use cases start through the `start_tutorial` / `start_use_case` tools, which dispatch
+`chatai:start-feature-guide` / `chatai:start-use-case`, or through inline links
+`[Start tutorial](/tutorial/<feature id>)` / `[Start use case](/use-case/<use case id>)` handled by
+`MarkdownLink`. The legacy `[[GUIDE:...]]` and `[[USE_CASE:...]]` markers still start them when no
+tool already did, and `[[PERSONA:...]]` remains supported.
 
 Mutating chat actions are proposals, never applied by the model. It emits `RENAME_CHAT` /
 `MOVE_CHAT`, `PIN_CHAT`, `PIN_TOPIC`, `SET_SETTING`, `MCP_SERVER`, and memory markers
@@ -392,15 +389,18 @@ entries or remote gateway ids). Only that click calls `updateConversationMeta` /
 `assignConversationToFolder` / `setConversationPinned` / `setFolderPinned` or dispatches
 `importUserSettings`; markers
 are stripped from rendered markdown and from Meta-chat history. Memory indices come from the
-numbered `<memories>` list in the system prompt. After applying, the card stores a snapshot and
+`list_memories` tool. After applying, the card stores a snapshot and
 offers a revert action; it only reverts if the current chats/settings/memories still match the
 values that were applied. A successful revert returns the card to the unapplied state, so the same
-proposal can be accepted again.
+proposal can be accepted again. Accept (or no decision) is stored as `meta.actionDecision` on the
+assistant message; reverting stores `rejected`. `useMetaChatSend` prefixes the next user message
+with “I accepted the change.” / “I rejected the change.” / “I cannot decide.” so the model sees the
+outcome.
 
 **Every new setting must be reachable from the Meta chat.** When adding a global, per-chat, or
-feature-specific setting, include its current value in the Meta chat context/system prompt and add a
-confirmable mutation marker with `MetaActionCard` apply/revert support. Do not ship a setting that
-the Meta chat cannot read or propose to change.
+feature-specific setting, expose its current value through a Meta-chat read tool (or an existing
+tool’s output) and add a confirmable mutation marker with `MetaActionCard` apply/revert support. Do
+not ship a setting that the Meta chat cannot read or propose to change.
 
 ### 4.17 Per-conversation memory mode overrides the global preference
 

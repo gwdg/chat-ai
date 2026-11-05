@@ -108,6 +108,7 @@ export default function MetaActionCard({
   localState,
   setLocalState,
   modelsData = [],
+  message_index,
 }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -121,6 +122,20 @@ export default function MetaActionCard({
   const [reverting, setReverting] = useState(false);
   const [error, setError] = useState("");
   const previousState = useRef(null);
+
+  const setDecision = (decision) => {
+    if (message_index === undefined) return;
+    setLocalState?.((prev) => {
+      const messages = [...prev.messages];
+      const message = messages[message_index];
+      if (!message) return prev;
+      messages[message_index] = {
+        ...message,
+        meta: { ...(message.meta || {}), actionDecision: decision },
+      };
+      return { ...prev, messages, flush: true };
+    });
+  };
 
   const conversationById = new Map(
     conversations.map((conversation) => [conversation.id, conversation]),
@@ -670,6 +685,7 @@ export default function MetaActionCard({
       }
 
       setApplied(true);
+      setDecision("accepted");
       notifySuccess(t("meta_chat.changes_applied"));
     } catch (applyError) {
       console.error("Failed to apply Meta chat changes", applyError);
@@ -850,6 +866,7 @@ export default function MetaActionCard({
       }
 
       setApplied(false);
+      setDecision("rejected");
       notifySuccess(t("meta_chat.changes_reverted"));
     } catch (revertError) {
       console.error("Failed to revert Meta chat changes", revertError);
@@ -935,7 +952,7 @@ export default function MetaActionCard({
 
           {error && <p className="mt-1.5 text-[11px] text-error">{error}</p>}
 
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2 flex justify-end gap-1.5">
             {applied ? (
               <button
                 type="button"

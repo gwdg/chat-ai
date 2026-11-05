@@ -4,7 +4,14 @@ import { Code2, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router";
-import { Folder, MessageCircle, MessageSquare, Settings } from "lucide-react";
+import {
+  Folder,
+  GraduationCap,
+  MessageCircle,
+  MessageSquare,
+  PlayCircle,
+  Settings,
+} from "lucide-react";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -49,7 +56,7 @@ const MarkdownLink = ({ href, children }) => {
   const className =
     "text-info hover:text-info underline transition-colors text-sm";
   const actionLinkClassName =
-    "btn btn-accent btn-sm ml-1 inline-flex w-fit gap-2 align-middle";
+    "btn btn-accent btn-xs ml-1 inline-flex w-fit gap-1 align-middle";
 
   if (
     typeof href === "string" &&
@@ -68,7 +75,7 @@ const MarkdownLink = ({ href, children }) => {
           navigate(href);
         }}
       >
-        <Icon size={16} aria-hidden="true" />
+        <Icon size={12} aria-hidden="true" />
         {children}
       </a>
     );
@@ -91,7 +98,52 @@ const MarkdownLink = ({ href, children }) => {
           );
         }}
       >
-        <Settings size={16} aria-hidden="true" />
+        <Settings size={12} aria-hidden="true" />
+        {children}
+      </a>
+    );
+  }
+
+  const tutorialMatch =
+    typeof href === "string" && href.match(/^\/tutorial\/([a-zA-Z0-9_-]+)$/);
+  if (tutorialMatch) {
+    return (
+      <a
+        href={href}
+        className={actionLinkClassName}
+        onClick={(event) => {
+          event.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("chatai:start-feature-guide", {
+              detail: { featureId: tutorialMatch[1] },
+            }),
+          );
+        }}
+      >
+        <GraduationCap size={12} aria-hidden="true" />
+        {children}
+      </a>
+    );
+  }
+
+  const useCaseMatch =
+    typeof href === "string" &&
+    href.match(/^\/use-?case\/([a-zA-Z0-9_-]+)$/i);
+  if (useCaseMatch) {
+    return (
+      <a
+        href={href}
+        className={actionLinkClassName}
+        onClick={(event) => {
+          event.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("chatai:start-use-case", {
+              detail: { useCaseId: useCaseMatch[1] },
+            }),
+          );
+        }}
+      >
+        <PlayCircle size={12} aria-hidden="true" />
         {children}
       </a>
     );
