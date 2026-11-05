@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import ThinkingBlock from "./ThinkingBlock";
 import Code from "./Code";
 import McpConfirmationCard from "./McpConfirmationCard";
 
@@ -98,7 +99,7 @@ function CodemodeStep({ call, result }) {
   );
 }
 
-// The agent's turn in order: text and thinking as Markdown, tool calls as collapsible rows
+// The agent's turn in order: thinking boxes, text as Markdown, tool calls as steps
 export default function AgentSteps({ agentMessages, isLoading, renderMode }) {
   const results = new Map(
     agentMessages.filter((m) => m.role === "toolResult").map((m) => [m.toolCallId, m])
@@ -109,20 +110,31 @@ export default function AgentSteps({ agentMessages, isLoading, renderMode }) {
     if (markdown.trim()) segments.push({ kind: "markdown", text: markdown });
     markdown = "";
   };
-  const lastMessageIndex = agentMessages.length - 1;
+
+  const lastAssistantMessageIndex = agentMessages.reduce(
+    (last, message, index) => (message.role === "assistant" ? index : last),
+    -1,
+  );
   for (const [messageIndex, message] of agentMessages.entries()) {
     if (message.role !== "assistant") continue;
     const blocks = message.content ?? [];
+    const lastThinkingIndex = blocks.reduce(
+      (last, block, index) => (block.type === "thinking" ? index : last),
+      -1,
+    );
     for (const [blockIndex, block] of blocks.entries()) {
       if (block.type === "thinking") {
-        // The closing tag must not move while the block is still streaming:
-        // MarkdownRenderer processes the text incrementally and would treat
-        // text appended before an already-seen closing tag as main text.
-        const live =
+        flush();
+        const liveThinking =
           isLoading &&
-          messageIndex === lastMessageIndex &&
-          blockIndex === blocks.length - 1;
-        markdown += `<think>${block.thinking}${live ? "" : "</think>"}`;
+          messageIndex === lastAssistantMessageIndex &&
+          blockIndex === lastThinkingIndex;
+        segments.push({
+          kind: "thinking",
+          text: block.thinking || "",
+          autoExpand: liveThinking,
+          isStreaming: liveThinking,
+        });
       } else if (block.type === "text") markdown += block.text;
       else if (block.type === "toolCall") {
         flush();
@@ -143,26 +155,29 @@ export default function AgentSteps({ agentMessages, isLoading, renderMode }) {
         }
       }
     }
-    if (messageIndex !== lastMessageIndex) markdown += "\n\n";
+    if (messageIndex !== agentMessages.length - 1) markdown += "\n\n";
   }
   flush();
 
   return (
-    // Steps are spaced by the gap alone: a reasoning block at the edge of a segment drops its margin
     <div className="flex flex-col gap-1 [&_.thinking-block:first-child]:mt-0 [&_.thinking-block:last-child]:mb-0">
       {segments.map((segment, i) =>
         segment.kind === "tool" ? (
           <ToolCall key={i} call={segment.call} result={segment.result} />
         ) : segment.kind === "codemode" ? (
           <CodemodeStep key={i} call={segment.call} result={segment.result} />
+        ) : segment.kind === "thinking" ? (
+          <ThinkingBlock
+            key={i}
+            autoExpand={segment.autoExpand}
+            isStreaming={segment.isStreaming}
+          >
+            {segment.text}
+          </ThinkingBlock>
         ) : (
           <MarkdownRenderer
             key={i}
-            isLoading={
-              isLoading &&
-              (i === segments.length - 1 ||
-                segments.slice(i + 1).some((next) => next.kind === "codemode"))
-            }
+            isLoading={isLoading && i === segments.length - 1}
             renderMode={renderMode}
           >
             {segment.text}

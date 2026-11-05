@@ -181,9 +181,8 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
   );
 
   const content = message?.content?.[0]?.text ?? "";
-  // Agent turns that used tools are shown step by step
-  const hasToolCalls = Array.isArray(message?.meta?.agent)
-    && message.meta.agent.some((m) => m.role === "toolResult" || m.content?.some?.((b) => b.type === "toolCall"));
+  // Agent turns are shown from the stored pi transcript, even before a tool call arrives
+  const isAgentTurn = Array.isArray(message?.meta?.agent) && message.meta.agent.length > 0;
   
   const hasForms = Array.isArray(message?.content) && message.content.some((i) => i?.type === "form");
   const isContentEmpty = !content.trim() && !hasForms;
@@ -327,7 +326,7 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              {hasToolCalls ? (
+              {isAgentTurn ? (
                 <AgentSteps agentMessages={message.meta.agent} isLoading={loading} renderMode={renderMode} />
               ) : (
                 <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
