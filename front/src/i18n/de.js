@@ -809,6 +809,8 @@ export default {
     mount_folder: "Lokalen Ordner teilen",
     folder_mounted: "Ordner für den Assistenten unter {{path}} verfügbar",
     tool_failed: "fehlgeschlagen",
+    codemode_running: "Code wird ausgeführt…",
+    codemode_output: "Code-Ausgabe",
     close_chat: "Chat schließen",
     speech_mode_title: "Sprachgespräch",
     speech_mode_button: "Sprachgespräch starten",

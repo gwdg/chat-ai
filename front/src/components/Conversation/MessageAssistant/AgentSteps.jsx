@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
+import Code from "./Code";
 import McpConfirmationCard from "./McpConfirmationCard";
 
 const resultText = (result) =>
@@ -43,6 +44,60 @@ function ToolCall({ call, result }) {
   );
 }
 
+const codemodeSource = (call) => {
+  const args = call?.arguments;
+  if (args && typeof args === "object" && typeof args.code === "string") return args.code;
+  if (typeof args === "string") {
+    try {
+      const parsed = JSON.parse(args);
+      if (typeof parsed?.code === "string") return parsed.code;
+    } catch {
+      // Partial JSON while the call is still streaming.
+    }
+    const match = args.match(/"code"\s*:\s*"((?:\\.|[^"\\])*)/);
+    if (match) {
+      try {
+        return JSON.parse(`"${match[1]}"`);
+      } catch {
+        return match[1].replace(/\\n/g, "\n");
+      }
+    }
+  }
+  return "";
+};
+
+function CodemodeStep({ call, result }) {
+  const { t } = useTranslation();
+  const code = codemodeSource(call);
+
+  if (!result) {
+    return (
+      <div
+        role="status"
+        aria-label={t("conversation.codemode_running")}
+        className="flex items-center gap-2 px-1 py-0.5 text-sm text-base-content/60"
+      >
+        <span className="loading loading-dots loading-xs" />
+        {t("conversation.codemode_running")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {code && <Code language="javascript">{code}</Code>}
+      <details className="rounded-lg border border-base-300 bg-base-100 text-xs">
+        <summary className="cursor-pointer px-2 py-1 text-base-content/70">
+          {t("conversation.codemode_output")}
+        </summary>
+        <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all border-t border-base-300 p-2 font-mono">
+          {resultText(result)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
 // The agent's turn in order: text and thinking as Markdown, tool calls as collapsible rows
 export default function AgentSteps({ agentMessages, isLoading, renderMode }) {
   const results = new Map(
@@ -54,17 +109,41 @@ export default function AgentSteps({ agentMessages, isLoading, renderMode }) {
     if (markdown.trim()) segments.push({ kind: "markdown", text: markdown });
     markdown = "";
   };
-  for (const message of agentMessages) {
+  const lastMessageIndex = agentMessages.length - 1;
+  for (const [messageIndex, message] of agentMessages.entries()) {
     if (message.role !== "assistant") continue;
-    for (const block of message.content ?? []) {
-      if (block.type === "thinking") markdown += `<think>${block.thinking}</think>`;
-      else if (block.type === "text") markdown += block.text;
+    const blocks = message.content ?? [];
+    for (const [blockIndex, block] of blocks.entries()) {
+      if (block.type === "thinking") {
+        // The closing tag must not move while the block is still streaming:
+        // MarkdownRenderer processes the text incrementally and would treat
+        // text appended before an already-seen closing tag as main text.
+        const live =
+          isLoading &&
+          messageIndex === lastMessageIndex &&
+          blockIndex === blocks.length - 1;
+        markdown += `<think>${block.thinking}${live ? "" : "</think>"}`;
+      } else if (block.type === "text") markdown += block.text;
       else if (block.type === "toolCall") {
         flush();
-        segments.push({ kind: "tool", call: block, result: results.get(block.id) });
+        const codemodeArgs =
+          block.arguments && typeof block.arguments === "object"
+            ? block.arguments
+            : null;
+        if (
+          block.name === "codemode" ||
+          (!block.name &&
+            (typeof codemodeArgs?.code === "string" ||
+              (typeof block.arguments === "string" &&
+                block.arguments.includes('"code"'))))
+        ) {
+          segments.push({ kind: "codemode", call: block, result: results.get(block.id) });
+        } else {
+          segments.push({ kind: "tool", call: block, result: results.get(block.id) });
+        }
       }
     }
-    markdown += "\n\n";
+    if (messageIndex !== lastMessageIndex) markdown += "\n\n";
   }
   flush();
 
@@ -73,11 +152,17 @@ export default function AgentSteps({ agentMessages, isLoading, renderMode }) {
     <div className="flex flex-col gap-1 [&_.thinking-block:first-child]:mt-0 [&_.thinking-block:last-child]:mb-0">
       {segments.map((segment, i) =>
         segment.kind === "tool" ? (
-          <ToolCall key={segment.call.id ?? i} call={segment.call} result={segment.result} />
+          <ToolCall key={i} call={segment.call} result={segment.result} />
+        ) : segment.kind === "codemode" ? (
+          <CodemodeStep key={i} call={segment.call} result={segment.result} />
         ) : (
           <MarkdownRenderer
             key={i}
-            isLoading={isLoading && i === segments.length - 1}
+            isLoading={
+              isLoading &&
+              (i === segments.length - 1 ||
+                segments.slice(i + 1).some((next) => next.kind === "codemode"))
+            }
             renderMode={renderMode}
           >
             {segment.text}

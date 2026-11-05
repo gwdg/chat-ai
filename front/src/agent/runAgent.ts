@@ -31,6 +31,7 @@ Every file you write is shown to the user in the chat, so do not repeat a file's
 
 const NO_TOOLS_PROMPT = "You cannot call tools in this conversation; attached files are referenced by name only.";
 
+
 type ModelSpec = { id: string; name?: string; input?: string[] };
 
 export interface TurnUpdate {

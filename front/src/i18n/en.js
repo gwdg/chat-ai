@@ -796,6 +796,8 @@ export default {
     mount_folder: "Share local folder",
     folder_mounted: "Folder available to the assistant at {{path}}",
     tool_failed: "failed",
+    codemode_running: "Running code…",
+    codemode_output: "Code output",
     close_chat: "Close chat",
     speech_mode_title: "Voice conversation",
     speech_mode_button: "Start voice conversation",
