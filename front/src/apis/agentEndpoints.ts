@@ -5,10 +5,10 @@ import { resolveBaseURL } from "./openaiClient";
 
 export const agentEndpoint = () => resolveBaseURL().replace(/\/$/, "");
 export const isAgentEnabled = () => import.meta.env.VITE_MODULE_AGENT === "true";
-// Arcana in agent mode runs in the SAIA gateway. Off unless front.json sets agentGatewayTools,
-// so agent requests reach the plain chat endpoint without gateway fields. Web search is an
+// Arcana in agent mode runs in the SAIA gateway. On unless front.json sets agentGatewayTools
+// to false, in which case agent requests reach the plain chat endpoint without gateway fields. Web search is an
 // agent tool of its own (agent/tools.ts) and does not need the gateway.
-export const agentGatewayTools = () => import.meta.env.VITE_AGENT_GATEWAY_TOOLS === "true";
+export const agentGatewayTools = () => import.meta.env.VITE_AGENT_GATEWAY_TOOLS !== "false";
 
 // Models whose server rejected a request with tools during this session
 const toollessModels = new Set<string>();
