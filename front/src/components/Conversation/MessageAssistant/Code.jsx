@@ -108,7 +108,7 @@ const Code = memo(({ language, children }) => {
         className="absolute top-2 right-2 z-10"
         style={{ transform: `translateY(${btnOffset}px)` }}
       >
-        <CodeCopyBtn hovered={hovered}>{children}</CodeCopyBtn>
+        <CodeCopyBtn hovered={hovered} language={language}>{children}</CodeCopyBtn>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 // Resolve the backend endpoint from config
-function resolveBaseURL() {
+export function resolveBaseURL() {
   const endpoint = import.meta.env.VITE_BACKEND_ENDPOINT;
   try {
     // If absolute, parse directly

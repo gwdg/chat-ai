@@ -3,7 +3,10 @@ import { Trans } from "react-i18next";
 import BaseModal from "../../../modals/BaseModal";
 import { useImportConversation } from "../../../hooks/useImportConversation";
 import i18n from "../../../i18n";
-import { PERSONA_REPO } from "../../../utils/personaCatalog";
+import {
+  PERSONA_REPO,
+  isIgnoredPersonaFolder,
+} from "../../../utils/personaCatalog";
 import { useToast } from "../../../hooks/useToast";
 import {
   Folder,
@@ -60,7 +63,7 @@ export default function ImportPersonaModal({
           continue;
 
         if (item.type === "dir") {
-          folders.push(item);
+          if (!isIgnoredPersonaFolder(item.name)) folders.push(item);
         } else if (
           item.type === "file" &&
           item.name.toLowerCase().endsWith(".json")

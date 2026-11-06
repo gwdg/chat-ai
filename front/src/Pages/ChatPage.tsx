@@ -18,6 +18,8 @@ import Conversation from "../components/Conversation/Conversation";
 import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
 import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
+import { activeMcpServers, prefetchMcpServers } from "../agent/mcp";
+import { isAgentEnabled } from "../apis/agentEndpoints";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
 
 import { useNavigate } from "react-router";
@@ -45,6 +47,14 @@ export default function ChatPage() {
     setLocalState,
     conversationId,
   });
+
+  // Connect to the conversation's MCP servers before the first message, so a turn does not
+  // wait for it. Debounced, as the list changes with every keystroke while a URL is typed.
+  const mcpServers = JSON.stringify(isAgentEnabled() ? activeMcpServers(localState?.settings) : []);
+  useEffect(() => {
+    const timer = setTimeout(() => prefetchMcpServers(JSON.parse(mcpServers)), 500);
+    return () => clearTimeout(timer);
+  }, [mcpServers]);
 
   // A chat started from the topic master view arrives with its first prompt
   // in router state; send it once the conversation has been hydrated.

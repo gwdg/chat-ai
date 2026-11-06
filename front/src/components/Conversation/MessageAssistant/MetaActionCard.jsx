@@ -6,11 +6,13 @@ import {
   Folder,
   PencilLine,
   Pin,
+  Server,
   Settings,
   SlidersHorizontal,
   TriangleAlert,
   Undo2,
 } from "lucide-react";
+import { normalizeMcpUrl } from "../../../agent/mcp";
 
 import {
   assignConversationToFolder,
@@ -30,11 +32,83 @@ import {
   selectUserSettings,
 } from "../../../Redux/reducers/userSettingsReducer";
 
+const cloneMcpServers = (servers) => JSON.parse(JSON.stringify(servers ?? []));
+
+const readMcpServers = (settings) => {
+  const raw = settings?.mcp_servers;
+  if (Array.isArray(raw)) return raw.map((server) => ({ ...server }));
+  if (typeof raw === "string" && raw.trim()) {
+    return [{ id: raw.trim(), enabled: true }];
+  }
+  return [];
+};
+
+const mcpServerMatches = (server, action) => {
+  if (!server || typeof server !== "object") return false;
+  if (action.serverScope === "local") {
+    if (typeof server.url !== "string") return false;
+    const url = normalizeMcpUrl(action.url);
+    return !!url && normalizeMcpUrl(server.url) === url;
+  }
+  return (
+    typeof server.id === "string" &&
+    typeof server.url !== "string" &&
+    server.id.trim() === action.serverId
+  );
+};
+
+const withAuthorization = (entry, authorization) => {
+  const { Authorization, ...rest } = entry.headers ?? {};
+  const headers = authorization ? { ...rest, Authorization: authorization } : rest;
+  if (Object.keys(headers).length) entry.headers = headers;
+  else delete entry.headers;
+  return entry;
+};
+
+const applyMcpAction = (servers, action) => {
+  if (action.serverScope === "local" && !normalizeMcpUrl(action.url)) {
+    throw new Error("Invalid MCP server URL");
+  }
+  const next = servers.map((server) => ({ ...server }));
+  const index = next.findIndex((server) => mcpServerMatches(server, action));
+
+  if (action.op === "remove") {
+    if (index < 0) throw new Error("MCP server not found");
+    next.splice(index, 1);
+    return next;
+  }
+
+  if (action.op === "add") {
+    if (index >= 0) {
+      const entry = { ...next[index] };
+      if (action.enabled !== undefined) entry.enabled = action.enabled;
+      if (action.authorization !== undefined) withAuthorization(entry, action.authorization);
+      next[index] = entry;
+      return next;
+    }
+    const entry =
+      action.serverScope === "local"
+        ? { url: action.url, enabled: action.enabled !== false }
+        : { id: action.serverId, enabled: action.enabled !== false };
+    if (action.authorization) entry.headers = { Authorization: action.authorization };
+    next.push(entry);
+    return next;
+  }
+
+  if (index < 0) throw new Error("MCP server not found");
+  const entry = { ...next[index] };
+  if (action.enabled !== undefined) entry.enabled = action.enabled;
+  if (action.authorization !== undefined) withAuthorization(entry, action.authorization);
+  next[index] = entry;
+  return next;
+};
+
 export default function MetaActionCard({
   actions,
   localState,
   setLocalState,
   modelsData = [],
+  message_index,
 }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -48,6 +122,20 @@ export default function MetaActionCard({
   const [reverting, setReverting] = useState(false);
   const [error, setError] = useState("");
   const previousState = useRef(null);
+
+  const setDecision = (decision) => {
+    if (message_index === undefined) return;
+    setLocalState?.((prev) => {
+      const messages = [...prev.messages];
+      const message = messages[message_index];
+      if (!message) return prev;
+      messages[message_index] = {
+        ...message,
+        meta: { ...(message.meta || {}), actionDecision: decision },
+      };
+      return { ...prev, messages, flush: true };
+    });
+  };
 
   const conversationById = new Map(
     conversations.map((conversation) => [conversation.id, conversation]),
@@ -209,6 +297,18 @@ export default function MetaActionCard({
         value,
         title: titleFor(action.conversationId),
       });
+    }
+    if (action.type === "mcp_server") {
+      const target =
+        action.scope === "all"
+          ? t("meta_chat.mcp_target_all")
+          : titleFor(action.conversationId);
+      const name =
+        action.serverScope === "local" ? action.url : action.serverId;
+      return t(
+        `meta_chat.mcp_${action.op}_${action.serverScope}_summary`,
+        { name, target },
+      );
     }
     if (action.type === "add_memory") {
       return t("meta_chat.add_memory_summary", { text: action.text });
@@ -429,6 +529,33 @@ export default function MetaActionCard({
         throw new Error("No conversations found");
       }
 
+      const mcpPlan = new Map();
+      for (const action of actions.filter((item) => item.type === "mcp_server")) {
+        const targets =
+          action.scope === "all"
+            ? conversations
+            : [await getConversationMeta(action.conversationId)];
+        if (targets.length === 0) {
+          throw new Error("No conversations found");
+        }
+        for (const conversation of targets) {
+          if (!conversation || conversation.isMetaChat) continue;
+          const entry = mcpPlan.get(conversation.id) || {
+            id: conversation.id,
+            previous: readMcpServers(conversation.settings),
+            expected: readMcpServers(conversation.settings),
+          };
+          entry.expected = applyMcpAction(entry.expected, action);
+          mcpPlan.set(conversation.id, entry);
+        }
+      }
+      if (
+        actions.some((action) => action.type === "mcp_server") &&
+        mcpPlan.size === 0
+      ) {
+        throw new Error("No conversations found");
+      }
+
       previousState.current = {
         chats: prepared.map((action) => {
           if (action.type === "rename") {
@@ -481,6 +608,11 @@ export default function MetaActionCard({
             expected: { ...entry.expected },
           }),
         ),
+        mcpServers: [...mcpPlan.values()].map((entry) => ({
+          id: entry.id,
+          previous: cloneMcpServers(entry.previous),
+          expected: cloneMcpServers(entry.expected),
+        })),
       };
 
       for (const action of prepared) {
@@ -535,6 +667,16 @@ export default function MetaActionCard({
         );
       }
 
+      for (const entry of mcpPlan.values()) {
+        const conversation = await getConversationMeta(entry.id);
+        if (!conversation) throw new Error("Conversation not found");
+        const settings = { ...(conversation.settings || {}), mcp_servers: entry.expected };
+        await updateConversationMeta(entry.id, { settings });
+        setLocalState?.((previous) =>
+          previous?.id === entry.id ? { ...previous, settings } : previous,
+        );
+      }
+
       if (Object.keys(settingUpdates).length > 0) {
         dispatch(importUserSettings(settingUpdates));
       }
@@ -543,6 +685,7 @@ export default function MetaActionCard({
       }
 
       setApplied(true);
+      setDecision("accepted");
       notifySuccess(t("meta_chat.changes_applied"));
     } catch (applyError) {
       console.error("Failed to apply Meta chat changes", applyError);
@@ -630,6 +773,14 @@ export default function MetaActionCard({
         }
       }
 
+      for (const entry of snapshot.mcpServers || []) {
+        const current = await getConversationMeta(entry.id);
+        if (!current) throw new Error("Conversation not found");
+        if (!valuesEqual(readMcpServers(current.settings), entry.expected)) {
+          throw new Error("MCP servers changed");
+        }
+      }
+
       if (
         snapshot.memories &&
         !valuesEqual(memories, snapshot.memories.expected)
@@ -689,6 +840,16 @@ export default function MetaActionCard({
         );
       }
 
+      for (const entry of snapshot.mcpServers || []) {
+        const conversation = await getConversationMeta(entry.id);
+        if (!conversation) throw new Error("Conversation not found");
+        const settings = { ...(conversation.settings || {}), mcp_servers: entry.previous };
+        await updateConversationMeta(entry.id, { settings });
+        setLocalState?.((previous) =>
+          previous?.id === entry.id ? { ...previous, settings } : previous,
+        );
+      }
+
       const previousSettings = Object.fromEntries(
         Object.entries(snapshot.settings).map(([key, values]) => [
           key,
@@ -705,6 +866,7 @@ export default function MetaActionCard({
       }
 
       setApplied(false);
+      setDecision("rejected");
       notifySuccess(t("meta_chat.changes_reverted"));
     } catch (revertError) {
       console.error("Failed to revert Meta chat changes", revertError);
@@ -770,6 +932,12 @@ export default function MetaActionCard({
                     className="mt-0.5 shrink-0 text-warning"
                     aria-hidden="true"
                   />
+                ) : action.type === "mcp_server" ? (
+                  <Server
+                    size={12}
+                    className="mt-0.5 shrink-0 text-warning"
+                    aria-hidden="true"
+                  />
                 ) : (
                   <Brain
                     size={12}
@@ -784,7 +952,7 @@ export default function MetaActionCard({
 
           {error && <p className="mt-1.5 text-[11px] text-error">{error}</p>}
 
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2 flex justify-end gap-1.5">
             {applied ? (
               <button
                 type="button"

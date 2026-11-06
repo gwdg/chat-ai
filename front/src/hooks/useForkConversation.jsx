@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { createConversation, newId, saveFile, loadFile } from "../db";
 import { useToast } from "./useToast";
+import { copyWorkspace } from "../agent/workspace";
 
 // Deep-clone a message's content, duplicating any attached files so the
 // forked conversation owns its own copies (independent of the source).
@@ -61,6 +62,8 @@ export function useForkConversation(localState) {
         }
 
         const newConversationId = newId();
+        // The agent's earlier turns refer to files in its workspace
+        await copyWorkspace(localState.id, newConversationId);
         const forkMessages = [];
         for (const msg of sourceMessages) {
           if (!msg?.role) continue;

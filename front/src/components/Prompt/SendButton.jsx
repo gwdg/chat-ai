@@ -4,6 +4,7 @@ import { useToast } from "../../hooks/useToast";
 import { useSendMessage } from "../../hooks/useSendMessage";
 import { useSendWithEnter } from "../../hooks/useSendWithEnter";
 import { Send, SendFilled } from "@carbon/icons-react";
+import { isAgentEnabled } from "../../apis/agentEndpoints";
 
 export default function SendButton({localState, setLocalState, handleSend, prompt}) {
     const { t, i18n } = useTranslation();
@@ -19,7 +20,8 @@ export default function SendButton({localState, setLocalState, handleSend, promp
             typeof modelName === "string" &&
             modelName.toLowerCase().includes("external");
 
-        const toolsEnabled = !!localState?.settings?.enable_tools;
+        // The agent does not use the gateway web search; it calls MCP servers itself (agent/mcp.ts)
+        const toolsEnabled = !!localState?.settings?.enable_tools && !isAgentEnabled();
         const tools = localState?.settings?.tools || {};
 
         // Web search should only trigger warnings when the toolset is active
@@ -29,7 +31,7 @@ export default function SendButton({localState, setLocalState, handleSend, promp
             !!tools.web_search ||
             !!tools.fetch_url);
 
-        const mcpEnabled = toolsEnabled && !!tools.mcp;
+        const mcpEnabled = !!tools.mcp;
 
         return !(isExternalModel || webSearchEnabled || mcpEnabled);
     }

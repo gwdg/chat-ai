@@ -16,6 +16,7 @@ import MetaActionCard from "./MetaActionCard";
 import FeedbackButtons from "./FeedbackButtons";
 import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
+import AgentSteps from "./AgentSteps";
 import ToolForm from "./ToolForm";
 import { getFeatureGuideMarker } from "../../../config/featureGuides";
 import { getUseCaseMarker } from "../../../config/useCases";
@@ -139,6 +140,11 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
     setLocalState((prev) => {
       let newMessages = [...prev.messages];
       newMessages[message_index].content[0].text = editedText;
+      // The edited text replaces the agent's transcript of this turn
+      if (newMessages[message_index].meta?.agent) {
+        const { agent, ...meta } = newMessages[message_index].meta;
+        newMessages[message_index].meta = meta;
+      }
       return { ...prev, messages: newMessages, flush: true };
     });
     setEditMode(false);
@@ -175,6 +181,9 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
   );
 
   const content = message?.content?.[0]?.text ?? "";
+  // Agent turns are shown from the stored pi transcript, even before a tool call arrives
+  const isAgentTurn = Array.isArray(message?.meta?.agent) && message.meta.agent.length > 0;
+  
   const hasForms = Array.isArray(message?.content) && message.content.some((i) => i?.type === "form");
   const isContentEmpty = !content.trim() && !hasForms;
   const errorMessage = message?.meta?.error || "Unknown Error";
@@ -317,9 +326,13 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
           {/* Display message content */}
           {!editMode && !feedbackMode && (
             <div className="flex flex-col gap-4">
-              <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
-                {message.content[0]?.text}
-              </MarkdownRenderer>
+              {isAgentTurn ? (
+                <AgentSteps agentMessages={message.meta.agent} isLoading={loading} renderMode={renderMode} />
+              ) : (
+                <MarkdownRenderer isLoading={loading} renderMode={renderMode}>
+                  {message.content[0]?.text}
+                </MarkdownRenderer>
+              )}
               {guideFeatureId && (
                 <FeatureGuideCard featureId={guideFeatureId} />
               )}
@@ -335,6 +348,7 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
                   localState={localState}
                   setLocalState={setLocalState}
                   modelsData={modelsData}
+                  message_index={message_index}
                 />
               )}
               {/* Attachments Section */}
