@@ -72,6 +72,27 @@ export function getPersonaDownloadUrl(path) {
   return `https://raw.githubusercontent.com/${PERSONA_REPO_OWNER}/${PERSONA_REPO_NAME}/${PERSONA_REPO_BRANCH}/${encodedPath.join("/")}`;
 }
 
+const isUnderscoreSegment = (value) => String(value || "").startsWith("_");
+
+/**
+ * Whether a persona-library folder is hidden. Folders whose name starts with an
+ * underscore are reserved for tests, drafts, and other non-persona content.
+ */
+export function isIgnoredPersonaFolder(name) {
+  return isUnderscoreSegment(name);
+}
+
+/**
+ * Whether a persona path lies inside a hidden folder, e.g. `_tests/foo.json` or
+ * `writing/_drafts/foo.json`.
+ */
+export function isIgnoredPersonaPath(path) {
+  return String(path || "")
+    .split("/")
+    .slice(0, -1)
+    .some(isUnderscoreSegment);
+}
+
 function toPersonaEntry(path, data) {
   return {
     id: path,
@@ -138,7 +159,8 @@ export async function loadPersonaCatalog({ force = false } = {}) {
         (item) =>
           item?.type === "blob" &&
           /\.json$/i.test(item.path || "") &&
-          !String(item.path).startsWith(".github/"),
+          !String(item.path).startsWith(".github/") &&
+          !isIgnoredPersonaPath(item.path),
       )
       .map((item) => item.path);
 

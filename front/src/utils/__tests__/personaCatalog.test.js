@@ -4,6 +4,8 @@ import {
   getPersonaDownloadUrl,
   getPersonaMarkers,
   hasPersonaStartLink,
+  isIgnoredPersonaFolder,
+  isIgnoredPersonaPath,
   loadPersonaCatalog,
   parsePersonaText,
   PERSONA_MARKER_PATTERN,
@@ -32,6 +34,16 @@ describe("persona catalog", () => {
     expect(stripPersonaMarkers(text)).not.toContain("PERSONA");
   });
 
+  it("ignores folders starting with an underscore", () => {
+    expect(isIgnoredPersonaFolder("_tests")).toBe(true);
+    expect(isIgnoredPersonaFolder("_drafts")).toBe(true);
+    expect(isIgnoredPersonaFolder("writing")).toBe(false);
+
+    expect(isIgnoredPersonaPath("_tests/report.json")).toBe(true);
+    expect(isIgnoredPersonaPath("writing/_drafts/editor.json")).toBe(true);
+    expect(isIgnoredPersonaPath("writing/editor.json")).toBe(false);
+  });
+
   it("fetches a persona and caches it", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response('{"title":"Tutor","subtitle":"Helps study"}', { status: 200 }),
@@ -46,7 +58,11 @@ describe("persona catalog", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
-          tree: [{ path: "writing/editor.json", type: "blob" }],
+          tree: [
+            { path: "writing/editor.json", type: "blob" },
+            { path: "_tests/report.json", type: "blob" },
+            { path: "writing/_drafts/editor.json", type: "blob" },
+          ],
         }),
         { status: 200 },
       ),
