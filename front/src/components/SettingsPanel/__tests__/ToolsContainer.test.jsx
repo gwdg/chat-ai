@@ -4,7 +4,7 @@ import ToolsContainer from "../ToolsContainer";
 
 vi.mock("react-redux", () => ({
   useDispatch: () => vi.fn(),
-  useSelector: () => false,
+  useSelector: () => true,
 }));
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: vi.fn() }),
@@ -45,5 +45,51 @@ describe("ToolsContainer MCP switch", () => {
 
     const button = screen.getByRole("button", { name: /mcp server/i });
     expect(button.querySelector("svg.lucide-triangle-alert")).toBeTruthy();
+  });
+});
+
+describe("ToolsContainer bulk actions", () => {
+  it("enables every tool and the master switch", () => {
+    const localState = stateWith({ web_search: false, mcp_remote: false });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /enable all/i }));
+
+    const next = setLocalState.mock.results.at(-1).value;
+    expect(next.settings.enable_tools).toBe(true);
+    for (const key of [
+      "web_search",
+      "fetch_url",
+      "image_generation",
+      "image_modification",
+      "audio_generation",
+      "arcana",
+      "mcp_remote",
+    ]) {
+      expect(next.settings.tools[key]).toBe(true);
+    }
+  });
+
+  it("disables every tool while keeping the master switch", () => {
+    const localState = stateWith({ web_search: true, mcp_remote: true });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /disable all/i }));
+
+    const next = setLocalState.mock.results.at(-1).value;
+    expect(next.settings.enable_tools).toBe(true);
+    for (const key of [
+      "web_search",
+      "fetch_url",
+      "image_generation",
+      "image_modification",
+      "audio_generation",
+      "arcana",
+      "mcp_remote",
+    ]) {
+      expect(next.settings.tools[key]).toBe(false);
+    }
   });
 });

@@ -773,6 +773,8 @@ export default {
     reset_default: "Reset default",
     default: "Default",
     tools_title: "GWDG Tools",
+    tools_enable_all: "Enable all",
+    tools_disable_all: "Disable all",
     chat_settings: "Chat settings",
     label_web_search: "Web Search",
     label_image_generation: "Image Generation",
@@ -793,13 +795,17 @@ export default {
     placeholder_mcp_auth: "Authorization header (optional)",
     mcp_add: "Add MCP server",
     mcp_remove: "Remove server",
+    mcp_test: "Test the server by establishing a direct connection from your computer",
+    mcp_test_success: "{{name}} is reachable ({{count}} tools).",
+    mcp_test_failed: "MCP test failed: {{error}}",
+    mcp_test_invalid_url: "Enter a valid MCP server URL first.",
     mcp_toggle: "Use this server",
     mcp_gateway_first: "Without agent mode only the first server is used, as a gateway server id.",
   },
 
   // Conversation
   conversation: {
-    local_tools: "Connect tools on your computer",
+    local_tools: "Browser & local tools",
     mount_folder: "Share local folder",
     folder_mounted: "Folder available to the assistant at {{path}}",
     tool_failed: "failed",

@@ -9,7 +9,6 @@ import MiniToolButton from "../SettingsPanel/MiniToolButton";
 import ToolLimit from "../SettingsPanel/ToolLimit";
 import { useToast } from "../../hooks/useToast";
 import { isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
-import { hasLocalMcpServerValue } from "../../agent/mcp";
 import { useModal } from "../../modals/ModalContext";
 import { canMountLocalDirectory, mountLocalDirectory, setAccessPrompt } from "../../agent/workspace";
 
@@ -28,7 +27,6 @@ export default function MountFolderButton({ localState, setLocalState }) {
   const codemodeEnabled = localState?.settings?.tools?.codemode !== false;
   const mcpDisabled = !modelSupportsTools(localState?.settings?.model);
   const showMcpConfig = mcpEnabled && !mcpDisabled;
-  const hasMcpServers = hasLocalMcpServerValue(localState?.settings?.mcp_servers);
 
   useEffect(() => {
     if (!canMount) return;
@@ -111,6 +109,32 @@ export default function MountFolderButton({ localState, setLocalState }) {
     }));
   };
 
+  const setTools = (patch) =>
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        tools: { ...prev.settings?.tools, ...patch },
+      },
+      flush: true,
+    }));
+
+  const enableAllTools = () => {
+    const patch = canMount ? { write_access: true } : {};
+    if (!mcpDisabled) {
+      patch.mcp = true;
+      patch.create_docx = true;
+      patch.codemode = true;
+    }
+    setTools(patch);
+  };
+
+  const disableAllTools = () => {
+    const patch = { mcp: false, create_docx: false, codemode: false };
+    if (canMount) patch.write_access = false;
+    setTools(patch);
+  };
+
   return (
     <Popover className="relative flex">
       <Tooltip text={t("conversation.local_tools")}>
@@ -137,7 +161,27 @@ export default function MountFolderButton({ localState, setLocalState }) {
         >
           {({ close }) => (
             <div className="w-full space-y-3">
-              <p className="text-sm font-medium">{t("conversation.local_tools")}</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium">{t("conversation.local_tools")}</p>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={enableAllTools}
+                    className="btn btn-xs btn-ghost"
+                    data-guide="local-tools-enable-all"
+                  >
+                    {t("settings.tools_enable_all")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={disableAllTools}
+                    className="btn btn-xs btn-ghost"
+                    data-guide="local-tools-disable-all"
+                  >
+                    {t("settings.tools_disable_all")}
+                  </button>
+                </div>
+              </div>
               <div className="grid gap-2.5 sm:gap-3 grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))]">
                 {canMount && (
                   <div className="w-full select-none rounded-xl border border-base-300 bg-base-100 text-base-content">
@@ -184,7 +228,7 @@ export default function MountFolderButton({ localState, setLocalState }) {
                       : undefined
                   }
                   guideKey="mcp_local"
-                  warning={hasMcpServers}
+                  warning
                 />
                 <MiniToolButton
                   active={createDocxEnabled}
@@ -215,19 +259,6 @@ export default function MountFolderButton({ localState, setLocalState }) {
               </div>
               {!mcpDisabled && (
                 <ToolLimit localState={localState} setLocalState={setLocalState} />
-              )}
-              {!canMount && (
-                <button
-                  type="button"
-                  onClick={toggleWriteAccess}
-                  aria-pressed={writeAccess}
-                  data-guide="tool-write_access"
-                  className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-left text-base-content/70 hover:bg-base-200 hover:text-base-content"
-                >
-                  <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  <span className="flex-1">{t("settings.label_write_access")}</span>
-                  {writeAccess && <Check className="h-3.5 w-3.5 shrink-0 text-success" aria-hidden="true" />}
-                </button>
               )}
               {showMcpConfig && (
                 <div className="border-t border-base-300 pt-3">

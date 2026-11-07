@@ -50,6 +50,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
   // (as in agent/tools.ts); the master switch and the server-side tools do not apply.
   const agentMode = isAgentEnabled();
   const agentWithoutTools = agentMode && !modelSupportsTools(settings?.model);
+  const bulkActionsDisabled = agentMode ? agentWithoutTools : isExternalModel;
 
   const showArcanaBox = agentMode
     ? agentGatewayTools() && toolsState.arcana === true
@@ -100,15 +101,54 @@ export default function ToolsContainer({ localState, setLocalState }) {
   ).filter(({ key }) => agentMode || !AGENT_ONLY.has(key));
 
   // Simple setter for per-tool flags
-  const toggleTool = (toolKey, nextValue) => {
+  const setTools = (patch) => {
     setLocalState((prev) => ({
       ...prev,
       settings: {
         ...prev.settings,
-        tools: { ...prev.settings?.tools, [toolKey]: nextValue },
+        tools: { ...prev.settings?.tools, ...patch },
       },
       flush: true,
     }));
+  };
+
+  const toggleTool = (toolKey, nextValue) => {
+    setTools({ [toolKey]: nextValue });
+  };
+
+  const handleEnableAll = () => {
+    const patch = { fetch_url: true };
+    TOOL_DEFS.forEach(({ key }) => {
+      patch[key] = true;
+    });
+    const apply = () =>
+      setLocalState((prev) => ({
+        ...prev,
+        settings: {
+          ...prev.settings,
+          ...(agentMode ? {} : { enable_tools: true }),
+          tools: { ...prev.settings?.tools, ...patch },
+        },
+        flush: true,
+      }));
+    if (!agreedWebSearch) {
+      openModal("disclaimerWebSearch", {
+        onAgree: () => {
+          apply();
+          dispatch(agreeWebSearch());
+        },
+      });
+      return;
+    }
+    apply();
+  };
+
+  const handleDisableAll = () => {
+    const patch = { fetch_url: false };
+    TOOL_DEFS.forEach(({ key }) => {
+      patch[key] = false;
+    });
+    setTools(patch);
   };
 
   // First-time disclaimer for Web Search only
@@ -138,7 +178,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
   return (
     <div className="w-full space-y-3">
       {/* Header */}
-      <div className="flex flex-row md:gap-4 gap-3 w-full md:items-center">
+      <div className="flex flex-row flex-wrap md:gap-4 gap-3 w-full md:items-center">
         <div className="flex-shrink-0 flex items-center gap-2">
           <p className="text-sm font-medium">{t("settings.tools_title")}</p>
           <CircleHelp
@@ -155,7 +195,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
             </span>
           )
         ) : (
-        <div className="w-full flex items-center gap-3 select-none">
+        <div className="flex items-center gap-3 select-none">
           <button
             type="button"
             onClick={() =>
@@ -196,6 +236,26 @@ export default function ToolsContainer({ localState, setLocalState }) {
           )}
         </div>
         )}
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleEnableAll}
+            disabled={bulkActionsDisabled}
+            className="btn btn-xs btn-ghost"
+            data-guide="tools-enable-all"
+          >
+            {t("settings.tools_enable_all")}
+          </button>
+          <button
+            type="button"
+            onClick={handleDisableAll}
+            disabled={bulkActionsDisabled}
+            className="btn btn-xs btn-ghost"
+            data-guide="tools-disable-all"
+          >
+            {t("settings.tools_disable_all")}
+          </button>
+        </div>
       </div>
 
       {/* Compact, responsive grid */}

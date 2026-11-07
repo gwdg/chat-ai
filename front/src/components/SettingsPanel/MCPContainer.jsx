@@ -3,16 +3,21 @@
 // and Local tools edits the agent's direct servers (entries with a URL); both live in
 // settings.mcp_servers. They are switched separately: tools.mcp_remote for the gateway and
 // tools.mcp for the agent, which only picks up the URL entries (agent/mcp.ts).
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleHelp, Plus, Trash2 } from "lucide-react";
+import { CircleHelp, FlaskConical, Loader2, Plus, Trash2 } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
-import { isRemoteMcpServer, mcpServers } from "../../agent/mcp";
+import { isRemoteMcpServer, mcpServers, testMcpServer } from "../../agent/mcp";
+import { useToast } from "../../hooks/useToast";
 
 const inputClass = "input input-sm w-full";
 
 const MCPContainer = ({ localState, setLocalState, remote = false }) => {
   const { t } = useTranslation();
   const { openModal } = useModal();
+  const { notifySuccess, notifyError } = useToast();
+  const [testStatus, setTestStatus] = useState({});
+  const testing = Object.values(testStatus).includes("testing");
   const raw = localState.settings?.mcp_servers;
   const servers = mcpServers(localState.settings);
   const remoteServers = Array.isArray(raw)
@@ -39,21 +44,91 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
     }
   };
 
-  const changeLocal = (index, patch) =>
+  const resetTest = (index) =>
+    setTestStatus((prev) => {
+      if (!(index in prev)) return prev;
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+
+  const changeLocal = (index, patch) => {
+    resetTest(index);
     setLocalServers(servers.map((server, i) => (i === index ? { ...server, ...patch } : server)));
+  };
   const setAuth = (index, value) => {
     const { Authorization, ...rest } = servers[index].headers ?? {};
     const headers = value ? { ...rest, Authorization: value } : rest;
     changeLocal(index, { headers: Object.keys(headers).length ? headers : undefined });
   };
-  const changeRemote = (index, patch) =>
+  const changeRemote = (index, patch) => {
+    resetTest(index);
     setRemoteServers(
       remoteServers.map((server, i) => (i === index ? { ...server, ...patch } : server)),
     );
+  };
   const setRemoteAuth = (index, value) => {
     const { Authorization, ...rest } = remoteServers[index].headers ?? {};
     const headers = value ? { ...rest, Authorization: value } : rest;
     changeRemote(index, { headers: Object.keys(headers).length ? headers : undefined });
+  };
+
+  // An enabled MCP section always has at least one row, and that first row cannot be removed.
+  useEffect(() => {
+    if (remote) {
+      if (remoteServers.length === 0) setRemoteServers([{ id: "", enabled: true }]);
+    } else if (servers.length === 0) {
+      setLocalServers([{ url: "", enabled: true }]);
+    }
+  }, [remote, remoteServers.length, servers.length]);
+
+  // A row that changed or moved may not keep another row's test result.
+  useEffect(() => {
+    setTestStatus({});
+  }, [servers.length, remoteServers.length]);
+
+  const testServer = async (index, server) => {
+    if (testing) return;
+    setTestStatus((prev) => ({ ...prev, [index]: "testing" }));
+    try {
+      const result = await testMcpServer(server);
+      setTestStatus((prev) => ({ ...prev, [index]: "success" }));
+      notifySuccess(
+        t("settings.mcp_test_success", {
+          name: result.name,
+          count: result.toolCount,
+        }),
+      );
+    } catch (error) {
+      setTestStatus((prev) => ({ ...prev, [index]: "error" }));
+      notifyError(
+        t("settings.mcp_test_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  };
+
+  const testButton = (index, disabled, server) => {
+    const status = testStatus[index];
+    const iconColor =
+      status === "success" ? "text-success" : status === "error" ? "text-error" : "";
+    return (
+      <button
+        type="button"
+        onClick={() => testServer(index, server)}
+        disabled={disabled || testing}
+        title={t("settings.mcp_test")}
+        aria-label={t("settings.mcp_test")}
+        className="shrink-0 p-1.5 rounded-lg text-base-content/60 hover:text-accent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-base-content/60"
+      >
+        {status === "testing" ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <FlaskConical className={`h-4 w-4 ${iconColor}`} />
+        )}
+      </button>
+    );
   };
 
   const header = (
@@ -98,14 +173,19 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
               placeholder={t("settings.placeholder_mcp_auth")}
               className={`${inputClass} md:max-w-[16rem]`}
             />
+            {testButton(index, !server.id.trim(), {
+              url: server.id,
+              headers: server.headers,
+            })}
             <button
               type="button"
               onClick={() =>
-                setRemoteServers(remoteServers.filter((_, i) => i !== index))
+                index > 0 && setRemoteServers(remoteServers.filter((_, i) => i !== index))
               }
+              disabled={index === 0}
               title={t("settings.mcp_remove")}
               aria-label={t("settings.mcp_remove")}
-              className="shrink-0 p-1.5 rounded-lg text-base-content/60 hover:text-error cursor-pointer"
+              className="shrink-0 p-1.5 rounded-lg text-base-content/60 hover:text-error cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-base-content/60"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -156,12 +236,19 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
             placeholder={t("settings.placeholder_mcp_auth")}
             className={`${inputClass} md:max-w-[16rem]`}
           />
+          {testButton(index, !server.url.trim(), {
+            url: server.url,
+            headers: server.headers,
+          })}
           <button
             type="button"
-            onClick={() => setLocalServers(servers.filter((_, i) => i !== index))}
+            onClick={() =>
+              index > 0 && setLocalServers(servers.filter((_, i) => i !== index))
+            }
+            disabled={index === 0}
             title={t("settings.mcp_remove")}
             aria-label={t("settings.mcp_remove")}
-            className="shrink-0 p-1.5 rounded-lg text-base-content/60 hover:text-error cursor-pointer"
+            className="shrink-0 p-1.5 rounded-lg text-base-content/60 hover:text-error cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-base-content/60"
           >
             <Trash2 className="h-4 w-4" />
           </button>

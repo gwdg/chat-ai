@@ -162,6 +162,23 @@ async function open(server: McpServer): Promise<Connection> {
   }
 }
 
+export interface McpTestResult {
+  name: string;
+  toolCount: number;
+}
+
+/** Connects to a server, lists its tools, and closes again. Used by the settings test button. */
+export async function testMcpServer(server: McpServer): Promise<McpTestResult> {
+  const url = normalizeMcpUrl(server.url);
+  if (!url) throw new Error(i18n.t("settings.mcp_test_invalid_url"));
+  const { client, tools, prefix } = await open({ ...server, url });
+  try {
+    return { name: prefix, toolCount: tools.length };
+  } finally {
+    client.close().catch(() => {});
+  }
+}
+
 function connect(server: McpServer): Promise<Connection> {
   const key = keyOf(server);
   let connection = connections.get(key);
