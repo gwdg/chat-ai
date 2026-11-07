@@ -41,6 +41,18 @@ describe("Meta chat action markers", () => {
     expect(proposals[8]).toMatchObject({ type: "delete_memory", index: 1 });
   });
 
+  it("accepts the reasoning streaming preference", () => {
+    const proposals = getMetaActionProposals(
+      '[[SET_SETTING:{"key":"collapse_reasoning_while_streaming","value":true}]]',
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      type: "setting",
+      key: "collapse_reasoning_while_streaming",
+      value: true,
+    });
+  });
+
   it("ignores unsupported settings and malformed actions", () => {
     const text = [
       '[[SET_SETTING:{"key":"not_a_setting","value":true}]]',

@@ -18,7 +18,7 @@ import {
   selectSettingsTab,
   toolsAreEnabled,
   topicNameEntered,
-} from "./featureGuideActions";
+} from "./featureGuideActions.js";
 
 export const featureGuides = {
   attach_media: {
@@ -712,6 +712,31 @@ export const featureGuides = {
       },
     ],
   },
+  reasoning_streaming: {
+    titleKey: "feature_guide.reasoning_streaming.title",
+    prompt:
+      "Keep the reasoning process collapsed while the model streams and show a small moving activity dot instead. Users can open the reasoning after the response finishes.",
+    keywords: ["reasoning", "thinking", "streaming", "collapse", "indicator"],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.reasoning_streaming.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-chat"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.reasoning_streaming.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="reasoning-streaming-preference"]',
+        prepare: () => selectSettingsTab("chat"),
+        textKey: "feature_guide.reasoning_streaming.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   document_conversion: {
     titleKey: "feature_guide.document_conversion.title",
     prompt:
@@ -1020,6 +1045,7 @@ export const FEATURE_CATEGORIES = {
     "chat_preferences",
     "memories",
     "rendering",
+    "reasoning_streaming",
     "document_conversion",
     "data_management",
     "dark_mode",

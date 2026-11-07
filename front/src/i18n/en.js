@@ -484,6 +484,13 @@ export default {
       step3:
         "Enable Typst or LaTeX rendering. HTML rendering and external references are configured here too.",
     },
+    reasoning_streaming: {
+      title: "Follow the reasoning process",
+      step1: "Open your user settings.",
+      step2: "Choose the Chat tab.",
+      step3:
+        "The option is enabled by default. Keep it on to see a moving dot while the model reasons. Click the header to open the reasoning while it is streaming, or turn the option off if you prefer the box to open automatically.",
+    },
     document_conversion: {
       title: "Choose document conversion",
       step1: "Open your user settings.",
@@ -844,6 +851,10 @@ export default {
     },
     reasoning: "Reasoning Process",
     copy_reasoning: "Copy reasoning process",
+    reasoning_streaming: "Reasoning in progress",
+    reasoning_streaming_label: "Thinking",
+    reasoning_received_words_one: "{{count}} word received",
+    reasoning_received_words_other: "{{count}} words received",
     action: "Action",
     html_block: {
       render: "Render HTML",
@@ -1055,6 +1066,11 @@ export default {
         label: "Render LaTeX blocks",
         description:
           "Choose whether LaTeX code blocks are rendered by default. You can still render or show code for each block.",
+      },
+      reasoning_streaming: {
+        label: "Keep reasoning collapsed while streaming",
+        description:
+          "Keep the reasoning box closed while the model is streaming and show a small moving activity dot instead. Click the header to open it while streaming, or open it after the response is complete.",
       },
       document_conversion: {
         label: "Document conversion",

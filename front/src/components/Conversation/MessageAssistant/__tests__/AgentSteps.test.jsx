@@ -1,11 +1,23 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+let userSettings = {};
+vi.mock("react-redux", () => ({
+  useSelector: (selector) =>
+    selector({ user_settings: userSettings, interface_settings: {} }),
+}));
+
 import AgentSteps from "../AgentSteps";
 
 const message = (blocks) => [{ role: "assistant", content: blocks }];
 
+beforeEach(() => {
+  userSettings = {};
+});
+
 describe("AgentSteps", () => {
-  it("keeps streamed reasoning inside its own block", () => {
+  it("keeps streamed reasoning inside its own block when the preference is off", () => {
+    userSettings = { collapse_reasoning_while_streaming: false };
     render(
       <AgentSteps
         isLoading
@@ -25,6 +37,27 @@ describe("AgentSteps", () => {
     expect(screen.getByText("The user wants a random png.")).toBeInTheDocument();
     expect(screen.getByText(/Reasoning Process/)).toBeInTheDocument();
     expect(screen.getByText(/Running code/)).toBeInTheDocument();
+  });
+
+  it("keeps reasoning collapsed by default and shows the word count while streaming", () => {
+    render(
+      <AgentSteps
+        isLoading
+        renderMode="Default"
+        agentMessages={message([
+          { type: "thinking", thinking: "The user wants a random png." },
+        ])}
+      />,
+    );
+
+    expect(
+      screen.queryByText("The user wants a random png."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("status", {
+        name: /Reasoning in progress|Denkprozess läuft/,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("renders a completed codemode call as code plus output", () => {

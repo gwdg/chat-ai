@@ -14,6 +14,7 @@ const SUPPORTED_SETTING_KEYS = new Set([
   "set_title_once",
   "render_typst",
   "render_latex",
+  "collapse_reasoning_while_streaming",
   "document_conversion_mode",
   "conversation_summaries",
   "send_with_enter",

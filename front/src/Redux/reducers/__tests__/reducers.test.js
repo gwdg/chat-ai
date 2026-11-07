@@ -9,6 +9,8 @@ import userSettingsReducer, {
   setSendWithEnter,
   selectMemoryMode,
   selectConversationSummaries,
+  selectCollapseReasoningWhileStreaming,
+  setCollapseReasoningWhileStreaming,
 } from "../userSettingsReducer";
 import interfaceSettingsReducer, {
   agreeWebSearch,
@@ -64,6 +66,25 @@ describe("user settings reducer", () => {
     expect(state.memory_mode).toBe(1);
     expect(state.html_render_mode).toBe("render");
     expect(state.unknown).toBeUndefined();
+  });
+
+  it("validates the reasoning streaming preference", () => {
+    let state = init(userSettingsReducer);
+    expect(
+      selectCollapseReasoningWhileStreaming({ user_settings: state }),
+    ).toBe(true);
+
+    state = userSettingsReducer(
+      state,
+      setCollapseReasoningWhileStreaming(false),
+    );
+    expect(state.collapse_reasoning_while_streaming).toBe(false);
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ collapse_reasoning_while_streaming: true }),
+    );
+    expect(state.collapse_reasoning_while_streaming).toBe(true);
   });
 
   it("falls back to safe selector values", () => {

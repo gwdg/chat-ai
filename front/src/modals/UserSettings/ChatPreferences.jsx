@@ -10,8 +10,10 @@ import {
   setSetTitleOnce,
   selectRenderLatex,
   selectRenderTypst,
+  selectCollapseReasoningWhileStreaming,
   setRenderLatex,
   setRenderTypst,
+  setCollapseReasoningWhileStreaming,
   setSuggestUserPrompts,
   selectHtmlRenderMode,
   setHtmlRenderMode,
@@ -368,12 +370,29 @@ export function RenderingPreferences() {
   const { t } = useTranslation();
   const renderTypst = useSelector(selectRenderTypst);
   const renderLatex = useSelector(selectRenderLatex);
+  const collapseReasoningWhileStreaming = useSelector(
+    selectCollapseReasoningWhileStreaming,
+  );
 
   return (
     <section className="flex flex-col gap-2">
       <h3 className="px-2 text-sm font-medium text-base-content">
         {t("user_settings.chat_preferences.rendering.label")}
       </h3>
+      <div data-guide="reasoning-streaming-preference">
+        <ProfilePreferenceSwitch
+          label={t(
+            "user_settings.chat_preferences.reasoning_streaming.label",
+          )}
+          description={t(
+            "user_settings.chat_preferences.reasoning_streaming.description",
+          )}
+          checked={collapseReasoningWhileStreaming}
+          onChange={(checked) =>
+            dispatch(setCollapseReasoningWhileStreaming(checked))
+          }
+        />
+      </div>
       <ProfilePreferenceSwitch
         label={t("user_settings.chat_preferences.typst.label")}
         description={t("user_settings.chat_preferences.typst.description")}

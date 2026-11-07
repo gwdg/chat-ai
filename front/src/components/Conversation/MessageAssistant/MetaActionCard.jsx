@@ -157,6 +157,8 @@ export default function MetaActionCard({
       "user_settings.chat_preferences.html_render.sanitization.label",
     render_typst: "user_settings.chat_preferences.typst.label",
     render_latex: "user_settings.chat_preferences.latex.label",
+    collapse_reasoning_while_streaming:
+      "user_settings.chat_preferences.reasoning_streaming.label",
     document_conversion_mode:
       "user_settings.chat_preferences.document_conversion.label",
     timeout: "user_settings.timeout.title",

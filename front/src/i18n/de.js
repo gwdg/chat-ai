@@ -498,6 +498,13 @@ export default {
       step3:
         "Aktivieren Sie die Typst- oder LaTeX-Darstellung. Auch HTML-Darstellung und externe Verweise werden hier konfiguriert.",
     },
+    reasoning_streaming: {
+      title: "Denkprozess verfolgen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3:
+        "Die Option ist standardmäßig aktiviert. Lassen Sie sie an, um während des Denkens einen bewegten Punkt zu sehen. Klicken Sie auf die Kopfzeile, um den Denkprozess während des Streamings zu öffnen, oder schalten Sie die Option aus, wenn sich die Box automatisch öffnen soll.",
+    },
     document_conversion: {
       title: "Dokumentkonvertierung wählen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
@@ -857,6 +864,10 @@ export default {
     },
     reasoning: "Denkprozess",
     copy_reasoning: "Denkprozess kopieren",
+    reasoning_streaming: "Denkprozess läuft",
+    reasoning_streaming_label: "Denke noch",
+    reasoning_received_words_one: "{{count}} Wort empfangen",
+    reasoning_received_words_other: "{{count}} Wörter empfangen",
     action: "Aktion",
     html_block: {
       render: "HTML rendern",
@@ -1075,6 +1086,11 @@ export default {
         label: "LaTeX-Blöcke rendern",
         description:
           "Legt fest, ob LaTeX-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
+      },
+      reasoning_streaming: {
+        label: "Denkprozess beim Streamen geschlossen halten",
+        description:
+          "Hält die Denkprozess-Box während des Streamings geschlossen und zeigt stattdessen einen kleinen bewegten Aktivitätspunkt. Klicken Sie auf die Kopfzeile, um sie während des Streamings zu öffnen; nach der Antwort können Sie sie ebenfalls öffnen.",
       },
       document_conversion: {
         label: "Dokumentkonvertierung",

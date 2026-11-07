@@ -9,7 +9,7 @@ import {
   openConversationSettings,
   openUserSettings,
   selectSettingsTab,
-} from "./featureGuideActions";
+} from "./featureGuideActions.js";
 
 export const useCases = {
   analyze_paper: {

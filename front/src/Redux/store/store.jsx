@@ -58,6 +58,7 @@ const getDefaultState = () => {
       set_title_once: true,
       render_typst: false,
       render_latex: false,
+      collapse_reasoning_while_streaming: true,
       document_conversion_mode: "choice",
       conversation_summaries: true,
       send_with_enter: null,
