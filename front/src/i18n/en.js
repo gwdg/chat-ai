@@ -247,6 +247,8 @@ export default {
     description:
       "The assistant wants to run “{{tool}}” on {{server}}. Only allow this if you trust the server and the arguments.",
     allow: "Run tool",
+    allow_always: "Always allow in this chat",
+    always_allowed: "(always allowed)",
     deny: "Deny",
     denied: "The user denied running the MCP tool “{{tool}}” on {{server}}.",
   },

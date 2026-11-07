@@ -46,6 +46,13 @@ export default function McpConfirmationCard({ callId }) {
             </button>
             <button
               type="button"
+              className="btn btn-outline btn-warning btn-xs"
+              onClick={() => resolveMcpConfirmation(callId, true, true)}
+            >
+              {t("mcp_confirmation.allow_always")}
+            </button>
+            <button
+              type="button"
               className="btn btn-warning btn-xs gap-1.5"
               onClick={() => resolveMcpConfirmation(callId, true)}
             >

@@ -238,6 +238,7 @@ export async function connectMcpServers(servers: McpServer[], taken: Set<string>
               id: String(toolCallId),
               server: server.url,
               tool: tool.name,
+              callName: name,
               args: args ?? {},
             },
             signal,

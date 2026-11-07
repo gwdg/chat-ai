@@ -19,6 +19,7 @@ import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
 import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
 import { activeMcpServers, prefetchMcpServers } from "../agent/mcp";
+import { resetMcpConfirmationSession } from "../agent/mcpConfirmation";
 import { isAgentEnabled } from "../apis/agentEndpoints";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
 
@@ -72,6 +73,11 @@ export default function ChatPage() {
     if (conversationId) {
       dispatch(setLastConversation(conversationId));
     }
+  }, [conversationId]);
+
+  // "Always allow" MCP grants last for one conversation only
+  useEffect(() => {
+    resetMcpConfirmationSession();
   }, [conversationId]);
 
   return (

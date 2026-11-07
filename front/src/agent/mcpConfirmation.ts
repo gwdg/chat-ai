@@ -4,6 +4,8 @@ export interface McpConfirmationRequest {
   id: string;
   server: string;
   tool: string;
+  /** The name the model uses for this tool, for marking calls that are always allowed. */
+  callName?: string;
   args: unknown;
 }
 
@@ -14,6 +16,13 @@ type Pending = McpConfirmationRequest & {
 
 const pending = new Map<string, Pending>();
 const listeners = new Set<() => void>();
+// "Always" grants for the current conversation, per MCP server and tool/function name.
+const alwaysAllowed = new Set<string>();
+// Model-facing tool names covered by the current grants, so the transcript can mark them.
+const alwaysAllowedNames = new Set<string>();
+let sessionConversation: string | null = null;
+const grantKey = (request: McpConfirmationRequest) =>
+  `${request.server}\u0000${request.tool}`;
 
 const notify = () => {
   for (const listener of listeners) listener();
@@ -30,6 +39,10 @@ export function getMcpConfirmation(id: string): McpConfirmationRequest | undefin
   return pending.get(id);
 }
 
+export function isMcpConfirmationAlwaysAllowed(callName: string | undefined) {
+  return !!callName && alwaysAllowedNames.has(callName);
+}
+
 function settle(id: string, allowed: boolean) {
   const entry = pending.get(id);
   if (!entry) return;
@@ -39,8 +52,37 @@ function settle(id: string, allowed: boolean) {
   entry.resolve(allowed);
 }
 
-export function resolveMcpConfirmation(id: string, allowed: boolean) {
+export function resolveMcpConfirmation(id: string, allowed: boolean, always = false) {
+  const entry = pending.get(id);
+  if (allowed && always && entry) {
+    const key = grantKey(entry);
+    alwaysAllowed.add(key);
+    if (entry.callName) alwaysAllowedNames.add(entry.callName);
+    // Calls of the same tool that are already waiting are covered by this grant as well.
+    for (const [pendingId, request] of [...pending]) {
+      if (grantKey(request) === key) settle(pendingId, true);
+    }
+    return;
+  }
   settle(id, allowed);
+}
+
+/** Forgets "always" grants when the conversation changes. */
+export function beginMcpConfirmationSession(conversationId: string | undefined) {
+  const next = conversationId ?? null;
+  if (next === sessionConversation) return;
+  sessionConversation = next;
+  alwaysAllowed.clear();
+  alwaysAllowedNames.clear();
+  notify();
+}
+
+/** Forgets all "always" grants, including the current conversation. */
+export function resetMcpConfirmationSession() {
+  sessionConversation = null;
+  alwaysAllowed.clear();
+  alwaysAllowedNames.clear();
+  notify();
 }
 
 export function requestMcpConfirmation(
@@ -48,6 +90,7 @@ export function requestMcpConfirmation(
   signal?: AbortSignal,
 ): Promise<boolean> {
   if (signal?.aborted) return Promise.resolve(false);
+  if (alwaysAllowed.has(grantKey(request))) return Promise.resolve(true);
   return new Promise((resolve) => {
     const onAbort = () => settle(request.id, false);
     const cleanup = () => signal?.removeEventListener("abort", onAbort);

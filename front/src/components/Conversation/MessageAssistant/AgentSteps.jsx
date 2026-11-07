@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useSyncExternalStore, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import MarkdownRenderer from "./MarkdownRenderer";
 import ThinkingBlock from "./ThinkingBlock";
 import Code from "./Code";
 import McpConfirmationCard from "./McpConfirmationCard";
+import {
+  isMcpConfirmationAlwaysAllowed,
+  subscribeMcpConfirmations,
+} from "../../../agent/mcpConfirmation";
 
 const resultText = (result) =>
   (result?.content ?? [])
@@ -15,6 +19,10 @@ const resultText = (result) =>
 function ToolCall({ call, result }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const alwaysAllowed = useSyncExternalStore(
+    subscribeMcpConfirmations,
+    () => isMcpConfirmationAlwaysAllowed(call.name),
+  );
   const args = call.arguments ?? {};
   const summary = args.path ?? args.prompt ?? args.pattern ?? args.text ?? args.query ?? "";
   const status = !result ? "…" : result.isError ? t("conversation.tool_failed") : "";
@@ -29,6 +37,11 @@ function ToolCall({ call, result }) {
         <span className="font-mono">{call.name}</span>
         <span className="truncate opacity-70">{String(summary).slice(0, 120)}</span>
         <span className={result?.isError ? "text-red-500" : ""}>{status}</span>
+        {alwaysAllowed && (
+          <span className="ml-auto whitespace-nowrap text-success">
+            {t("mcp_confirmation.always_allowed")}
+          </span>
+        )}
       </button>
       {call.id && <McpConfirmationCard callId={call.id} />}
       {open && (

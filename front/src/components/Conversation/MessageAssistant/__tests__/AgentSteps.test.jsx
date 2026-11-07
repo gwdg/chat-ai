@@ -1,5 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  requestMcpConfirmation,
+  resetMcpConfirmationSession,
+  resolveMcpConfirmation,
+} from "../../../../agent/mcpConfirmation";
 
 let userSettings = {};
 vi.mock("react-redux", () => ({
@@ -13,6 +18,7 @@ const message = (blocks) => [{ role: "assistant", content: blocks }];
 
 beforeEach(() => {
   userSettings = {};
+  resetMcpConfirmationSession();
 });
 
 describe("AgentSteps", () => {
@@ -89,5 +95,34 @@ describe("AgentSteps", () => {
 
     expect(screen.getByText("Code output")).toBeInTheDocument();
     expect(screen.getByText("hello")).toBeInTheDocument();
+  });
+
+  it("marks a tool call that is always allowed", async () => {
+    const pending = requestMcpConfirmation({
+      id: "call-2",
+      server: "http://localhost:9000",
+      tool: "read_file",
+      callName: "folder__read_file",
+      args: {},
+    });
+    resolveMcpConfirmation("call-2", true, true);
+    await pending;
+
+    render(
+      <AgentSteps
+        isLoading={false}
+        renderMode="Default"
+        agentMessages={message([
+          {
+            type: "toolCall",
+            id: "call-3",
+            name: "folder__read_file",
+            arguments: { path: "/a" },
+          },
+        ])}
+      />,
+    );
+
+    expect(screen.getByText(/always allowed|immer erlaubt/i)).toBeInTheDocument();
   });
 });

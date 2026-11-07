@@ -257,6 +257,8 @@ export default {
     description:
       "Der Assistent möchte „{{tool}}“ auf {{server}} ausführen. Erlauben Sie dies nur, wenn Sie dem Server und den Argumenten vertrauen.",
     allow: "Werkzeug ausführen",
+    allow_always: "Immer in diesem Chat erlauben",
+    always_allowed: "(immer erlaubt)",
     deny: "Ablehnen",
     denied: "Der Benutzer hat die Ausführung des MCP-Werkzeugs „{{tool}}“ auf {{server}} abgelehnt.",
   },

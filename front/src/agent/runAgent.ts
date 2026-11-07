@@ -16,6 +16,7 @@ import { prepareAttachment, UPLOADS, uploadPath } from "./prepare";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
 import i18n from "../i18n";
 import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpTools } from "./mcp";
+import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
@@ -217,6 +218,7 @@ export async function runAgentTurn({
   settings: any;
   onUpdate: (update: TurnUpdate) => void;
 }): Promise<TurnResult> {
+  beginMcpConfirmationSession(conversationId);
   const spec: ModelSpec = typeof settings.model === "string" ? { id: settings.model } : settings.model;
   const external = isExternalModel(spec);
   const useTools = modelSupportsTools(spec);
