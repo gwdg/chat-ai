@@ -21,13 +21,13 @@ import ArcanaContainer from "./ArcanaContainer";
 import MCPContainer from "./MCPContainer";
 import MiniToolButton from "./MiniToolButton";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
-import { hasMcpServerValue } from "../../agent/mcp";
+import { remoteMcpEnabled } from "../../agent/mcp";
 
 // Tools the agent has no counterpart for
 const AGENT_UNAVAILABLE = new Set([...(agentGatewayTools() ? [] : ["arcana"])]);
 // Agent tools that are off unless switched on: web search and writing files (agent/tools.ts),
 // arcana, which the gateway runs (agent/gateway.ts), and MCP servers (agent/mcp.ts)
-const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access", "mcp"]);
+const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access", "mcp", "mcp_remote"]);
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
 
@@ -45,7 +45,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
 
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools && !isExternalModel;
-  const hasMcpServers = hasMcpServerValue(settings.mcp_servers);
+  const remoteMcpOn = remoteMcpEnabled(settings);
   // In agent mode every tool is switched on its own and a missing key counts as on
   // (as in agent/tools.ts); the master switch and the server-side tools do not apply.
   const agentMode = isAgentEnabled();
@@ -55,7 +55,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
     ? agentGatewayTools() && toolsState.arcana === true
     : !!settings?.enable_tools && !!toolsState.arcana;
   const showMCPBox =
-    (agentMode ? !agentWithoutTools : !!settings?.enable_tools) && !!toolsState.mcp;
+    (agentMode ? !agentWithoutTools : !!settings?.enable_tools) && remoteMcpOn;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
@@ -91,7 +91,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
         ),
         label: t("settings.label_arcana"),
       },
-      { key: "mcp",
+      { key: "mcp_remote",
         Icon: Server,
         label: t("settings.label_mcp_server")
       },
@@ -132,7 +132,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
     toggleTool("arcana", nextValue);
   };
   const handleToggleMCP = (nextValue) => {
-    toggleTool("mcp", nextValue);
+    toggleTool("mcp_remote", nextValue);
   };
 
   return (
@@ -208,13 +208,16 @@ export default function ToolsContainer({ localState, setLocalState }) {
       >
         {TOOL_DEFS.map(({ key, Icon, label }) => {
           const unavailable = agentMode && AGENT_UNAVAILABLE.has(key);
-          const active = !agentMode
-            ? !!toolsState[key]
-            : unavailable
-              ? false
-              : AGENT_OPT_IN.has(key)
-                ? toolsState[key] === true
-                : toolsState[key] !== false;
+          const active =
+            key === "mcp_remote"
+              ? remoteMcpOn
+              : !agentMode
+                ? !!toolsState[key]
+                : unavailable
+                  ? false
+                  : AGENT_OPT_IN.has(key)
+                    ? toolsState[key] === true
+                    : toolsState[key] !== false;
           const onToggle =
             key === "web_search"
               ? () => handleToggleWebSearch(!active)
@@ -230,7 +233,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
               label={label}
               title={unavailable ? `${label}: ${t("settings.tools_agent_unavailable")}` : label}
               guideKey={key}
-              warning={key === "web_search" || (key === "mcp" && hasMcpServers)}
+              warning={key === "web_search" || key === "mcp_remote"}
             />
           );
         })}

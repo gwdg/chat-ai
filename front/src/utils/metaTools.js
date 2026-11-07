@@ -8,6 +8,7 @@ import {
 import { buildFeatureGuidePrompt, featureGuides } from "../config/featureGuides";
 import { buildUseCasePrompt, useCases } from "../config/useCases";
 import { loadPersonaCatalog } from "./personaCatalog";
+import { remoteMcpEnabled } from "../agent/mcp";
 
 const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
@@ -119,7 +120,7 @@ export function buildConversationSettingsSummary(settings = {}) {
         : ""
     }`,
     `arcana ${arcanaId || "none"}`,
-    `MCP ${mcpDescription || "none"}`,
+    `MCP local ${tools.mcp ? "enabled" : "disabled"}, remote ${remoteMcpEnabled(settings) ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
   ].join("; ");
 }
 

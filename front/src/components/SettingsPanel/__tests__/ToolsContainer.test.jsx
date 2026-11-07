@@ -1,0 +1,49 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import ToolsContainer from "../ToolsContainer";
+
+vi.mock("react-redux", () => ({
+  useDispatch: () => vi.fn(),
+  useSelector: () => false,
+}));
+vi.mock("../../../modals/ModalContext", () => ({
+  useModal: () => ({ openModal: vi.fn() }),
+}));
+
+const stateWith = (tools) => ({
+  settings: {
+    enable_tools: true,
+    model: { id: "test-model", name: "Test Model" },
+    tools,
+  },
+});
+
+describe("ToolsContainer MCP switch", () => {
+  it("toggles the remote MCP flag without changing the local one", () => {
+    const localState = stateWith({ mcp: true, mcp_remote: false });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /mcp server/i }));
+
+    expect(setLocalState).toHaveBeenCalled();
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.tools.mcp_remote).toBe(true);
+    expect(next.settings.tools.mcp).toBe(true);
+  });
+
+  it("shows the remote MCP configuration only when its flag is on", () => {
+    const localState = stateWith({ mcp: true, mcp_remote: false });
+    render(<ToolsContainer localState={localState} setLocalState={vi.fn()} />);
+
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("marks the remote MCP button as a data-transfer risk", () => {
+    const localState = stateWith({ mcp: true, mcp_remote: false });
+    render(<ToolsContainer localState={localState} setLocalState={vi.fn()} />);
+
+    const button = screen.getByRole("button", { name: /mcp server/i });
+    expect(button.querySelector("svg.lucide-triangle-alert")).toBeTruthy();
+  });
+});

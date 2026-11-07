@@ -12,6 +12,16 @@ export interface McpServer {
   headers?: Record<string, string>;
 }
 
+/** A gateway server entry: a server id. Older conversations store it as a bare string. */
+export function isRemoteMcpServer(server: unknown): server is { id: string; enabled?: boolean } {
+  return (
+    !!server &&
+    typeof server === "object" &&
+    typeof (server as { id?: unknown }).id === "string" &&
+    typeof (server as { url?: unknown }).url !== "string"
+  );
+}
+
 const LOCAL_HOST = /^(localhost|127(?:\.\d{1,3}){3}|\[?::1\]?|0\.0\.0\.0)(?::\d+)?(?:[/?#]|$)/i;
 
 /** A server URL with a scheme; bare hosts like `localhost:9000` default to http on this machine. */
@@ -48,12 +58,38 @@ export const activeMcpServers = (settings: any) =>
         .filter((server) => server.url)
     : [];
 
-/** Whether `settings.mcp_servers` holds anything: a gateway id or a server with a URL. */
-export const hasMcpServerValue = (value: unknown) =>
+/** Whether `settings.mcp_servers` holds a gateway server id. */
+export const hasRemoteMcpServerValue = (value: unknown) =>
   typeof value === "string"
     ? value.trim().length > 0
     : Array.isArray(value) &&
-      value.some((server) => server?.url?.trim?.() || server?.id?.trim?.());
+      value.some((server) => isRemoteMcpServer(server) && server.id.trim().length > 0);
+
+/** Whether `settings.mcp_servers` holds a server the agent connects to by URL. */
+export const hasLocalMcpServerValue = (value: unknown) =>
+  Array.isArray(value) &&
+  value.some(
+    (server) =>
+      server &&
+      typeof server === "object" &&
+      typeof (server as { url?: unknown }).url === "string" &&
+      (server as { url: string }).url.trim().length > 0,
+  );
+
+/** Whether `settings.mcp_servers` holds anything: a gateway id or a server with a URL. */
+export const hasMcpServerValue = (value: unknown) =>
+  hasLocalMcpServerValue(value) || hasRemoteMcpServerValue(value);
+
+/**
+ * The MCP tool has two backends: local URLs in the agent (`tools.mcp`) and gateway server ids
+ * in the GWDG tools (`tools.mcp_remote`). Old conversations only have `tools.mcp`; treat that
+ * as the remote switch too when remote entries are stored.
+ */
+export const remoteMcpEnabled = (settings: any) => {
+  const flag = settings?.tools?.mcp_remote;
+  if (typeof flag === "boolean") return flag;
+  return settings?.tools?.mcp === true && hasRemoteMcpServerValue(settings?.mcp_servers);
+};
 
 /** The servers without their headers, for sharing and exporting. */
 export const withoutHeaders = (servers: unknown) =>

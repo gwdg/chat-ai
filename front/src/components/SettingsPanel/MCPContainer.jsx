@@ -1,19 +1,14 @@
 // components/settings/MCPContainer.jsx
 // MCP configuration. GWDG Tools edits the remote gateway servers (entries with a server id)
 // and Local tools edits the agent's direct servers (entries with a URL); both live in
-// settings.mcp_servers, and agent/mcp.ts only picks up the URL entries.
+// settings.mcp_servers. They are switched separately: tools.mcp_remote for the gateway and
+// tools.mcp for the agent, which only picks up the URL entries (agent/mcp.ts).
 import { useTranslation } from "react-i18next";
 import { CircleHelp, Plus, Trash2 } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
-import { mcpServers } from "../../agent/mcp";
+import { isRemoteMcpServer, mcpServers } from "../../agent/mcp";
 
 const inputClass = "input input-sm w-full";
-
-const isRemoteEntry = (server) =>
-  !!server &&
-  typeof server === "object" &&
-  typeof server.id === "string" &&
-  typeof server.url !== "string";
 
 const MCPContainer = ({ localState, setLocalState, remote = false }) => {
   const { t } = useTranslation();
@@ -21,7 +16,7 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
   const raw = localState.settings?.mcp_servers;
   const servers = mcpServers(localState.settings);
   const remoteServers = Array.isArray(raw)
-    ? raw.filter(isRemoteEntry)
+    ? raw.filter(isRemoteMcpServer)
     : typeof raw === "string" && raw.trim()
       ? [{ id: raw.trim(), enabled: true }]
       : [];
@@ -30,13 +25,13 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
     setLocalState((prev) => ({ ...prev, settings: { ...prev.settings, mcp_servers: next }, flush: true }));
 
   const setRemoteServers = (nextRemote) => {
-    const localEntries = Array.isArray(raw) ? raw.filter((server) => !isRemoteEntry(server)) : [];
+    const localEntries = Array.isArray(raw) ? raw.filter((server) => !isRemoteMcpServer(server)) : [];
     update([...localEntries, ...nextRemote]);
   };
 
   const setLocalServers = (nextLocal) => {
     if (Array.isArray(raw)) {
-      update([...raw.filter(isRemoteEntry), ...nextLocal]);
+      update([...raw.filter(isRemoteMcpServer), ...nextLocal]);
     } else if (typeof raw === "string" && raw.trim()) {
       update([{ id: raw.trim(), enabled: true }, ...nextLocal]);
     } else {

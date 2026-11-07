@@ -21,7 +21,7 @@ function isSafeSettings(localState) {
       !!tools.web_search ||
       !!tools.fetch_url);
 
-  const mcpEnabled = !!tools.mcp;
+  const mcpEnabled = !!(tools.mcp || tools.mcp_remote);
 
   return !(isExternalModel || webSearchEnabled || mcpEnabled);
 }

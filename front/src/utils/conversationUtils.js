@@ -35,6 +35,7 @@ export const getDefaultSettings = (userSettings = {}) => {
       "audio_generation": true,
       "arcana": true,
       "mcp": false,
+      "mcp_remote": false,
       // Agent mode only
       "write_access": false,
       "codemode": true,

@@ -9,7 +9,7 @@ import MiniToolButton from "../SettingsPanel/MiniToolButton";
 import ToolLimit from "../SettingsPanel/ToolLimit";
 import { useToast } from "../../hooks/useToast";
 import { isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
-import { hasMcpServerValue } from "../../agent/mcp";
+import { hasLocalMcpServerValue } from "../../agent/mcp";
 import { useModal } from "../../modals/ModalContext";
 import { canMountLocalDirectory, mountLocalDirectory, setAccessPrompt } from "../../agent/workspace";
 
@@ -28,7 +28,7 @@ export default function MountFolderButton({ localState, setLocalState }) {
   const codemodeEnabled = localState?.settings?.tools?.codemode !== false;
   const mcpDisabled = !modelSupportsTools(localState?.settings?.model);
   const showMcpConfig = mcpEnabled && !mcpDisabled;
-  const hasMcpServers = hasMcpServerValue(localState?.settings?.mcp_servers);
+  const hasMcpServers = hasLocalMcpServerValue(localState?.settings?.mcp_servers);
 
   useEffect(() => {
     if (!canMount) return;
@@ -183,7 +183,7 @@ export default function MountFolderButton({ localState, setLocalState }) {
                       ? `${t("settings.label_mcp_server")}: ${t("settings.tools_agent_unavailable")}`
                       : undefined
                   }
-                  guideKey="mcp"
+                  guideKey="mcp_local"
                   warning={hasMcpServers}
                 />
                 <MiniToolButton

@@ -314,14 +314,14 @@ export const featureGuides = {
         check: toolsAreEnabled,
       },
       {
-        target: '[data-guide="tool-mcp"]',
+        target: '[data-guide="tool-mcp_remote"]',
         prepare: ensureToolsEnabled,
         textKey: "feature_guide.mcp_server.step3",
-        check: () => isToolActive("mcp"),
+        check: () => isToolActive("mcp_remote"),
       },
       {
         target: '[data-guide="mcp-input"]',
-        prepare: () => ensureTool("mcp"),
+        prepare: () => ensureTool("mcp_remote"),
         textKey: "feature_guide.mcp_server.step4",
         check: mcpConfigured,
       },

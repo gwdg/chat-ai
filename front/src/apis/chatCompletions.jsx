@@ -1,27 +1,16 @@
 import getModelDefaults from "../config/getModelDefaults";
-import { normalizeMcpUrl } from "../agent/mcp";
+import { isRemoteMcpServer, remoteMcpEnabled } from "../agent/mcp";
 import { createBackendClient } from "./openaiClient";
 
-// Remote entries carry a server id; local entries carry a URL. Older conversations keep the
-// id as a string in mcp_servers.
+// Only gateway server ids go to the backend. Local agent URLs stay in the browser.
 const gatewayMcpServers = (settings) => {
+  if (!remoteMcpEnabled(settings)) return [];
   const servers = settings?.mcp_servers;
   if (Array.isArray(servers)) {
-    const remote = servers
-      .filter(
-        (server) =>
-          server &&
-          typeof server.id === "string" &&
-          typeof server.url !== "string" &&
-          server.enabled !== false,
-      )
+    return servers
+      .filter((server) => isRemoteMcpServer(server) && server.enabled !== false)
       .map((server) => server.id.trim())
       .filter(Boolean);
-    if (remote.length) return remote;
-    const local = normalizeMcpUrl(
-      servers.find((server) => server?.enabled && server?.url?.trim())?.url,
-    );
-    return local ? [local] : [];
   }
   return typeof servers === "string" && servers.trim() ? [servers.trim()] : [];
 };
