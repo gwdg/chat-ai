@@ -27,7 +27,7 @@ const PROXY_KEY = "set-by-backend";
 
 const AGENT_PROMPT = `You have a virtual filesystem rooted at "/" that belongs to this conversation. There is no shell.
 Files the user attaches are placed under ${UPLOADS}/; documents and audio come with a converted text variant next to them.
-Use the tools to read, write and edit files, to convert documents, to transcribe audio, and to generate speech, images and Word documents.
+Use the tools to read, write and edit files, to convert documents, to transcribe audio, to analyze images, and to generate speech, images and Word documents.
 Every file you write is shown to the user in the chat, so do not repeat a file's whole content in your answer.`;
 
 const NO_TOOLS_PROMPT = "You cannot call tools in this conversation; attached files are referenced by name only.";

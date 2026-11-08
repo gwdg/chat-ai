@@ -365,6 +365,11 @@ export default {
       step2: "Enable tools.",
       step3: "Select Image Modification, then attach or describe the image.",
     },
+    image_analysis: {
+      title: "Analyze images",
+      step1: "Open Browser & local tools from the prompt box.",
+      step2: "Select Analyze images so the assistant can analyze image files with SAIA's Gemma vision model.",
+    },
     audio_generation: {
       title: "Generate audio",
       step1: "Open GWDG Tools from the prompt box.",
@@ -781,6 +786,7 @@ export default {
     label_web_search: "Web Search",
     label_image_generation: "Image Generation",
     label_image_modification: "Image Modification",
+    label_image_analysis: "Analyze images",
     label_audio_generation: "Audio Generation",
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",

@@ -378,6 +378,12 @@ export default {
       step3:
         "Wählen Sie Bildbearbeitung und hängen Sie das Bild an oder beschreiben Sie es.",
     },
+    image_analysis: {
+      title: "Bilder analysieren",
+      step1: "Öffnen Sie Browser & lokale Werkzeuge im Eingabefeld.",
+      step2:
+        "Wählen Sie Bilder analysieren, damit der Assistent Bilddateien mit dem Gemma-Visionsmodell von SAIA analysieren kann.",
+    },
     audio_generation: {
       title: "Audio erzeugen",
       step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
@@ -794,6 +800,7 @@ export default {
     label_web_search: "Websuche",
     label_image_generation: "Bildgenerierung",
     label_image_modification: "Bildbearbeitung",
+    label_image_analysis: "Bilder analysieren",
     label_audio_generation: "Audiogenerierung",
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",

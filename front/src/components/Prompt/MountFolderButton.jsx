@@ -1,7 +1,7 @@
 import { Fragment, useEffect } from "react";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
-import { Check, Code, FileText, Pencil, Server } from "lucide-react";
+import { Check, Code, FileText, Pencil, ScanEye, Server } from "lucide-react";
 import { FolderAdd, ToolBox } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
 import MCPContainer from "../SettingsPanel/MCPContainer";
@@ -25,6 +25,7 @@ export default function MountFolderButton({ localState, setLocalState }) {
   const mcpEnabled = localState?.settings?.tools?.mcp === true;
   const createDocxEnabled = localState?.settings?.tools?.create_docx !== false;
   const codemodeEnabled = localState?.settings?.tools?.codemode !== false;
+  const imageAnalysisEnabled = localState?.settings?.tools?.image_analysis !== false;
   const mcpDisabled = !modelSupportsTools(localState?.settings?.model);
   const showMcpConfig = mcpEnabled && !mcpDisabled;
 
@@ -109,6 +110,18 @@ export default function MountFolderButton({ localState, setLocalState }) {
     }));
   };
 
+  const toggleImageAnalysis = () => {
+    if (mcpDisabled) return;
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        tools: { ...prev.settings?.tools, image_analysis: !imageAnalysisEnabled },
+      },
+      flush: true,
+    }));
+  };
+
   const setTools = (patch) =>
     setLocalState((prev) => ({
       ...prev,
@@ -125,12 +138,13 @@ export default function MountFolderButton({ localState, setLocalState }) {
       patch.mcp = true;
       patch.create_docx = true;
       patch.codemode = true;
+      patch.image_analysis = true;
     }
     setTools(patch);
   };
 
   const disableAllTools = () => {
-    const patch = { mcp: false, create_docx: false, codemode: false };
+    const patch = { mcp: false, create_docx: false, codemode: false, image_analysis: false };
     if (canMount) patch.write_access = false;
     setTools(patch);
   };
@@ -139,6 +153,7 @@ export default function MountFolderButton({ localState, setLocalState }) {
     <Popover className="relative flex">
       <Tooltip text={t("conversation.local_tools")}>
         <PopoverButton
+          data-guide="local-tools"
           className="h-[30px] w-[30px] flex items-center justify-center cursor-pointer focus:outline-none"
           aria-label={t("conversation.local_tools")}
         >
@@ -242,6 +257,19 @@ export default function MountFolderButton({ localState, setLocalState }) {
                       : undefined
                   }
                   guideKey="create_docx"
+                />
+                <MiniToolButton
+                  active={imageAnalysisEnabled}
+                  disabled={mcpDisabled}
+                  onClick={toggleImageAnalysis}
+                  Icon={ScanEye}
+                  label={t("settings.label_image_analysis")}
+                  title={
+                    mcpDisabled
+                      ? `${t("settings.label_image_analysis")}: ${t("settings.tools_agent_unavailable")}`
+                      : undefined
+                  }
+                  guideKey="image_analysis"
                 />
                 <MiniToolButton
                   active={codemodeEnabled}

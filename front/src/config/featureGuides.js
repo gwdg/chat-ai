@@ -8,6 +8,7 @@ import {
   mcpConfigured,
   openConversationMenu,
   openConversationSettings,
+  openLocalTools,
   openSearch,
   openSortMenu,
   openTools,
@@ -268,6 +269,25 @@ export const featureGuides = {
         prepare: ensureToolsEnabled,
         textKey: "feature_guide.image_modification.step3",
         check: () => isToolActive("image_modification"),
+      },
+    ],
+  },
+  image_analysis: {
+    titleKey: "feature_guide.image_analysis.title",
+    prompt:
+      "Analyze images with SAIA's Gemma vision model. Open Browser & local tools from the prompt box, then select Analyze images.",
+    keywords: ["analyze image", "analyse image", "read image", "image text", "vision"],
+    steps: [
+      {
+        target: '[data-guide="local-tools"]',
+        textKey: "feature_guide.image_analysis.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="tool-image_analysis"]',
+        prepare: openLocalTools,
+        textKey: "feature_guide.image_analysis.step2",
+        check: () => isToolActive("image_analysis"),
       },
     ],
   },
@@ -1022,6 +1042,7 @@ export const FEATURE_CATEGORIES = {
     "web_search",
     "image_generation",
     "image_modification",
+    "image_analysis",
     "audio_generation",
     "mcp_server",
   ],

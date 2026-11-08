@@ -49,6 +49,7 @@ const TOGGLES: Record<string, string[]> = {
   write_access: ["write", "edit"],
   codemode: ["codemode"],
   create_docx: ["create_docx"],
+  image_analysis: ["explain_image"],
   image_generation: ["generate_image"],
   image_modification: ["edit_image"],
   audio_generation: ["generate_speech"],
@@ -149,10 +150,11 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
     }),
   ];
 
-  // A model with vision reads images itself; one without asks the vision model through this tool.
+  // SAIA's Gemma vision model analyzes the image and returns text. It runs in the browser
+  // through the same back proxy as the rest of the chat, so no MCP server is involved.
   const explainImageTool = tool(
     "explain_image",
-    "Look at an image file (png, jpeg, gif, webp) and return a description. read cannot show you images; use this instead.",
+    "Analyze an image file (png, jpeg, gif, webp) with a vision model and return a description or answer a question about it. Use this to read text in an image or to look at an image when read cannot show it.",
     Type.Object({
       path: Type.String({ description: "Path of the image" }),
       question: Type.Optional(Type.String({ description: "A specific question about the image" })),
@@ -191,7 +193,7 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
 
   const mediaTools: AgentTool<any>[] = [
     webSearchTool,
-    ...(vision ? [] : [explainImageTool]),
+    explainImageTool,
     tool(
       "convert_document",
       "Convert a document (PDF, DOCX, PPTX, XLSX, ...) to Markdown. The result is written next to it as <path>.md and returned.",
