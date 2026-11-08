@@ -1299,6 +1299,10 @@ export default {
   // Alerts and warnings
   alert: {
     mcp_unreachable: "MCP server {{url}} is not reachable. Make sure it is running, or turn it off in the tool settings to continue.",
+    mcp_name_changed_title: "MCP server name changed",
+    mcp_name_changed:
+      "The server at {{server}} now reports the name \"{{actualName}}\" instead of \"{{previousName}}\". Connect to it and update the saved name?",
+    mcp_name_changed_connect: "Connect and update",
     folder_access:
       "The assistant wants to use the local folder <strong>{{name}}</strong> again. Your browser needs you to allow access after a reload.",
     title: "Warning",

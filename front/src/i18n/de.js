@@ -1319,6 +1319,10 @@ export default {
   // Alerts and warnings
   alert: {
     mcp_unreachable: "Der MCP-Server {{url}} ist nicht erreichbar. Stellen Sie sicher, dass er läuft, oder schalten Sie ihn in den Werkzeugeinstellungen aus, um fortzufahren.",
+    mcp_name_changed_title: "Name des MCP-Servers geändert",
+    mcp_name_changed:
+      "Der Server unter {{server}} meldet jetzt den Namen \"{{actualName}}\" statt \"{{previousName}}\". Verbinden und den gespeicherten Namen aktualisieren?",
+    mcp_name_changed_connect: "Verbinden und aktualisieren",
     folder_access:
       "Der Assistent möchte den lokalen Ordner <strong>{{name}}</strong> wieder verwenden. Nach einem Neuladen muss der Zugriff erneut erlaubt werden.",
     title: "Warning",

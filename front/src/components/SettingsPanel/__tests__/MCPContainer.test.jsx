@@ -136,3 +136,21 @@ describe("MCPContainer test button", () => {
     );
   });
 });
+
+describe("MCPContainer server name", () => {
+  it("shows the tested name read-only and stores it in the per-chat setting", async () => {
+    mcpMocks.testMcpServer.mockResolvedValue({ name: "My MCP Server", toolCount: 3 });
+    const server = { url: "http://localhost:9000/mcp", enabled: true };
+    const setLocalState = renderWith(makeState([server]));
+
+    fireEvent.click(screen.getByRole("button", { name: /test the server/i }));
+
+    await waitFor(() => expect(setLocalState).toHaveBeenCalled());
+    const next = setLocalState.mock.results.at(-1).value;
+    expect(next.settings.mcp_servers[0].name).toBe("My MCP Server");
+
+    render(<MCPContainer localState={next} setLocalState={vi.fn()} />);
+    expect(screen.getByText("My MCP Server")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("My MCP Server")).not.toBeInTheDocument();
+  });
+});

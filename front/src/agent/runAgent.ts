@@ -15,7 +15,7 @@ import { getFileType } from "../utils/attachments";
 import { prepareAttachment, UPLOADS, uploadPath } from "./prepare";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
 import i18n from "../i18n";
-import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpTools } from "./mcp";
+import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpTools } from "./mcp";
 import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
 import { type Change, observe } from "./vfs";
@@ -211,12 +211,14 @@ export async function runAgentTurn({
   systemPrompt,
   settings,
   onUpdate,
+  onMcpNameMismatch,
 }: {
   conversationId: string;
   uiMessages: any[];
   systemPrompt: string;
   settings: any;
   onUpdate: (update: TurnUpdate) => void;
+  onMcpNameMismatch?: (server: McpServer, actualName: string) => Promise<boolean>;
 }): Promise<TurnResult> {
   beginMcpConfirmationSession(conversationId);
   const spec: ModelSpec = typeof settings.model === "string" ? { id: settings.model } : settings.model;
@@ -312,7 +314,9 @@ export async function runAgentTurn({
   let mcp: McpTools | undefined;
   if (servers.length) {
     try {
-      mcp = await connectMcpServers(servers, new Set(tools.map((tool) => tool.name)));
+      mcp = await connectMcpServers(servers, new Set(tools.map((tool) => tool.name)), {
+        onNameMismatch: onMcpNameMismatch,
+      });
     } catch (error) {
       if (!(error instanceof McpUnavailableError)) throw error;
       console.error(error);

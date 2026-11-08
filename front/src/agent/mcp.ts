@@ -8,6 +8,8 @@ import { requestMcpConfirmation } from "./mcpConfirmation";
 export interface McpServer {
   url: string;
   enabled: boolean;
+  /** The server name from the last test or connection. Shown read-only in the settings. */
+  name?: string;
   /** Extra request headers, e.g. Authorization. Not shared or exported. */
   headers?: Record<string, string>;
 }
@@ -121,7 +123,7 @@ function toResult(result: any): AgentToolResult<any> {
   return { content, details: undefined };
 }
 
-type Connection = { client: any; tools: any[]; prefix: string };
+type Connection = { client: any; tools: any[]; prefix: string; name: string };
 
 // Open connections by server (URL + headers). They are opened ahead of the first message
 // (prefetchMcpServers) and kept across turns; one that fails is dropped and opened again
@@ -154,8 +156,8 @@ async function open(server: McpServer): Promise<Connection> {
       tools.push(...page.tools);
       cursor = page.nextCursor;
     } while (cursor);
-    const prefix = toName(client.getServerVersion()?.name || new URL(server.url).host);
-    return { client, tools, prefix };
+    const name = client.getServerVersion()?.name || new URL(server.url).host;
+    return { client, tools, prefix: toName(name), name };
   } catch (error) {
     client.close().catch(() => {});
     throw error;
@@ -171,9 +173,9 @@ export interface McpTestResult {
 export async function testMcpServer(server: McpServer): Promise<McpTestResult> {
   const url = normalizeMcpUrl(server.url);
   if (!url) throw new Error(i18n.t("settings.mcp_test_invalid_url"));
-  const { client, tools, prefix } = await open({ ...server, url });
+  const { client, tools, name } = await open({ ...server, url });
   try {
-    return { name: prefix, toolCount: tools.length };
+    return { name, toolCount: tools.length };
   } finally {
     client.close().catch(() => {});
   }
@@ -203,12 +205,24 @@ export interface McpTools {
   tools: AgentTool<any>[];
 }
 
+export interface McpConnectOptions {
+  /**
+   * Called when the name stored for a server differs from the name it reports on connecting.
+   * Return true to connect and accept the new name; false to skip the server for this turn.
+   */
+  onNameMismatch?: (server: McpServer, actualName: string) => Promise<boolean>;
+}
+
 /**
  * The tools of all servers as agent tools, named `<server>__<tool>`. Connects to the servers
  * at the same time, reusing open connections. Throws McpUnavailableError for a server that
  * cannot be reached; the turn stops then.
  */
-export async function connectMcpServers(servers: McpServer[], taken: Set<string>): Promise<McpTools> {
+export async function connectMcpServers(
+  servers: McpServer[],
+  taken: Set<string>,
+  options: McpConnectOptions = {},
+): Promise<McpTools> {
   const opened = await Promise.all(
     servers.map(async (server) => {
       try {
@@ -218,9 +232,20 @@ export async function connectMcpServers(servers: McpServer[], taken: Set<string>
       }
     }),
   );
+  const accepted: typeof opened = [];
+  for (const entry of opened) {
+    const { server, connection } = entry;
+    if (options.onNameMismatch && server.name && server.name !== connection.name) {
+      if (!(await options.onNameMismatch(server, connection.name))) {
+        drop(keyOf(server));
+        continue;
+      }
+    }
+    accepted.push(entry);
+  }
   const names = new Set(taken);
   const tools: AgentTool<any>[] = [];
-  for (const { server, connection } of opened) {
+  for (const { server, connection } of accepted) {
     const key = keyOf(server);
     const current = connections.get(key);
     for (const tool of connection.tools) {

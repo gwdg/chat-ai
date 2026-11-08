@@ -10,6 +10,7 @@ import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversatio
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled } from "../apis/agentEndpoints";
 import { remoteMcpEnabled } from "../agent/mcp";
+import { confirmMcpNameChange } from "./mcpNameChange";
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
@@ -633,6 +634,14 @@ const sendMessage = async ({
           };
           return { ...prev, messages, ignoreConflict: true };
         });
+      const handleMcpNameMismatch = (server, actualName) =>
+        confirmMcpNameChange({
+          openModal,
+          setLocalState,
+          conversationId,
+          server,
+          actualName,
+        });
       const result = await runAgentTurn({
         conversationId,
         // Up to and including the new user message
@@ -640,6 +649,7 @@ const sendMessage = async ({
         systemPrompt: systemPromptAPI,
         settings: localState.settings,
         onUpdate: showTurn,
+        onMcpNameMismatch: handleMcpNameMismatch,
       });
       if (result.error && !result.text) throw new Error(result.error);
       if (result.error) notifyError(result.error);

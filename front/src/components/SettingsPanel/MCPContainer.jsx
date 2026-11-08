@@ -92,6 +92,9 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
     setTestStatus((prev) => ({ ...prev, [index]: "testing" }));
     try {
       const result = await testMcpServer(server);
+      // The name is read-only in the row and remembered for the next connection.
+      if (remote) changeRemote(index, { name: result.name });
+      else changeLocal(index, { name: result.name });
       setTestStatus((prev) => ({ ...prev, [index]: "success" }));
       notifySuccess(
         t("settings.mcp_test_success", {
@@ -157,13 +160,21 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
               aria-label={t("settings.mcp_toggle")}
               className="checkbox checkbox-sm shrink-0"
             />
+            {server.name && (
+              <span
+                className="w-[8rem] shrink-0 truncate text-[11px] text-base-content/70"
+                title={server.name}
+              >
+                {server.name}
+              </span>
+            )}
             <input
               type="text"
               data-guide="mcp-input"
               value={server.id}
               onChange={(e) => changeRemote(index, { id: e.target.value.trim() })}
               placeholder={t("settings.placeholder_mcp_id")}
-              className={inputClass}
+              className={`${inputClass} min-w-0 md:max-w-none md:flex-1`}
             />
             <input
               type="password"
@@ -171,7 +182,7 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
               value={server.headers?.Authorization ?? ""}
               onChange={(e) => setRemoteAuth(index, e.target.value)}
               placeholder={t("settings.placeholder_mcp_auth")}
-              className={`${inputClass} md:max-w-[16rem]`}
+              className={`${inputClass} min-w-0 md:max-w-none md:flex-1`}
             />
             {testButton(index, !server.id.trim(), {
               url: server.id,
@@ -220,13 +231,21 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
             aria-label={t("settings.mcp_toggle")}
             className="checkbox checkbox-sm shrink-0"
           />
+          {server.name && (
+            <span
+              className="w-[8rem] shrink-0 truncate text-[11px] text-base-content/70"
+              title={server.name}
+            >
+              {server.name}
+            </span>
+          )}
           <input
             type="text"
             data-guide="mcp-input"
             value={server.url}
             onChange={(e) => changeLocal(index, { url: e.target.value.trim() })}
             placeholder={t("settings.placeholder_mcp_url")}
-            className={inputClass}
+            className={`${inputClass} min-w-0 md:max-w-none md:flex-1`}
           />
           <input
             type="password"
@@ -234,7 +253,7 @@ const MCPContainer = ({ localState, setLocalState, remote = false }) => {
             value={server.headers?.Authorization ?? ""}
             onChange={(e) => setAuth(index, e.target.value)}
             placeholder={t("settings.placeholder_mcp_auth")}
-            className={`${inputClass} md:max-w-[16rem]`}
+            className={`${inputClass} min-w-0 md:max-w-none md:flex-1`}
           />
           {testButton(index, !server.url.trim(), {
             url: server.url,

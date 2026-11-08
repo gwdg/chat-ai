@@ -32,6 +32,7 @@ import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
 import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
 import MigrateDataModal from "./Alert/MigrateDataModal";
+import McpServerNameModal from "./Alert/McpServerNameModal";
 import ConversationConflict from "./Chat/ConversationConflict";
 import SummarizeChatModal from "./Chat/SummarizeChatModal";
 
@@ -171,6 +172,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "confirmAction" && (
         <ConfirmActionModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "mcpNameChange" && (
+        <McpServerNameModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "folderAccess" && (
         <FolderAccessModal isOpen onClose={closeModal} {...modalProps} />

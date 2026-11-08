@@ -102,8 +102,9 @@ export function buildConversationSettingsSummary(settings = {}) {
   const mcpDescription = mcpServers
     .map((server) => {
       const enabled = server?.enabled === false ? "disabled" : "enabled";
-      if (typeof server?.url === "string") return `local ${server.url} (${enabled})`;
-      if (typeof server?.id === "string") return `remote ${server.id} (${enabled})`;
+      const name = typeof server?.name === "string" && server.name.trim() ? ` "${server.name.trim()}"` : "";
+      if (typeof server?.url === "string") return `local ${server.url}${name} (${enabled})`;
+      if (typeof server?.id === "string") return `remote ${server.id}${name} (${enabled})`;
       return `unknown ${JSON.stringify(server)}`;
     })
     .join(", ");
