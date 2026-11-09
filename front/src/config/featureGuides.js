@@ -8,6 +8,7 @@ import {
   mcpConfigured,
   openConversationMenu,
   openConversationSettings,
+  openLocalTools,
   openSearch,
   openSortMenu,
   openTools,
@@ -18,7 +19,7 @@ import {
   selectSettingsTab,
   toolsAreEnabled,
   topicNameEntered,
-} from "./featureGuideActions";
+} from "./featureGuideActions.js";
 
 export const featureGuides = {
   attach_media: {
@@ -271,6 +272,25 @@ export const featureGuides = {
       },
     ],
   },
+  image_analysis: {
+    titleKey: "feature_guide.image_analysis.title",
+    prompt:
+      "Analyze images with SAIA's Gemma vision model. Open Browser & local tools from the prompt box, then select Analyze images.",
+    keywords: ["analyze image", "analyse image", "read image", "image text", "vision"],
+    steps: [
+      {
+        target: '[data-guide="local-tools"]',
+        textKey: "feature_guide.image_analysis.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="tool-image_analysis"]',
+        prepare: openLocalTools,
+        textKey: "feature_guide.image_analysis.step2",
+        check: () => isToolActive("image_analysis"),
+      },
+    ],
+  },
   audio_generation: {
     titleKey: "feature_guide.audio_generation.title",
     prompt:
@@ -296,31 +316,6 @@ export const featureGuides = {
       },
     ],
   },
-  video_generation: {
-    titleKey: "feature_guide.video_generation.title",
-    prompt:
-      "Generate videos with GWDG Tools. Open Tools, enable tools, then select Video Generation. The video queue shows progress.",
-    keywords: ["video generation", "generate video", "text to video"],
-    steps: [
-      {
-        target: '[data-guide="tools"]',
-        textKey: "feature_guide.video_generation.step1",
-        completeOnTargetClick: true,
-      },
-      {
-        target: '[data-guide="tools-enable"]',
-        prepare: openTools,
-        textKey: "feature_guide.video_generation.step2",
-        check: toolsAreEnabled,
-      },
-      {
-        target: '[data-guide="tool-video_generation"]',
-        prepare: ensureToolsEnabled,
-        textKey: "feature_guide.video_generation.step3",
-        check: () => isToolActive("video_generation"),
-      },
-    ],
-  },
   mcp_server: {
     titleKey: "feature_guide.mcp_server.title",
     prompt:
@@ -339,14 +334,14 @@ export const featureGuides = {
         check: toolsAreEnabled,
       },
       {
-        target: '[data-guide="tool-mcp"]',
+        target: '[data-guide="tool-mcp_remote"]',
         prepare: ensureToolsEnabled,
         textKey: "feature_guide.mcp_server.step3",
-        check: () => isToolActive("mcp"),
+        check: () => isToolActive("mcp_remote"),
       },
       {
         target: '[data-guide="mcp-input"]',
-        prepare: () => ensureTool("mcp"),
+        prepare: () => ensureTool("mcp_remote"),
         textKey: "feature_guide.mcp_server.step4",
         check: mcpConfigured,
       },
@@ -737,6 +732,31 @@ export const featureGuides = {
       },
     ],
   },
+  reasoning_streaming: {
+    titleKey: "feature_guide.reasoning_streaming.title",
+    prompt:
+      "Keep the reasoning process collapsed while the model streams and show a small moving activity dot instead. Users can open the reasoning after the response finishes.",
+    keywords: ["reasoning", "thinking", "streaming", "collapse", "indicator"],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.reasoning_streaming.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-chat"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.reasoning_streaming.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="reasoning-streaming-preference"]',
+        prepare: () => selectSettingsTab("chat"),
+        textKey: "feature_guide.reasoning_streaming.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   document_conversion: {
     titleKey: "feature_guide.document_conversion.title",
     prompt:
@@ -1022,8 +1042,8 @@ export const FEATURE_CATEGORIES = {
     "web_search",
     "image_generation",
     "image_modification",
+    "image_analysis",
     "audio_generation",
-    "video_generation",
     "mcp_server",
   ],
   chats: [
@@ -1046,6 +1066,7 @@ export const FEATURE_CATEGORIES = {
     "chat_preferences",
     "memories",
     "rendering",
+    "reasoning_streaming",
     "document_conversion",
     "data_management",
     "dark_mode",
@@ -1100,7 +1121,6 @@ const germanGuideKeywords = {
   image_generation: ["bilder erzeug", "bild erzeug", "bild generier", "bilder generier", "bild erstell", "bilder erstell", "text zu bild"],
   image_modification: ["bild bearbeit", "bilder bearbeit", "bild änder", "bilder änder", "bild modifizier", "bilder modifizier"],
   audio_generation: ["audio erzeug", "audio generier", "audio", "sprache erzeug", "sprache generier", "ton erzeug"],
-  video_generation: ["videos erzeug", "video erzeug", "video generier", "video", "text zu video"],
   mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],

@@ -1,5 +1,58 @@
 import getModelDefaults from "../config/getModelDefaults";
+import { isRemoteMcpServer, remoteMcpEnabled } from "../agent/mcp";
 import { createBackendClient } from "./openaiClient";
+
+// Only gateway server ids go to the backend. Local agent URLs stay in the browser.
+const gatewayMcpServers = (settings) => {
+  if (!remoteMcpEnabled(settings)) return [];
+  const servers = settings?.mcp_servers;
+  if (Array.isArray(servers)) {
+    return servers
+      .filter((server) => isRemoteMcpServer(server) && server.enabled !== false)
+      .map((server) => server.id.trim())
+      .filter(Boolean);
+  }
+  return typeof servers === "string" && servers.trim() ? [servers.trim()] : [];
+};
+
+// Request fields that set the reasoning effort for `model`, from its defaults and the conversation settings
+export function reasoningParams(model, settings) {
+  const params = {};
+  const modelDefaults = getModelDefaults(model);
+  try {
+    if (modelDefaults?.reasoning_effort !== undefined && modelDefaults?.reasoning_effort !== null) {
+      let reasoning_effort = modelDefaults.reasoning_effort;
+      if (settings?.reasoning_effort !== undefined && settings?.reasoning_effort !== null) {
+        reasoning_effort = Math.min(settings.reasoning_effort, modelDefaults.reasoning_options.length - 1)
+      }
+      if (model?.toLowerCase().startsWith("claude")) {
+        // External Claude models
+        params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
+      }
+      else if (model?.toLowerCase().startsWith("openai") && !(model?.toLowerCase().startsWith("openai-gpt-oss"))) {
+        // External OpenAI models
+        params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
+      }
+      if (model?.toLowerCase().includes("mistral")) {
+        // Internal models that don't use enable_thinking separately
+        params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
+      }
+      else {
+        if (reasoning_effort == 0) {
+          params.chat_template_kwargs = modelDefaults.reasoning_options[0] == "none" ?
+            {enable_thinking: false} : {reasoning_effort: modelDefaults.reasoning_options[0]};
+        } else if (modelDefaults.reasoning_options[reasoning_effort] == "on") {
+          params.chat_template_kwargs = {enable_thinking: true};
+        } else {
+          params.chat_template_kwargs = {enable_thinking: true, reasoning_effort: modelDefaults.reasoning_options[reasoning_effort]};
+        }
+      }
+    }
+  }  catch {
+    console.warn("Could not find reasoning setting")
+  }
+  return params;
+}
 
 // Controller for handling API request cancellation
 let controller = new AbortController();
@@ -14,7 +67,6 @@ async function* chatCompletions (
       ? conversation.settings.model
       : conversation.settings.model?.id; // TODO fall back to defaultModel
 
-    const modelDefaults = getModelDefaults(model);
     // Initialize params
     const params = {
       model: model,
@@ -25,44 +77,18 @@ async function* chatCompletions (
       stream_options: {include_usage: true },
     };
 
-    // Handle reasoning settings
-    try {
-      if (modelDefaults?.reasoning_effort !== undefined && modelDefaults?.reasoning_effort !== null) {
-        let reasoning_effort = modelDefaults.reasoning_effort;
-        if (conversation.settings?.reasoning_effort !== undefined && conversation.settings?.reasoning_effort !== null) {
-          reasoning_effort = Math.min(conversation.settings.reasoning_effort, modelDefaults.reasoning_options.length - 1)
-        }
-        if (model?.toLowerCase().startsWith("claude")) {
-          // External Claude models
-          params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
-        }
-        else if (model?.toLowerCase().startsWith("openai") && !(model?.toLowerCase().startsWith("openai-gpt-oss"))) {
-          // External OpenAI models
-          params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
-        }
-        if (model?.toLowerCase().includes("mistral")) {
-          // Internal models that don't use enable_thinking separately
-          params.reasoning_effort = modelDefaults.reasoning_options[reasoning_effort];
-        }
-        else {
-          if (reasoning_effort == 0) {
-            params.chat_template_kwargs = modelDefaults.reasoning_options[0] == "none" ?
-              {enable_thinking: false} : {reasoning_effort: modelDefaults.reasoning_options[0]};
-          } else if (modelDefaults.reasoning_options[reasoning_effort] == "on") {
-            params.chat_template_kwargs = {enable_thinking: true};
-          } else {
-            params.chat_template_kwargs = {enable_thinking: true, reasoning_effort: modelDefaults.reasoning_options[reasoning_effort]};
-          }
-        }
-      }
-    }  catch {
-      console.warn("Could not find reasoning setting")
-    }
+    Object.assign(params, reasoningParams(model, conversation.settings));
 
     // Handle tools
     if (conversation.settings?.enable_tools) {
       params.enable_tools = true;
       params.tools = conversation?.settings?.tools || [];
+    }
+
+    // Function tools run by the caller (e.g. the Meta chat's local tools)
+    if (Array.isArray(conversation.settings?.function_tools) && conversation.settings.function_tools.length > 0) {
+      params.tools = conversation.settings.function_tools;
+      if (conversation.settings.tool_choice) params.tool_choice = conversation.settings.tool_choice;
     }
 
     if (conversation.settings?.arcana && conversation.settings.arcana.id !== "") {
@@ -73,8 +99,10 @@ async function* chatCompletions (
       params.feedback = conversation.settings.feedback;
     }
 
-    if (conversation.settings?.mcp_servers && conversation.settings.mcp_servers.length > 0) {
-      params["mcp-servers"] = [conversation.settings.mcp_servers];
+    // Remote server ids, or the first enabled local server as the gateway server id
+    const mcpServers = gatewayMcpServers(conversation.settings);
+    if (mcpServers.length) {
+      params["mcp-servers"] = mcpServers;
     }
 
     // Define openai object to call backend
@@ -134,7 +162,15 @@ async function* chatCompletions (
   }
 }
 
+// Other running requests (the agent loop) that the abort button should stop too
+const abortListeners = new Set();
+export function onAbortRequest(listener) {
+  abortListeners.add(listener);
+  return () => abortListeners.delete(listener);
+}
+
 function abortRequest() {
+  abortListeners.forEach((listener) => listener());
   if (controller) {
     controller.abort(); // stops the stream/fetch
   }

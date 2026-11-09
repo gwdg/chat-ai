@@ -9,7 +9,7 @@ import {
   loadFile,
   saveFile,
 } from "../../db";
-import { WarningAltFilled, Close, Video, DocumentBlank } from "@carbon/icons-react";
+import { WarningAltFilled, Close, Download, Video, DocumentBlank } from "@carbon/icons-react";
 import { useSelector } from "react-redux";
 import { processFile } from "../../apis/processFile";
 import { getFileType } from "../../utils/attachments";
@@ -19,6 +19,8 @@ import {
 } from "../../utils/browserDocumentConversion";
 import { selectDocumentConversionMode } from "../../Redux/reducers/userSettingsReducer";
 import { useToast } from "../../hooks/useToast";
+import { isAgentEnabled } from "../../apis/agentEndpoints";
+import { usePrepareStatus } from "../../agent/prepare";
 
 export default function Attachment({
   localState,
@@ -41,13 +43,16 @@ export default function Attachment({
   const isImage = file?.type?.startsWith("image/");
   const isAudio = file?.type?.startsWith("audio/");
   const base64 = useFileBase64((isImage || isAudio) ? attachment.fileId : null);
+  const prepareStatus = usePrepareStatus(attachment.fileId);
   if (!file) return ""; // TODO placeholder file
   const fileType = getFileType(file); // Get readable file type, e.g., "image"
   const model = localState.settings.model;
+  // The agent copies every upload into its workspace and converts documents and audio on send
+  const agentMode = isAgentEnabled();
 
-  const isAudioSupported = (localState.settings.enable_tools || (model?.input?.includes("audio") || false));
-  const isVideoSupported = (localState.settings.enable_tools || (model?.input?.includes("video") || false));
-  const isImageSupported = (localState.settings.enable_tools || (model?.input?.includes("image") || false));
+  const isAudioSupported = (agentMode || localState.settings.enable_tools || (model?.input?.includes("audio") || false));
+  const isVideoSupported = (agentMode || localState.settings.enable_tools || (model?.input?.includes("video") || false));
+  const isImageSupported = (agentMode || localState.settings.enable_tools || (model?.input?.includes("image") || false));
   const isFileSupported = !fileType
     ? false
     : fileType === "image"
@@ -64,6 +69,25 @@ export default function Attachment({
       setLocalState,
       index,
     });
+  };
+
+  const handleDownload = async (event) => {
+    event.stopPropagation();
+    try {
+      const bytes = await loadFile(attachment.fileId);
+      const blob = new Blob([bytes], { type: file.type || "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.name || "download";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 300);
+    } catch (error) {
+      console.error("Download failed:", error);
+      notifyError(t("file_preview.save_failed"));
+    }
   };
   // Handle Process File
   const handleProcessFile = async (useBrowser = documentConversionMode !== "server") => {
@@ -125,7 +149,7 @@ export default function Attachment({
   };
 
   const badge = getFileBadge(file);
-  const canProcess = !inHistory && (fileType === "pdf" || fileType === "docx"); // TODO add other supported types
+  const canProcess = !agentMode && !inHistory && (fileType === "pdf" || fileType === "docx"); // TODO add other supported types
 
   const getFileDisplayInfo = (file) => {
     if (canProcess) {
@@ -327,6 +351,17 @@ export default function Attachment({
                 >
                   {badge}
                 </span>
+                {/* Download button - positioned at card corner */}
+                {(inHistory || inAssistant) && (
+                  <button
+                    className="btn btn-ghost btn-xs btn-circle absolute top-1 right-1 bg-base-100/30 hover:bg-base-100/90"
+                    onClick={handleDownload}
+                    aria-label={t("file_preview.download_aria")}
+                    title={t("file_preview.download_aria")}
+                  >
+                    <Download size={16} className="opacity-70 hover:opacity-100 transition-opacity" />
+                  </button>
+                )}
                 {/* Remove button - positioned at card corner */}
                 {!inHistory && (
                   <button
@@ -347,8 +382,15 @@ export default function Attachment({
               </div>
             </div>
           </div>
+          {/* Agent mode: converting or transcribing in the background */}
+          {prepareStatus && (
+            <span className="text-[11px] text-tertiary flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-tertiary animate-pulse flex-shrink-0" />
+              <Trans i18nKey={`conversation.attachment.${prepareStatus}`} />
+            </span>
+          )}
           {/* Process Needed Warning*/}
-          {!inAssistant && !suppressUnsupportedWarning && (!isFileSupported || fileType === "pdf") && (
+          {!inAssistant && !agentMode && !suppressUnsupportedWarning && (!isFileSupported || fileType === "pdf") && (
             <span className="text-[11px] text-warning flex items-center gap-1">
               <WarningAltFilled size={12} className="flex-shrink-0" />
               {!isFileSupported

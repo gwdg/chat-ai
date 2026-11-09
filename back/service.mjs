@@ -7,7 +7,7 @@ import fileUpload from "express-fileupload";
 import FormData from "form-data";
 import fs from "fs";
 import path from "path";
-import { Readable } from "stream"; // Node's stream module
+import { Readable, pipeline } from "stream"; // Node's stream module
 import OpenAI from "openai";
 
 const app = express();
@@ -43,6 +43,47 @@ try {
   }
 } catch (error) {
   console.error("Failed to read back.json. Using default values.", error);
+}
+
+// Authorization for upstream calls: the inference-id header only stands in for a missing apiKey
+const authHeaders = (req) => ({
+  Authorization: "Bearer " + (apiKey || req.headers["inference-id"]),
+  "inference-portal": serviceName,
+});
+
+// Forwards a parsed request to the API and streams the answer back. Cancels the upstream
+// request when the client goes away.
+async function forward(req, res, path, body, contentType) {
+  const controller = new AbortController();
+  res.on("close", () => controller.abort());
+  try {
+    const upstream = await globalThis.fetch(apiEndpoint + path, {
+      method: "POST",
+      headers: { ...authHeaders(req), ...(contentType ? { "Content-Type": contentType } : {}) },
+      body,
+      signal: controller.signal,
+    });
+    res.status(upstream.status);
+    const type = upstream.headers.get("content-type");
+    if (type) res.setHeader("Content-Type", type);
+    if (upstream.body) pipeline(Readable.fromWeb(upstream.body), res, () => {});
+    else res.end();
+  } catch (error) {
+    if (controller.signal.aborted) return;
+    console.error(`Error in ${path}:`, error);
+    if (!res.headersSent) res.status(502);
+    res.end("Upstream request failed.");
+  }
+}
+
+// Builds a multipart body from the parsed fields and uploaded files of a request
+function multipart(req) {
+  const form = new globalThis.FormData();
+  for (const [name, value] of Object.entries(req.body ?? {})) form.append(name, String(value));
+  for (const [name, file] of Object.entries(req.files ?? {})) {
+    for (const one of [file].flat()) form.append(name, new Blob([one.data], { type: one.mimetype }), one.name);
+  }
+  return form;
 }
 
 // Global request limitations
@@ -111,14 +152,14 @@ async function processFile(file, inference_id) {
 // Process PDF file
 app.post("/documents/convert/file", async (req, res) => {
   // Check for the presence of `document` file key
-  if (!req.files || !req.files.document) {
+  // `files` is docling's field name, which the front end and saia-engine use; `document` is older
+  if (!req.files || !(req.files.files || req.files.document)) {
     return res.status(422).json({ error: "No file provided" });
   }
 
   const inference_id = req.headers["inference-id"];
   try {
-    // Access the file using the correct key name
-    const file = req.files;
+    const file = req.files.files || req.files.document;
     const response = await processFile(file, inference_id);
     if (!response.ok) {
       return res.status(response.status).send(response.statusText);
@@ -316,6 +357,14 @@ app.post("/audio/speech", async (req, res) => {
   }
 });
 
+// Endpoints the browser agent's tools call. Bodies are forwarded as they are.
+app.post("/audio/transcriptions", (req, res) => forward(req, res, "/audio/transcriptions", multipart(req)));
+app.post("/images/edits", (req, res) => forward(req, res, "/images/edits", multipart(req)));
+app.post("/images/generations", (req, res) =>
+  forward(req, res, "/images/generations", JSON.stringify(req.body ?? {}), "application/json"),
+);
+app.post("/websearch", (req, res) => forward(req, res, "/websearch", JSON.stringify(req.body ?? {}), "application/json"));
+
 // Build a sophisticated JSON form for a requested tool in test mode. The shape
 // matches what the frontend's ToolForm component renders: { tool_id, title,
 // description, fields[] } with declarative HTML input types.
@@ -357,23 +406,6 @@ function buildTestForm(toolType) {
           { value: "jpeg", label: "JPEG" },
           { value: "webp", label: "WebP" },
         ]},
-      ],
-    },
-    video_generation: {
-      tool_id: "video_generation",
-      title: "Video generation settings",
-      description: "Configure the video the tool will generate.",
-      fields: [
-        { name: "prompt", label: "Prompt", type: "textarea", rows: 3, value: "A city timelapse from day to night" },
-        { name: "duration", label: "Duration (s)", type: "number", value: 5, min: 1, max: 30, step: 1 },
-        { name: "resolution", label: "Resolution", type: "select", value: "1080p", options: [
-          { value: "720p", label: "720p" },
-          { value: "1080p", label: "1080p" },
-          { value: "4k", label: "4K" },
-        ]},
-        { name: "fps", label: "Frames per second", type: "number", value: 30, min: 12, max: 60, step: 6 },
-        { name: "motion", label: "Motion strength", type: "range", value: 0.5, min: 0, max: 1, step: 0.1 },
-        { name: "loop", label: "Loop video", type: "checkbox", value: false },
       ],
     },
     audio_generation: {
@@ -454,6 +486,7 @@ app.post("/chat/completions", async (req, res) => {
     feedback = null,
     chat_template_kwargs = null,
     reasoning_effort = null,
+    tool_choice = null,
   } = req.body;
 
   const mcp_servers = req.body["mcp-servers"] || null;
@@ -600,7 +633,7 @@ app.post("/chat/completions", async (req, res) => {
     }
 
     // Handle tools and arcana
-    if (enable_tools && !isExternalModel) {
+    if ((enable_tools || params.arcana) && !isExternalModel) {
       inference_service = "saia-openai-gateway";
       params["runToolsOnServer"] = true;
       if (mcp_servers && mcp_servers.length > 0) {
@@ -617,9 +650,6 @@ app.post("/chat/completions", async (req, res) => {
           }
           if (tool.type === "image_generation") {
             params.tools.push({type: "image_generation"});
-          }
-          if (tool.type === "video_generation") {
-            params.tools.push({type: "video_create"});
           }
           if (tool.type === "image_modify" || tool.type === "image_modification") {
             params.tools.push({type: "image_modify"});
@@ -642,6 +672,14 @@ app.post("/chat/completions", async (req, res) => {
       }
     }
     
+    // Function tools of the browser agent, which runs them itself. Without enable_tools they go
+    // to the model unchanged, and the request does not go through the tool gateway.
+    const functionTools = Array.isArray(tools) ? tools.filter((tool) => tool?.type === "function") : [];
+    if (!enable_tools && functionTools.length > 0) {
+      params.tools = functionTools;
+      if (tool_choice) params.tool_choice = tool_choice;
+    }
+
     const openai = new OpenAI({baseURL : apiEndpoint, apiKey: apiKey ? apiKey : inference_id});
 
     // Temporary workaround as middleware doesn't support timeout yet
@@ -660,8 +698,12 @@ app.post("/chat/completions", async (req, res) => {
     }
 
     // Get chat completion response
+    // Stop generating when the client goes away (e.g. the user stops the agent)
+    const controller = new AbortController();
+    res.on("close", () => controller.abort());
     const response = await openai.chat.completions.create(params, {
-        headers
+        headers,
+        signal: controller.signal,
     }).asResponse();
 
     // Pass through headers (optional but recommended)
@@ -690,6 +732,8 @@ app.post("/chat/completions", async (req, res) => {
 
     nodeStream.pipe(res);
   } catch (err) {
+    // The client went away and the request was cancelled: nothing to answer
+    if (res.destroyed) return;
     try {
       // Well-formed error, return
       if (err?.status && err?.error) {

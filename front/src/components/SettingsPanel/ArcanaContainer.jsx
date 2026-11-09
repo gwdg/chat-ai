@@ -2,6 +2,7 @@
 import { Trans, useTranslation } from "react-i18next";
 import { CircleHelp } from "lucide-react";
 import { useModal } from "../../modals/ModalContext";
+import { isAgentEnabled } from "../../apis/agentEndpoints";
 
 const ArcanaContainer = ({ localState, setLocalState }) => {
   const { t } = useTranslation();
@@ -27,8 +28,11 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
 
   const currentModel = settings.model;
 
-  return (settings?.enable_tools && !isExternalModel) ||
-    false ? (
+  // The agent has no enable_tools switch; ToolsContainer decides when to show this box there
+  const agentMode = isAgentEnabled();
+  const toolsOn = agentMode || !!settings?.enable_tools;
+
+  return toolsOn && !isExternalModel ? (
     <>
       <div className="flex gap-4 w-full items-center">
         <div className="flex-shrink-0 flex items-center gap-2 select-none">
@@ -51,7 +55,7 @@ const ArcanaContainer = ({ localState, setLocalState }) => {
         </div>
       </div>
       {settings.arcana?.id &&
-        (settings?.enable_tools ||
+        (toolsOn ||
           settings.model?.input?.includes("arcana") ||
           false) && (
           <div className="text-warning text-xs w-full select-none space-y-1">

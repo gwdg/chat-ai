@@ -1,5 +1,5 @@
 const ACTION_TYPES =
-  "RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
+  "RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
 const ACTION_SOURCE = `\\[\\[(${ACTION_TYPES}):\\s*(\\{[\\s\\S]*?\\})\\]\\]`;
 
 const BARE_CLEAR_SOURCE =
@@ -14,6 +14,7 @@ const SUPPORTED_SETTING_KEYS = new Set([
   "set_title_once",
   "render_typst",
   "render_latex",
+  "collapse_reasoning_while_streaming",
   "document_conversion_mode",
   "conversation_summaries",
   "send_with_enter",
@@ -110,6 +111,56 @@ export function getMetaActionProposals(text) {
           conversationId: targetAll ? null : conversationId,
           key,
           value: payload.value,
+        },
+      );
+      continue;
+    }
+
+    if (type === "MCP_SERVER") {
+      const op = String(payload.op || "").trim().toLowerCase();
+      if (!["add", "remove", "update"].includes(op)) continue;
+      const serverScope = String(payload.server || "").trim().toLowerCase();
+      if (!["local", "remote"].includes(serverScope)) continue;
+
+      const rawTarget =
+        payload.target ?? payload.conversationId ?? payload.conversation_id;
+      const targetAll =
+        rawTarget === "all" || rawTarget === undefined ||
+        rawTarget === null || rawTarget === "";
+      const conversationId = String(rawTarget ?? "").trim();
+      if (!targetAll && !conversationId) continue;
+
+      const url = String(payload.url || "").trim();
+      const serverId = String(
+        payload.serverId ?? payload.server_id ?? payload.id ?? "",
+      ).trim();
+      if (serverScope === "local" && !url) continue;
+      if (serverScope === "remote" && !serverId) continue;
+
+      const enabled =
+        typeof payload.enabled === "boolean" ? payload.enabled : undefined;
+      const authorization =
+        typeof payload.authorization === "string"
+          ? payload.authorization
+          : undefined;
+      if (op === "update" && enabled === undefined && authorization === undefined) {
+        continue;
+      }
+
+      const scope = targetAll ? "all" : "conversation";
+      const name = serverScope === "local" ? url : serverId;
+      proposals.set(
+        `mcp:${scope}:${conversationId || "all"}:${op}:${serverScope}:${name}`,
+        {
+          type: "mcp_server",
+          op,
+          serverScope,
+          scope,
+          conversationId: targetAll ? null : conversationId,
+          url,
+          serverId,
+          enabled,
+          authorization,
         },
       );
       continue;
@@ -216,7 +267,7 @@ export function stripMetaActionMarkers(text) {
     .replace(new RegExp(ACTION_SOURCE, "gi"), "")
     .replace(new RegExp(BARE_CLEAR_SOURCE, "gi"), "")
     .replace(
-      /\[\[(?:RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|CLEAR_ALL_MEMORIES|DELETE_ALL_MEMORIES):[\s\S]*$/i,
+      /\[\[(?:RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|CLEAR_ALL_MEMORIES|DELETE_ALL_MEMORIES):[\s\S]*$/i,
       "",
     )
     .replace(/\n{3,}/g, "\n\n")

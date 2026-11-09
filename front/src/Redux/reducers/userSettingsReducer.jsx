@@ -12,6 +12,7 @@ const initialState = {
   set_title_once: true,
   render_typst: false,
   render_latex: false,
+  collapse_reasoning_while_streaming: true,
   document_conversion_mode: "choice",
   conversation_summaries: true,
   // null = device default (Enter on desktop, Shift+Enter on mobile).
@@ -54,6 +55,7 @@ function importUserSettingsState(state, incoming) {
     "set_title_once",
     "render_typst",
     "render_latex",
+    "collapse_reasoning_while_streaming",
     "conversation_summaries",
   ]) {
     if (typeof incoming[key] === "boolean") state[key] = incoming[key];
@@ -150,6 +152,10 @@ const userSettingsSlice = createSlice({
       state.render_latex = Boolean(action.payload);
     },
 
+    setCollapseReasoningWhileStreaming: (state, action) => {
+      state.collapse_reasoning_while_streaming = Boolean(action.payload);
+    },
+
     setDocumentConversionMode: (state, action) => {
       const mode = action.payload;
       if (["server", "browser", "choice"].includes(mode)) {
@@ -194,7 +200,8 @@ export const {
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
-  setRenderLatex, setDocumentConversionMode, setConversationSummaries,
+  setRenderLatex, setCollapseReasoningWhileStreaming, setDocumentConversionMode,
+  setConversationSummaries,
   setSendWithEnter, importUserSettings
 } = userSettingsSlice.actions;
 
@@ -224,6 +231,8 @@ export const selectRenderTypst = (state) =>
   state.user_settings.render_typst ?? false;
 export const selectRenderLatex = (state) =>
   state.user_settings.render_latex ?? false;
+export const selectCollapseReasoningWhileStreaming = (state) =>
+  state.user_settings.collapse_reasoning_while_streaming ?? true;
 export const selectDocumentConversionMode = (state) => {
   const mode = state.user_settings.document_conversion_mode;
   return ["server", "browser", "choice"].includes(mode) ? mode : "choice";

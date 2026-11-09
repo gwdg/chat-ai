@@ -41,6 +41,9 @@ const hasDynamicSettingsTabs = sourceText.includes(
 const hasDynamicAttachmentCards = sourceText.includes(
   'data-guide={inHistory ? undefined : "attachment-card"}',
 );
+const hasDynamicMessageCitations = sourceText.includes(
+  'data-guide={isMessage ? "message-citation" : undefined}',
+);
 
 function getKey(object, key) {
   return key.split(".").reduce((value, part) => value?.[part], object);
@@ -64,7 +67,8 @@ function checkTarget(target, featureId, label, errors) {
         !staticGuideValues.has(value) &&
         !(value.startsWith("tool-") && hasDynamicTools) &&
         !(value.startsWith("settings-tab-") && hasDynamicSettingsTabs) &&
-        !(value === "attachment-card" && hasDynamicAttachmentCards)
+        !(value === "attachment-card" && hasDynamicAttachmentCards) &&
+        !(value === "message-citation" && hasDynamicMessageCitations)
       ) {
         errors.push(`${featureId}: ${label} targets missing data-guide="${value}"`);
       }

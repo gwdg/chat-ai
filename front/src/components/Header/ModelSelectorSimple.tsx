@@ -10,6 +10,7 @@ import {
   faImage,
   faMagnifyingGlass,
   faMicrophone,
+  faTriangleExclamation,
   faVideo
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -128,6 +129,14 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
             <div className="pl-1 shrink-0">
               <DemandIndicator demand={model.demand} status={model?.status} />
             </div>
+            {isExternalModel(model) && (
+              <Tooltip text={"External Model"}>
+                <FontAwesomeIcon
+                  icon={faTriangleExclamation}
+                  className="shrink-0 text-warning"
+                />
+              </Tooltip>
+            )}
             <span className="font-medium truncate">{model.name}</span>
           </div>
           <div className="ml-2 flex shrink-0 items-center gap-1 text-accent">

@@ -26,11 +26,13 @@ import MoveChatModal from "../components/Sidebar/Modals/MoveChatModal";
 import OrganizeChatsModal from "../components/Sidebar/Modals/OrganizeChatsModal";
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
 import ConfirmActionModal from "./Alert/ConfirmActionModal";
+import FolderAccessModal from "./Alert/FolderAccessModal";
 import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
 import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
 import MigrateDataModal from "./Alert/MigrateDataModal";
+import McpServerNameModal from "./Alert/McpServerNameModal";
 import ConversationConflict from "./Chat/ConversationConflict";
 import SummarizeChatModal from "./Chat/SummarizeChatModal";
 
@@ -170,6 +172,12 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "confirmAction" && (
         <ConfirmActionModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "mcpNameChange" && (
+        <McpServerNameModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "folderAccess" && (
+        <FolderAccessModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {/* General Modals */}
       {modalType === "exportChat" && (

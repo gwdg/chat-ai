@@ -199,10 +199,10 @@ export default function MetaChatPage() {
           />
 
           <div className="flex min-h-0 min-w-0 flex-col">
-            <div className="mx-1 mb-1 flex items-start gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm">
+            <div className="mx-auto mb-2 flex w-full md:max-w-[85vw] xl:max-w-[1300px] items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 shadow-sm">
               <Ai
                 size={16}
-                className="mt-0.5 shrink-0 text-accent"
+                className="mt-0.5 shrink-0 text-warning"
                 aria-hidden="true"
               />
               <div className="min-w-0">

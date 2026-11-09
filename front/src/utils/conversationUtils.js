@@ -33,9 +33,13 @@ export const getDefaultSettings = (userSettings = {}) => {
       "image_generation": true,
       "image_modification": true,
       "audio_generation": true,
-      "video_generation": false,
       "arcana": true,
       "mcp": false,
+      "mcp_remote": false,
+      // Agent mode only
+      "write_access": false,
+      "codemode": true,
+      "create_docx": true,
     },
     audio: {
       voice: "auto",

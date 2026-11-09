@@ -192,6 +192,7 @@ export default {
   },
   meta_chat: {
     title: "Meta-Chat",
+    prompt_placeholder: "Frag den Meta-Chat!",
     open: "Metachat: Chats durchsuchen",
     banner_description: "Metachat kann Ihnen auf zwei Arten helfen:",
     purposes: {
@@ -226,6 +227,19 @@ export default {
       "{{setting}} für alle Chats auf „{{value}}“ setzen",
     conversation_setting_summary:
       "{{setting}} in „{{title}}“ auf „{{value}}“ setzen",
+    mcp_target_all: "alle Chats",
+    mcp_add_local_summary:
+      "Lokalen MCP-Server {{name}} zu {{target}} hinzufügen",
+    mcp_add_remote_summary:
+      "Entfernten MCP-Server {{name}} zu {{target}} hinzufügen",
+    mcp_remove_local_summary:
+      "Lokalen MCP-Server {{name}} aus {{target}} entfernen",
+    mcp_remove_remote_summary:
+      "Entfernten MCP-Server {{name}} aus {{target}} entfernen",
+    mcp_update_local_summary:
+      "Lokalen MCP-Server {{name}} in {{target}} aktualisieren",
+    mcp_update_remote_summary:
+      "Entfernten MCP-Server {{name}} in {{target}} aktualisieren",
     add_memory_summary: "Erinnerung „{{text}}“ hinzufügen",
     update_memory_summary: "Erinnerung „{{from}}“ in „{{to}}“ ändern",
     delete_memory_summary: "Erinnerung „{{text}}“ löschen",
@@ -237,6 +251,16 @@ export default {
     unsorted_topic: "Nicht zugeordnet",
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
+  },
+  mcp_confirmation: {
+    title: "MCP-Werkzeug ausführen?",
+    description:
+      "Der Assistent möchte „{{tool}}“ auf {{server}} ausführen. Erlauben Sie dies nur, wenn Sie dem Server und den Argumenten vertrauen.",
+    allow: "Werkzeug ausführen",
+    allow_always: "Immer in diesem Chat erlauben",
+    always_allowed: "(immer erlaubt)",
+    deny: "Ablehnen",
+    denied: "Der Benutzer hat die Ausführung des MCP-Werkzeugs „{{tool}}“ auf {{server}} abgelehnt.",
   },
   feature_guide: {
     catalog: {
@@ -354,19 +378,18 @@ export default {
       step3:
         "Wählen Sie Bildbearbeitung und hängen Sie das Bild an oder beschreiben Sie es.",
     },
+    image_analysis: {
+      title: "Bilder analysieren",
+      step1: "Öffnen Sie Browser & lokale Werkzeuge im Eingabefeld.",
+      step2:
+        "Wählen Sie Bilder analysieren, damit der Assistent Bilddateien mit dem Gemma-Visionsmodell von SAIA analysieren kann.",
+    },
     audio_generation: {
       title: "Audio erzeugen",
       step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
       step2: "Aktivieren Sie die Tools.",
       step3:
         "Wählen Sie Audioerzeugung und beschreiben Sie das gewünschte Audio.",
-    },
-    video_generation: {
-      title: "Videos erzeugen",
-      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
-      step2: "Aktivieren Sie die Tools.",
-      step3:
-        "Wählen Sie Videoerzeugung. Die Videowarteschlange zeigt den Fortschritt.",
     },
     mcp_server: {
       title: "Einen MCP-Server verbinden",
@@ -482,6 +505,13 @@ export default {
       step2: "Wählen Sie den Tab Chat.",
       step3:
         "Aktivieren Sie die Typst- oder LaTeX-Darstellung. Auch HTML-Darstellung und externe Verweise werden hier konfiguriert.",
+    },
+    reasoning_streaming: {
+      title: "Denkprozess verfolgen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3:
+        "Die Option ist standardmäßig aktiviert. Lassen Sie sie an, um während des Denkens einen bewegten Punkt zu sehen. Klicken Sie auf die Kopfzeile, um den Denkprozess während des Streamings zu öffnen, oder schalten Sie die Option aus, wenn sich die Box automatisch öffnen soll.",
     },
     document_conversion: {
       title: "Dokumentkonvertierung wählen",
@@ -764,37 +794,45 @@ export default {
     reset_default: "Standard zurücksetzen",
     default: "Standard",
     tools_title: "GWDG-Werkzeuge",
+    tools_enable_all: "Alle aktivieren",
+    tools_disable_all: "Alle deaktivieren",
     chat_settings: "Chat-Einstellungen",
     label_web_search: "Websuche",
     label_image_generation: "Bildgenerierung",
     label_image_modification: "Bildbearbeitung",
+    label_image_analysis: "Bilder analysieren",
     label_audio_generation: "Audiogenerierung",
-    label_video_generation: "Videogenerierung",
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",
+    label_write_access: "Schreiben erlauben",
+    label_codemode: "Codemode",
+    label_create_docx: "Word-Dokument",
+    tools_agent_unavailable: "Im Agentenmodus nicht verfügbar",
+    label_tool_limit: "Werkzeugaufrufe pro Antwort begrenzen",
+    tool_limit_hint: "Maximale Werkzeugaufrufe pro Antwort; gemeinsam ausgeführte Aufrufe zählen einmal",
+    tools_agent_external: "Dieses Modell läuft ohne Werkzeuge",
     placeholder_arcana_id: "Arcana-ID",
     placeholder_mcp_id: "Server-ID",
-    video_queue_title: "Videogenerierungs-Warteschlange",
-    video_queue_subtitle: "Liste der Video-Generation Aufgaben",
-    video_queue_job_label: "Videoanfrage #{{count}}",
-    video_queue_status_queued: "Warteschlange",
-    video_queue_status_processing: "In Bearbeitung",
-    video_queue_status_ready: "Fertig",
-    video_queue_status_failed: "Fehlgeschlagen",
-    video_queue_delete: "Löschen",
-    video_queue_eta: "ETA ~{{seconds}}s",
-    video_queue_eta_done: "Gerade abgeschlossen",
-    video_queue_download: "Download",
-    video_queue_empty: "Noch keine Videoanfragen in der Warteschlange.",
-    video_queue_badge_label: "Video-Warteschlange",
-    video_queue_badge_tooltip_processing: "{{processing}} in Arbeit • {{ready}} fertig",
-    video_queue_badge_tooltip_ready: "{{ready}} bereit zum Download",
-    video_queue_modal_title: "Videogenerierungs-Warteschlange",
-    video_queue_modal_subtitle: "{{processing}} in Arbeit • {{ready}} fertig zum Download",
+    placeholder_mcp_url: "http://localhost:3000/mcp",
+    placeholder_mcp_auth: "Authorization-Header (optional)",
+    mcp_add: "MCP-Server hinzufügen",
+    mcp_remove: "Server entfernen",
+    mcp_test: "Testen Sie den Server über eine direkte Verbindung von Ihrem Computer aus",
+    mcp_test_success: "{{name}} ist erreichbar ({{count}} Werkzeuge).",
+    mcp_test_failed: "MCP-Test fehlgeschlagen: {{error}}",
+    mcp_test_invalid_url: "Bitte geben Sie zuerst eine gültige MCP-Server-URL ein.",
+    mcp_toggle: "Diesen Server verwenden",
+    mcp_gateway_first: "Ohne Agentenmodus wird nur der erste Server verwendet, als Gateway-Server-ID.",
   },
 
   // Conversation
   conversation: {
+    local_tools: "Browser & lokale Werkzeuge",
+    mount_folder: "Lokalen Ordner teilen",
+    folder_mounted: "Ordner für den Assistenten unter {{path}} verfügbar",
+    tool_failed: "fehlgeschlagen",
+    codemode_running: "Code wird ausgeführt…",
+    codemode_output: "Code-Ausgabe",
     close_chat: "Chat schließen",
     speech_mode_title: "Sprachgespräch",
     speech_mode_button: "Sprachgespräch starten",
@@ -832,12 +870,19 @@ export default {
       audio_unsupported: "Modell wechseln, um Audio zu verarbeiten",
       file_unsupported: "Nur mit {{filetype}}-Modell nutzbar",
       unprocessed: "Unverarbeitete Datei",
+      transcript_of: "Transkript von {{name}}",
+      converting: "Wird konvertiert…",
+      transcribing: "Wird transkribiert…",
       process_browser: "Im Browser verarbeiten",
       process_server: "Auf dem Server verarbeiten",
       must_process: "Datei muss verarbeitet werden",
     },
     reasoning: "Denkprozess",
     copy_reasoning: "Denkprozess kopieren",
+    reasoning_streaming: "Denkprozess läuft",
+    reasoning_streaming_label: "Denke noch",
+    reasoning_received_words_one: "{{count}} Wort empfangen",
+    reasoning_received_words_other: "{{count}} Wörter empfangen",
     action: "Aktion",
     html_block: {
       render: "HTML rendern",
@@ -1057,6 +1102,11 @@ export default {
         description:
           "Legt fest, ob LaTeX-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
       },
+      reasoning_streaming: {
+        label: "Denkprozess beim Streamen geschlossen halten",
+        description:
+          "Hält die Denkprozess-Box während des Streamings geschlossen und zeigt stattdessen einen kleinen bewegten Aktivitätspunkt. Klicken Sie auf die Kopfzeile, um sie während des Streamings zu öffnen; nach der Antwort können Sie sie ebenfalls öffnen.",
+      },
       document_conversion: {
         label: "Dokumentkonvertierung",
         options: {
@@ -1268,6 +1318,13 @@ export default {
   },
   // Alerts and warnings
   alert: {
+    mcp_unreachable: "Der MCP-Server {{url}} ist nicht erreichbar. Stellen Sie sicher, dass er läuft, oder schalten Sie ihn in den Werkzeugeinstellungen aus, um fortzufahren.",
+    mcp_name_changed_title: "Name des MCP-Servers geändert",
+    mcp_name_changed:
+      "Der Server unter {{server}} meldet jetzt den Namen \"{{actualName}}\" statt \"{{previousName}}\". Verbinden und den gespeicherten Namen aktualisieren?",
+    mcp_name_changed_connect: "Verbinden und aktualisieren",
+    folder_access:
+      "Der Assistent möchte den lokalen Ordner <strong>{{name}}</strong> wieder verwenden. Nach einem Neuladen muss der Zugriff erneut erlaubt werden.",
     title: "Warning",
     bad_request:
       "Fehlerhafte Anfrage wurde gesendet: Bitte löschen Sie die Konversation, versuchen Sie es innerhalb des Limits erneut, und speichern Sie Ihren Chatverlauf für spätere Zwecke.",
@@ -1368,6 +1425,30 @@ export default {
     reassurance:
       "Keine Sorge! Sie können eine neue Unterhaltung starten, indem Sie auf den Button unten klicken.",
     buttonText: "Zum Chat gehen",
+  },
+  file_preview: {
+    no_file: "Keine Datei zur Vorschau",
+    no_data: "Keine Daten verfügbar",
+    no_content: "Kein Inhalt verfügbar",
+    unsupported: "Nicht unterstützter Dateityp",
+    error: "Fehler: {{message}}",
+    error_display: "Fehler beim Anzeigen des Inhalts: {{message}}",
+    csv_parse_failed: "CSV-Inhalt konnte nicht gelesen werden",
+    image_failed: "Bild konnte nicht geladen werden",
+    video_failed: "Video konnte nicht geladen werden",
+    video_unsupported: "Ihr Browser unterstützt das Video-Element nicht.",
+    pdf_failed: "PDF konnte nicht angezeigt werden",
+    pdf_mobile_title: "Die PDF-Vorschau ist auf Mobilgeräten nicht verfügbar",
+    pdf_mobile_hint: "Bitte nutzen Sie einen Desktop-Browser für die PDF-Vorschau",
+    pdf_original_title: "Vorschau des Original-PDFs",
+    pdf_original_hint: "Dieses PDF wurde noch nicht verarbeitet. Klicken Sie auf \"Verarbeiten\", um den Text zu extrahieren.",
+    pdf_missing_title: "PDF-Inhalt nicht verfügbar",
+    pdf_missing_hint: "Die Daten des Original-PDFs sind für die Vorschau nicht verfügbar",
+    docx_failed: "Word-Dokument konnte nicht angezeigt werden",
+    save: "Auf Gerät speichern",
+    save_failed: "Datei konnte nicht heruntergeladen werden",
+    download_aria: "Datei herunterladen",
+    close_aria: "Schließen",
   },
   typst: {
     rendering: "Typst-Dokument wird gerendert...",

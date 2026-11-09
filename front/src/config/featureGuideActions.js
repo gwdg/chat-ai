@@ -62,6 +62,12 @@ export function ensureTool(toolKey) {
   });
 }
 
+export function openLocalTools() {
+  if (!find('[data-guide="tool-image_analysis"]')) {
+    click('[data-guide="local-tools"]');
+  }
+}
+
 export function openUserSettings() {
   if (find('[data-guide="settings-tab-chat"]')) return;
   if (click('[data-guide="user-settings"]')) return;

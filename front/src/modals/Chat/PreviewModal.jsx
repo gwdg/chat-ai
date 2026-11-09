@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Papa from "papaparse";
 import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
 import AudioPlayer from "./AudioPlayer";
@@ -11,6 +12,7 @@ import { getFileType } from "../../utils/attachments";
 // --------------------
 
 const CSVTable = ({ content }) => {
+  const { t } = useTranslation();
   const [error, setError] = useState(null);
 
   const parsedData = useMemo(() => {
@@ -22,19 +24,19 @@ const CSVTable = ({ content }) => {
       });
       return result.data;
     } catch (error) {
-      setError("Failed to parse CSV content");
+      setError(t("file_preview.csv_parse_failed"));
       return [];
     }
   }, [content]);
 
   if (error)
     return (
-      <div className="p-4 text-error">Error: {error}</div>
+      <div className="p-4 text-error">{t("file_preview.error", { message: error })}</div>
     );
   if (!parsedData?.length)
     return (
       <div className="p-4 text-base-content/70">
-        No data available
+        {t("file_preview.no_data")}
       </div>
     );
 
@@ -74,7 +76,51 @@ const CSVTable = ({ content }) => {
   );
 };
 
+// Renders a .docx in the browser; docx-preview is loaded on first use.
+const DocxViewer = ({ data }) => {
+  const { t } = useTranslation();
+  const ref = useRef(null);
+  const [status, setStatus] = useState("loading");
+
+  useEffect(() => {
+    if (!data || !ref.current) return;
+    let cancelled = false;
+    const container = ref.current;
+    setStatus("loading");
+    import("docx-preview")
+      .then(({ renderAsync }) => {
+        container.innerHTML = "";
+        return renderAsync(data, container, undefined, { inWrapper: true });
+      })
+      .then(() => !cancelled && setStatus("done"))
+      .catch((err) => {
+        console.error("DOCX preview failed:", err);
+        if (!cancelled) setStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [data]);
+
+  return (
+    <div className="max-h-[85vh] w-full overflow-auto">
+      {status === "loading" && (
+        <div className="p-4 text-base-content/70">
+          {t("common.loading")}
+        </div>
+      )}
+      {status === "error" && (
+        <div className="p-4 text-error">
+          {t("file_preview.docx_failed")}
+        </div>
+      )}
+      <div ref={ref} className={status === "error" ? "hidden" : ""} />
+    </div>
+  );
+};
+
 export default function PreviewModal({ isOpen, onClose, fileId }) {
+  const { t } = useTranslation();
 
   const [loadError, setLoadError] = useState(null);
   const {file, data} = useFile(fileId);
@@ -100,7 +146,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       setTimeout(() => URL.revokeObjectURL(downloadUrl), 300);
     } catch (err) {
       console.error("Download failed:", err);
-      alert("Failed to download file");
+      alert(t("file_preview.save_failed"));
     }
   };
 
@@ -109,13 +155,13 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       if (loadError)
         return (
           <div className="p-4 text-error">
-            Error: {loadError}
+            {t("file_preview.error", { message: loadError })}
           </div>
         );
       if (!file)
         return (
           <div className="p-4 text-base-content/70">
-            No file to preview
+            {t("file_preview.no_file")}
           </div>
         );
 
@@ -136,7 +182,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
               src={base64}
               alt={file.name}
               className="max-h-[85vh] max-w-full object-contain"
-              onError={() => setLoadError("Failed to load image")}
+              onError={() => setLoadError(t("file_preview.image_failed"))}
             />
           </div>
         );
@@ -149,9 +195,9 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
               src={base64}
               controls
               className="max-h-[85vh] max-w-full"
-              onError={() => setLoadError("Failed to load video")}
+              onError={() => setLoadError(t("file_preview.video_failed"))}
             >
-              Your browser does not support the video tag.
+              {t("file_preview.video_unsupported")}
             </video>
           </div>
         );
@@ -179,10 +225,10 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
                 />
               </svg>
               <p className="text-base-content/70 mb-2">
-                PDF preview is not available on mobile devices
+                {t("file_preview.pdf_mobile_title")}
               </p>
               <p className="text-sm text-base-content/70">
-                Please use a desktop browser to preview PDF files
+                {t("file_preview.pdf_mobile_hint")}
               </p>
             </div>
           );
@@ -210,11 +256,10 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
                   </svg>
                   <div>
                     <p className="text-sm font-medium text-info">
-                      Original PDF Preview
+                      {t("file_preview.pdf_original_title")}
                     </p>
                     <p className="text-xs text-info">
-                      This PDF hasn&quot;t been processed yet. Click
-                      &quot;Process&quot; to extract text content.
+                      {t("file_preview.pdf_original_hint")}
                     </p>
                   </div>
                 </div>
@@ -225,7 +270,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
                 className="w-full flex-1"
                 style={{ minWidth: "800px" }}
                 title={file.name}
-                onError={() => setLoadError("Failed to display PDF")}
+                onError={() => setLoadError(t("file_preview.pdf_failed"))}
               />
             </div>
           );
@@ -248,13 +293,18 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
               />
             </svg>
             <p className="text-base-content/70 mb-2">
-              PDF content not available
+              {t("file_preview.pdf_missing_title")}
             </p>
             <p className="text-sm text-base-content/70">
-              The original PDF file data is not available for preview
+              {t("file_preview.pdf_missing_hint")}
             </p>
           </div>
         );
+      }
+
+      // Word document viewer
+      if (fileType === "docx") {
+        return <DocxViewer data={data} />;
       }
 
       // CSV Table Viewer
@@ -269,7 +319,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       ) {
         return (
           <pre className="bg-base-200 p-6 rounded-lg overflow-auto max-h-[85vh] w-full font-mono text-sm text-base-content">
-            {textContent || "No content available"}
+            {textContent || t("file_preview.no_content")}
           </pre>
         );
       }
@@ -279,7 +329,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         return (
           <pre className="bg-base-200 p-6 rounded-lg overflow-auto max-h-[85vh] w-full">
             <code className="font-mono text-sm whitespace-pre-wrap text-base-content">
-              {textContent || "No content available"}
+              {textContent || t("file_preview.no_content")}
             </code>
           </pre>
         );
@@ -297,14 +347,14 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       // Unsupported File Type
       return (
         <div className="p-4 text-base-content/70">
-          Unsupported file type
+          {t("file_preview.unsupported")}
         </div>
       );
     } catch (error) {
       console.error("Error rendering content:", error);
       return (
         <div className="p-4 text-error">
-          Error displaying content: {error.message}
+          {t("file_preview.error_display", { message: error.message })}
         </div>
       );
     }
@@ -328,12 +378,12 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
           <button
             onClick={handleSave}
             className="btn btn-sm btn-info"
-            aria-label="Download file"
+            aria-label={t("file_preview.download_aria")}
           >
-            Save to device
+            {t("file_preview.save")}
           </button>
           {/* Close Button */}
-          <button onClick={onClose} aria-label="Close">
+          <button onClick={onClose} aria-label={t("file_preview.close_aria")}>
             <X
               className="h-[20px] w-[20px] cursor-pointer text-accent"
               alt="cross"

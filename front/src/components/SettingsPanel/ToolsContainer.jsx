@@ -11,7 +11,6 @@ import {
   CircleHelp,
   Globe,
   Image as ImageIcon,
-  Video,
   Wand2,
   AudioLines,
   Server, // MCP
@@ -20,37 +19,17 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import ArcanaContainer from "./ArcanaContainer";
 import MCPContainer from "./MCPContainer";
-import VideoList from "./VideoList";
+import MiniToolButton from "./MiniToolButton";
+import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
+import { remoteMcpEnabled } from "../../agent/mcp";
 
-function MiniToolButton({ active, disabled, onClick, Icon, label, guideKey }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      data-guide={`tool-${guideKey}`}
-      className={[
-        "group w-full select-none",
-        "rounded-xl border text-sm font-medium",
-        "px-3 py-2 md:px-3.5 md:py-2.5",
-        "flex flex-col items-center justify-center gap-2",
-        "transition-all",
-        disabled
-          ? "opacity-50 cursor-not-allowed"
-          : active
-          ? "border-success bg-success/10 text-success cursor-pointer"
-          : "border-base-300 bg-base-100 text-base-content hover:bg-base-200 cursor-pointer",
-        active ? "shadow-sm" : "shadow-none",
-      ].join(" ")}
-      title={label}
-    >
-      <Icon className="h-6 w-6 md:h-7 md:w-7 shrink-0" aria-hidden="true" />
-      <span className="leading-none text-xs text-center">
-        {label}
-      </span>
-    </button>
-  );
-}
+// Tools the agent has no counterpart for
+const AGENT_UNAVAILABLE = new Set([...(agentGatewayTools() ? [] : ["arcana"])]);
+// Agent tools that are off unless switched on: web search and writing files (agent/tools.ts),
+// arcana, which the gateway runs (agent/gateway.ts), and MCP servers (agent/mcp.ts)
+const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access", "mcp", "mcp_remote"]);
+// Tools that only exist in agent mode
+const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
 
 export default function ToolsContainer({ localState, setLocalState }) {
   const { t } = useTranslation();
@@ -66,10 +45,18 @@ export default function ToolsContainer({ localState, setLocalState }) {
 
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools && !isExternalModel;
- 
-  const showArcanaBox = !!settings?.enable_tools && !!toolsState.arcana;
-  const showMCPBox = !!settings?.enable_tools && !!toolsState.mcp;
-  const showVideoList = !!toolsState.video_generation;
+  const remoteMcpOn = remoteMcpEnabled(settings);
+  // In agent mode every tool is switched on its own and a missing key counts as on
+  // (as in agent/tools.ts); the master switch and the server-side tools do not apply.
+  const agentMode = isAgentEnabled();
+  const agentWithoutTools = agentMode && !modelSupportsTools(settings?.model);
+  const bulkActionsDisabled = agentMode ? agentWithoutTools : isExternalModel;
+
+  const showArcanaBox = agentMode
+    ? agentGatewayTools() && toolsState.arcana === true
+    : !!settings?.enable_tools && !!toolsState.arcana;
+  const showMCPBox =
+    (agentMode ? !agentWithoutTools : !!settings?.enable_tools) && remoteMcpOn;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
@@ -91,11 +78,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
         label: t("settings.label_audio_generation"),
       },
       {
-        key: "video_generation",
-        Icon: Video,
-        label: t("settings.label_video_generation"),
-      },
-      {
         key: "arcana",
         Icon: ({ className = "", ...rest }) => (
           <FontAwesomeIcon
@@ -110,24 +92,63 @@ export default function ToolsContainer({ localState, setLocalState }) {
         ),
         label: t("settings.label_arcana"),
       },
-      { key: "mcp",
+      { key: "mcp_remote",
         Icon: Server,
         label: t("settings.label_mcp_server")
       },
     ],
     [t]
-  );
+  ).filter(({ key }) => agentMode || !AGENT_ONLY.has(key));
 
   // Simple setter for per-tool flags
-  const toggleTool = (toolKey, nextValue) => {
+  const setTools = (patch) => {
     setLocalState((prev) => ({
       ...prev,
       settings: {
         ...prev.settings,
-        tools: { ...prev.settings?.tools, [toolKey]: nextValue },
+        tools: { ...prev.settings?.tools, ...patch },
       },
       flush: true,
     }));
+  };
+
+  const toggleTool = (toolKey, nextValue) => {
+    setTools({ [toolKey]: nextValue });
+  };
+
+  const handleEnableAll = () => {
+    const patch = { fetch_url: true };
+    TOOL_DEFS.forEach(({ key }) => {
+      patch[key] = true;
+    });
+    const apply = () =>
+      setLocalState((prev) => ({
+        ...prev,
+        settings: {
+          ...prev.settings,
+          ...(agentMode ? {} : { enable_tools: true }),
+          tools: { ...prev.settings?.tools, ...patch },
+        },
+        flush: true,
+      }));
+    if (!agreedWebSearch) {
+      openModal("disclaimerWebSearch", {
+        onAgree: () => {
+          apply();
+          dispatch(agreeWebSearch());
+        },
+      });
+      return;
+    }
+    apply();
+  };
+
+  const handleDisableAll = () => {
+    const patch = { fetch_url: false };
+    TOOL_DEFS.forEach(({ key }) => {
+      patch[key] = false;
+    });
+    setTools(patch);
   };
 
   // First-time disclaimer for Web Search only
@@ -151,13 +172,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
     toggleTool("arcana", nextValue);
   };
   const handleToggleMCP = (nextValue) => {
-    toggleTool("mcp", nextValue);
+    toggleTool("mcp_remote", nextValue);
   };
 
   return (
     <div className="w-full space-y-3">
       {/* Header */}
-      <div className="flex flex-row md:gap-4 gap-3 w-full md:items-center">
+      <div className="flex flex-row flex-wrap md:gap-4 gap-3 w-full md:items-center">
         <div className="flex-shrink-0 flex items-center gap-2">
           <p className="text-sm font-medium">{t("settings.tools_title")}</p>
           <CircleHelp
@@ -167,7 +188,14 @@ export default function ToolsContainer({ localState, setLocalState }) {
           />
         </div>
 
-        <div className="w-full flex items-center gap-3 select-none">
+        {agentMode ? (
+          agentWithoutTools && (
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-300 select-none">
+              {t("settings.tools_agent_external")}
+            </span>
+          )
+        ) : (
+        <div className="flex items-center gap-3 select-none">
           <button
             type="button"
             onClick={() =>
@@ -207,6 +235,27 @@ export default function ToolsContainer({ localState, setLocalState }) {
             </span>
           )}
         </div>
+        )}
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleEnableAll}
+            disabled={bulkActionsDisabled}
+            className="btn btn-xs btn-ghost"
+            data-guide="tools-enable-all"
+          >
+            {t("settings.tools_enable_all")}
+          </button>
+          <button
+            type="button"
+            onClick={handleDisableAll}
+            disabled={bulkActionsDisabled}
+            className="btn btn-xs btn-ghost"
+            data-guide="tools-disable-all"
+          >
+            {t("settings.tools_disable_all")}
+          </button>
+        </div>
       </div>
 
       {/* Compact, responsive grid */}
@@ -218,7 +267,17 @@ export default function ToolsContainer({ localState, setLocalState }) {
         ].join(" ")}
       >
         {TOOL_DEFS.map(({ key, Icon, label }) => {
-          const active = !!toolsState[key];
+          const unavailable = agentMode && AGENT_UNAVAILABLE.has(key);
+          const active =
+            key === "mcp_remote"
+              ? remoteMcpOn
+              : !agentMode
+                ? !!toolsState[key]
+                : unavailable
+                  ? false
+                  : AGENT_OPT_IN.has(key)
+                    ? toolsState[key] === true
+                    : toolsState[key] !== false;
           const onToggle =
             key === "web_search"
               ? () => handleToggleWebSearch(!active)
@@ -228,21 +287,17 @@ export default function ToolsContainer({ localState, setLocalState }) {
             <MiniToolButton
               key={key}
               active={active}
-              disabled={!toolsEnabled}
+              disabled={agentMode ? unavailable || agentWithoutTools : !toolsEnabled}
               onClick={onToggle}
               Icon={Icon}
               label={label}
+              title={unavailable ? `${label}: ${t("settings.tools_agent_unavailable")}` : label}
               guideKey={key}
+              warning={key === "web_search" || key === "mcp_remote"}
             />
           );
         })}
       </div>
-      {showVideoList && (
-          <VideoList
-          jobs={[]}
-          onDownload={() => {}}
-        />
-      )}
       {/* Arcana box (only when enabled AND has an ID) */}
       {showArcanaBox && (
         <ArcanaContainer
@@ -255,6 +310,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
         <MCPContainer
           localState={localState}
           setLocalState={setLocalState}
+          remote
         />
       )}
     </div>

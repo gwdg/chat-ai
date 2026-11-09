@@ -6,6 +6,7 @@ import { useToast } from "../../hooks/useToast";
 import { Image } from "@carbon/icons-react";
 
 import { useAttachments } from "../../hooks/useAttachments";
+import { isAgentEnabled } from "../../apis/agentEndpoints";
 
 export default function AttachMediaButton({
     localState,
@@ -23,9 +24,11 @@ export default function AttachMediaButton({
     ? localState.messages[localState.messages.length - 2]?.loading || false
     : false;
 
-    const isAudioSupported = (model?.input?.includes("audio") || false)
+    // The agent transcribes audio and keeps images in its workspace, whatever the model
+    const agentMode = isAgentEnabled()
+    const isAudioSupported = (agentMode || model?.input?.includes("audio") || false)
     const isVideoSupported = (model?.input?.includes("video") || false)
-    const isImageSupported = (model?.input?.includes("image") || false)
+    const isImageSupported = (agentMode || model?.input?.includes("image") || false)
 
     const getAcceptedFileTypes = (
         isImageSupported,

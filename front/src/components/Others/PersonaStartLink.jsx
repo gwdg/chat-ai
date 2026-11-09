@@ -30,10 +30,10 @@ export default function PersonaStartLink({ path, children }) {
     <a
       href={`/persona/${path}`}
       onClick={handleClick}
-      className="btn btn-accent btn-sm ml-1 inline-flex w-fit gap-2 align-middle"
+      className="btn btn-accent btn-xs ml-1 inline-flex w-fit gap-1 align-middle"
       aria-busy={starting}
     >
-      <Bot size={16} aria-hidden="true" />
+      <Bot size={12} aria-hidden="true" />
       {starting ? t("persona.startingChat") : children || t("persona.startChat")}
     </a>
   );

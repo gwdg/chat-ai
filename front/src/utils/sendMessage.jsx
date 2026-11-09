@@ -8,6 +8,9 @@ import generateChoiceProposal from "../apis/generateChoiceProposal";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
+import { isAgentEnabled } from "../apis/agentEndpoints";
+import { remoteMcpEnabled } from "../agent/mcp";
+import { confirmMcpNameChange } from "./mcpNameChange";
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
@@ -268,11 +271,6 @@ function handleToolEvent(name, arg) {
       if (arg.event === "error") return text("Image generation failed: " + String(arg?.msg) + "\n\n");
       return {};
     }
-    case "video.event": {
-      if (arg.event === "begin") return text(`Generating video: "${arg.query}" \n\n`);
-      if (arg.event === "error") return text("Video generation failed: " + String(arg?.msg) + "\n\n");
-      return {};
-    }
     case "audio.event": {
       if (arg.event === "audio_creation_begin") return text(`Generating audio: "${arg.query}" \n\n`);
       if (arg.event === "error") return text("Audio generation failed: " + String(arg?.msg) + "\n\n");
@@ -357,7 +355,7 @@ const sendMessage = async ({
         if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
           conversationForAPI.settings.arcana.limit = 3;
         }
-        if (!localState.settings.tools.mcp) delete conversationForAPI.settings.mcp_servers;
+        if (!remoteMcpEnabled(localState.settings)) delete conversationForAPI.settings.mcp_servers;
         if (!localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
       } else {
         conversationForAPI.settings.tools = [];
@@ -619,6 +617,49 @@ const sendMessage = async ({
       }
     }
 
+    // Run the turn through the agent loop, which calls tools in the browser
+    async function getAgentChunk(conversationId) {
+      const { runAgentTurn } = await import("../agent/runAgent");
+      const showTurn = ({ text, files, agentMessages }) =>
+        setLocalState(prev => {
+          if (prev.id !== conversationId) {
+            return prev;
+          }
+          const messages = [...prev.messages];
+          messages[messages.length - 2] = {
+            role: "assistant",
+            content: [{ type: "text", text }, ...files],
+            loading: true,
+            meta: { agent: agentMessages },
+          };
+          return { ...prev, messages, ignoreConflict: true };
+        });
+      const handleMcpNameMismatch = (server, actualName) =>
+        confirmMcpNameChange({
+          openModal,
+          setLocalState,
+          conversationId,
+          server,
+          actualName,
+        });
+      const result = await runAgentTurn({
+        conversationId,
+        // Up to and including the new user message
+        uiMessages: localState.messages,
+        systemPrompt: systemPromptAPI,
+        settings: localState.settings,
+        onUpdate: showTurn,
+        onMcpNameMismatch: handleMcpNameMismatch,
+      });
+      if (result.error && !result.text) throw new Error(result.error);
+      if (result.error) notifyError(result.error);
+      return {
+        answer: [{ type: "text", text: result.text }, ...result.files],
+        usage: result.usage,
+        agent: result.agentMessages,
+      };
+    }
+
     let responseContent = "";
     let usage = null;
     let chatChunk = null;
@@ -627,13 +668,16 @@ const sendMessage = async ({
     let choicesProposed = [];
     try {
       // Get chat completion response
-      chatChunk = await getChatChunk(conversationId);
+      chatChunk = isAgentEnabled()
+        ? await getAgentChunk(conversationId)
+        : await getChatChunk(conversationId);
       responseContent = chatChunk?.answer || ""
       usage = chatChunk?.usage;
       speechTranscriptForTurn = chatChunk?.speechTranscript || "";
       meta = {
         model: localState.settings.model?.name || localState.settings.model?.id || "",
-        usage
+        usage,
+        ...(chatChunk?.agent ? { agent: chatChunk.agent } : {}),
       };
     } catch (error) {
       const errorType = error?.type || "Error";
