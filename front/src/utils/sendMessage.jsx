@@ -8,6 +8,7 @@ import generateChoiceProposal from "../apis/generateChoiceProposal";
 import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
+import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
@@ -20,6 +21,8 @@ export async function processContentItems({
   ignoreVideo = false, 
   ignoreDocs = false,
   convertDocs = true,
+  sendRawDocuments = false,
+  model = null,
 }) {
   const output = [];
   for (const item of items) {
@@ -97,7 +100,11 @@ export async function processContentItems({
           }
         });
       }
-      else if (convertDocs) {
+      else if (
+        convertDocs &&
+        !(BINARY_DOCUMENT_TYPES.includes(fileType) &&
+          (sendRawDocuments || modelSupportsFileType(model, fileType)))
+      ) {
         if (fileType === "pdf") {
           // Shouldn't send unprocessed PDF file
           continue;
@@ -212,6 +219,7 @@ export async function buildConversationForAPI(localState, { forceAudioInput = fa
             ignoreImages,
             ignoreAudio: ignoreAudioForMessage,
             ignoreVideo,
+            model,
         })
         };
       }

@@ -9,10 +9,11 @@ import {
   loadFile,
   saveFile,
 } from "../../db";
-import { WarningAltFilled, Close, Video, DocumentBlank } from "@carbon/icons-react";
+import { WarningAltFilled, CheckmarkFilled, Close, Video, DocumentBlank } from "@carbon/icons-react";
 import { useSelector } from "react-redux";
 import { processFile } from "../../apis/processFile";
 import { getFileType } from "../../utils/attachments";
+import { modelSupportsFileType } from "../../utils/modelCapabilities";
 import {
   canConvertDocumentLocally,
   convertDocumentLocally,
@@ -44,6 +45,7 @@ export default function Attachment({
   if (!file) return ""; // TODO placeholder file
   const fileType = getFileType(file); // Get readable file type, e.g., "image"
   const model = localState.settings.model;
+  const supportsBinary = modelSupportsFileType(model, fileType);
 
   const isAudioSupported = (localState.settings.enable_tools || (model?.input?.includes("audio") || false));
   const isVideoSupported = (localState.settings.enable_tools || (model?.input?.includes("video") || false));
@@ -126,9 +128,10 @@ export default function Attachment({
 
   const badge = getFileBadge(file);
   const canProcess = !inHistory && (fileType === "pdf" || fileType === "docx"); // TODO add other supported types
+  const requiresProcessing = canProcess && !supportsBinary;
 
   const getFileDisplayInfo = (file) => {
-    if (canProcess) {
+    if (requiresProcessing) {
       return {
         bgColor:
           "relative bg-warning/10",
@@ -264,16 +267,28 @@ export default function Attachment({
           </div>
 
           <div className="mt-1 flex items-center justify-between gap-1 leading-tight">
-            <span className="flex min-w-0 items-center gap-1 text-[10px] text-warning">
-              <WarningAltFilled size={10} className="flex-shrink-0" />
+            <span
+              className={`flex min-w-0 items-center gap-1 text-[10px] ${
+                requiresProcessing ? "text-warning" : "text-success"
+              }`}
+            >
+              {requiresProcessing ? (
+                <WarningAltFilled size={10} className="flex-shrink-0" />
+              ) : (
+                <CheckmarkFilled size={10} className="flex-shrink-0" />
+              )}
               <span className="truncate">
-                {t("conversation.attachment.must_process")}
+                {requiresProcessing
+                  ? t("conversation.attachment.must_process")
+                  : t("conversation.attachment.optional_process")}
               </span>
             </span>
             <span
-              className={`shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded-full
-                bg-error/20 text-error
-                `}
+              className={`shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded-full ${
+                requiresProcessing
+                  ? "bg-error/20 text-error"
+                  : "bg-base-300 text-base-content"
+              }`}
             >
               {badge}
             </span>
@@ -348,7 +363,7 @@ export default function Attachment({
             </div>
           </div>
           {/* Process Needed Warning*/}
-          {!inAssistant && !suppressUnsupportedWarning && (!isFileSupported || fileType === "pdf") && (
+          {!inAssistant && !suppressUnsupportedWarning && (!isFileSupported || ((fileType === "pdf" || fileType === "docx") && !supportsBinary)) && (
             <span className="text-[11px] text-warning flex items-center gap-1">
               <WarningAltFilled size={12} className="flex-shrink-0" />
               {!isFileSupported

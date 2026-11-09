@@ -150,7 +150,24 @@ app.get("/models", async (req, res) => {
       headers.Authorization = "Bearer " + inference_id;
     }
     const response = await fetch(url, { method: "GET", headers });
-    res.status(200).json(await response.json());
+    const data = await response.json();
+    // Testing: only the external OpenAI models accept raw `file` content parts.
+    // Local SAIA engines reject them with "Unsupported chat content part type".
+    if (Array.isArray(data?.data)) {
+      data.data = data.data.map((model) => {
+        const input = Array.isArray(model.input) ? model.input : [];
+        const supportsFiles =
+          typeof model.id === "string" && model.id.startsWith("openai-");
+        return {
+          ...model,
+          input:
+            supportsFiles && !input.includes("pdf")
+              ? [...input, "pdf"]
+              : input,
+        };
+      });
+    }
+    res.status(200).json(data);
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch models." });
