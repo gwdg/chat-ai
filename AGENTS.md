@@ -227,6 +227,12 @@ Verified in `back/service.mjs`:
   `## Version: vX.Y.Z (DD.MM.YYYY)` block with a `Highlights:` list at the top of `CHANGELOG.md`. `back/package.json` is versioned independently and is not
   bumped in lockstep.
 - Never commit `secrets/*.json`, `node_modules/` or `dist/`.
+- **Every change gets a changelog fragment** — feature branch, direct commit to `dev` or hotfix
+  alike. Add `changes/unreleased/<short-slug>.md` (a few lines: what changed, why, anything a
+  reviewer or user must know) in the same commit as the change. One file per change, so parallel
+  branches never conflict. Don't edit `CHANGELOG.md` directly for unreleased work.
+- At release, merge the fragments in `changes/unreleased/` into the new `CHANGELOG.md` version
+  block, then delete them.
 
 ## 7. Before you finish
 
@@ -238,6 +244,7 @@ Verified in `back/service.mjs`:
 - [ ] touched a `VITE_MODULE_*` area → still correct with the module off
 - [ ] conversation write → `lastModified` threaded through and `-1` handled
 - [ ] behaviour exercised in a browser, not just compiled
+- [ ] changelog fragment added in `changes/unreleased/`
 
 ## 8. Maintaining this file
 
@@ -246,5 +253,5 @@ non-obvious invariant, a trap, a command that does not work the documented way �
 matching section, briefly.
 
 Two rules: **only write what you have verified in the code**, not what the structure suggests ought
-to be true; and keep it to facts and rules — no task logs, no status updates, no changelog entries.
+to be true; and keep it to facts and rules — no task logs, no status updates, no changelog entries (those go in `changes/unreleased/`, see §6).
 If something here turns out to be wrong, fix it rather than working around it.
