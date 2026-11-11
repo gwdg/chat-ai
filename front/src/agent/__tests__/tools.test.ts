@@ -14,8 +14,48 @@ const toolNames = (options: Parameters<typeof createTools>[1]) =>
   createTools(fs as any, options).map((tool) => tool.name);
 
 describe("agent tools", () => {
-  it("offers no file tools until browser storage is enabled", () => {
-    expect(toolNames({ vision: true })).toEqual([]);
+  it("offers no file tools until browser storage is enabled, but keeps codemode", () => {
+    expect(toolNames({ vision: true })).toEqual(["codemode"]);
+  });
+
+  it("keeps codemode usable without file tools when browser storage is off", () => {
+    const codemode = createTools(fs as any, { vision: true }).find(
+      (tool) => tool.name === "codemode",
+    );
+    expect(codemode?.description).toContain("No file tools are available");
+  });
+
+  it("disables every file-dependent tool when browser storage is off", () => {
+    const names = toolNames({
+      vision: true,
+      enabled: {
+        browser_storage: false,
+        write_access: true,
+        web_search: true,
+        create_docx: true,
+        image_analysis: true,
+        codemode: true,
+      },
+    });
+    expect(names).toEqual(["codemode", "web_search"]);
+  });
+
+  it("offers analyze images and Word document for either storage source", () => {
+    for (const options of [
+      { vision: true, enabled: { browser_storage: true } },
+      { vision: true, hasLocalFolder: true },
+    ]) {
+      const names = toolNames(options);
+      expect(names).toContain("explain_image");
+      expect(names).toContain("create_docx");
+    }
+  });
+
+  it("enables file tools when a local folder is mounted without browser storage", () => {
+    const names = toolNames({ vision: true, hasLocalFolder: true });
+    expect(names).toContain("read");
+    expect(names).toContain("codemode");
+    expect(names).not.toContain("write");
   });
 
   it("offers image analysis by default once browser storage is on, for models with and without vision", () => {

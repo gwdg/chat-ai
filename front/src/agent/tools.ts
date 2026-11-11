@@ -41,6 +41,8 @@ export interface ToolOptions {
   vision: boolean;
   /** The conversation's tool toggles (`settings.tools`); a missing key counts as on. */
   enabled?: Record<string, boolean>;
+  /** A local folder is mounted, so the file tools have storage to work on. */
+  hasLocalFolder?: boolean;
 }
 
 // Tool toggles in the UI and the agent tools they switch. Browser storage is the master switch
@@ -52,7 +54,6 @@ const TOGGLES: Record<string, string[]> = {
     "edit",
     "ls",
     "find",
-    "codemode",
     "convert_document",
     "transcribe_audio",
     "create_docx",
@@ -71,7 +72,7 @@ const TOGGLES: Record<string, string[]> = {
   web_search: ["web_search"],
 };
 
-export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): AgentTool<any>[] {
+export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = false }: ToolOptions): AgentTool<any>[] {
   const readFile = async (path: string) => Buffer.from(await fs.readFile(path));
   const writeFile = (path: string, content: string) => fs.writeFile(path, content);
   const access = async (path: string) => {
@@ -291,9 +292,16 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
   ];
 
   // Browser storage, writing and web search (needs the user's consent, and is billed) are opt-in:
-  // off unless switched on. The other toggles are on unless switched off.
+  // off unless switched on. The other toggles are on unless switched off. A mounted local folder
+  // is an alternative storage source, so it turns the file tools on as well.
   const OPT_IN = ["browser_storage", "write_access", "web_search"];
-  const isOff = (key: string) => (OPT_IN.includes(key) ? enabled[key] !== true : enabled[key] === false);
+  const storageEnabled = enabled.browser_storage === true || hasLocalFolder;
+  const isOff = (key: string) =>
+    key === "browser_storage"
+      ? !storageEnabled
+      : OPT_IN.includes(key)
+        ? enabled[key] !== true
+        : enabled[key] === false;
   const off = new Set(Object.entries(TOGGLES).flatMap(([key, names]) => (isOff(key) ? names : [])));
   const on = (tool: AgentTool<any>) => !off.has(tool.name);
   // Scripts get the same file tools, so they cannot write either when writing is off

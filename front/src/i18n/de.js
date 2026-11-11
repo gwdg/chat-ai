@@ -814,6 +814,7 @@ export default {
     label_browser_storage: "Browserspeicher",
     label_codemode: "Codemode",
     label_create_docx: "Word-Dokument",
+    tools_requires_browser_storage: "Zuerst den Browserspeicher aktivieren oder einen lokalen Ordner freigeben",
     tools_agent_unavailable: "Im Agentenmodus nicht verfügbar",
     label_tool_limit: "Werkzeugaufrufe pro Antwort begrenzen",
     tool_limit_hint: "Maximale Werkzeugaufrufe pro Antwort; gemeinsam ausgeführte Aufrufe zählen einmal",

@@ -800,6 +800,7 @@ export default {
     label_browser_storage: "Browser storage",
     label_codemode: "Codemode",
     label_create_docx: "Word document",
+    tools_requires_browser_storage: "Enable browser storage or share a local folder first",
     tools_agent_unavailable: "Not available in agent mode",
     label_tool_limit: "Limit tool calls per response",
     tool_limit_hint: "Maximum tool invocations per response; calls made together count once",
