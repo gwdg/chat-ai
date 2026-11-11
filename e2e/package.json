@@ -1,0 +1,19 @@
+{
+    "name": "chat-ai-e2e",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "e2e": "tsx src/cli.ts",
+        "check": "tsc --noEmit"
+    },
+    "dependencies": {
+        "openai": "^4.104.0",
+        "playwright": "^1.55.0",
+        "yaml": "^2.8.1"
+    },
+    "devDependencies": {
+        "@types/node": "^22.18.0",
+        "tsx": "^4.20.5",
+        "typescript": "^5.9.2"
+    }
+}
