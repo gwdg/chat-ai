@@ -1,14 +1,19 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { Code2, Eye } from "lucide-react";
 import DOMPurify from "dompurify";
 import latexWasmUrl from "faster-latex-wasm?url";
 import { selectRenderLatex } from "../../../Redux/reducers/userSettingsReducer";
+import { grantWasmConsent, useWasmConsent } from "../../../hooks/useWasmConsent";
 import Code from "./Code";
+import WasmDownloadPrompt from "./WasmDownloadPrompt";
 import { extractTikz, renderTikzSnippets } from "./tikzRenderer";
 
 const CACHE_LIMIT = 50;
+// faster-latex WASM (~0.4 MB); TikZJax adds its engine, fonts and CSS (~6.8 MB).
+const LATEX_DOWNLOAD_MB = 0.4;
+const TIKZ_DOWNLOAD_MB = 6.8;
 const htmlCache = new Map();
 
 const EXTRA_CSS = `
@@ -100,6 +105,22 @@ const LatexBlock = memo(
   ({ content, language = "latex", defaultRender = true }) => {
     const { t } = useTranslation();
     const renderLatexEnabled = useSelector(selectRenderLatex);
+    const latexConsent = useWasmConsent("latex");
+    const tikzConsent = useWasmConsent("tikz");
+    const tikzNeeded = useMemo(
+      () => extractTikz(String(content || "")).snippets.length > 0,
+      [content]
+    );
+    const hasRequiredConsent = latexConsent && (!tikzNeeded || tikzConsent);
+    const consentSizeMb =
+      (!latexConsent ? LATEX_DOWNLOAD_MB : 0) +
+      (tikzNeeded && !tikzConsent ? TIKZ_DOWNLOAD_MB : 0);
+    const consentFeature =
+      !latexConsent && (!tikzNeeded || tikzConsent)
+        ? t("wasm_download.feature_latex")
+        : !latexConsent
+          ? `${t("wasm_download.feature_latex")} + ${t("wasm_download.feature_tikz")}`
+          : t("wasm_download.feature_tikz");
     const [showCode, setShowCode] = useState(
       !(defaultRender && renderLatexEnabled)
     );
@@ -146,6 +167,14 @@ const LatexBlock = memo(
         return;
       }
 
+      if (!hasRequiredConsent) {
+        setOutput(null);
+        setError(false);
+        setErrorMessage("");
+        setLoading(false);
+        return;
+      }
+
       let cancelled = false;
       setLoading(true);
       setError(false);
@@ -170,7 +199,7 @@ const LatexBlock = memo(
         cancelled = true;
         clearTimeout(timer);
       };
-    }, [content, showCode]);
+    }, [content, showCode, hasRequiredConsent]);
 
     const codeContent = String(content || "").replace(/\n$/, "");
 
@@ -199,6 +228,15 @@ const LatexBlock = memo(
           <div className="pt-3">
             <Code language={language}>{codeContent}</Code>
           </div>
+        ) : !hasRequiredConsent && codeContent.trim() ? (
+          <WasmDownloadPrompt
+            feature={consentFeature}
+            sizeMb={consentSizeMb}
+            onConfirm={() =>
+              grantWasmConsent("latex", ...(tikzNeeded ? ["tikz"] : []))
+            }
+            onCancel={() => setShowCode(true)}
+          />
         ) : error ? (
           <div className="pt-3 p-2 text-error">
             {t("latex.render_error")}

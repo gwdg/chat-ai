@@ -1468,6 +1468,16 @@ export default {
     render_error:
       "LaTeX-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
   },
+  wasm_download: {
+    title: "{{feature}}-Renderer herunterladen?",
+    body: "Das Rendern dieses Blocks lädt beim ersten Mal WebAssembly und Schriftarten herunter. Danach bleiben sie im Browser-Cache.",
+    size: "Etwa {{size}} MB",
+    confirm: "Herunterladen und rendern",
+    keep_code: "Als Code anzeigen",
+    feature_typst: "Typst",
+    feature_latex: "LaTeX",
+    feature_tikz: "TikZ",
+  },
   // Announcement
   announcement: "",
   // Editierbare Tool-Formulare

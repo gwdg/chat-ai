@@ -6,10 +6,14 @@ import DOMPurify from "dompurify";
 import compilerWasmUrl from "@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm?url";
 import rendererWasmUrl from "@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm?url";
 import { selectRenderTypst } from "../../../Redux/reducers/userSettingsReducer";
+import { grantWasmConsent, useWasmConsent } from "../../../hooks/useWasmConsent";
 import Code from "./Code";
+import WasmDownloadPrompt from "./WasmDownloadPrompt";
 
 const CACHE_LIMIT = 50;
 const CROP_PADDING = 6;
+// Compiler (28.3 MB), renderer (0.9 MB) and the vendored text fonts (8.3 MB).
+const TYPST_DOWNLOAD_MB = 38;
 const TYPST_SVG_STYLES =
   "<style>:host{display:block}svg{display:block;max-width:100%;height:auto}</style>";
 const svgCache = new Map();
@@ -123,6 +127,7 @@ const TypstBlock = memo(
   ({ content, language = "typst", defaultRender = true }) => {
     const { t } = useTranslation();
     const renderTypst = useSelector(selectRenderTypst);
+    const typstConsent = useWasmConsent("typst");
     const [showCode, setShowCode] = useState(!(defaultRender && renderTypst));
     const [svg, setSvg] = useState(null);
     const [error, setError] = useState(false);
@@ -165,6 +170,13 @@ const TypstBlock = memo(
         return;
       }
 
+      if (!typstConsent) {
+        setSvg(null);
+        setError(false);
+        setLoading(false);
+        return;
+      }
+
       let cancelled = false;
       setLoading(true);
       setError(false);
@@ -198,7 +210,7 @@ const TypstBlock = memo(
         cancelled = true;
         clearTimeout(timer);
       };
-    }, [content, showCode]);
+    }, [content, showCode, typstConsent]);
 
     const codeContent = String(content || "").replace(/\n$/, "");
 
@@ -227,6 +239,13 @@ const TypstBlock = memo(
           <div className="pt-3">
             <Code language={language}>{codeContent}</Code>
           </div>
+        ) : !typstConsent && codeContent.trim() ? (
+          <WasmDownloadPrompt
+            feature={t("wasm_download.feature_typst")}
+            sizeMb={TYPST_DOWNLOAD_MB}
+            onConfirm={() => grantWasmConsent("typst")}
+            onCancel={() => setShowCode(true)}
+          />
         ) : error ? (
           <div className="pt-3 p-2 text-error">
             {t("typst.render_error")}

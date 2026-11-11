@@ -1446,6 +1446,16 @@ export default {
     render_error:
       "Failed to render LaTeX document. Showing source instead:",
   },
+  wasm_download: {
+    title: "Download {{feature}} renderer?",
+    body: "Rendering this block downloads WebAssembly and fonts the first time. They stay in your browser cache afterwards.",
+    size: "About {{size}} MB",
+    confirm: "Download and render",
+    keep_code: "Keep as code",
+    feature_typst: "Typst",
+    feature_latex: "LaTeX",
+    feature_tikz: "TikZ",
+  },
   // Announcement
   announcement: "",
   // Editable tool forms
