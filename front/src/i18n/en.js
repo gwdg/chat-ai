@@ -821,6 +821,8 @@ export default {
 
   // Conversation
   conversation: {
+    meta_tokens: "tokens",
+    meta_cost: "cost",
     local_tools: "Browser & local tools",
     mount_folder: "Share local folder",
     folder_mounted: "Folder available to the assistant at {{path}}",
