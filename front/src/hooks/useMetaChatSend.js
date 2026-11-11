@@ -82,6 +82,7 @@ Supported per-chat setting keys and values:
 - reasoning_effort: number or null
 - memory_mode_override: "default", 0, 1, or 2
 - enable_tools, enable_web_search: true or false
+- browser_storage: true or false (agent mode: lets the agent read and write this chat's browser workspace)
 
 Use SET_CONVERSATION_SETTING with "target":"all" only when the user explicitly asks to change all chats; otherwise use a conversation id from list_chats. The Meta chat's own settings are read-only.
 

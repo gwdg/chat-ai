@@ -32,6 +32,8 @@ Every file you write is shown to the user in the chat, so do not repeat a file's
 
 const NO_TOOLS_PROMPT = "You cannot call tools in this conversation; attached files are referenced by name only.";
 
+const NO_BROWSER_STORAGE_PROMPT = "The user has turned off browser storage for this conversation, so you cannot read or write files. Attached files are referenced by name only; do not claim to have read them.";
+
 
 type ModelSpec = { id: string; name?: string; input?: string[] };
 
@@ -224,6 +226,7 @@ export async function runAgentTurn({
   const spec: ModelSpec = typeof settings.model === "string" ? { id: settings.model } : settings.model;
   const external = isExternalModel(spec);
   const useTools = modelSupportsTools(spec);
+  const browserStorage = settings.tools?.browser_storage === true;
   const model = toModel(spec);
   const vision = model.input.includes("image");
 
@@ -330,9 +333,9 @@ export async function runAgentTurn({
     initialState: {
       systemPrompt: [
         systemPrompt,
-        useTools ? AGENT_PROMPT : NO_TOOLS_PROMPT,
-        useTools && mounts.length ? `The user's local folders are mounted at: ${mounts.join(", ")}.` : "",
-        useTools && settings.tools?.write_access !== true
+        useTools ? (browserStorage ? AGENT_PROMPT : NO_BROWSER_STORAGE_PROMPT) : NO_TOOLS_PROMPT,
+        useTools && browserStorage && mounts.length ? `The user's local folders are mounted at: ${mounts.join(", ")}.` : "",
+        useTools && browserStorage && settings.tools?.write_access !== true
           ? "The user has turned off writing and editing files: you can read files but not change them."
           : "",
         `Current date: ${new Date().toLocaleString()}`,

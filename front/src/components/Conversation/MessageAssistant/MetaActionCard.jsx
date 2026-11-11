@@ -168,6 +168,7 @@ export default function MetaActionCard({
     memory_mode_override: "settings.memory_mode.label",
     enable_tools: "settings.tools_title",
     enable_web_search: "settings.label_web_search",
+    browser_storage: "settings.label_browser_storage",
   };
 
   const formatSettingValue = (key, value) => {
@@ -519,7 +520,10 @@ export default function MetaActionCard({
             if (!model) throw new Error("Model not found");
             nextValue = model;
           }
-          entry.previous[action.key] = conversation.settings?.[action.key];
+          entry.previous[action.key] =
+            action.key === "browser_storage"
+              ? conversation.settings?.tools?.browser_storage
+              : conversation.settings?.[action.key];
           entry.expected[action.key] = nextValue;
           conversationSettingsPlan.set(conversation.id, entry);
         }
@@ -712,12 +716,23 @@ export default function MetaActionCard({
 
   const applyConversationSettingValues = (settings, values) => {
     const next = { ...(settings || {}) };
+    let tools;
     for (const [key, value] of Object.entries(values)) {
+      if (key === "browser_storage") {
+        tools ??= { ...(next.tools || {}) };
+        if (value === undefined) delete tools[key];
+        else tools[key] = value;
+        continue;
+      }
       if (value === undefined) {
         delete next[key];
       } else {
         next[key] = value;
       }
+    }
+    if (tools) {
+      if (Object.keys(tools).length) next.tools = tools;
+      else delete next.tools;
     }
     return next;
   };
@@ -769,7 +784,11 @@ export default function MetaActionCard({
         const current = await getConversationMeta(entry.id);
         if (!current) throw new Error("Conversation not found");
         for (const [key, expected] of Object.entries(entry.expected)) {
-          if (!conversationSettingMatches(key, current.settings?.[key], expected)) {
+          const currentValue =
+            key === "browser_storage"
+              ? current.settings?.tools?.browser_storage
+              : current.settings?.[key];
+          if (!conversationSettingMatches(key, currentValue, expected)) {
             throw new Error("Conversation setting changed");
           }
         }

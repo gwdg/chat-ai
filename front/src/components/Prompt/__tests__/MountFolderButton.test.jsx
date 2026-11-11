@@ -47,7 +47,7 @@ describe("MountFolderButton bulk actions", () => {
 
   it("enables every local tool", () => {
     workspaceMocks.canMount = true;
-    const localState = stateWith({ mcp: false, create_docx: false, codemode: false, image_analysis: false });
+    const localState = stateWith({ browser_storage: false, mcp: false, create_docx: false, codemode: false, image_analysis: false });
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<MountFolderButton localState={localState} setLocalState={setLocalState} />);
     openPanel();
@@ -56,6 +56,7 @@ describe("MountFolderButton bulk actions", () => {
 
     const next = setLocalState.mock.results.at(-1).value;
     expect(next.settings.tools).toMatchObject({
+      browser_storage: true,
       mcp: true,
       create_docx: true,
       codemode: true,
@@ -74,7 +75,7 @@ describe("MountFolderButton bulk actions", () => {
 
   it("disables every local tool", () => {
     workspaceMocks.canMount = true;
-    const localState = stateWith({ mcp: true, create_docx: true, codemode: true, image_analysis: true, write_access: true });
+    const localState = stateWith({ browser_storage: true, mcp: true, create_docx: true, codemode: true, image_analysis: true, write_access: true });
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<MountFolderButton localState={localState} setLocalState={setLocalState} />);
     openPanel();
@@ -83,12 +84,25 @@ describe("MountFolderButton bulk actions", () => {
 
     const next = setLocalState.mock.results.at(-1).value;
     expect(next.settings.tools).toMatchObject({
+      browser_storage: false,
       mcp: false,
       create_docx: false,
       codemode: false,
       image_analysis: false,
       write_access: false,
     });
+  });
+
+  it("toggles browser storage access", () => {
+    const localState = stateWith({ browser_storage: false });
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<MountFolderButton localState={localState} setLocalState={setLocalState} />);
+    openPanel();
+
+    fireEvent.click(screen.getByRole("button", { name: /browser storage/i }));
+
+    const next = setLocalState.mock.results.at(-1).value;
+    expect(next.settings.tools.browser_storage).toBe(true);
   });
 
   it("toggles image analysis with the Gemma vision tool", () => {

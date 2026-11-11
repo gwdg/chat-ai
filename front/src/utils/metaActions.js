@@ -29,6 +29,7 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "memory_mode_override",
   "enable_tools",
   "enable_web_search",
+  "browser_storage",
 ]);
 
 function isValidConversationSetting(key, value) {

@@ -378,6 +378,12 @@ export default {
       step3:
         "Wählen Sie Bildbearbeitung und hängen Sie das Bild an oder beschreiben Sie es.",
     },
+    browser_storage: {
+      title: "Browserspeicher aktivieren",
+      step1: "Öffnen Sie Browser & lokale Werkzeuge im Eingabefeld.",
+      step2:
+        "Wählen Sie Browserspeicher, damit der Assistent Dateien im Browser-Arbeitsbereich dieses Chats lesen und schreiben kann.",
+    },
     image_analysis: {
       title: "Bilder analysieren",
       step1: "Öffnen Sie Browser & lokale Werkzeuge im Eingabefeld.",
@@ -805,6 +811,7 @@ export default {
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",
     label_write_access: "Schreiben erlauben",
+    label_browser_storage: "Browserspeicher",
     label_codemode: "Codemode",
     label_create_docx: "Word-Dokument",
     tools_agent_unavailable: "Im Agentenmodus nicht verfügbar",

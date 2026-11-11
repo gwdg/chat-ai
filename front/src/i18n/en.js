@@ -365,6 +365,12 @@ export default {
       step2: "Enable tools.",
       step3: "Select Image Modification, then attach or describe the image.",
     },
+    browser_storage: {
+      title: "Enable browser storage",
+      step1: "Open Browser & local tools from the prompt box.",
+      step2:
+        "Select Browser storage so the assistant can read and write files in this chat's browser workspace.",
+    },
     image_analysis: {
       title: "Analyze images",
       step1: "Open Browser & local tools from the prompt box.",
@@ -791,6 +797,7 @@ export default {
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",
     label_write_access: "Allow write",
+    label_browser_storage: "Browser storage",
     label_codemode: "Codemode",
     label_create_docx: "Word document",
     tools_agent_unavailable: "Not available in agent mode",

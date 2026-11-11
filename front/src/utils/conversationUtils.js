@@ -38,6 +38,7 @@ export const getDefaultSettings = (userSettings = {}) => {
       "mcp_remote": false,
       // Agent mode only
       "write_access": false,
+      "browser_storage": false,
       "codemode": true,
       "create_docx": true,
     },

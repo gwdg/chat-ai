@@ -272,6 +272,25 @@ export const featureGuides = {
       },
     ],
   },
+  browser_storage: {
+    titleKey: "feature_guide.browser_storage.title",
+    prompt:
+      "Let the agent use this chat's browser workspace. Open Browser & local tools from the prompt box, then select Browser storage to allow reading and writing files.",
+    keywords: ["browser storage", "browser workspace", "opfs", "local files"],
+    steps: [
+      {
+        target: '[data-guide="local-tools"]',
+        textKey: "feature_guide.browser_storage.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="tool-browser_storage"]',
+        prepare: openLocalTools,
+        textKey: "feature_guide.browser_storage.step2",
+        check: () => isToolActive("browser_storage"),
+      },
+    ],
+  },
   image_analysis: {
     titleKey: "feature_guide.image_analysis.title",
     prompt:
@@ -1043,6 +1062,7 @@ export const FEATURE_CATEGORIES = {
     "image_generation",
     "image_modification",
     "image_analysis",
+    "browser_storage",
     "audio_generation",
     "mcp_server",
   ],
@@ -1122,6 +1142,7 @@ const germanGuideKeywords = {
   image_modification: ["bild bearbeit", "bilder bearbeit", "bild änder", "bilder änder", "bild modifizier", "bilder modifizier"],
   audio_generation: ["audio erzeug", "audio generier", "audio", "sprache erzeug", "sprache generier", "ton erzeug"],
   mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
+  browser_storage: ["browserspeicher", "browser speicher", "arbeitsbereich", "arbeitsfläche", "opfs", "lokale dateien"],
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],
   manage_topics: ["thema", "themen", "topic", "themen erstell", "chats organisier"],

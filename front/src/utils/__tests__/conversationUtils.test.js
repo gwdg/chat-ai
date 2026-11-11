@@ -22,6 +22,10 @@ describe("conversation defaults", () => {
     expect(settings.tools.mcp_remote).toBe(false);
   });
 
+  it("keeps browser storage off by default", () => {
+    expect(getDefaultSettings().tools.browser_storage).toBe(false);
+  });
+
   it("builds a default conversation with a timestamp and message", () => {
     const conversation = getDefaultConversation(
       { model: { id: "test-model", name: "Test" } },

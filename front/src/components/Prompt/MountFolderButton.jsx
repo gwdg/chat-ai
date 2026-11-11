@@ -1,7 +1,7 @@
 import { Fragment, useEffect } from "react";
 import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
-import { Check, Code, FileText, Pencil, ScanEye, Server } from "lucide-react";
+import { Check, Code, Database, FileText, Pencil, ScanEye, Server } from "lucide-react";
 import { FolderAdd, ToolBox } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
 import MCPContainer from "../SettingsPanel/MCPContainer";
@@ -22,6 +22,7 @@ export default function MountFolderButton({ localState, setLocalState }) {
   const agent = isAgentEnabled();
   const canMount = agent && canMountLocalDirectory();
   const writeAccess = localState?.settings?.tools?.write_access === true;
+  const browserStorageEnabled = localState?.settings?.tools?.browser_storage === true;
   const mcpEnabled = localState?.settings?.tools?.mcp === true;
   const createDocxEnabled = localState?.settings?.tools?.create_docx !== false;
   const codemodeEnabled = localState?.settings?.tools?.codemode !== false;
@@ -70,6 +71,21 @@ export default function MountFolderButton({ localState, setLocalState }) {
       },
       flush: true,
     }));
+
+  const toggleBrowserStorage = () => {
+    if (mcpDisabled) return;
+    setLocalState((prev) => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        tools: {
+          ...prev.settings?.tools,
+          browser_storage: !browserStorageEnabled,
+        },
+      },
+      flush: true,
+    }));
+  };
 
   const setMcp = (value) =>
     setLocalState((prev) => ({
@@ -135,6 +151,7 @@ export default function MountFolderButton({ localState, setLocalState }) {
   const enableAllTools = () => {
     const patch = canMount ? { write_access: true } : {};
     if (!mcpDisabled) {
+      patch.browser_storage = true;
       patch.mcp = true;
       patch.create_docx = true;
       patch.codemode = true;
@@ -144,7 +161,13 @@ export default function MountFolderButton({ localState, setLocalState }) {
   };
 
   const disableAllTools = () => {
-    const patch = { mcp: false, create_docx: false, codemode: false, image_analysis: false };
+    const patch = {
+      browser_storage: false,
+      mcp: false,
+      create_docx: false,
+      codemode: false,
+      image_analysis: false,
+    };
     if (canMount) patch.write_access = false;
     setTools(patch);
   };
@@ -231,6 +254,19 @@ export default function MountFolderButton({ localState, setLocalState }) {
                     </button>
                   </div>
                 )}
+                <MiniToolButton
+                  active={browserStorageEnabled}
+                  disabled={mcpDisabled}
+                  onClick={toggleBrowserStorage}
+                  Icon={Database}
+                  label={t("settings.label_browser_storage")}
+                  title={
+                    mcpDisabled
+                      ? `${t("settings.label_browser_storage")}: ${t("settings.tools_agent_unavailable")}`
+                      : t("settings.label_browser_storage")
+                  }
+                  guideKey="browser_storage"
+                />
                 <MiniToolButton
                   active={mcpEnabled}
                   disabled={mcpDisabled}

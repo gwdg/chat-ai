@@ -43,9 +43,24 @@ export interface ToolOptions {
   enabled?: Record<string, boolean>;
 }
 
-// Tool toggles in the UI and the agent tools they switch. Reading, listing, searching and the
-// converters are always on.
+// Tool toggles in the UI and the agent tools they switch. Browser storage is the master switch
+// for the conversation workspace: without it the agent gets no tools that read or write files.
 const TOGGLES: Record<string, string[]> = {
+  browser_storage: [
+    "read",
+    "write",
+    "edit",
+    "ls",
+    "find",
+    "codemode",
+    "convert_document",
+    "transcribe_audio",
+    "create_docx",
+    "explain_image",
+    "generate_speech",
+    "generate_image",
+    "edit_image",
+  ],
   write_access: ["write", "edit"],
   codemode: ["codemode"],
   create_docx: ["create_docx"],
@@ -275,9 +290,9 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
     ),
   ];
 
-  // Writing and web search (needs the user's consent, and is billed) are opt-in: off unless
-  // switched on. The other toggles are on unless switched off.
-  const OPT_IN = ["write_access", "web_search"];
+  // Browser storage, writing and web search (needs the user's consent, and is billed) are opt-in:
+  // off unless switched on. The other toggles are on unless switched off.
+  const OPT_IN = ["browser_storage", "write_access", "web_search"];
   const isOff = (key: string) => (OPT_IN.includes(key) ? enabled[key] !== true : enabled[key] === false);
   const off = new Set(Object.entries(TOGGLES).flatMap(([key, names]) => (isOff(key) ? names : [])));
   const on = (tool: AgentTool<any>) => !off.has(tool.name);
