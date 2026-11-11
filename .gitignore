@@ -1,4 +1,4 @@
 *.env
 .serena/
 .claude/
-./deploy.sh
+deploy.sh
