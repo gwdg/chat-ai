@@ -335,6 +335,23 @@ export const featureGuides = {
       },
     ],
   },
+  diagram_renderers: {
+    titleKey: "feature_guide.diagram_renderers.title",
+    prompt:
+      "Render diagrams and charts from fenced code blocks. Use ```dot or ```graphviz for Graphviz, ```vega-lite or ```vega for Vega-Lite, and ```chart or ```chartjs for a Chart.js JSON config. They are rendered locally in the browser.",
+    keywords: ["graphviz", "dot graph", "vega-lite", "vega", "chart.js", "chartjs", "diagram", "chart"],
+    steps: [
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.diagram_renderers.step1",
+      },
+      {
+        target: '[data-guide="send"]',
+        textKey: "feature_guide.diagram_renderers.step2",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
   mcp_server: {
     titleKey: "feature_guide.mcp_server.title",
     prompt:
@@ -1091,7 +1108,7 @@ export const FEATURE_CATEGORIES = {
     "data_management",
     "dark_mode",
   ],
-  other: ["feedback", "speech_output"],
+  other: ["feedback", "speech_output", "diagram_renderers"],
 };
 
 export function getFeatureCategory(featureId) {
@@ -1142,6 +1159,7 @@ const germanGuideKeywords = {
   image_modification: ["bild bearbeit", "bilder bearbeit", "bild änder", "bilder änder", "bild modifizier", "bilder modifizier"],
   audio_generation: ["audio erzeug", "audio generier", "audio", "sprache erzeug", "sprache generier", "ton erzeug"],
   mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
+  diagram_renderers: ["graphviz", "dot", "vega", "vega-lite", "chart.js", "chartjs", "diagramm", "diagramme", "diagramm zeichnen", "chart"],
   browser_storage: ["browserspeicher", "browser speicher", "arbeitsbereich", "arbeitsfläche", "opfs", "lokale dateien"],
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],

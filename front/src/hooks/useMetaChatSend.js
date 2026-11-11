@@ -69,7 +69,7 @@ Use only ids returned by the tools. Use "folderId": null for Unsorted, or provid
 
 Supported setting keys and values:
 - memory_mode: 0 (none), 1 (recall), 2 (learn)
-- suggest_user_prompts, html_load_external, set_title_once, render_typst, render_latex, conversation_summaries: true or false
+- suggest_user_prompts, html_load_external, set_title_once, render_typst, render_latex, render_graphviz, render_vega, render_chartjs, conversation_summaries: true or false
 - html_render_mode: "render", "code", or "off"
 - html_sanitization: "strict" or "relaxed"
 - document_conversion_mode: "server", "browser", or "choice"

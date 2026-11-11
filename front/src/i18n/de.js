@@ -397,6 +397,11 @@ export default {
       step3:
         "Wählen Sie Audioerzeugung und beschreiben Sie das gewünschte Audio.",
     },
+    diagram_renderers: {
+      title: "Diagramme aus Codeblöcken rendern",
+      step1: "Fragen Sie nach einem Codeblock: ```dot für Graphviz, ```vega-lite für Vega-Lite oder ```chart für eine Chart.js-JSON-Konfiguration.",
+      step2: "Senden Sie die Nachricht. Der Block wird lokal als SVG oder Canvas-Diagramm gerendert.",
+    },
     mcp_server: {
       title: "Einen MCP-Server verbinden",
       step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
@@ -903,6 +908,18 @@ export default {
       render: "Als Typst rendern",
       show_code: "Code anzeigen",
     },
+    graphviz_block: {
+      render: "Als Graphviz rendern",
+      show_code: "Code anzeigen",
+    },
+    vega_block: {
+      render: "Als Vega-Lite rendern",
+      show_code: "Code anzeigen",
+    },
+    chartjs_block: {
+      render: "Als Chart.js rendern",
+      show_code: "Code anzeigen",
+    },
     latex_block: {
       render: "Als LaTeX rendern",
       show_code: "Code anzeigen",
@@ -1112,6 +1129,21 @@ export default {
         label: "LaTeX-Blöcke rendern",
         description:
           "Legt fest, ob LaTeX-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
+      },
+      graphviz: {
+        label: "Graphviz-Diagramme rendern",
+        description:
+          "Rendert ```dot- und ```graphviz-Blöcke lokal. Beim ersten Rendern wird die Graphviz-Engine (etwa 1,4 MB) nach Ihrer Bestätigung heruntergeladen.",
+      },
+      vega: {
+        label: "Vega-Lite-Diagramme rendern",
+        description:
+          "Rendert ```vega-lite- und ```vega-Blöcke lokal. Externe Daten-URLs bleiben blockiert, solange externe Referenzen nicht aktiviert sind.",
+      },
+      chartjs: {
+        label: "Chart.js-Diagramme rendern",
+        description:
+          "Rendert ```chart- und ```chartjs-Blöcke lokal aus einer Chart.js-JSON-Konfiguration.",
       },
       reasoning_streaming: {
         label: "Denkprozess beim Streamen geschlossen halten",
@@ -1480,6 +1512,20 @@ export default {
     feature_typst: "Typst",
     feature_latex: "LaTeX",
     feature_tikz: "TikZ",
+    feature_graphviz: "Graphviz",
+  },
+  graphviz: {
+    rendering: "Graphviz-Diagramm wird gerendert...",
+    render_error: "Graphviz-Diagramm konnte nicht gerendert werden.",
+  },
+  vega: {
+    rendering: "Diagramm wird gerendert...",
+    render_error: "Vega-Lite-Diagramm konnte nicht gerendert werden.",
+    external_blocked: "Dieses Diagramm lädt externe Daten von {{url}}. Aktivieren Sie externe Referenzen, um es zu rendern.",
+  },
+  chartjs: {
+    rendering: "Diagramm wird gerendert...",
+    render_error: "Chart.js-Diagramm konnte nicht gerendert werden.",
   },
   // Announcement
   announcement: "",

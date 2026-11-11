@@ -7,7 +7,13 @@ import userSettingsReducer, {
   importUserSettings,
   setMemoryMode,
   setSendWithEnter,
+  setRenderGraphviz,
+  setRenderVega,
+  setRenderChartjs,
   selectMemoryMode,
+  selectRenderGraphviz,
+  selectRenderVega,
+  selectRenderChartjs,
   selectConversationSummaries,
   selectCollapseReasoningWhileStreaming,
   setCollapseReasoningWhileStreaming,
@@ -91,6 +97,32 @@ describe("user settings reducer", () => {
   it("falls back to safe selector values", () => {
     expect(selectMemoryMode({ user_settings: { memory_mode: 99 } })).toBe(0);
     expect(selectConversationSummaries({ user_settings: {} })).toBe(true);
+  });
+
+  it("toggles diagram rendering preferences and imports them", () => {
+    let state = init(userSettingsReducer);
+    expect(selectRenderGraphviz({ user_settings: state })).toBe(false);
+    expect(selectRenderVega({ user_settings: state })).toBe(false);
+    expect(selectRenderChartjs({ user_settings: state })).toBe(false);
+
+    state = userSettingsReducer(state, setRenderGraphviz(true));
+    state = userSettingsReducer(state, setRenderVega(true));
+    state = userSettingsReducer(state, setRenderChartjs(true));
+    expect(selectRenderGraphviz({ user_settings: state })).toBe(true);
+    expect(selectRenderVega({ user_settings: state })).toBe(true);
+    expect(selectRenderChartjs({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({
+        render_graphviz: false,
+        render_vega: false,
+        render_chartjs: false,
+      }),
+    );
+    expect(selectRenderGraphviz({ user_settings: state })).toBe(false);
+    expect(selectRenderVega({ user_settings: state })).toBe(false);
+    expect(selectRenderChartjs({ user_settings: state })).toBe(false);
   });
 
   it("returns a stable empty list for old interface settings", () => {

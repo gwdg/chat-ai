@@ -23,6 +23,9 @@ import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
+import GraphvizDiagram from "./GraphvizDiagram";
+import VegaLiteChart from "./VegaLiteChart";
+import ChartJsChart from "./ChartJsChart";
 import {
   selectHtmlRenderMode,
   selectHtmlLoadExternal,
@@ -37,6 +40,7 @@ import {
 } from "../../../utils/externalRefs";
 import { stripPersonaMarkers } from "../../../utils/personaCatalog";
 import { stripMetaActionMarkers } from "../../../utils/metaActions";
+import { detectJsonDiagram } from "../../../utils/diagramSpec";
 
 // Markdown images load automatically, so keep them on the same origin when
 // external references are disabled. Plain links are not fetched until clicked.
@@ -174,7 +178,7 @@ const MarkdownLink = ({ href, children }) => {
 export const rendererComponents = {
   img: MarkdownImage,
   code({ className, children, node }) {
-    const match = /language-(\w+)/.exec(className || "");
+    const match = /language-([\w.-]+)/.exec(className || "");
     const content = String(children).replace(/\n$/, "");
     const isCodeBlock = node?.parent?.tagName === "pre";
     const hasNewlines = content.includes("\n");
@@ -194,6 +198,29 @@ export const rendererComponents = {
 
     if (language === "mermaid") {
       return <MermaidDiagram content={content} />;
+    }
+
+    if (language === "dot" || language === "graphviz") {
+      return <GraphvizDiagram content={content} language={language} />;
+    }
+
+    if (language === "vega" || language === "vega-lite" || language === "vegalite") {
+      return <VegaLiteChart content={content} language={language} />;
+    }
+
+    if (language === "chart" || language === "chartjs" || language === "chart.js") {
+      return <ChartJsChart content={content} language={language} />;
+    }
+
+    if (language === "json") {
+      const diagram = detectJsonDiagram(content);
+      if (diagram?.type === "vega") {
+        return <VegaLiteChart content={content} language={diagram.language} />;
+      }
+      if (diagram?.type === "chartjs") {
+        return <ChartJsChart content={content} language="chartjs" />;
+      }
+      return <Code language="json">{content}</Code>;
     }
 
     if (language === "html") {

@@ -10,9 +10,15 @@ import {
   setSetTitleOnce,
   selectRenderLatex,
   selectRenderTypst,
+  selectRenderGraphviz,
+  selectRenderVega,
+  selectRenderChartjs,
   selectCollapseReasoningWhileStreaming,
   setRenderLatex,
   setRenderTypst,
+  setRenderGraphviz,
+  setRenderVega,
+  setRenderChartjs,
   setCollapseReasoningWhileStreaming,
   setSuggestUserPrompts,
   selectHtmlRenderMode,
@@ -370,6 +376,9 @@ export function RenderingPreferences() {
   const { t } = useTranslation();
   const renderTypst = useSelector(selectRenderTypst);
   const renderLatex = useSelector(selectRenderLatex);
+  const renderGraphviz = useSelector(selectRenderGraphviz);
+  const renderVega = useSelector(selectRenderVega);
+  const renderChartjs = useSelector(selectRenderChartjs);
   const collapseReasoningWhileStreaming = useSelector(
     selectCollapseReasoningWhileStreaming,
   );
@@ -404,6 +413,24 @@ export function RenderingPreferences() {
         description={t("user_settings.chat_preferences.latex.description")}
         checked={renderLatex}
         onChange={(checked) => dispatch(setRenderLatex(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.graphviz.label")}
+        description={t("user_settings.chat_preferences.graphviz.description")}
+        checked={renderGraphviz}
+        onChange={(checked) => dispatch(setRenderGraphviz(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.vega.label")}
+        description={t("user_settings.chat_preferences.vega.description")}
+        checked={renderVega}
+        onChange={(checked) => dispatch(setRenderVega(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.chartjs.label")}
+        description={t("user_settings.chat_preferences.chartjs.description")}
+        checked={renderChartjs}
+        onChange={(checked) => dispatch(setRenderChartjs(checked))}
       />
       <HtmlRenderPreference />
     </section>

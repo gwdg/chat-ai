@@ -157,6 +157,9 @@ export default function MetaActionCard({
       "user_settings.chat_preferences.html_render.sanitization.label",
     render_typst: "user_settings.chat_preferences.typst.label",
     render_latex: "user_settings.chat_preferences.latex.label",
+    render_graphviz: "user_settings.chat_preferences.graphviz.label",
+    render_vega: "user_settings.chat_preferences.vega.label",
+    render_chartjs: "user_settings.chat_preferences.chartjs.label",
     collapse_reasoning_while_streaming:
       "user_settings.chat_preferences.reasoning_streaming.label",
     document_conversion_mode:

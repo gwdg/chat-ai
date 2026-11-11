@@ -12,6 +12,9 @@ const initialState = {
   set_title_once: true,
   render_typst: false,
   render_latex: false,
+  render_graphviz: false,
+  render_vega: false,
+  render_chartjs: false,
   collapse_reasoning_while_streaming: true,
   document_conversion_mode: "choice",
   conversation_summaries: true,
@@ -55,6 +58,9 @@ function importUserSettingsState(state, incoming) {
     "set_title_once",
     "render_typst",
     "render_latex",
+    "render_graphviz",
+    "render_vega",
+    "render_chartjs",
     "collapse_reasoning_while_streaming",
     "conversation_summaries",
   ]) {
@@ -152,6 +158,18 @@ const userSettingsSlice = createSlice({
       state.render_latex = Boolean(action.payload);
     },
 
+    setRenderGraphviz: (state, action) => {
+      state.render_graphviz = Boolean(action.payload);
+    },
+
+    setRenderVega: (state, action) => {
+      state.render_vega = Boolean(action.payload);
+    },
+
+    setRenderChartjs: (state, action) => {
+      state.render_chartjs = Boolean(action.payload);
+    },
+
     setCollapseReasoningWhileStreaming: (state, action) => {
       state.collapse_reasoning_while_streaming = Boolean(action.payload);
     },
@@ -200,7 +218,8 @@ export const {
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
-  setRenderLatex, setCollapseReasoningWhileStreaming, setDocumentConversionMode,
+  setRenderLatex, setRenderGraphviz, setRenderVega, setRenderChartjs,
+  setCollapseReasoningWhileStreaming, setDocumentConversionMode,
   setConversationSummaries,
   setSendWithEnter, importUserSettings
 } = userSettingsSlice.actions;
@@ -231,6 +250,12 @@ export const selectRenderTypst = (state) =>
   state.user_settings.render_typst ?? false;
 export const selectRenderLatex = (state) =>
   state.user_settings.render_latex ?? false;
+export const selectRenderGraphviz = (state) =>
+  state.user_settings.render_graphviz ?? false;
+export const selectRenderVega = (state) =>
+  state.user_settings.render_vega ?? false;
+export const selectRenderChartjs = (state) =>
+  state.user_settings.render_chartjs ?? false;
 export const selectCollapseReasoningWhileStreaming = (state) =>
   state.user_settings.collapse_reasoning_while_streaming ?? true;
 export const selectDocumentConversionMode = (state) => {

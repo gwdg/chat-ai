@@ -382,6 +382,11 @@ export default {
       step2: "Enable tools.",
       step3: "Select Audio Generation, then describe the audio you want.",
     },
+    diagram_renderers: {
+      title: "Render diagrams from code blocks",
+      step1: "Ask for a fenced code block: ```dot for Graphviz, ```vega-lite for Vega-Lite, or ```chart for a Chart.js JSON config.",
+      step2: "Send the message. The block is rendered locally as an SVG or canvas chart.",
+    },
     mcp_server: {
       title: "Connect an MCP server",
       step1: "Open GWDG Tools from the prompt box.",
@@ -889,6 +894,18 @@ export default {
       render: "Render as Typst",
       show_code: "Show code",
     },
+    graphviz_block: {
+      render: "Render as Graphviz",
+      show_code: "Show code",
+    },
+    vega_block: {
+      render: "Render as Vega-Lite",
+      show_code: "Show code",
+    },
+    chartjs_block: {
+      render: "Render as Chart.js",
+      show_code: "Show code",
+    },
     latex_block: {
       render: "Render as LaTeX",
       show_code: "Show code",
@@ -1091,6 +1108,21 @@ export default {
         label: "Render LaTeX blocks",
         description:
           "Choose whether LaTeX code blocks are rendered by default. You can still render or show code for each block.",
+      },
+      graphviz: {
+        label: "Render Graphviz diagrams",
+        description:
+          "Render ```dot and ```graphviz blocks locally. The first render downloads the Graphviz engine (about 1.4 MB) after your confirmation.",
+      },
+      vega: {
+        label: "Render Vega-Lite charts",
+        description:
+          "Render ```vega-lite and ```vega blocks locally. External data URLs stay blocked unless external references are enabled.",
+      },
+      chartjs: {
+        label: "Render Chart.js charts",
+        description:
+          "Render ```chart and ```chartjs blocks locally from a Chart.js JSON configuration.",
       },
       reasoning_streaming: {
         label: "Keep reasoning collapsed while streaming",
@@ -1458,6 +1490,20 @@ export default {
     feature_typst: "Typst",
     feature_latex: "LaTeX",
     feature_tikz: "TikZ",
+    feature_graphviz: "Graphviz",
+  },
+  graphviz: {
+    rendering: "Rendering Graphviz diagram...",
+    render_error: "Failed to render Graphviz diagram.",
+  },
+  vega: {
+    rendering: "Rendering chart...",
+    render_error: "Failed to render Vega-Lite chart.",
+    external_blocked: "This chart loads external data from {{url}}. Enable external references to render it.",
+  },
+  chartjs: {
+    rendering: "Rendering chart...",
+    render_error: "Failed to render Chart.js chart.",
   },
   // Announcement
   announcement: "",
