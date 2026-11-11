@@ -8,8 +8,9 @@ import {
 } from "../../../Redux/reducers/userSettingsReducer";
 import { sanitizeExternalRefs } from "../../../utils/externalRefs";
 import { grantWasmConsent, useWasmConsent } from "../../../hooks/useWasmConsent";
+import { downloadSvg, renderedFilename } from "../../../utils/download";
 import Code from "./Code";
-import RenderCodeToggle from "./RenderCodeToggle";
+import RenderToolbar from "./RenderToolbar";
 import WasmDownloadPrompt from "./WasmDownloadPrompt";
 
 const CACHE_LIMIT = 50;
@@ -100,11 +101,17 @@ const GraphvizDiagram = memo(({ content, language = "dot" }) => {
 
   return (
     <div className="relative my-2">
-      <RenderCodeToggle
+      <RenderToolbar
         showCode={showCode}
         onToggle={() => setShowCode((prev) => !prev)}
         renderLabel={t("conversation.graphviz_block.render")}
         showCodeLabel={t("conversation.graphviz_block.show_code")}
+        onDownload={
+          !showCode && svg
+            ? () => downloadSvg(svg, renderedFilename("graphviz", "svg"))
+            : undefined
+        }
+        downloadLabel={t("conversation.download_rendered")}
       />
 
       {showCode ? (

@@ -2,8 +2,9 @@ import { memo, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { selectRenderChartjs } from "../../../Redux/reducers/userSettingsReducer";
+import { downloadCanvas, renderedFilename } from "../../../utils/download";
 import Code from "./Code";
-import RenderCodeToggle from "./RenderCodeToggle";
+import RenderToolbar from "./RenderToolbar";
 
 let chartPromise;
 let chartRegistered = false;
@@ -27,6 +28,7 @@ const ChartJsChart = memo(({ content, language = "chart" }) => {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
   const [showCode, setShowCode] = useState(!chartjsEnabled);
+  const [rendered, setRendered] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -43,6 +45,7 @@ const ChartJsChart = memo(({ content, language = "chart" }) => {
     let cancelled = false;
     const canvas = canvasRef.current;
     setError("");
+    setRendered(false);
 
     const timer = setTimeout(async () => {
       try {
@@ -50,6 +53,7 @@ const ChartJsChart = memo(({ content, language = "chart" }) => {
         const Chart = await loadChart();
         if (cancelled || !canvas) return;
         chartRef.current = new Chart(canvas, config);
+        setRendered(true);
       } catch (err) {
         console.error("Chart.js rendering error:", err);
         if (!cancelled) setError(err?.message || t("chartjs.render_error"));
@@ -67,13 +71,21 @@ const ChartJsChart = memo(({ content, language = "chart" }) => {
   const codeContent = String(content || "").replace(/\n$/, "");
   if (!codeContent.trim()) return null;
 
+  const handleDownload = () => {
+    if (canvasRef.current) {
+      downloadCanvas(canvasRef.current, renderedFilename("chart", "png"));
+    }
+  };
+
   return (
     <div className="relative my-2">
-      <RenderCodeToggle
+      <RenderToolbar
         showCode={showCode}
         onToggle={() => setShowCode((prev) => !prev)}
         renderLabel={t("conversation.chartjs_block.render")}
         showCodeLabel={t("conversation.chartjs_block.show_code")}
+        onDownload={!showCode && rendered ? handleDownload : undefined}
+        downloadLabel={t("conversation.download_rendered")}
       />
 
       {showCode ? (

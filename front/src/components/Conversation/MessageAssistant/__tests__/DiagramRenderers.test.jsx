@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ChartJsChart from "../ChartJsChart";
 import GraphvizDiagram from "../GraphvizDiagram";
@@ -15,6 +15,9 @@ const mocks = vi.hoisted(() => ({
   embed: vi.fn(async () => ({ view: { finalize: vi.fn() } })),
   chartConstructor: vi.fn(),
   chartDestroy: vi.fn(),
+  downloadSvg: vi.fn(),
+  downloadHtml: vi.fn(),
+  downloadCanvas: vi.fn(),
 }));
 
 vi.mock("react-redux", () => ({
@@ -30,6 +33,12 @@ vi.mock("@viz-js/viz", () => ({
 }));
 vi.mock("vega-embed", () => ({
   default: mocks.embed,
+}));
+vi.mock("../../../../utils/download", () => ({
+  downloadSvg: mocks.downloadSvg,
+  downloadHtml: mocks.downloadHtml,
+  downloadCanvas: mocks.downloadCanvas,
+  renderedFilename: (base, extension) => `${base}.${extension}`,
 }));
 vi.mock("chart.js", () => {
   class Chart {
@@ -52,6 +61,8 @@ describe("diagram renderers", () => {
     mocks.embed.mockClear();
     mocks.chartConstructor.mockClear();
     mocks.chartDestroy.mockClear();
+    mocks.downloadSvg.mockClear();
+    mocks.downloadCanvas.mockClear();
   });
 
   it("renders sanitized Graphviz SVG", async () => {
@@ -64,6 +75,12 @@ describe("diagram renderers", () => {
     expect(mocks.graphvizRender).toHaveBeenCalledWith(
       "digraph { a -> b }",
       { format: "svg", engine: "dot" },
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Download rendered document" }));
+    expect(mocks.downloadSvg).toHaveBeenCalledWith(
+      expect.any(String),
+      "graphviz.svg",
     );
   });
 

@@ -886,6 +886,7 @@ export default {
     reasoning_received_words_one: "{{count}} word received",
     reasoning_received_words_other: "{{count}} words received",
     action: "Action",
+    download_rendered: "Download rendered document",
     html_block: {
       render: "Render HTML",
       show_code: "Show code",

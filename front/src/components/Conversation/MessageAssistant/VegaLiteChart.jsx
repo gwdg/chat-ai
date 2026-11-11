@@ -6,8 +6,9 @@ import {
   selectRenderVega,
 } from "../../../Redux/reducers/userSettingsReducer";
 import { isExternalUrl } from "../../../utils/externalRefs";
+import { downloadSvg, renderedFilename } from "../../../utils/download";
 import Code from "./Code";
-import RenderCodeToggle from "./RenderCodeToggle";
+import RenderToolbar from "./RenderToolbar";
 
 const URL_KEYS = new Set(["url", "src", "image", "href"]);
 let embedPromise;
@@ -51,6 +52,7 @@ const VegaLiteChart = memo(({ content, language = "vega-lite" }) => {
   const containerRef = useRef(null);
   const viewRef = useRef(null);
   const [showCode, setShowCode] = useState(!vegaEnabled);
+  const [rendered, setRendered] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -67,6 +69,7 @@ const VegaLiteChart = memo(({ content, language = "vega-lite" }) => {
     let cancelled = false;
     const container = containerRef.current;
     setError("");
+    setRendered(false);
 
     const timer = setTimeout(async () => {
       try {
@@ -90,6 +93,7 @@ const VegaLiteChart = memo(({ content, language = "vega-lite" }) => {
           return;
         }
         viewRef.current = result.view;
+        setRendered(true);
       } catch (err) {
         console.error("Vega-Lite rendering error:", err);
         if (!cancelled) {
@@ -111,13 +115,20 @@ const VegaLiteChart = memo(({ content, language = "vega-lite" }) => {
   const codeContent = String(content || "").replace(/\n$/, "");
   if (!codeContent.trim()) return null;
 
+  const handleDownload = () => {
+    const svg = containerRef.current?.querySelector("svg");
+    if (svg) downloadSvg(svg.outerHTML, renderedFilename("vega-lite", "svg"));
+  };
+
   return (
     <div className="relative my-2">
-      <RenderCodeToggle
+      <RenderToolbar
         showCode={showCode}
         onToggle={() => setShowCode((prev) => !prev)}
         renderLabel={t("conversation.vega_block.render")}
         showCodeLabel={t("conversation.vega_block.show_code")}
+        onDownload={!showCode && rendered ? handleDownload : undefined}
+        downloadLabel={t("conversation.download_rendered")}
       />
 
       {showCode ? (

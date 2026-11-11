@@ -900,6 +900,7 @@ export default {
     reasoning_received_words_one: "{{count}} Wort empfangen",
     reasoning_received_words_other: "{{count}} Wörter empfangen",
     action: "Aktion",
+    download_rendered: "Gerendertes Dokument herunterladen",
     html_block: {
       render: "HTML rendern",
       show_code: "Code anzeigen",

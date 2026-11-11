@@ -1,12 +1,13 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
-import { Code2, Eye } from "lucide-react";
 import DOMPurify from "dompurify";
 import latexWasmUrl from "faster-latex-wasm?url";
 import { selectRenderLatex } from "../../../Redux/reducers/userSettingsReducer";
 import { grantWasmConsent, useWasmConsent } from "../../../hooks/useWasmConsent";
+import { downloadHtml, renderedFilename } from "../../../utils/download";
 import Code from "./Code";
+import RenderToolbar from "./RenderToolbar";
 import WasmDownloadPrompt from "./WasmDownloadPrompt";
 import {
   extractTikz,
@@ -207,26 +208,27 @@ const LatexBlock = memo(
 
     const codeContent = String(content || "").replace(/\n$/, "");
 
+    const handleDownload = () => {
+      const rendered = contentRef.current?.shadowRoot?.innerHTML;
+      const body =
+        rendered ||
+        `<style>${output?.css || ""}${EXTRA_CSS}</style>${output?.html || ""}`;
+      downloadHtml(
+        `<!doctype html><html><head><meta charset="utf-8"></head><body>${body}</body></html>`,
+        renderedFilename("latex", "html")
+      );
+    };
+
     return (
       <div className="relative my-2">
-        <button
-          type="button"
-          onClick={() => setShowCode((prev) => !prev)}
-          aria-pressed={showCode}
-          className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-base-300 bg-base-100 px-2 py-1 text-[11px] font-medium text-base-content/70 shadow-sm transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
-        >
-          {showCode ? (
-            <>
-              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("conversation.latex_block.render")}
-            </>
-          ) : (
-            <>
-              <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("conversation.latex_block.show_code")}
-            </>
-          )}
-        </button>
+        <RenderToolbar
+          showCode={showCode}
+          onToggle={() => setShowCode((prev) => !prev)}
+          renderLabel={t("conversation.latex_block.render")}
+          showCodeLabel={t("conversation.latex_block.show_code")}
+          onDownload={!showCode && output ? handleDownload : undefined}
+          downloadLabel={t("conversation.download_rendered")}
+        />
 
         {showCode ? (
           <div className="pt-3">

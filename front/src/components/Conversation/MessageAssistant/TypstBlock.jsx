@@ -1,13 +1,14 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
-import { Code2, Eye } from "lucide-react";
 import DOMPurify from "dompurify";
 import compilerWasmUrl from "@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm?url";
 import rendererWasmUrl from "@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm?url";
 import { selectRenderTypst } from "../../../Redux/reducers/userSettingsReducer";
 import { grantWasmConsent, useWasmConsent } from "../../../hooks/useWasmConsent";
+import { downloadSvg, renderedFilename } from "../../../utils/download";
 import Code from "./Code";
+import RenderToolbar from "./RenderToolbar";
 import WasmDownloadPrompt from "./WasmDownloadPrompt";
 
 const CACHE_LIMIT = 50;
@@ -216,24 +217,18 @@ const TypstBlock = memo(
 
     return (
       <div className="relative my-2">
-        <button
-          type="button"
-          onClick={() => setShowCode((prev) => !prev)}
-          aria-pressed={showCode}
-          className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-base-300 bg-base-100 px-2 py-1 text-[11px] font-medium text-base-content/70 shadow-sm transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
-        >
-          {showCode ? (
-            <>
-              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("conversation.typst_block.render")}
-            </>
-          ) : (
-            <>
-              <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("conversation.typst_block.show_code")}
-            </>
-          )}
-        </button>
+        <RenderToolbar
+          showCode={showCode}
+          onToggle={() => setShowCode((prev) => !prev)}
+          renderLabel={t("conversation.typst_block.render")}
+          showCodeLabel={t("conversation.typst_block.show_code")}
+          onDownload={
+            !showCode && svg
+              ? () => downloadSvg(svg, renderedFilename("typst", "svg"))
+              : undefined
+          }
+          downloadLabel={t("conversation.download_rendered")}
+        />
 
         {showCode ? (
           <div className="pt-3">
