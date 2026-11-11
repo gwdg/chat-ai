@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router";
-import { Ai } from "@carbon/icons-react";
+import { AiLabel } from "@carbon/icons-react";
 
 import { getDefaultConversation } from "../utils/conversationUtils";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
@@ -200,7 +200,7 @@ export default function MetaChatPage() {
 
           <div className="flex min-h-0 min-w-0 flex-col">
             <div className="mx-auto mb-2 flex w-full md:max-w-[85vw] xl:max-w-[1300px] items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 shadow-sm">
-              <Ai
+              <AiLabel
                 size={16}
                 className="mt-0.5 shrink-0 text-warning"
                 aria-hidden="true"

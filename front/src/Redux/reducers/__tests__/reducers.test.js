@@ -22,6 +22,7 @@ import interfaceSettingsReducer, {
   toggleTheme,
   selectAgreeWebSearch,
   selectConversationGrouping,
+  selectSuppressedTutorials,
 } from "../interfaceSettingsSlice";
 
 const init = (reducer) => reducer(undefined, { type: "@@INIT" });
@@ -90,6 +91,13 @@ describe("user settings reducer", () => {
   it("falls back to safe selector values", () => {
     expect(selectMemoryMode({ user_settings: { memory_mode: 99 } })).toBe(0);
     expect(selectConversationSummaries({ user_settings: {} })).toBe(true);
+  });
+
+  it("returns a stable empty list for old interface settings", () => {
+    const state = { interface_settings: {} };
+    expect(selectSuppressedTutorials(state)).toBe(
+      selectSuppressedTutorials(state),
+    );
   });
 });
 

@@ -145,12 +145,15 @@ export const selectConversationGrouping = (state) => {
   const grouping = state.interface_settings.conversation_grouping;
   return ["date", "created"].includes(grouping) ? grouping : "topic";
 };
+// Stable empty arrays keep useSelector from reporting a new snapshot for old,
+// persisted state that predates these lists.
+const EMPTY_LIST = [];
 export const selectCompletedTutorials = (state) =>
-  state.interface_settings.completed_tutorials ?? [];
+  state.interface_settings.completed_tutorials ?? EMPTY_LIST;
 export const selectCompletedUseCases = (state) =>
-  state.interface_settings.completed_use_cases ?? [];
+  state.interface_settings.completed_use_cases ?? EMPTY_LIST;
 export const selectSuppressedTutorials = (state) =>
-  state.interface_settings.suppressed_tutorials ?? [];
+  state.interface_settings.suppressed_tutorials ?? EMPTY_LIST;
 export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,

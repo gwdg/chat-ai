@@ -8,7 +8,11 @@ import { selectRenderLatex } from "../../../Redux/reducers/userSettingsReducer";
 import { grantWasmConsent, useWasmConsent } from "../../../hooks/useWasmConsent";
 import Code from "./Code";
 import WasmDownloadPrompt from "./WasmDownloadPrompt";
-import { extractTikz, renderTikzSnippets } from "./tikzRenderer";
+import {
+  extractTikz,
+  formatLatexError,
+  renderTikzSnippets,
+} from "./tikzRenderer";
 
 const CACHE_LIMIT = 50;
 // faster-latex WASM (~0.4 MB); TikZJax adds its engine, fonts and CSS (~6.8 MB).
@@ -241,9 +245,9 @@ const LatexBlock = memo(
           <div className="pt-3 p-2 text-error">
             {t("latex.render_error")}
             {errorMessage && (
-              <div className="mt-1 font-mono text-xs break-words">
-                {errorMessage}
-              </div>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-base-200 p-2 font-mono text-xs">
+                {formatLatexError(errorMessage)}
+              </pre>
             )}
             <pre className="mt-2 text-xs bg-base-200 p-2 rounded overflow-x-auto">
               {codeContent}

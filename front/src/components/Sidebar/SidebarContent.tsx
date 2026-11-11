@@ -10,7 +10,7 @@ import {
 } from "@headlessui/react";
 
 import {
-  Ai,
+  AiLabel,
   ArrangeHorizontal,
   Calendar,
   Checkmark,
@@ -778,7 +778,7 @@ export default function SidebarContent({
                 aria-label={t("meta_chat.open")}
                 title={t("meta_chat.open")}
               >
-                <Ai size={16} />
+                <AiLabel size={16} />
               </button>
               <button
                 type="button"
