@@ -1478,6 +1478,7 @@ export default {
       "Failed to render Typst document. Showing source instead:",
   },
   latex: {
+    download_failed: "Failed to download the LaTeX document.",
     rendering: "Rendering LaTeX document...",
     render_error:
       "Failed to render LaTeX document. Showing source instead:",

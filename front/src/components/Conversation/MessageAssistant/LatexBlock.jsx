@@ -5,6 +5,7 @@ import DOMPurify from "dompurify";
 import latexWasmUrl from "faster-latex-wasm?url";
 import { selectRenderLatex } from "../../../Redux/reducers/userSettingsReducer";
 import { grantWasmConsent, useWasmConsent } from "../../../hooks/useWasmConsent";
+import { useToast } from "../../../hooks/useToast";
 import { downloadHtml, renderedFilename } from "../../../utils/download";
 import Code from "./Code";
 import RenderToolbar from "./RenderToolbar";
@@ -109,6 +110,7 @@ const renderLatex = async (source) => {
 const LatexBlock = memo(
   ({ content, language = "latex", defaultRender = true }) => {
     const { t } = useTranslation();
+    const { notifyError } = useToast();
     const renderLatexEnabled = useSelector(selectRenderLatex);
     const latexConsent = useWasmConsent("latex");
     const tikzConsent = useWasmConsent("tikz");
@@ -209,10 +211,7 @@ const LatexBlock = memo(
     const codeContent = String(content || "").replace(/\n$/, "");
 
     const handleDownload = () => {
-      const rendered = contentRef.current?.shadowRoot?.innerHTML;
-      const body =
-        rendered ||
-        `<style>${output?.css || ""}${EXTRA_CSS}</style>${output?.html || ""}`;
+      const body = `<style>${output?.css || ""}${EXTRA_CSS}</style>${output?.html || ""}`;
       downloadHtml(
         `<!doctype html><html><head><meta charset="utf-8"></head><body>${body}</body></html>`,
         renderedFilename("latex", "html")

@@ -1500,6 +1500,7 @@ export default {
       "Typst-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
   },
   latex: {
+    download_failed: "Das LaTeX-Dokument konnte nicht heruntergeladen werden.",
     rendering: "LaTeX-Dokument wird gerendert...",
     render_error:
       "LaTeX-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",

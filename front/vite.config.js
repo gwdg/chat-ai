@@ -212,6 +212,10 @@ export default defineConfig({
         find: /^faster-latex-wasm/,
         replacement: path.join(fasterLatexRoot, "web/faster_latex_bg.wasm"),
       },
+      {
+        find: /^html2canvas$/,
+        replacement: path.resolve(__dirname, "src/utils/emptyHtml2canvas.js"),
+      },
     ],
   },
   optimizeDeps: {
