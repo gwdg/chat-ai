@@ -48,7 +48,7 @@ export const featureGuides = {
   upload_file: {
     titleKey: "feature_guide.upload_file.title",
     prompt:
-      "Attach a file to the current chat. The paperclip button in the prompt box opens the file picker. After attaching, PDF and DOCX files may need to be processed. Then add a message and send it.",
+      "Attach a file to the current chat. The paperclip button in the prompt box opens the file picker. After attaching, PDF and DOCX files may need to be processed, unless the selected model supports binary file input. Then add a message and send it.",
     keywords: ["attach", "attachment", "upload"],
     steps: [
       {

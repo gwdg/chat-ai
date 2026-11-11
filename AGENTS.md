@@ -322,6 +322,17 @@ runs in the package's blob worker first; if the worker cannot be created (for ex
 CSP) it retries on the main thread. The PDFium WASM is imported with `?url` so Vite emits it as an
 app asset.
 
+A model can accept binary documents directly instead of requiring conversion.
+`utils/modelCapabilities.js#modelSupportsFileType` treats a specific `pdf`/`docx` as supported when
+`input` (or `capabilities`) contains a generic `file`, `files`, `binary`, `document` or `documents`
+modality, or the matching type (`pdf`; `docx`/`word`/`wordprocessingml`), or when the model object /
+`config/models/<id>.json` sets `supports_binary`, `supports_binary_data`, `supports_binary_input` or
+`supports_file_input`. In that case an unprocessed file of that type is sent as an OpenAI `file`
+content part (`{ type: "file", file: { file_data, filename } }`), `Prompt.jsx` does not block the
+send, and `Attachment.jsx` still offers the Process buttons but without the "must process" warning.
+Without the capability the previous behaviour applies: `Prompt.jsx` blocks, and
+`processContentItems` drops an unprocessed PDF (and falls back to text for DOCX).
+
 ### 4.14 Prompt submission key is a user setting
 
 `user_settings.send_with_enter` controls whether plain Enter or Shift+Enter submits the prompt:

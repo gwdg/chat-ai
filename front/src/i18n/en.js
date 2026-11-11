@@ -862,6 +862,7 @@ export default {
       process_browser: "Process (browser)",
       process_server: "Process (server)",
       must_process: "File must be processed",
+      optional_process: "Optional: convert to text",
     },
     reasoning: "Reasoning Process",
     copy_reasoning: "Copy reasoning process",

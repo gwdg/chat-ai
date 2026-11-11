@@ -876,6 +876,7 @@ export default {
       process_browser: "Im Browser verarbeiten",
       process_server: "Auf dem Server verarbeiten",
       must_process: "Datei muss verarbeitet werden",
+      optional_process: "Optional: in Text umwandeln",
     },
     reasoning: "Denkprozess",
     copy_reasoning: "Denkprozess kopieren",
