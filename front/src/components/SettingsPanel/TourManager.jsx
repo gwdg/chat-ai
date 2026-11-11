@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import Joyride from "react-joyride-react-19";
 import { useDispatch, useSelector } from "react-redux";
 import { useWindowSize } from "../../hooks/useWindowSize";
 import { useModal } from "../../modals/ModalContext";
@@ -10,6 +9,9 @@ import {
   toggleSettings,
   toggleSidebar,
 } from "../../Redux/reducers/interfaceSettingsSlice";
+
+// Joyride only loads once a tour actually runs.
+const Joyride = lazy(() => import("react-joyride-react-19"));
 
 export default function TourManager() {
   const { t } = useTranslation();
@@ -162,6 +164,7 @@ export default function TourManager() {
   if (!(showTour && tourReady && targetsReady)) return null;
 
   return (
+    <Suspense fallback={null}>
     <Joyride
       steps={tourSteps}
       run={runTour}
@@ -226,5 +229,6 @@ export default function TourManager() {
         },
       }}
     />
+    </Suspense>
   );
 }

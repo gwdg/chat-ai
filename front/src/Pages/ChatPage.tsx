@@ -52,6 +52,19 @@ export default function ChatPage() {
   // Connect to the conversation's MCP servers before the first message, so a turn does not
   // wait for it. Debounced, as the list changes with every keystroke while a URL is typed.
   const mcpServers = JSON.stringify(isAgentEnabled() ? activeMcpServers(localState?.settings) : []);
+  // The agent loop is a large lazy chunk; fetch it while idle so the first
+  // message does not wait for it.
+  useEffect(() => {
+    if (!isAgentEnabled()) return;
+    const load = () => void import("../agent/runAgent").catch(() => {});
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(load, { timeout: 5000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(load, 2000);
+    return () => window.clearTimeout(id);
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => prefetchMcpServers(JSON.parse(mcpServers)), 500);
     return () => clearTimeout(timer);

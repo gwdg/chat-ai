@@ -1,7 +1,36 @@
 import { memo, useCallback, useState, useMemo, useRef, useEffect } from "react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import CodeCopyBtn from "../../Others/CodeCopyBtn";
+
+// PrismAsyncLight fetches the Prism core and each grammar on first use, but
+// its loader map only knows canonical names, so resolve common aliases here.
+const LANGUAGE_ALIASES = {
+  js: "javascript", mjs: "javascript", cjs: "javascript", node: "javascript",
+  ts: "typescript", mts: "typescript",
+  py: "python", python3: "python",
+  sh: "bash", shell: "bash", zsh: "bash", console: "bash", shellsession: "bash",
+  yml: "yaml",
+  html: "markup", xml: "markup", svg: "markup", xhtml: "markup", vue: "markup",
+  md: "markdown",
+  cs: "csharp", dotnet: "csharp",
+  "c++": "cpp", hpp: "cpp", cc: "cpp",
+  golang: "go",
+  rs: "rust",
+  rb: "ruby",
+  kt: "kotlin", kts: "kotlin",
+  ps1: "powershell", ps: "powershell",
+  dockerfile: "docker",
+  objc: "objectivec",
+  tex: "latex",
+  jsonc: "json", json5: "json",
+  patch: "diff",
+};
+
+const resolveLanguage = (language) => {
+  const lang = (language || "text").toLowerCase();
+  return LANGUAGE_ALIASES[lang] || lang;
+};
 
 const highlightCache = new Map();
 const CACHE_LIMIT = 200;
@@ -37,7 +66,7 @@ const Code = memo(({ language, children }) => {
       <SyntaxHighlighter
         style={vscDarkPlus}
         className="custom-syntax-highlighter !bg-transparent"
-        language={language || "text"}
+        language={resolveLanguage(language)}
         PreTag="div"
         wrapLines={true}
         wrapLongLines={true}
