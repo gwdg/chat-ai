@@ -345,9 +345,11 @@ both i18n files, and the export/import path.
 
 ### 4.15 Sidebar conversation grouping is a persisted interface setting
 
-`interface_settings.conversation_grouping` is `"topic"` (default), `"date"`, or `"created"`. The
-sort menu in `SidebarContent` dispatches `setConversationGrouping`, and `TopicList` receives the
-value as `grouping` to render either topic rows or a date-bucket tree. `date` uses
+`interface_settings.conversation_grouping` is `"topic"` (default), `"date"`, `"created"`, or
+`"size"`. The sort menu in `SidebarContent` dispatches `setConversationGrouping`, and `TopicList`
+receives the value as `grouping` to render either topic rows or a date-bucket tree. `size` bypasses
+`TopicList` and renders all chats as a flat list sorted by their OPFS browser-workspace size.
+`date` uses
 `groupConversationsByDate` (modified time); `created` uses `groupConversationsByCreationDate`. Both
 date-like modes show a non-collapsible parent label; their date buckets sit at the top level and are
 collapsible. Collapse state reuses `collapsed_topics` with `__by_date__` / `__by_created__`

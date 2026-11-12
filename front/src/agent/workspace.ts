@@ -32,6 +32,27 @@ async function conversationsDir() {
   return opfs.getDirectoryHandle("conversations", { create: true });
 }
 
+async function directorySize(dir: FileSystemDirectoryHandle): Promise<number> {
+  let total = 0;
+  // @ts-expect-error entries() is missing from older DOM typings
+  for await (const [, handle] of dir.entries()) {
+    if (handle.kind === "file") total += (await handle.getFile()).size;
+    else total += await directorySize(handle);
+  }
+  return total;
+}
+
+/** Bytes stored in this conversation's browser (OPFS) workspace. */
+export async function getWorkspaceSize(conversationId: string): Promise<number> {
+  try {
+    const opfs = await navigator.storage.getDirectory();
+    const root = await opfs.getDirectoryHandle("conversations");
+    return await directorySize(await root.getDirectoryHandle(conversationId));
+  } catch {
+    return 0;
+  }
+}
+
 export async function getWorkspace(conversationId: string): Promise<MountFs> {
   let fs = workspaces.get(conversationId);
   if (!fs) {

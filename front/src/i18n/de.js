@@ -67,11 +67,14 @@ export default {
     uncategorized: "Nicht zugeordnete Chats",
     by_date: "Alle Chats nach Datum",
     by_created: "Alle Chats nach Erstellungsdatum",
+    by_size: "Alle Chats nach Speichergröße",
     sort_label: "Chats sortieren",
     sort_by_topic: "Nach Thema",
     sort_by_date: "Nach Datum",
     sort_by_created: "Nach Erstellungsdatum",
+    sort_by_size: "Nach Speichergröße",
     modified: "Geändert {{date}}",
+    storage_size: "Browserspeicher {{size}}",
     dateBuckets: {
       today: "Heute",
       yesterday: "Gestern",
@@ -446,7 +449,8 @@ export default {
     sort_group_chats: {
       title: "Chats sortieren und gruppieren",
       step1: "Öffnen Sie das Sortiermenü in der Seitenleiste.",
-      step2: "Wählen Sie die Gruppierung nach Thema, Datum oder Erstellungsdatum.",
+      step2:
+        "Wählen Sie die Gruppierung nach Thema, Datum, Erstellungsdatum oder Browserspeichergröße.",
     },
     pin_chat: {
       title: "Einen Chat anheften",

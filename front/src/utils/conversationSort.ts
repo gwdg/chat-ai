@@ -3,7 +3,8 @@ export type ConversationSortOrder =
   | "created_asc"
   | "updated_desc"
   | "title_asc"
-  | "title_desc";
+  | "title_desc"
+  | "size_desc";
 
 export const DEFAULT_CONVERSATION_SORT: ConversationSortOrder = "created_desc";
 
@@ -11,6 +12,7 @@ type SortableConversation = {
   title?: string | null;
   createdAt: number;
   lastModified?: number;
+  storageSize?: number;
 };
 
 export function sortConversations<T extends SortableConversation>(
@@ -39,6 +41,12 @@ export function sortConversations<T extends SortableConversation>(
       return sorted.sort((a, b) => collator.compare(titleOf(a), titleOf(b)));
     case "title_desc":
       return sorted.sort((a, b) => collator.compare(titleOf(b), titleOf(a)));
+    case "size_desc":
+      return sorted.sort(
+        (a, b) =>
+          (b.storageSize ?? 0) - (a.storageSize ?? 0) ||
+          b.createdAt - a.createdAt,
+      );
     case "created_desc":
     default:
       return sorted.sort((a, b) => b.createdAt - a.createdAt);

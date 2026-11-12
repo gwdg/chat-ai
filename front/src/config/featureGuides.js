@@ -508,8 +508,8 @@ export const featureGuides = {
   sort_group_chats: {
     titleKey: "feature_guide.sort_group_chats.title",
     prompt:
-      "Sort and group chats by topic, date, or creation date from the sidebar sort menu.",
-    keywords: ["sort chats", "group chats", "grouping", "sort by date", "sort"],
+      "Sort and group chats by topic, date, creation date, or browser storage size from the sidebar sort menu.",
+    keywords: ["sort chats", "group chats", "grouping", "sort by date", "sort by size", "storage size"],
     steps: [
       {
         target: '[data-guide="sort-chats"]',
@@ -1223,7 +1223,7 @@ const germanGuideKeywords = {
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],
   manage_topics: ["thema", "themen", "topic", "themen erstell", "chats organisier"],
-  sort_group_chats: ["chats sortier", "chats gruppier", "sortier", "gruppier", "nach datum sortier"],
+  sort_group_chats: ["chats sortier", "chats gruppier", "sortier", "gruppier", "nach datum sortier", "speichergröße", "nach größe sortier"],
   sort_organize: ["sortieren", "organisieren", "sort & organize", "chats aufräum", "chats organisier", "themen vorschlag", "ki organisation", "duplikate finden", "chats umbenenn", "sortieren und organisieren"],
   export_conversation: ["chat exportier", "unterhaltung exportier", "chat herunterlad", "chat speicher", "exportier"],
   import_conversation: ["chat importier", "unterhaltung importier", "importier", "chat wiederherstell"],

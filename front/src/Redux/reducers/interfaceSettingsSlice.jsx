@@ -92,7 +92,7 @@ const interfaceSettingsSlice = createSlice({
       state.conversation_sort = action.payload;
     },
     setConversationGrouping: (state, action) => {
-      if (["topic", "date", "created"].includes(action.payload)) {
+      if (["topic", "date", "created", "size"].includes(action.payload)) {
         state.conversation_grouping = action.payload;
       }
     },
@@ -143,7 +143,7 @@ export const selectConversationSort = (state) =>
   state.interface_settings.conversation_sort ?? "created_desc";
 export const selectConversationGrouping = (state) => {
   const grouping = state.interface_settings.conversation_grouping;
-  return ["date", "created"].includes(grouping) ? grouping : "topic";
+  return ["date", "created", "size"].includes(grouping) ? grouping : "topic";
 };
 // Stable empty arrays keep useSelector from reporting a new snapshot for old,
 // persisted state that predates these lists.

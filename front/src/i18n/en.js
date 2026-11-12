@@ -67,11 +67,14 @@ export default {
     uncategorized: "Unsorted Chats",
     by_date: "All chats by date",
     by_created: "All chats by creation date",
+    by_size: "All chats by storage size",
     sort_label: "Sort chats",
     sort_by_topic: "By topic",
     sort_by_date: "By date",
     sort_by_created: "By creation date",
+    sort_by_size: "By storage size",
     modified: "Modified {{date}}",
+    storage_size: "Browser storage {{size}}",
     dateBuckets: {
       today: "Today",
       yesterday: "Yesterday",
@@ -431,7 +434,8 @@ export default {
     sort_group_chats: {
       title: "Sort and group chats",
       step1: "Open the sort menu in the sidebar.",
-      step2: "Choose grouping by topic, date, or creation date.",
+      step2:
+        "Choose grouping by topic, date, creation date, or browser storage size.",
     },
     pin_chat: {
       title: "Pin a chat",

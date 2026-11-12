@@ -164,8 +164,10 @@ describe("interface settings reducer", () => {
     let state = init(interfaceSettingsReducer);
     state = interfaceSettingsReducer(state, setConversationGrouping("date"));
     expect(selectConversationGrouping({ interface_settings: state })).toBe("date");
+    state = interfaceSettingsReducer(state, setConversationGrouping("size"));
+    expect(selectConversationGrouping({ interface_settings: state })).toBe("size");
     state = interfaceSettingsReducer(state, setConversationGrouping("invalid"));
-    expect(selectConversationGrouping({ interface_settings: state })).toBe("date");
+    expect(selectConversationGrouping({ interface_settings: state })).toBe("size");
   });
 
   it("tracks completed and suppressed tutorials without duplicates", () => {
