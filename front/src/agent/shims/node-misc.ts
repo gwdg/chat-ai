@@ -40,6 +40,8 @@ export const createRequire = () =>
 export const promisify = (fn: unknown) => fn;
 export const inspect = (v: unknown) => String(v);
 export const stripVTControlCharacters = (s: string) => s;
+export const TextDecoder = globalThis.TextDecoder;
+export const TextEncoder = globalThis.TextEncoder;
 // crypto
 export const randomUUID = () => crypto.randomUUID();
 export const randomBytes = (n: number) => crypto.getRandomValues(new Uint8Array(n));
