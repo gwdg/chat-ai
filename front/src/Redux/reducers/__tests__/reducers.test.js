@@ -16,7 +16,9 @@ import userSettingsReducer, {
   selectRenderChartjs,
   selectConversationSummaries,
   selectCollapseReasoningWhileStreaming,
+  selectShowTimestamps,
   setCollapseReasoningWhileStreaming,
+  setShowTimestamps,
 } from "../userSettingsReducer";
 import interfaceSettingsReducer, {
   agreeWebSearch,
@@ -94,9 +96,24 @@ describe("user settings reducer", () => {
     expect(state.collapse_reasoning_while_streaming).toBe(true);
   });
 
+  it("toggles message timestamps and imports them", () => {
+    let state = init(userSettingsReducer);
+    expect(selectShowTimestamps({ user_settings: state })).toBe(false);
+
+    state = userSettingsReducer(state, setShowTimestamps(true));
+    expect(selectShowTimestamps({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ show_timestamps: false }),
+    );
+    expect(selectShowTimestamps({ user_settings: state })).toBe(false);
+  });
+
   it("falls back to safe selector values", () => {
     expect(selectMemoryMode({ user_settings: { memory_mode: 99 } })).toBe(0);
     expect(selectConversationSummaries({ user_settings: {} })).toBe(true);
+    expect(selectShowTimestamps({ user_settings: {} })).toBe(false);
   });
 
   it("toggles diagram rendering preferences and imports them", () => {

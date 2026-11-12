@@ -451,17 +451,30 @@ const sendMessage = async ({
       return;
     }
     // Pushing message into conversation history
-    setLocalState((prev) => ({
-      ...prev,
-      // Add two new placeholder messages
-      messages: [
-        ...prev.messages,
-        { role: "assistant", content: [{ type: "text", text: ""}], loading: true },
-        { role: "user", content: [{ type: "text", text: "" }] },
-      ],
-      hasFirstPrompt: true,
-      flush: true // Save to DB immediately
-    }));
+    setLocalState((prev) => {
+      const now = Date.now();
+      const messages = [...prev.messages];
+      const lastIndex = messages.length - 1;
+      if (messages[lastIndex]?.role === "user" && !messages[lastIndex].createdAt) {
+        messages[lastIndex] = { ...messages[lastIndex], createdAt: now };
+      }
+      return {
+        ...prev,
+        // Add two new placeholder messages
+        messages: [
+          ...messages,
+          {
+            role: "assistant",
+            content: [{ type: "text", text: "" }],
+            loading: true,
+            createdAt: now,
+          },
+          { role: "user", content: [{ type: "text", text: "" }] },
+        ],
+        hasFirstPrompt: true,
+        flush: true // Save to DB immediately
+      };
+    });
 
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
@@ -571,6 +584,7 @@ const sendMessage = async ({
             const messages = [...prev.messages];
             if (!messages[assistantIndex]) return prev;
             messages[assistantIndex] = {
+              ...messages[assistantIndex],
               role: "assistant",
               content: currentContent,
               loading: true,
@@ -603,6 +617,7 @@ const sendMessage = async ({
           const messages = [...prev.messages];
           if (!messages[assistantIndex]) return prev;
           messages[assistantIndex] = {
+            ...messages[assistantIndex],
             role: "assistant",
             content: currentContent,
             loading: true,
@@ -635,6 +650,7 @@ const sendMessage = async ({
           }
           const messages = [...prev.messages];
           messages[messages.length - 2] = {
+            ...messages[messages.length - 2],
             role: "assistant",
             content: [{ type: "text", text }, ...files],
             loading: true,
@@ -723,7 +739,7 @@ const sendMessage = async ({
         if (prev.id !== conversationId) {
           // Handle save when conversation is not active, ideally save directly into DB (TODO)
           const messages = [...localState.messages,
-            { role: "assistant", content: responseContent, loading: false, meta },
+            { role: "assistant", content: responseContent, loading: false, meta, createdAt: Date.now() },
             { role: "user", content: [{ type: "text", text: "" }] },
           ];
           updateConversation(
@@ -737,6 +753,7 @@ const sendMessage = async ({
         const messages = [...prev.messages];
         if (!messages[assistantIndex]) return prev;
         messages[assistantIndex] = {
+          ...messages[assistantIndex],
           role: "assistant",
           content: responseContent,
           loading: false,

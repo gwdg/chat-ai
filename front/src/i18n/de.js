@@ -508,7 +508,14 @@ export default {
       title: "Chat-Einstellungen öffnen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2:
-        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Darstellung und Dokumentkonvertierung zu ändern.",
+        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Zeitstempel, Darstellung und Dokumentkonvertierung zu ändern.",
+    },
+    message_timestamps: {
+      title: "Zeitstempel für Nachrichten anzeigen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3:
+        "Aktivieren Sie im Abschnitt Nachrichten die Option Zeitstempel für Nachrichten anzeigen, um zu sehen, wann jede Nachricht gesendet wurde.",
     },
     rendering: {
       title: "Darstellung konfigurieren",
@@ -1058,6 +1065,14 @@ export default {
         label: "Zusammenfassungen beim Darüberfahren anzeigen",
         description:
           "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",
+      },
+      messages: {
+        section_label: "Nachrichten",
+        timestamps: {
+          label: "Zeitstempel für Nachrichten anzeigen",
+          description:
+            "Zeigt Datum und Uhrzeit unter jeder Nachricht an, zu der sie gesendet wurde.",
+        },
       },
       submission: {
         label: "Nachricht senden mit",

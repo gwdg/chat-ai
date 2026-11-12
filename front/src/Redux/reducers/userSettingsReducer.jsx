@@ -18,6 +18,7 @@ const initialState = {
   collapse_reasoning_while_streaming: true,
   document_conversion_mode: "choice",
   conversation_summaries: true,
+  show_timestamps: false,
   // null = device default (Enter on desktop, Shift+Enter on mobile).
   send_with_enter: null,
 };
@@ -63,6 +64,7 @@ function importUserSettingsState(state, incoming) {
     "render_chartjs",
     "collapse_reasoning_while_streaming",
     "conversation_summaries",
+    "show_timestamps",
   ]) {
     if (typeof incoming[key] === "boolean") state[key] = incoming[key];
   }
@@ -185,6 +187,10 @@ const userSettingsSlice = createSlice({
       state.conversation_summaries = Boolean(action.payload);
     },
 
+    setShowTimestamps: (state, action) => {
+      state.show_timestamps = Boolean(action.payload);
+    },
+
     setSendWithEnter: (state, action) => {
       state.send_with_enter = Boolean(action.payload);
     },
@@ -220,7 +226,7 @@ export const {
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
   setRenderLatex, setRenderGraphviz, setRenderVega, setRenderChartjs,
   setCollapseReasoningWhileStreaming, setDocumentConversionMode,
-  setConversationSummaries,
+  setConversationSummaries, setShowTimestamps,
   setSendWithEnter, importUserSettings
 } = userSettingsSlice.actions;
 
@@ -264,6 +270,8 @@ export const selectDocumentConversionMode = (state) => {
 };
 export const selectConversationSummaries = (state) =>
   state.user_settings.conversation_summaries ?? true;
+export const selectShowTimestamps = (state) =>
+  state.user_settings.show_timestamps ?? false;
 // null means "use the device default", resolved in the prompt component.
 export const selectSendWithEnter = (state) =>
   state.user_settings.send_with_enter ?? null;

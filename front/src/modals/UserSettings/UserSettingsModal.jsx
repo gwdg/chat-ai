@@ -20,6 +20,7 @@ import {
   ConversationSummaryPreference,
   DocumentConversionPreference,
   MemoryPreference,
+  MessageDisplayPreference,
   RenderingPreferences,
   SubmissionPreference,
   SuggestionPreference,
@@ -145,6 +146,9 @@ export default function UserSettingsModal({
           </div>
           <div className="border-t border-base-300 pt-5">
             <ConversationSummaryPreference />
+          </div>
+          <div className="border-t border-base-300 pt-5">
+            <MessageDisplayPreference />
           </div>
           <div className="border-t border-base-300 pt-5" data-guide="rendering-preference">
             <RenderingPreferences />

@@ -64,6 +64,7 @@ const getDefaultState = () => {
       collapse_reasoning_while_streaming: true,
       document_conversion_mode: "choice",
       conversation_summaries: true,
+      show_timestamps: false,
       send_with_enter: null,
     },
   };

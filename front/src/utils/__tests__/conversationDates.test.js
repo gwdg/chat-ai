@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatCompactDate,
   formatFullTimestamp,
+  formatMessageTimestamp,
   formatModifiedTime,
   formatRelativeTime,
   getDateBucket,
@@ -58,5 +59,7 @@ describe("conversation dates and sorting", () => {
     expect(formatRelativeTime(now - 30 * day, "en", now)).not.toBe("");
     expect(formatFullTimestamp(0, "en")).toBe("");
     expect(formatFullTimestamp(now, "en")).not.toBe("");
+    expect(formatMessageTimestamp(0, "en")).toBe("");
+    expect(formatMessageTimestamp(now, "en")).toContain("2026");
   });
 });

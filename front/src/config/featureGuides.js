@@ -743,6 +743,37 @@ export const featureGuides = {
       },
     ],
   },
+  message_timestamps: {
+    titleKey: "feature_guide.message_timestamps.title",
+    prompt:
+      "Show the date and time each message was sent. Open user settings, choose the Chat tab, and enable Show message timestamps in the Messages section.",
+    keywords: [
+      "message timestamps",
+      "message time",
+      "timestamp",
+      "zeitstempel",
+      "uhrzeit",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.message_timestamps.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-chat"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.message_timestamps.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="message-timestamps-preference"]',
+        prepare: () => selectSettingsTab("chat"),
+        textKey: "feature_guide.message_timestamps.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   rendering: {
     titleKey: "feature_guide.rendering.title",
     prompt:
@@ -1101,6 +1132,7 @@ export const FEATURE_CATEGORIES = {
   settings: [
     "settings_overview",
     "chat_preferences",
+    "message_timestamps",
     "memories",
     "rendering",
     "reasoning_streaming",

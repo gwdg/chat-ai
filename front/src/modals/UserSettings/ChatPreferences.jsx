@@ -31,6 +31,8 @@ import {
   setDocumentConversionMode,
   selectConversationSummaries,
   setConversationSummaries,
+  selectShowTimestamps,
+  setShowTimestamps,
   setSendWithEnter,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
@@ -237,6 +239,30 @@ export function ConversationSummaryPreference() {
         checked={conversationSummaries}
         onChange={(checked) => dispatch(setConversationSummaries(checked))}
       />
+    </section>
+  );
+}
+
+export function MessageDisplayPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const showTimestamps = useSelector(selectShowTimestamps);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="px-2 text-sm font-medium text-base-content">
+        {t("user_settings.chat_preferences.messages.section_label")}
+      </h3>
+      <div data-guide="message-timestamps-preference">
+        <ProfilePreferenceSwitch
+          label={t("user_settings.chat_preferences.messages.timestamps.label")}
+          description={t(
+            "user_settings.chat_preferences.messages.timestamps.description",
+          )}
+          checked={showTimestamps}
+          onChange={(checked) => dispatch(setShowTimestamps(checked))}
+        />
+      </div>
     </section>
   );
 }

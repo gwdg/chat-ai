@@ -51,6 +51,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Suggest follow-up prompts: ${yesNo(userSettings.suggest_user_prompts)}`,
     `- Set title only on first prompt: ${yesNo(userSettings.set_title_once)}`,
     `- Conversation summaries: ${yesNo(userSettings.conversation_summaries)}`,
+    `- Show message timestamps: ${yesNo(userSettings.show_timestamps)}`,
     `- Send message with: ${sendWithEnter}`,
     `- HTML rendering: ${userSettings.html_render_mode ?? "off"}`,
     `- Load external references: ${yesNo(userSettings.html_load_external)}`,

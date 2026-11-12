@@ -493,7 +493,14 @@ export default {
       title: "Open chat preferences",
       step1: "Open your user settings.",
       step2:
-        "Choose the Chat tab to change the default model, send key, summaries, rendering, and document conversion.",
+        "Choose the Chat tab to change the default model, send key, summaries, timestamps, rendering, and document conversion.",
+    },
+    message_timestamps: {
+      title: "Show message timestamps",
+      step1: "Open your user settings.",
+      step2: "Choose the Chat tab.",
+      step3:
+        "In the Messages section, turn on Show message timestamps to see when each message was sent.",
     },
     rendering: {
       title: "Configure rendering",
@@ -1037,6 +1044,14 @@ export default {
         label: "Show summaries on hover",
         description:
           "Generate a short summary when you switch away from a chat, then show it when hovering over that chat in the sidebar.",
+      },
+      messages: {
+        section_label: "Messages",
+        timestamps: {
+          label: "Show message timestamps",
+          description:
+            "Display the date and time each message was sent below the message.",
+        },
       },
       submission: {
         label: "Send message with",

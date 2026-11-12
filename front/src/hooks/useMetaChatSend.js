@@ -110,19 +110,28 @@ export function useMetaChatSend(modelsData = []) {
           : localState.settings?.model?.id) ||
         getDefaultChatAIModel(userSettings);
       if (!modelId) {
-        setLocalState((prev) => ({
-          ...prev,
-          messages: [
-            ...prev.messages,
-            {
-              role: "assistant",
-              content: [{ type: "text", text: "" }],
-              loading: false,
-              meta: { error: t("meta_chat.no_model") },
-            },
-            { role: "user", content: [{ type: "text", text: "" }] },
-          ],
-        }));
+        setLocalState((prev) => {
+          const now = Date.now();
+          const messages = [...prev.messages];
+          const lastIndex = messages.length - 1;
+          if (messages[lastIndex]?.role === "user" && !messages[lastIndex].createdAt) {
+            messages[lastIndex] = { ...messages[lastIndex], createdAt: now };
+          }
+          return {
+            ...prev,
+            messages: [
+              ...messages,
+              {
+                role: "assistant",
+                content: [{ type: "text", text: "" }],
+                loading: false,
+                meta: { error: t("meta_chat.no_model") },
+                createdAt: now,
+              },
+              { role: "user", content: [{ type: "text", text: "" }] },
+            ],
+          };
+        });
         return;
       }
 
@@ -208,18 +217,27 @@ export function useMetaChatSend(modelsData = []) {
       const timeoutMs =
         timeout >= 5000 && timeout <= 900000 ? timeout : 300000;
 
-      setLocalState((prev) => ({
-        ...prev,
-        messages: [
-          ...prev.messages,
-          {
-            role: "assistant",
-            content: [{ type: "text", text: "" }],
-            loading: true,
-          },
-          { role: "user", content: [{ type: "text", text: "" }] },
-        ],
-      }));
+      setLocalState((prev) => {
+        const now = Date.now();
+        const messages = [...prev.messages];
+        const lastIndex = messages.length - 1;
+        if (messages[lastIndex]?.role === "user" && !messages[lastIndex].createdAt) {
+          messages[lastIndex] = { ...messages[lastIndex], createdAt: now };
+        }
+        return {
+          ...prev,
+          messages: [
+            ...messages,
+            {
+              role: "assistant",
+              content: [{ type: "text", text: "" }],
+              loading: true,
+              createdAt: now,
+            },
+            { role: "user", content: [{ type: "text", text: "" }] },
+          ],
+        };
+      });
 
       let accumulated = "";
       let errorMeta = null;

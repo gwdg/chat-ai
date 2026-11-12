@@ -149,6 +149,7 @@ export default function MetaActionCard({
     set_title_once:
       "user_settings.chat_preferences.suggestions.title_once.label",
     conversation_summaries: "user_settings.chat_preferences.summaries.label",
+    show_timestamps: "user_settings.chat_preferences.messages.timestamps.label",
     send_with_enter: "user_settings.chat_preferences.submission.label",
     html_render_mode: "user_settings.chat_preferences.html_render.label",
     html_load_external:

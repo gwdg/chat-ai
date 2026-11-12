@@ -20,6 +20,7 @@ const SUPPORTED_SETTING_KEYS = new Set([
   "collapse_reasoning_while_streaming",
   "document_conversion_mode",
   "conversation_summaries",
+  "show_timestamps",
   "send_with_enter",
   "timeout",
 ]);
