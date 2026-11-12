@@ -22,10 +22,10 @@
   "license": "GPL-3.0-only",
   "dependencies": {
     "@carbon/icons-react": "^11.91.0",
-    "@earendil-works/pi-agent-core": "1.0.4",
-    "@earendil-works/pi-ai": "1.0.4",
-    "@earendil-works/pi-codemode": "1.0.4",
-    "@earendil-works/pi-coding-agent": "1.0.4",
+    "@earendil-works/pi-agent-core": "^1.5.2",
+    "@earendil-works/pi-ai": "^1.5.2",
+    "@earendil-works/pi-codemode": "^1.5.2",
+    "@earendil-works/pi-coding-agent": "^1.5.2",
     "@fortawesome/fontawesome-svg-core": "^7.3.1",
     "@fortawesome/free-regular-svg-icons": "^7.3.1",
     "@fortawesome/free-solid-svg-icons": "^7.3.1",
@@ -57,7 +57,7 @@
     "lucide-react": "^1.66.0",
     "mammoth": "^1.13.0",
     "mermaid": "^12.2.0",
-    "minimatch": "10.2.6",
+    "minimatch": "^11.0.8",
     "openai": "^7.47.0",
     "papaparse": "^5.7.0",
     "path-browserify": "1.0.1",
@@ -99,5 +99,8 @@
     "jsdom": "^31.0.0",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "katex": "$katex"
   }
 }
