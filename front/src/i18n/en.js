@@ -382,6 +382,13 @@ export default {
       step2: "Enable tools.",
       step3: "Select Audio Generation, then describe the audio you want.",
     },
+    arcana_v2: {
+      title: "Use ArcanaV2",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3:
+        "Select ArcanaV2 so the assistant can inspect Arcana collections, manage their files and indexes, and handle sharing.",
+    },
     diagram_renderers: {
       title: "Render diagrams from code blocks",
       step1: "Ask for a fenced code block: ```dot for Graphviz, ```vega-lite for Vega-Lite, or ```chart for a Chart.js JSON config.",
@@ -806,6 +813,7 @@ export default {
     label_image_modification: "Image Modification",
     label_image_analysis: "Analyze images",
     label_audio_generation: "Audio Generation",
+    label_arcana_v2: "ArcanaV2",
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",
     label_write_access: "Allow write",
@@ -1307,7 +1315,7 @@ export default {
     temperature:
       "A low temperature (e.g., 0-1) produces more predictable and logical responses, while higher temperatures (e.g., above 1) increase the possibility of more creative and unconventional responses. You can adjust the temperature setting to achieve different levels of predictability and creativity.",
     tools:
-      "Tools are a new and experimental feature designed to extend the capabilities of Chat AI. They allow the model to perform additional actions or access additional resources in order to provide more useful, accurate, or specialized responses. Current tools include Arcana (for all models) and Web Search (optional), with more tools planned for the future. As this feature is still evolving, functionality and available tools may change over time.",
+      "Tools are a new and experimental feature designed to extend the capabilities of Chat AI. They allow the model to perform additional actions or access additional resources in order to provide more useful, accurate, or specialized responses. Current tools include Arcana, ArcanaV2, Web Search, image and audio generation, and MCP servers. ArcanaV2 lets the assistant inspect and manage Arcana collections, their files, indexes, and sharing. As this feature is still evolving, functionality and available tools may change over time.",
     web_search:
       "The web search tool allows the AI to look up the latest information from the internet to improve its responses. When enabled, the AI can generate search queries based on your question and the full conversation history, send them to a search engine (such as Google), and use the retrieved results to provide more accurate and up-to-date answers. This is especially useful for topics where current or rapidly changing information is important.",
     top_p:

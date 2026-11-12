@@ -34,6 +34,7 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "enable_tools",
   "enable_web_search",
   "browser_storage",
+  "arcana_v2",
 ]);
 
 function isValidConversationSetting(key, value) {

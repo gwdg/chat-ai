@@ -34,6 +34,16 @@ import {
 
 const cloneMcpServers = (servers) => JSON.parse(JSON.stringify(servers ?? []));
 
+const CONVERSATION_TOOL_SETTING_KEYS = new Set([
+  "browser_storage",
+  "arcana_v2",
+]);
+
+const readConversationSetting = (settings, key) =>
+  CONVERSATION_TOOL_SETTING_KEYS.has(key)
+    ? settings?.tools?.[key]
+    : settings?.[key];
+
 const readMcpServers = (settings) => {
   const raw = settings?.mcp_servers;
   if (Array.isArray(raw)) return raw.map((server) => ({ ...server }));
@@ -173,6 +183,7 @@ export default function MetaActionCard({
     enable_tools: "settings.tools_title",
     enable_web_search: "settings.label_web_search",
     browser_storage: "settings.label_browser_storage",
+    arcana_v2: "settings.label_arcana_v2",
   };
 
   const formatSettingValue = (key, value) => {
@@ -524,10 +535,10 @@ export default function MetaActionCard({
             if (!model) throw new Error("Model not found");
             nextValue = model;
           }
-          entry.previous[action.key] =
-            action.key === "browser_storage"
-              ? conversation.settings?.tools?.browser_storage
-              : conversation.settings?.[action.key];
+          entry.previous[action.key] = readConversationSetting(
+            conversation.settings,
+            action.key,
+          );
           entry.expected[action.key] = nextValue;
           conversationSettingsPlan.set(conversation.id, entry);
         }
@@ -722,7 +733,7 @@ export default function MetaActionCard({
     const next = { ...(settings || {}) };
     let tools;
     for (const [key, value] of Object.entries(values)) {
-      if (key === "browser_storage") {
+      if (CONVERSATION_TOOL_SETTING_KEYS.has(key)) {
         tools ??= { ...(next.tools || {}) };
         if (value === undefined) delete tools[key];
         else tools[key] = value;
@@ -788,10 +799,7 @@ export default function MetaActionCard({
         const current = await getConversationMeta(entry.id);
         if (!current) throw new Error("Conversation not found");
         for (const [key, expected] of Object.entries(entry.expected)) {
-          const currentValue =
-            key === "browser_storage"
-              ? current.settings?.tools?.browser_storage
-              : current.settings?.[key];
+          const currentValue = readConversationSetting(current.settings, key);
           if (!conversationSettingMatches(key, currentValue, expected)) {
             throw new Error("Conversation setting changed");
           }

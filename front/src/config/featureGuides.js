@@ -335,6 +335,31 @@ export const featureGuides = {
       },
     ],
   },
+  arcana_v2: {
+    titleKey: "feature_guide.arcana_v2.title",
+    prompt:
+      "Use ArcanaV2 from GWDG Tools. Enable tools, then select ArcanaV2 so the assistant can inspect Arcana collections, manage their files and indexes, and handle sharing.",
+    keywords: ["arcana v2", "arcanav2", "arcana", "rag index", "sharing"],
+    steps: [
+      {
+        target: '[data-guide="tools"]',
+        textKey: "feature_guide.arcana_v2.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="tools-enable"]',
+        prepare: openTools,
+        textKey: "feature_guide.arcana_v2.step2",
+        check: toolsAreEnabled,
+      },
+      {
+        target: '[data-guide="tool-arcana_v2"]',
+        prepare: ensureToolsEnabled,
+        textKey: "feature_guide.arcana_v2.step3",
+        check: () => isToolActive("arcana_v2"),
+      },
+    ],
+  },
   diagram_renderers: {
     titleKey: "feature_guide.diagram_renderers.title",
     prompt:
@@ -386,7 +411,7 @@ export const featureGuides = {
   tools_overview: {
     titleKey: "feature_guide.tools_overview.title",
     prompt:
-      "GWDG Tools add web search, image, audio, and video generation, Arcana, and MCP servers. Open Tools and enable them to see the available buttons.",
+      "GWDG Tools add web search, image, audio, and video generation, Arcana, ArcanaV2, and MCP servers. Open Tools and enable them to see the available buttons.",
     keywords: ["tools", "gwdg tools", "tool use"],
     steps: [
       {
@@ -1112,6 +1137,7 @@ export const FEATURE_CATEGORIES = {
     "image_analysis",
     "browser_storage",
     "audio_generation",
+    "arcana_v2",
     "mcp_server",
   ],
   chats: [
@@ -1190,6 +1216,7 @@ const germanGuideKeywords = {
   image_generation: ["bilder erzeug", "bild erzeug", "bild generier", "bilder generier", "bild erstell", "bilder erstell", "text zu bild"],
   image_modification: ["bild bearbeit", "bilder bearbeit", "bild änder", "bilder änder", "bild modifizier", "bilder modifizier"],
   audio_generation: ["audio erzeug", "audio generier", "audio", "sprache erzeug", "sprache generier", "ton erzeug"],
+  arcana_v2: ["arcana v2", "arcanav2", "arcana", "rag index", "freigabe", "teilen"],
   mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
   diagram_renderers: ["graphviz", "dot", "vega", "vega-lite", "chart.js", "chartjs", "diagramm", "diagramme", "diagramm zeichnen", "chart"],
   browser_storage: ["browserspeicher", "browser speicher", "arbeitsbereich", "arbeitsfläche", "opfs", "lokale dateien"],

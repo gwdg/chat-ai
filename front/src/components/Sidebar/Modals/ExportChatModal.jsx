@@ -10,6 +10,7 @@ import { jsPDF } from "jspdf";
 import Logo from "../../../assets/logos/chat_ai.png"
 import { processContentItems } from "../../../utils/sendMessage";
 import { hasMcpServerValue, withoutHeaders } from "../../../agent/mcp";
+import { isArcanasEnabled } from "../../../utils/modules";
 
 export default function ExportChatModal({
   isOpen,
@@ -52,7 +53,10 @@ export default function ExportChatModal({
   }, [conversationId, isOpen, onClose]); // Re-run when conversationId changes
 
   if (!conversation) return null; // Or a loading indicator
-  const isArcanaSupported = conversation.settings?.model?.input?.includes("arcana") || conversation.settings?.enable_tools;
+  const isArcanaSupported =
+    isArcanasEnabled() &&
+    (conversation.settings?.model?.input?.includes("arcana") ||
+      conversation.settings?.enable_tools);
   const messages = conversation?.messages
   const arcana = conversation?.settings?.arcana
   const mcpServers = conversation?.settings?.mcp_servers;

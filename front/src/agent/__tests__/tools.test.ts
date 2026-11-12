@@ -69,6 +69,36 @@ describe("agent tools", () => {
     ).not.toContain("explain_image");
   });
 
+  it("offers ArcanaV2 tools independently of browser storage", () => {
+    expect(toolNames({ vision: true })).not.toContain("list_arcanas");
+    const names = toolNames({ vision: true, enabled: { arcana_v2: true } });
+    for (const name of [
+      "list_arcanas",
+      "create_arcana",
+      "get_arcana",
+      "list_arcana_files",
+      "read_arcana_file",
+      "start_index",
+      "index_status",
+      "index_job",
+      "delete_index",
+      "upload_arcana_file",
+      "replace_arcana_file",
+      "delete_arcana_file",
+      "list_arcana_members",
+      "add_arcana_member",
+      "remove_arcana_member",
+    ]) {
+      expect(names).toContain(name);
+    }
+  });
+
+  it("keeps the old remote file access switch working as ArcanaV2", () => {
+    expect(
+      toolNames({ vision: true, enabled: { remote_file_access: true } }),
+    ).toContain("list_arcanas");
+  });
+
   it("keeps writing opt-in even with browser storage enabled", () => {
     const names = toolNames({ vision: true, enabled: { browser_storage: true } });
     expect(names).toContain("read");

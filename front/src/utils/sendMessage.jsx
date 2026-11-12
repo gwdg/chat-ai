@@ -10,6 +10,7 @@ import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversatio
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled } from "../apis/agentEndpoints";
 import { remoteMcpEnabled } from "../agent/mcp";
+import { isArcanasEnabled } from "./modules";
 import { confirmMcpNameChange } from "./mcpNameChange";
 import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
 
@@ -327,11 +328,13 @@ const sendMessage = async ({
     const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
     const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
 
+    const arcanasModule = isArcanasEnabled();
     const isExternalModel =
       typeof localState.settings.model?.name === "string" &&
       localState.settings.model.name.toLowerCase().includes("external");
     const isToolsEnabled = toolsModule && !isExternalModel && localState.settings?.enable_tools;
-    const isArcanaSupported = isToolsEnabled && !!localState.settings.tools.arcana   
+    const isArcanaSupported =
+      arcanasModule && isToolsEnabled && !!localState.settings.tools.arcana;
   
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState, {
@@ -358,13 +361,20 @@ const sendMessage = async ({
       // Convert tools dictionary to OpenAI-compatible tools list
       if (isToolsEnabled) {
         conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
-                  .filter(([_, enabled]) => enabled)
+                  .filter(
+                    ([toolKey, enabled]) =>
+                      enabled &&
+                      (arcanasModule ||
+                        (toolKey !== "arcana" && toolKey !== "arcana_v2"))
+                  )
                   .map(([toolKey]) => ({ type: toolKey }));
         if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
           conversationForAPI.settings.arcana.limit = 3;
         }
         if (!remoteMcpEnabled(localState.settings)) delete conversationForAPI.settings.mcp_servers;
-        if (!localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
+        if (!arcanasModule || !localState.settings.tools.arcana) {
+          delete conversationForAPI.settings.arcana;
+        }
       } else {
         conversationForAPI.settings.tools = [];
         conversationForAPI.settings.enable_tools = true;

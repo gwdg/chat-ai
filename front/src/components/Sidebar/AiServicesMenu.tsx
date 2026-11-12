@@ -4,6 +4,7 @@ import Logo from '../../assets/logos/chat_ai.svg'
 import LogoSmall from '../../assets/logos/chat_ai_small.ico'
 import ImageAiLogo from '../../assets/logos/image-ai.svg'
 import VoiceAiLogo from '../../assets/logos/voice-ai.svg'
+import { isArcanasEnabled } from '../../utils/modules'
 
 const items = [
   {
@@ -62,7 +63,9 @@ export default function AiServicesMenu() {
                           transform rotate-45"
           ></div>
           <nav className="flex flex-col space-y-2">
-            {items.map((item) => (
+            {items
+              .filter((item) => item.name !== 'RAG-Manager' || isArcanasEnabled())
+              .map((item) => (
               <a
                 target='_blank'
                 key={item.description}

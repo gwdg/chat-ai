@@ -115,6 +115,8 @@ The `back` service listens to requests from `front` and interacts with an OpenAI
 - `apiEndpoint`: Endpoint of your API provider. If you have a Chat AI API key, set this to `https://chat-ai.academiccloud.de/v1`
 - `apiKey`: Your valid API key
 - `serviceName`: (Optional) A custom service name to be sent as a header in API requests to your provider. Will not be visible in the interface
+- `remoteFilesEndpoint`: (Optional) Base URL of the saia-rag-web API used by ArcanaV2 and Remote file access. Default: `http://localhost:8000/arcanas/api/v1`
+- `remoteFilesArcana`: (Optional) Arcana name that stores generic remote files. It is created on first write. Default: `remote-files`
 
 If you wish to avoid using different ports for the `front` and `back` services, you must set up a reverse proxy or virtual host to route paths such as `/models` and `/backend` to the backend service listening on its own distinguished port. This can be done with popular server software such as Apache or Nginx.
 

@@ -63,7 +63,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Render Chart.js: ${yesNo(userSettings.render_chartjs ?? false)}`,
     `- Keep reasoning collapsed while streaming: ${yesNo(userSettings.collapse_reasoning_while_streaming)}`,
     `- Document conversion: ${documentConversion}`,
-    `- Modules: tools ${import.meta.env.VITE_MODULE_TOOLS === "true" ? "enabled" : "disabled"}, feedback ${import.meta.env.VITE_MODULE_FEEDBACK === "true" ? "enabled" : "disabled"}, choices ${import.meta.env.VITE_MODULE_CHOICES === "true" ? "enabled" : "disabled"}, speech ${import.meta.env.VITE_MODULE_SPEECH === "true" ? "enabled" : "disabled"}`,
+    `- Modules: tools ${import.meta.env.VITE_MODULE_TOOLS === "true" ? "enabled" : "disabled"}, feedback ${import.meta.env.VITE_MODULE_FEEDBACK === "true" ? "enabled" : "disabled"}, choices ${import.meta.env.VITE_MODULE_CHOICES === "true" ? "enabled" : "disabled"}, arcanas ${import.meta.env.VITE_MODULE_ARCANAS !== "false" ? "enabled" : "disabled"}, speech ${import.meta.env.VITE_MODULE_SPEECH === "true" ? "enabled" : "disabled"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,

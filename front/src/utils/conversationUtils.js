@@ -33,6 +33,7 @@ export const getDefaultSettings = (userSettings = {}) => {
       "image_generation": true,
       "image_modification": true,
       "audio_generation": true,
+      "arcana_v2": false,
       "arcana": true,
       "mcp": false,
       "mcp_remote": false,
@@ -57,6 +58,15 @@ export const getDefaultSettings = (userSettings = {}) => {
       userSettings?.[key] ?? envSettings?.[key] ?? defaultSettings[key]
     ])
   );
+  const tools = mergedSettings.tools;
+  if (
+    tools &&
+    typeof tools === "object" &&
+    tools.arcana_v2 === undefined &&
+    tools.remote_file_access !== undefined
+  ) {
+    mergedSettings.tools = { ...tools, arcana_v2: tools.remote_file_access };
+  }
   return mergedSettings ;
 };
 

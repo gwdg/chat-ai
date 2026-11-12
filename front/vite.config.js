@@ -131,6 +131,7 @@ try {
         process.env["VITE_MODULE_FEEDBACK"] = value?.feedback  || false;
         process.env["VITE_MODULE_CHOICES"] = value?.choices  || false;
         process.env["VITE_MODULE_AGENT"] = value?.agent ?? true;
+        process.env["VITE_MODULE_ARCANAS"] = value?.arcanas ?? true;
         process.env["VITE_MODULE_SPEECH"] = JSON.stringify(value?.speech) || false;
       } catch (e) {
         console.log("Error while parsing modules: ", e)
