@@ -160,9 +160,10 @@ into the nested shape the UI uses. Raw table access (`db.messages`, `db.content_
 
 ### 4.3 Dexie migrations
 
-`db/index.ts` is at **version 5**. A new *indexed* field needs a new `this.version(n).stores({...})`
+`db/index.ts` is at **version 9**. A new *indexed* field needs a new `this.version(n).stores({...})`
 block plus an `.upgrade()` that backfills existing rows — this is how `folderId` (v3),
-`hasFirstPrompt` (v4) and `lastOpenedAt` (v5) were added. A field that is only stored and never
+`hasFirstPrompt` (v4), `lastOpenedAt` (v5), the workspace tables (v6-v8) and
+`workspace_file_references` (v9) were added. A field that is only stored and never
 queried needs **no** version bump; Dexie keeps unindexed properties on the row as-is. A version
 bump and `.upgrade()` are still appropriate when existing rows need a backfill. Never edit an
 existing version block: users have live databases.
@@ -178,13 +179,16 @@ inside `db/`. UI strings and i18n keys say topic.
 `secrets/front.json` is read **at Vite startup** and hand-mapped into `process.env.VITE_*`:
 `VITE_BACKEND_ENDPOINT`, `VITE_MODELS_ENDPOINT`, `VITE_USERDATA_ENDPOINT`,
 `VITE_DEFAULT_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`,
-`VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
+`VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
+`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
 
 Feature modules are gated this way — `VITE_MODULE_TOOLS`, `VITE_MODULE_FEEDBACK`,
-`VITE_MODULE_CHOICES`, `VITE_MODULE_AGENT` (the browser agent), `VITE_MODULE_ARCANAS` (Arcana and ArcanaV2, on by default), `VITE_MODULE_SPEECH` (JSON, with `model` and `voice`). A deployment can
+`VITE_MODULE_CHOICES`, `VITE_MODULE_AGENT` (the browser agent), `VITE_MODULE_AGENTS` (the sidebar
+Agents section, on by default), `VITE_MODULE_ARCANAS` (Arcana and ArcanaV2, on by default), `VITE_MODULE_SPEECH` (JSON, with `model` and `voice`). A deployment can
 switch these parts of the UI off, so new code in those areas must still behave with the flag off.
 
 ### 4.6 Model capabilities are data, not code
@@ -554,14 +558,22 @@ the Meta conversation's effective group.
 The sidebar's Workspace section (`components/Workspace/WorkspaceList.tsx`) sits below the Chats subpanel;
 `/workspace/:workspaceId` renders `Pages/WorkspacePage.tsx`. Workspace and Chats are separate
 collapsible subpanels; their collapse state reuses `interface_settings.collapsed_topics` under the
-synthetic ids `__workspaces__` and `__chats__`. Workspace, source, mount and chat-link metadata
+synthetic ids `__workspaces__` and `__chats__`. The Agents section (`Sidebar/AgentList.tsx`) sits
+between Workspace and MCP Servers and uses `__agents__`; its + button opens a placeholder add-agent
+modal with a dummy HPC project list, and agent metadata is kept in localStorage. Workspace, source, mount and chat-link metadata
 lives entirely in IndexedDB; the back service does not store it. Dexie schema v6 adds
 `workspaces`, `workspace_sources`, `workspace_handles` and `workspace_transfers`; v7 adds
 `workspace_mounts` and `workspace_chats`; v8 adds the browser source's `workspace_nodes` /
-`workspace_blobs` file tree. Handles and the transfer journal never leave the device. A persisted
+`workspace_blobs` file tree; v9 adds `workspace_file_references`. Handles and the transfer journal
+never leave the device. A persisted
 `chatai.workspace.deviceId` binds `browser`, `local` and `mcp` sources to this device; `arcana`
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
+
+Attaching a file from a workspace to a chat records a `workspace_file_references` row for the
+browser node. `deleteWorkspace` removes only browser nodes/blobs that no longer have such a
+reference (plus their unreferenced siblings); referenced files and their ancestor directories stay.
+Deleting a chat removes its reference rows.
 
 Every source kind is a `FileProvider` (`workspace/providers/`) built from its `WorkspaceSourceRow`:
 browser = an IndexedDB file tree in `workspace_nodes` / `workspace_blobs`, local = a
@@ -599,6 +611,10 @@ journals progress in `workspace_transfers`. Arcana quota is read through the
 `/arcana-v2/arcanas/:name/quota` proxy; local and MCP quota is shown as `—` because browsers cannot
 read disk free space.
 
+The file browser's Upload file action writes files from the computer into the folder currently
+shown (workspace root or the selected source) through `workspace/upload.ts`; it is disabled for
+read-only sources and mounts.
+
 The prompt box's Workspace popover (`WorkspaceAttachButton`) also holds the agent settings that
 apply to workspace files: the codemode toggle (`tools.codemode`) and the tool-call limit
 (`settings.max_tool_calls`). GWDG Tools no longer renders either.
@@ -618,6 +634,23 @@ the agent, gateway request and prefetch, and still merges legacy full entries fr
 server on or off; enabling it reveals the selector, which lists every configured server and
 badges it local or GWDG and never shows URL/id/auth fields. `remoteMcpEnabled` also treats selected
 remote ids as a value.
+
+
+### 4.26 Sidebar agents connect to a local opencode server
+
+`Sidebar/AgentList.tsx` lists remote agents like conversation rows; clicking one navigates to
+`Pages/AgentPage.tsx` (`/agent/:agentId`), whose `components/Agent/AgentConversation.jsx` is the
+chat pane. Its `+` opens `modals/Agent/AddAgentModal`, which only offers the placeholder HPC
+project list. Adding an agent calls the local `opencode serve` HTTP API through
+`apis/opencodeAgents.js`: `GET /api/info` verifies the server, `POST /api/session` creates the chat
+session, and `AgentConversation` sends `POST /api/session/:id/prompt` and polls
+`GET /api/session/:id/message?order=asc` until an `idle` message appears. The server URL and
+HTTP-basic credentials default from `opencodeServerUrl` / `opencodeServerUsername` /
+`opencodeServerPassword` in `front.json` (mapped to `VITE_OPENCODE_SERVER_*`) and stay editable per
+agent. The browser talks to the server directly (opencode allows the app origin via CORS), so the
+back service is not involved. `agents/agentStore.js` persists the agent metadata in localStorage,
+but never the password; it is re-read from the config on load. `modules.agents: false` in
+`front.json` sets `VITE_MODULE_AGENTS=false`, hiding the sidebar section and its route.
 
 
 ## 5. Conventions

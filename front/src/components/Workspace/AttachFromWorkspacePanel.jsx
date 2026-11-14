@@ -10,10 +10,12 @@ import {
 import { useAttachments } from "../../hooks/useAttachments";
 import { useToast } from "../../hooks/useToast";
 import {
+  addFileReference,
   useWorkspace,
   useWorkspaceMounts,
   useWorkspaceSources,
 } from "../../db/workspaceDb";
+import { getSourceNode } from "../../db/workspaceVfs";
 import { useWorkspaceProviders } from "../../workspace/useWorkspaceProviders";
 import {
   createWorkspaceRootProvider,
@@ -239,6 +241,17 @@ function WorkspaceAttachmentSection({
         setLocalState,
         selectedFiles: [file],
       });
+      const node = await getSourceNode(entry.sourceId, entry.path);
+      if (node && localState.id) {
+        await addFileReference({
+          conversationId: localState.id,
+          workspaceId,
+          sourceId: entry.sourceId,
+          nodeId: node.id,
+          name: entry.name,
+          path: entry.path,
+        });
+      }
       onClose?.();
     } catch (reason) {
       notifyError(

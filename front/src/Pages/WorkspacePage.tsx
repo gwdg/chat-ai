@@ -11,6 +11,7 @@ import {
   Locked,
   Unlocked,
   TrashCan,
+  Upload,
   WarningAltFilled,
 } from "@carbon/icons-react";
 
@@ -51,6 +52,7 @@ import type { RootEntry } from "../workspace/workspaceRoot";
 import { useWorkspaceProviders } from "../workspace/useWorkspaceProviders";
 import { planTransfer } from "../workspace/transferPlanner";
 import { runTransfer } from "../workspace/transfer";
+import { uploadLocalFiles } from "../workspace/upload";
 import { baseName, joinPath, normalizePath, parentPath } from "../workspace/paths";
 import type { FileProvider, QuotaInfo } from "../workspace/providers/types";
 
@@ -119,7 +121,7 @@ export default function WorkspacePage() {
   const navigate = useNavigate();
   const { workspaceId } = useParams();
   const { openModal, confirmAction } = useModal();
-  const { notifyError } = useToast();
+  const { notifyError, notifySuccess } = useToast();
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
 
@@ -177,6 +179,8 @@ export default function WorkspacePage() {
     entry: WorkspaceFileEntry;
   } | null>(null);
   const [dragHint, setDragHint] = useState<"copy" | "move" | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId);
@@ -481,6 +485,71 @@ export default function WorkspacePage() {
     link.click();
   };
 
+  const uploadReadOnly = selectedSourceId
+    ? activeMount?.readOnly === true ||
+      selectedSource?.readOnly === true ||
+      selectedProvider?.capabilities?.write !== true
+    : false;
+  const uploadDisabled =
+    uploading ||
+    uploadReadOnly ||
+    (selectedSourceId ? !selectedProvider : !rootProvider);
+
+  const triggerUpload = () => {
+    if (uploadReadOnly) {
+      notifyError(
+        t(
+          selectedSourceId
+            ? "workspace.source_read_only_error"
+            : "workspace.mount_read_only_error",
+        ),
+      );
+      return;
+    }
+    uploadInputRef.current?.click();
+  };
+
+  const uploadFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!files.length) return;
+    const provider = selectedSourceId ? selectedProvider : rootProvider;
+    const directory = selectedSourceId ? currentPath : rootPath;
+    if (!provider || provider.capabilities?.write !== true) {
+      notifyError(t("workspace.upload_not_supported"));
+      return;
+    }
+    if (selectedSourceId && (activeMount?.readOnly || selectedSource?.readOnly)) {
+      notifyError(t("workspace.source_read_only_error"));
+      return;
+    }
+    setUploading(true);
+    try {
+      if (provider.status !== "connected") await provider.connect();
+      const uploaded = await uploadLocalFiles(
+        provider,
+        directory,
+        files,
+        (file, error) => {
+          notifyError(
+            `${file.name}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        },
+      );
+      if (uploaded > 0) {
+        notifySuccess(t("workspace.upload_success", { count: uploaded }));
+      }
+      if (selectedSourceId) await loadEntries(false);
+      else await loadRoot();
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const addSource = () => {
     openModal("workspaceAddSource", {
       workspaceId,
@@ -740,6 +809,13 @@ export default function WorkspacePage() {
 
   return (
     <div className="h-dvh grid grid-rows-[auto_1fr]">
+      <input
+        ref={uploadInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={uploadFiles}
+      />
       <div className="min-w-0 overflow-hidden">
         <Header
           className="md:hidden"
@@ -1091,6 +1167,21 @@ export default function WorkspacePage() {
                         <div className="ml-auto flex items-center gap-1">
                           <button
                             type="button"
+                            onClick={triggerUpload}
+                            disabled={uploadDisabled}
+                            data-guide="workspace-upload"
+                            className="btn btn-ghost btn-xs"
+                            title={t("workspace.upload_file")}
+                          >
+                            {uploading ? (
+                              <span className="loading loading-spinner loading-xs" />
+                            ) : (
+                              <Upload size={14} />
+                            )}
+                            {t("workspace.upload_file")}
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => createRootEntry("dir")}
                             className="btn btn-ghost btn-xs"
                             title={t("workspace.new_folder")}
@@ -1322,9 +1413,26 @@ export default function WorkspacePage() {
                             {t("workspace.mount_read_only")}
                           </span>
                         )}
-                        <span className="ml-auto text-[10px] text-base-content/50">
-                          {selectedSource?.label}
-                        </span>
+                        <div className="ml-auto flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={triggerUpload}
+                            disabled={uploadDisabled}
+                            data-guide="workspace-upload"
+                            className="btn btn-ghost btn-xs"
+                            title={t("workspace.upload_file")}
+                          >
+                            {uploading ? (
+                              <span className="loading loading-spinner loading-xs" />
+                            ) : (
+                              <Upload size={14} />
+                            )}
+                            {t("workspace.upload_file")}
+                          </button>
+                          <span className="text-[10px] text-base-content/50">
+                            {selectedSource?.label}
+                          </span>
+                        </div>
                       </div>
 
                       <div

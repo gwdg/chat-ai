@@ -51,6 +51,7 @@ import { useWindowSize } from "../../hooks/useWindowSize";
 import { getWorkspaceSize } from "../../agent/workspace";
 import { sortConversations } from "../../utils/conversationSort";
 import { formatBytes } from "../../utils/formatBytes";
+import { isAgentsEnabled } from "../../utils/modules";
 import {
   formatCompactDate,
   formatModifiedTime,
@@ -81,6 +82,7 @@ import DeleteChatButton from "./Buttons/DeleteChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
 import TutorialStatus from "../Others/TutorialStatus";
 import WorkspaceList from "../Workspace/WorkspaceList";
+import AgentList from "./AgentList";
 import McpServerList from "./McpServerList";
 
 export default function SidebarContent({
@@ -1027,6 +1029,12 @@ export default function SidebarContent({
             <>
               <div className="mx-3 border-t border-base-300" />
               <WorkspaceList />
+              {isAgentsEnabled() && (
+                <>
+                  <div className="mx-3 border-t border-base-300" />
+                  <AgentList />
+                </>
+              )}
               <div className="mx-3 border-t border-base-300" />
               <McpServerList />
             </>

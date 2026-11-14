@@ -19,6 +19,7 @@ import {
   toolsAreEnabled,
   topicNameEntered,
 } from "./featureGuideActions.js";
+import { isAgentsEnabled } from "../utils/modules.js";
 
 export const featureGuides = {
   workspace_overview: {
@@ -42,6 +43,23 @@ export const featureGuides = {
       },
     ],
   },
+  workspace_upload: {
+    titleKey: "feature_guide.workspace_upload.title",
+    prompt:
+      "Upload a file from your computer into a workspace. Open a workspace and use Upload file in the file browser; it writes into the folder you are viewing.",
+    keywords: ["upload file", "workspace upload", "add file to workspace", "local file"],
+    steps: [
+      {
+        target: '[data-guide="workspace-upload"]',
+        textKey: "feature_guide.workspace_upload.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_upload.step2",
+      },
+    ],
+  },
   attach_from_workspace: {
     titleKey: "feature_guide.attach_from_workspace.title",
     prompt:
@@ -62,6 +80,23 @@ export const featureGuides = {
         target: '[data-guide="send"]',
         textKey: "feature_guide.attach_from_workspace.step3",
         completeOnEvent: "message-complete",
+      },
+    ],
+  },
+  remote_agents: {
+    titleKey: "feature_guide.remote_agents.title",
+    prompt:
+      "Spawn a remote agent from the Agents section in the sidebar. Agents run on GWDG infrastructure; each HPC project shows its chat underneath.",
+    keywords: ["agent", "agents", "remote agent", "hpc project", "gwdg infrastructure"],
+    steps: [
+      {
+        target: '[data-guide="agents-spawn"]',
+        textKey: "feature_guide.remote_agents.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="agents-list"]',
+        textKey: "feature_guide.remote_agents.step2",
       },
     ],
   },
@@ -1169,7 +1204,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "attach_from_workspace"],
+  workspace: ["workspace_overview", "workspace_upload", "attach_from_workspace", "remote_agents"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
@@ -1340,6 +1375,7 @@ export function findFeatureGuideForText(text) {
 
 export function buildFeatureGuidePrompt() {
   return Object.entries(featureGuides)
+    .filter(([featureId]) => featureId !== "remote_agents" || isAgentsEnabled())
     .map(([featureId, guide]) => `- ${featureId}: ${guide.prompt}`)
     .join("\n");
 }

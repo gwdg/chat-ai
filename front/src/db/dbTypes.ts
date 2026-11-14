@@ -305,3 +305,14 @@ export type WorkspaceBlobRow = {
   sourceId: string
   data: Uint8Array
 }
+
+export type WorkspaceFileReferenceRow = {
+  id: string
+  conversationId: string
+  workspaceId: string
+  sourceId: string
+  nodeId: string
+  name?: string
+  path?: string
+  createdAt: number
+}

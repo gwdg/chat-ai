@@ -55,6 +55,7 @@ import AttachChatModal from "./Workspace/AttachChatModal";
 import CreateEntryModal from "./Workspace/CreateEntryModal";
 import RenameWorkspaceModal from "./Workspace/RenameWorkspaceModal";
 import McpServerModal from "./McpServer/McpServerModal";
+import AddAgentModal from "./Agent/AddAgentModal";
 
 const ModalContext = createContext();
 
@@ -227,6 +228,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "mcpServerEdit" && (
         <McpServerModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "agentAdd" && (
+        <AddAgentModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "summarizeChat" && (
         <SummarizeChatModal isOpen onClose={closeModal} {...modalProps} />

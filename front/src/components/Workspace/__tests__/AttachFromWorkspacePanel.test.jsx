@@ -4,6 +4,7 @@ import AttachFromWorkspacePanel from "../AttachFromWorkspacePanel";
 
 const mocks = vi.hoisted(() => ({
   addAttachments: vi.fn(),
+  addReference: vi.fn(async () => "ref-1"),
   notifyError: vi.fn(),
 }));
 
@@ -43,6 +44,10 @@ vi.mock("../../../db/workspaceDb", () => ({
   useWorkspace: () => ({ id: "workspace-1", name: "Research" }),
   useWorkspaceSources: () => sources,
   useWorkspaceMounts: () => mounts,
+  addFileReference: (...args) => mocks.addReference(...args),
+}));
+vi.mock("../../../db/workspaceVfs", () => ({
+  getSourceNode: async () => ({ id: "node-1" }),
 }));
 vi.mock("../../../workspace/useWorkspaceProviders", () => ({
   useWorkspaceProviders: () => ({ providers, reconnect: vi.fn() }),
@@ -66,6 +71,7 @@ const localState = {
 
 beforeEach(() => {
   mocks.addAttachments.mockReset();
+  mocks.addReference.mockReset();
   mocks.notifyError.mockReset();
   rootProvider.list.mockClear();
   rootProvider.read.mockClear();
@@ -92,6 +98,15 @@ describe("AttachFromWorkspacePanel", () => {
     expect(file.name).toBe("notes.md");
     expect(file.type).toBe("text/markdown");
     expect(await file.text()).toBe("hello");
+    expect(mocks.addReference).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: "conversation",
+        workspaceId: "workspace-1",
+        sourceId: "workspace-root:workspace-1",
+        nodeId: "node-1",
+        name: "notes.md",
+      }),
+    );
     expect(onClose).toHaveBeenCalled();
   });
 

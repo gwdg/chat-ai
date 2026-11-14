@@ -8,6 +8,7 @@ import type {
   TransferJobRow,
   WorkspaceMountRow,
   WorkspaceChatRow,
+  WorkspaceFileReferenceRow,
 } from "./dbTypes";
 import { defaultCapabilities } from "../workspace/capabilities";
 import { getDeviceId, DEVICE_PLANE_KINDS } from "../workspace/deviceId";
@@ -17,6 +18,73 @@ import { deleteSourceNodes } from "./workspaceVfs";
 export { getDeviceId } from "../workspace/deviceId";
 
 const now = () => Date.now();
+
+// Browser nodes referenced by a chat are kept when their workspace is deleted. Keep their
+// ancestor directories too, so the remaining rows still form a usable tree.
+async function deleteUnreferencedSourceNodes(sourceId: string): Promise<void> {
+  const [nodes, references] = await Promise.all([
+    db.workspace_nodes.where("sourceId").equals(sourceId).toArray(),
+    db.workspace_file_references.where("sourceId").equals(sourceId).toArray(),
+  ]);
+  if (nodes.length === 0) return;
+
+  const kept = new Set(references.map((reference) => reference.nodeId));
+  const byPath = new Map(nodes.map((node) => [node.path, node]));
+  for (const nodeId of [...kept]) {
+    let node = nodes.find((item) => item.id === nodeId);
+    while (node?.parentPath && node.parentPath !== "/") {
+      const parent = byPath.get(node.parentPath);
+      if (!parent) break;
+      kept.add(parent.id);
+      node = parent;
+    }
+  }
+
+  const ids = nodes
+    .filter((node) => !kept.has(node.id))
+    .map((node) => node.id);
+  if (ids.length === 0) return;
+  await db.transaction(
+    "rw",
+    [db.workspace_nodes, db.workspace_blobs],
+    async () => {
+      await db.workspace_nodes.bulkDelete(ids);
+      await db.workspace_blobs.bulkDelete(ids);
+    },
+  );
+}
+
+export type AddFileReferenceInput = {
+  conversationId: string;
+  workspaceId: string;
+  sourceId: string;
+  nodeId: string;
+  name?: string;
+  path?: string;
+};
+
+/** Remember that a chat uses a file from a workspace's browser storage. */
+export async function addFileReference(
+  input: AddFileReferenceInput,
+): Promise<string> {
+  const existing = await db.workspace_file_references
+    .where("conversationId")
+    .equals(input.conversationId)
+    .and(
+      (reference) =>
+        reference.sourceId === input.sourceId &&
+        reference.nodeId === input.nodeId,
+    )
+    .first();
+  if (existing) return existing.id;
+  const reference: WorkspaceFileReferenceRow = {
+    id: newId(),
+    ...input,
+    createdAt: now(),
+  };
+  await db.workspace_file_references.add(reference);
+  return reference.id;
+}
 
 export async function createWorkspace(name: string): Promise<string> {
   const trimmed = name.trim();
@@ -97,8 +165,11 @@ export async function deleteWorkspace(id: string): Promise<void> {
   );
   for (const source of sources) {
     await db.workspace_handles.delete(source.id);
-    if (source.kind === "browser") await deleteSourceNodes(source.id);
+    if (source.kind === "browser") {
+      await deleteUnreferencedSourceNodes(source.id);
+    }
   }
+  await deleteUnreferencedSourceNodes(`workspace-root:${id}`);
 }
 
 export function useWorkspaceList(): WorkspaceRow[] {

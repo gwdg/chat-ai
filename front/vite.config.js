@@ -78,7 +78,7 @@ let port = 8080;
 try {
   // Read and parse the JSON file
   const config = JSON.parse(fs.readFileSync(CONFIG_LOCATION, "utf8"));
-  console.log(`Config loaded from ${CONFIG_LOCATION}:`, config);
+  console.log(`Config loaded from ${CONFIG_LOCATION}`);
 
   // Extract the port from the config (ensure it's a valid number)
   if (typeof config.port === "number" && config.port > 0) {
@@ -122,6 +122,15 @@ try {
     } else if (key == "useOpenAISdk") {
       process.env["VITE_USE_OPENAI_SDK"] = value === true ? "true" : "false";
       console.log("Use openai SDK:", value === true);
+    } else if (key == "opencodeServerUrl") {
+      process.env["VITE_OPENCODE_SERVER_URL"] = value;
+      console.log("opencode server URL:", value);
+    } else if (key == "opencodeServerUsername") {
+      process.env["VITE_OPENCODE_SERVER_USERNAME"] = value;
+      console.log("opencode server username:", value);
+    } else if (key == "opencodeServerPassword") {
+      process.env["VITE_OPENCODE_SERVER_PASSWORD"] = value;
+      console.log("opencode server password:", value ? "set" : "not set");
     } else if (key == "explainImageModel") {
       process.env["VITE_EXPLAIN_IMAGE_MODEL"] = value;
       console.log("Explain-image model:", value);
@@ -135,6 +144,7 @@ try {
         process.env["VITE_MODULE_FEEDBACK"] = value?.feedback  || false;
         process.env["VITE_MODULE_CHOICES"] = value?.choices  || false;
         process.env["VITE_MODULE_AGENT"] = value?.agent ?? true;
+        process.env["VITE_MODULE_AGENTS"] = value?.agents ?? true;
         process.env["VITE_MODULE_ARCANAS"] = value?.arcanas ?? true;
         process.env["VITE_MODULE_SPEECH"] = JSON.stringify(value?.speech) || false;
       } catch (e) {
