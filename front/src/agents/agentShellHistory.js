@@ -31,6 +31,7 @@ const trimShell = (message, settleRunning = false) => {
       settleRunning && message.status === "running"
         ? "exited"
         : (message.status ?? "exited"),
+    aborted: message.aborted === true,
     exit: message.exit,
     output,
     time: message.time,

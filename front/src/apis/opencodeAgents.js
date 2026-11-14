@@ -51,6 +51,31 @@ export async function getOpencodeInfo(agent) {
   return request(agent, "/info");
 }
 
+export async function getOpencodeHealth(agent) {
+  return request(agent, "/global/health");
+}
+
+export async function getOpencodePath(agent) {
+  return request(agent, "/path");
+}
+
+export async function getOpencodeVcs(agent) {
+  return request(agent, "/vcs");
+}
+
+export async function getOpencodeFileStatus(agent) {
+  const result = await request(agent, "/file/status");
+  return result?.data ?? result ?? [];
+}
+
+export async function listOpencodeTodos(agent, sessionId) {
+  const result = await request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/todo`,
+  );
+  return result?.data ?? result ?? [];
+}
+
 export async function createOpencodeSession(agent, title) {
   const result = await request(agent, "/session", {
     method: "POST",
@@ -258,6 +283,11 @@ export async function listOpencodeModels(agent) {
 export async function getOpencodeDefaultModel(agent) {
   const result = await request(agent, "/model/default");
   return result?.data ?? null;
+}
+
+export async function getOpencodeSessionStatus(agent) {
+  const result = await request(agent, "/session/status");
+  return result?.data ?? result ?? {};
 }
 
 export async function getOpencodeSession(agent, sessionId) {

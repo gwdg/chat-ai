@@ -12,17 +12,39 @@ import {
   commitOpencodeRevert,
   connectOpencodeMcpServer,
   deleteSavedOpencodePermission,
-  getOpencodeContext,
   getOpencodeDiff,
+  getOpencodeFileStatus,
+  getOpencodeHealth,
+  getOpencodeInfo,
+  getOpencodePath,
   getOpencodeSession,
+  getOpencodeVcs,
   listOpencodeMcpServers,
   listOpencodeMessages,
   listSavedOpencodePermissions,
   removeOpencodeMcpServer,
   stageOpencodeRevert,
 } from "../../apis/opencodeAgents";
+import {
+  buildAgentHistoryJson,
+  buildAgentHistoryMarkdown,
+  downloadAgentHistory,
+} from "../../agents/agentHistoryExport";
+import {
+  loadAgentPermissionPolicies,
+  saveAgentPermissionPolicies,
+} from "../../agents/agentPermissionPolicies";
+import { loadAgentFormHistory } from "../../agents/agentFormHistory";
+import { loadAgentShellHistory } from "../../agents/agentShellHistory";
 
-const TABS = ["changes", "permissions", "stats", "mcp"];
+const TABS = [
+  "changes",
+  "permissions",
+  "policies",
+  "stats",
+  "mcp",
+  "connection",
+];
 
 const ReadJson = ({ value }) => (
   <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded bg-base-200 p-2 font-mono text-[11px]">
@@ -41,9 +63,14 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
   const [messages, setMessages] = useState([]);
   const [revertMessageId, setRevertMessageId] = useState("");
   const [permissions, setPermissions] = useState([]);
+  const [policies, setPolicies] = useState([]);
+  const [policyAction, setPolicyAction] = useState("");
+  const [policyDecision, setPolicyDecision] = useState("once");
   const [stats, setStats] = useState(null);
-  const [context, setContext] = useState(null);
   const [mcpServers, setMcpServers] = useState([]);
+  const [connection, setConnection] = useState(null);
+  const [vcs, setVcs] = useState(null);
+  const [trackedFiles, setTrackedFiles] = useState([]);
 
   const addedMcpNames = useMemo(
     () => new Set(mcpServers.map((server) => server.name)),
@@ -81,6 +108,99 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
     }
   };
 
+  const storePolicies = (next) => {
+    setPolicies(next);
+    saveAgentPermissionPolicies(agent.id, next);
+    window.dispatchEvent(
+      new CustomEvent("chatai:agent-policies-updated", {
+        detail: { agentId: agent.id },
+      }),
+    );
+  };
+
+  const addPolicy = () => {
+    const action = policyAction.trim();
+    if (!action || !agent?.id) return;
+    storePolicies([
+      ...policies.filter((policy) => policy.action !== action),
+      {
+        id: `${action}:${policyDecision}:${Date.now()}`,
+        action,
+        decision: policyDecision,
+      },
+    ]);
+    setPolicyAction("");
+  };
+
+  const removePolicy = (id) => {
+    storePolicies(policies.filter((policy) => policy.id !== id));
+  };
+
+  const exportHistory = async (format) => {
+    if (!agent?.sessionId || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const nextMessages = await listOpencodeMessages(
+        agent,
+        agent.sessionId,
+      ).catch(() => []);
+      const shells = loadAgentShellHistory(agent.id, agent.sessionId);
+      const forms = loadAgentFormHistory(agent.id, agent.sessionId);
+      const serialize =
+        format === "json"
+          ? buildAgentHistoryJson
+          : buildAgentHistoryMarkdown;
+      const content = serialize({
+        agent,
+        messages: nextMessages,
+        shells,
+        forms,
+      });
+      const safeName = String(agent.name || "agent")
+        .replace(/[^\w.-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      downloadAgentHistory(
+        `${safeName || "agent"}-${agent.sessionId}.${format === "json" ? "json" : "md"}`,
+        content,
+        format === "json" ? "application/json" : "text/markdown",
+      );
+      notifySuccess(t("agents.tools.exported"));
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : String(reason);
+      setError(message);
+      notifyError(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const loadDiagnostics = async () => {
+    const settled = await Promise.allSettled([
+      getOpencodeInfo(agent),
+      getOpencodeHealth(agent),
+      getOpencodePath(agent),
+      getOpencodeVcs(agent),
+      getOpencodeSession(agent, agent.sessionId),
+    ]);
+    const value = (index) =>
+      settled[index].status === "fulfilled" ? settled[index].value : null;
+    const errors = settled
+      .filter((item) => item.status === "rejected")
+      .map((item) =>
+        item.reason instanceof Error ? item.reason.message : String(item.reason),
+      );
+    setConnection({
+      info: value(0),
+      health: value(1),
+      path: value(2),
+      vcs: value(3),
+      session: value(4),
+      errors,
+    });
+    setVcs(value(3));
+  };
+
   useEffect(() => {
     if (!isOpen || !agent?.sessionId) return;
     let cancelled = false;
@@ -88,12 +208,17 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
     void (async () => {
       try {
         if (tab === "changes") {
-          const [nextDiff, nextMessages] = await Promise.all([
-            getOpencodeDiff(agent, agent.sessionId),
-            listOpencodeMessages(agent, agent.sessionId),
-          ]);
+          const [nextDiff, nextMessages, nextVcs, nextFiles] =
+            await Promise.all([
+              getOpencodeDiff(agent, agent.sessionId),
+              listOpencodeMessages(agent, agent.sessionId),
+              getOpencodeVcs(agent).catch(() => null),
+              getOpencodeFileStatus(agent).catch(() => []),
+            ]);
           if (cancelled) return;
           setDiff(nextDiff);
+          setVcs(nextVcs);
+          setTrackedFiles(Array.isArray(nextFiles) ? nextFiles : []);
           const users = nextMessages.filter((message) => message.type === "user");
           setMessages(users);
           setRevertMessageId((current) => current || users.at(-1)?.id || "");
@@ -101,15 +226,13 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
           const info = await getOpencodeSession(agent, agent.sessionId);
           const next = await listSavedOpencodePermissions(agent, info?.projectID);
           if (!cancelled) setPermissions(next);
+        } else if (tab === "policies") {
+          if (!cancelled) setPolicies(loadAgentPermissionPolicies(agent.id));
+        } else if (tab === "connection") {
+          await loadDiagnostics();
         } else if (tab === "stats") {
-          const [info, ctx] = await Promise.all([
-            getOpencodeSession(agent, agent.sessionId),
-            getOpencodeContext(agent, agent.sessionId).catch(() => null),
-          ]);
-          if (!cancelled) {
-            setStats(info);
-            setContext(ctx);
-          }
+          const info = await getOpencodeSession(agent, agent.sessionId);
+          if (!cancelled) setStats(info);
         } else if (tab === "mcp") {
           const next = await listOpencodeMcpServers(agent);
           if (!cancelled) setMcpServers(next);
@@ -159,6 +282,24 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
               {t(`agents.tools.tabs.${item}`)}
             </button>
           ))}
+          <div className="ml-auto flex gap-1">
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs"
+              disabled={busy}
+              onClick={() => void exportHistory("md")}
+            >
+              {t("agents.tools.export_md")}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs"
+              disabled={busy}
+              onClick={() => void exportHistory("json")}
+            >
+              {t("agents.tools.export_json")}
+            </button>
+          </div>
         </div>
 
         {error && <p className="text-xs text-error">{error}</p>}
@@ -166,6 +307,34 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
         <div className="min-h-0 flex-1 overflow-y-auto">
           {tab === "changes" && (
             <div className="space-y-3">
+              {vcs && (
+                <div className="rounded-lg border border-base-300 p-2 text-xs">
+                  <p className="font-medium">{t("agents.tools.workspace")}</p>
+                  <ReadJson value={vcs} />
+                </div>
+              )}
+              {trackedFiles.length > 0 && (
+                <div className="rounded-lg border border-base-300 p-2 text-xs">
+                  <p className="mb-1 font-medium">
+                    {t("agents.tools.tracked_files")}
+                  </p>
+                  <div className="max-h-40 space-y-1 overflow-y-auto">
+                    {trackedFiles.map((file, index) => (
+                      <div
+                        key={file.path ?? file.file ?? index}
+                        className="flex gap-2"
+                      >
+                        <span className="min-w-0 flex-1 truncate font-mono">
+                          {file.path ?? file.file}
+                        </span>
+                        <span className="text-base-content/60">
+                          {file.status ?? file.code ?? ""}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={revertMessageId}
@@ -271,6 +440,80 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
             </div>
           )}
 
+          {tab === "policies" && (
+            <div className="space-y-3 text-xs">
+              <p className="flex items-start gap-1 leading-relaxed text-base-content/60">
+                <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0 text-warning" />
+                <span>{t("agents.tools.policies_hint")}</span>
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="flex min-w-[12rem] flex-1 flex-col gap-1">
+                  <span className="text-base-content/60">
+                    {t("agents.tools.policy_action")}
+                  </span>
+                  <input
+                    value={policyAction}
+                    onChange={(event) => setPolicyAction(event.target.value)}
+                    placeholder="bash, edit, *"
+                    className="input input-bordered input-sm"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-base-content/60">
+                    {t("agents.tools.policy_decision")}
+                  </span>
+                  <select
+                    value={policyDecision}
+                    onChange={(event) => setPolicyDecision(event.target.value)}
+                    className="select select-bordered select-sm"
+                  >
+                    <option value="once">{t("agents.tools.policy_once")}</option>
+                    <option value="always">
+                      {t("agents.tools.policy_always")}
+                    </option>
+                    <option value="reject">
+                      {t("agents.tools.policy_reject")}
+                    </option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-accent btn-sm"
+                  disabled={!policyAction.trim()}
+                  onClick={addPolicy}
+                >
+                  {t("agents.tools.policy_add")}
+                </button>
+              </div>
+              {policies.length === 0 ? (
+                <p className="text-base-content/60">
+                  {t("agents.tools.no_policies")}
+                </p>
+              ) : (
+                policies.map((policy) => (
+                  <div
+                    key={policy.id}
+                    className="flex items-center gap-2 rounded-lg border border-base-300 px-3 py-2"
+                  >
+                    <span className="min-w-0 flex-1 truncate font-mono">
+                      {policy.action}
+                    </span>
+                    <span className="badge badge-ghost badge-xs">
+                      {t(`agents.tools.policy_${policy.decision}`)}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs text-error"
+                      onClick={() => removePolicy(policy.id)}
+                    >
+                      {t("agents.tools.remove")}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
           {tab === "stats" && (
             <div className="space-y-3 text-xs">
               {stats ? (
@@ -295,21 +538,29 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
               ) : (
                 <p className="text-base-content/60">{t("agents.tools.no_stats")}</p>
               )}
-              {context && (
-                <div>
-                  <p className="mb-1 font-medium">Context</p>
-                  <ReadJson value={context} />
-                </div>
-              )}
             </div>
           )}
 
           {tab === "mcp" && (
             <div className="space-y-4">
               <div>
-                <p className="mb-2 text-xs font-medium">
-                  {t("agents.tools.opencode_mcp")}
-                </p>
+                <div className="mb-2 flex items-center gap-2">
+                  <p className="text-xs font-medium">
+                    {t("agents.tools.opencode_mcp")}
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        setMcpServers(await listOpencodeMcpServers(agent));
+                      })
+                    }
+                  >
+                    {t("common.refresh")}
+                  </button>
+                </div>
                 {mcpServers.length === 0 ? (
                   <p className="text-xs text-base-content/60">
                     {t("agents.tools.no_mcp")}
@@ -326,6 +577,19 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
                       <span className="badge badge-ghost badge-xs">
                         {String(server.status?.type ?? server.status)}
                       </span>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs"
+                        disabled={busy}
+                        onClick={() =>
+                          void run(async () => {
+                            await connectOpencodeMcpServer(agent, server.name);
+                            setMcpServers(await listOpencodeMcpServers(agent));
+                          }, "agents.tools.mcp_reconnected")
+                        }
+                      >
+                        {t("agents.tools.reconnect")}
+                      </button>
                       <button
                         type="button"
                         className="btn btn-ghost btn-xs text-error"
@@ -391,6 +655,90 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
                   })
                 )}
               </div>
+            </div>
+          )}
+
+          {tab === "connection" && (
+            <div className="space-y-3 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="min-w-0 flex-1 truncate">
+                  {agent.serverUrl}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs"
+                  disabled={busy}
+                  onClick={() => void run(loadDiagnostics)}
+                >
+                  {t("agents.tools.test_connection")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs"
+                  onClick={() =>
+                    void navigator.clipboard
+                      ?.writeText(
+                        JSON.stringify(
+                          { agent: agent.serverUrl, connection },
+                          null,
+                          2,
+                        ),
+                      )
+                      .then(() => notifySuccess(t("agents.tools.copied")))
+                      .catch(() => {})
+                  }
+                >
+                  {t("agents.tools.copy_diagnostics")}
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded bg-base-200 p-2">
+                  <span className="text-base-content/60">Version</span>
+                  <p className="font-mono">
+                    {connection?.health?.version ??
+                      connection?.info?.version ??
+                      "—"}
+                  </p>
+                </div>
+                <div className="rounded bg-base-200 p-2">
+                  <span className="text-base-content/60">Session</span>
+                  <p className="truncate font-mono">{agent.sessionId}</p>
+                </div>
+                <div className="rounded bg-base-200 p-2">
+                  <span className="text-base-content/60">Path</span>
+                  <p className="truncate font-mono">
+                    {connection?.path?.directory ??
+                      connection?.path?.cwd ??
+                      "—"}
+                  </p>
+                </div>
+                <div className="rounded bg-base-200 p-2">
+                  <span className="text-base-content/60">VCS</span>
+                  <p className="truncate font-mono">
+                    {connection?.vcs?.branch ??
+                      connection?.vcs?.head ??
+                      "—"}
+                  </p>
+                </div>
+              </div>
+              {connection ? (
+                <>
+                  {connection.errors?.length > 0 && (
+                    <div className="rounded-lg border border-warning/40 bg-warning/10 p-2 text-warning">
+                      {connection.errors.map((message, index) => (
+                        <p key={index} className="break-words">
+                          {message}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  <ReadJson value={connection} />
+                </>
+              ) : (
+                <p className="text-base-content/60">
+                  {t("agents.tools.no_diagnostics")}
+                </p>
+              )}
             </div>
           )}
         </div>

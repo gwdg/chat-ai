@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Attachment,
   Bot,
+  Copy,
   StopFilled,
   Terminal,
   Tools,
@@ -21,6 +22,10 @@ import {
   saveAgentShellHistory,
 } from "../../agents/agentShellHistory";
 import { updateAgent } from "../../agents/agentStore";
+import {
+  loadAgentPermissionPolicies,
+  matchPermissionPolicy,
+} from "../../agents/agentPermissionPolicies";
 import {
   compactOpencodeSession,
   createOpencodeSession,
@@ -46,14 +51,12 @@ import {
 import Tooltip from "../Others/Tooltip";
 import ModelButton from "../Prompt/ModelButton";
 import SendButton from "../Prompt/SendButton";
+import AgentAssistantParts from "./AgentAssistantParts";
 import AgentFormCard from "./AgentFormCard";
 import AgentFormResultCard from "./AgentFormResultCard";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
-import {
-  rendererComponents,
-  SafeMarkdown,
-} from "../Conversation/MessageAssistant/MarkdownRenderer";
+
 
 const POLL_INTERVAL = 1000;
 const MAX_POLLS = 120;
@@ -74,10 +77,17 @@ const toModelInfo = (model) => ({
 
 const formHistoryTime = (entry) => entry?.time?.created ?? 0;
 
+const messageParts = (message) =>
+  Array.isArray(message.content)
+    ? message.content
+    : Array.isArray(message.parts)
+      ? message.parts
+      : [];
+
 const messageText = (message) => {
   if (message.type === "user") return message.text || "";
   if (message.type !== "assistant") return "";
-  return (message.content ?? [])
+  return messageParts(message)
     .map((part) => {
       if (part.type === "text") return part.text;
       if (part.type === "tool") return `[${part.name}]`;
@@ -90,7 +100,7 @@ const messageText = (message) => {
 export default function AgentConversation({ agent, modelsData = [] }) {
   const { t } = useTranslation();
   const { openModal, confirmAction } = useModal();
-  const { notifyError } = useToast();
+  const { notifyError, notifySuccess } = useToast();
   const [messages, setMessages] = useState([]);
   const [commands, setCommands] = useState([]);
   const [models, setModels] = useState([]);
@@ -123,6 +133,8 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const pendingShellRef = useRef(null);
   const shellMessagesRef = useRef(new Map());
   const formHistoryRef = useRef([]);
+  const permissionPoliciesRef = useRef([]);
+  const autoReplyingRef = useRef(new Set());
 
   const updatePendingShell = useCallback((value) => {
     pendingShellRef.current = value;
@@ -220,8 +232,36 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const refreshPermissions = useCallback(async () => {
     if (!agent?.sessionId) return [];
     const next = await listOpencodePermissions(agent, agent.sessionId);
-    setPermissions(next);
-    return next;
+    const remaining = [];
+    for (const request of next) {
+      const policy = matchPermissionPolicy(
+        permissionPoliciesRef.current,
+        request,
+      );
+      if (!policy) {
+        remaining.push(request);
+        continue;
+      }
+      if (autoReplyingRef.current.has(request.id)) continue;
+      autoReplyingRef.current.add(request.id);
+      void replyOpencodePermission(
+        agent,
+        agent.sessionId,
+        request.id,
+        policy.decision,
+      )
+        .then(() => {
+          setPermissions((current) =>
+            current.filter((item) => item.id !== request.id),
+          );
+        })
+        .catch((reason) => {
+          autoReplyingRef.current.delete(request.id);
+          setError(reason instanceof Error ? reason.message : String(reason));
+        });
+    }
+    setPermissions(remaining);
+    return remaining;
   }, [agent]);
 
   const refreshForms = useCallback(async () => {
@@ -329,6 +369,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     const storedForms = loadAgentFormHistory(agent.id, agent.sessionId);
     formHistoryRef.current = storedForms;
     setFormHistory(storedForms);
+    autoReplyingRef.current.clear();
     setReplyingForm(null);
     shellMessagesRef.current = new Map(
       loadAgentShellHistory(agent.id, agent.sessionId).map((message) => [
@@ -353,6 +394,21 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       stopPolling();
     };
   }, [agent, refresh, refreshPermissions, refreshForms, stopPolling]);
+
+  useEffect(() => {
+    if (!agent?.id) return;
+    const load = () => {
+      permissionPoliciesRef.current = loadAgentPermissionPolicies(agent.id);
+    };
+    load();
+    const onUpdate = (event) => {
+      if (event.detail?.agentId === agent.id) load();
+    };
+    window.addEventListener("chatai:agent-policies-updated", onUpdate);
+    return () => {
+      window.removeEventListener("chatai:agent-policies-updated", onUpdate);
+    };
+  }, [agent?.id]);
 
   useEffect(() => {
     if (!agent?.sessionId) return;
@@ -451,7 +507,10 @@ export default function AgentConversation({ agent, modelsData = [] }) {
           type: "shell",
           shellID: shell.id,
           command: shell.command ?? existing?.command ?? "",
-          status: shell.status ?? "running",
+          status: existing?.aborted
+            ? "aborted"
+            : (shell.status ?? "running"),
+          aborted: existing?.aborted,
           exit: shell.exit,
           output: existing?.output,
           time: {
@@ -468,7 +527,10 @@ export default function AgentConversation({ agent, modelsData = [] }) {
           type: "shell",
           shellID: shell.id,
           command: shell.command ?? existing?.command ?? "",
-          status: shell.status ?? "exited",
+          status: existing?.aborted
+            ? "aborted"
+            : (shell.status ?? "exited"),
+          aborted: existing?.aborted,
           exit: shell.exit ?? existing?.exit,
           output: data.output ?? existing?.output,
           time: {
@@ -508,17 +570,52 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   }, [messages, sending, aborted, formHistory, forms]);
 
   const stop = async () => {
-    if (!sending || !agent?.sessionId || stopping) return;
+    const runningShells = [...shellMessagesRef.current.entries()].filter(
+      ([, message]) => message.status === "running",
+    );
+    const hadRunningShell = runningShells.length > 0 || !!pendingShellRef.current;
+    if ((!sending && !hadRunningShell) || !agent?.sessionId || stopping) return;
     setStopping(true);
     setError("");
     try {
       await interruptOpencodeSession(agent, agent.sessionId);
-      stopPolling();
-      setSending(false);
-      setAborted(true);
-      await Promise.all([refresh(), refreshPermissions()]).catch(() => {});
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
+    }
+    try {
+      stopPolling();
+      setSending(false);
+      setAborted(!hadRunningShell);
+      if (hadRunningShell) {
+        const completed = Date.now();
+        for (const [id, message] of runningShells) {
+          shellMessagesRef.current.set(id, {
+            ...message,
+            status: "aborted",
+            aborted: true,
+            time: { ...message.time, completed },
+          });
+        }
+        const pending = pendingShellRef.current;
+        if (runningShells.length === 0 && pending?.command) {
+          const id = `pending:${completed}`;
+          shellMessagesRef.current.set(id, {
+            id: `shell:${id}`,
+            type: "shell",
+            shellID: id,
+            command: pending.command,
+            status: "aborted",
+            aborted: true,
+            time: { created: completed, completed },
+          });
+        }
+        persistShellMessages();
+        updatePendingShell(null);
+        setMessages((current) =>
+          mergeAgentMessages(current, shellMessagesRef.current),
+        );
+      }
+      await Promise.all([refresh(), refreshPermissions()]).catch(() => {});
     } finally {
       setStopping(false);
     }
@@ -802,6 +899,9 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     if (message.status === "running") {
       return { label: t("agents.shell_status_running"), className: "badge-warning" };
     }
+    if (message.status === "aborted") {
+      return { label: t("agents.shell_status_aborted"), className: "badge-error" };
+    }
     if (message.status === "exited") {
       const succeeded = message.exit === undefined || message.exit === 0;
       return {
@@ -822,8 +922,17 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     if (message.type === "shell") {
       return [{ kind: "shell", message, status: shellStatus(message), time }];
     }
+    const parts = message.type === "assistant" ? messageParts(message) : [];
+    const hasParts = parts.some((part) => {
+      if (part.type === "text" || part.type === "reasoning") {
+        return !!part.text?.trim();
+      }
+      return part.type === "tool";
+    });
     const text = messageText(message);
-    return text.trim() ? [{ kind: "message", message, text, time }] : [];
+    return text.trim() || hasParts
+      ? [{ kind: "message", message, text, parts, time }]
+      : [];
   });
 
   const activeFormIds = new Set(forms.map((form) => form.id));
@@ -917,6 +1026,34 @@ export default function AgentConversation({ agent, modelsData = [] }) {
                   <span className={`badge badge-xs ${item.status.className}`}>
                     {item.status.label}
                   </span>
+                  {item.message.status === "running" && (
+                    <button
+                      type="button"
+                      onClick={() => void stop()}
+                      disabled={stopping}
+                      className="flex h-4 w-4 items-center justify-center rounded text-base-content/50 hover:text-error"
+                      title={t("common.abort")}
+                      aria-label={t("common.abort")}
+                    >
+                      <StopFilled size={11} />
+                    </button>
+                  )}
+                  {item.message.output?.output && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void navigator.clipboard
+                          ?.writeText(item.message.output.output)
+                          .then(() => notifySuccess(t("agents.shell_copied")))
+                          .catch(() => {})
+                      }
+                      className="flex h-4 w-4 items-center justify-center rounded text-base-content/50 hover:text-base-content"
+                      title={t("agents.shell_copy")}
+                      aria-label={t("agents.shell_copy")}
+                    >
+                      <Copy size={11} />
+                    </button>
+                  )}
                 </div>
                 {item.message.output?.output ? (
                   <pre className="mt-1 whitespace-pre-wrap break-words text-base-content">
@@ -951,9 +1088,10 @@ export default function AgentConversation({ agent, modelsData = [] }) {
                   {item.message.type === "user" ? (
                     item.text
                   ) : (
-                    <SafeMarkdown components={rendererComponents}>
-                      {item.text}
-                    </SafeMarkdown>
+                    <AgentAssistantParts
+                      parts={item.parts}
+                      fallback={item.text}
+                    />
                   )}
                 </div>
               </div>

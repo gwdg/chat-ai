@@ -9,9 +9,12 @@ export default function CreateEntryModal({
   kind = "file",
   path = "/",
   onCreate,
+  initialName = "",
+  titleKey,
+  confirmKey,
 }) {
   const { t } = useTranslation();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -40,7 +43,8 @@ export default function CreateEntryModal({
       isOpen={isOpen}
       onClose={onClose}
       titleKey={
-        kind === "dir" ? "workspace.new_folder" : "workspace.new_file"
+        titleKey ??
+        (kind === "dir" ? "workspace.new_folder" : "workspace.new_file")
       }
     >
       <div className="flex flex-col gap-3 pb-2 text-sm">
@@ -78,9 +82,11 @@ export default function CreateEntryModal({
             onClick={submit}
             disabled={!name.trim() || saving}
           >
-            {kind === "dir"
-              ? t("workspace.new_folder")
-              : t("workspace.new_file")}
+            {confirmKey
+              ? t(confirmKey)
+              : kind === "dir"
+                ? t("workspace.new_folder")
+                : t("workspace.new_file")}
           </button>
         </div>
       </div>

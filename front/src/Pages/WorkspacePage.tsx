@@ -5,6 +5,8 @@ import {
   Add,
   Bot,
   ChevronRight,
+  Download,
+  Edit,
   Folder,
   FolderAdd,
   Home,
@@ -477,6 +479,73 @@ export default function WorkspacePage() {
     activeMount?.readOnly !== true &&
     !(selectedProvider.kind === "arcana-filesystem" && entry.kind === "dir");
 
+  const downloadEntry = async (
+    entry: WorkspaceFileEntry,
+    provider = selectedProvider,
+  ) => {
+    if (!provider || entry.kind !== "file") return;
+    try {
+      if (provider.status !== "connected") await provider.connect();
+      const bytes = await readAll(await provider.read(entry.path));
+      const blob = new Blob([bytes], {
+        type: entry.mime || "application/octet-stream",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = entry.name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const renameEntry = (
+    entry: WorkspaceFileEntry,
+    provider = selectedProvider,
+    after: () => Promise<void> | void = loadEntries,
+  ) => {
+    if (!provider) return;
+    const parent = parentPath(entry.path);
+    openModal("workspaceCreateEntry", {
+      kind: entry.kind,
+      path: parent || "/",
+      initialName: entry.name,
+      titleKey: "workspace.rename_entry",
+      confirmKey: "common.rename",
+      onCreate: async (name: string) => {
+        if (name === entry.name) return;
+        if (provider.status !== "connected") await provider.connect();
+        await provider.move(entry.path, joinPath(parent, name));
+        await after();
+        notifySuccess(t("workspace.rename_success", { name }));
+      },
+    });
+  };
+
+  const createSourceEntry = (kind: "dir" | "file") => {
+    if (!selectedProvider || !selectedSourceId) return;
+    openModal("workspaceCreateEntry", {
+      kind,
+      path: currentPath,
+      onCreate: async (name: string) => {
+        if (selectedProvider.status !== "connected") {
+          await selectedProvider.connect();
+        }
+        const path = joinPath(currentPath, name);
+        if (kind === "dir") {
+          await selectedProvider.mkdir(path);
+        } else {
+          await selectedProvider.write(path, emptyStream(), {
+            overwrite: false,
+          });
+        }
+        await loadEntries(false);
+      },
+    });
+  };
+
   const openFile = async (
     entry: WorkspaceFileEntry,
     provider = selectedProvider,
@@ -566,15 +635,43 @@ export default function WorkspacePage() {
   const renderRootEntryActions = (entry: RootEntry) => {
     if (entry.local) {
       return (
-        <button
-          type="button"
-          onClick={() => requestDeleteRootEntry(entry)}
-          className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
-          title={t("common.delete")}
-          aria-label={t("common.delete")}
-        >
-          <TrashCan size={12} />
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() =>
+              renameEntry(entry, rootProvider ?? undefined, async () => {
+                await loadRoot();
+                await loadRootTree();
+                setRootTreeRevision((current) => current + 1);
+              })
+            }
+            className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-base-content group-hover:opacity-100"
+            title={t("common.rename")}
+            aria-label={t("common.rename")}
+          >
+            <Edit size={12} />
+          </button>
+          {entry.kind === "file" && (
+            <button
+              type="button"
+              onClick={() => void downloadEntry(entry, rootProvider ?? undefined)}
+              className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-base-content group-hover:opacity-100"
+              title={t("workspace.download")}
+              aria-label={t("workspace.download")}
+            >
+              <Download size={12} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => requestDeleteRootEntry(entry)}
+            className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
+            title={t("common.delete")}
+            aria-label={t("common.delete")}
+          >
+            <TrashCan size={12} />
+          </button>
+        </>
       );
     }
     if (!entry.mount) return null;
@@ -1442,6 +1539,20 @@ export default function WorkspacePage() {
                       onUpload={triggerUpload}
                       uploading={uploading}
                       uploadDisabled={uploadDisabled}
+                      onNewFolder={
+                        selectedProvider?.capabilities?.mkdir &&
+                        !selectedSource?.readOnly &&
+                        !activeMount?.readOnly
+                          ? () => createSourceEntry("dir")
+                          : undefined
+                      }
+                      onNewFile={
+                        selectedProvider?.capabilities?.write &&
+                        !selectedSource?.readOnly &&
+                        !activeMount?.readOnly
+                          ? () => createSourceEntry("file")
+                          : undefined
+                      }
                       toolbarInfo={
                         <>
                           {activeMount?.readOnly && (
@@ -1505,6 +1616,38 @@ export default function WorkspacePage() {
                       }}
                       entryActions={(entry) => (
                         <>
+                          {selectedProvider?.capabilities?.rename === true &&
+                            selectedSource?.readOnly !== true &&
+                            activeMount?.readOnly !== true && (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  renameEntry(entry, selectedProvider, () =>
+                                    loadEntries(false),
+                                  );
+                                }}
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-base-content group-hover:opacity-100"
+                                title={t("common.rename")}
+                                aria-label={t("common.rename")}
+                              >
+                                <Edit size={12} />
+                              </button>
+                            )}
+                          {entry.kind === "file" && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void downloadEntry(entry);
+                              }}
+                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-base-content group-hover:opacity-100"
+                              title={t("workspace.download")}
+                              aria-label={t("workspace.download")}
+                            >
+                              <Download size={12} />
+                            </button>
+                          )}
                           {entry.kind === "file" && (
                             <button
                               type="button"

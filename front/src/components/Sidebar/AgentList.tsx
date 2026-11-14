@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router";
@@ -21,6 +21,8 @@ import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import {
   deleteOpencodeSession,
+  getOpencodeInfo,
+  getOpencodeSessionStatus,
   interruptOpencodeSession,
 } from "../../apis/opencodeAgents";
 import {
@@ -43,6 +45,24 @@ const canRemoveLocally = (reason: unknown) => {
   );
 };
 
+const classifySessionStatus = (value: unknown) => {
+  if (!value) return "ready";
+  const status =
+    typeof value === "string"
+      ? value
+      : String(
+          (value as { type?: string; status?: string; state?: string }).type ??
+            (value as { type?: string; status?: string; state?: string }).status ??
+            (value as { type?: string; status?: string; state?: string }).state ??
+            "",
+        );
+  if (/busy|running|working|active|pending|retry|permission/i.test(status)) {
+    return "working";
+  }
+  if (/error|offline|failed|unavailable/i.test(status)) return "error";
+  return "ready";
+};
+
 // Remote agents that will run on GWDG infrastructure. Each agent is backed by a session on a
 // local opencode server; the HPC project list is still a placeholder.
 export default function AgentList() {
@@ -54,11 +74,66 @@ export default function AgentList() {
   const { notifyError } = useToast();
   const agents = useAgents();
   const [removing, setRemoving] = useState<string | null>(null);
+  const [statuses, setStatuses] = useState<
+    Record<string, "ready" | "working" | "error" | "checking">
+  >({});
+  const statusPollingRef = useRef(false);
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__agents__");
   const activeId = location.pathname.startsWith("/agent/")
     ? location.pathname.slice("/agent/".length)
     : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      if (statusPollingRef.current || document.visibilityState === "hidden") {
+        return;
+      }
+      statusPollingRef.current = true;
+      try {
+        const next: Record<
+          string,
+          "ready" | "working" | "error" | "checking"
+        > = {};
+        await Promise.all(
+          agents.map(async (agent) => {
+            if (!agent.sessionId) {
+              next[agent.id] = "error";
+              return;
+            }
+            try {
+              const statusMap = await getOpencodeSessionStatus(agent);
+              next[agent.id] = classifySessionStatus(
+                statusMap?.[agent.sessionId],
+              );
+            } catch {
+              try {
+                await getOpencodeInfo(agent);
+                next[agent.id] = "ready";
+              } catch {
+                next[agent.id] = "error";
+              }
+            }
+          }),
+        );
+        if (!cancelled) setStatuses(next);
+      } finally {
+        statusPollingRef.current = false;
+      }
+    };
+    void poll();
+    const timer = window.setInterval(poll, 5000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [agents]);
 
   const spawn = () =>
     openModal("agentAdd", {
@@ -131,6 +206,16 @@ export default function AgentList() {
         <div className="space-y-0.5">
           {agents.map((agent) => {
             const active = agent.id === activeId;
+            const status = statuses[agent.id] ?? "checking";
+            const statusLabel = t(`agents.status_${status}`);
+            const statusClass =
+              status === "ready"
+                ? "bg-success"
+                : status === "working"
+                  ? "bg-warning animate-pulse"
+                  : status === "error"
+                    ? "bg-error"
+                    : "bg-base-content/20";
             return (
               <div
                 key={agent.id}
@@ -146,6 +231,14 @@ export default function AgentList() {
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
                   title={agent.serverUrl}
                 >
+                  <span
+                    className="flex w-3 shrink-0 justify-center"
+                    title={statusLabel}
+                    aria-label={statusLabel}
+                    role="status"
+                  >
+                    <span className={`h-2 w-2 rounded-full ${statusClass}`} />
+                  </span>
                   <Bot size={14} className="shrink-0 text-base-content/50" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs leading-relaxed">

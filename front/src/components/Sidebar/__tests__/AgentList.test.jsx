@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   openModal: vi.fn(),
   interrupt: vi.fn(async () => null),
   deleteSession: vi.fn(async () => null),
+  status: vi.fn(async () => ({})),
   notifyError: vi.fn(),
 }));
 
@@ -21,6 +22,7 @@ vi.mock("../../../modals/ModalContext", () => ({
 vi.mock("../../../apis/opencodeAgents", () => ({
   interruptOpencodeSession: (...args) => mocks.interrupt(...args),
   deleteOpencodeSession: (...args) => mocks.deleteSession(...args),
+  getOpencodeSessionStatus: (...args) => mocks.status(...args),
   opencodeDefaults: () => ({ serverUrl: "", username: "opencode", password: "" }),
 }));
 vi.mock("../../../hooks/useToast", () => ({
@@ -31,9 +33,11 @@ beforeEach(() => {
   mocks.openModal.mockReset();
   mocks.interrupt.mockReset();
   mocks.deleteSession.mockReset();
+  mocks.status.mockReset();
   mocks.notifyError.mockReset();
   mocks.interrupt.mockResolvedValue(null);
   mocks.deleteSession.mockResolvedValue(null);
+  mocks.status.mockResolvedValue({});
   localStorage.clear();
   removeAgent("agent-1");
 });
@@ -88,6 +92,34 @@ describe("AgentList", () => {
 
     expect(screen.getByText("HPC project 1")).toBeInTheDocument();
     expect(screen.getByText("http://127.0.0.1:9000")).toBeInTheDocument();
+  });
+
+  it("shows the live connection status for an agent", async () => {
+    mocks.status.mockResolvedValue({ "session-1": { type: "busy" } });
+    render(
+      <MemoryRouter initialEntries={["/chat"]}>
+        <AgentList />
+      </MemoryRouter>,
+    );
+    addAgentThroughModal();
+
+    expect(
+      await screen.findByRole("status", { name: "Working" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a connection error when the status request fails", async () => {
+    mocks.status.mockRejectedValue(new Error("offline"));
+    render(
+      <MemoryRouter initialEntries={["/chat"]}>
+        <AgentList />
+      </MemoryRouter>,
+    );
+    addAgentThroughModal();
+
+    expect(
+      await screen.findByRole("status", { name: "Connection issue" }),
+    ).toBeInTheDocument();
   });
 
   it("interrupts and deletes the session before removing the agent", async () => {

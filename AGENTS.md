@@ -621,7 +621,9 @@ read disk free space.
 
 The file browser's Upload file action writes files from the computer into the folder currently
 shown (workspace root or the selected source) through `workspace/upload.ts`; it is disabled for
-read-only sources and mounts. HTML previews render in `SandboxedHtmlPreview`: an empty-sandbox
+read-only sources and mounts. Entries can be downloaded, renamed through the shared create-entry
+modal, and deleted recursively after confirmation; sources with the matching capabilities also
+offer new file/folder creation. HTML previews render in `SandboxedHtmlPreview`: an empty-sandbox
 iframe with an opaque origin, strict CSP (no scripts or network), and external references stripped.
 
 The prompt box's Workspace popover (`WorkspaceAttachButton`) also holds the agent settings that
@@ -647,9 +649,12 @@ remote ids as a value.
 
 ### 4.26 Sidebar agents connect to a local opencode server
 
-`Sidebar/AgentList.tsx` lists remote agents like conversation rows; clicking one navigates to
+`Sidebar/AgentList.tsx` lists remote agents like conversation rows and polls
+`GET /api/session/status` every 5 s for the status dot (green idle, yellow working, red connection
+error). Clicking one navigates to
 `Pages/AgentPage.tsx` (`/agent/:agentId`), whose `components/Agent/AgentConversation.jsx` is the
-chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`. The left
+chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`, and tool or
+reasoning parts render as inline expandable cards (`AgentAssistantParts`). The left
 `AgentFilesPanel` reuses the central `WorkspaceRootBrowser` (the same component used for the
 workspace root file browser) and reads/writes the OpenCode project filesystem through
 `GET /api/fs/list`, `GET /api/fs/read/<path>`, `POST /api/experimental/fs/write` and
@@ -675,8 +680,12 @@ agent entry, and clears the remembered shell history. The composer also accepts 
 `AgentFormCard` renders OpenCode forms inline in the conversation; form cards are persisted per
 agent/session in localStorage (`agents/agentFormHistory.js`), so a card remains in the timeline
 after reloads. After a successful reply, the same history entry receives the answers and renders
-as `AgentFormResultCard`. `AgentToolsModal` exposes session diff/revert, saved permissions, usage stats, and MCP
-management (syncing ChatAI local MCP servers into OpenCode). `subscribeOpencodeEvents`
+as `AgentFormResultCard`. `AgentToolsModal` exposes a live step/todo timeline, session
+diff/revert with VCS and tracked-file status, saved permissions, local permission policies
+(`agents/agentPermissionPolicies.js`, auto-answered by `AgentConversation`), usage stats, MCP
+reconnect/refresh, connection diagnostics, and Markdown/JSON transcript export. The Composer's
+shell output can be copied and a running shell command can be aborted from its card.
+`subscribeOpencodeEvents`
 refreshes messages and permissions from the `/api/event` stream. The composer reuses `SendButton` and
 `ModelButton`; the model list is the intersection of `GET /api/model` (falling back to
 `/api/model/default`) with the app's ChatAI models, the selector is centred in the composer, and a
