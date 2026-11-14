@@ -32,6 +32,13 @@ import {
   useAgents,
 } from "../../agents/agentStore";
 import {
+  createAgentSession,
+  fetchAgentSessions,
+  notifyAgentSessionsChanged,
+  switchAgentSession,
+} from "../../agents/agentSessions";
+import AgentSessionList from "../Agent/AgentSessionList";
+import {
   selectCollapsedTopics,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
@@ -75,6 +82,13 @@ export default function AgentList() {
   const { notifyError } = useToast();
   const agents = useAgents();
   const [removing, setRemoving] = useState<string | null>(null);
+  const [sessionsByAgent, setSessionsByAgent] = useState<Record<string, any>>(
+    {},
+  );
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
+    new Set(),
+  );
+  const [creatingSession, setCreatingSession] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<
     Record<string, "ready" | "working" | "error" | "checking">
   >({});
@@ -144,6 +158,49 @@ export default function AgentList() {
     };
   }, [agents]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (document.visibilityState === "hidden") return;
+      const next: Record<string, any[]> = {};
+      await Promise.all(
+        agents.map(async (agent) => {
+          try {
+            next[agent.id] = await fetchAgentSessions(agent);
+          } catch {
+            next[agent.id] = [];
+          }
+        }),
+      );
+      if (!cancelled) setSessionsByAgent(next);
+    };
+    void load();
+    const timer = window.setInterval(load, 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [agents]);
+
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      const agentId = (event as CustomEvent).detail?.agentId;
+      const agent = agents.find((item) => item.id === agentId);
+      if (!agent) return;
+      void fetchAgentSessions(agent)
+        .then((tree) =>
+          setSessionsByAgent((current) => ({
+            ...current,
+            [agent.id]: tree,
+          })),
+        )
+        .catch(() => {});
+    };
+    window.addEventListener("chatai:agent-sessions-changed", refresh);
+    return () =>
+      window.removeEventListener("chatai:agent-sessions-changed", refresh);
+  }, [agents]);
+
   const spawn = () =>
     openModal("agentAdd", {
       onCreate: (agent) => {
@@ -176,6 +233,41 @@ export default function AgentList() {
     } finally {
       setRemoving(null);
     }
+  };
+
+  const createSession = async (agent) => {
+    if (creatingSession) return;
+    setCreatingSession(agent.id);
+    try {
+      await createAgentSession(agent);
+      notifyAgentSessionsChanged(agent.id);
+      const tree = await fetchAgentSessions(agent);
+      setSessionsByAgent((current) => ({
+        ...current,
+        [agent.id]: tree,
+      }));
+      setExpandedSessions((current) => new Set(current).add(agent.id));
+      navigate(`/agent/${agent.id}`);
+    } catch (reason) {
+      notifyError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setCreatingSession(null);
+    }
+  };
+
+  const switchSession = (agent, session) => {
+    switchAgentSession(agent, session.id);
+    setExpandedSessions((current) => new Set(current).add(agent.id));
+    navigate(`/agent/${agent.id}`);
+  };
+
+  const toggleSessions = (agentId) => {
+    setExpandedSessions((current) => {
+      const next = new Set(current);
+      if (next.has(agentId)) next.delete(agentId);
+      else next.add(agentId);
+      return next;
+    });
   };
 
   return (
@@ -226,6 +318,8 @@ export default function AgentList() {
                     ? "bg-error"
                     : "bg-base-content/20";
             const summary = (agent.summary ?? "").trim();
+            const sessionTree = sessionsByAgent[agent.id];
+            const sessionOpen = expandedSessions.has(agent.id);
             return (
               <ShortcutTooltip
                 key={agent.id}
@@ -243,6 +337,19 @@ export default function AgentList() {
                     : "text-base-content transition-all duration-100 hover:bg-base-200"
                 }`}
               >
+                <button
+                  type="button"
+                  onClick={() => toggleSessions(agent.id)}
+                  className="flex h-5 w-4 shrink-0 items-center justify-center rounded text-base-content/40 hover:bg-base-300 hover:text-base-content"
+                  title={t("agents.sessions")}
+                  aria-label={t("agents.sessions")}
+                  aria-expanded={sessionOpen}
+                >
+                  <ChevronDown
+                    size={12}
+                    className={sessionOpen ? "" : "-rotate-90"}
+                  />
+                </button>
                 <button
                   type="button"
                   onClick={() => navigate(`/agent/${agent.id}`)}
@@ -266,6 +373,20 @@ export default function AgentList() {
                       {agent.serverUrl}
                     </span>
                   </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void createSession(agent)}
+                  disabled={creatingSession === agent.id}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/45 transition hover:bg-base-300 hover:text-base-content disabled:opacity-50"
+                  title={t("agents.new_session")}
+                  aria-label={t("agents.new_session")}
+                >
+                  {creatingSession === agent.id ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : (
+                    <Add size={14} />
+                  )}
                 </button>
                 {removing === agent.id ? (
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center">
@@ -314,6 +435,18 @@ export default function AgentList() {
                   </Popover>
                 )}
               </div>
+              {sessionOpen && (
+                <AgentSessionList
+                  agent={agent}
+                  tree={sessionTree}
+                  activeSessionId={agent.sessionId}
+                  onSelect={(session) => switchSession(agent, session)}
+                  onCreate={createSession}
+                  creating={creatingSession === agent.id}
+                  showCreate={false}
+                  className="mt-1 ml-4"
+                />
+              )}
               </ShortcutTooltip>
             );
           })}

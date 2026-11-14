@@ -5,6 +5,11 @@ import type { Vfs } from "./vfs";
 
 import { getAgents } from "../agents/agentStore";
 import {
+  deleteAgentSession,
+  fetchAgentSessions,
+  switchAgentSession,
+} from "../agents/agentSessions";
+import {
   getConversationWorkspaceIds,
   getWorkspaceAgentIds,
 } from "../db/workspaceDb";
@@ -73,6 +78,40 @@ export async function createConnectedAgentTools(
     );
   };
 
+  const findSession = async (agent: any, reference: string) => {
+    const tree = await fetchAgentSessions(agent);
+    const target = String(reference || "").trim();
+    if (!target) return { tree, session: null };
+    const normalized = target.toLowerCase();
+    const session =
+      tree.all.find((item: any) => item.id === target) ||
+      tree.all.find(
+        (item: any) =>
+          String(item.title || "").trim().toLowerCase() === normalized,
+      ) ||
+      null;
+    return { tree, session };
+  };
+
+  const sessionLines = (agent: any, tree: any) => {
+    const roots = tree?.roots ?? [];
+    const children = tree?.children ?? new Map();
+    const lines: string[] = [];
+    const seen = new Set<string>();
+    const walk = (session: any, depth: number) => {
+      if (!session?.id || seen.has(session.id)) return;
+      seen.add(session.id);
+      lines.push(
+        `${"  ".repeat(depth)}- ${session.id}\n${"  ".repeat(depth)}  title: ${session.title || "Untitled session"}${session.id === agent.sessionId ? "\n" + "  ".repeat(depth) + "  active: yes" : ""}`,
+      );
+      for (const child of children.get(session.id) || []) {
+        walk(child, depth + 1);
+      }
+    };
+    for (const root of roots) walk(root, 0);
+    return lines;
+  };
+
   const statusTool: AgentTool<any> = {
     name: "connected_agents_status",
     label: "Connected agent status",
@@ -109,20 +148,27 @@ export async function createConnectedAgentTools(
     name: "connected_agent_history",
     label: "Connected agent history",
     description:
-      "Read recent messages from an agent connected to this chat's workspace.",
+      "Read recent messages from an agent connected to this chat's workspace. Defaults to the active session; pass a session id or title from connected_agent_list_sessions to read another session or subagent.",
     parameters: Type.Object({
       agent: Type.String(),
+      session: Type.Optional(Type.String()),
       limit: Type.Optional(Type.Number()),
     }),
     execute: async (_id, args) => {
       const agent = findAgent(args.agent);
       if (!agent || !agent.sessionId) return text("Agent not found.");
+      let sessionId = agent.sessionId;
+      if (args.session) {
+        const { session } = await findSession(agent, args.session);
+        if (!session) return text("Session not found.");
+        sessionId = session.id;
+      }
       const limit = Math.min(
         100,
         Math.max(1, Number(args.limit) || 40),
       );
       try {
-        const messages = await listOpencodeMessages(agent, agent.sessionId);
+        const messages = await listOpencodeMessages(agent, sessionId);
         return text(
           messages
             .slice(-limit)
@@ -138,6 +184,103 @@ export async function createConnectedAgentTools(
       } catch (error) {
         return text(
           `Could not read agent history: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    },
+  };
+
+  const sessionsTool: AgentTool<any> = {
+    name: "connected_agent_list_sessions",
+    label: "List connected agent sessions",
+    description:
+      "List every session of an agent connected to this chat's workspace, including nested subagent sessions, with their ids and the active session.",
+    parameters: Type.Object({
+      agent: Type.String(),
+    }),
+    execute: async (_id, args) => {
+      const agent = findAgent(args.agent);
+      if (!agent) return text("Agent not found.");
+      try {
+        const tree = await fetchAgentSessions(agent);
+        return text(
+          [
+            `Active session: ${agent.sessionId || "none"}`,
+            ...sessionLines(agent, tree),
+          ].join("\n") || "(no sessions)",
+        );
+      } catch (error) {
+        return text(
+          `Could not list agent sessions: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    },
+  };
+
+  const switchSessionTool: AgentTool<any> = {
+    name: "connected_agent_switch_session",
+    label: "Switch connected agent session",
+    description:
+      "Switch an agent connected to this chat's workspace to one of its sessions or subagent sessions. Use connected_agent_list_sessions first to get the session id or title.",
+    parameters: Type.Object({
+      agent: Type.String(),
+      session: Type.String(),
+    }),
+    execute: async (_id, args) => {
+      const agent = findAgent(args.agent);
+      if (!agent) return text("Agent not found.");
+      try {
+        const { tree, session } = await findSession(agent, args.session);
+        if (!session) {
+          const available = tree.all
+            .slice(0, 20)
+            .map((item: any) => `${item.id} (${item.title || "Untitled"})`)
+            .join(", ");
+          return text(
+            `Session not found.${available ? ` Available: ${available}` : ""}`,
+          );
+        }
+        switchAgentSession(agent, session.id);
+        return text(
+          `Switched ${agent.name || agent.id} to ${session.title || session.id} (${session.id}).`,
+        );
+      } catch (error) {
+        return text(
+          `Could not switch agent session: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    },
+  };
+
+  const removeSessionTool: AgentTool<any> = {
+    name: "connected_agent_remove_session",
+    label: "Remove connected agent session",
+    description:
+      "Delete a session or subagent session from an agent connected to this chat's workspace. Only use this when the user explicitly asks to remove that session. If the active session is removed, another session is selected or a new one is created.",
+    parameters: Type.Object({
+      agent: Type.String(),
+      session: Type.String(),
+    }),
+    execute: async (_id, args) => {
+      const agent = findAgent(args.agent);
+      if (!agent) return text("Agent not found.");
+      try {
+        const { tree, session } = await findSession(agent, args.session);
+        if (!session) return text("Session not found.");
+        const next = await deleteAgentSession(agent, session, tree);
+        return text(
+          `Removed ${session.title || session.id} (${session.id}) from ${agent.name || agent.id}.${
+            next ? ` Active session is now ${next.title || next.id}.` : ""
+          }`,
+        );
+      } catch (error) {
+        return text(
+          `Could not remove agent session: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
@@ -264,5 +407,14 @@ export async function createConnectedAgentTools(
     },
   };
 
-  return [statusTool, historyTool, filesTool, readTool, fetchTool];
+  return [
+    statusTool,
+    sessionsTool,
+    historyTool,
+    switchSessionTool,
+    removeSessionTool,
+    filesTool,
+    readTool,
+    fetchTool,
+  ];
 }

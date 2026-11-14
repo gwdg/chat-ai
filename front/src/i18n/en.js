@@ -258,6 +258,9 @@ export default {
     mcp_target_global: "the MCP server list",
     agent_prompt_summary: "Send a prompt to agent {{agent}}",
     agent_interrupt_summary: "Interrupt agent {{agent}}",
+    agent_session_create_summary: "Create a new session on agent {{agent}}",
+    agent_session_switch_summary: "Switch to session {{session}} on agent {{agent}}",
+    agent_session_delete_summary: "Remove session {{session}} from agent {{agent}}",
     workspace_attach_summary: "Attach workspace {{workspace}} to {{target}}",
     workspace_detach_summary: "Detach workspace {{workspace}} from {{target}}",
     mcp_add_local_summary: "Add local MCP server {{name}} to {{target}}",
@@ -317,7 +320,7 @@ export default {
       title: "Spawn a remote agent",
       step1: "Use the + button in the Agents section to add an agent and select its HPC project.",
       step2: "Agents appear in the list; click one to open its chat on the right.",
-      step3: "Use the X in the agent chat header to clear its history and start a new OpenCode session.",
+      step3: "Expand an agent with the chevron to see its sessions and any subagent sessions. Click a session to switch, use + to create one, or open the ... menu to rename or close it.",
     },
     catalog: {
       open: "Browse tutorials",
@@ -672,7 +675,7 @@ export default {
       title: "Get a what's-new digest",
       step1: "Open the Meta chat from the AI icon in the sidebar.",
       step2: "The banner shows when the last check ran. It is updated after each what's-new answer.",
-      step3: "Ask “What's new?” to see changed chats, new topics and memories, agent status, and recently modified agent files.",
+      step3: "Ask “What's new?” to see changed chats, new topics and memories, agent status across all sessions and subagents, new or changed sessions, and recently modified agent files.",
     },
     meta_chat_mcp: {
       title: "Manage MCP servers from the Meta chat",
@@ -1506,6 +1509,8 @@ export default {
     close_chat:
       "Close this chat? It will be removed from your conversations.",
     close_chat_yes: "Close chat",
+    close_agent_session: "Close this session? It will be removed from OpenCode.",
+    close_agent_session_yes: "Close session",
     regenerate_confirm:
       "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone. To keep this conversation intact, use “Continue in a new chat” instead.",
     regenerate_yes: "Regenerate",
@@ -1601,6 +1606,16 @@ export default {
   },
   agents: {
     section_title: "Agents",
+    sessions: "Sessions",
+    new_session: "New session",
+    no_sessions: "No sessions yet.",
+    subagent_short: "sub",
+    rename_session: "Rename session",
+    close_session: "Close session",
+    session_options: "Session options",
+    session_renamed: "Session renamed",
+    session_closed: "Session closed",
+    session_name_placeholder: "Session name",
     tooltip: "Remote agents running on GWDG infrastructure.",
     status_ready: "Connected and idle",
     status_working: "Working",

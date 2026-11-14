@@ -1,5 +1,5 @@
 const ACTION_TYPES =
-  "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
+  "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|AGENT_SESSION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
 const ACTION_SOURCE = `\\[\\[(${ACTION_TYPES}):\\s*(\\{[\\s\\S]*?\\})\\]\\]`;
 
 const BARE_CLEAR_SOURCE =
@@ -271,6 +271,26 @@ export function getMetaActionProposals(text) {
         op,
         agentId,
         ...(op === "prompt" ? { text } : {}),
+      });
+      continue;
+    }
+
+    if (type === "AGENT_SESSION") {
+      const op = String(payload.op || "").trim().toLowerCase();
+      if (!["create", "switch", "delete"].includes(op)) continue;
+      const agentId = String(payload.agent ?? payload.agentId ?? "").trim();
+      if (!agentId) continue;
+      const sessionId = String(
+        payload.sessionId ?? payload.session_id ?? "",
+      ).trim();
+      const title = String(payload.title || "").trim().slice(0, 200);
+      if ((op === "switch" || op === "delete") && !sessionId) continue;
+      proposals.set(`agent-session:${op}:${agentId}:${sessionId || title}`, {
+        type: "agent_session",
+        op,
+        agentId,
+        ...(sessionId ? { sessionId } : {}),
+        ...(title ? { title } : {}),
       });
       continue;
     }

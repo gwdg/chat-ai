@@ -15,6 +15,7 @@ import {
   testMcpServer,
 } from "../agent/mcp";
 import { getAgents } from "../agents/agentStore";
+import { fetchAgentSessions } from "../agents/agentSessions";
 import { listWorkspaceSummaries } from "../db/workspaceDb";
 import {
   getOpencodeInfo,
@@ -272,6 +273,48 @@ const agentMessageText = (message) => {
 const agentFileLink = (agent, path) =>
   `/agent/${encodeURIComponent(agent.id)}?file=${encodeURIComponent(path)}`;
 
+const findAgentSession = async (agent, reference) => {
+  if (!agent?.sessionId) return null;
+  const target = String(reference || "").trim();
+  if (!target) return agent.sessionId;
+  const tree = await fetchAgentSessions(agent).catch(() => ({ all: [] }));
+  const sessions = tree?.all || [];
+  const exact = sessions.find((session) => session.id === target);
+  if (exact) return exact.id;
+  const byTitle = sessions.find(
+    (session) =>
+      String(session.title || "").trim().toLowerCase() ===
+      target.toLowerCase(),
+  );
+  return byTitle?.id || null;
+};
+
+const agentSessionLines = (agent, tree) => {
+  const roots = tree?.roots || [];
+  const children = tree?.children || new Map();
+  const line = (session, depth) => {
+    const parentId = session.parentID || session.parentId;
+    return [
+      `- ${session.id}`,
+      `  title: ${session.title || "Untitled session"}`,
+      `  ${depth ? `subagent of: ${parentId}` : "top-level"}`,
+      ...(session.id === agent.sessionId ? ["  active: yes"] : []),
+    ].join("\n");
+  };
+  const lines = [];
+  const seen = new Set();
+  const walk = (session, depth) => {
+    if (!session?.id || seen.has(session.id)) return;
+    seen.add(session.id);
+    lines.push(line(session, depth));
+    for (const child of children.get(session.id) || []) {
+      walk(child, depth + 1);
+    }
+  };
+  for (const root of roots) walk(root, 0);
+  return lines;
+};
+
 const fileTime = (item) => {
   const raw =
     item?.mtime ??
@@ -383,32 +426,77 @@ const parseSince = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const agentStatusLines = async (agents) => {
+const sessionActivity = (raw) => {
+  if (!raw) return "idle";
+  const activity =
+    typeof raw === "string"
+      ? raw
+      : raw?.type ?? raw?.status ?? raw?.state ?? "unknown";
+  const value = String(activity);
+  if (/busy|running|working|active|pending|retry|permission/i.test(value)) {
+    return "working";
+  }
+  if (/error|offline|failed|unavailable/i.test(value)) return "error";
+  return "idle";
+};
+
+const loadAgentSessionTrees = async (agents) => {
+  const entries = await Promise.all(
+    agents.map(async (agent) => {
+      try {
+        return [agent.id, await fetchAgentSessions(agent)];
+      } catch {
+        return [agent.id, null];
+      }
+    }),
+  );
+  return new Map(entries);
+};
+
+const agentStatusLines = async (agents, sessionTrees = null) => {
   const lines = await Promise.all(
     agents.map(async (agent) => {
-      if (!agent.sessionId) {
-        return `- ${agent.name || agent.id}: no OpenCode session configured.`;
-      }
-      const [info, statuses] = await Promise.allSettled([
-        getOpencodeInfo(agent),
-        getOpencodeSessionStatus(agent),
+      const treeResult = sessionTrees
+        ? Promise.resolve({
+            status: "fulfilled",
+            value: sessionTrees.get(agent.id),
+          })
+        : fetchAgentSessions(agent).then(
+            (value) => ({ status: "fulfilled", value }),
+            (reason) => ({ status: "rejected", reason }),
+          );
+      const [info, statuses, treeResultValue] = await Promise.all([
+        getOpencodeInfo(agent).then(
+          (value) => ({ status: "fulfilled", value }),
+          (reason) => ({ status: "rejected", reason }),
+        ),
+        getOpencodeSessionStatus(agent).then(
+          (value) => ({ status: "fulfilled", value }),
+          (reason) => ({ status: "rejected", reason }),
+        ),
+        treeResult,
       ]);
+      const tree =
+        treeResultValue.status === "fulfilled" ? treeResultValue.value : null;
+      const sessions = tree?.all || [];
+      const statusMap =
+        statuses.status === "fulfilled" ? statuses.value || {} : {};
       const connected =
         info.status === "fulfilled" || statuses.status === "fulfilled";
-      const rawStatus =
-        statuses.status === "fulfilled"
-          ? statuses.value?.[agent.sessionId]
-          : null;
-      const activity =
-        typeof rawStatus === "string"
-          ? rawStatus
-          : rawStatus?.type ??
-            rawStatus?.status ??
-            rawStatus?.state ??
-            "unknown";
-      const working = /busy|running|working|active|pending|retry|permission/i.test(
-        String(activity),
-      );
+      if (!agent.sessionId && !sessions.length) {
+        return `- ${agent.name || agent.id}: no OpenCode session configured.`;
+      }
+      const active = sessions.find((session) => session.id === agent.sessionId);
+      const activeState = sessionActivity(statusMap[agent.sessionId]);
+      const workingCount = sessions.filter(
+        (session) => sessionActivity(statusMap[session.id]) === "working",
+      ).length;
+      const errorCount = sessions.filter(
+        (session) => sessionActivity(statusMap[session.id]) === "error",
+      ).length;
+      const subagents = sessions.filter(
+        (session) => session.parentID || session.parentId,
+      ).length;
       const error =
         info.status === "rejected"
           ? info.reason instanceof Error
@@ -418,12 +506,43 @@ const agentStatusLines = async (agents) => {
       return [
         `- ${agent.name || agent.id}: ${connected ? "connected" : "unreachable"}`,
         `  server: ${agent.serverUrl}`,
-        `  session: ${working ? "working" : connected ? "idle" : "unknown"}`,
+        `  active session: ${active?.title || agent.sessionId || "none"} — ${activeState}`,
+        `  all sessions: ${sessions.length} total, ${workingCount} working, ${errorCount} error${subagents ? `, ${subagents} subagent session(s)` : ""}`,
         ...(error ? [`  error: ${error}`] : []),
       ].join("\n");
     }),
   );
   return lines;
+};
+
+const agentSessionChanges = async (agents, since, sessionTrees = null) => {
+  const rows = [];
+  await Promise.all(
+    agents.map(async (agent) => {
+      try {
+        const tree = sessionTrees
+          ? sessionTrees.get(agent.id)
+          : await fetchAgentSessions(agent);
+        if (!tree) return;
+        for (const session of tree.all || []) {
+          const updated = fileTime(session);
+          if (!updated || updated < since) continue;
+          rows.push({
+            agent,
+            session,
+            updated,
+            active: session.id === agent.sessionId,
+            parent: tree.all.find(
+              (item) =>
+                item.id === (session.parentID || session.parentId),
+            ),
+          });
+        }
+      } catch {}
+    }),
+  );
+  rows.sort((left, right) => right.updated - left.updated);
+  return rows;
 };
 
 const recentAgentFiles = async (agents, since) => {
@@ -521,10 +640,17 @@ export const META_TOOL_DEFINITIONS = [
     "Check the connection and session activity of every configured OpenCode agent.",
   ),
   tool(
+    "list_agent_sessions",
+    "List an OpenCode agent's sessions and subagent sessions, including which one is active. Use the ids with get_agent_history.",
+    { agent: { type: "string", description: "Agent id or name" } },
+    ["agent"],
+  ),
+  tool(
     "get_agent_history",
-    "Read recent OpenCode messages for one agent by its id or name.",
+    "Read recent OpenCode messages for one agent session by agent id or name. Defaults to the active session; pass a session id or title from list_agent_sessions to read another session or subagent.",
     {
       agent: { type: "string", description: "Agent id or name" },
+      session: { type: "string", description: "Optional session id or title" },
       limit: { type: "integer", description: "Maximum messages to return (default 40, max 100)" },
     },
     ["agent"],
@@ -554,7 +680,7 @@ export const META_TOOL_DEFINITIONS = [
   ),
   tool(
     "get_whats_new",
-    "Report changes since a timestamp: new or changed chats, topics, memories, agent status, and recently modified agent files.",
+    "Report changes since a timestamp: new or changed chats, topics, memories, agent status, all agent sessions and subagent sessions, and recently modified agent files.",
     {
       since: { type: "string", description: "ISO timestamp or epoch milliseconds; defaults to 24 hours ago" },
     },
@@ -649,9 +775,15 @@ const memories = (userSettings.memories || []).filter((memory) => {
   const created = new Date(memory.createdAt || 0).getTime();
   return Number.isFinite(created) && created >= since;
 });
+const sessionTrees = agents.length
+  ? await loadAgentSessionTrees(agents)
+  : new Map();
 const status = agents.length
-  ? (await agentStatusLines(agents)).join("\n")
+  ? (await agentStatusLines(agents, sessionTrees)).join("\n")
   : "No agents configured.";
+const sessionChanges = agents.length
+  ? await agentSessionChanges(agents, since, sessionTrees)
+  : [];
 const recent = agents.length
   ? await recentAgentFiles(agents, since)
   : { files: [], withoutTimestamp: 0 };
@@ -682,6 +814,23 @@ return [
   "",
   "Agents:",
   status,
+  "",
+  "New or changed agent sessions:",
+  sessionChanges.length
+    ? sessionChanges
+        .slice(0, 100)
+        .map(({ agent, session, updated, active, parent }) => {
+          const suffix = [
+            active ? "active" : "",
+            parent ? `subagent of ${parent.title || parent.id}` : "",
+            new Date(updated).toISOString(),
+          ]
+            .filter(Boolean)
+            .join(" — ");
+          return `- ${agent.name || agent.id}: [${session.title || "Untitled session"}](/agent/${agent.id}?session=${session.id}) — ${suffix}`;
+        })
+        .join("\n")
+    : "(no new or changed sessions)",
   "",
   "Recently modified agent files:",
   recent.files.length
@@ -1101,17 +1250,36 @@ export function createMetaToolRunner({
       case "get_whats_new":
         return getWhatsNew({ userSettings, since: args.since });
 
+      case "list_agent_sessions": {
+        const agent = findAgent(args.agent);
+        if (!agent) return "Agent not found.";
+        if (!agent.sessionId) return "This agent has no OpenCode session.";
+        try {
+          const tree = await fetchAgentSessions(agent);
+          const lines = agentSessionLines(agent, tree);
+          return `Agent: ${agent.name || agent.id}
+Active session: ${agent.sessionId}
+Sessions:\n${lines.join("\n") || "(no sessions)"}`;
+        } catch (error) {
+          return `Could not list the agent sessions: ${
+            error instanceof Error ? error.message : String(error)
+          }`;
+        }
+      }
+
       case "get_agent_history": {
         const agent = findAgent(args.agent);
         if (!agent) return "Agent not found.";
         if (!agent.sessionId) return "This agent has no OpenCode session.";
+        const sessionId = await findAgentSession(agent, args.session);
+        if (!sessionId) return "Agent session not found.";
         const limit = Math.min(
           100,
           Math.max(1, Number.parseInt(args.limit, 10) || 40),
         );
         let messages;
         try {
-          messages = await listOpencodeMessages(agent, agent.sessionId);
+          messages = await listOpencodeMessages(agent, sessionId);
         } catch (error) {
           return `Could not read the agent history: ${
             error instanceof Error ? error.message : String(error)
@@ -1125,7 +1293,7 @@ export function createMetaToolRunner({
             `- id: ${message.id}\n  role: ${message.type}\n  text: ${text.slice(0, 12000)}`,
           );
         }
-        return `Agent: ${agent.name || agent.id}\nsession: ${agent.sessionId}\nHistory (${lines.length} messages):\n${lines.join("\n") || "(no messages)"}`;
+        return `Agent: ${agent.name || agent.id}\nsession: ${sessionId}${sessionId !== agent.sessionId ? " (not active)" : ""}\nHistory (${lines.length} messages):\n${lines.join("\n") || "(no messages)"}`;
       }
 
       case "list_agent_files": {

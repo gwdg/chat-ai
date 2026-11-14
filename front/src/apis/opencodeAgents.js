@@ -76,6 +76,19 @@ export async function listOpencodeTodos(agent, sessionId) {
   return result?.data ?? result ?? [];
 }
 
+export async function listOpencodeSessions(agent) {
+  const result = await request(agent, "/session");
+  return result?.data ?? result ?? [];
+}
+
+export async function listOpencodeSessionChildren(agent, sessionId) {
+  const result = await request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/children`,
+  );
+  return result?.data ?? result ?? [];
+}
+
 export async function createOpencodeSession(agent, title) {
   const result = await request(agent, "/session", {
     method: "POST",
@@ -322,6 +335,13 @@ export async function sendOpencodePrompt(agent, sessionId, text, files = []) {
       text,
       ...(files.length ? { files } : {}),
     }),
+  });
+}
+
+export async function renameOpencodeSession(agent, sessionId, title) {
+  return request(agent, `/session/${encodeURIComponent(sessionId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
   });
 }
 

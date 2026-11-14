@@ -15,9 +15,15 @@ import {
 import { normalizeMcpUrl } from "../../../agent/mcp";
 import { getAgents } from "../../../agents/agentStore";
 import {
+  deleteOpencodeSession,
   interruptOpencodeSession,
   sendOpencodePrompt,
 } from "../../../apis/opencodeAgents";
+import {
+  createAgentSession,
+  deleteAgentSession,
+  switchAgentSession,
+} from "../../../agents/agentSessions";
 
 import {
   assignConversationToFolder,
@@ -335,7 +341,11 @@ export default function MetaActionCard({
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
   const [reverting, setReverting] = useState(false);
-  const reversible = !actions.some((action) => action.type === "agent_action");
+  const reversible = !actions.some(
+    (action) =>
+      action.type === "agent_action" ||
+      (action.type === "agent_session" && action.op === "delete"),
+  );
   const [error, setError] = useState("");
   const previousState = useRef(null);
 
@@ -536,6 +546,12 @@ export default function MetaActionCard({
         { agent: action.agentId },
       );
     }
+    if (action.type === "agent_session") {
+      return t(
+        `meta_chat.agent_session_${action.op}_summary`,
+        { agent: action.agentId, session: action.sessionId || action.title },
+      );
+    }
     if (action.type === "workspace_link") {
       return t(
         `meta_chat.workspace_${action.op}_summary`,
@@ -648,7 +664,8 @@ export default function MetaActionCard({
           action.type === "mcp_server" ||
           action.type === "create_chat" ||
           action.type === "workspace_link" ||
-          action.type === "agent_action"
+          action.type === "agent_action" ||
+          action.type === "agent_session"
         ) {
           continue;
         }
@@ -942,6 +959,7 @@ export default function MetaActionCard({
           : null,
         createdChats,
         workspaceLinks: workspaceLinks.map((link) => ({ ...link })),
+        agentSessions: [],
       };
 
       for (const action of prepared) {
@@ -1033,6 +1051,37 @@ export default function MetaActionCard({
           settings: payload.settings,
           messages: payload.messages.map(normalizeCreatedMessage),
         });
+      }
+
+      for (const action of actions.filter(
+        (item) => item.type === "agent_session",
+      )) {
+        const agent = getAgents().find((item) => item.id === action.agentId);
+        if (!agent) throw new Error("Agent not found");
+        const previousSessionId = agent.sessionId || null;
+        if (action.op === "delete") {
+          await deleteAgentSession(agent, { id: action.sessionId });
+        } else if (action.op === "create") {
+          const session = await createAgentSession(agent, action.title);
+          previousState.current.agentSessions.push({
+            agentId: agent.id,
+            previousSessionId,
+            expectedSessionId: session.id,
+            createdSessionId: session.id,
+          });
+          window.dispatchEvent(
+            new CustomEvent("chatai:agent-sessions-changed", {
+              detail: { agentId: agent.id },
+            }),
+          );
+        } else {
+          switchAgentSession(agent, action.sessionId);
+          previousState.current.agentSessions.push({
+            agentId: agent.id,
+            previousSessionId,
+            expectedSessionId: action.sessionId,
+          });
+        }
       }
 
       for (const action of actions.filter(
@@ -1203,6 +1252,14 @@ export default function MetaActionCard({
         }
       }
 
+      for (const entry of snapshot.agentSessions || []) {
+        const agent = getAgents().find((item) => item.id === entry.agentId);
+        if (!agent) throw new Error("Agent not found");
+        if (agent.sessionId !== entry.expectedSessionId) {
+          throw new Error("Agent session changed");
+        }
+      }
+
       for (const chat of snapshot.createdChats || []) {
         const current = await getConversation(chat.id);
         if (!current) throw new Error("Created chat no longer exists");
@@ -1285,6 +1342,19 @@ export default function MetaActionCard({
         setLocalState?.((previous) =>
           previous?.id === entry.id ? { ...previous, settings } : previous,
         );
+      }
+
+      for (const entry of snapshot.agentSessions || []) {
+        const agent = getAgents().find((item) => item.id === entry.agentId);
+        if (!agent) throw new Error("Agent not found");
+        if (entry.createdSessionId) {
+          await deleteOpencodeSession(agent, entry.createdSessionId).catch(
+            () => {},
+          );
+        }
+        if (entry.previousSessionId) {
+          switchAgentSession(agent, entry.previousSessionId);
+        }
       }
 
       for (const link of snapshot.workspaceLinks || []) {

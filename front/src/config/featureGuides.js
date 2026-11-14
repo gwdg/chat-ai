@@ -102,8 +102,8 @@ export const featureGuides = {
   remote_agents: {
     titleKey: "feature_guide.remote_agents.title",
     prompt:
-      "Spawn a remote agent from the Agents section in the sidebar. Agents run on GWDG infrastructure; each HPC project shows its chat underneath.",
-    keywords: ["agent", "agents", "remote agent", "hpc project", "gwdg infrastructure"],
+      "Spawn a remote agent from the Agents section in the sidebar. Agents run on GWDG infrastructure; expand an agent to switch between its sessions and subagent sessions, or use + to create a new session.",
+    keywords: ["agent", "agents", "remote agent", "hpc project", "gwdg infrastructure", "agent session", "subagent", "new session"],
     steps: [
       {
         target: '[data-guide="agents-spawn"]',

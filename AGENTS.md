@@ -415,14 +415,24 @@ an explicit Accept button. `MCP_SERVER` adds, updates, or removes per-chat MCP s
 entries or remote gateway ids), and with `target: "global"` it changes the sidebar MCP server list
 in `user_settings.mcp_servers`; the Meta chat reads the entry ids from `get_user_settings`.
 `test_mcp_server` tests a configured local server by id, name, or URL. Stateful "what's new" uses
-`get_whats_new` and stores the last check in localStorage (`chatai.meta.last-check`). `search_all`
+`get_whats_new`, which checks every session and subagent session of every agent (status and
+`time.updated` since the last check), and stores the last check in localStorage
+(`chatai.meta.last-check`). `search_all`
 searches chats, messages, topics, memories, agent histories, and agent file names/contents.
 `agent_health` combines agent connectivity with local MCP tests; `list_mcp_tools` exposes tool names.
 `list_workspaces` plus `WORKSPACE_LINK` proposals attach/detach workspaces to agents or chats.
 `AGENT_ACTION` proposals can prompt or interrupt an agent and are not revertible.
-`list_agents`, `check_agents`, `get_agent_history`, `list_agent_files`, `list_recent_agent_files`,
-`read_agent_file`, and `fetch_agent_file` use the existing direct OpenCode connection to inspect
-agents, their messages, and project files. File listings preserve modification/access timestamps when the server returns them;
+`list_agents`, `list_agent_sessions`, `check_agents`, `get_agent_history`, `list_agent_files`,
+`list_recent_agent_files`, `read_agent_file`, and `fetch_agent_file` use the existing direct
+OpenCode connection to inspect agents, their messages, and project files. `list_agent_sessions`
+returns top-level and subagent sessions with the active one marked; `get_agent_history` accepts an
+optional session id or title. The `AGENT_SESSION` proposal creates, switches, or deletes sessions;
+creating is revertible by returning to the previous session and deleting the created one, while
+deleting is not revertible. Normal chats expose the same access only for workspace-connected
+agents through `connected_agent_list_sessions`, `connected_agent_switch_session`,
+`connected_agent_remove_session`, and the `session` argument of `connected_agent_history`.
+
+File listings preserve modification/access timestamps when the server returns them;
 recent-file queries sort by modification time and, because `/fs/list` may omit timestamps, run a
 fixed Node `fs.stat` listing through the OpenCode shell tagged `CHATAI_FILE_STAT`. Internal shell
 commands carrying `CHATAI_GIT_LOG` or `CHATAI_FILE_STAT` are filtered from the agent chat. `fetch_agent_file`
@@ -677,8 +687,16 @@ remote ids as a value.
 
 `Sidebar/AgentList.tsx` lists remote agents like conversation rows and polls
 `GET /api/session/status` every 5 s for the status dot (green idle, yellow working, red connection
-error). Leaving an agent page summarizes its messages with `generateConversationSummary`, stores the
-summary on the agent entry, and shows it in the row tooltip. Clicking one navigates to
+error). Each agent row expands into its OpenCode sessions: the active `sessionId` is stored on the
+local agent entry, while the session list is read from `GET /api/session` plus
+`GET /api/session/:id/children` by `agents/agentSessions.js`. Child sessions are the subagent
+sessions OpenCode creates; they are shown nested in the same list and can be opened like a
+top-level session. The + action creates a new session and makes it active. `AgentList`,
+`ChatAgentSidebar` and the workspace Agents panel refetch every 10s (or immediately on the
+`chatai:agent-sessions-changed` / `chatai:agent-session-changed` events) so a subagent spawned by
+OpenCode appears without a reload. Leaving an agent page summarizes its messages with
+`generateConversationSummary`, stores the summary on the agent entry, and shows it in the row
+tooltip. Clicking one navigates to
 `Pages/AgentPage.tsx` (`/agent/:agentId`), whose `components/Agent/AgentConversation.jsx` is the
 chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`, and tool or
 reasoning parts render as inline expandable cards (`AgentAssistantParts`). The left

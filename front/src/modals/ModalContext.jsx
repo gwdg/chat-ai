@@ -58,6 +58,7 @@ import RenameWorkspaceModal from "./Workspace/RenameWorkspaceModal";
 import McpServerModal from "./McpServer/McpServerModal";
 import AddAgentModal from "./Agent/AddAgentModal";
 import AgentToolsModal from "./Agent/AgentToolsModal";
+import RenameAgentSessionModal from "./Agent/RenameAgentSessionModal";
 
 const ModalContext = createContext();
 
@@ -239,6 +240,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "agentEdit" && (
         <AddAgentModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "agentSessionRename" && (
+        <RenameAgentSessionModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "agentTools" && (
         <AgentToolsModal isOpen onClose={closeModal} {...modalProps} />

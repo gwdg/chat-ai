@@ -13,6 +13,12 @@ import {
 
 import { useAgents } from "../../agents/agentStore";
 import {
+  createAgentSession,
+  fetchAgentSessions,
+  notifyAgentSessionsChanged,
+  switchAgentSession,
+} from "../../agents/agentSessions";
+import {
   getOpencodeInfo,
   getOpencodeSession,
   getOpencodeSessionStatus,
@@ -24,6 +30,7 @@ import {
   useWorkspaceAgentLinks,
 } from "../../db/workspaceDb";
 import MetaChangesPanel from "../Meta/MetaChangesPanel";
+import AgentSessionList from "../Agent/AgentSessionList";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
 const classifySessionStatus = (value) => {
@@ -63,6 +70,8 @@ export default function ChatAgentSidebar({ conversationId }) {
   const [statuses, setStatuses] = useState({});
   const [expanded, setExpanded] = useState(new Set());
   const [details, setDetails] = useState({});
+  const [sessions, setSessions] = useState({});
+  const [creatingSession, setCreatingSession] = useState(null);
 
   const connectedAgents = useMemo(() => {
     const workspaceIds = new Set(
@@ -121,6 +130,34 @@ export default function ChatAgentSidebar({ conversationId }) {
 
   useEffect(() => {
     for (const agentId of expanded) {
+      const agent = connectedAgents.find((item) => item.id === agentId);
+      if (!agent) continue;
+      void fetchAgentSessions(agent)
+        .then((tree) =>
+          setSessions((current) => ({ ...current, [agentId]: tree })),
+        )
+        .catch(() => {});
+    }
+  }, [connectedAgents, expanded]);
+
+  useEffect(() => {
+    const refresh = (event) => {
+      const agentId = event.detail?.agentId;
+      const agent = connectedAgents.find((item) => item.id === agentId);
+      if (!agent) return;
+      void fetchAgentSessions(agent)
+        .then((tree) =>
+          setSessions((current) => ({ ...current, [agentId]: tree })),
+        )
+        .catch(() => {});
+    };
+    window.addEventListener("chatai:agent-sessions-changed", refresh);
+    return () =>
+      window.removeEventListener("chatai:agent-sessions-changed", refresh);
+  }, [connectedAgents]);
+
+  useEffect(() => {
+    for (const agentId of expanded) {
       if (details[agentId]) continue;
       const agent = connectedAgents.find((item) => item.id === agentId);
       if (!agent?.sessionId) continue;
@@ -139,6 +176,25 @@ export default function ChatAgentSidebar({ conversationId }) {
   }, [connectedAgents, details, expanded]);
 
   if (!connectedAgents.length) return null;
+
+  const createSession = async (agent) => {
+    if (creatingSession) return;
+    setCreatingSession(agent.id);
+    try {
+      await createAgentSession(agent);
+      notifyAgentSessionsChanged(agent.id);
+      const tree = await fetchAgentSessions(agent);
+      setSessions((current) => ({ ...current, [agent.id]: tree }));
+      navigate(`/agent/${agent.id}`);
+    } finally {
+      setCreatingSession(null);
+    }
+  };
+
+  const switchSession = (agent, session) => {
+    switchAgentSession(agent, session.id);
+    navigate(`/agent/${agent.id}`);
+  };
 
   const toggle = (agentId) => {
     setExpanded((current) => {
@@ -193,6 +249,15 @@ export default function ChatAgentSidebar({ conversationId }) {
               </div>
               {open && (
                 <div className="mt-2 space-y-2 text-[10px] text-base-content/70">
+                  <AgentSessionList
+                    agent={agent}
+                    tree={sessions[agent.id]}
+                    activeSessionId={agent.sessionId}
+                    onSelect={(session) => switchSession(agent, session)}
+                    onCreate={createSession}
+                    creating={creatingSession === agent.id}
+                    className="text-[10px]"
+                  />
                   <div>
                     <p className="mb-0.5 flex items-center gap-1 font-semibold text-base-content/60">
                       <Settings size={11} /> {t("workspace.agent_settings")}

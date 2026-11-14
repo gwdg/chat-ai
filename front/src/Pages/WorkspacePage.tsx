@@ -23,6 +23,7 @@ import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import WorkspaceRootTree from "../components/Workspace/WorkspaceRootTree";
 import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
 import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
+import AgentSessionList from "../components/Agent/AgentSessionList";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "../hooks/useToast";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
@@ -31,6 +32,12 @@ import { formatBytes } from "../utils/formatBytes";
 import { formatGitLog } from "../utils/gitLog";
 import { useConversationList } from "../db";
 import { useAgents } from "../agents/agentStore";
+import {
+  createAgentSession,
+  fetchAgentSessions,
+  notifyAgentSessionsChanged,
+  switchAgentSession,
+} from "../agents/agentSessions";
 import {
   deleteWorkspace,
   detachWorkspaceChat,
@@ -178,8 +185,50 @@ export default function WorkspacePage() {
         .filter(Boolean),
     [workspaceAgents, agents],
   );
+  const [agentSessions, setAgentSessions] = useState<Record<string, any>>({});
+  const [expandedAgentSessions, setExpandedAgentSessions] = useState<Set<string>>(
+    new Set(),
+  );
+  const [creatingAgentSession, setCreatingAgentSession] = useState<string | null>(
+    null,
+  );
+
   useEffect(() => {
     void removeOrphanWorkspaceAgents(agents.map((agent) => agent.id));
+  }, [agents]);
+
+  useEffect(() => {
+    for (const agentId of expandedAgentSessions) {
+      const agent = agents.find((item) => item.id === agentId);
+      if (!agent) continue;
+      void fetchAgentSessions(agent)
+        .then((tree) =>
+          setAgentSessions((current) => ({ ...current, [agentId]: tree })),
+        )
+        .catch(() => {});
+    }
+  }, [agents, expandedAgentSessions]);
+
+  useEffect(() => {
+    const refresh = (event: CustomEvent) => {
+      const agentId = event.detail?.agentId;
+      const agent = agents.find((item) => item.id === agentId);
+      if (!agent) return;
+      void fetchAgentSessions(agent)
+        .then((tree) =>
+          setAgentSessions((current) => ({ ...current, [agentId]: tree })),
+        )
+        .catch(() => {});
+    };
+    window.addEventListener(
+      "chatai:agent-sessions-changed",
+      refresh as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "chatai:agent-sessions-changed",
+        refresh as EventListener,
+      );
   }, [agents]);
   const pendingTransfers = usePendingTransfers(workspaceId);
   const resumedRef = useRef<Set<string>>(new Set());
@@ -960,6 +1009,34 @@ export default function WorkspacePage() {
     void detachWorkspaceAgent(workspaceId!, agentId);
   };
 
+  const toggleAgentSessions = (agentId: string) => {
+    setExpandedAgentSessions((current) => {
+      const next = new Set(current);
+      if (next.has(agentId)) next.delete(agentId);
+      else next.add(agentId);
+      return next;
+    });
+  };
+
+  const createSessionForAgent = async (agent) => {
+    if (creatingAgentSession) return;
+    setCreatingAgentSession(agent.id);
+    try {
+      await createAgentSession(agent);
+      notifyAgentSessionsChanged(agent.id);
+      const tree = await fetchAgentSessions(agent);
+      setAgentSessions((current) => ({ ...current, [agent.id]: tree }));
+      navigate(`/agent/${agent.id}`);
+    } finally {
+      setCreatingAgentSession(null);
+    }
+  };
+
+  const switchToAgentSession = (agent, session) => {
+    switchAgentSession(agent, session.id);
+    navigate(`/agent/${agent.id}`);
+  };
+
   const toggleSourceReadOnly = (source: { id: string; readOnly?: boolean }) => {
     void updateSource(source.id, { readOnly: !source.readOnly });
   };
@@ -1550,29 +1627,54 @@ export default function WorkspacePage() {
                         </p>
                       ) : (
                         attachedAgents.map((agent) => (
-                          <div
-                            key={agent.id}
-                            className="group flex items-center gap-1 rounded-md px-1 py-1 hover:bg-base-200"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/agent/${agent.id}`)}
-                              className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-                            >
-                              <Bot size={12} className="shrink-0 text-base-content/50" />
-                              <span className="min-w-0 flex-1 truncate text-[11px] text-base-content/80">
-                                {agent.name}
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => detachAgent(agent.id)}
-                              className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover:opacity-100"
-                              title={t("workspace.detach_agent")}
-                              aria-label={t("workspace.detach_agent")}
-                            >
-                              ×
-                            </button>
+                          <div key={agent.id} className="rounded-md">
+                            <div className="group flex items-center gap-1 rounded-md px-1 py-1 hover:bg-base-200">
+                              <button
+                                type="button"
+                                onClick={() => toggleAgentSessions(agent.id)}
+                                className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 hover:text-base-content"
+                                title={t("agents.sessions")}
+                                aria-label={t("agents.sessions")}
+                                aria-expanded={expandedAgentSessions.has(agent.id)}
+                              >
+                                <ChevronRight
+                                  size={12}
+                                  className={expandedAgentSessions.has(agent.id) ? "rotate-90 transition" : "transition"}
+                                />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/agent/${agent.id}`)}
+                                className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                              >
+                                <Bot size={12} className="shrink-0 text-base-content/50" />
+                                <span className="min-w-0 flex-1 truncate text-[11px] text-base-content/80">
+                                  {agent.name}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => detachAgent(agent.id)}
+                                className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover:opacity-100"
+                                title={t("workspace.detach_agent")}
+                                aria-label={t("workspace.detach_agent")}
+                              >
+                                ×
+                              </button>
+                            </div>
+                            {expandedAgentSessions.has(agent.id) && (
+                              <AgentSessionList
+                                agent={agent}
+                                tree={agentSessions[agent.id]}
+                                activeSessionId={agent.sessionId}
+                                onSelect={(session) =>
+                                  switchToAgentSession(agent, session)
+                                }
+                                onCreate={createSessionForAgent}
+                                creating={creatingAgentSession === agent.id}
+                                className="mb-1 ml-5"
+                              />
+                            )}
                           </div>
                         ))
                       )}

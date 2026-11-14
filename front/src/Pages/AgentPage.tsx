@@ -10,6 +10,10 @@ import AgentConversation from "../components/Agent/AgentConversation";
 import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
 import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
 import { updateAgent, useAgent } from "../agents/agentStore";
+import {
+  fetchAgentSessions,
+  switchAgentSession,
+} from "../agents/agentSessions";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
@@ -28,11 +32,28 @@ export default function AgentPage() {
   const { agentId } = useParams();
   const [searchParams] = useSearchParams();
   const focusedFilePath = searchParams.get("file");
+  const sessionParam = searchParams.get("session");
   const agent = useAgent(agentId);
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
   const { preview, openFile, openText, closePreview, download } =
     useOpencodeFilePreview(agent);
+  useEffect(() => {
+    if (!agent?.id || !sessionParam || sessionParam === agent.sessionId) return;
+    let cancelled = false;
+    fetchAgentSessions(agent)
+      .then((tree) => {
+        if (cancelled) return;
+        if (tree.all.some((session) => session.id === sessionParam)) {
+          switchAgentSession(agent, sessionParam);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [agent, sessionParam]);
+
   useEffect(() => {
     if (!agent || !focusedFilePath) return;
     void openFile({

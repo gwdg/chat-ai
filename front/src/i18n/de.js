@@ -262,6 +262,9 @@ export default {
     mcp_target_global: "die MCP-Serverliste",
     agent_prompt_summary: "Prompt an Agenten {{agent}} senden",
     agent_interrupt_summary: "Agenten {{agent}} unterbrechen",
+    agent_session_create_summary: "Neue Sitzung für Agenten {{agent}} erstellen",
+    agent_session_switch_summary: "Zu Sitzung {{session}} von Agent {{agent}} wechseln",
+    agent_session_delete_summary: "Sitzung {{session}} vom Agenten {{agent}} entfernen",
     workspace_attach_summary: "Arbeitsbereich {{workspace}} mit {{target}} verknüpfen",
     workspace_detach_summary: "Arbeitsbereich {{workspace}} von {{target}} trennen",
     mcp_add_local_summary:
@@ -327,7 +330,7 @@ export default {
       title: "Einen Remote-Agenten starten",
       step1: "Verwenden Sie die +-Schaltfläche im Bereich Agenten, um einen Agenten hinzuzufügen und sein HPC-Projekt auszuwählen.",
       step2: "Agenten erscheinen in der Liste; klicken Sie auf einen, um seinen Chat rechts zu öffnen.",
-      step3: "Verwenden Sie das X im Kopf des Agenten-Chats, um den Verlauf zu löschen und eine neue OpenCode-Sitzung zu starten.",
+      step3: "Klappen Sie einen Agenten über das Chevron auf, um seine Sitzungen und Subagenten-Sitzungen zu sehen. Klicken Sie eine Sitzung zum Wechseln an, erstellen Sie mit + eine neue oder öffnen Sie das ...-Menü zum Umbenennen oder Schließen.",
     },
     catalog: {
       open: "Tutorials durchsuchen",
@@ -688,7 +691,7 @@ export default {
       title: "Eine Was-ist-neu-Übersicht erhalten",
       step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
       step2: "Das Banner zeigt, wann zuletzt geprüft wurde. Es wird nach jeder Was-ist-neu-Antwort aktualisiert.",
-      step3: "Fragen Sie „Was gibt es Neues?“, um geänderte Chats, neue Themen und Erinnerungen, Agentenstatus und neue Agentendateien zu sehen.",
+      step3: "Fragen Sie „Was gibt es Neues?“, um geänderte Chats, neue Themen und Erinnerungen, den Agentenstatus über alle Sitzungen und Subagenten, neue oder geänderte Sitzungen und neue Agentendateien zu sehen.",
     },
     meta_chat_mcp: {
       title: "MCP-Server über den Metachat verwalten",
@@ -1526,6 +1529,8 @@ export default {
     close_chat:
       "Diesen Chat schließen? Er wird aus Ihren Unterhaltungen entfernt.",
     close_chat_yes: "Chat schließen",
+    close_agent_session: "Diese Sitzung schließen? Sie wird aus OpenCode entfernt.",
+    close_agent_session_yes: "Sitzung schließen",
     regenerate_confirm:
       "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden. Um diese Unterhaltung zu behalten, verwenden Sie stattdessen „In neuem Chat fortfahren“.",
     regenerate_yes: "Regenerieren",
@@ -1623,6 +1628,16 @@ export default {
   },
   agents: {
     section_title: "Agenten",
+    sessions: "Sitzungen",
+    new_session: "Neue Sitzung",
+    no_sessions: "Noch keine Sitzungen.",
+    subagent_short: "Sub",
+    rename_session: "Sitzung umbenennen",
+    close_session: "Sitzung schließen",
+    session_options: "Sitzungsoptionen",
+    session_renamed: "Sitzung umbenannt",
+    session_closed: "Sitzung geschlossen",
+    session_name_placeholder: "Sitzungsname",
     tooltip: "Remote-Agenten, die auf der GWDG-Infrastruktur laufen.",
     status_ready: "Verbunden und bereit",
     status_working: "Arbeitet",
