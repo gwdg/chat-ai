@@ -13,6 +13,14 @@ import {
   remoteMcpEnabled,
   testMcpServer,
 } from "../agent/mcp";
+import { getAgents } from "../agents/agentStore";
+import {
+  getOpencodeInfo,
+  getOpencodeSessionStatus,
+  listOpencodeFiles,
+  listOpencodeMessages,
+  readOpencodeFile,
+} from "../apis/opencodeAgents";
 
 const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
@@ -236,6 +244,27 @@ function messageLines(matches, topics) {
   );
 }
 
+const findAgent = (reference) => {
+  const target = String(reference || "").trim();
+  return getAgents().find(
+    (agent) => agent.id === target || agent.name === target,
+  );
+};
+
+const agentMessageText = (message) => {
+  if (message?.type === "user") return String(message.text || "").trim();
+  const parts = message?.content ?? message?.parts ?? [];
+  return parts
+    .map((part) => {
+      if (part?.type === "text") return part.text || "";
+      if (part?.type === "tool") return `[tool: ${part.name || "tool"}]`;
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+};
+
 const tool = (name, description, properties = {}, required = []) => ({
   type: "function",
   function: {
@@ -280,6 +309,42 @@ export const META_TOOL_DEFINITIONS = [
     "Test a configured local MCP server by its id, name, or URL and report whether it is reachable.",
     { server: { type: "string", description: "MCP server id, name, or URL" } },
     ["server"],
+  ),
+  tool(
+    "list_agents",
+    "List the user's configured OpenCode agents with id, name, server URL, and local/remote mode.",
+  ),
+  tool(
+    "check_agents",
+    "Check the connection and session activity of every configured OpenCode agent.",
+  ),
+  tool(
+    "get_agent_history",
+    "Read recent OpenCode messages for one agent by its id or name.",
+    {
+      agent: { type: "string", description: "Agent id or name" },
+      limit: { type: "integer", description: "Maximum messages to return (default 40, max 100)" },
+    },
+    ["agent"],
+  ),
+  tool(
+    "list_agent_files",
+    "List files in one agent's OpenCode project by its id or name.",
+    {
+      agent: { type: "string", description: "Agent id or name" },
+      path: { type: "string", description: "Project-relative folder, default empty/root" },
+    },
+    ["agent"],
+  ),
+  tool(
+    "read_agent_file",
+    "Read a UTF-8 file from one agent's OpenCode project by its id or name.",
+    {
+      agent: { type: "string", description: "Agent id or name" },
+      path: { type: "string", description: "Project-relative file path" },
+      maxChars: { type: "integer", description: "Maximum characters (default 20000, max 100000)" },
+    },
+    ["agent", "path"],
   ),
   tool("list_models", "List the models available in this deployment with their ids and names."),
   tool("list_personas", "List the recommended persona catalog with ids, titles, categories, and descriptions."),
@@ -458,6 +523,137 @@ export function createMetaToolRunner({
             }),
           );
           return `Connection failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`;
+        }
+      }
+
+      case "list_agents": {
+        const agents = getAgents();
+        if (!agents.length) return "No agents configured.";
+        return agents
+          .map(
+            (agent) =>
+              `- id: ${agent.id}
+  name: ${agent.name || agent.id}
+  server: ${agent.serverUrl}
+  mode: ${agent.local === false ? "remote" : "local"}`,
+          )
+          .join("\n");
+      }
+
+      case "check_agents": {
+        const agents = getAgents();
+        if (!agents.length) return "No agents configured.";
+        const lines = await Promise.all(
+          agents.map(async (agent) => {
+            if (!agent.sessionId) {
+              return `- ${agent.name || agent.id}: no OpenCode session configured.`;
+            }
+            const [info, statuses] = await Promise.allSettled([
+              getOpencodeInfo(agent),
+              getOpencodeSessionStatus(agent),
+            ]);
+            const connected =
+              info.status === "fulfilled" || statuses.status === "fulfilled";
+            const rawStatus =
+              statuses.status === "fulfilled"
+                ? statuses.value?.[agent.sessionId]
+                : null;
+            const activity =
+              typeof rawStatus === "string"
+                ? rawStatus
+                : rawStatus?.type ??
+                  rawStatus?.status ??
+                  rawStatus?.state ??
+                  "unknown";
+            const working = /busy|running|working|active|pending|retry|permission/i.test(
+              String(activity),
+            );
+            const error =
+              info.status === "rejected"
+                ? info.reason instanceof Error
+                  ? info.reason.message
+                  : String(info.reason)
+                : "";
+            return [
+              `- ${agent.name || agent.id}: ${connected ? "connected" : "unreachable"}`,
+              `  server: ${agent.serverUrl}`,
+              `  session: ${working ? "working" : connected ? "idle" : "unknown"}`,
+              ...(error ? [`  error: ${error}`] : []),
+            ].join("\n");
+          }),
+        );
+        return lines.join("\n");
+      }
+
+      case "get_agent_history": {
+        const agent = findAgent(args.agent);
+        if (!agent) return "Agent not found.";
+        if (!agent.sessionId) return "This agent has no OpenCode session.";
+        const limit = Math.min(
+          100,
+          Math.max(1, Number.parseInt(args.limit, 10) || 40),
+        );
+        let messages;
+        try {
+          messages = await listOpencodeMessages(agent, agent.sessionId);
+        } catch (error) {
+          return `Could not read the agent history: ${
+            error instanceof Error ? error.message : String(error)
+          }`;
+        }
+        const lines = [];
+        for (const message of messages.slice(-limit)) {
+          const text = agentMessageText(message);
+          if (!text) continue;
+          lines.push(
+            `- id: ${message.id}\n  role: ${message.type}\n  text: ${text.slice(0, 12000)}`,
+          );
+        }
+        return `Agent: ${agent.name || agent.id}\nsession: ${agent.sessionId}\nHistory (${lines.length} messages):\n${lines.join("\n") || "(no messages)"}`;
+      }
+
+      case "list_agent_files": {
+        const agent = findAgent(args.agent);
+        if (!agent) return "Agent not found.";
+        const path = String(args.path || "").replace(/^\/+/, "");
+        try {
+          const rows = await listOpencodeFiles(agent, path);
+          return rows
+            .map(
+              (entry) =>
+                `- ${entry.type === "directory" ? "dir " : "file"} ${entry.path}${typeof entry.size === "number" ? ` (${entry.size} bytes)` : ""}`,
+            )
+            .join("\n") || "(empty folder)";
+        } catch (error) {
+          return `Could not list agent files: ${
+            error instanceof Error ? error.message : String(error)
+          }`;
+        }
+      }
+
+      case "read_agent_file": {
+        const agent = findAgent(args.agent);
+        if (!agent) return "Agent not found.";
+        const path = String(args.path || "").trim();
+        if (!path) return "A file path is required.";
+        const maxChars = Math.min(
+          100000,
+          Math.max(1, Number.parseInt(args.maxChars, 10) || 20000),
+        );
+        try {
+          const { blob, type } = await readOpencodeFile(agent, path);
+          if (blob.size > 2 * 1024 * 1024) {
+            return `File is too large to read (${blob.size} bytes).`;
+          }
+          const text = await blob.text();
+          if (text.includes("\u0000")) {
+            return `File appears to be binary (${type || "unknown type"}, ${blob.size} bytes).`;
+          }
+          return text.slice(0, maxChars) || "(empty file)";
+        } catch (error) {
+          return `Could not read the agent file: ${
             error instanceof Error ? error.message : String(error)
           }`;
         }

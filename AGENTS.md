@@ -414,8 +414,11 @@ creates a new conversation with validated settings and text-only initial message
 an explicit Accept button. `MCP_SERVER` adds, updates, or removes per-chat MCP servers (local URL
 entries or remote gateway ids), and with `target: "global"` it changes the sidebar MCP server list
 in `user_settings.mcp_servers`; the Meta chat reads the entry ids from `get_user_settings`.
-`test_mcp_server` tests a configured local server by id, name, or URL. Reverting a created chat
-deletes it only if its title, settings, and messages still match what was created. Only that click calls `updateConversationMeta` /
+`test_mcp_server` tests a configured local server by id, name, or URL. `list_agents`, `check_agents`,
+`get_agent_history`, `list_agent_files`, and `read_agent_file` use the existing direct OpenCode
+connection to inspect agents, their messages, and project files. Agent links use `/agent/<id>` so
+`MarkdownLink` renders them as internal cards. Reverting a created chat deletes it only if its title,
+settings, and messages still match what was created. Only that click calls `updateConversationMeta` /
 `assignConversationToFolder` / `setConversationPinned` / `setFolderPinned` or dispatches
 `importUserSettings`; markers
 are stripped from rendered markdown and from Meta-chat history. Memory indices come from the
@@ -664,7 +667,8 @@ remote ids as a value.
 
 `Sidebar/AgentList.tsx` lists remote agents like conversation rows and polls
 `GET /api/session/status` every 5 s for the status dot (green idle, yellow working, red connection
-error). Clicking one navigates to
+error). Leaving an agent page summarizes its messages with `generateConversationSummary`, stores the
+summary on the agent entry, and shows it in the row tooltip. Clicking one navigates to
 `Pages/AgentPage.tsx` (`/agent/:agentId`), whose `components/Agent/AgentConversation.jsx` is the
 chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`, and tool or
 reasoning parts render as inline expandable cards (`AgentAssistantParts`). The left

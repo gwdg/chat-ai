@@ -17,6 +17,7 @@ import {
 } from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
+import ShortcutTooltip from "./ShortcutTooltip";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import {
@@ -224,9 +225,18 @@ export default function AgentList() {
                   : status === "error"
                     ? "bg-error"
                     : "bg-base-content/20";
+            const summary = (agent.summary ?? "").trim();
             return (
-              <div
+              <ShortcutTooltip
                 key={agent.id}
+                label={summary}
+                position="right"
+                enterDelay={350}
+                multiline
+                disabled={!summary}
+                containerClassName="block"
+              >
+              <div
                 className={`group relative flex min-h-[16px] items-center rounded-xl px-2 py-1 ${
                   active
                     ? "bg-base-200 text-base-content shadow-sm"
@@ -237,7 +247,7 @@ export default function AgentList() {
                   type="button"
                   onClick={() => navigate(`/agent/${agent.id}`)}
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  title={agent.serverUrl}
+                  title={summary ? undefined : agent.serverUrl}
                 >
                   <span
                     className="flex w-3 shrink-0 justify-center"
@@ -304,6 +314,7 @@ export default function AgentList() {
                   </Popover>
                 )}
               </div>
+              </ShortcutTooltip>
             );
           })}
         </div>

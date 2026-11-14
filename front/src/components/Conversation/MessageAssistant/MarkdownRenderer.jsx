@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router";
 import {
+  Bot,
   Folder,
   GraduationCap,
   MessageCircle,
@@ -79,6 +80,22 @@ const MarkdownLink = ({ href, children }) => {
         }}
       >
         <Icon size={12} aria-hidden="true" />
+        {children}
+      </a>
+    );
+  }
+
+  if (typeof href === "string" && href.startsWith("/agent/")) {
+    return (
+      <a
+        href={href}
+        className={actionLinkClassName}
+        onClick={(event) => {
+          event.preventDefault();
+          navigate(href);
+        }}
+      >
+        <Bot size={12} aria-hidden="true" />
         {children}
       </a>
     );

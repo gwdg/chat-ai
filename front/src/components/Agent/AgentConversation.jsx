@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
 import {
   Attachment,
   Bot,
@@ -63,6 +64,12 @@ import AgentFormCard from "./AgentFormCard";
 import AgentFormResultCard from "./AgentFormResultCard";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
+import generateConversationSummary from "../../apis/generateConversationSummary";
+import { conversationSummarySignature } from "../../utils/conversationSummary";
+import {
+  selectConversationSummaries,
+  selectUserSettings,
+} from "../../Redux/reducers/userSettingsReducer";
 
 
 const POLL_INTERVAL = 1000;
@@ -90,6 +97,23 @@ const messageParts = (message) =>
     : Array.isArray(message.parts)
       ? message.parts
       : [];
+
+const summaryMessage = (message) => {
+  if (message?.type === "user") {
+    return message.text
+      ? { role: "user", content: [{ type: "text", text: message.text }] }
+      : null;
+  }
+  if (message?.type !== "assistant") return null;
+  const text = messageParts(message)
+    .map((part) => (part.type === "text" ? part.text || "" : ""))
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+  return text
+    ? { role: "assistant", content: [{ type: "text", text }] }
+    : null;
+};
 
 const messageText = (message) => {
   if (message.type === "user") return message.text || "";
@@ -142,6 +166,23 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const formHistoryRef = useRef([]);
   const permissionPoliciesRef = useRef([]);
   const autoReplyingRef = useRef(new Set());
+  const summaryMessagesRef = useRef(new Map());
+  const summariesEnabled = useSelector(selectConversationSummaries);
+  const summaryUserSettings = useSelector(selectUserSettings);
+  const summarySettingsRef = useRef({
+    enabled: summariesEnabled,
+    userSettings: summaryUserSettings,
+  });
+
+  summarySettingsRef.current = {
+    enabled: summariesEnabled,
+    userSettings: summaryUserSettings,
+  };
+  const summaryKey =
+    agent?.id && agent?.sessionId
+      ? `${agent.id}:${agent.sessionId}`
+      : null;
+  if (summaryKey) summaryMessagesRef.current.set(summaryKey, messages);
 
   const updatePendingShell = useCallback((value) => {
     pendingShellRef.current = value;
@@ -378,6 +419,37 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     },
     [refresh, t],
   );
+
+  useEffect(() => {
+    if (!summaryKey || !agent) return;
+    const previousAgent = agent;
+    return () => {
+      const settings = summarySettingsRef.current;
+      const snapshot = summaryMessagesRef.current.get(summaryKey) ?? [];
+      summaryMessagesRef.current.delete(summaryKey);
+      if (!settings.enabled) return;
+      const summaryMessages = snapshot.map(summaryMessage).filter(Boolean);
+      if (!summaryMessages.length) return;
+      const sourceHash = conversationSummarySignature(summaryMessages);
+      if (!sourceHash || previousAgent.summarySourceHash === sourceHash) {
+        return;
+      }
+      void (async () => {
+        try {
+          const summary = await generateConversationSummary({
+            localState: { messages: summaryMessages },
+            userSettings: settings.userSettings,
+          });
+          if (!summary) return;
+          updateAgent(previousAgent.id, {
+            summary,
+            summarySourceHash: sourceHash,
+            summaryUpdatedAt: Date.now(),
+          });
+        } catch {}
+      })();
+    };
+  }, [summaryKey]);
 
   useEffect(() => {
     if (!agent?.sessionId) return;

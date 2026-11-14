@@ -20,6 +20,29 @@ vi.mock("../../db", () => ({
   getConversationMeta: vi.fn(),
 }));
 
+const agentMocks = vi.hoisted(() => ({
+  agents: [],
+  info: vi.fn(async () => ({})),
+  status: vi.fn(async () => ({})),
+  messages: vi.fn(async () => []),
+  files: vi.fn(async () => []),
+  read: vi.fn(async () => ({
+    blob: new Blob(["hello"]),
+    type: "text/plain",
+  })),
+}));
+
+vi.mock("../../agents/agentStore", () => ({
+  getAgents: () => agentMocks.agents,
+}));
+vi.mock("../../apis/opencodeAgents", () => ({
+  getOpencodeInfo: (...args) => agentMocks.info(...args),
+  getOpencodeSessionStatus: (...args) => agentMocks.status(...args),
+  listOpencodeMessages: (...args) => agentMocks.messages(...args),
+  listOpencodeFiles: (...args) => agentMocks.files(...args),
+  readOpencodeFile: (...args) => agentMocks.read(...args),
+}));
+
 vi.mock("../personaCatalog", () => ({
   loadPersonaCatalog: vi.fn(async () => [
     {
@@ -64,6 +87,20 @@ const context = {
 
 describe("Meta chat local tools", () => {
   beforeEach(() => {
+    agentMocks.agents = [];
+    agentMocks.info.mockReset();
+    agentMocks.status.mockReset();
+    agentMocks.messages.mockReset();
+    agentMocks.files.mockReset();
+    agentMocks.read.mockReset();
+    agentMocks.info.mockResolvedValue({});
+    agentMocks.status.mockResolvedValue({});
+    agentMocks.messages.mockResolvedValue([]);
+    agentMocks.files.mockResolvedValue([]);
+    agentMocks.read.mockResolvedValue({
+      blob: new Blob(["hello"]),
+      type: "text/plain",
+    });
     vi.mocked(listConversationMetas).mockResolvedValue([
       {
         id: "chat-1",
@@ -101,12 +138,86 @@ describe("Meta chat local tools", () => {
       "list_memories",
       "get_user_settings",
       "test_mcp_server",
+      "list_agents",
+      "check_agents",
+      "get_agent_history",
+      "list_agent_files",
+      "read_agent_file",
       "list_models",
       "list_personas",
       "list_tutorials",
       "start_tutorial",
       "start_use_case",
     ]);
+  });
+
+  it("lists configured agents with link ids", async () => {
+    agentMocks.agents = [
+      {
+        id: "agent-1",
+        name: "Research agent",
+        serverUrl: "http://127.0.0.1:9000",
+        sessionId: "session-1",
+        local: true,
+      },
+    ];
+    const run = createMetaToolRunner(context);
+    const result = await run("list_agents");
+    expect(result).toContain("id: agent-1");
+    expect(result).toContain("name: Research agent");
+    expect(result).toContain("mode: local");
+  });
+
+  it("reads an agent history and files through its OpenCode connection", async () => {
+    agentMocks.agents = [
+      {
+        id: "agent-1",
+        name: "Research agent",
+        serverUrl: "http://127.0.0.1:9000",
+        sessionId: "session-1",
+      },
+    ];
+    agentMocks.messages.mockResolvedValue([
+      { id: "m1", type: "user", text: "Find the report" },
+      {
+        id: "m2",
+        type: "assistant",
+        content: [{ type: "text", text: "I found it." }],
+      },
+    ]);
+    agentMocks.files.mockResolvedValue([
+      { path: "report.md", type: "file", size: 12 },
+    ]);
+    const run = createMetaToolRunner(context);
+
+    await expect(run("get_agent_history", { agent: "agent-1" })).resolves.toContain(
+      "Find the report",
+    );
+    await expect(
+      run("list_agent_files", { agent: "agent-1", path: "" }),
+    ).resolves.toContain("report.md");
+    await expect(
+      run("read_agent_file", { agent: "agent-1", path: "report.md" }),
+    ).resolves.toBe("hello");
+  });
+
+  it("checks all configured agents", async () => {
+    agentMocks.agents = [
+      {
+        id: "agent-1",
+        name: "Research agent",
+        serverUrl: "http://127.0.0.1:9000",
+        sessionId: "session-1",
+      },
+    ];
+    agentMocks.status.mockResolvedValue({
+      "session-1": { type: "busy" },
+    });
+    const run = createMetaToolRunner(context);
+
+    const result = await run("check_agents");
+    expect(result).toContain("Research agent: connected");
+    expect(result).toContain("session: working");
   });
 
   it("returns current settings, models, memories, and personas", async () => {

@@ -77,7 +77,7 @@ To propose changes, include one marker per change on its own line at the end of 
 [[DELETE_MEMORY:{"index":0}]]
 [[CLEAR_MEMORIES:{}]]
 
-Use only ids returned by the tools. Use "folderId": null for Unsorted, or provide a new folderName to create a topic. Use "pinned": true to pin a chat or topic and "pinned": false to unpin it. CREATE_CHAT messages must be text-only, use only system/user/assistant roles, and total at most 200 messages. Settings are optional and are validated before the chat is created. Use MCP_SERVER "target":"global" to change the sidebar MCP server list; get the entryId from get_user_settings.
+Use only ids returned by the tools. Use "folderId": null for Unsorted, or provide a new folderName to create a topic. Use "pinned": true to pin a chat or topic and "pinned": false to unpin it. CREATE_CHAT messages must be text-only, use only system/user/assistant roles, and total at most 200 messages. Settings are optional and are validated before the chat is created. Use MCP_SERVER "target":"global" to change the sidebar MCP server list; get the entryId from get_user_settings. To link to an agent, call list_agents and use [Agent name](/agent/<agent id>).
 
 Supported setting keys and values:
 - memory_mode: 0 (none), 1 (recall), 2 (learn)
@@ -239,6 +239,19 @@ export function useMetaChatSend(modelsData = []) {
         memories,
       });
 
+      const newUserMessage = extractMessageText(
+        localState.messages[localState.messages.length - 1],
+      ).trim();
+      const asksForNewStatus =
+        /\b(what'?s new|anything new|any news|any updates?|recent activity|recent changes|new in meta|agent status|status of (?:the )?agents?|neuigkeiten|was gibt'?s neues|irgendetwas neues|aktivität der agenten|status der agenten)\b/i.test(
+          newUserMessage,
+        );
+      let systemPrompt = buildSystemPrompt();
+      if (asksForNewStatus) {
+        const status = await runTool("check_agents");
+        systemPrompt += `\n\nCurrent agent status (checked now with check_agents):\n${status}`;
+      }
+
       const payload = {
         settings: {
           model: { id: modelId, name: modelId },
@@ -250,15 +263,12 @@ export function useMetaChatSend(modelsData = []) {
           tool_choice: "auto",
         },
         messages: [
-          { role: "system", content: buildSystemPrompt() },
+          { role: "system", content: systemPrompt },
           ...history,
         ],
       };
 
       const conversationId = localState.id;
-      const newUserMessage = extractMessageText(
-        localState.messages[localState.messages.length - 1],
-      ).trim();
       const timeoutMs =
         timeout >= 5000 && timeout <= 900000 ? timeout : 300000;
 

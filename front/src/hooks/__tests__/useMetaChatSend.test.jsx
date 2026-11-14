@@ -105,6 +105,28 @@ describe("useMetaChatSend", () => {
     expect(setter.getState().messages.at(-2).content[0].text).toBe("Hello from meta");
   });
 
+  it("checks agent status when the user asks what is new", async () => {
+    const runner = vi.fn(async (name) =>
+      name === "check_agents" ? "Agent A: connected" : "tool result",
+    );
+    vi.mocked(createMetaToolRunner).mockReturnValue(runner);
+    vi.mocked(chatCompletions).mockImplementationOnce(finalMessage("Nothing new"));
+
+    const state = makeState([
+      { role: "user", content: [{ type: "text", text: "What's new?" }] },
+    ]);
+    const setter = makeSetter(state);
+    const { result } = renderHook(() => useMetaChatSend([]));
+
+    await act(async () => {
+      await result.current({ localState: state, setLocalState: setter.setLocalState });
+    });
+
+    expect(runner).toHaveBeenCalledWith("check_agents");
+    const payload = vi.mocked(chatCompletions).mock.calls[0][0];
+    expect(payload.messages[0].content).toContain("Agent A: connected");
+  });
+
   it("executes a tool call and feeds the result back to the model", async () => {
     const runner = vi.fn(async (name) => `result for ${name}`);
     vi.mocked(createMetaToolRunner).mockReturnValue(runner);
