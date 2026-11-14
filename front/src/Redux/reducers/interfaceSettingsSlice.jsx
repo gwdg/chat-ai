@@ -11,6 +11,7 @@ const interfaceSettingsSlice = createSlice({
     warn_share_settings: true,
     warn_regenerate: true,
     warn_fork: true,
+    warn_workspace_delete: true,
     show_tour: true,
     count_hallucination: 0,
     count_announcement: 0,

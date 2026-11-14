@@ -46,6 +46,12 @@ import WelcomeModal from "./Help/WelcomeModal";
 import HelpMCPModal from "./Help/HelpMCPModal";
 import ImportSettingsDisclaimerModal from "./Alert/ImportSettingsDisclaimerModal";
 import HelpReasoningModal from "./Help/HelpReasoningModal";
+import CreateWorkspaceModal from "./Workspace/CreateWorkspaceModal";
+import AddSourceModal from "./Workspace/AddSourceModal";
+import TransferConfirmModal from "./Workspace/TransferConfirmModal";
+import MoveToModal from "./Workspace/MoveToModal";
+import AddMountModal from "./Workspace/AddMountModal";
+import AttachChatModal from "./Workspace/AttachChatModal";
 
 const ModalContext = createContext();
 
@@ -191,6 +197,24 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "preview" && (
         <PreviewModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceCreate" && (
+        <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAddSource" && (
+        <AddSourceModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceTransfer" && (
+        <TransferConfirmModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceMoveTo" && (
+        <MoveToModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAddMount" && (
+        <AddMountModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAttachChat" && (
+        <AttachChatModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "summarizeChat" && (
         <SummarizeChatModal isOpen onClose={closeModal} {...modalProps} />

@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid';
 import { deleteAllWorkspaces, deleteWorkspace } from '../agent/workspace'
+import { deleteChatLinkRemote } from '../apis/workspaces'
 
 import type { 
   ConversationRow, 
@@ -17,7 +18,13 @@ import type {
   ContentItemInput,
   FolderRow,
   FeedbackRow,
-  PersonaInfo
+  PersonaInfo,
+  WorkspaceRow,
+  WorkspaceSourceRow,
+  WorkspaceHandleRow,
+  TransferJobRow,
+  WorkspaceMountRow,
+  WorkspaceChatRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -29,6 +36,12 @@ export class AppDB extends Dexie {
   files_meta!: Table<FileMetaRow, string>
   files_data!: Table<FileDataRow, string>
   folders!: Table<FolderRow, string>
+  workspaces!: Table<WorkspaceRow, string>
+  workspace_sources!: Table<WorkspaceSourceRow, string>
+  workspace_handles!: Table<WorkspaceHandleRow, string>
+  workspace_transfers!: Table<TransferJobRow, string>
+  workspace_mounts!: Table<WorkspaceMountRow, string>
+  workspace_chats!: Table<WorkspaceChatRow, string>
 
   constructor() {
     super('app-conversations-db')
@@ -88,6 +101,34 @@ export class AppDB extends Dexie {
           conv.lastOpenedAt = conv.lastModified ?? conv.createdAt ?? Date.now();
         }
       });
+    });
+
+    this.version(6).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt'
+    });
+
+    this.version(7).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]'
     });
   }
 }
@@ -720,13 +761,18 @@ export async function setConversationSummary(
 
 // Delete entire conversation (messages + content items + files)
 export async function deleteConversation(conversationId: string) {
+  const chatLinks = await db.workspace_chats
+    .where('conversationId')
+    .equals(conversationId)
+    .toArray();
   await db.transaction(
     'rw',
     [db.messages,
     db.content_items,
     db.files_meta,
     db.files_data,
-    db.conversations],
+    db.conversations,
+    db.workspace_chats],
     async () => {
       // Delete all files for this conversation (meta + data)
       const fileIds = await db.files_meta
@@ -754,8 +800,12 @@ export async function deleteConversation(conversationId: string) {
 
       // Finally, delete the conversation record itself
       await db.conversations.delete(conversationId);
+      await db.workspace_chats.where('conversationId').equals(conversationId).delete();
     }
   );
+  for (const link of chatLinks) {
+    void deleteChatLinkRemote(link.workspaceId, link.id).catch(() => {});
+  }
   // The agent's files live in OPFS, outside the database
   await deleteWorkspace(conversationId);
 }

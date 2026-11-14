@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router";
-import { AiLabel } from "@carbon/icons-react";
+import ChattyLogo from "../components/Others/ChattyLogo";
 
 import { getDefaultConversation } from "../utils/conversationUtils";
 import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
@@ -204,14 +204,13 @@ export default function MetaChatPage() {
               <HallucinationWarning />
             </div>
             <div className="mx-auto mb-2 flex w-full md:max-w-[85vw] xl:max-w-[1300px] items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 shadow-sm">
-              <AiLabel
-                size={16}
-                className="mt-0.5 shrink-0 text-warning"
-                aria-hidden="true"
-              />
+              <ChattyLogo className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-base-content">
-                  {t("meta_chat.title")}
+                  {t("meta_chat.name")}
+                  <span className="ml-1 font-normal text-base-content/60">
+                    · {t("meta_chat.title")}
+                  </span>
                 </p>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-base-content/70">
                   {t("meta_chat.banner_description")}

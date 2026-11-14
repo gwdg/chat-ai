@@ -34,6 +34,10 @@ export function listArcanaFiles(name: string) {
   return request(`${arcanaPath(name)}/files`);
 }
 
+export function getArcanaQuota(name: string) {
+  return request(`${arcanaPath(name)}/quota`).catch(() => null);
+}
+
 export function readArcanaFile(
   name: string,
   file: string,

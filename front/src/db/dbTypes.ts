@@ -172,3 +172,116 @@ export type FolderRow = {
   pinned?: boolean
   sortOrder?: number
 }
+
+// ---------- Workspaces ----------
+
+export type SourceKind = 'browser' | 'local' | 'mcp' | 'arcana'
+
+export type SourceStatus =
+  | 'connected'
+  | 'needs-permission'
+  | 'offline'
+  | 'disabled'
+  | 'error'
+
+export type WorkspaceCapabilities = {
+  read: boolean
+  write: boolean
+  delete: boolean
+  mkdir: boolean
+  rename: boolean
+  move: boolean
+  copy: boolean
+  serverSideMove: boolean
+  serverSideCopy: boolean
+  quota: boolean
+  watch: boolean
+  range: boolean
+  maxFileSize?: number
+}
+
+export type BrowserConfig = { storage: 'opfs' }
+export type LocalConfig = { handleKey: string }
+export type McpConfig = {
+  endpoint: string
+  transport: 'streamable-http' | 'sse'
+  toolAllowlist: string[]
+}
+export type ArcanaConfig = { remoteWorkspaceId: string; baseUrl?: string }
+
+export type SourceConfig =
+  | BrowserConfig
+  | LocalConfig
+  | McpConfig
+  | ArcanaConfig
+
+export type WorkspaceRow = {
+  id: string
+  name: string
+  createdAt: number
+  lastModified: number
+}
+
+export type WorkspaceSourceRow = {
+  id: string
+  workspaceId: string
+  kind: SourceKind
+  label: string
+  deviceId?: string
+  config: SourceConfig
+  capabilities: WorkspaceCapabilities
+  status: SourceStatus
+  error?: string
+  createdAt: number
+  lastModified: number
+}
+
+export type WorkspaceHandleRow = {
+  sourceId: string
+  handle: FileSystemDirectoryHandle
+}
+
+export type TransferJobRow = {
+  id: string
+  workspaceId: string
+  fromSourceId: string
+  toSourceId: string
+  fromPath: string
+  toPath: string
+  intent: 'copy' | 'move'
+  status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
+  totalBytes?: number
+  copiedBytes?: number
+  error?: string
+  createdAt: number
+  updatedAt: number
+}
+
+export type WorkspaceFileEntry = {
+  sourceId: string
+  path: string
+  name: string
+  kind: 'file' | 'dir'
+  size?: number
+  mtime?: string
+  mime?: string
+  etag?: string
+  childCount?: number
+}
+
+export type WorkspaceMountRow = {
+  id: string
+  workspaceId: string
+  sourceId: string
+  sourcePath: string
+  path: string
+  createdAt: number
+  lastModified: number
+}
+
+export type WorkspaceChatRow = {
+  id: string
+  workspaceId: string
+  conversationId: string
+  createdAt: number
+}

@@ -754,6 +754,18 @@ app.get("/arcana-v2/arcanas/:name", async (req, res) => {
   }
 });
 
+app.get("/arcana-v2/arcanas/:name/quota", async (req, res) => {
+  try {
+    const quota = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/quota`
+    );
+    return res.status(200).json(quota);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
 app.get("/arcana-v2/arcanas/:name/files", async (req, res) => {
   try {
     const files = await proxyArcanaJson(
@@ -1377,6 +1389,192 @@ app.post("/chat/completions", async (req, res) => {
       return;
     }
   }
+});
+
+
+// Workspace metadata is shared across devices; file bytes stay in their providers.
+const workspaceStorePath = process.env.WORKSPACES_FILE
+  ? path.resolve(process.env.WORKSPACES_FILE)
+  : path.resolve("./workspaces.json");
+
+const workspaceUserKey = (req) =>
+  String(
+    req.headers["x-auth-claim-uid"] ||
+      req.headers["x-consumer-custom-id"] ||
+      req.headers["oidc_claim_uid"] ||
+      req.headers["inference-id"] ||
+      "local"
+  );
+
+function readWorkspaceStore() {
+  try {
+    return JSON.parse(fs.readFileSync(workspaceStorePath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function writeWorkspaceStore(store) {
+  fs.writeFileSync(workspaceStorePath, JSON.stringify(store, null, 2));
+}
+
+function userWorkspaces(store, req) {
+  const key = workspaceUserKey(req);
+  store[key] = store[key] ?? { workspaces: [], sources: [], mounts: [], chats: [] };
+  if (!Array.isArray(store[key].workspaces)) store[key].workspaces = [];
+  if (!Array.isArray(store[key].sources)) store[key].sources = [];
+  if (!Array.isArray(store[key].mounts)) store[key].mounts = [];
+  if (!Array.isArray(store[key].chats)) store[key].chats = [];
+  return store[key];
+}
+
+app.get("/workspaces", (req, res) => {
+  const store = readWorkspaceStore();
+  return res.status(200).json(userWorkspaces(store, req));
+});
+
+app.post("/workspaces", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  const id = String(req.body?.id ?? "").trim();
+  const name = String(req.body?.name ?? "").trim();
+  if (!id || !name) return res.status(400).json({ error: "id and name are required" });
+  const workspace = {
+    id,
+    name,
+    createdAt: Number(req.body?.createdAt) || Date.now(),
+    lastModified: Date.now(),
+  };
+  user.workspaces = [...user.workspaces.filter((item) => item.id !== id), workspace];
+  writeWorkspaceStore(store);
+  return res.status(200).json(workspace);
+});
+
+app.put("/workspaces/:id", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  const workspace = user.workspaces.find((item) => item.id === req.params.id);
+  if (!workspace) return res.status(404).json({ error: "workspace not found" });
+  const name = String(req.body?.name ?? "").trim();
+  if (name) workspace.name = name;
+  workspace.lastModified = Date.now();
+  writeWorkspaceStore(store);
+  return res.status(200).json(workspace);
+});
+
+app.delete("/workspaces/:id", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  user.workspaces = user.workspaces.filter((item) => item.id !== req.params.id);
+  user.sources = user.sources.filter((item) => item.workspaceId !== req.params.id);
+  user.mounts = user.mounts.filter((item) => item.workspaceId !== req.params.id);
+  user.chats = user.chats.filter((item) => item.workspaceId !== req.params.id);
+  writeWorkspaceStore(store);
+  return res.status(204).end();
+});
+
+app.post("/workspaces/:id/sources", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  if (!user.workspaces.some((item) => item.id === req.params.id)) {
+    return res.status(404).json({ error: "workspace not found" });
+  }
+  const source = req.body;
+  if (!source?.id || !source?.kind) {
+    return res.status(400).json({ error: "source id and kind are required" });
+  }
+  user.sources = [
+    ...user.sources.filter((item) => item.id !== source.id),
+    { ...source, workspaceId: req.params.id },
+  ];
+  writeWorkspaceStore(store);
+  return res.status(200).json(source);
+});
+
+app.put("/workspaces/:id/sources/:sourceId", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  const index = user.sources.findIndex(
+    (item) => item.id === req.params.sourceId && item.workspaceId === req.params.id
+  );
+  if (index < 0) return res.status(404).json({ error: "source not found" });
+  user.sources[index] = {
+    ...user.sources[index],
+    ...req.body,
+    id: req.params.sourceId,
+    workspaceId: req.params.id,
+  };
+  writeWorkspaceStore(store);
+  return res.status(200).json(user.sources[index]);
+});
+
+app.delete("/workspaces/:id/sources/:sourceId", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  user.sources = user.sources.filter(
+    (item) => !(item.id === req.params.sourceId && item.workspaceId === req.params.id)
+  );
+  writeWorkspaceStore(store);
+  return res.status(204).end();
+});
+
+
+app.post("/workspaces/:id/mounts", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  const workspaceId = req.params.id;
+  if (!user.workspaces.some((item) => item.id === workspaceId)) {
+    return res.status(404).json({ error: "workspace not found" });
+  }
+  const mount = req.body;
+  if (!mount?.id || !mount?.sourceId || !mount?.path) {
+    return res.status(400).json({ error: "mount id, sourceId and path are required" });
+  }
+  user.mounts = [
+    ...user.mounts.filter((item) => item.id !== mount.id),
+    { ...mount, workspaceId, lastModified: Date.now() },
+  ];
+  writeWorkspaceStore(store);
+  return res.status(200).json(mount);
+});
+
+app.delete("/workspaces/:id/mounts/:mountId", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  user.mounts = user.mounts.filter(
+    (item) => !(item.id === req.params.mountId && item.workspaceId === req.params.id)
+  );
+  writeWorkspaceStore(store);
+  return res.status(204).end();
+});
+
+app.post("/workspaces/:id/chats", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  const workspaceId = req.params.id;
+  if (!user.workspaces.some((item) => item.id === workspaceId)) {
+    return res.status(404).json({ error: "workspace not found" });
+  }
+  const chat = req.body;
+  if (!chat?.id || !chat?.conversationId) {
+    return res.status(400).json({ error: "chat id and conversationId are required" });
+  }
+  user.chats = [
+    ...user.chats.filter((item) => item.id !== chat.id),
+    { ...chat, workspaceId },
+  ];
+  writeWorkspaceStore(store);
+  return res.status(200).json(chat);
+});
+
+app.delete("/workspaces/:id/chats/:chatId", (req, res) => {
+  const store = readWorkspaceStore();
+  const user = userWorkspaces(store, req);
+  user.chats = user.chats.filter(
+    (item) => !(item.id === req.params.chatId && item.workspaceId === req.params.id)
+  );
+  writeWorkspaceStore(store);
+  return res.status(204).end();
 });
 
 // Start Chat AI Backend App

@@ -22,6 +22,27 @@ import {
 } from "./featureGuideActions.js";
 
 export const featureGuides = {
+  workspace_overview: {
+    titleKey: "feature_guide.workspace_overview.title",
+    prompt:
+      "Open a workspace from the sidebar. A workspace groups browser storage, local folders, Arcana collections and MCP file servers in one place. Add a source, click it to browse its files, and drag files between sources to copy or move them.",
+    keywords: ["workspace", "workspaces", "files", "browser storage", "local folder", "arcana files", "mcp files"],
+    steps: [
+      {
+        target: '[data-guide="workspace-add-source"]',
+        textKey: "feature_guide.workspace_overview.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-sources"]',
+        textKey: "feature_guide.workspace_overview.step2",
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_overview.step3",
+      },
+    ],
+  },
   attach_media: {
     titleKey: "feature_guide.attach_media.title",
     prompt:
@@ -1154,6 +1175,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
+  workspace: ["workspace_overview"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

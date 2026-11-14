@@ -11,6 +11,7 @@ import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
 import MountFolderButton from "./MountFolderButton";
+import WorkspaceAttachButton from "./WorkspaceAttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
 import SpeechModeButton from "./SpeechModeButton";
@@ -201,6 +202,7 @@ export default function Prompt({
           <div className="flex gap-4 items-center justify-center">
             {!metaChatSend && (
               <>
+                <WorkspaceAttachButton localState={localState} />
                 {/* Local folder and write access for the agent */}
                 <MountFolderButton
                   localState={localState}
