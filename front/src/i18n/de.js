@@ -259,7 +259,9 @@ export default {
     mcp_update_remote_summary:
       "Entfernten MCP-Server {{name}} in {{target}} aktualisieren",
     add_memory_summary: "Erinnerung „{{text}}“ hinzufügen",
+    add_memory_group_summary: "Erinnerung „{{text}}“ zur Gruppe „{{group}}“ hinzufügen",
     update_memory_summary: "Erinnerung „{{from}}“ in „{{to}}“ ändern",
+    update_memory_group_summary: "Erinnerung „{{from}}“ in „{{to}}“ in Gruppe „{{group}}“ ändern",
     delete_memory_summary: "Erinnerung „{{text}}“ löschen",
     clear_memories_summary: "Alle gespeicherten Erinnerungen löschen",
     memory_item: "Erinnerung {{index}}",
@@ -1303,8 +1305,8 @@ export default {
   },
   // Memory Modal
   memory: {
-    group: "Gruppe",
     userMemory: "Erinnerungen",
+    userMemoryGroup: "Erinnerungen (Gruppe: {{group}})",
     memoryCount_one: "{{count}} Erinnerung gespeichert",
     memoryCount_other: "{{count}} Erinnerungen gespeichert",
     addNew: "Neue Erinnerung hinzufügen",

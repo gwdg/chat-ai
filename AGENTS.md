@@ -544,7 +544,10 @@ settings; the conversation override is part of
 the conversation settings. Redux persist migration 8 initializes `memory_groups` /
 `default_memory_group` and assigns every existing memory to `"default"`; old conversations without
 `memory_group_override` follow the global default group. No Dexie version bump is needed (all fields
-are unindexed).
+are unindexed). The Meta chat exposes the grouping through `list_memories` (default group, available
+groups, and each memory's group) and `get_user_settings` (group list and default group). Its
+`ADD_MEMORY` / `UPDATE_MEMORY` proposals accept an optional `group` name; additions without one use
+the Meta conversation's effective group.
 
 ## 5. Conventions
 

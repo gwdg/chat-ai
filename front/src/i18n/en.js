@@ -249,7 +249,9 @@ export default {
     mcp_update_local_summary: "Update local MCP server {{name}} in {{target}}",
     mcp_update_remote_summary: "Update remote MCP server {{name}} in {{target}}",
     add_memory_summary: "Add memory “{{text}}”",
+    add_memory_group_summary: "Add memory “{{text}}” to group “{{group}}”",
     update_memory_summary: "Update memory “{{from}}” to “{{to}}”",
+    update_memory_group_summary: "Update memory “{{from}}” to “{{to}}” in group “{{group}}”",
     delete_memory_summary: "Delete memory “{{text}}”",
     clear_memories_summary: "Delete all saved memories",
     memory_item: "Memory {{index}}",
@@ -1282,8 +1284,8 @@ export default {
   },
   // Memory Modal
   memory: {
-    group: "Group",
     userMemory: "User Memory",
+    userMemoryGroup: "User Memory (Group: {{group}})",
     memoryCount_one: "{{count}} memory stored",
     memoryCount_other: "{{count}} memories stored",
     addNew: "Add New Memory",

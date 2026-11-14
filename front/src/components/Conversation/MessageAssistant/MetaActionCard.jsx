@@ -127,6 +127,40 @@ export default function MetaActionCard({
   const folders = useFolderList() || [];
   const userSettings = useSelector(selectUserSettings);
   const memories = useSelector(selectAllMemories);
+  const memoryGroups = userSettings.memory_groups ?? [];
+  const defaultMemoryGroupId = userSettings.default_memory_group ?? "default";
+  const groupOverride = localState?.settings?.memory_group_override;
+  const requestedMemoryGroup =
+    groupOverride && groupOverride !== "default"
+      ? groupOverride
+      : defaultMemoryGroupId;
+  const effectiveMemoryGroupId =
+    requestedMemoryGroup === "default" ||
+    memoryGroups.some((group) => group.id === requestedMemoryGroup)
+      ? requestedMemoryGroup
+      : "default";
+
+  const resolveMemoryGroupId = (value) => {
+    const raw = typeof value === "string" ? value.trim() : "";
+    if (!raw) return effectiveMemoryGroupId;
+    const groups = [{ id: "default", name: "Default" }, ...memoryGroups];
+    const lower = raw.toLowerCase();
+    return (
+      groups.find(
+        (group) =>
+          group.id.toLowerCase() === lower ||
+          String(group.name).toLowerCase() === lower,
+      )?.id ?? null
+    );
+  };
+
+  const memoryGroupLabel = (value) => {
+    if (!value) return "";
+    const id = resolveMemoryGroupId(value);
+    if (!id) return value;
+    if (id === "default") return "Default";
+    return memoryGroups.find((group) => group.id === id)?.name ?? value;
+  };
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
   const [reverting, setReverting] = useState(false);
@@ -329,13 +363,24 @@ export default function MetaActionCard({
       );
     }
     if (action.type === "add_memory") {
-      return t("meta_chat.add_memory_summary", { text: action.text });
+      return action.group
+        ? t("meta_chat.add_memory_group_summary", {
+            text: action.text,
+            group: memoryGroupLabel(action.group),
+          })
+        : t("meta_chat.add_memory_summary", { text: action.text });
     }
     if (action.type === "update_memory") {
-      return t("meta_chat.update_memory_summary", {
-        from: memoryText(action.index),
-        to: action.text,
-      });
+      return action.group
+        ? t("meta_chat.update_memory_group_summary", {
+            from: memoryText(action.index),
+            to: action.text,
+            group: memoryGroupLabel(action.group),
+          })
+        : t("meta_chat.update_memory_summary", {
+            from: memoryText(action.index),
+            to: action.text,
+          });
     }
     if (action.type === "delete_memory") {
       return t("meta_chat.delete_memory_summary", {
@@ -486,24 +531,35 @@ export default function MetaActionCard({
               .filter((action) => action.type === "delete_memory")
               .map((action) => action.index),
           );
-          const updatesByIndex = new Map(
-            memoryActions
-              .filter((action) => action.type === "update_memory")
-              .map((action) => [action.index, action.text]),
-          );
+          const updatesByIndex = new Map();
+          for (const action of memoryActions) {
+            if (action.type !== "update_memory") continue;
+            const update = { text: action.text };
+            if (action.group) {
+              const groupId = resolveMemoryGroupId(action.group);
+              if (!groupId) throw new Error("Memory group not found");
+              update.groupId = groupId;
+            }
+            updatesByIndex.set(action.index, update);
+          }
           updatedMemories = memories
             .map((memory, index) =>
               updatesByIndex.has(index)
-                ? { ...memory, text: updatesByIndex.get(index) }
+                ? { ...memory, ...updatesByIndex.get(index) }
                 : memory,
             )
             .filter((_, index) => !deletionIndexes.has(index));
           for (const action of memoryActions) {
             if (action.type !== "add_memory") continue;
+            const groupId = action.group
+              ? resolveMemoryGroupId(action.group)
+              : effectiveMemoryGroupId;
+            if (!groupId) throw new Error("Memory group not found");
             updatedMemories.push({
               id: `meta-${Date.now()}-${updatedMemories.length}`,
               text: action.text,
               createdAt: new Date().toISOString(),
+              groupId,
             });
           }
         }

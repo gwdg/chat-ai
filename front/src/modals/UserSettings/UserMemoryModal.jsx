@@ -11,7 +11,6 @@ import {
   selectAllMemories,
   selectDefaultMemoryGroup,
   selectMemoryGroups,
-  setMemoryGroup,
 } from "../../Redux/reducers/userSettingsReducer";
 
 export default function UserMemoryModal({
@@ -40,6 +39,9 @@ export default function UserMemoryModal({
     { id: "default", name: t("settings.memory_mode.default_group_name") },
     ...memoryGroups,
   ];
+  const groupName = groupId
+    ? groupOptions.find((group) => group.id === groupId)?.name ?? groupId
+    : null;
 
   const [newMemoryText, setNewMemoryText] = useState("");
   const [newMemoryGroup, setNewMemoryGroup] = useState(
@@ -91,7 +93,8 @@ export default function UserMemoryModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="memory.userMemory"
+      titleKey={groupName ? "memory.userMemoryGroup" : "memory.userMemory"}
+      titleValues={groupName ? { group: groupName } : undefined}
       maxWidth="max-w-2xl"
     >
       {/* Memory count */}
@@ -120,17 +123,19 @@ export default function UserMemoryModal({
               className="textarea flex-1 h-full text-sm"
               onKeyDown={(e) => e.key === "Enter" && handleAddMemory()}
             />
-            <select
-              value={newMemoryGroup}
-              onChange={(event) => setNewMemoryGroup(event.target.value)}
-              className="select select-bordered select-sm"
-            >
-              {groupOptions.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
+            {!groupId && (
+              <select
+                value={newMemoryGroup}
+                onChange={(event) => setNewMemoryGroup(event.target.value)}
+                className="select select-bordered select-sm"
+              >
+                {groupOptions.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
               onClick={handleAddMemory}
               disabled={!newMemoryText.trim()}
@@ -234,27 +239,6 @@ export default function UserMemoryModal({
                       <p className="text-base-content break-words text-sm">
                         {memory.text}
                       </p>
-                      <label className="flex items-center gap-2 text-xs text-base-content/70">
-                        <span>{t("memory.group")}</span>
-                        <select
-                          value={memory.groupId ?? "default"}
-                          onChange={(event) =>
-                            dispatch(
-                              setMemoryGroup({
-                                index: globalIndex,
-                                groupId: event.target.value,
-                              }),
-                            )
-                          }
-                          className="select select-bordered select-xs min-w-0 flex-1"
-                        >
-                          {groupOptions.map((group) => (
-                            <option key={group.id} value={group.id}>
-                              {group.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-base-content/70">
                           <Trans

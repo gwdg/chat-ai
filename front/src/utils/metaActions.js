@@ -175,7 +175,14 @@ export function getMetaActionProposals(text) {
     if (type === "ADD_MEMORY") {
       const text = String(payload.text || "").trim();
       if (!text) continue;
-      proposals.set(`memory:add:${text}`, { type: "add_memory", text });
+      const group = String(
+        payload.group ?? payload.groupId ?? payload.group_id ?? "",
+      ).trim();
+      proposals.set(`memory:add:${group}:${text}`, {
+        type: "add_memory",
+        text,
+        ...(group ? { group } : {}),
+      });
       continue;
     }
 
@@ -183,10 +190,14 @@ export function getMetaActionProposals(text) {
       const index = Number(payload.index);
       const text = String(payload.text || "").trim();
       if (!Number.isInteger(index) || index < 0 || !text) continue;
+      const group = String(
+        payload.group ?? payload.groupId ?? payload.group_id ?? "",
+      ).trim();
       proposals.set(`memory:update:${index}`, {
         type: "update_memory",
         index,
         text,
+        ...(group ? { group } : {}),
       });
       continue;
     }

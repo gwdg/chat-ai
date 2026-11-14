@@ -409,7 +409,11 @@ export default function Conversation({
           }`}
       >
         {/* Hallucination Warning */}
-        <HallucinationWarning />
+        {!(
+          localState?.isMetaChat === true ||
+          localState?.id === "meta-chat" ||
+          localState?.persona
+        ) && <HallucinationWarning />}
 
         {/* Scrollable messages container */}
         <div className="relative flex-1 min-h-0">
