@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { getDefaultSettings } from "../utils/conversationUtils";
 import { useToast } from "./useToast";
-import { createConversation, deleteConversation, ensureFolder, getFolder, newId, saveFile } from "../db";
+import { createConversation, deleteConversation, ensureFolder, getFolder, newId, saveFileReady } from "../db";
 import { dataURLtoFile } from "../utils/attachments";
 import { selectUserSettings, importUserSettings } from "../Redux/reducers/userSettingsReducer";
 
@@ -19,7 +19,7 @@ export function useImportConversation() {
   const userSettings = useSelector(selectUserSettings);
   const defaultSettings = getDefaultSettings(userSettings);
 
-  const extractMessageContent = (message, conversationId = null) => {
+  const extractMessageContent = async (message, conversationId = null) => {
     let res = [{
       "type": "text",
       "text": "",
@@ -36,7 +36,9 @@ export function useImportConversation() {
 
       // if message or content is array
       if (Array.isArray(content)) {
-        res = content.map(item => extractMessageContent(item, conversationId)[0]);
+        res = await Promise.all(
+          content.map(async (item) => (await extractMessageContent(item, conversationId))[0]),
+        );
         if (res[0]?.type !== "text") {
           res.unshift({type: "text", text: ""});
         } 
@@ -49,7 +51,7 @@ export function useImportConversation() {
         const filename = content?.name || content.image_url?.filename || "image";
         const file = dataURLtoFile(dataURL, filename);
         if (!file) return res; // fallback
-        const fileId = saveFile(conversationId, file);
+        const fileId = await saveFileReady(conversationId, file);
         console.log("Saved new file", fileId)
         return [{
           "type": "file",
@@ -66,7 +68,7 @@ export function useImportConversation() {
         const dataURL = "data:" + mimeType + ";base64," + content.input_audio.data;
         const file = dataURLtoFile(dataURL, filename);
         if (!file) return res; // fallback
-        const fileId = saveFile(conversationId, file);
+        const fileId = await saveFileReady(conversationId, file);
         console.log("Saved new file", fileId)
         return [{
           "type": "file",
@@ -80,7 +82,7 @@ export function useImportConversation() {
         const filename = content?.name || content.file?.filename || "file"; 
         const file = dataURLtoFile(data, filename);
         if (!file) return res; // fallback
-        const fileId = saveFile(conversationId, file);
+        const fileId = await saveFileReady(conversationId, file);
         console.log("Saved new file", fileId)
         return [{
           "type": "file",
@@ -152,7 +154,7 @@ export function useImportConversation() {
       if (messages) {
         // Look for system prompt
         const systemMessage = messages.find((msg) => msg.role === "system");
-        sanitizedMessages[0].content = extractMessageContent(systemMessage, conversationId);
+        sanitizedMessages[0].content = await extractMessageContent(systemMessage, conversationId);
         // Sanitize user + assistant messages
         try {       
           for (let i = 0; i < messages.length; i++) {
@@ -165,7 +167,7 @@ export function useImportConversation() {
             if (message.role === "info") {
               sanitizedMessages.push({
                 "role": "info",
-                "content": extractMessageContent(message, conversationId),
+                "content": await extractMessageContent(message, conversationId),
               });
               continue;
             }
@@ -184,7 +186,7 @@ export function useImportConversation() {
               }
               sanitizedMessages.push({
                 "role": "user",
-                "content": extractMessageContent(message, conversationId),
+                "content": await extractMessageContent(message, conversationId),
               })
               
             } else if (message.role === "assistant") {
@@ -201,7 +203,7 @@ export function useImportConversation() {
               }
               sanitizedMessages.push({
                 "role": "assistant",
-                "content": extractMessageContent(message, conversationId),
+                "content": await extractMessageContent(message, conversationId),
               })
 
               if (message?.feedback){
@@ -234,7 +236,7 @@ export function useImportConversation() {
       // Check for system prompt in data settings
       const system_prompt = extractParameter(data, "system_prompt") || extractParameter(data, "systemPrompt");
       if (system_prompt && typeof system_prompt === "string")
-        sanitizedMessages[0].content = extractMessageContent(system_prompt, conversationId);
+        sanitizedMessages[0].content = await extractMessageContent(system_prompt, conversationId);
       
       // temperature
       const temperature =
@@ -382,7 +384,7 @@ export function useImportConversation() {
           title: data?.title || "Imported Conversation",
           messages: sanitizedMessages,
           settings: settings,
-          folderId: folderId ?? "__unsorted__",
+          folderId: folderId ?? null,
           isMetaChat: options.metaChat === true,
           persona: personaInfo,
         },

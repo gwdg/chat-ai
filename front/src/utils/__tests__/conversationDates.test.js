@@ -45,6 +45,16 @@ describe("conversation dates and sorting", () => {
     expect(DEFAULT_CONVERSATION_SORT).toBe("created_desc");
   });
 
+  it("sorts rows that are missing createdAt using lastModified", () => {
+    const conversations = [
+      { id: "old", lastModified: 1 },
+      { id: "new", createdAt: 5 },
+    ];
+    expect(
+      sortConversations(conversations, "created_desc").map((c) => c.id),
+    ).toEqual(["new", "old"]);
+  });
+
   it("sorts by browser storage size", () => {
     const conversations = [
       { id: "small", createdAt: 1, storageSize: 10 },

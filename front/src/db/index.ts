@@ -315,13 +315,24 @@ export async function updateConversation(
   },
   force: boolean = false,
 ) {
-  if (!force) {
-    // Soft change, check lastModified
-    const lastModifiedDB = (await getConversationMeta(conversationId)).lastModified;
-    if (lastModifiedDB !== data?.lastModified) {
-      // Conflict detected
-      return -1;
-    }
+  const existing = await getConversationMeta(conversationId);
+  if (!existing) {
+    // The conversation was deleted (or never existed). Do not create a partial
+    // row or throw from the concurrency check.
+    return -1;
+  }
+  if (!force && existing.lastModified !== data?.lastModified) {
+    // Conflict detected
+    return -1;
+  }
+  const incomingMessages = Array.isArray(data.messages) ? data.messages : [];
+  if (incomingMessages.length === 0) {
+    // A stale/empty local snapshot must never erase a non-empty conversation.
+    const existingMessageCount = await db.messages
+      .where('conversationId')
+      .equals(conversationId)
+      .count();
+    if (existingMessageCount > 0) return -1;
   }
   const now = Date.now();
   await db.transaction(
@@ -336,7 +347,7 @@ export async function updateConversation(
       if (!convo) throw new Error('Conversation not found');
 
       // Normalize incoming messages (ensure IDs)
-      const normalizedMsgs = data.messages.map((m, index) => ({
+      const normalizedMsgs = incomingMessages.map((m, index) => ({
         id: m.id ?? newId(),
         idx: m.idx ?? index,
         role: m.role,
@@ -450,11 +461,16 @@ export async function updateConversation(
 // ---------- Conversation List ----------
 
 export async function getLastModifiedConversationMeta(): Promise<ConversationRow | undefined> {
-  const conversations = await db.conversations
-    .orderBy('lastModified')
-    .reverse()
-    .filter((conversation) => !conversation.isMetaChat && conversation.id !== 'meta-chat')
-    .toArray();
+  const conversations = (await db.conversations.toArray())
+    .filter(
+      (conversation) =>
+        !conversation.isMetaChat && conversation.id !== 'meta-chat',
+    )
+    .sort(
+      (first, second) =>
+        (second.lastModified ?? second.createdAt ?? second.lastOpenedAt ?? 0) -
+        (first.lastModified ?? first.createdAt ?? first.lastOpenedAt ?? 0),
+    );
   return conversations[0];
 }
 
@@ -771,10 +787,17 @@ function debounce<T extends (...args: any[]) => any>(fn: T, wait = 1000) {
 export function useConversationList() {
   const list = useLiveQuery(
     async () => {
-      const rows = await db.conversations.orderBy('createdAt').reverse().toArray()
-      return rows.filter(
-        (conversation) => !conversation.isMetaChat && conversation.id !== 'meta-chat',
-      )
+      const rows = await db.conversations.toArray()
+      return rows
+        .filter(
+          (conversation) =>
+            !conversation.isMetaChat && conversation.id !== 'meta-chat',
+        )
+        .sort(
+          (first, second) =>
+            (second.createdAt ?? second.lastModified ?? second.lastOpenedAt ?? 0) -
+            (first.createdAt ?? first.lastModified ?? first.lastOpenedAt ?? 0),
+        )
     },
   [],
   [] as ConversationRow[]
@@ -924,8 +947,10 @@ async function persistFile(id: string, file: File, conversationId: string) {
     id,
     data: arrayBuffer,
   };
-  await db.files_meta.add(meta);
-  await db.files_data.add(data);
+  await db.transaction('rw', [db.files_meta, db.files_data], async () => {
+    await db.files_meta.add(meta);
+    await db.files_data.add(data);
+  });
 }
 
 // Insert file meta+data; returns the new id. The write continues in the

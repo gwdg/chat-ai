@@ -87,6 +87,44 @@ describe("conversation persistence", () => {
     expect((await getConversationMeta("chat-1")).title).toBe("New");
   });
 
+  it("returns a conflict for a missing conversation instead of throwing", async () => {
+    const result = await updateConversation("missing-chat", {
+      title: "Missing",
+      settings,
+      messages: [],
+      lastModified: 0,
+    });
+    expect(result).toBe(-1);
+  });
+
+  it("does not let an empty snapshot erase stored messages", async () => {
+    await createConversation({
+      id: "chat-1",
+      title: "Keep me",
+      settings,
+      messages: [
+        {
+          idx: 0,
+          role: "user",
+          content: [{ type: "text", text: "important message" }],
+        },
+      ],
+    });
+    const meta = await getConversationMeta("chat-1");
+
+    const result = await updateConversation("chat-1", {
+      title: "Keep me",
+      settings,
+      messages: [],
+      lastModified: meta.lastModified,
+    });
+
+    expect(result).toBe(-1);
+    const conversation = await getConversation("chat-1");
+    expect(conversation.messages).toHaveLength(1);
+    expect(conversation.messages[0].content[0].text).toBe("important message");
+  });
+
   it("searches message contents", async () => {
     await createConversation({
       id: "chat-1",

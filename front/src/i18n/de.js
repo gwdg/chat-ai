@@ -1,4 +1,19 @@
 export default {
+  errors: {
+    app_title: "Etwas ist schiefgelaufen",
+    app_message:
+      "Die Oberfläche konnte nicht gerendert werden. Ihre gespeicherten Chats bleiben in diesem Browser, solange Sie keine Websitedaten löschen. Laden Sie die Seite neu.",
+    database_title: "Lokale Datenbank nicht verfügbar",
+    database_version:
+      "Dieser Browser enthält eine neuere lokale Datenbankversion, als diese App unterstützt. Öffnen Sie die passende App-Version oder einen neueren Build. Löschen Sie keine Websitedaten.",
+    database_blocked:
+      "Ein anderer Chat-AI-Tab blockiert die lokale Datenbank. Schließen Sie die anderen Tabs und laden Sie neu.",
+    database_quota:
+      "Der Browserspeicher ist voll oder nicht verfügbar. Exportieren Sie eine Sicherung, schaffen Sie Speicherplatz und laden Sie neu.",
+    database_generic:
+      "Die lokale Datenbank konnte nicht geöffnet werden. Ihre Daten sind möglicherweise noch vorhanden. Laden Sie neu oder schließen Sie andere Chat-AI-Tabs.",
+    reload: "Neu laden",
+  },
   // Common phrases
   common: {
     loading: "Lädt...",
@@ -1218,8 +1233,17 @@ export default {
         "Exportieren Sie eine Kopie Ihrer lokalen Daten oder entfernen Sie Unterhaltungen, Erinnerungen, Einstellungen und Anhänge dauerhaft aus diesem Browser.",
       export_success: "Lokale Daten wurden erfolgreich exportiert.",
       export_error: "Lokale Daten konnten nicht exportiert werden.",
+      storage_title: "Browserspeicher",
+      storage_unavailable: "Speicherinformationen sind in diesem Browser nicht verfügbar.",
+      storage_persisted:
+        "Dauerhafter Speicher ist aktiviert. Der Browser sollte Ihre Chats bei knappem Speicher behalten.",
+      storage_not_persisted:
+        "Dauerhafter Speicher ist nicht aktiviert. Der Browser kann lokale Chats bei knappem Speicher oder längerer Inaktivität entfernen. Exportieren Sie regelmäßig eine Sicherung.",
+      storage_usage: "{{used}} von {{quota}} belegt.",
+      storage_request: "Dauerhaften Speicher anfordern",
+      storage_requesting: "Wird angefordert…",
     },
-    clear_data_button: "Daten löschen",
+    clear_data_button: "Alle lokalen Daten löschen",
     import_data_button: "Daten importieren",
     export_data_button: "Daten exportieren",
     memory: {
@@ -1399,7 +1423,8 @@ export default {
     title: "Warning",
     bad_request:
       "Fehlerhafte Anfrage wurde gesendet: Bitte löschen Sie die Konversation, versuchen Sie es innerhalb des Limits erneut, und speichern Sie Ihren Chatverlauf für spätere Zwecke.",
-    clear_data: "Achtung! Die Löschung löscht Ihren Verlauf. Fortfahren?",
+    clear_data:
+      "Achtung! Dadurch werden alle Unterhaltungen, Anhänge und lokalen Einstellungen dauerhaft aus diesem Browser gelöscht. Exportieren Sie vorher eine Sicherung, wenn Sie sie noch benötigen. Fortfahren?",
     clear_messages:
       "Sind Sie sicher, dass alle Nachrichten gelöscht werden sollen?",
     close_chat:
