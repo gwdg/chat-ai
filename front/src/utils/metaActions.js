@@ -1,5 +1,5 @@
 const ACTION_TYPES =
-  "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
+  "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
 const ACTION_SOURCE = `\\[\\[(${ACTION_TYPES}):\\s*(\\{[\\s\\S]*?\\})\\]\\]`;
 
 const BARE_CLEAR_SOURCE =
@@ -254,6 +254,50 @@ export function getMetaActionProposals(text) {
           conversationId: targetAll ? null : conversationId,
           key,
           value: payload.value,
+        },
+      );
+      continue;
+    }
+
+    if (type === "AGENT_ACTION") {
+      const op = String(payload.op || "").trim().toLowerCase();
+      if (!["prompt", "interrupt"].includes(op)) continue;
+      const agentId = String(payload.agent ?? payload.agentId ?? "").trim();
+      if (!agentId) continue;
+      const text = String(payload.text ?? payload.prompt ?? "").trim();
+      if (op === "prompt" && (!text || text.length > 20000)) continue;
+      proposals.set(`agent-action:${op}:${agentId}:${text.slice(0, 40)}`, {
+        type: "agent_action",
+        op,
+        agentId,
+        ...(op === "prompt" ? { text } : {}),
+      });
+      continue;
+    }
+
+    if (type === "WORKSPACE_LINK") {
+      const op = String(payload.op || "").trim().toLowerCase();
+      if (!["attach", "detach"].includes(op)) continue;
+      const workspaceId = String(
+        payload.workspaceId ?? payload.workspace_id ?? "",
+      ).trim();
+      const agentId = String(payload.agentId ?? payload.agent_id ?? "").trim();
+      const conversationId = String(
+        payload.conversationId ?? payload.conversation_id ?? "",
+      ).trim();
+      if (!workspaceId || Boolean(agentId) === Boolean(conversationId)) {
+        continue;
+      }
+      const targetKind = agentId ? "agent" : "conversation";
+      const targetId = agentId || conversationId;
+      proposals.set(
+        `workspace-link:${op}:${workspaceId}:${targetKind}:${targetId}`,
+        {
+          type: "workspace_link",
+          op,
+          workspaceId,
+          targetKind,
+          targetId,
         },
       );
       continue;

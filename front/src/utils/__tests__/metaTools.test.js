@@ -32,6 +32,9 @@ const agentMocks = vi.hoisted(() => ({
   })),
 }));
 
+vi.mock("../../db/workspaceDb", () => ({
+  listWorkspaceSummaries: vi.fn(async () => []),
+}));
 vi.mock("../../agents/agentStore", () => ({
   getAgents: () => agentMocks.agents,
 }));
@@ -138,11 +141,16 @@ describe("Meta chat local tools", () => {
       "list_memories",
       "get_user_settings",
       "test_mcp_server",
+      "agent_health",
+      "list_mcp_tools",
+      "list_workspaces",
       "list_agents",
       "check_agents",
       "get_agent_history",
       "list_agent_files",
       "list_recent_agent_files",
+      "search_all",
+      "get_whats_new",
       "read_agent_file",
       "fetch_agent_file",
       "list_models",

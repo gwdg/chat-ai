@@ -13,6 +13,11 @@ import {
   Undo2,
 } from "lucide-react";
 import { normalizeMcpUrl } from "../../../agent/mcp";
+import { getAgents } from "../../../agents/agentStore";
+import {
+  interruptOpencodeSession,
+  sendOpencodePrompt,
+} from "../../../apis/opencodeAgents";
 
 import {
   assignConversationToFolder,
@@ -29,6 +34,14 @@ import {
   useConversationList,
   useFolderList,
 } from "../../../db";
+import {
+  attachWorkspaceAgent,
+  attachWorkspaceChat,
+  detachWorkspaceAgent,
+  detachWorkspaceChat,
+  hasWorkspaceAgentLink,
+  hasWorkspaceChatLink,
+} from "../../../db/workspaceDb";
 import { getDefaultSettings } from "../../../utils/conversationUtils";
 import { useToast } from "../../../hooks/useToast";
 import {
@@ -322,6 +335,7 @@ export default function MetaActionCard({
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
   const [reverting, setReverting] = useState(false);
+  const reversible = !actions.some((action) => action.type === "agent_action");
   const [error, setError] = useState("");
   const previousState = useRef(null);
 
@@ -514,6 +528,20 @@ export default function MetaActionCard({
         count: action.messages?.length ?? 0,
       });
     }
+    if (action.type === "agent_action") {
+      return t(
+        action.op === "prompt"
+          ? "meta_chat.agent_prompt_summary"
+          : "meta_chat.agent_interrupt_summary",
+        { agent: action.agentId },
+      );
+    }
+    if (action.type === "workspace_link") {
+      return t(
+        `meta_chat.workspace_${action.op}_summary`,
+        { workspace: action.workspaceId, target: action.targetId },
+      );
+    }
     if (action.type === "mcp_server") {
       const target =
         action.scope === "global"
@@ -616,7 +644,12 @@ export default function MetaActionCard({
           continue;
         }
 
-        if (action.type === "mcp_server" || action.type === "create_chat") {
+        if (
+          action.type === "mcp_server" ||
+          action.type === "create_chat" ||
+          action.type === "workspace_link" ||
+          action.type === "agent_action"
+        ) {
           continue;
         }
 
@@ -823,6 +856,27 @@ export default function MetaActionCard({
         globalMcpSnapshot = { previous, expected };
       }
 
+      const workspaceLinks = [];
+      for (const action of actions.filter(
+        (item) => item.type === "workspace_link",
+      )) {
+        const exists =
+          action.targetKind === "agent"
+            ? await hasWorkspaceAgentLink(
+                action.workspaceId,
+                action.targetId,
+              )
+            : await hasWorkspaceChatLink(
+                action.workspaceId,
+                action.targetId,
+              );
+        workspaceLinks.push({
+          ...action,
+          previous: exists,
+          expected: action.op === "attach",
+        });
+      }
+
       previousState.current = {
         chats: prepared.map((action) => {
           if (action.type === "rename") {
@@ -887,6 +941,7 @@ export default function MetaActionCard({
             }
           : null,
         createdChats,
+        workspaceLinks: workspaceLinks.map((link) => ({ ...link })),
       };
 
       for (const action of prepared) {
@@ -978,6 +1033,33 @@ export default function MetaActionCard({
           settings: payload.settings,
           messages: payload.messages.map(normalizeCreatedMessage),
         });
+      }
+
+      for (const action of actions.filter(
+        (item) => item.type === "agent_action",
+      )) {
+        const agent = getAgents().find((item) => item.id === action.agentId);
+        if (!agent?.sessionId) throw new Error("Agent not found");
+        if (action.op === "prompt") {
+          await sendOpencodePrompt(agent, agent.sessionId, action.text, []);
+        } else {
+          await interruptOpencodeSession(agent, agent.sessionId);
+        }
+      }
+
+      for (const link of workspaceLinks) {
+        const attach = link.op === "attach";
+        if (link.targetKind === "agent") {
+          if (attach) {
+            await attachWorkspaceAgent(link.workspaceId, link.targetId);
+          } else {
+            await detachWorkspaceAgent(link.workspaceId, link.targetId);
+          }
+        } else if (attach) {
+          await attachWorkspaceChat(link.workspaceId, link.targetId);
+        } else {
+          await detachWorkspaceChat(link.workspaceId, link.targetId);
+        }
       }
 
       if (globalMcpSnapshot) {
@@ -1111,6 +1193,16 @@ export default function MetaActionCard({
         throw new Error("MCP servers changed");
       }
 
+      for (const link of snapshot.workspaceLinks || []) {
+        const exists =
+          link.targetKind === "agent"
+            ? await hasWorkspaceAgentLink(link.workspaceId, link.targetId)
+            : await hasWorkspaceChatLink(link.workspaceId, link.targetId);
+        if (exists !== link.expected) {
+          throw new Error("Workspace link changed");
+        }
+      }
+
       for (const chat of snapshot.createdChats || []) {
         const current = await getConversation(chat.id);
         if (!current) throw new Error("Created chat no longer exists");
@@ -1193,6 +1285,20 @@ export default function MetaActionCard({
         setLocalState?.((previous) =>
           previous?.id === entry.id ? { ...previous, settings } : previous,
         );
+      }
+
+      for (const link of snapshot.workspaceLinks || []) {
+        if (link.previous) {
+          if (link.targetKind === "agent") {
+            await attachWorkspaceAgent(link.workspaceId, link.targetId);
+          } else {
+            await attachWorkspaceChat(link.workspaceId, link.targetId);
+          }
+        } else if (link.targetKind === "agent") {
+          await detachWorkspaceAgent(link.workspaceId, link.targetId);
+        } else {
+          await detachWorkspaceChat(link.workspaceId, link.targetId);
+        }
       }
 
       for (const chat of snapshot.createdChats || []) {
@@ -1309,7 +1415,11 @@ export default function MetaActionCard({
           {error && <p className="mt-1.5 text-[11px] text-error">{error}</p>}
 
           <div className="mt-2 flex justify-end gap-1.5">
-            {applied ? (
+            {applied && !reversible ? (
+              <span className="text-[11px] text-base-content/60">
+                {t("meta_chat.applied_not_reversible")}
+              </span>
+            ) : applied ? (
               <button
                 type="button"
                 className="btn btn-ghost btn-xs gap-1.5"

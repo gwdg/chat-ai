@@ -216,6 +216,7 @@ export default {
     help_label: "Hilfe/Meta-Assistent Chatty",
     help_tooltip:
       "Öffnet den Metachat: Fragen Sie nach Ihren Chats, Themen, Einstellungen und Erinnerungen oder lassen Sie sich Funktionen von Chat AI Schritt für Schritt erklären. Vorgeschlagene Änderungen werden erst nach Ihrer Bestätigung übernommen.",
+    last_checked: "Letzte Änderungsprüfung: {{date}}",
     banner_description: "Metachat kann Ihnen auf zwei Arten helfen:",
     purposes: {
       tutor: "Die Funktionen von Chat AI kennenlernen",
@@ -229,6 +230,7 @@ export default {
       "Diese Änderungen bearbeiten Ihre Chats, Einstellungen oder Erinnerungen. Prüfen Sie sie vor dem Übernehmen.",
     accept_changes: "Änderungen übernehmen",
     applying_changes: "Wird übernommen…",
+    applied_not_reversible: "Angewendet – diese Aktion kann nicht rückgängig gemacht werden.",
     changes_applied: "Änderungen übernommen",
     revert_changes: "Änderungen zurücksetzen",
     reverting: "Wird zurückgesetzt…",
@@ -252,6 +254,10 @@ export default {
     create_chat_summary: "Chat „{{title}}“ mit {{count}} Anfangsnachrichten erstellen",
     mcp_target_all: "alle Chats",
     mcp_target_global: "die MCP-Serverliste",
+    agent_prompt_summary: "Prompt an Agenten {{agent}} senden",
+    agent_interrupt_summary: "Agenten {{agent}} unterbrechen",
+    workspace_attach_summary: "Arbeitsbereich {{workspace}} mit {{target}} verknüpfen",
+    workspace_detach_summary: "Arbeitsbereich {{workspace}} von {{target}} trennen",
     mcp_add_local_summary:
       "Lokalen MCP-Server {{name}} zu {{target}} hinzufügen",
     mcp_add_remote_summary:
@@ -659,6 +665,30 @@ export default {
         "Bitten Sie ihn, Sie irgendwohin zu führen, zum Beispiel: „Bring mich zu den Chat-Einstellungen“ oder „Öffne den Chat über die Preise“.",
       step3:
         "Bitten Sie ihn, Ihre Chats zu durchsuchen, zum Beispiel: „Finde, wo wir das Preismodell entschieden haben“ oder „Welche Aufgaben gibt es?“. Klicken Sie auf eine zitierte Nachricht, um dorthin zu springen.",
+    },
+    meta_chat_agents: {
+      title: "Agenten über den Metachat bedienen",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2: "Fragen Sie nach Agentenstatus oder Verlauf, zum Beispiel: „Prüfe alle Agenten und zeige neue Dateien.“",
+      step3: "Lassen Sie eine Datei abrufen, zum Beispiel: „Zeige random.png vom Research-Agenten“, oder prüfen Sie einen Prompt-/Unterbrechungsvorschlag vor dem Annehmen.",
+    },
+    meta_chat_workspaces: {
+      title: "Arbeitsbereiche über den Metachat verknüpfen",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2: "Fragen Sie nach Arbeitsbereichen und lassen Sie einen verknüpfen, zum Beispiel: „Verknüpfe den Arbeitsbereich Research mit Agent 1.“",
+      step3: "Prüfen Sie den Vorschlag und klicken Sie auf Änderungen übernehmen.",
+    },
+    meta_chat_digest: {
+      title: "Eine Was-ist-neu-Übersicht erhalten",
+      step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
+      step2: "Das Banner zeigt die letzte Änderungsprüfung. Sie wird nach jeder Was-ist-neu-Antwort aktualisiert.",
+      step3: "Fragen Sie „Was gibt es Neues?“, um geänderte Chats, neue Themen und Erinnerungen, Agentenstatus und neue Agentendateien zu sehen.",
+    },
+    meta_chat_mcp: {
+      title: "MCP-Server über den Metachat verwalten",
+      step1: "Öffnen Sie den Bereich MCP-Server in der Seitenleiste oder fügen Sie dort einen Server hinzu.",
+      step2: "Kehren Sie über das KI-Symbol zum Metachat zurück.",
+      step3: "Lassen Sie Server testen, Werkzeuge auflisten oder Server hinzufügen/aktualisieren/entfernen. Änderungen an der Seitenleiste erfordern eine Bestätigung.",
     },
     meta_chat_usage: {
       title: "Den Metachat verwenden",

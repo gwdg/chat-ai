@@ -1166,6 +1166,123 @@ export const featureGuides = {
       },
     ],
   },
+  meta_chat_agents: {
+    titleKey: "feature_guide.meta_chat_agents.title",
+    prompt:
+      "Use the Meta chat to check agent connections, read an agent's recent history, list or search agent files, fetch an agent file into the chat, or send a confirmable prompt/interrupt to an agent. Use list_agents first, then ask for the agent by name or id.",
+    keywords: [
+      "meta chat agents",
+      "check agents",
+      "agent status",
+      "agent history",
+      "agent files",
+      "fetch agent file",
+      "prompt an agent",
+      "interrupt agent",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_agents.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_agents.step2",
+        completeOnEvent: "message-complete",
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_agents.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
+  meta_chat_workspaces: {
+    titleKey: "feature_guide.meta_chat_workspaces.title",
+    prompt:
+      "Use the Meta chat to list workspaces and propose attaching or detaching a workspace to an agent or chat. Changes appear as warning cards and are applied only after Accept.",
+    keywords: [
+      "meta chat workspace",
+      "attach workspace with meta chat",
+      "detach workspace",
+      "workspace link",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_workspaces.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_workspaces.step2",
+        completeOnEvent: "message-complete",
+      },
+      {
+        target: '[data-guide="meta-action-accept"]',
+        textKey: "feature_guide.meta_chat_workspaces.step3",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  meta_chat_digest: {
+    titleKey: "feature_guide.meta_chat_digest.title",
+    prompt:
+      "Ask the Meta chat what is new. It remembers the last check, then reports changed chats, new topics and memories, agent status, and recently modified agent files. The Meta banner shows when changes were last checked.",
+    keywords: [
+      "meta chat what's new",
+      "anything new",
+      "recent activity",
+      "new agent files",
+      "daily digest",
+    ],
+    steps: [
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_digest.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="meta-last-check"]',
+        textKey: "feature_guide.meta_chat_digest.step2",
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_digest.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
+  meta_chat_mcp: {
+    titleKey: "feature_guide.meta_chat_mcp.title",
+    prompt:
+      "Manage MCP servers with the Meta chat. It can test local servers, list their tools, add, update, or remove global MCP servers, and report agent/MCP health. Changes to the sidebar list require Accept.",
+    keywords: [
+      "meta chat mcp",
+      "mcp status",
+      "mcp tools",
+      "add mcp server",
+      "test mcp server",
+    ],
+    steps: [
+      {
+        target: '[data-guide="mcp-servers-add"]',
+        textKey: "feature_guide.meta_chat_mcp.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="meta-chat"]',
+        textKey: "feature_guide.meta_chat_mcp.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.meta_chat_mcp.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
   meta_chat_usage: {
     titleKey: "feature_guide.meta_chat_usage.title",
     prompt:
@@ -1189,6 +1306,10 @@ export const FEATURE_CATEGORIES = {
     "meta_chat_navigation",
     "meta_chat_actions",
     "meta_chat_pins",
+    "meta_chat_agents",
+    "meta_chat_workspaces",
+    "meta_chat_digest",
+    "meta_chat_mcp",
   ],
   prompt: [
     "attach_media",
@@ -1317,6 +1438,10 @@ const germanGuideKeywords = {
   meta_chat_navigation: ["metachat navigation", "nachricht finden", "entscheidung finden", "aufgaben finden", "zum chat springen", "zur einstellung", "deep link", "zitat"],
   meta_chat_actions: ["metachat umbenennen", "meta chat umbenennen", "chat umbenennen", "chat verschieben", "chat in thema verschieben", "änderungen übernehmen", "vorschlag bestätigen"],
   meta_chat_pins: ["metachat anheften", "chat anheften", "chat nicht mehr anheften", "thema anheften", "angeheftete chats", "anheften metachat"],
+  meta_chat_agents: ["metachat agenten", "agentenstatus", "agent verlauf", "agent dateien", "agent datei abrufen", "agent prompt", "agent unterbrechen"],
+  meta_chat_workspaces: ["metachat arbeitsbereich", "arbeitsbereich verknüpfen", "arbeitsbereich trennen", "workspace link"],
+  meta_chat_digest: ["metachat neuigkeiten", "was gibt es neues", "letzte aktivität", "neue agent dateien", "tagesübersicht"],
+  meta_chat_mcp: ["metachat mcp", "mcp status", "mcp werkzeuge", "mcp server hinzufügen", "mcp server testen"],
   meta_chat_usage: ["metachat", "meta chat", "metachat verwend", "metachat öffn"],
 };
 

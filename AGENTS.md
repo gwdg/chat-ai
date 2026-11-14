@@ -414,10 +414,15 @@ creates a new conversation with validated settings and text-only initial message
 an explicit Accept button. `MCP_SERVER` adds, updates, or removes per-chat MCP servers (local URL
 entries or remote gateway ids), and with `target: "global"` it changes the sidebar MCP server list
 in `user_settings.mcp_servers`; the Meta chat reads the entry ids from `get_user_settings`.
-`test_mcp_server` tests a configured local server by id, name, or URL. `list_agents`, `check_agents`,
-`get_agent_history`, `list_agent_files`, `list_recent_agent_files`, `read_agent_file`, and
-`fetch_agent_file` use the existing direct OpenCode connection to inspect agents, their messages, and
-project files. File listings preserve modification/access timestamps when the server returns them;
+`test_mcp_server` tests a configured local server by id, name, or URL. Stateful "what's new" uses
+`get_whats_new` and stores the last check in localStorage (`chatai.meta.last-check`). `search_all`
+searches chats, messages, topics, memories, agent histories, and agent file names/contents.
+`agent_health` combines agent connectivity with local MCP tests; `list_mcp_tools` exposes tool names.
+`list_workspaces` plus `WORKSPACE_LINK` proposals attach/detach workspaces to agents or chats.
+`AGENT_ACTION` proposals can prompt or interrupt an agent and are not revertible.
+`list_agents`, `check_agents`, `get_agent_history`, `list_agent_files`, `list_recent_agent_files`,
+`read_agent_file`, and `fetch_agent_file` use the existing direct OpenCode connection to inspect
+agents, their messages, and project files. File listings preserve modification/access timestamps when the server returns them;
 recent-file queries sort by modification time and, because `/fs/list` may omit timestamps, run a
 fixed Node `fs.stat` listing through the OpenCode shell tagged `CHATAI_FILE_STAT`. Internal shell
 commands carrying `CHATAI_GIT_LOG` or `CHATAI_FILE_STAT` are filtered from the agent chat. `fetch_agent_file`

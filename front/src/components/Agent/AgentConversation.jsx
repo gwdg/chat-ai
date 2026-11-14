@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
+import { useSearchParams } from "react-router";
 import {
   Attachment,
   Bot,
@@ -130,6 +131,8 @@ const messageText = (message) => {
 
 export default function AgentConversation({ agent, modelsData = [] }) {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const focusMessageId = searchParams.get("message");
   const { openModal, confirmAction } = useModal();
   const { notifyError, notifySuccess } = useToast();
   const [messages, setMessages] = useState([]);
@@ -1048,6 +1051,20 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     });
   }
 
+  useEffect(() => {
+    if (!focusMessageId) return;
+    const element = document.getElementById(
+      `agent-message-${focusMessageId}`,
+    );
+    if (!element) return;
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    element.classList.add("ring-2", "ring-accent", "rounded-xl");
+    const timer = window.setTimeout(() => {
+      element.classList.remove("ring-2", "ring-accent", "rounded-xl");
+    }, 2200);
+    return () => window.clearTimeout(timer);
+  }, [focusMessageId, messages]);
+
   return (
     <section className="mx-auto flex h-full w-full flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm md:max-w-[85vw] xl:max-w-[1300px]">
       <header className="flex items-center gap-3 border-b border-base-300 px-4 py-3">
@@ -1114,6 +1131,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
             ) : item.kind === "shell" ? (
               <div
                 key={item.message.id}
+                id={`agent-message-${item.message.id}`}
                 className="rounded-xl border border-warning/30 bg-base-300/40 p-2 font-mono text-[11px]"
               >
                 <div className="flex items-center gap-1.5 text-base-content/70">
@@ -1172,6 +1190,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
             ) : (
               <div
                 key={item.message.id}
+                id={`agent-message-${item.message.id}`}
                 className={`flex ${
                   item.message.type === "user" ? "justify-end" : "justify-start"
                 }`}

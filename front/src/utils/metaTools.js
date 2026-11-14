@@ -9,11 +9,13 @@ import { buildFeatureGuidePrompt, featureGuides } from "../config/featureGuides"
 import { buildUseCasePrompt, useCases } from "../config/useCases";
 import { loadPersonaCatalog } from "./personaCatalog";
 import {
+  listMcpServerTools,
   normalizeMcpUrl,
   remoteMcpEnabled,
   testMcpServer,
 } from "../agent/mcp";
 import { getAgents } from "../agents/agentStore";
+import { listWorkspaceSummaries } from "../db/workspaceDb";
 import {
   getOpencodeInfo,
   getOpencodeSessionStatus,
@@ -22,7 +24,7 @@ import {
   readOpencodeFile,
   runOpencodeShellAndWait,
 } from "../apis/opencodeAgents";
-import { FILE_STAT_MARKER } from "./gitLog";
+import { FILE_SEARCH_MARKER, FILE_STAT_MARKER } from "./gitLog";
 
 const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
@@ -267,6 +269,9 @@ const agentMessageText = (message) => {
     .trim();
 };
 
+const agentFileLink = (agent, path) =>
+  `/agent/${encodeURIComponent(agent.id)}?file=${encodeURIComponent(path)}`;
+
 const fileTime = (item) => {
   const raw =
     item?.mtime ??
@@ -282,8 +287,39 @@ const fileTime = (item) => {
   return numeric < 1e12 ? numeric * 1000 : numeric;
 };
 
+const shellQuote = (value) =>
+  `'${String(value).replace(/'/g, "'\\''")}'`;
+
+const searchAgentFileContents = async (agent, query) => {
+  if (!agent?.sessionId) return [];
+  const command = `grep -RInF --exclude-dir=.git --exclude-dir=node_modules -- ${shellQuote(query)} . 2>/dev/null | head -50 # ${FILE_SEARCH_MARKER}`;
+  try {
+    const output = await runOpencodeShellAndWait(
+      agent,
+      agent.sessionId,
+      command,
+      20000,
+    );
+    return output
+      .split("\n")
+      .filter(Boolean)
+      .filter((line) => !line.includes(FILE_SEARCH_MARKER))
+      .slice(0, 50);
+  } catch {
+    return [];
+  }
+};
+
+const fileStatsCache = new Map();
+const FILE_STATS_TTL = 60 * 1000;
+
 const readAgentFileStats = async (agent) => {
   if (!agent?.sessionId) return null;
+  const cacheKey = `${agent.id}:${agent.sessionId}`;
+  const cached = fileStatsCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < FILE_STATS_TTL) {
+    return cached.rows;
+  }
   const command = `node -e "const fs=require('fs'),path=require('path');function walk(d,out){for(const e of fs.readdirSync(d,{withFileTypes:true})){if(e.name==='.git'||e.name==='node_modules')continue;const p=path.join(d,e.name);if(e.isDirectory())walk(p,out);else{const s=fs.statSync(p);out.push({path:path.relative(process.cwd(),p),size:s.size,mtime:s.mtimeMs})}if(out.length>=2000)return out}return out}console.log(JSON.stringify(walk('.',[])))" # ${FILE_STAT_MARKER}`;
   try {
     const output = await runOpencodeShellAndWait(
@@ -297,9 +333,11 @@ const readAgentFileStats = async (agent) => {
       .find((entry) => entry.trim().startsWith("["));
     if (!line) return null;
     const rows = JSON.parse(line);
-    return Array.isArray(rows)
+    const files = Array.isArray(rows)
       ? rows.filter((row) => row?.path && typeof row.path === "string")
       : null;
+    if (files) fileStatsCache.set(cacheKey, { at: Date.now(), rows: files });
+    return files;
   } catch {
     return null;
   }
@@ -334,6 +372,85 @@ const collectAgentFiles = async (
     }
   }
   return output;
+};
+
+const parseSince = (value) => {
+  if (value === undefined || value === null || value === "") return 0;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const agentStatusLines = async (agents) => {
+  const lines = await Promise.all(
+    agents.map(async (agent) => {
+      if (!agent.sessionId) {
+        return `- ${agent.name || agent.id}: no OpenCode session configured.`;
+      }
+      const [info, statuses] = await Promise.allSettled([
+        getOpencodeInfo(agent),
+        getOpencodeSessionStatus(agent),
+      ]);
+      const connected =
+        info.status === "fulfilled" || statuses.status === "fulfilled";
+      const rawStatus =
+        statuses.status === "fulfilled"
+          ? statuses.value?.[agent.sessionId]
+          : null;
+      const activity =
+        typeof rawStatus === "string"
+          ? rawStatus
+          : rawStatus?.type ??
+            rawStatus?.status ??
+            rawStatus?.state ??
+            "unknown";
+      const working = /busy|running|working|active|pending|retry|permission/i.test(
+        String(activity),
+      );
+      const error =
+        info.status === "rejected"
+          ? info.reason instanceof Error
+            ? info.reason.message
+            : String(info.reason)
+          : "";
+      return [
+        `- ${agent.name || agent.id}: ${connected ? "connected" : "unreachable"}`,
+        `  server: ${agent.serverUrl}`,
+        `  session: ${working ? "working" : connected ? "idle" : "unknown"}`,
+        ...(error ? [`  error: ${error}`] : []),
+      ].join("\n");
+    }),
+  );
+  return lines;
+};
+
+const recentAgentFiles = async (agents, since) => {
+  const files = [];
+  let withoutTimestamp = 0;
+  await Promise.all(
+    agents.map(async (agent) => {
+      const rows = (
+        (await readAgentFileStats(agent)) ??
+        (await collectAgentFiles(agent))
+      ).map((row) => ({
+        ...row,
+        agentId: agent.id,
+        agentName: agent.name || agent.id,
+      }));
+      for (const row of rows) {
+        const time = fileTime(row);
+        if (!time) {
+          withoutTimestamp += 1;
+          continue;
+        }
+        if (time >= since) files.push({ ...row, time });
+      }
+    }),
+  );
+  files.sort((left, right) => right.time - left.time);
+  return { files, withoutTimestamp };
 };
 
 const tool = (name, description, properties = {}, required = []) => ({
@@ -382,6 +499,20 @@ export const META_TOOL_DEFINITIONS = [
     ["server"],
   ),
   tool(
+    "agent_health",
+    "Check all agent connections and test all configured local MCP servers.",
+  ),
+  tool(
+    "list_mcp_tools",
+    "List tools exposed by one configured local MCP server.",
+    { server: { type: "string", description: "MCP server id, name, or URL" } },
+    ["server"],
+  ),
+  tool(
+    "list_workspaces",
+    "List the user's workspaces with ids, names, attached agent ids, attached chat ids, and source counts.",
+  ),
+  tool(
     "list_agents",
     "List the user's configured OpenCode agents with id, name, server URL, and local/remote mode.",
   ),
@@ -413,6 +544,19 @@ export const META_TOOL_DEFINITIONS = [
     {
       hours: { type: "integer", description: "How far back to look, default 24, max 720" },
       agent: { type: "string", description: "Optional agent id or name" },
+    },
+  ),
+  tool(
+    "search_all",
+    "Search chats, messages, topics, memories, agent histories, agent file names, and agent file contents.",
+    { query: { type: "string", description: "Text to search for" } },
+    ["query"],
+  ),
+  tool(
+    "get_whats_new",
+    "Report changes since a timestamp: new or changed chats, topics, memories, agent status, and recently modified agent files.",
+    {
+      since: { type: "string", description: "ISO timestamp or epoch milliseconds; defaults to 24 hours ago" },
     },
   ),
   tool(
@@ -463,6 +607,148 @@ export function createMetaToolRunner({
 }) {
   return async function runMetaTool(name, args = {}) {
     switch (name) {
+      case "search_all": {
+        const query = String(args.query || "").trim();
+        if (!query) return "A search query is required.";
+        const lower = query.toLowerCase();
+        const [messages, rows, folders, agents] = await Promise.all([
+          searchMessages(query).catch(() => []),
+          listConversationMetas(),
+          listFolders(),
+          Promise.resolve(getAgents()),
+        ]);
+        const chatTitles = (rows || [])
+          .filter(
+            (row) =>
+              !row.isMetaChat &&
+              row.id !== "meta-chat" &&
+              String(row.title || "").toLowerCase().includes(lower),
+          )
+          .slice(0, 20);
+        const topics = (folders || []).filter((folder) =>
+          String(folder.name || "").toLowerCase().includes(lower),
+        );
+        const memoryMatches = (userSettings.memories || []).filter((memory) =>
+          String(memory.text || "").toLowerCase().includes(lower),
+        );
+        const agentMessageMatches = [];
+        const agentFileNames = [];
+        const agentFileContents = [];
+        await Promise.all(
+          agents.slice(0, 10).map(async (agent) => {
+            if (agent.sessionId) {
+              try {
+                const history = await listOpencodeMessages(
+                  agent,
+                  agent.sessionId,
+                );
+                for (const message of history) {
+                  const text = agentMessageText(message);
+                  if (!text.toLowerCase().includes(lower)) continue;
+                  agentMessageMatches.push({
+                    agent,
+                    messageId: message.id,
+                    role: message.type,
+                    text: text.slice(0, 240),
+                  });
+                }
+              } catch {}
+            }
+            const stats = await readAgentFileStats(agent);
+            if (stats) {
+              for (const file of stats) {
+                if (String(file.path).toLowerCase().includes(lower)) {
+                  agentFileNames.push({ agent, file });
+                }
+              }
+            }
+            const contentLines = await searchAgentFileContents(agent, query);
+            for (const line of contentLines) {
+              const [path, lineNumber, ...rest] = line.split(":");
+              if (!path) continue;
+              agentFileContents.push({
+                agent,
+                path,
+                line: lineNumber,
+                text: rest.join(":").slice(0, 240),
+              });
+            }
+          }),
+        );
+        const lines = [`Search results for “${query}”:`];
+        lines.push("", "Chats:");
+        lines.push(
+          chatTitles.length
+            ? chatTitles
+                .map((chat) => `- [${chat.title || "Untitled Chat"}](/chat/${chat.id})`)
+                .join("\n")
+            : "(none)",
+        );
+        lines.push("", "Messages:");
+        lines.push(
+          (messages || []).length
+            ? (messages || [])
+                .slice(0, 20)
+                .map(
+                  (match) =>
+                    `- [${match.conversationTitle || "Untitled Chat"}](/chat/${match.conversationId}?message=${match.messageId}) — ${match.snippet}`,
+                )
+                .join("\n")
+            : "(none)",
+        );
+        lines.push("", "Topics:");
+        lines.push(
+          topics.length
+            ? topics
+                .map((topic) => `- [${topic.name || "Untitled topic"}](/topic/${topic.id})`)
+                .join("\n")
+            : "(none)",
+        );
+        lines.push("", "Memories:");
+        lines.push(
+          memoryMatches.length
+            ? memoryMatches.map((memory) => `- ${memory.text}`).join("\n")
+            : "(none)",
+        );
+        lines.push("", "Agent messages:");
+        lines.push(
+          agentMessageMatches.length
+            ? agentMessageMatches
+                .slice(0, 30)
+                .map(
+                  (match) =>
+                    `- [${match.agent.name || match.agent.id}, ${match.role}](/agent/${match.agent.id}?message=${match.messageId}) — ${match.text}`,
+                )
+                .join("\n")
+            : "(none)",
+        );
+        lines.push("", "Agent files:");
+        lines.push(
+          agentFileNames.length
+            ? agentFileNames
+                .slice(0, 30)
+                .map(
+                  (match) =>
+                    `- ${match.agent.name || match.agent.id}: [${match.file.path}](${agentFileLink(match.agent, match.file.path)}) (${match.file.size ?? "?"} bytes)`,
+                )
+                .join("\n")
+            : "(none)",
+        );
+        lines.push("", "Agent file contents:");
+        lines.push(
+          agentFileContents.length
+            ? agentFileContents
+                .slice(0, 50)
+                .map(
+                  (match) =>
+                    `- ${match.agent.name || match.agent.id}: ${match.path}:${match.line} — ${match.text}`,
+                )
+                .join("\n")
+            : "(none)",
+        );
+        return lines.join("\n");
+      }
+
       case "list_chats": {
         const [rows, folders] = await Promise.all([
           listConversationMetas(),
@@ -616,6 +902,81 @@ export function createMetaToolRunner({
         }
       }
 
+      case "agent_health": {
+        const agents = getAgents();
+        const servers = (userSettings.mcp_servers || []).filter(
+          (server) => server.kind === "local" && normalizeMcpUrl(server.url),
+        );
+        const statusLines = agents.length
+          ? (await agentStatusLines(agents)).join("\n")
+          : "No agents configured.";
+        const mcpLines = await Promise.all(
+          servers.slice(0, 20).map(async (server) => {
+            try {
+              const result = await testMcpServer({
+                url: normalizeMcpUrl(server.url),
+                headers: server.headers,
+                enabled: true,
+              });
+              return `- ${server.name || server.id}: connected (${result.name}, ${result.toolCount} tools)`;
+            } catch (error) {
+              return `- ${server.name || server.id}: unreachable — ${
+                error instanceof Error ? error.message : String(error)
+              }`;
+            }
+          }),
+        );
+        return [
+          "Agents:",
+          statusLines,
+          "",
+          "Local MCP servers:",
+          mcpLines.length ? mcpLines.join("\n") : "(none configured)",
+        ].join("\n");
+      }
+
+      case "list_mcp_tools": {
+        const target = String(args.server || "").trim();
+        const server = (userSettings.mcp_servers || []).find(
+          (item) =>
+            item?.id === target ||
+            item?.name === target ||
+            item?.url === target,
+        );
+        if (!server) return "MCP server not found.";
+        if (server.kind !== "local" || !normalizeMcpUrl(server.url)) {
+          return "This MCP server has no browser-reachable URL.";
+        }
+        try {
+          const tools = await listMcpServerTools({
+            url: normalizeMcpUrl(server.url),
+            headers: server.headers,
+            enabled: true,
+          });
+          return tools
+            .map(
+              (tool) =>
+                `- ${tool.name}${tool.title ? ` (${tool.title})` : ""}: ${tool.description || "no description"}`,
+            )
+            .join("\n") || "(no tools)";
+        } catch (error) {
+          return `Could not list MCP tools: ${
+            error instanceof Error ? error.message : String(error)
+          }`;
+        }
+      }
+
+      case "list_workspaces": {
+        const workspaces = await listWorkspaceSummaries();
+        if (!workspaces.length) return "No workspaces configured.";
+        return workspaces
+          .map(
+            (workspace) =>
+              `- id: ${workspace.id}\n  name: ${workspace.name}\n  agents: ${workspace.agentIds.join(", ") || "none"}\n  chats: ${workspace.conversationIds.join(", ") || "none"}\n  sources: ${workspace.sourceCount}`,
+          )
+          .join("\n");
+      }
+
       case "list_agents": {
         const agents = getAgents();
         if (!agents.length) return "No agents configured.";
@@ -633,46 +994,83 @@ export function createMetaToolRunner({
       case "check_agents": {
         const agents = getAgents();
         if (!agents.length) return "No agents configured.";
-        const lines = await Promise.all(
-          agents.map(async (agent) => {
-            if (!agent.sessionId) {
-              return `- ${agent.name || agent.id}: no OpenCode session configured.`;
-            }
-            const [info, statuses] = await Promise.allSettled([
-              getOpencodeInfo(agent),
-              getOpencodeSessionStatus(agent),
-            ]);
-            const connected =
-              info.status === "fulfilled" || statuses.status === "fulfilled";
-            const rawStatus =
-              statuses.status === "fulfilled"
-                ? statuses.value?.[agent.sessionId]
-                : null;
-            const activity =
-              typeof rawStatus === "string"
-                ? rawStatus
-                : rawStatus?.type ??
-                  rawStatus?.status ??
-                  rawStatus?.state ??
-                  "unknown";
-            const working = /busy|running|working|active|pending|retry|permission/i.test(
-              String(activity),
-            );
-            const error =
-              info.status === "rejected"
-                ? info.reason instanceof Error
-                  ? info.reason.message
-                  : String(info.reason)
-                : "";
-            return [
-              `- ${agent.name || agent.id}: ${connected ? "connected" : "unreachable"}`,
-              `  server: ${agent.serverUrl}`,
-              `  session: ${working ? "working" : connected ? "idle" : "unknown"}`,
-              ...(error ? [`  error: ${error}`] : []),
-            ].join("\n");
-          }),
+        return (await agentStatusLines(agents)).join("\n");
+      }
+
+      case "get_whats_new": {
+        const since = parseSince(args.since) || Date.now() - 24 * 60 * 60 * 1000;
+        const [rows, folders, agents] = await Promise.all([
+          listConversationMetas(),
+          listFolders(),
+          Promise.resolve(getAgents()),
+        ]);
+        const chats = (rows || [])
+          .filter(
+            (row) =>
+              !row.isMetaChat &&
+              row.id !== "meta-chat" &&
+              (row.lastModified ?? row.createdAt ?? 0) >= since,
+          )
+          .sort(
+            (left, right) =>
+              (right.lastModified ?? 0) - (left.lastModified ?? 0),
+          )
+          .slice(0, 20);
+        const topics = (folders || []).filter(
+          (folder) => (folder.createdAt ?? 0) >= since,
         );
-        return lines.join("\n");
+        const memories = (userSettings.memories || []).filter((memory) => {
+          const created = new Date(memory.createdAt || 0).getTime();
+          return Number.isFinite(created) && created >= since;
+        });
+        const status = agents.length
+          ? (await agentStatusLines(agents)).join("\n")
+          : "No agents configured.";
+        const recent = agents.length
+          ? await recentAgentFiles(agents, since)
+          : { files: [], withoutTimestamp: 0 };
+        return [
+          `Changes since ${new Date(since).toISOString()}:`,
+          "",
+          "Chats:",
+          chats.length
+            ? chats
+                .map(
+                  (chat) =>
+                    `- [${chat.title || "Untitled Chat"}](/chat/${chat.id}) — ${new Date(chat.lastModified ?? chat.createdAt ?? 0).toISOString()}`,
+                )
+                .join("\n")
+            : "(no changed chats)",
+          "",
+          "New topics:",
+          topics.length
+            ? topics
+                .map((topic) => `- ${topic.name} (id: ${topic.id})`)
+                .join("\n")
+            : "(none)",
+          "",
+          "New memories:",
+          memories.length
+            ? memories.map((memory) => `- ${memory.text}`).join("\n")
+            : "(none)",
+          "",
+          "Agents:",
+          status,
+          "",
+          "Recently modified agent files:",
+          recent.files.length
+            ? recent.files
+                .slice(0, 100)
+                .map(
+                  (file) =>
+                    `- ${new Date(file.time).toISOString()} — ${file.agentName}: [${file.path}](${agentFileLink({ id: file.agentId }, file.path)})${typeof file.size === "number" ? ` (${file.size} bytes)` : ""}`,
+                )
+                .join("\n")
+            : "(none)",
+          ...(recent.withoutTimestamp
+            ? [`(${recent.withoutTimestamp} file(s) had no timestamp metadata.)`]
+            : []),
+        ].join("\n");
       }
 
       case "get_agent_history": {
@@ -711,7 +1109,7 @@ export function createMetaToolRunner({
           return rows
             .map((entry) => {
               const time = fileTime(entry);
-              return `- ${entry.type === "directory" ? "dir " : "file"} ${entry.path}${typeof entry.size === "number" ? ` (${entry.size} bytes)` : ""}${time ? ` — ${new Date(time).toISOString()}` : ""}`;
+              return `- ${entry.type === "directory" ? "dir " : "file"} [${entry.path}](${agentFileLink(agent, entry.path)})${typeof entry.size === "number" ? ` (${entry.size} bytes)` : ""}${time ? ` — ${new Date(time).toISOString()}` : ""}`;
             })
             .join("\n") || "(empty folder)";
         } catch (error) {

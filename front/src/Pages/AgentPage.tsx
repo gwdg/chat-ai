@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 
 import AnnouncementBar from "../components/Header/AnnouncementBar";
 import Header from "../components/Header/Header";
@@ -26,11 +26,23 @@ import { createWorkspaceRootProvider } from "../workspace/workspaceRoot";
 export default function AgentPage() {
   const { t } = useTranslation();
   const { agentId } = useParams();
+  const [searchParams] = useSearchParams();
+  const focusedFilePath = searchParams.get("file");
   const agent = useAgent(agentId);
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
   const { preview, openFile, openText, closePreview, download } =
     useOpencodeFilePreview(agent);
+  useEffect(() => {
+    if (!agent || !focusedFilePath) return;
+    void openFile({
+      sourceId: agent.id,
+      path: focusedFilePath,
+      name: focusedFilePath.split("/").filter(Boolean).pop() || focusedFilePath,
+      kind: "file",
+      local: false,
+    });
+  }, [agent, focusedFilePath, openFile]);
   const workspaces = useWorkspaceList();
   const workspaceId = agent?.bridgeWorkspaceId ?? null;
   const workspace = useWorkspace(workspaceId ?? undefined);

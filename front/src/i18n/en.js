@@ -213,6 +213,7 @@ export default {
     help_label: "Help/Meta Assistant Chatty",
     help_tooltip:
       "Open the Meta chat: ask about your chats, topics, settings, and memories, or get step-by-step guidance for Chat AI features. Proposed changes apply only after you confirm them.",
+    last_checked: "Last change check: {{date}}",
     banner_description: "Metachat can help you in two ways:",
     purposes: {
       tutor: "Learn how to use Chat AI features",
@@ -226,6 +227,7 @@ export default {
       "These changes modify your chats, settings, or memories. Review them before applying.",
     accept_changes: "Accept changes",
     applying_changes: "Applying…",
+    applied_not_reversible: "Applied — this action cannot be reverted.",
     changes_applied: "Changes applied",
     revert_changes: "Revert changes",
     reverting: "Reverting…",
@@ -248,6 +250,10 @@ export default {
     create_chat_summary: "Create chat “{{title}}” with {{count}} initial messages",
     mcp_target_all: "all chats",
     mcp_target_global: "the MCP server list",
+    agent_prompt_summary: "Send a prompt to agent {{agent}}",
+    agent_interrupt_summary: "Interrupt agent {{agent}}",
+    workspace_attach_summary: "Attach workspace {{workspace}} to {{target}}",
+    workspace_detach_summary: "Detach workspace {{workspace}} from {{target}}",
     mcp_add_local_summary: "Add local MCP server {{name}} to {{target}}",
     mcp_add_remote_summary: "Add remote MCP server {{name}} to {{target}}",
     mcp_remove_local_summary: "Remove local MCP server {{name}} from {{target}}",
@@ -643,6 +649,30 @@ export default {
         "Ask it to take you somewhere, for example: “Take me to chat settings” or “Open the chat about pricing.”",
       step3:
         "Ask it to search your chats, for example: “Find where we decided the pricing model” or “What are the action items?”. Click a cited message to jump to it.",
+    },
+    meta_chat_agents: {
+      title: "Work with agents from the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2: "Ask for agent status or history, for example: “Check all agents and show recent files.”",
+      step3: "Ask it to fetch a file, for example: “Show random.png from Research agent,” or review a prompt/interrupt proposal before accepting.",
+    },
+    meta_chat_workspaces: {
+      title: "Attach workspaces from the Meta chat",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2: "Ask it to list workspaces and attach one, for example: “Attach Research workspace to agent 1.”",
+      step3: "Review the workspace-link proposal and click Accept changes.",
+    },
+    meta_chat_digest: {
+      title: "Get a what's-new digest",
+      step1: "Open the Meta chat from the AI icon in the sidebar.",
+      step2: "The banner shows the last change check. It is updated after each what's-new answer.",
+      step3: "Ask “What's new?” to see changed chats, new topics and memories, agent status, and recently modified agent files.",
+    },
+    meta_chat_mcp: {
+      title: "Manage MCP servers from the Meta chat",
+      step1: "Open the MCP Servers section in the sidebar or add a server there.",
+      step2: "Return to the Meta chat from the AI icon.",
+      step3: "Ask it to test servers, list their tools, or add/update/remove one. Sidebar changes require Accept.",
     },
     meta_chat_usage: {
       title: "Use the Meta chat",

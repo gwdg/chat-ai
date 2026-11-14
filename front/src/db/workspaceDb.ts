@@ -219,6 +219,29 @@ export async function deleteWorkspace(id: string): Promise<void> {
   await deleteUnreferencedSourceNodes(`workspace-root:${id}`);
 }
 
+export async function listWorkspaceSummaries() {
+  const [workspaces, agents, chats, sources] = await Promise.all([
+    db.workspaces.toArray(),
+    db.workspace_agents.toArray(),
+    db.workspace_chats.toArray(),
+    db.workspace_sources.toArray(),
+  ]);
+  return workspaces.map((workspace) => ({
+    id: workspace.id,
+    name: workspace.name,
+    icon: workspace.icon,
+    color: workspace.color,
+    agentIds: agents
+      .filter((link) => link.workspaceId === workspace.id)
+      .map((link) => link.agentId),
+    conversationIds: chats
+      .filter((link) => link.workspaceId === workspace.id)
+      .map((link) => link.conversationId),
+    sourceCount: sources.filter((source) => source.workspaceId === workspace.id)
+      .length,
+  }));
+}
+
 export function useWorkspaceList(): WorkspaceRow[] {
   return (
     useLiveQuery(
@@ -506,6 +529,30 @@ export async function attachWorkspaceAgent(
     agentId,
     createdAt: now(),
   });
+}
+
+export async function hasWorkspaceAgentLink(
+  workspaceId: string,
+  agentId: string,
+): Promise<boolean> {
+  return Boolean(
+    await db.workspace_agents
+      .where("[workspaceId+agentId]")
+      .equals([workspaceId, agentId])
+      .first(),
+  );
+}
+
+export async function hasWorkspaceChatLink(
+  workspaceId: string,
+  conversationId: string,
+): Promise<boolean> {
+  return Boolean(
+    await db.workspace_chats
+      .where("[workspaceId+conversationId]")
+      .equals([workspaceId, conversationId])
+      .first(),
+  );
 }
 
 export async function detachWorkspaceAgent(

@@ -9,7 +9,10 @@ import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 import { abortRequest } from "../apis/chatCompletions";
 import { createConversation, getConversation, updateConversation } from "../db";
 
-import { useMetaChatSend } from "../hooks/useMetaChatSend";
+import {
+  META_LAST_CHECK_KEY,
+  useMetaChatSend,
+} from "../hooks/useMetaChatSend";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
@@ -44,6 +47,13 @@ export default function MetaChatPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [loaded, setLoaded] = useState(false);
+  const [lastCheck, setLastCheck] = useState(() => {
+    try {
+      return Number(localStorage.getItem(META_LAST_CHECK_KEY)) || 0;
+    } catch {
+      return 0;
+    }
+  });
   const [openCatalog, setOpenCatalog] = useState(null);
   const catalogRef = useRef(null);
   const latestStateRef = useRef(localState);
@@ -52,6 +62,14 @@ export default function MetaChatPage() {
   useEffect(() => {
     if (isActive) setOpenCatalog(null);
   }, [isActive]);
+
+  useEffect(() => {
+    const onCheck = (event) => {
+      setLastCheck(Number(event.detail?.at) || Date.now());
+    };
+    window.addEventListener("chatai:meta-last-check", onCheck);
+    return () => window.removeEventListener("chatai:meta-last-check", onCheck);
+  }, []);
 
   useEffect(() => {
     if (!openCatalog) return;
@@ -205,13 +223,25 @@ export default function MetaChatPage() {
             </div>
             <div className="mx-auto mb-2 flex w-full md:max-w-[85vw] xl:max-w-[1300px] items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 shadow-sm">
               <ChattyLogo className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-base-content">
-                  {t("meta_chat.name")}
-                  <span className="ml-1 font-normal text-base-content/60">
-                    · {t("meta_chat.title")}
-                  </span>
-                </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2">
+                  <p className="min-w-0 flex-1 text-xs font-semibold text-base-content">
+                    {t("meta_chat.name")}
+                    <span className="ml-1 font-normal text-base-content/60">
+                      · {t("meta_chat.title")}
+                    </span>
+                  </p>
+                  {lastCheck > 0 && (
+                    <span
+                      data-guide="meta-last-check"
+                      className="ml-auto shrink-0 text-[10px] font-bold text-base-content/60"
+                    >
+                      {t("meta_chat.last_checked", {
+                        date: new Date(lastCheck).toLocaleString(),
+                      })}
+                    </span>
+                  )}
+                </div>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-base-content/70">
                   {t("meta_chat.banner_description")}
                 </p>

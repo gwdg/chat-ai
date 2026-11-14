@@ -35,6 +35,7 @@ import { createMetaToolRunner, META_TOOL_DEFINITIONS } from "../utils/metaTools"
 import { saveFileReady } from "../db";
 
 const MAX_TOOL_ROUNDS = 6;
+export const META_LAST_CHECK_KEY = "chatai.meta.last-check";
 
 function buildSystemPrompt() {
   return `You are the Meta chat assistant and a helpful tutor for a local chat application. You help the user understand and use Chat AI, including its features and workflows, and find and understand their past conversations and topics. You are the only assistant that can start in-app tutorials.
@@ -46,6 +47,8 @@ For navigation, give the user an inline Markdown link:
 - Exact message: [<conversation title>, message](/chat/<conversation id>?message=<message id>)
 - Topic: [<topic name>](/topic/<topic id>)
 - Settings tab: [Open settings](/settings/<tab>), where <tab> is one of profile, chat, memories, data.
+- Agent message: [Agent name, role](/agent/<agent id>?message=<message id>)
+- Agent file: [file path](/agent/<agent id>?file=<URL-encoded path>)
 
 Use only ids returned by the tools. When the user asks to be taken to a chat, message, topic, or setting, give the matching link and briefly say what it opens.
 
@@ -69,6 +72,10 @@ To propose changes, include one marker per change on its own line at the end of 
 [[MCP_SERVER:{"op":"add","server":"remote","target":"<conversation id>","serverId":"<server id>","enabled":true,"authorization":"<optional>"}]]
 [[MCP_SERVER:{"op":"update","server":"local","target":"all","url":"localhost:9000","enabled":false}]]
 [[MCP_SERVER:{"op":"remove","server":"remote","target":"<conversation id>","serverId":"<server id>"}]]
+[[AGENT_ACTION:{"op":"prompt","agent":"<agent id>","text":"<prompt text>"}]]
+[[AGENT_ACTION:{"op":"interrupt","agent":"<agent id>"}]]
+[[WORKSPACE_LINK:{"op":"attach","workspaceId":"<workspace id>","agentId":"<agent id>"}]]
+[[WORKSPACE_LINK:{"op":"detach","workspaceId":"<workspace id>","conversationId":"<conversation id>"}]]
 [[MCP_SERVER:{"op":"add","server":"local","target":"global","name":"<name>","url":"localhost:9000"}]]
 [[MCP_SERVER:{"op":"add","server":"remote","target":"global","name":"<name>","serverId":"<server id>"}]]
 [[MCP_SERVER:{"op":"update","server":"local","target":"global","entryId":"<server entry id>","name":"<new name>"}]]
@@ -78,7 +85,7 @@ To propose changes, include one marker per change on its own line at the end of 
 [[DELETE_MEMORY:{"index":0}]]
 [[CLEAR_MEMORIES:{}]]
 
-Use only ids returned by the tools. Use "folderId": null for Unsorted, or provide a new folderName to create a topic. Use "pinned": true to pin a chat or topic and "pinned": false to unpin it. CREATE_CHAT messages must be text-only, use only system/user/assistant roles, and total at most 200 messages. Settings are optional and are validated before the chat is created. Use MCP_SERVER "target":"global" to change the sidebar MCP server list; get the entryId from get_user_settings. To link to an agent, call list_agents and use [Agent name](/agent/<agent id>). To download or display a file from an agent, call list_agent_files and then fetch_agent_file; that attaches the file to this Meta chat. Use read_agent_file only for text. Do not claim that binary files cannot be accessed or shown. When the user asks what is new, which files are new, or for recent activity, call check_agents and list_recent_agent_files, then report the recently modified files and their agents.
+Use only ids returned by the tools. Use "folderId": null for Unsorted, or provide a new folderName to create a topic. Use "pinned": true to pin a chat or topic and "pinned": false to unpin it. CREATE_CHAT messages must be text-only, use only system/user/assistant roles, and total at most 200 messages. Settings are optional and are validated before the chat is created. Use MCP_SERVER "target":"global" to change the sidebar MCP server list; get the entryId from get_user_settings. Use list_workspaces before WORKSPACE_LINK and provide exactly one of agentId or conversationId. Use list_agents before AGENT_ACTION; prompt and interrupt actions cannot be reverted. To link to an agent, call list_agents and use [Agent name](/agent/<agent id>). To download or display a file from an agent, call list_agent_files and then fetch_agent_file; that attaches the file to this Meta chat. Use read_agent_file only for text. Do not claim that binary files cannot be accessed or shown. When the user asks what is new, which files are new, or for recent activity, use get_whats_new with the last-check timestamp supplied in the system context. Report changed chats, new topics/memories, agent status, and recently modified agent files with their agents.
 
 Supported setting keys and values:
 - memory_mode: 0 (none), 1 (recall), 2 (learn)
@@ -243,17 +250,29 @@ export function useMetaChatSend(modelsData = []) {
       const newUserMessage = extractMessageText(
         localState.messages[localState.messages.length - 1],
       ).trim();
-      const asksForNewStatus =
-        /\b(what'?s new|anything new|any news|any updates?|recent activity|recent changes|new in meta|agent status|status of (?:the )?agents?|neuigkeiten|was gibt'?s neues|irgendetwas neues|aktivität der agenten|status der agenten)\b/i.test(
+      const asksForNew =
+        /\b(what'?s new|anything new|any news|any updates?|recent activity|recent changes|new in meta|neuigkeiten|was gibt'?s neues|irgendetwas neues)\b/i.test(
+          newUserMessage,
+        );
+      const asksForAgentStatus =
+        /\b(agent status|status of (?:the )?agents?|aktivität der agenten|status der agenten)\b/i.test(
           newUserMessage,
         );
       let systemPrompt = buildSystemPrompt();
-      if (asksForNewStatus) {
-        const [status, files] = await Promise.all([
-          runTool("check_agents"),
-          runTool("list_recent_agent_files", { hours: 24 }),
-        ]);
-        systemPrompt += `\n\nCurrent agent status (checked now with check_agents):\n${status}\n\n${files}`;
+      const metaCheckStartedAt = Date.now();
+      if (asksForNew) {
+        let lastCheck = 0;
+        try {
+          lastCheck = Number(localStorage.getItem(META_LAST_CHECK_KEY)) || 0;
+        } catch {}
+        const since = lastCheck || metaCheckStartedAt - 24 * 60 * 60 * 1000;
+        const changes = await runTool("get_whats_new", {
+          since: new Date(since).toISOString(),
+        });
+        systemPrompt += `\n\nChanges checked at ${new Date(metaCheckStartedAt).toISOString()} since ${new Date(since).toISOString()}:\n${changes}`;
+      } else if (asksForAgentStatus) {
+        const status = await runTool("check_agents");
+        systemPrompt += `\n\nCurrent agent status (checked now with check_agents):\n${status}`;
       }
 
       const payload = {
@@ -451,6 +470,19 @@ export function useMetaChatSend(modelsData = []) {
           }
         }
 
+        if (asksForNew && !errorMeta) {
+          try {
+            localStorage.setItem(
+              META_LAST_CHECK_KEY,
+              String(metaCheckStartedAt),
+            );
+            window.dispatchEvent(
+              new CustomEvent("chatai:meta-last-check", {
+                detail: { at: metaCheckStartedAt },
+              }),
+            );
+          } catch {}
+        }
         window.dispatchEvent(new Event("chatai:message-complete"));
       }
 
