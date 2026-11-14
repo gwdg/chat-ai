@@ -146,6 +146,7 @@ describe("Meta chat local tools", () => {
       "list_workspaces",
       "list_agents",
       "check_agents",
+      "list_agent_sessions",
       "get_agent_history",
       "list_agent_files",
       "list_recent_agent_files",
@@ -227,7 +228,7 @@ describe("Meta chat local tools", () => {
 
     const result = await run("check_agents");
     expect(result).toContain("Research agent: connected");
-    expect(result).toContain("session: working");
+    expect(result).toContain("active session: session-1 — working");
   });
 
   it("returns current settings, models, memories, and personas", async () => {

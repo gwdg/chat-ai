@@ -1,6 +1,15 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as testingLibraryRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router";
 import AgentConversation from "../AgentConversation";
+
+const render = (ui) =>
+  testingLibraryRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 const apiMocks = vi.hoisted(() => ({
   list: vi.fn(),

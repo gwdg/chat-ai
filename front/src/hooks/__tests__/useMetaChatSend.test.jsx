@@ -105,9 +105,9 @@ describe("useMetaChatSend", () => {
     expect(setter.getState().messages.at(-2).content[0].text).toBe("Hello from meta");
   });
 
-  it("checks agent status when the user asks what is new", async () => {
+  it("checks what is new when the user asks for recent changes", async () => {
     const runner = vi.fn(async (name) =>
-      name === "check_agents" ? "Agent A: connected" : "tool result",
+      name === "get_whats_new" ? "Agent A: connected" : "tool result",
     );
     vi.mocked(createMetaToolRunner).mockReturnValue(runner);
     vi.mocked(chatCompletions).mockImplementationOnce(finalMessage("Nothing new"));
@@ -122,7 +122,9 @@ describe("useMetaChatSend", () => {
       await result.current({ localState: state, setLocalState: setter.setLocalState });
     });
 
-    expect(runner).toHaveBeenCalledWith("check_agents");
+    expect(runner).toHaveBeenCalledWith("get_whats_new", {
+      since: expect.any(String),
+    });
     const payload = vi.mocked(chatCompletions).mock.calls[0][0];
     expect(payload.messages[0].content).toContain("Agent A: connected");
   });
