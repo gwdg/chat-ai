@@ -36,6 +36,7 @@ import {
   createAgentSession,
   fetchAgentSessions,
   notifyAgentSessionsChanged,
+  sessionSummariesFor,
   switchAgentSession,
 } from "../agents/agentSessions";
 import {
@@ -1689,6 +1690,7 @@ export default function WorkspacePage() {
                                 agent={agent}
                                 tree={agentSessions[agent.id]}
                                 activeSessionId={agent.sessionId}
+                                summaries={sessionSummariesFor(agent)}
                                 onSelect={(session) =>
                                   switchToAgentSession(agent, session)
                                 }

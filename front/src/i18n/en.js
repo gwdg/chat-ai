@@ -1749,6 +1749,7 @@ export default {
     no_search_results: "No matching files.",
     send: "Send",
     working: "Agent is working…",
+    session_busy: "This agent is still working. Wait for it to finish or stop it before sending another message.",
     chat_timeout: "The agent did not finish in time.",
     aborted_by_user: "Aborted by user",
     permission_title: "Permission required",

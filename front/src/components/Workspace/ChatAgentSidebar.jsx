@@ -16,6 +16,7 @@ import {
   createAgentSession,
   fetchAgentSessions,
   notifyAgentSessionsChanged,
+  sessionSummariesFor,
   switchAgentSession,
 } from "../../agents/agentSessions";
 import {
@@ -68,6 +69,7 @@ export default function ChatAgentSidebar({ conversationId }) {
   const chatLinks = useChatWorkspaces(conversationId);
   const agentLinks = useWorkspaceAgentLinks();
   const [statuses, setStatuses] = useState({});
+  const [sessionStatuses, setSessionStatuses] = useState({});
   const [expanded, setExpanded] = useState(new Set());
   const [details, setDetails] = useState({});
   const [sessions, setSessions] = useState({});
@@ -93,12 +95,14 @@ export default function ChatAgentSidebar({ conversationId }) {
   useEffect(() => {
     if (!connectedAgents.length) {
       setStatuses({});
+      setSessionStatuses({});
       return;
     }
     let cancelled = false;
     const poll = async () => {
       if (document.visibilityState === "hidden") return;
       const next = {};
+      const nextSessions = {};
       await Promise.all(
         connectedAgents.map(async (agent) => {
           if (!agent.sessionId) {
@@ -108,6 +112,12 @@ export default function ChatAgentSidebar({ conversationId }) {
           try {
             const map = await getOpencodeSessionStatus(agent);
             next[agent.id] = classifySessionStatus(map?.[agent.sessionId]);
+            nextSessions[agent.id] = Object.fromEntries(
+              Object.entries(map || {}).map(([id, value]) => [
+                id,
+                classifySessionStatus(value),
+              ]),
+            );
           } catch {
             try {
               await getOpencodeInfo(agent);
@@ -118,7 +128,10 @@ export default function ChatAgentSidebar({ conversationId }) {
           }
         }),
       );
-      if (!cancelled) setStatuses(next);
+      if (!cancelled) {
+        setStatuses(next);
+        setSessionStatuses(nextSessions);
+      }
     };
     void poll();
     const timer = window.setInterval(poll, 10000);
@@ -253,6 +266,8 @@ export default function ChatAgentSidebar({ conversationId }) {
                     agent={agent}
                     tree={sessions[agent.id]}
                     activeSessionId={agent.sessionId}
+                    statuses={sessionStatuses[agent.id]}
+                    summaries={sessionSummariesFor(agent)}
                     onSelect={(session) => switchSession(agent, session)}
                     onCreate={createSession}
                     creating={creatingSession === agent.id}

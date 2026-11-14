@@ -697,9 +697,9 @@ sessions OpenCode creates; they are shown nested in the same list and can be ope
 top-level session. The + action creates a new session and makes it active. `AgentList`,
 `ChatAgentSidebar` and the workspace Agents panel refetch every 10s (or immediately on the
 `chatai:agent-sessions-changed` / `chatai:agent-session-changed` events) so a subagent spawned by
-OpenCode appears without a reload. Leaving an agent page summarizes its messages with
-`generateConversationSummary`, stores the summary on the agent entry, and shows it in the row
-tooltip. Clicking one navigates to
+OpenCode appears without a reload. Leaving an agent session summarizes its messages with
+`generateConversationSummary`, stores the summary under that session in the agent entry's
+`sessionSummaries`, and shows it in the session row tooltip. Clicking one navigates to
 `Pages/AgentPage.tsx` (`/agent/:agentId`), whose `components/Agent/AgentConversation.jsx` is the
 chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`, and tool or
 reasoning parts render as inline expandable cards (`AgentAssistantParts`). The left

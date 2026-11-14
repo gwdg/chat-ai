@@ -17,7 +17,6 @@ import {
 } from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
-import ShortcutTooltip from "./ShortcutTooltip";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import {
@@ -35,6 +34,7 @@ import {
   createAgentSession,
   fetchAgentSessions,
   notifyAgentSessionsChanged,
+  sessionSummariesFor,
   switchAgentSession,
 } from "../../agents/agentSessions";
 import AgentSessionList from "../Agent/AgentSessionList";
@@ -92,6 +92,9 @@ export default function AgentList() {
   const [statuses, setStatuses] = useState<
     Record<string, "ready" | "working" | "error" | "checking">
   >({});
+  const [sessionStatuses, setSessionStatuses] = useState<
+    Record<string, Record<string, "ready" | "working" | "error">>
+  >({});
   const statusPollingRef = useRef<Promise<void> | null>(null);
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__agents__");
@@ -107,6 +110,10 @@ export default function AgentList() {
         string,
         "ready" | "working" | "error" | "checking"
       > = {};
+      const nextSessions: Record<
+        string,
+        Record<string, "ready" | "working" | "error">
+      > = {};
       await Promise.all(
         agents.map(async (agent) => {
           if (!agent.sessionId) {
@@ -118,6 +125,12 @@ export default function AgentList() {
             next[agent.id] = classifySessionStatus(
               statusMap?.[agent.sessionId],
             );
+            nextSessions[agent.id] = Object.fromEntries(
+              Object.entries(statusMap || {}).map(([id, value]) => [
+                id,
+                classifySessionStatus(value),
+              ]),
+            );
           } catch {
             try {
               await getOpencodeInfo(agent);
@@ -128,7 +141,10 @@ export default function AgentList() {
           }
         }),
       );
-      if (!cancelled) setStatuses(next);
+      if (!cancelled) {
+        setStatuses(next);
+        setSessionStatuses(nextSessions);
+      }
     };
     const poll = async () => {
       while (statusPollingRef.current) {
@@ -317,19 +333,10 @@ export default function AgentList() {
                   : status === "error"
                     ? "bg-error"
                     : "bg-base-content/20";
-            const summary = (agent.summary ?? "").trim();
             const sessionTree = sessionsByAgent[agent.id];
             const sessionOpen = expandedSessions.has(agent.id);
             return (
-              <ShortcutTooltip
-                key={agent.id}
-                label={summary}
-                position="right"
-                enterDelay={350}
-                multiline
-                disabled={!summary}
-                containerClassName="block"
-              >
+              <div key={agent.id}>
               <div
                 className={`group relative flex min-h-[16px] items-center rounded-xl px-2 py-1 ${
                   active
@@ -354,7 +361,7 @@ export default function AgentList() {
                   type="button"
                   onClick={() => navigate(`/agent/${agent.id}`)}
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  title={summary ? undefined : agent.serverUrl}
+                  title={agent.serverUrl}
                 >
                   <span
                     className="flex w-3 shrink-0 justify-center"
@@ -440,6 +447,8 @@ export default function AgentList() {
                   agent={agent}
                   tree={sessionTree}
                   activeSessionId={agent.sessionId}
+                  statuses={sessionStatuses[agent.id]}
+                  summaries={sessionSummariesFor(agent)}
                   onSelect={(session) => switchSession(agent, session)}
                   onCreate={createSession}
                   creating={creatingSession === agent.id}
@@ -447,7 +456,7 @@ export default function AgentList() {
                   className="mt-1 ml-4"
                 />
               )}
-              </ShortcutTooltip>
+              </div>
             );
           })}
         </div>

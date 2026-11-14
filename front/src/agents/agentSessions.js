@@ -14,6 +14,18 @@ const byRecent = (left, right) => sessionTime(right) - sessionTime(left);
 export const sessionLabel = (session, fallback = "Session") =>
   String(session?.title || session?.id || fallback).trim();
 
+export const sessionSummariesFor = (agent) => {
+  const summaries = { ...(agent?.sessionSummaries || {}) };
+  if (agent?.summary && agent?.sessionId && !summaries[agent.sessionId]) {
+    summaries[agent.sessionId] = {
+      summary: agent.summary,
+      sourceHash: agent.summarySourceHash,
+      updatedAt: agent.summaryUpdatedAt,
+    };
+  }
+  return summaries;
+};
+
 export const buildSessionTree = (sessions = []) => {
   const unique = new Map();
   for (const session of sessions) {

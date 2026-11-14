@@ -19,11 +19,14 @@ import {
 } from "../../agents/agentSessions";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
+import ShortcutTooltip from "../Sidebar/ShortcutTooltip";
 
 const SessionRow = ({
   session,
   depth,
   active,
+  status,
+  summary,
   onSelect,
   onRename,
   onClose,
@@ -31,7 +34,15 @@ const SessionRow = ({
 }) => {
   const { t } = useTranslation();
   const Icon = depth > 0 ? GitBranch : Bot;
-  return (
+  const statusClass =
+    status === "working"
+      ? "bg-warning animate-pulse"
+      : status === "error"
+        ? "bg-error"
+        : status === "ready"
+          ? "bg-success"
+          : "bg-base-content/20";
+  const row = (
     <div
       className={`group flex items-center rounded-md pr-1 transition ${
         active
@@ -46,8 +57,13 @@ const SessionRow = ({
           active ? "font-medium" : ""
         }`}
         style={{ paddingLeft: `${8 + depth * 14}px` }}
-        title={session.id}
+        title={summary || undefined}
       >
+        <span
+          className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusClass}`}
+          title={t(`agents.status_${status || "checking"}`)}
+          aria-label={t(`agents.status_${status || "checking"}`)}
+        />
         <Icon size={11} className="shrink-0 text-base-content/45" />
         <span className="min-w-0 flex-1 truncate">{sessionLabel(session)}</span>
         {depth > 0 && (
@@ -98,12 +114,26 @@ const SessionRow = ({
       </Popover>
     </div>
   );
+  if (!summary) return row;
+  return (
+    <ShortcutTooltip
+      label={summary}
+      position="right"
+      enterDelay={350}
+      multiline
+      containerClassName="block"
+    >
+      {row}
+    </ShortcutTooltip>
+  );
 };
 
 export default function AgentSessionList({
   agent,
   tree,
   activeSessionId,
+  statuses = {},
+  summaries = {},
   onSelect,
   onCreate,
   creating = false,
@@ -127,6 +157,8 @@ export default function AgentSessionList({
         session={session}
         depth={depth}
         active={activeSessionId === session.id}
+        status={statuses[session.id]}
+        summary={summaries[session.id]?.summary}
         onSelect={onSelect}
         onRename={renameSession}
         onClose={closeSession}

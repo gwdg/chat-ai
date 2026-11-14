@@ -82,11 +82,19 @@ export async function listOpencodeSessions(agent) {
 }
 
 export async function listOpencodeSessionChildren(agent, sessionId) {
-  const result = await request(
-    agent,
-    `/session/${encodeURIComponent(sessionId)}/children`,
-  );
-  return result?.data ?? result ?? [];
+  try {
+    const result = await request(
+      agent,
+      `/session/${encodeURIComponent(sessionId)}/children`,
+    );
+    return result?.data ?? result ?? [];
+  } catch {
+    const result = await request(
+      agent,
+      `/session?parentID=${encodeURIComponent(sessionId)}&limit=200`,
+    );
+    return result?.data ?? result ?? [];
+  }
 }
 
 export async function createOpencodeSession(agent, title) {
@@ -299,8 +307,15 @@ export async function getOpencodeDefaultModel(agent) {
 }
 
 export async function getOpencodeSessionStatus(agent) {
-  const result = await request(agent, "/session/status");
-  return result?.data ?? result ?? {};
+  try {
+    // OpenCode v2 exposes only active sessions; absence means idle.
+    const result = await request(agent, "/session/active");
+    return result?.data ?? result ?? {};
+  } catch {
+    // OpenCode v1 returned a status entry for every session.
+    const result = await request(agent, "/session/status");
+    return result?.data ?? result ?? {};
+  }
 }
 
 export async function getOpencodeSession(agent, sessionId) {
@@ -321,11 +336,17 @@ export async function setOpencodeModel(agent, sessionId, model) {
 }
 
 export async function listOpencodeMessages(agent, sessionId) {
-  const result = await request(
-    agent,
-    `/session/${encodeURIComponent(sessionId)}/message?order=asc`,
-  );
-  return result?.data ?? [];
+  const base = `/session/${encodeURIComponent(sessionId)}/message`;
+  const messages = [];
+  let params = new URLSearchParams({ order: "desc", limit: "200" });
+  for (let page = 0; page < 20; page += 1) {
+    const result = await request(agent, `${base}?${params.toString()}`);
+    messages.push(...(result?.data ?? []));
+    const cursor = result?.cursor?.next;
+    if (!cursor) break;
+    params = new URLSearchParams({ limit: "200", cursor });
+  }
+  return messages.reverse();
 }
 
 export async function sendOpencodePrompt(agent, sessionId, text, files = []) {

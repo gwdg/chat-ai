@@ -16,6 +16,55 @@ const asText = (value) => {
   }
 };
 
+const TOOL_ARGUMENT_KEYS = {
+  edit: ["filePath", "file_path", "path", "filename", "file"],
+  write: ["filePath", "file_path", "path", "filename", "file"],
+  read: ["filePath", "file_path", "path", "filename", "file"],
+  patch: ["filePath", "file_path", "path", "filename", "file"],
+  apply_patch: ["filePath", "file_path", "path", "filename", "file"],
+  multiedit: ["filePath", "file_path", "path", "filename", "file"],
+  bash: ["command", "cmd"],
+  shell: ["command", "cmd"],
+  glob: ["pattern", "path"],
+  grep: ["pattern", "query", "path"],
+  list: ["path"],
+  webfetch: ["url"],
+  websearch: ["query", "search"],
+  task: ["description", "prompt"],
+  subagent: ["description", "prompt"],
+  skill: ["name"],
+};
+
+const DEFAULT_ARGUMENT_KEYS = [
+  "filePath",
+  "file_path",
+  "path",
+  "filename",
+  "name",
+  "description",
+  "command",
+  "query",
+  "pattern",
+  "url",
+];
+
+const toolArgument = (name, input) => {
+  if (input === undefined || input === null) return "";
+  if (typeof input === "string") {
+    return input.replace(/\s+/g, " ").trim();
+  }
+  if (typeof input !== "object" || Array.isArray(input)) return "";
+  const keys = TOOL_ARGUMENT_KEYS[String(name || "").toLowerCase()];
+  const candidates = [...(keys || []), ...DEFAULT_ARGUMENT_KEYS];
+  for (const key of candidates) {
+    const value = input[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.replace(/\s+/g, " ").trim();
+    }
+  }
+  return "";
+};
+
 const toolDetail = (part) => {
   const state = part.state ?? part;
   return {
@@ -63,6 +112,9 @@ export default function AgentAssistantParts({ parts = [], fallback = "" }) {
           ) : null;
         }
         const detail = toolDetail(part);
+        const toolName = part.name ?? part.title ?? "tool";
+        const argument = toolArgument(toolName, detail.input);
+        const label = argument ? `${toolName}(${argument})` : toolName;
         return (
           <details
             key={`tool:${index}`}
@@ -72,8 +124,11 @@ export default function AgentAssistantParts({ parts = [], fallback = "" }) {
               <span className="badge badge-warning badge-xs">
                 {t("agents.tool_call")}
               </span>
-              <span className="min-w-0 flex-1 truncate font-mono font-medium">
-                {part.name ?? part.title ?? "tool"}
+              <span
+                className="min-w-0 flex-1 truncate font-mono font-medium"
+                title={label}
+              >
+                {label}
               </span>
               {detail.status && (
                 <span className="badge badge-ghost badge-xs">

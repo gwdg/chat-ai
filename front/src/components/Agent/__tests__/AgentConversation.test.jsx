@@ -26,6 +26,7 @@ const apiMocks = vi.hoisted(() => ({
   models: vi.fn(),
   defaultModel: vi.fn(),
   sessionInfo: vi.fn(),
+  status: vi.fn(),
   setModel: vi.fn(),
   commands: vi.fn(),
   agents: vi.fn(),
@@ -33,6 +34,7 @@ const apiMocks = vi.hoisted(() => ({
   forms: vi.fn(),
   replyForm: vi.fn(),
   subscribe: vi.fn(async () => {}),
+  getAgent: vi.fn(),
 }));
 
 vi.mock("../../../apis/opencodeAgents", () => ({
@@ -49,6 +51,7 @@ vi.mock("../../../apis/opencodeAgents", () => ({
   listOpencodeModels: (...args) => apiMocks.models(...args),
   getOpencodeDefaultModel: (...args) => apiMocks.defaultModel(...args),
   getOpencodeSession: (...args) => apiMocks.sessionInfo(...args),
+  getOpencodeSessionStatus: (...args) => apiMocks.status(...args),
   setOpencodeModel: (...args) => apiMocks.setModel(...args),
   listOpencodeCommands: (...args) => apiMocks.commands(...args),
   listOpencodeAgents: (...args) => apiMocks.agents(...args),
@@ -58,6 +61,7 @@ vi.mock("../../../apis/opencodeAgents", () => ({
   subscribeOpencodeEvents: (...args) => apiMocks.subscribe(...args),
 }));
 vi.mock("../../../agents/agentStore", () => ({
+  getAgent: (...args) => apiMocks.getAgent(...args),
   updateAgent: (...args) => apiMocks.updateAgent(...args),
 }));
 vi.mock("react-redux", () => ({
@@ -102,6 +106,7 @@ beforeEach(() => {
   apiMocks.models.mockResolvedValue([]);
   apiMocks.defaultModel.mockResolvedValue(null);
   apiMocks.sessionInfo.mockResolvedValue({ model: null });
+  apiMocks.status.mockResolvedValue({});
   apiMocks.setModel.mockResolvedValue(null);
   apiMocks.commands.mockResolvedValue([]);
   apiMocks.agents.mockResolvedValue([

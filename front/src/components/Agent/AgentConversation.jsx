@@ -28,7 +28,7 @@ import {
   mergeAgentMessages,
   saveAgentShellHistory,
 } from "../../agents/agentShellHistory";
-import { updateAgent } from "../../agents/agentStore";
+import { getAgent, updateAgent } from "../../agents/agentStore";
 import {
   loadAgentPermissionPolicies,
   matchPermissionPolicy,
@@ -40,6 +40,7 @@ import {
   deleteOpencodeSession,
   getOpencodeDefaultModel,
   getOpencodeSession,
+  getOpencodeSessionStatus,
   interruptOpencodeSession,
   listOpencodeAgents,
   listOpencodeCommands,
@@ -128,6 +129,16 @@ const messageText = (message) => {
     .filter(Boolean)
     .join("\n\n");
 };
+
+const sessionStatusValue = (value) =>
+  typeof value === "string"
+    ? value
+    : String(value?.type ?? value?.status ?? value?.state ?? "");
+
+const sessionIsWorking = (value) =>
+  /busy|running|working|active|pending|retry|permission/i.test(
+    sessionStatusValue(value),
+  );
 
 export default function AgentConversation({ agent, modelsData = [] }) {
   const { t } = useTranslation();
@@ -386,6 +397,43 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     [refresh, refreshPermissions, t],
   );
 
+  const startStatusPolling = useCallback(() => {
+    const startedAt = Date.now();
+    let polls = 0;
+    const poll = async () => {
+      try {
+        const [next, , , statuses] = await Promise.all([
+          refresh(),
+          refreshPermissions(),
+          refreshForms(),
+          getOpencodeSessionStatus(agent).catch(() => null),
+        ]);
+        const finishedByStatus =
+          statuses && !sessionIsWorking(statuses?.[agent.sessionId]);
+        const finishedByMessage = next.some(
+          (message) =>
+            message.type === "idle" &&
+            (message.time?.created ?? 0) >= startedAt,
+        );
+        if (finishedByStatus || (!statuses && finishedByMessage)) {
+          setSending(false);
+          return;
+        }
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : String(reason));
+        setSending(false);
+        return;
+      }
+      polls += 1;
+      if (polls >= 1800) {
+        setSending(false);
+        return;
+      }
+      pollRef.current = setTimeout(poll, POLL_INTERVAL);
+    };
+    pollRef.current = setTimeout(poll, 700);
+  }, [agent, refresh, refreshPermissions, refreshForms]);
+
   const startShellPolling = useCallback(
     (baseline) => {
       let polls = 0;
@@ -424,8 +472,9 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   );
 
   useEffect(() => {
-    if (!summaryKey || !agent) return;
+    if (!summaryKey || !agent?.sessionId) return;
     const previousAgent = agent;
+    const previousSessionId = agent.sessionId;
     return () => {
       const settings = summarySettingsRef.current;
       const snapshot = summaryMessagesRef.current.get(summaryKey) ?? [];
@@ -434,7 +483,9 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       const summaryMessages = snapshot.map(summaryMessage).filter(Boolean);
       if (!summaryMessages.length) return;
       const sourceHash = conversationSummarySignature(summaryMessages);
-      if (!sourceHash || previousAgent.summarySourceHash === sourceHash) {
+      const existing =
+        getAgent(previousAgent.id)?.sessionSummaries?.[previousSessionId];
+      if (!sourceHash || existing?.sourceHash === sourceHash) {
         return;
       }
       void (async () => {
@@ -442,17 +493,61 @@ export default function AgentConversation({ agent, modelsData = [] }) {
           const summary = await generateConversationSummary({
             localState: { messages: summaryMessages },
             userSettings: settings.userSettings,
+            short: true,
           });
           if (!summary) return;
+          const current = getAgent(previousAgent.id);
           updateAgent(previousAgent.id, {
-            summary,
-            summarySourceHash: sourceHash,
-            summaryUpdatedAt: Date.now(),
+            sessionSummaries: {
+              ...(current?.sessionSummaries || {}),
+              [previousSessionId]: {
+                summary,
+                sourceHash,
+                updatedAt: Date.now(),
+              },
+            },
           });
         } catch {}
       })();
     };
   }, [summaryKey]);
+
+  useEffect(() => {
+    if (!summariesEnabled || !agent?.id || !agent?.sessionId) return;
+    const existing = getAgent(agent.id)?.sessionSummaries?.[agent.sessionId];
+    if (existing?.summary) return;
+    const summaryMessages = messages.map(summaryMessage).filter(Boolean);
+    if (!summaryMessages.length) return;
+    const sourceHash = conversationSummarySignature(summaryMessages);
+    if (!sourceHash) return;
+    const timer = window.setTimeout(() => {
+      const settings = summarySettingsRef.current;
+      if (!settings.enabled) return;
+      void (async () => {
+        try {
+          const summary = await generateConversationSummary({
+            localState: { messages: summaryMessages },
+            userSettings: settings.userSettings,
+            short: true,
+          });
+          if (!summary) return;
+          const current = getAgent(agent.id);
+          if (current?.sessionSummaries?.[agent.sessionId]?.summary) return;
+          updateAgent(agent.id, {
+            sessionSummaries: {
+              ...(current?.sessionSummaries || {}),
+              [agent.sessionId]: {
+                summary,
+                sourceHash,
+                updatedAt: Date.now(),
+              },
+            },
+          });
+        } catch {}
+      })();
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [agent?.id, agent?.sessionId, messages, summariesEnabled]);
 
   useEffect(() => {
     if (!agent?.sessionId) return;
@@ -488,6 +583,24 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       stopPolling();
     };
   }, [agent, refresh, refreshPermissions, refreshForms, stopPolling]);
+
+  useEffect(() => {
+    if (!agent?.id || !agent?.sessionId) return;
+    let cancelled = false;
+    void getOpencodeSessionStatus(agent)
+      .then((statuses) => {
+        if (cancelled) return;
+        if (sessionIsWorking(statuses?.[agent.sessionId])) {
+          setSending(true);
+          startStatusPolling();
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [agent?.id, agent?.sessionId, startStatusPolling]);
+
 
   useEffect(() => {
     if (!agent?.id) return;
@@ -934,8 +1047,14 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     setSending(true);
     setAborted(false);
     setError("");
-    updateInput("");
     try {
+      const statuses = await getOpencodeSessionStatus(agent).catch(() => null);
+      if (statuses && sessionIsWorking(statuses?.[agent.sessionId])) {
+        startStatusPolling();
+        notifyError(t("agents.session_busy"));
+        return;
+      }
+      updateInput("");
       if (shellMode) {
         const baseline = new Set(
           messages.filter((message) => message.type === "shell").map((message) => message.id),

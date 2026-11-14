@@ -1771,6 +1771,7 @@ export default {
     no_search_results: "Keine passenden Dateien.",
     send: "Senden",
     working: "Der Agent arbeitet…",
+    session_busy: "Dieser Agent arbeitet noch. Warten Sie, bis er fertig ist, oder stoppen Sie ihn, bevor Sie eine weitere Nachricht senden.",
     chat_timeout: "Der Agent hat nicht rechtzeitig geantwortet.",
     aborted_by_user: "Vom Benutzer abgebrochen",
     permission_title: "Berechtigung erforderlich",
