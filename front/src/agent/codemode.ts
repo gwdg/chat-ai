@@ -22,10 +22,13 @@ export function createCodemodeTool(tools: AgentTool<any>[]): AgentTool<any> {
   }));
 
   const parameters = Type.Object({ code: Type.String({ description: "JavaScript source to run" }) });
+  const usage = sandboxTools.length
+    ? "Use it to search many files, or to transform data in bulk."
+    : "No file tools are available in this conversation, so use it for calculations and data transformations.";
   return {
     name: "codemode",
     label: "codemode",
-    description: `Run JavaScript in a sandbox. The code is the body of an async function. It can only reach the outside through the tools below, called as \`await tools.<name>(args)\`. Output with text() or console.log(), or return a value. There is no DOM, fetch, timers or modules. Use it to search many files, or to transform data in bulk.\n\n${renderDeclarations({ tools: sandboxTools })}`,
+    description: `Run JavaScript in a sandbox. The code is the body of an async function. It can only reach the outside through the tools below, called as \`await tools.<name>(args)\`. Output with text() or console.log(), or return a value. There is no DOM, fetch, timers or modules. ${usage}\n\n${renderDeclarations({ tools: sandboxTools })}`,
     parameters,
     execute: async (_toolCallId, { code }, signal) => {
       wasm ??= WebAssembly.compileStreaming(fetch(wasmUrl));

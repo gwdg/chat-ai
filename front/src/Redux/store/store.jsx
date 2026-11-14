@@ -58,9 +58,13 @@ const getDefaultState = () => {
       set_title_once: true,
       render_typst: false,
       render_latex: false,
+      render_graphviz: false,
+      render_vega: false,
+      render_chartjs: false,
       collapse_reasoning_while_streaming: true,
       document_conversion_mode: "choice",
       conversation_summaries: true,
+      show_timestamps: false,
       send_with_enter: null,
     },
   };

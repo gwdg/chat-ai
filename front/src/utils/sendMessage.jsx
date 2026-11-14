@@ -9,7 +9,9 @@ import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversatio
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled } from "../apis/agentEndpoints";
 import { remoteMcpEnabled } from "../agent/mcp";
+import { isArcanasEnabled } from "./modules";
 import { confirmMcpNameChange } from "./mcpNameChange";
+import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
 
 // Text to be appended to system prompt for memories
 const memoryExplanation = "The following list of memories was gathered by the system from previous conversations and may be irrelevant now. You may refer to relevant items only if justified to provide a more personalized and contextual response. Do not make any assumptions based on memories, instead focus on the user messages and requests:"
@@ -22,6 +24,8 @@ export async function processContentItems({
   ignoreVideo = false, 
   ignoreDocs = false,
   convertDocs = true,
+  sendRawDocuments = false,
+  model = null,
 }) {
   const output = [];
   for (const item of items) {
@@ -99,7 +103,11 @@ export async function processContentItems({
           }
         });
       }
-      else if (convertDocs) {
+      else if (
+        convertDocs &&
+        !(BINARY_DOCUMENT_TYPES.includes(fileType) &&
+          (sendRawDocuments || modelSupportsFileType(model, fileType)))
+      ) {
         if (fileType === "pdf") {
           // Shouldn't send unprocessed PDF file
           continue;
@@ -214,6 +222,7 @@ export async function buildConversationForAPI(localState, { forceAudioInput = fa
             ignoreImages,
             ignoreAudio: ignoreAudioForMessage,
             ignoreVideo,
+            model,
         })
         };
       }
@@ -318,11 +327,13 @@ const sendMessage = async ({
     const toolsModule = import.meta.env.VITE_MODULE_TOOLS === "true";
     const choicesModule = import.meta.env.VITE_MODULE_CHOICES === "true";
 
+    const arcanasModule = isArcanasEnabled();
     const isExternalModel =
       typeof localState.settings.model?.name === "string" &&
       localState.settings.model.name.toLowerCase().includes("external");
     const isToolsEnabled = toolsModule && !isExternalModel && localState.settings?.enable_tools;
-    const isArcanaSupported = isToolsEnabled && !!localState.settings.tools.arcana   
+    const isArcanaSupported =
+      arcanasModule && isToolsEnabled && !!localState.settings.tools.arcana;
   
     let finalConversationForState; // For local state updates
     let conversationForAPI = await buildConversationForAPI(localState, {
@@ -349,13 +360,20 @@ const sendMessage = async ({
       // Convert tools dictionary to OpenAI-compatible tools list
       if (isToolsEnabled) {
         conversationForAPI.settings.tools = Object.entries(localState.settings.tools)
-                  .filter(([_, enabled]) => enabled)
+                  .filter(
+                    ([toolKey, enabled]) =>
+                      enabled &&
+                      (arcanasModule ||
+                        (toolKey !== "arcana" && toolKey !== "arcana_v2"))
+                  )
                   .map(([toolKey]) => ({ type: toolKey }));
         if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
           conversationForAPI.settings.arcana.limit = 3;
         }
         if (!remoteMcpEnabled(localState.settings)) delete conversationForAPI.settings.mcp_servers;
-        if (!localState.settings.tools.arcana) delete conversationForAPI.settings.arcana;
+        if (!arcanasModule || !localState.settings.tools.arcana) {
+          delete conversationForAPI.settings.arcana;
+        }
       } else {
         conversationForAPI.settings.tools = [];
         conversationForAPI.settings.enable_tools = true;
@@ -442,17 +460,30 @@ const sendMessage = async ({
       return;
     }
     // Pushing message into conversation history
-    setLocalState((prev) => ({
-      ...prev,
-      // Add two new placeholder messages
-      messages: [
-        ...prev.messages,
-        { role: "assistant", content: [{ type: "text", text: ""}], loading: true },
-        { role: "user", content: [{ type: "text", text: "" }] },
-      ],
-      hasFirstPrompt: true,
-      flush: true // Save to DB immediately
-    }));
+    setLocalState((prev) => {
+      const now = Date.now();
+      const messages = [...prev.messages];
+      const lastIndex = messages.length - 1;
+      if (messages[lastIndex]?.role === "user" && !messages[lastIndex].createdAt) {
+        messages[lastIndex] = { ...messages[lastIndex], createdAt: now };
+      }
+      return {
+        ...prev,
+        // Add two new placeholder messages
+        messages: [
+          ...messages,
+          {
+            role: "assistant",
+            content: [{ type: "text", text: "" }],
+            loading: true,
+            createdAt: now,
+          },
+          { role: "user", content: [{ type: "text", text: "" }] },
+        ],
+        hasFirstPrompt: true,
+        flush: true // Save to DB immediately
+      };
+    });
 
     // Stream assistant response into localState
     async function getChatChunk(conversationId, messageId = null) {
@@ -562,6 +593,7 @@ const sendMessage = async ({
             const messages = [...prev.messages];
             if (!messages[assistantIndex]) return prev;
             messages[assistantIndex] = {
+              ...messages[assistantIndex],
               role: "assistant",
               content: currentContent,
               loading: true,
@@ -594,6 +626,7 @@ const sendMessage = async ({
           const messages = [...prev.messages];
           if (!messages[assistantIndex]) return prev;
           messages[assistantIndex] = {
+            ...messages[assistantIndex],
             role: "assistant",
             content: currentContent,
             loading: true,
@@ -626,6 +659,7 @@ const sendMessage = async ({
           }
           const messages = [...prev.messages];
           messages[messages.length - 2] = {
+            ...messages[messages.length - 2],
             role: "assistant",
             content: [{ type: "text", text }, ...files],
             loading: true,
@@ -714,7 +748,7 @@ const sendMessage = async ({
         if (prev.id !== conversationId) {
           // Handle save when conversation is not active, ideally save directly into DB (TODO)
           const messages = [...localState.messages,
-            { role: "assistant", content: responseContent, loading: false, meta },
+            { role: "assistant", content: responseContent, loading: false, meta, createdAt: Date.now() },
             { role: "user", content: [{ type: "text", text: "" }] },
           ];
           updateConversation(
@@ -728,6 +762,7 @@ const sendMessage = async ({
         const messages = [...prev.messages];
         if (!messages[assistantIndex]) return prev;
         messages[assistantIndex] = {
+          ...messages[assistantIndex],
           role: "assistant",
           content: responseContent,
           loading: false,

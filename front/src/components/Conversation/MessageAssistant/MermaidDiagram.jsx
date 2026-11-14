@@ -1,8 +1,11 @@
 import { useState, useEffect, memo } from "react";
+import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import DOMPurify from "dompurify";
 import { selectHtmlLoadExternal } from "../../../Redux/reducers/userSettingsReducer";
 import { sanitizeExternalRefs } from "../../../utils/externalRefs";
+import { downloadSvg, renderedFilename } from "../../../utils/download";
+import RenderToolbar from "./RenderToolbar";
 
 // Initialize mermaid once
 // mermaid (plus its diagram/layout deps) is large; load it on first diagram.
@@ -23,6 +26,7 @@ const loadMermaid = () => {
 };
 
 const MermaidDiagram = memo(({ content }) => {
+  const { t } = useTranslation();
   const loadExternal = useSelector(selectHtmlLoadExternal);
   const [svg, setSvg] = useState(null);
   const [error, setError] = useState(false);
@@ -84,7 +88,17 @@ const MermaidDiagram = memo(({ content }) => {
     return <div className="p-2">Loading diagram...</div>;
   }
 
-  return <div dangerouslySetInnerHTML={{ __html: svg }} />;
+  return (
+    <div className="relative my-2">
+      <RenderToolbar
+        onDownload={() =>
+          downloadSvg(svg, renderedFilename("mermaid", "svg"))
+        }
+        downloadLabel={t("conversation.download_rendered")}
+      />
+      <div className="pt-3" dangerouslySetInnerHTML={{ __html: svg }} />
+    </div>
+  );
 });
 
 MermaidDiagram.displayName = "MermaidDiagram";

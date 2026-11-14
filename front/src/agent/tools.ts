@@ -12,7 +12,25 @@ import { detectSupportedImageMimeType } from "pi-coding-agent/utils/mime.js";
 import { Type, type TSchema } from "typebox";
 import { convertDocument, editImage, explainImage, generateImage, generateSpeech, transcribeAudio, webSearch, DEFAULT_VOICE } from "../apis/agentEndpoints";
 import { createCodemodeTool } from "./codemode";
+import {
+  addArcanaMember,
+  createArcana,
+  deleteArcanaFile,
+  deleteArcanaIndex,
+  getArcana,
+  getArcanaIndexJob,
+  getArcanaIndexStatus,
+  listArcanaFiles,
+  listArcanaMembers,
+  listArcanas,
+  readArcanaFile,
+  removeArcanaMember,
+  replaceArcanaFile,
+  startArcanaIndex,
+  uploadArcanaFile,
+} from "./arcanaV2";
 import { markdownToDocx } from "./docx";
+import { isArcanasEnabled } from "../utils/modules";
 import { enoent, normalize, type Vfs, walk } from "./vfs";
 
 export const CWD = "/";
@@ -41,11 +59,44 @@ export interface ToolOptions {
   vision: boolean;
   /** The conversation's tool toggles (`settings.tools`); a missing key counts as on. */
   enabled?: Record<string, boolean>;
+  /** A local folder is mounted, so the file tools have storage to work on. */
+  hasLocalFolder?: boolean;
 }
 
-// Tool toggles in the UI and the agent tools they switch. Reading, listing, searching and the
-// converters are always on.
+// Tool toggles in the UI and the agent tools they switch. Browser storage is the master switch
+// for the conversation workspace: without it the agent gets no tools that read or write files.
 const TOGGLES: Record<string, string[]> = {
+  browser_storage: [
+    "read",
+    "write",
+    "edit",
+    "ls",
+    "find",
+    "convert_document",
+    "transcribe_audio",
+    "create_docx",
+    "explain_image",
+    "generate_speech",
+    "generate_image",
+    "edit_image",
+  ],
+  arcana_v2: [
+    "list_arcanas",
+    "create_arcana",
+    "get_arcana",
+    "list_arcana_files",
+    "read_arcana_file",
+    "start_index",
+    "index_status",
+    "index_job",
+    "delete_index",
+    "upload_arcana_file",
+    "replace_arcana_file",
+    "delete_arcana_file",
+    "list_arcana_members",
+    "add_arcana_member",
+    "remove_arcana_member",
+  ],
   write_access: ["write", "edit"],
   codemode: ["codemode"],
   create_docx: ["create_docx"],
@@ -56,7 +107,7 @@ const TOGGLES: Record<string, string[]> = {
   web_search: ["web_search"],
 };
 
-export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): AgentTool<any>[] {
+export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = false }: ToolOptions): AgentTool<any>[] {
   const readFile = async (path: string) => Buffer.from(await fs.readFile(path));
   const writeFile = (path: string, content: string) => fs.writeFile(path, content);
   const access = async (path: string) => {
@@ -191,6 +242,224 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
     },
   );
 
+  const arcanaV2Tools: AgentTool<any>[] = [
+    tool(
+      "list_arcanas",
+      "List the user's Arcana collections with file counts, sizes and index status.",
+      Type.Object({}),
+      async () => text(JSON.stringify(await listArcanas(), null, 2))
+    ),
+    tool(
+      "create_arcana",
+      "Create a new Arcana collection. Ask the user for the name and confirm before creating it.",
+      Type.Object({
+        name: Type.String({ description: "New Arcana name" }),
+        embedding_model: Type.Optional(
+          Type.String({ description: "Embedding model, optional" })
+        ),
+      }),
+      async ({ name, embedding_model = "" }) =>
+        text(
+          JSON.stringify(
+            await createArcana(String(name), String(embedding_model)),
+            null,
+            2
+          )
+        )
+    ),
+    tool(
+      "get_arcana",
+      "Get details for one Arcana collection.",
+      Type.Object({ name: Type.String({ description: "Arcana name" }) }),
+      async ({ name }) =>
+        text(JSON.stringify(await getArcana(String(name)), null, 2))
+    ),
+    tool(
+      "list_arcana_files",
+      "List the files in an Arcana collection, including their index status.",
+      Type.Object({ name: Type.String({ description: "Arcana name" }) }),
+      async ({ name }) =>
+        text(JSON.stringify(await listArcanaFiles(String(name)), null, 2))
+    ),
+    tool(
+      "read_arcana_file",
+      "Read a file from an Arcana collection. Use encoding base64 for binary files.",
+      Type.Object({
+        name: Type.String({ description: "Arcana name" }),
+        file: Type.String({ description: "File name" }),
+        encoding: Type.Optional(
+          Type.Union([Type.Literal("utf8"), Type.Literal("base64")], {
+            description: "Content encoding, default utf8",
+          })
+        ),
+      }),
+      async ({ name, file, encoding = "utf8" }) => {
+        const result = await readArcanaFile(
+          String(name),
+          String(file),
+          encoding
+        );
+        const content = String(result?.content ?? "");
+        return text(encoding === "base64" ? content : clip(content));
+      }
+    ),
+    tool(
+      "start_index",
+      "Start indexing an Arcana collection. Ask the user before starting unless they already asked for it.",
+      Type.Object({ name: Type.String({ description: "Arcana name" }) }),
+      async ({ name }) =>
+        text(JSON.stringify(await startArcanaIndex(String(name)), null, 2))
+    ),
+    tool(
+      "index_status",
+      "Get the index status of an Arcana and whether an index job is running.",
+      Type.Object({ name: Type.String({ description: "Arcana name" }) }),
+      async ({ name }) =>
+        text(JSON.stringify(await getArcanaIndexStatus(String(name)), null, 2))
+    ),
+    tool(
+      "index_job",
+      "Get the status of an Arcana index job.",
+      Type.Object({
+        name: Type.String({ description: "Arcana name" }),
+        job_id: Type.String({ description: "Index job id" }),
+      }),
+      async ({ name, job_id }) =>
+        text(
+          JSON.stringify(
+            await getArcanaIndexJob(String(name), String(job_id)),
+            null,
+            2
+          )
+        )
+    ),
+    tool(
+      "delete_index",
+      "Delete the vector index of an Arcana collection. Ask the user for confirmation first.",
+      Type.Object({ name: Type.String({ description: "Arcana name" }) }),
+      async ({ name }) =>
+        text(JSON.stringify(await deleteArcanaIndex(String(name)), null, 2))
+    ),
+    tool(
+      "upload_arcana_file",
+      "Upload a new file to an Arcana collection. Ask the user before uploading unless they already asked for it.",
+      Type.Object({
+        name: Type.String({ description: "Arcana name" }),
+        filename: Type.String({ description: "File name" }),
+        content: Type.String({
+          description: "Text content, or base64-encoded bytes when encoding is base64",
+        }),
+        encoding: Type.Optional(
+          Type.Union([Type.Literal("utf8"), Type.Literal("base64")], {
+            description: "Content encoding, default utf8",
+          })
+        ),
+      }),
+      async ({ name, filename, content, encoding = "utf8" }) =>
+        text(
+          JSON.stringify(
+            await uploadArcanaFile(
+              String(name),
+              String(filename),
+              String(content),
+              encoding
+            ),
+            null,
+            2
+          )
+        )
+    ),
+    tool(
+      "replace_arcana_file",
+      "Replace a file in an Arcana collection. Ask the user before replacing unless they already asked for it.",
+      Type.Object({
+        name: Type.String({ description: "Arcana name" }),
+        filename: Type.String({ description: "File name" }),
+        content: Type.String({
+          description: "Text content, or base64-encoded bytes when encoding is base64",
+        }),
+        encoding: Type.Optional(
+          Type.Union([Type.Literal("utf8"), Type.Literal("base64")], {
+            description: "Content encoding, default utf8",
+          })
+        ),
+      }),
+      async ({ name, filename, content, encoding = "utf8" }) =>
+        text(
+          JSON.stringify(
+            await replaceArcanaFile(
+              String(name),
+              String(filename),
+              String(content),
+              encoding
+            ),
+            null,
+            2
+          )
+        )
+    ),
+    tool(
+      "delete_arcana_file",
+      "Delete a file from an Arcana collection. Ask the user for confirmation first.",
+      Type.Object({
+        name: Type.String({ description: "Arcana name" }),
+        filename: Type.String({ description: "File name" }),
+      }),
+      async ({ name, filename }) =>
+        text(
+          JSON.stringify(
+            await deleteArcanaFile(String(name), String(filename)),
+            null,
+            2
+          )
+        )
+    ),
+    tool(
+      "list_arcana_members",
+      "List the members and their roles for an Arcana collection.",
+      Type.Object({ name: Type.String({ description: "Arcana name" }) }),
+      async ({ name }) =>
+        text(JSON.stringify(await listArcanaMembers(String(name)), null, 2))
+    ),
+    tool(
+      "add_arcana_member",
+      "Share an Arcana collection with a user. Ask the user before changing sharing.",
+      Type.Object({
+        name: Type.String({ description: "Arcana name" }),
+        user: Type.String({ description: "User name to add" }),
+        role: Type.Optional(
+          Type.Union([Type.Literal("reader"), Type.Literal("editor")], {
+            description: "Member role, default reader",
+          })
+        ),
+      }),
+      async ({ name, user, role = "reader" }) =>
+        text(
+          JSON.stringify(
+            await addArcanaMember(String(name), String(user), role),
+            null,
+            2
+          )
+        )
+    ),
+    tool(
+      "remove_arcana_member",
+      "Remove a member from an Arcana collection. Ask the user for confirmation first.",
+      Type.Object({
+        name: Type.String({ description: "Arcana name" }),
+        member: Type.String({ description: "Member user name" }),
+      }),
+      async ({ name, member }) =>
+        text(
+          JSON.stringify(
+            await removeArcanaMember(String(name), String(member)),
+            null,
+            2
+          )
+        )
+    ),
+  ];
+
   const mediaTools: AgentTool<any>[] = [
     webSearchTool,
     explainImageTool,
@@ -275,13 +544,30 @@ export function createTools(fs: Vfs, { vision, enabled = {} }: ToolOptions): Age
     ),
   ];
 
-  // Writing and web search (needs the user's consent, and is billed) are opt-in: off unless
-  // switched on. The other toggles are on unless switched off.
-  const OPT_IN = ["write_access", "web_search"];
-  const isOff = (key: string) => (OPT_IN.includes(key) ? enabled[key] !== true : enabled[key] === false);
+  // Browser storage, writing and web search (needs the user's consent, and is billed) are opt-in:
+  // off unless switched on. The other toggles are on unless switched off. A mounted local folder
+  // is an alternative storage source, so it turns the file tools on as well.
+  const OPT_IN = [
+    "browser_storage",
+    "arcana_v2",
+    "write_access",
+    "web_search",
+  ];
+  const storageEnabled = enabled.browser_storage === true || hasLocalFolder;
+  const arcanaV2Enabled =
+    isArcanasEnabled() &&
+    (enabled.arcana_v2 === true || enabled.remote_file_access === true);
+  const isOff = (key: string) =>
+    key === "browser_storage"
+      ? !storageEnabled
+      : key === "arcana_v2"
+        ? !arcanaV2Enabled
+        : OPT_IN.includes(key)
+          ? enabled[key] !== true
+          : enabled[key] === false;
   const off = new Set(Object.entries(TOGGLES).flatMap(([key, names]) => (isOff(key) ? names : [])));
   const on = (tool: AgentTool<any>) => !off.has(tool.name);
   // Scripts get the same file tools, so they cannot write either when writing is off
   const codemode = createCodemodeTool(fileTools.filter(on));
-  return [...fileTools, codemode, ...mediaTools].filter(on);
+  return [...fileTools, codemode, ...arcanaV2Tools, ...mediaTools].filter(on);
 }

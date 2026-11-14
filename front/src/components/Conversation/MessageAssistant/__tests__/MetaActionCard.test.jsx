@@ -113,6 +113,36 @@ describe("MetaActionCard", () => {
     );
   });
 
+  it("applies an ArcanaV2 tool setting", async () => {
+    vi.mocked(getConversationMeta).mockResolvedValue({
+      ...conversation,
+      settings: { tools: { arcana_v2: false } },
+    });
+    render(
+      <MetaActionCard
+        actions={[
+          {
+            type: "conversation_setting",
+            scope: "conversation",
+            conversationId: "chat-1",
+            key: "arcana_v2",
+            value: true,
+          },
+        ]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /accept changes/i }));
+    await waitFor(() =>
+      expect(updateConversationMeta).toHaveBeenCalledWith("chat-1", {
+        settings: { tools: { arcana_v2: true } },
+      }),
+    );
+  });
+
   it("assigns a chat to a topic", async () => {
     render(
       <MetaActionCard

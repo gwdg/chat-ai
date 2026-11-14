@@ -34,7 +34,14 @@ function ModelSelectorWrapper({modelsData, localState, setLocalState, inHeader =
 
   function setModel(newModel: ModelInfo) {
     if (newModel?.id === currentModelId) {
-      if (newModel?.status === localState?.settings?.model?.status) return;
+      const currentModel = localState?.settings?.model;
+      const sameCapabilities =
+        JSON.stringify(newModel?.input) === JSON.stringify(currentModel?.input) &&
+        JSON.stringify(newModel?.output) === JSON.stringify(currentModel?.output);
+      if (
+        newModel?.status === currentModel?.status &&
+        sameCapabilities
+      ) return;
     }
     if (newModel?.status === "offline") {
       openModal("serviceOffline");

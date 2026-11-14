@@ -1,4 +1,10 @@
+import { useTranslation } from "react-i18next";
+
+const formatCost = (value) =>
+    value.toLocaleString(undefined, { maximumSignificantDigits: 4 });
+
 export default function MetaBox({ meta }) {
+    const { t } = useTranslation();
     // Function to truncate the model name
     const truncateModel = (text, length) => {
         if (!text) return "";
@@ -12,7 +18,11 @@ export default function MetaBox({ meta }) {
     if (meta?.usage) {
         const promptTokens = meta.usage?.prompt_tokens ?? "N/A";
         const completionTokens = meta.usage?.completion_tokens ?? "N/A";
-        parts.push(`${promptTokens} + ${completionTokens} tokens`);
+        parts.push(`${promptTokens} + ${completionTokens} ${t("conversation.meta_tokens")}`);
+        const cost = meta.usage?.cost;
+        if (typeof cost === "number" && Number.isFinite(cost)) {
+            parts.push(`${formatCost(cost)} ${t("conversation.meta_cost")}`);
+        }
     }
     // Combine with non-breaking spaces around dot
     const displayText = parts.join(" \u00A0•\u00A0 ");

@@ -164,3 +164,17 @@ export function formatFullTimestamp(
   if (!timestamp) return "";
   return new Date(timestamp).toLocaleString(locale);
 }
+
+export function formatMessageTimestamp(
+  timestamp: number,
+  locale: string = "en",
+): string {
+  if (!timestamp) return "";
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+}

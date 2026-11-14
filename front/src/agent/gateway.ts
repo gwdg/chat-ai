@@ -7,15 +7,20 @@
 // assistant tool-call message and tool results) into pi messages for the transcript, so the
 // model sees them again on later requests. See docs/tool-passthrough.md in the gateway repo.
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import { isArcanasEnabled } from "../utils/modules";
 
 /** Request fields that switch on gateway tools for this turn. */
 export function gatewayRequestFields(settings: any) {
   const tools = settings?.tools ?? {};
   const fields: Record<string, unknown> = {};
+  const selectors: { type: string }[] = [];
   // Opt-in: arcana sends conversation data to a further service. Web search is an agent
   // tool (agent/tools.ts), not a gateway selector.
   const arcana = settings?.arcana;
-  if (tools.arcana === true && arcana?.id) fields.arcana = arcana;
+  if (isArcanasEnabled() && tools.arcana === true && arcana?.id) {
+    fields.arcana = arcana;
+  }
+  if (selectors.length) fields.selectors = selectors;
   return fields;
 }
 

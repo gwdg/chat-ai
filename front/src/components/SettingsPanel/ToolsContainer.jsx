@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   Wand2,
   AudioLines,
+  Database,
   Server, // MCP
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -22,12 +23,23 @@ import MCPContainer from "./MCPContainer";
 import MiniToolButton from "./MiniToolButton";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 import { remoteMcpEnabled } from "../../agent/mcp";
+import { isArcanasEnabled } from "../../utils/modules";
 
 // Tools the agent has no counterpart for
-const AGENT_UNAVAILABLE = new Set([...(agentGatewayTools() ? [] : ["arcana"])]);
+const AGENT_UNAVAILABLE = new Set(
+  agentGatewayTools() ? [] : ["arcana"],
+);
 // Agent tools that are off unless switched on: web search and writing files (agent/tools.ts),
-// arcana, which the gateway runs (agent/gateway.ts), and MCP servers (agent/mcp.ts)
-const AGENT_OPT_IN = new Set(["web_search", "arcana", "write_access", "mcp", "mcp_remote"]);
+// ArcanaV2 (agent/arcanaV2.ts), arcana, which the gateway runs (agent/gateway.ts), and MCP
+// servers (agent/mcp.ts)
+const AGENT_OPT_IN = new Set([
+  "web_search",
+  "arcana",
+  "arcana_v2",
+  "write_access",
+  "mcp",
+  "mcp_remote",
+]);
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
 
@@ -51,10 +63,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
   const agentMode = isAgentEnabled();
   const agentWithoutTools = agentMode && !modelSupportsTools(settings?.model);
   const bulkActionsDisabled = agentMode ? agentWithoutTools : isExternalModel;
+  const arcanasEnabled = isArcanasEnabled();
 
-  const showArcanaBox = agentMode
-    ? agentGatewayTools() && toolsState.arcana === true
-    : !!settings?.enable_tools && !!toolsState.arcana;
+  const showArcanaBox =
+    arcanasEnabled &&
+    (agentMode
+      ? agentGatewayTools() && toolsState.arcana === true
+      : !!settings?.enable_tools && !!toolsState.arcana);
   const showMCPBox =
     (agentMode ? !agentWithoutTools : !!settings?.enable_tools) && remoteMcpOn;
 
@@ -78,6 +93,11 @@ export default function ToolsContainer({ localState, setLocalState }) {
         label: t("settings.label_audio_generation"),
       },
       {
+        key: "arcana_v2",
+        Icon: Database,
+        label: t("settings.label_arcana_v2"),
+      },
+      {
         key: "arcana",
         Icon: ({ className = "", ...rest }) => (
           <FontAwesomeIcon
@@ -97,8 +117,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
         label: t("settings.label_mcp_server")
       },
     ],
-    [t]
-  ).filter(({ key }) => agentMode || !AGENT_ONLY.has(key));
+    [t, arcanasEnabled]
+  )
+    .filter(({ key }) => agentMode || !AGENT_ONLY.has(key))
+    .filter(
+      ({ key }) =>
+        arcanasEnabled || (key !== "arcana" && key !== "arcana_v2")
+    );
 
   // Simple setter for per-tool flags
   const setTools = (patch) => {

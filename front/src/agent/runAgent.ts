@@ -32,6 +32,10 @@ Every file you write is shown to the user in the chat, so do not repeat a file's
 
 const NO_TOOLS_PROMPT = "You cannot call tools in this conversation; attached files are referenced by name only.";
 
+const NO_BROWSER_STORAGE_PROMPT = "The user has turned off browser storage for this conversation, so you cannot read or write local workspace files. Attached files are referenced by name only; do not claim to have read them.";
+
+const ARCANA_V2_PROMPT = "ArcanaV2 is enabled. Use the ArcanaV2 tools to inspect Arcana collections, manage their files, check or start indexing, and manage sharing. Ask the user for explicit confirmation before deleting files or an index, changing sharing, or uploading and replacing files unless they already asked for that exact change.";
+
 
 type ModelSpec = { id: string; name?: string; input?: string[] };
 
@@ -224,6 +228,8 @@ export async function runAgentTurn({
   const spec: ModelSpec = typeof settings.model === "string" ? { id: settings.model } : settings.model;
   const external = isExternalModel(spec);
   const useTools = modelSupportsTools(spec);
+  const browserStorage = settings.tools?.browser_storage === true;
+  const arcanaV2 = settings.tools?.arcana_v2 === true;
   const model = toModel(spec);
   const vision = model.input.includes("image");
 
@@ -233,6 +239,9 @@ export async function runAgentTurn({
   const workspace = observe(storage, (change: Change) => {
     if (change.kind === "write" && !change.path.startsWith(`${UPLOADS}/`)) written.add(change.path);
   });
+  // A mounted folder is an alternative to the browser workspace for the file tools.
+  const mounts = listMounts(conversationId);
+  const storageAccess = browserStorage || mounts.length > 0;
 
   // Audio files by upload path, sent as audio to models that take it
   const audio = spec.input?.includes("audio") ? new Map<string, InputAudio>() : null;
@@ -308,7 +317,13 @@ export async function runAgentTurn({
     gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
   );
 
-  const tools = useTools ? createTools(workspace, { vision, enabled: settings.tools }) : [];
+  const tools = useTools
+    ? createTools(workspace, {
+        vision,
+        enabled: settings.tools,
+        hasLocalFolder: mounts.length > 0,
+      })
+    : [];
   // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it
   const servers = useTools ? activeMcpServers(settings) : [];
   let mcp: McpTools | undefined;
@@ -325,14 +340,18 @@ export async function runAgentTurn({
     tools.push(...mcp.tools);
   }
 
-  const mounts = listMounts(conversationId);
   const agent = new Agent({
     initialState: {
       systemPrompt: [
         systemPrompt,
-        useTools ? AGENT_PROMPT : NO_TOOLS_PROMPT,
-        useTools && mounts.length ? `The user's local folders are mounted at: ${mounts.join(", ")}.` : "",
-        useTools && settings.tools?.write_access !== true
+        useTools
+          ? storageAccess
+            ? AGENT_PROMPT
+            : NO_BROWSER_STORAGE_PROMPT
+          : NO_TOOLS_PROMPT,
+        useTools && arcanaV2 ? ARCANA_V2_PROMPT : "",
+        useTools && storageAccess && mounts.length ? `The user's local folders are mounted at: ${mounts.join(", ")}.` : "",
+        useTools && storageAccess && settings.tools?.write_access !== true
           ? "The user has turned off writing and editing files: you can read files but not change them."
           : "",
         `Current date: ${new Date().toLocaleString()}`,

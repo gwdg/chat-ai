@@ -7,10 +7,18 @@ import userSettingsReducer, {
   importUserSettings,
   setMemoryMode,
   setSendWithEnter,
+  setRenderGraphviz,
+  setRenderVega,
+  setRenderChartjs,
   selectMemoryMode,
+  selectRenderGraphviz,
+  selectRenderVega,
+  selectRenderChartjs,
   selectConversationSummaries,
   selectCollapseReasoningWhileStreaming,
+  selectShowTimestamps,
   setCollapseReasoningWhileStreaming,
+  setShowTimestamps,
 } from "../userSettingsReducer";
 import interfaceSettingsReducer, {
   agreeWebSearch,
@@ -22,6 +30,7 @@ import interfaceSettingsReducer, {
   toggleTheme,
   selectAgreeWebSearch,
   selectConversationGrouping,
+  selectSuppressedTutorials,
 } from "../interfaceSettingsSlice";
 
 const init = (reducer) => reducer(undefined, { type: "@@INIT" });
@@ -87,9 +96,57 @@ describe("user settings reducer", () => {
     expect(state.collapse_reasoning_while_streaming).toBe(true);
   });
 
+  it("toggles message timestamps and imports them", () => {
+    let state = init(userSettingsReducer);
+    expect(selectShowTimestamps({ user_settings: state })).toBe(false);
+
+    state = userSettingsReducer(state, setShowTimestamps(true));
+    expect(selectShowTimestamps({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({ show_timestamps: false }),
+    );
+    expect(selectShowTimestamps({ user_settings: state })).toBe(false);
+  });
+
   it("falls back to safe selector values", () => {
     expect(selectMemoryMode({ user_settings: { memory_mode: 99 } })).toBe(0);
     expect(selectConversationSummaries({ user_settings: {} })).toBe(true);
+    expect(selectShowTimestamps({ user_settings: {} })).toBe(false);
+  });
+
+  it("toggles diagram rendering preferences and imports them", () => {
+    let state = init(userSettingsReducer);
+    expect(selectRenderGraphviz({ user_settings: state })).toBe(false);
+    expect(selectRenderVega({ user_settings: state })).toBe(false);
+    expect(selectRenderChartjs({ user_settings: state })).toBe(false);
+
+    state = userSettingsReducer(state, setRenderGraphviz(true));
+    state = userSettingsReducer(state, setRenderVega(true));
+    state = userSettingsReducer(state, setRenderChartjs(true));
+    expect(selectRenderGraphviz({ user_settings: state })).toBe(true);
+    expect(selectRenderVega({ user_settings: state })).toBe(true);
+    expect(selectRenderChartjs({ user_settings: state })).toBe(true);
+
+    state = userSettingsReducer(
+      state,
+      importUserSettings({
+        render_graphviz: false,
+        render_vega: false,
+        render_chartjs: false,
+      }),
+    );
+    expect(selectRenderGraphviz({ user_settings: state })).toBe(false);
+    expect(selectRenderVega({ user_settings: state })).toBe(false);
+    expect(selectRenderChartjs({ user_settings: state })).toBe(false);
+  });
+
+  it("returns a stable empty list for old interface settings", () => {
+    const state = { interface_settings: {} };
+    expect(selectSuppressedTutorials(state)).toBe(
+      selectSuppressedTutorials(state),
+    );
   });
 });
 
@@ -107,8 +164,10 @@ describe("interface settings reducer", () => {
     let state = init(interfaceSettingsReducer);
     state = interfaceSettingsReducer(state, setConversationGrouping("date"));
     expect(selectConversationGrouping({ interface_settings: state })).toBe("date");
+    state = interfaceSettingsReducer(state, setConversationGrouping("size"));
+    expect(selectConversationGrouping({ interface_settings: state })).toBe("size");
     state = interfaceSettingsReducer(state, setConversationGrouping("invalid"));
-    expect(selectConversationGrouping({ interface_settings: state })).toBe("date");
+    expect(selectConversationGrouping({ interface_settings: state })).toBe("size");
   });
 
   it("tracks completed and suppressed tutorials without duplicates", () => {

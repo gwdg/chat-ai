@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, memo, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
-import { Code2, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router";
@@ -21,6 +20,10 @@ import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import Code from "./Code";
 import MermaidDiagram from "./MermaidDiagram";
+import GraphvizDiagram from "./GraphvizDiagram";
+import RenderToolbar from "./RenderToolbar";
+import VegaLiteChart from "./VegaLiteChart";
+import ChartJsChart from "./ChartJsChart";
 import {
   selectHtmlRenderMode,
   selectHtmlLoadExternal,
@@ -35,6 +38,8 @@ import {
 } from "../../../utils/externalRefs";
 import { stripPersonaMarkers } from "../../../utils/personaCatalog";
 import { stripMetaActionMarkers } from "../../../utils/metaActions";
+import { detectJsonDiagram } from "../../../utils/diagramSpec";
+import { downloadHtml, renderedFilename } from "../../../utils/download";
 
 // Markdown images load automatically, so keep them on the same origin when
 // external references are disabled. Plain links are not fetched until clicked.
@@ -172,7 +177,7 @@ const MarkdownLink = ({ href, children }) => {
 export const rendererComponents = {
   img: MarkdownImage,
   code({ className, children, node }) {
-    const match = /language-(\w+)/.exec(className || "");
+    const match = /language-([\w.-]+)/.exec(className || "");
     const content = String(children).replace(/\n$/, "");
     const isCodeBlock = node?.parent?.tagName === "pre";
     const hasNewlines = content.includes("\n");
@@ -192,6 +197,29 @@ export const rendererComponents = {
 
     if (language === "mermaid") {
       return <MermaidDiagram content={content} />;
+    }
+
+    if (language === "dot" || language === "graphviz") {
+      return <GraphvizDiagram content={content} language={language} />;
+    }
+
+    if (language === "vega" || language === "vega-lite" || language === "vegalite") {
+      return <VegaLiteChart content={content} language={language} />;
+    }
+
+    if (language === "chart" || language === "chartjs" || language === "chart.js") {
+      return <ChartJsChart content={content} language={language} />;
+    }
+
+    if (language === "json") {
+      const diagram = detectJsonDiagram(content);
+      if (diagram?.type === "vega") {
+        return <VegaLiteChart content={content} language={diagram.language} />;
+      }
+      if (diagram?.type === "chartjs") {
+        return <ChartJsChart content={content} language="chartjs" />;
+      }
+      return <Code language="json">{content}</Code>;
     }
 
     if (language === "html") {
@@ -648,27 +676,24 @@ const HtmlBlock = memo(({ content, isLoading }) => {
   const forceCode = isLoading;
   const codeVisible = showCode || forceCode;
 
+  const handleDownload = () => {
+    downloadHtml(
+      `<!doctype html><html><head><meta charset="utf-8"></head><body>${safeHtml}</body></html>`,
+      renderedFilename("html-document", "html")
+    );
+  };
+
   return (
     <div className="relative my-2">
-      <button
-        type="button"
-        onClick={() => setShowCode((prev) => !prev)}
-        disabled={forceCode}
-        aria-pressed={!codeVisible}
-        className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-base-300 bg-base-100 px-2 py-1 text-[11px] font-medium text-base-content/70 shadow-sm transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {codeVisible ? (
-          <>
-            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("conversation.html_block.render")} ({sanitizationLabel})
-          </>
-        ) : (
-          <>
-            <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("conversation.html_block.show_code")}
-          </>
-        )}
-      </button>
+      <RenderToolbar
+        showCode={codeVisible}
+        onToggle={() => setShowCode((prev) => !prev)}
+        toggleDisabled={forceCode}
+        renderLabel={`${t("conversation.html_block.render")} (${sanitizationLabel})`}
+        showCodeLabel={t("conversation.html_block.show_code")}
+        onDownload={!codeVisible ? handleDownload : undefined}
+        downloadLabel={t("conversation.download_rendered")}
+      />
 
       {codeVisible ? (
         <div className="pt-3">

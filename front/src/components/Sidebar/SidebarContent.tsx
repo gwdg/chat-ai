@@ -10,12 +10,13 @@ import {
 } from "@headlessui/react";
 
 import {
-  Ai,
+  AiLabel,
   ArrangeHorizontal,
   Calendar,
   Checkmark,
   ChevronLeft,
   Close,
+  DataBase,
   FolderMoveTo,
   FolderTree,
   OverflowMenuVertical,
@@ -45,7 +46,9 @@ import {
 import { selectConversationSummaries } from "../../Redux/reducers/userSettingsReducer";
 
 import { useWindowSize } from "../../hooks/useWindowSize";
+import { getWorkspaceSize } from "../../agent/workspace";
 import { sortConversations } from "../../utils/conversationSort";
+import { formatBytes } from "../../utils/formatBytes";
 import {
   formatCompactDate,
   formatModifiedTime,
@@ -106,14 +109,62 @@ export default function SidebarContent({
   const sidebarIsDocked = windowWidth >= 1081;
   const conversations = useConversationList() || [];
   const folders = useFolderList() || [];
+  const [conversationSizes, setConversationSizes] = useState<
+    Record<string, number>
+  >({});
+  const [sizeRefresh, setSizeRefresh] = useState(0);
+  const conversationIds = useMemo(
+    () =>
+      conversations
+        .map((conversation) => conversation.id)
+        .sort()
+        .join("|"),
+    [conversations],
+  );
+
+  useEffect(() => {
+    const refresh = () => setSizeRefresh((value) => value + 1);
+    window.addEventListener("chatai:message-complete", refresh);
+    return () =>
+      window.removeEventListener("chatai:message-complete", refresh);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (conversations.length === 0) {
+      setConversationSizes({});
+      return;
+    }
+    void Promise.all(
+      conversations.map(async (conversation) => {
+        const size = await getWorkspaceSize(conversation.id);
+        return [conversation.id, size] as const;
+      }),
+    ).then((entries) => {
+      if (!cancelled) setConversationSizes(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationIds, sizeRefresh]);
+
+  const conversationsWithSize = useMemo(
+    () =>
+      conversations.map((conversation) => ({
+        ...conversation,
+        storageSize: conversationSizes[conversation.id] ?? 0,
+      })),
+    [conversations, conversationSizes],
+  );
+
   const orderedConversations = useMemo(
     () =>
       sortConversations(
-        conversations,
-        conversationSort,
+        conversationsWithSize,
+        conversationGrouping === "size" ? "size_desc" : conversationSort,
         t("conversation.untitled", { defaultValue: "Untitled Chat" }),
       ),
-    [conversations, conversationSort, t],
+    [conversationsWithSize, conversationSort, conversationGrouping, t],
   );
   
   const pinnedConversations = useMemo(
@@ -362,9 +413,11 @@ export default function SidebarContent({
     }
   };
 
-  const handleGroupingChange = (grouping: "topic" | "date" | "created") => {
+  const handleGroupingChange = (
+    grouping: "topic" | "date" | "created" | "size",
+  ) => {
     dispatch(setConversationGrouping(grouping));
-    if (grouping === "topic") return;
+    if (grouping === "topic" || grouping === "size") return;
     const groups = grouping === "date" ? dateGroups : creationDateGroups;
     const parentId = grouping === "date" ? DATE_TOPIC_ID : CREATED_TOPIC_ID;
     dispatch(
@@ -533,6 +586,14 @@ export default function SidebarContent({
     const modified = showDateModified
       ? formatModifiedTime(modifiedTimestamp, i18n.language)
       : formatRelativeTime(modifiedTimestamp, i18n.language);
+    const storageSize = conv.storageSize ?? conversationSizes[id] ?? 0;
+    const storageLabel = storageSize > 0 ? formatBytes(storageSize) : "";
+    const metadata = [
+      showDates ? t("folders.modified", { date: modified }) : "",
+      storageLabel,
+    ]
+      .filter(Boolean)
+      .join(" · ");
 
     return (
       <ShortcutTooltip
@@ -580,9 +641,18 @@ export default function SidebarContent({
                   </span>
                 ) : null}
               </div>
-              {showDates && (
-                <div className="truncate text-[10px] leading-tight text-base-content/70">
-                  {t("folders.modified", { date: modified })}
+              {metadata && (
+                <div
+                  className="truncate text-[10px] leading-tight text-base-content/70"
+                  title={
+                    storageSize > 0
+                      ? t("folders.storage_size", {
+                          size: formatBytes(storageSize),
+                        })
+                      : undefined
+                  }
+                >
+                  {metadata}
                 </div>
               )}
             </div>
@@ -680,7 +750,7 @@ export default function SidebarContent({
                   role="menu"
                   aria-label={t("folders.sort_label")}
                   data-guide="sort-menu"
-                  className="z-50 w-52 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
+                  className="z-50 w-64 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
                 >
                   {({ close }) => (
                     <>
@@ -747,6 +817,27 @@ export default function SidebarContent({
                           />
                         )}
                       </button>
+                      <button
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={conversationGrouping === "size"}
+                        onClick={() => {
+                          handleGroupingChange("size");
+                          close();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <DataBase size={14} className="shrink-0" />
+                        <span className="flex-1 truncate">
+                          {t("folders.sort_by_size")}
+                        </span>
+                        {conversationGrouping === "size" && (
+                          <Checkmark
+                            size={14}
+                            className="shrink-0 text-accent"
+                          />
+                        )}
+                      </button>
                     </>
                   )}
                 </PopoverPanel>
@@ -778,7 +869,7 @@ export default function SidebarContent({
                 aria-label={t("meta_chat.open")}
                 title={t("meta_chat.open")}
               >
-                <Ai size={16} />
+                <AiLabel size={16} />
               </button>
               <button
                 type="button"
@@ -873,6 +964,7 @@ export default function SidebarContent({
                 pinnedConversations={pinnedConversations}
                 conversationsByTopic={conversationsByTopic}
                 unsortedConversations={unsortedConversations}
+                sizeConversations={dateGroupableConversations}
                 onCreateTopic={handleCreateFolder}
                 onRenameTopic={handleRenameFolder}
                 onDeleteTopic={handleDeleteFolder}

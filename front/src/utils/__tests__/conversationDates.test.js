@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatCompactDate,
   formatFullTimestamp,
+  formatMessageTimestamp,
   formatModifiedTime,
   formatRelativeTime,
   getDateBucket,
@@ -44,6 +45,17 @@ describe("conversation dates and sorting", () => {
     expect(DEFAULT_CONVERSATION_SORT).toBe("created_desc");
   });
 
+  it("sorts by browser storage size", () => {
+    const conversations = [
+      { id: "small", createdAt: 1, storageSize: 10 },
+      { id: "large", createdAt: 2, storageSize: 500 },
+      { id: "empty", createdAt: 3 },
+    ];
+    expect(
+      sortConversations(conversations, "size_desc").map((c) => c.id),
+    ).toEqual(["large", "small", "empty"]);
+  });
+
   it("formats dates for compact, modified, relative, and full views", () => {
     expect(formatCompactDate(0)).toBe("");
     expect(formatCompactDate(now, "en")).not.toBe("");
@@ -58,5 +70,7 @@ describe("conversation dates and sorting", () => {
     expect(formatRelativeTime(now - 30 * day, "en", now)).not.toBe("");
     expect(formatFullTimestamp(0, "en")).toBe("");
     expect(formatFullTimestamp(now, "en")).not.toBe("");
+    expect(formatMessageTimestamp(0, "en")).toBe("");
+    expect(formatMessageTimestamp(now, "en")).toContain("2026");
   });
 });

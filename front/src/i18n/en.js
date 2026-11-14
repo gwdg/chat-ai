@@ -67,11 +67,14 @@ export default {
     uncategorized: "Unsorted Chats",
     by_date: "All chats by date",
     by_created: "All chats by creation date",
+    by_size: "All chats by storage size",
     sort_label: "Sort chats",
     sort_by_topic: "By topic",
     sort_by_date: "By date",
     sort_by_created: "By creation date",
+    sort_by_size: "By storage size",
     modified: "Modified {{date}}",
+    storage_size: "Browser storage {{size}}",
     dateBuckets: {
       today: "Today",
       yesterday: "Yesterday",
@@ -365,6 +368,12 @@ export default {
       step2: "Enable tools.",
       step3: "Select Image Modification, then attach or describe the image.",
     },
+    browser_storage: {
+      title: "Enable browser storage",
+      step1: "Open Browser & local tools from the prompt box.",
+      step2:
+        "Select Browser storage so the assistant can read and write files in this chat's browser workspace.",
+    },
     image_analysis: {
       title: "Analyze images",
       step1: "Open Browser & local tools from the prompt box.",
@@ -375,6 +384,18 @@ export default {
       step1: "Open GWDG Tools from the prompt box.",
       step2: "Enable tools.",
       step3: "Select Audio Generation, then describe the audio you want.",
+    },
+    arcana_v2: {
+      title: "Use ArcanaV2",
+      step1: "Open GWDG Tools from the prompt box.",
+      step2: "Enable tools.",
+      step3:
+        "Select ArcanaV2 so the assistant can inspect Arcana collections, manage their files and indexes, and handle sharing.",
+    },
+    diagram_renderers: {
+      title: "Render diagrams from code blocks",
+      step1: "Ask for a fenced code block: ```dot for Graphviz, ```vega-lite for Vega-Lite, or ```chart for a Chart.js JSON config.",
+      step2: "Send the message. The block is rendered locally as an SVG or canvas chart.",
     },
     mcp_server: {
       title: "Connect an MCP server",
@@ -413,7 +434,8 @@ export default {
     sort_group_chats: {
       title: "Sort and group chats",
       step1: "Open the sort menu in the sidebar.",
-      step2: "Choose grouping by topic, date, or creation date.",
+      step2:
+        "Choose grouping by topic, date, creation date, or browser storage size.",
     },
     pin_chat: {
       title: "Pin a chat",
@@ -482,7 +504,14 @@ export default {
       title: "Open chat preferences",
       step1: "Open your user settings.",
       step2:
-        "Choose the Chat tab to change the default model, send key, summaries, rendering, and document conversion.",
+        "Choose the Chat tab to change the default model, send key, summaries, timestamps, rendering, and document conversion.",
+    },
+    message_timestamps: {
+      title: "Show message timestamps",
+      step1: "Open your user settings.",
+      step2: "Choose the Chat tab.",
+      step3:
+        "In the Messages section, turn on Show message timestamps to see when each message was sent.",
     },
     rendering: {
       title: "Configure rendering",
@@ -788,11 +817,14 @@ export default {
     label_image_modification: "Image Modification",
     label_image_analysis: "Analyze images",
     label_audio_generation: "Audio Generation",
+    label_arcana_v2: "ArcanaV2",
     label_arcana: "Arcana",
     label_mcp_server: "MCP Server",
     label_write_access: "Allow write",
+    label_browser_storage: "Browser storage",
     label_codemode: "Codemode",
     label_create_docx: "Word document",
+    tools_requires_browser_storage: "Enable browser storage or share a local folder first",
     tools_agent_unavailable: "Not available in agent mode",
     label_tool_limit: "Limit tool calls per response",
     tool_limit_hint: "Maximum tool invocations per response; calls made together count once",
@@ -813,6 +845,8 @@ export default {
 
   // Conversation
   conversation: {
+    meta_tokens: "tokens",
+    meta_cost: "cost",
     local_tools: "Browser & local tools",
     mount_folder: "Share local folder",
     folder_mounted: "Folder available to the assistant at {{path}}",
@@ -862,6 +896,7 @@ export default {
       process_browser: "Process (browser)",
       process_server: "Process (server)",
       must_process: "File must be processed",
+      optional_process: "Optional: convert to text",
     },
     reasoning: "Reasoning Process",
     copy_reasoning: "Copy reasoning process",
@@ -870,12 +905,25 @@ export default {
     reasoning_received_words_one: "{{count}} word received",
     reasoning_received_words_other: "{{count}} words received",
     action: "Action",
+    download_rendered: "Download rendered document",
     html_block: {
       render: "Render HTML",
       show_code: "Show code",
     },
     typst_block: {
       render: "Render as Typst",
+      show_code: "Show code",
+    },
+    graphviz_block: {
+      render: "Render as Graphviz",
+      show_code: "Show code",
+    },
+    vega_block: {
+      render: "Render as Vega-Lite",
+      show_code: "Show code",
+    },
+    chartjs_block: {
+      render: "Render as Chart.js",
       show_code: "Show code",
     },
     latex_block: {
@@ -1009,6 +1057,14 @@ export default {
         description:
           "Generate a short summary when you switch away from a chat, then show it when hovering over that chat in the sidebar.",
       },
+      messages: {
+        section_label: "Messages",
+        timestamps: {
+          label: "Show message timestamps",
+          description:
+            "Display the date and time each message was sent below the message.",
+        },
+      },
       submission: {
         label: "Send message with",
         options: {
@@ -1080,6 +1136,21 @@ export default {
         label: "Render LaTeX blocks",
         description:
           "Choose whether LaTeX code blocks are rendered by default. You can still render or show code for each block.",
+      },
+      graphviz: {
+        label: "Render Graphviz diagrams",
+        description:
+          "Render ```dot and ```graphviz blocks locally. The first render downloads the Graphviz engine (about 1.4 MB) after your confirmation.",
+      },
+      vega: {
+        label: "Render Vega-Lite charts",
+        description:
+          "Render ```vega-lite and ```vega blocks locally. External data URLs stay blocked unless external references are enabled.",
+      },
+      chartjs: {
+        label: "Render Chart.js charts",
+        description:
+          "Render ```chart and ```chartjs blocks locally from a Chart.js JSON configuration.",
       },
       reasoning_streaming: {
         label: "Keep reasoning collapsed while streaming",
@@ -1248,7 +1319,7 @@ export default {
     temperature:
       "A low temperature (e.g., 0-1) produces more predictable and logical responses, while higher temperatures (e.g., above 1) increase the possibility of more creative and unconventional responses. You can adjust the temperature setting to achieve different levels of predictability and creativity.",
     tools:
-      "Tools are a new and experimental feature designed to extend the capabilities of Chat AI. They allow the model to perform additional actions or access additional resources in order to provide more useful, accurate, or specialized responses. Current tools include Arcana (for all models) and Web Search (optional), with more tools planned for the future. As this feature is still evolving, functionality and available tools may change over time.",
+      "Tools are a new and experimental feature designed to extend the capabilities of Chat AI. They allow the model to perform additional actions or access additional resources in order to provide more useful, accurate, or specialized responses. Current tools include Arcana, ArcanaV2, Web Search, image and audio generation, and MCP servers. ArcanaV2 lets the assistant inspect and manage Arcana collections, their files, indexes, and sharing. As this feature is still evolving, functionality and available tools may change over time.",
     web_search:
       "The web search tool allows the AI to look up the latest information from the internet to improve its responses. When enabled, the AI can generate search queries based on your question and the full conversation history, send them to a search engine (such as Google), and use the retrieved results to provide more accurate and up-to-date answers. This is especially useful for topics where current or rapidly changing information is important.",
     top_p:
@@ -1434,9 +1505,34 @@ export default {
       "Failed to render Typst document. Showing source instead:",
   },
   latex: {
+    download_failed: "Failed to download the LaTeX document.",
     rendering: "Rendering LaTeX document...",
     render_error:
       "Failed to render LaTeX document. Showing source instead:",
+  },
+  wasm_download: {
+    title: "Download {{feature}} renderer?",
+    body: "Rendering this block downloads WebAssembly and fonts the first time. They stay in your browser cache afterwards.",
+    size: "About {{size}} MB",
+    confirm: "Download and render",
+    keep_code: "Keep as code",
+    feature_typst: "Typst",
+    feature_latex: "LaTeX",
+    feature_tikz: "TikZ",
+    feature_graphviz: "Graphviz",
+  },
+  graphviz: {
+    rendering: "Rendering Graphviz diagram...",
+    render_error: "Failed to render Graphviz diagram.",
+  },
+  vega: {
+    rendering: "Rendering chart...",
+    render_error: "Failed to render Vega-Lite chart.",
+    external_blocked: "This chart loads external data from {{url}}. Enable external references to render it.",
+  },
+  chartjs: {
+    rendering: "Rendering chart...",
+    render_error: "Failed to render Chart.js chart.",
   },
   // Announcement
   announcement: "",

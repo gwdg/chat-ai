@@ -18,6 +18,7 @@ import ForkButton from "./ForkButton";
 import SpeakButton from "./SpeakButton";
 import AgentSteps from "./AgentSteps";
 import ToolForm from "./ToolForm";
+import MessageTimestamp from "../MessageTimestamp";
 import { getFeatureGuideMarker } from "../../../config/featureGuides";
 import { getUseCaseMarker } from "../../../config/useCases";
 import { getPersonaMarkers } from "../../../utils/personaCatalog";
@@ -380,6 +381,7 @@ export default React.memo(({ localState, setLocalState, message_index, modelsDat
                     />
                   ) : null
                 )}
+              <MessageTimestamp message={message} className="pt-1" />
               {/* Bottom panel for message */}
               <div className="group flex justify-between w-full mt-1 gap-2">
                 {/* Buttons on the bottom right */}

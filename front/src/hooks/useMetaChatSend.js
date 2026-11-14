@@ -69,7 +69,7 @@ Use only ids returned by the tools. Use "folderId": null for Unsorted, or provid
 
 Supported setting keys and values:
 - memory_mode: 0 (none), 1 (recall), 2 (learn)
-- suggest_user_prompts, html_load_external, set_title_once, render_typst, render_latex, conversation_summaries: true or false
+- suggest_user_prompts, html_load_external, set_title_once, render_typst, render_latex, render_graphviz, render_vega, render_chartjs, conversation_summaries: true or false
 - html_render_mode: "render", "code", or "off"
 - html_sanitization: "strict" or "relaxed"
 - document_conversion_mode: "server", "browser", or "choice"
@@ -82,6 +82,8 @@ Supported per-chat setting keys and values:
 - reasoning_effort: number or null
 - memory_mode_override: "default", 0, 1, or 2
 - enable_tools, enable_web_search: true or false
+- browser_storage: true or false (agent mode: lets the agent read and write this chat's browser workspace)
+- arcana_v2: true or false (lets the assistant inspect Arcana collections, their files, indexes, and sharing)
 
 Use SET_CONVERSATION_SETTING with "target":"all" only when the user explicitly asks to change all chats; otherwise use a conversation id from list_chats. The Meta chat's own settings are read-only.
 
@@ -109,19 +111,28 @@ export function useMetaChatSend(modelsData = []) {
           : localState.settings?.model?.id) ||
         getDefaultChatAIModel(userSettings);
       if (!modelId) {
-        setLocalState((prev) => ({
-          ...prev,
-          messages: [
-            ...prev.messages,
-            {
-              role: "assistant",
-              content: [{ type: "text", text: "" }],
-              loading: false,
-              meta: { error: t("meta_chat.no_model") },
-            },
-            { role: "user", content: [{ type: "text", text: "" }] },
-          ],
-        }));
+        setLocalState((prev) => {
+          const now = Date.now();
+          const messages = [...prev.messages];
+          const lastIndex = messages.length - 1;
+          if (messages[lastIndex]?.role === "user" && !messages[lastIndex].createdAt) {
+            messages[lastIndex] = { ...messages[lastIndex], createdAt: now };
+          }
+          return {
+            ...prev,
+            messages: [
+              ...messages,
+              {
+                role: "assistant",
+                content: [{ type: "text", text: "" }],
+                loading: false,
+                meta: { error: t("meta_chat.no_model") },
+                createdAt: now,
+              },
+              { role: "user", content: [{ type: "text", text: "" }] },
+            ],
+          };
+        });
         return;
       }
 
@@ -207,18 +218,27 @@ export function useMetaChatSend(modelsData = []) {
       const timeoutMs =
         timeout >= 5000 && timeout <= 900000 ? timeout : 300000;
 
-      setLocalState((prev) => ({
-        ...prev,
-        messages: [
-          ...prev.messages,
-          {
-            role: "assistant",
-            content: [{ type: "text", text: "" }],
-            loading: true,
-          },
-          { role: "user", content: [{ type: "text", text: "" }] },
-        ],
-      }));
+      setLocalState((prev) => {
+        const now = Date.now();
+        const messages = [...prev.messages];
+        const lastIndex = messages.length - 1;
+        if (messages[lastIndex]?.role === "user" && !messages[lastIndex].createdAt) {
+          messages[lastIndex] = { ...messages[lastIndex], createdAt: now };
+        }
+        return {
+          ...prev,
+          messages: [
+            ...messages,
+            {
+              role: "assistant",
+              content: [{ type: "text", text: "" }],
+              loading: true,
+              createdAt: now,
+            },
+            { role: "user", content: [{ type: "text", text: "" }] },
+          ],
+        };
+      });
 
       let accumulated = "";
       let errorMeta = null;

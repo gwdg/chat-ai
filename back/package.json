@@ -8,7 +8,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "node service.mjs",
-    "start": "node service.mjs"
+    "start": "node service.mjs",
+    "dummy:rag": "node dummy-rag-web.mjs",
+    "test:remote-files": "node test-remote-files.mjs"
   },
   "keywords": [],
   "author": "Gesellschaft für wissenschaftliche Datenverarbeitung mbH Göttingen",

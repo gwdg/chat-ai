@@ -22,6 +22,20 @@ describe("conversation defaults", () => {
     expect(settings.tools.mcp_remote).toBe(false);
   });
 
+  it("keeps browser storage off by default", () => {
+    expect(getDefaultSettings().tools.browser_storage).toBe(false);
+  });
+
+  it("keeps ArcanaV2 off by default", () => {
+    expect(getDefaultSettings().tools.arcana_v2).toBe(false);
+  });
+
+  it("maps the old remote file access switch to ArcanaV2", () => {
+    expect(
+      getDefaultSettings({ tools: { remote_file_access: true } }).tools.arcana_v2,
+    ).toBe(true);
+  });
+
   it("builds a default conversation with a timestamp and message", () => {
     const conversation = getDefaultConversation(
       { model: { id: "test-model", name: "Test" } },

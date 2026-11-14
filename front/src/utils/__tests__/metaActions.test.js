@@ -41,6 +41,34 @@ describe("Meta chat action markers", () => {
     expect(proposals[8]).toMatchObject({ type: "delete_memory", index: 1 });
   });
 
+  it("accepts the browser storage tool setting", () => {
+    const proposals = getMetaActionProposals(
+      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"browser_storage","value":true}]]',
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      type: "conversation_setting",
+      scope: "conversation",
+      conversationId: "c1",
+      key: "browser_storage",
+      value: true,
+    });
+  });
+
+  it("accepts the ArcanaV2 tool setting", () => {
+    const proposals = getMetaActionProposals(
+      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"arcana_v2","value":true}]]',
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      type: "conversation_setting",
+      scope: "conversation",
+      conversationId: "c1",
+      key: "arcana_v2",
+      value: true,
+    });
+  });
+
   it("accepts the reasoning streaming preference", () => {
     const proposals = getMetaActionProposals(
       '[[SET_SETTING:{"key":"collapse_reasoning_while_streaming","value":true}]]',

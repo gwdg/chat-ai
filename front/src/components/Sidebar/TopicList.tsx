@@ -48,6 +48,7 @@ export default function TopicList({
   pinnedConversations,
   conversationsByTopic,
   unsortedConversations,
+  sizeConversations,
   onCreateTopic,
   onRenameTopic,
   onDeleteTopic,
@@ -69,6 +70,7 @@ export default function TopicList({
   pinnedConversations: any[];
   conversationsByTopic: Map<string, any[]>;
   unsortedConversations: any[];
+  sizeConversations: any[];
   onCreateTopic: (anchor: { x: number; y: number }) => void;
   onRenameTopic: (topic: TopicRef) => void;
   onDeleteTopic: (topic: TopicRef) => void;
@@ -90,7 +92,7 @@ export default function TopicList({
   dateGroups: DateGroup[];
   creationDateGroups: DateGroup[];
   isDark: boolean;
-  grouping: "topic" | "date" | "created";
+  grouping: "topic" | "date" | "created" | "size";
 }) {
   const { t } = useTranslation();
   const createButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -448,6 +450,17 @@ export default function TopicList({
               );
             });
           })()}
+        </div>
+      )}
+
+      {grouping === "size" && (
+        <div className="flex flex-col gap-1">
+          <div className="px-2 pt-3 pb-1 text-[10px] font-semibold text-base-content/70">
+            {t("folders.by_size")}
+          </div>
+          {sizeConversations.map((conv) =>
+            renderConversationRow(conv, { showModified: true }),
+          )}
         </div>
       )}
 

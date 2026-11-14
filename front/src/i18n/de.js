@@ -67,11 +67,14 @@ export default {
     uncategorized: "Nicht zugeordnete Chats",
     by_date: "Alle Chats nach Datum",
     by_created: "Alle Chats nach Erstellungsdatum",
+    by_size: "Alle Chats nach Speichergröße",
     sort_label: "Chats sortieren",
     sort_by_topic: "Nach Thema",
     sort_by_date: "Nach Datum",
     sort_by_created: "Nach Erstellungsdatum",
+    sort_by_size: "Nach Speichergröße",
     modified: "Geändert {{date}}",
+    storage_size: "Browserspeicher {{size}}",
     dateBuckets: {
       today: "Heute",
       yesterday: "Gestern",
@@ -378,6 +381,12 @@ export default {
       step3:
         "Wählen Sie Bildbearbeitung und hängen Sie das Bild an oder beschreiben Sie es.",
     },
+    browser_storage: {
+      title: "Browserspeicher aktivieren",
+      step1: "Öffnen Sie Browser & lokale Werkzeuge im Eingabefeld.",
+      step2:
+        "Wählen Sie Browserspeicher, damit der Assistent Dateien im Browser-Arbeitsbereich dieses Chats lesen und schreiben kann.",
+    },
     image_analysis: {
       title: "Bilder analysieren",
       step1: "Öffnen Sie Browser & lokale Werkzeuge im Eingabefeld.",
@@ -390,6 +399,18 @@ export default {
       step2: "Aktivieren Sie die Tools.",
       step3:
         "Wählen Sie Audioerzeugung und beschreiben Sie das gewünschte Audio.",
+    },
+    arcana_v2: {
+      title: "ArcanaV2 verwenden",
+      step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
+      step2: "Aktivieren Sie die Tools.",
+      step3:
+        "Wählen Sie ArcanaV2, damit der Assistent Arcana-Sammlungen, ihre Dateien und Indizes sowie Freigaben verwalten kann.",
+    },
+    diagram_renderers: {
+      title: "Diagramme aus Codeblöcken rendern",
+      step1: "Fragen Sie nach einem Codeblock: ```dot für Graphviz, ```vega-lite für Vega-Lite oder ```chart für eine Chart.js-JSON-Konfiguration.",
+      step2: "Senden Sie die Nachricht. Der Block wird lokal als SVG oder Canvas-Diagramm gerendert.",
     },
     mcp_server: {
       title: "Einen MCP-Server verbinden",
@@ -428,7 +449,8 @@ export default {
     sort_group_chats: {
       title: "Chats sortieren und gruppieren",
       step1: "Öffnen Sie das Sortiermenü in der Seitenleiste.",
-      step2: "Wählen Sie die Gruppierung nach Thema, Datum oder Erstellungsdatum.",
+      step2:
+        "Wählen Sie die Gruppierung nach Thema, Datum, Erstellungsdatum oder Browserspeichergröße.",
     },
     pin_chat: {
       title: "Einen Chat anheften",
@@ -497,7 +519,14 @@ export default {
       title: "Chat-Einstellungen öffnen",
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2:
-        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Darstellung und Dokumentkonvertierung zu ändern.",
+        "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Zeitstempel, Darstellung und Dokumentkonvertierung zu ändern.",
+    },
+    message_timestamps: {
+      title: "Zeitstempel für Nachrichten anzeigen",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Chat.",
+      step3:
+        "Aktivieren Sie im Abschnitt Nachrichten die Option Zeitstempel für Nachrichten anzeigen, um zu sehen, wann jede Nachricht gesendet wurde.",
     },
     rendering: {
       title: "Darstellung konfigurieren",
@@ -802,11 +831,14 @@ export default {
     label_image_modification: "Bildbearbeitung",
     label_image_analysis: "Bilder analysieren",
     label_audio_generation: "Audiogenerierung",
+    label_arcana_v2: "ArcanaV2",
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",
     label_write_access: "Schreiben erlauben",
+    label_browser_storage: "Browserspeicher",
     label_codemode: "Codemode",
     label_create_docx: "Word-Dokument",
+    tools_requires_browser_storage: "Zuerst den Browserspeicher aktivieren oder einen lokalen Ordner freigeben",
     tools_agent_unavailable: "Im Agentenmodus nicht verfügbar",
     label_tool_limit: "Werkzeugaufrufe pro Antwort begrenzen",
     tool_limit_hint: "Maximale Werkzeugaufrufe pro Antwort; gemeinsam ausgeführte Aufrufe zählen einmal",
@@ -827,6 +859,8 @@ export default {
 
   // Conversation
   conversation: {
+    meta_tokens: "Token",
+    meta_cost: "Kosten",
     local_tools: "Browser & lokale Werkzeuge",
     mount_folder: "Lokalen Ordner teilen",
     folder_mounted: "Ordner für den Assistenten unter {{path}} verfügbar",
@@ -876,6 +910,7 @@ export default {
       process_browser: "Im Browser verarbeiten",
       process_server: "Auf dem Server verarbeiten",
       must_process: "Datei muss verarbeitet werden",
+      optional_process: "Optional: in Text umwandeln",
     },
     reasoning: "Denkprozess",
     copy_reasoning: "Denkprozess kopieren",
@@ -884,12 +919,25 @@ export default {
     reasoning_received_words_one: "{{count}} Wort empfangen",
     reasoning_received_words_other: "{{count}} Wörter empfangen",
     action: "Aktion",
+    download_rendered: "Gerendertes Dokument herunterladen",
     html_block: {
       render: "HTML rendern",
       show_code: "Code anzeigen",
     },
     typst_block: {
       render: "Als Typst rendern",
+      show_code: "Code anzeigen",
+    },
+    graphviz_block: {
+      render: "Als Graphviz rendern",
+      show_code: "Code anzeigen",
+    },
+    vega_block: {
+      render: "Als Vega-Lite rendern",
+      show_code: "Code anzeigen",
+    },
+    chartjs_block: {
+      render: "Als Chart.js rendern",
       show_code: "Code anzeigen",
     },
     latex_block: {
@@ -1030,6 +1078,14 @@ export default {
         description:
           "Beim Verlassen eines Chats wird eine kurze Zusammenfassung erstellt und beim Darüberfahren mit der Maus in der Seitenleiste angezeigt.",
       },
+      messages: {
+        section_label: "Nachrichten",
+        timestamps: {
+          label: "Zeitstempel für Nachrichten anzeigen",
+          description:
+            "Zeigt Datum und Uhrzeit unter jeder Nachricht an, zu der sie gesendet wurde.",
+        },
+      },
       submission: {
         label: "Nachricht senden mit",
         options: {
@@ -1101,6 +1157,21 @@ export default {
         label: "LaTeX-Blöcke rendern",
         description:
           "Legt fest, ob LaTeX-Codeblöcke standardmäßig gerendert werden. Pro Block kann weiterhin zwischen Darstellung und Code gewechselt werden.",
+      },
+      graphviz: {
+        label: "Graphviz-Diagramme rendern",
+        description:
+          "Rendert ```dot- und ```graphviz-Blöcke lokal. Beim ersten Rendern wird die Graphviz-Engine (etwa 1,4 MB) nach Ihrer Bestätigung heruntergeladen.",
+      },
+      vega: {
+        label: "Vega-Lite-Diagramme rendern",
+        description:
+          "Rendert ```vega-lite- und ```vega-Blöcke lokal. Externe Daten-URLs bleiben blockiert, solange externe Referenzen nicht aktiviert sind.",
+      },
+      chartjs: {
+        label: "Chart.js-Diagramme rendern",
+        description:
+          "Rendert ```chart- und ```chartjs-Blöcke lokal aus einer Chart.js-JSON-Konfiguration.",
       },
       reasoning_streaming: {
         label: "Denkprozess beim Streamen geschlossen halten",
@@ -1268,7 +1339,7 @@ export default {
     temperature:
       "Eine niedrige Temperatur (z. B. 0-1) erzeugt vorhersehbarere und logischere Antworten, während höhere Temperaturen (z. B. über 1) die Möglichkeit kreativerer und unkonventionellerer Antworten erhöhen. Sie können die Temperatureinstellung anpassen, um verschiedene Stufen der Vorhersagbarkeit und Kreativität zu erreichen.",
     tools:
-      "Tools sind eine neue und experimentelle Funktion, die darauf ausgelegt ist, die Fähigkeiten von Chat-AI zu erweitern. Sie ermöglichen dem Modell, zusätzliche Aktionen auszuführen oder auf weitere Ressourcen zuzugreifen, um nützlichere, genauere oder spezialisierte Antworten zu liefern. Zu den aktuellen Tools gehören Arcana (für alle Modelle) und Websuche (optional); weitere Tools sind für die Zukunft geplant. Da sich diese Funktion noch in Entwicklung befindet, können sich Funktionsumfang und verfügbare Tools im Laufe der Zeit ändern.",
+      "Tools sind eine neue und experimentelle Funktion, die darauf ausgelegt ist, die Fähigkeiten von Chat-AI zu erweitern. Sie ermöglichen dem Modell, zusätzliche Aktionen auszuführen oder auf weitere Ressourcen zuzugreifen, um nützlichere, genauere oder spezialisierte Antworten zu liefern. Zu den aktuellen Tools gehören Arcana, ArcanaV2, Websuche, Bild- und Audioerzeugung und MCP-Server. Mit ArcanaV2 kann der Assistent Arcana-Sammlungen, ihre Dateien, Indizes und Freigaben verwalten. Da sich diese Funktion noch in Entwicklung befindet, können sich Funktionsumfang und verfügbare Tools im Laufe der Zeit ändern.",
     web_search:
       "Das Websuche-Werkzeug ermöglicht es der KI, aktuelle Informationen aus dem Internet abzurufen, um ihre Antworten zu verbessern. Wenn es aktiviert ist, kann die KI auf Grundlage Ihrer Frage und des gesamten Gesprächsverlaufs Suchanfragen erstellen, diese an eine Suchmaschine (wie z. B. Google) senden und die erhaltenen Ergebnisse nutzen, um genauere und aktuellere Antworten zu geben. Dies ist besonders nützlich bei Themen, bei denen aktuelle oder sich schnell ändernde Informationen wichtig sind.",
     top_p:
@@ -1456,9 +1527,34 @@ export default {
       "Typst-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
   },
   latex: {
+    download_failed: "Das LaTeX-Dokument konnte nicht heruntergeladen werden.",
     rendering: "LaTeX-Dokument wird gerendert...",
     render_error:
       "LaTeX-Dokument konnte nicht gerendert werden. Quelle wird stattdessen angezeigt:",
+  },
+  wasm_download: {
+    title: "{{feature}}-Renderer herunterladen?",
+    body: "Das Rendern dieses Blocks lädt beim ersten Mal WebAssembly und Schriftarten herunter. Danach bleiben sie im Browser-Cache.",
+    size: "Etwa {{size}} MB",
+    confirm: "Herunterladen und rendern",
+    keep_code: "Als Code anzeigen",
+    feature_typst: "Typst",
+    feature_latex: "LaTeX",
+    feature_tikz: "TikZ",
+    feature_graphviz: "Graphviz",
+  },
+  graphviz: {
+    rendering: "Graphviz-Diagramm wird gerendert...",
+    render_error: "Graphviz-Diagramm konnte nicht gerendert werden.",
+  },
+  vega: {
+    rendering: "Diagramm wird gerendert...",
+    render_error: "Vega-Lite-Diagramm konnte nicht gerendert werden.",
+    external_blocked: "Dieses Diagramm lädt externe Daten von {{url}}. Aktivieren Sie externe Referenzen, um es zu rendern.",
+  },
+  chartjs: {
+    rendering: "Diagramm wird gerendert...",
+    render_error: "Chart.js-Diagramm konnte nicht gerendert werden.",
   },
   // Announcement
   announcement: "",

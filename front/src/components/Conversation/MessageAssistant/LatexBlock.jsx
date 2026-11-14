@@ -1,14 +1,25 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
-import { Code2, Eye } from "lucide-react";
 import DOMPurify from "dompurify";
 import latexWasmUrl from "faster-latex-wasm?url";
 import { selectRenderLatex } from "../../../Redux/reducers/userSettingsReducer";
+import { grantWasmConsent, useWasmConsent } from "../../../hooks/useWasmConsent";
+import { useToast } from "../../../hooks/useToast";
+import { downloadHtml, renderedFilename } from "../../../utils/download";
 import Code from "./Code";
-import { extractTikz, renderTikzSnippets } from "./tikzRenderer";
+import RenderToolbar from "./RenderToolbar";
+import WasmDownloadPrompt from "./WasmDownloadPrompt";
+import {
+  extractTikz,
+  formatLatexError,
+  renderTikzSnippets,
+} from "./tikzRenderer";
 
 const CACHE_LIMIT = 50;
+// faster-latex WASM (~0.4 MB); TikZJax adds its engine, fonts and CSS (~6.8 MB).
+const LATEX_DOWNLOAD_MB = 0.4;
+const TIKZ_DOWNLOAD_MB = 6.8;
 const htmlCache = new Map();
 
 const EXTRA_CSS = `
@@ -99,7 +110,24 @@ const renderLatex = async (source) => {
 const LatexBlock = memo(
   ({ content, language = "latex", defaultRender = true }) => {
     const { t } = useTranslation();
+    const { notifyError } = useToast();
     const renderLatexEnabled = useSelector(selectRenderLatex);
+    const latexConsent = useWasmConsent("latex");
+    const tikzConsent = useWasmConsent("tikz");
+    const tikzNeeded = useMemo(
+      () => extractTikz(String(content || "")).snippets.length > 0,
+      [content]
+    );
+    const hasRequiredConsent = latexConsent && (!tikzNeeded || tikzConsent);
+    const consentSizeMb =
+      (!latexConsent ? LATEX_DOWNLOAD_MB : 0) +
+      (tikzNeeded && !tikzConsent ? TIKZ_DOWNLOAD_MB : 0);
+    const consentFeature =
+      !latexConsent && (!tikzNeeded || tikzConsent)
+        ? t("wasm_download.feature_latex")
+        : !latexConsent
+          ? `${t("wasm_download.feature_latex")} + ${t("wasm_download.feature_tikz")}`
+          : t("wasm_download.feature_tikz");
     const [showCode, setShowCode] = useState(
       !(defaultRender && renderLatexEnabled)
     );
@@ -146,6 +174,14 @@ const LatexBlock = memo(
         return;
       }
 
+      if (!hasRequiredConsent) {
+        setOutput(null);
+        setError(false);
+        setErrorMessage("");
+        setLoading(false);
+        return;
+      }
+
       let cancelled = false;
       setLoading(true);
       setError(false);
@@ -170,42 +206,49 @@ const LatexBlock = memo(
         cancelled = true;
         clearTimeout(timer);
       };
-    }, [content, showCode]);
+    }, [content, showCode, hasRequiredConsent]);
 
     const codeContent = String(content || "").replace(/\n$/, "");
 
+    const handleDownload = () => {
+      const body = `<style>${output?.css || ""}${EXTRA_CSS}</style>${output?.html || ""}`;
+      downloadHtml(
+        `<!doctype html><html><head><meta charset="utf-8"></head><body>${body}</body></html>`,
+        renderedFilename("latex", "html")
+      );
+    };
+
     return (
       <div className="relative my-2">
-        <button
-          type="button"
-          onClick={() => setShowCode((prev) => !prev)}
-          aria-pressed={showCode}
-          className="absolute -top-3 right-2 z-10 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-base-300 bg-base-100 px-2 py-1 text-[11px] font-medium text-base-content/70 shadow-sm transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
-        >
-          {showCode ? (
-            <>
-              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("conversation.latex_block.render")}
-            </>
-          ) : (
-            <>
-              <Code2 className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("conversation.latex_block.show_code")}
-            </>
-          )}
-        </button>
+        <RenderToolbar
+          showCode={showCode}
+          onToggle={() => setShowCode((prev) => !prev)}
+          renderLabel={t("conversation.latex_block.render")}
+          showCodeLabel={t("conversation.latex_block.show_code")}
+          onDownload={!showCode && output ? handleDownload : undefined}
+          downloadLabel={t("conversation.download_rendered")}
+        />
 
         {showCode ? (
           <div className="pt-3">
             <Code language={language}>{codeContent}</Code>
           </div>
+        ) : !hasRequiredConsent && codeContent.trim() ? (
+          <WasmDownloadPrompt
+            feature={consentFeature}
+            sizeMb={consentSizeMb}
+            onConfirm={() =>
+              grantWasmConsent("latex", ...(tikzNeeded ? ["tikz"] : []))
+            }
+            onCancel={() => setShowCode(true)}
+          />
         ) : error ? (
           <div className="pt-3 p-2 text-error">
             {t("latex.render_error")}
             {errorMessage && (
-              <div className="mt-1 font-mono text-xs break-words">
-                {errorMessage}
-              </div>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded bg-base-200 p-2 font-mono text-xs">
+                {formatLatexError(errorMessage)}
+              </pre>
             )}
             <pre className="mt-2 text-xs bg-base-200 p-2 rounded overflow-x-auto">
               {codeContent}

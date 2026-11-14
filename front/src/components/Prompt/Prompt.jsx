@@ -20,6 +20,7 @@ import { useSendMessage } from "../../hooks/useSendMessage";
 import { useSpeechSession } from "../../hooks/useSpeechSession";
 import { loadFileMeta } from "../../db";
 import { getFileType } from "../../utils/attachments";
+import { modelSupportsFileType } from "../../utils/modelCapabilities";
 import { getSpeechModule } from "../../utils/speechAudio";
 import { useModal } from "../../modals/ModalContext";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -109,7 +110,12 @@ export default function Prompt({
       const meta = await loadFileMeta(attachment.fileId);
       if (!meta) continue;
       const fileType = getFileType(meta);
-      if (fileType === "pdf" || fileType === "docx") return true;
+      if (
+        (fileType === "pdf" || fileType === "docx") &&
+        !modelSupportsFileType(localState.settings.model, fileType)
+      ) {
+        return true;
+      }
     }
     return false;
   };

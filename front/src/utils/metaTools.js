@@ -51,15 +51,19 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Suggest follow-up prompts: ${yesNo(userSettings.suggest_user_prompts)}`,
     `- Set title only on first prompt: ${yesNo(userSettings.set_title_once)}`,
     `- Conversation summaries: ${yesNo(userSettings.conversation_summaries)}`,
+    `- Show message timestamps: ${yesNo(userSettings.show_timestamps)}`,
     `- Send message with: ${sendWithEnter}`,
     `- HTML rendering: ${userSettings.html_render_mode ?? "off"}`,
     `- Load external references: ${yesNo(userSettings.html_load_external)}`,
     `- HTML sanitization: ${userSettings.html_sanitization ?? "strict"}`,
     `- Render Typst: ${yesNo(userSettings.render_typst)}`,
     `- Render LaTeX: ${yesNo(userSettings.render_latex)}`,
+    `- Render Graphviz: ${yesNo(userSettings.render_graphviz ?? false)}`,
+    `- Render Vega-Lite: ${yesNo(userSettings.render_vega ?? false)}`,
+    `- Render Chart.js: ${yesNo(userSettings.render_chartjs ?? false)}`,
     `- Keep reasoning collapsed while streaming: ${yesNo(userSettings.collapse_reasoning_while_streaming)}`,
     `- Document conversion: ${documentConversion}`,
-    `- Modules: tools ${import.meta.env.VITE_MODULE_TOOLS === "true" ? "enabled" : "disabled"}, feedback ${import.meta.env.VITE_MODULE_FEEDBACK === "true" ? "enabled" : "disabled"}, choices ${import.meta.env.VITE_MODULE_CHOICES === "true" ? "enabled" : "disabled"}, speech ${import.meta.env.VITE_MODULE_SPEECH === "true" ? "enabled" : "disabled"}`,
+    `- Modules: tools ${import.meta.env.VITE_MODULE_TOOLS === "true" ? "enabled" : "disabled"}, feedback ${import.meta.env.VITE_MODULE_FEEDBACK === "true" ? "enabled" : "disabled"}, choices ${import.meta.env.VITE_MODULE_CHOICES === "true" ? "enabled" : "disabled"}, arcanas ${import.meta.env.VITE_MODULE_ARCANAS !== "false" ? "enabled" : "disabled"}, speech ${import.meta.env.VITE_MODULE_SPEECH === "true" ? "enabled" : "disabled"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,
@@ -82,6 +86,7 @@ export function buildConversationSettingsSummary(settings = {}) {
   const enabledTools = Object.entries(tools)
     .filter(([, enabled]) => enabled)
     .map(([name]) => name);
+  const browserStorage = tools.browser_storage === true;
   const memoryOverride =
     settings.memory_mode_override === "default" ||
     settings.memory_mode_override === undefined
@@ -120,6 +125,7 @@ export function buildConversationSettingsSummary(settings = {}) {
         ? ` (${enabledTools.join(", ")})`
         : ""
     }`,
+    `browser storage ${browserStorage ? "enabled" : "disabled"}`,
     `arcana ${arcanaId || "none"}`,
     `MCP local ${tools.mcp ? "enabled" : "disabled"}, remote ${remoteMcpEnabled(settings) ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
   ].join("; ");

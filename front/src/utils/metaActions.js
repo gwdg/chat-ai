@@ -14,9 +14,13 @@ const SUPPORTED_SETTING_KEYS = new Set([
   "set_title_once",
   "render_typst",
   "render_latex",
+  "render_graphviz",
+  "render_vega",
+  "render_chartjs",
   "collapse_reasoning_while_streaming",
   "document_conversion_mode",
   "conversation_summaries",
+  "show_timestamps",
   "send_with_enter",
   "timeout",
 ]);
@@ -29,6 +33,8 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "memory_mode_override",
   "enable_tools",
   "enable_web_search",
+  "browser_storage",
+  "arcana_v2",
 ]);
 
 function isValidConversationSetting(key, value) {

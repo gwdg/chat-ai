@@ -11,18 +11,49 @@ const fasterLatexRoot = path.dirname(
   require.resolve("faster-latex/package.json")
 );
 
-const serveTikzGzip = (middlewares) => {
+const TIKZ_CONTENT_TYPES = {
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json",
+  ".otf": "font/otf",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".ttf": "font/ttf",
+  ".txt": "text/plain; charset=utf-8",
+  ".wasm": "application/wasm",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+};
+
+// Serve /tikzjax directly from disk. Vite's public-dir cache can keep serving
+// index.html after copy-tikzjax.mjs recreates the directory, which makes the
+// worker load HTML as JavaScript. A missing asset must be a 404, never the SPA
+// fallback.
+const serveTikzAssets = (middlewares) => {
   middlewares.use((req, res, next) => {
     const url = (req.url || "").split("?")[0];
-    if (!url.startsWith("/tikzjax/") || !url.endsWith(".gz")) {
-      return next();
+    if (!url.startsWith("/tikzjax/")) return next();
+
+    const root = path.resolve(process.cwd(), "public", "tikzjax");
+    const file = path.resolve(root, "." + url.slice("/tikzjax".length));
+    if (!file.startsWith(root + path.sep)) {
+      res.statusCode = 403;
+      return res.end("Forbidden");
     }
 
-    const file = path.join(process.cwd(), "public", url);
     fs.readFile(file, (error, data) => {
-      if (error) return next();
-      res.setHeader("Content-Type", "application/gzip");
-      res.setHeader("Content-Encoding", "identity");
+      if (error) {
+        res.statusCode = 404;
+        return res.end("Not found");
+      }
+      if (file.endsWith(".gz")) {
+        res.setHeader("Content-Type", "application/gzip");
+        res.setHeader("Content-Encoding", "identity");
+      } else {
+        const type = TIKZ_CONTENT_TYPES[path.extname(file).toLowerCase()];
+        if (type) res.setHeader("Content-Type", type);
+      }
       res.end(data);
     });
   });
@@ -31,10 +62,10 @@ const serveTikzGzip = (middlewares) => {
 const tikzAssetsPlugin = {
   name: "serve-tikzjax-gzip",
   configureServer(server) {
-    serveTikzGzip(server.middlewares);
+    serveTikzAssets(server.middlewares);
   },
   configurePreviewServer(server) {
-    serveTikzGzip(server.middlewares);
+    serveTikzAssets(server.middlewares);
   },
 };
 
@@ -104,6 +135,7 @@ try {
         process.env["VITE_MODULE_FEEDBACK"] = value?.feedback  || false;
         process.env["VITE_MODULE_CHOICES"] = value?.choices  || false;
         process.env["VITE_MODULE_AGENT"] = value?.agent ?? true;
+        process.env["VITE_MODULE_ARCANAS"] = value?.arcanas ?? true;
         process.env["VITE_MODULE_SPEECH"] = JSON.stringify(value?.speech) || false;
       } catch (e) {
         console.log("Error while parsing modules: ", e)
@@ -186,6 +218,10 @@ export default defineConfig({
       {
         find: /^faster-latex-wasm/,
         replacement: path.join(fasterLatexRoot, "web/faster_latex_bg.wasm"),
+      },
+      {
+        find: /^html2canvas$/,
+        replacement: path.resolve(__dirname, "src/utils/emptyHtml2canvas.js"),
       },
     ],
   },

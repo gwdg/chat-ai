@@ -22,6 +22,14 @@ let apiEndpoint = "https://chat-ai.academiccloud.de/v1";
 let apiKey = "";
 let serviceName = "Chat AI Dev";
 let testMode = false;
+let remoteFilesEndpoint =
+  process.env.REMOTE_FILES_ENDPOINT ||
+  process.env.SAIA_RAG_WEB_ENDPOINT ||
+  "http://localhost:8000/arcanas/api/v1";
+let remoteFilesArcana =
+  process.env.REMOTE_FILES_ARCANA ||
+  process.env.SAIA_RAG_WEB_ARCANA ||
+  "remote-files";
 
 // Load configuration
 try {
@@ -38,6 +46,22 @@ try {
   apiKey = config.apiKey;
   serviceName = config.serviceName;
   testMode = config.testMode === true;
+  const configuredRemoteFilesEndpoint =
+    config.remoteFilesEndpoint || config.saiaRagWebEndpoint;
+  if (
+    typeof configuredRemoteFilesEndpoint === "string" &&
+    configuredRemoteFilesEndpoint.trim()
+  ) {
+    remoteFilesEndpoint = configuredRemoteFilesEndpoint.trim();
+  }
+  const configuredRemoteFilesArcana =
+    config.remoteFilesArcana || config.saiaRagWebArcana;
+  if (
+    typeof configuredRemoteFilesArcana === "string" &&
+    configuredRemoteFilesArcana.trim()
+  ) {
+    remoteFilesArcana = configuredRemoteFilesArcana.trim();
+  }
   if (testMode) {
     console.log("TEST MODE ENABLED: no upstream calls will be made.");
   }
@@ -191,7 +215,24 @@ app.get("/models", async (req, res) => {
       headers.Authorization = "Bearer " + inference_id;
     }
     const response = await fetch(url, { method: "GET", headers });
-    res.status(200).json(await response.json());
+    const data = await response.json();
+    // Testing: only the external OpenAI models accept raw `file` content parts.
+    // Local SAIA engines reject them with "Unsupported chat content part type".
+    if (Array.isArray(data?.data)) {
+      data.data = data.data.map((model) => {
+        const input = Array.isArray(model.input) ? model.input : [];
+        const supportsFiles =
+          typeof model.id === "string" && model.id.startsWith("openai-");
+        return {
+          ...model,
+          input:
+            supportsFiles && !input.includes("pdf")
+              ? [...input, "pdf"]
+              : input,
+        };
+      });
+    }
+    res.status(200).json(data);
   } catch (error) {
     console.error(`Error: ${error}`);
     res.status(500).json({ error: "Failed to fetch models." });
@@ -364,6 +405,560 @@ app.post("/images/generations", (req, res) =>
   forward(req, res, "/images/generations", JSON.stringify(req.body ?? {}), "application/json"),
 );
 app.post("/websearch", (req, res) => forward(req, res, "/websearch", JSON.stringify(req.body ?? {}), "application/json"));
+
+// Remote file store. Files live in a dedicated saia-rag-web Arcana and are
+// accessed through the saia-rag-web backend with the user's OIDC header.
+const REMOTE_FILE_NAME_PREFIX = "rf_";
+
+function remoteRelative(value) {
+  const pathValue = String(value ?? "").replace(/\\/g, "/").replace(/^\/+/, "");
+  const segments = pathValue
+    .split("/")
+    .filter((segment) => segment && segment !== ".");
+  if (segments.some((segment) => segment === ".." || segment.includes("\0"))) {
+    const error = new Error("Invalid remote file path");
+    error.status = 400;
+    throw error;
+  }
+  return segments.join("/");
+}
+
+function remoteRouteParam(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function remoteApiBase() {
+  const base = remoteFilesEndpoint.replace(/\/+$/, "");
+  return /\/api\/v1$/.test(base) ? base : `${base}/api/v1`;
+}
+
+function remoteAuthHeaders(req) {
+  const uid =
+    req.headers["x-auth-claim-uid"] ||
+    req.headers["x-consumer-custom-id"] ||
+    req.headers["oidc_claim_uid"] ||
+    req.headers["inference-id"];
+  return uid ? { "x-auth-claim-uid": uid } : {};
+}
+
+async function remoteApi(req, pathname, init = {}) {
+  const url = `${remoteApiBase()}${pathname}`;
+  try {
+    return await globalThis.fetch(url, {
+      ...init,
+      headers: { ...remoteAuthHeaders(req), ...(init.headers ?? {}) },
+    });
+  } catch (error) {
+    const code = error?.cause?.code || error?.code;
+    const wrapped = new Error(
+      `saia-rag-web is not reachable at ${remoteApiBase()}${code ? ` (${code})` : ""}. ` +
+        'Start the local dummy with "npm run dummy:rag" from back/, or set remoteFilesEndpoint in back.json.'
+    );
+    wrapped.status = 502;
+    wrapped.cause = error;
+    throw wrapped;
+  }
+}
+
+async function remoteRequestError(response) {
+  const text = await response.text().catch(() => "");
+  let message = text;
+  try {
+    const parsed = JSON.parse(text);
+    message = parsed?.detail || parsed?.error || text;
+  } catch {
+    // not JSON
+  }
+  const error = new Error(
+    message || `saia-rag-web request failed (${response.status})`
+  );
+  error.status =
+    response.status >= 400 && response.status < 500 ? response.status : 502;
+  return error;
+}
+
+const remoteArcanaPath = () => `/arcana/${encodeURIComponent(remoteFilesArcana)}`;
+
+const encodeRemoteName = (relative) =>
+  `${REMOTE_FILE_NAME_PREFIX}${Buffer.from(relative, "utf8").toString("base64url")}`;
+
+function decodeRemoteName(name) {
+  if (typeof name !== "string" || !name.startsWith(REMOTE_FILE_NAME_PREFIX)) {
+    return null;
+  }
+  try {
+    return Buffer.from(
+      name.slice(REMOTE_FILE_NAME_PREFIX.length),
+      "base64url"
+    ).toString("utf8");
+  } catch {
+    return null;
+  }
+}
+
+async function ensureRemoteArcana(req) {
+  const response = await remoteApi(req, "/arcana/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: remoteFilesArcana, embedding_model: "" }),
+  });
+  if (response.status === 400) return;
+  if (!response.ok) throw await remoteRequestError(response);
+}
+
+async function listStoredRemotePaths(req) {
+  const response = await remoteApi(
+    req,
+    `${remoteArcanaPath()}/files/?grouped=false`
+  );
+  if (response.status === 404) return [];
+  if (!response.ok) throw await remoteRequestError(response);
+  const files = await response.json();
+  if (!Array.isArray(files)) return [];
+  return files.map((file) => decodeRemoteName(file?.name)).filter(Boolean);
+}
+
+function remoteEntries(relative, paths) {
+  const prefix = relative ? `${relative}/` : "";
+  const entries = new Map();
+  for (const pathValue of paths) {
+    if (!pathValue.startsWith(prefix) || pathValue === relative) continue;
+    const segments = pathValue.slice(prefix.length).split("/").filter(Boolean);
+    if (!segments.length) continue;
+    const name = segments[0];
+    const childPath = relative ? `${relative}/${name}` : name;
+    const type = segments.length > 1 ? "directory" : "file";
+    const existing = entries.get(childPath);
+    if (!existing || existing.type !== "directory") {
+      entries.set(childPath, { name, path: childPath, type });
+    }
+  }
+  return [...entries.values()].sort(
+    (a, b) =>
+      Number(b.type === "directory") - Number(a.type === "directory") ||
+      a.name.localeCompare(b.name)
+  );
+}
+
+function sendRemoteError(res, error) {
+  if (error?.status) {
+    return res.status(error.status).json({ error: error.message });
+  }
+  console.error("Remote files error:", error);
+  return res.status(502).json({ error: "Remote file backend request failed." });
+}
+
+async function readRemoteFileOrList(req, res, requested) {
+  try {
+    const relative = remoteRelative(requested);
+    const paths = await listStoredRemotePaths(req);
+    const entries = remoteEntries(relative, paths);
+    if (!relative || entries.length) {
+      return res.status(200).json({
+        path: relative,
+        type: "directory",
+        entries,
+      });
+    }
+    if (!paths.includes(relative)) {
+      return res.status(404).json({ error: "Remote file not found" });
+    }
+    const encoding = req.query?.encoding === "base64" ? "base64" : "utf8";
+    const response = await remoteApi(
+      req,
+      `${remoteArcanaPath()}/files/${encodeURIComponent(encodeRemoteName(relative))}/download`
+    );
+    if (!response.ok) throw await remoteRequestError(response);
+    const content = Buffer.from(await response.arrayBuffer());
+    return res.status(200).json({
+      path: relative,
+      type: "file",
+      encoding,
+      content: content.toString(encoding),
+      size: content.length,
+      modified: new Date().toISOString(),
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+}
+
+function remoteFileForm(name, data) {
+  const form = new globalThis.FormData();
+  form.append(
+    "file",
+    new Blob([data], { type: "application/octet-stream" }),
+    name
+  );
+  return form;
+}
+
+async function writeRemoteFile(req, res, requested) {
+  try {
+    const relative = remoteRelative(requested ?? req.body?.path ?? req.query?.path);
+    if (!relative) {
+      return res.status(422).json({ error: "A file path is required" });
+    }
+    if (typeof req.body?.content !== "string") {
+      return res.status(422).json({ error: "content must be a string" });
+    }
+    const encoding = req.body?.encoding === "base64" ? "base64" : "utf8";
+    const data = Buffer.from(req.body.content, encoding);
+    const name = encodeRemoteName(relative);
+    await ensureRemoteArcana(req);
+    let response = await remoteApi(req, `${remoteArcanaPath()}/files/`, {
+      method: "POST",
+      body: remoteFileForm(name, data),
+    });
+    if (response.status === 400) {
+      response = await remoteApi(
+        req,
+        `${remoteArcanaPath()}/files/${encodeURIComponent(name)}`,
+        { method: "PUT", body: remoteFileForm(name, data) }
+      );
+    }
+    if (!response.ok) throw await remoteRequestError(response);
+    return res.status(200).json({
+      path: relative,
+      type: "file",
+      size: data.length,
+      modified: new Date().toISOString(),
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+}
+
+async function deleteRemoteFile(req, res, requested) {
+  try {
+    const relative = remoteRelative(requested ?? req.body?.path ?? req.query?.path);
+    if (!relative) {
+      return res.status(422).json({ error: "A file path is required" });
+    }
+    const paths = await listStoredRemotePaths(req);
+    const targets = paths.filter(
+      (pathValue) =>
+        pathValue === relative || pathValue.startsWith(`${relative}/`)
+    );
+    if (!targets.length) {
+      return res.status(404).json({ error: "Remote file not found" });
+    }
+    for (const target of targets) {
+      const response = await remoteApi(
+        req,
+        `${remoteArcanaPath()}/files/${encodeURIComponent(encodeRemoteName(target))}`,
+        { method: "DELETE" }
+      );
+      if (!response.ok && response.status !== 404) {
+        throw await remoteRequestError(response);
+      }
+    }
+    return res.status(200).json({
+      path: relative,
+      deleted: true,
+      deletedCount: targets.length,
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+}
+
+app.get("/remote-files", (req, res) =>
+  readRemoteFileOrList(req, res, req.query?.path)
+);
+app.get(/^\/remote-files\/(.+)$/, (req, res) =>
+  readRemoteFileOrList(req, res, remoteRouteParam(req.params[0]))
+);
+app.put("/remote-files", (req, res) =>
+  writeRemoteFile(req, res, req.body?.path ?? req.query?.path)
+);
+app.put(/^\/remote-files\/(.+)$/, (req, res) =>
+  writeRemoteFile(req, res, remoteRouteParam(req.params[0]))
+);
+app.post("/remote-files", (req, res) => {
+  const operation = String(req.body?.operation ?? "write").toLowerCase();
+  if (operation === "read" || operation === "list") {
+    return readRemoteFileOrList(req, res, req.body?.path ?? req.query?.path);
+  }
+  if (operation === "delete" || operation === "remove") {
+    return deleteRemoteFile(req, res, req.body?.path ?? req.query?.path);
+  }
+  return writeRemoteFile(req, res, req.body?.path ?? req.query?.path);
+});
+app.delete("/remote-files", (req, res) =>
+  deleteRemoteFile(req, res, req.body?.path ?? req.query?.path)
+);
+app.delete(/^\/remote-files\/(.+)$/, (req, res) =>
+  deleteRemoteFile(req, res, remoteRouteParam(req.params[0]))
+);
+
+const encodeArcana = (value) => encodeURIComponent(String(value ?? ""));
+const arcanaV2Path = (name) => `/arcana/${encodeArcana(name)}`;
+
+async function proxyArcanaJson(req, pathname, init = {}) {
+  const response = await remoteApi(req, pathname, init);
+  if (!response.ok) throw await remoteRequestError(response);
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+app.get("/arcana-v2/arcanas", async (req, res) => {
+  try {
+    const arcanas = await proxyArcanaJson(req, "/arcana/");
+    return res.status(200).json(
+      Array.isArray(arcanas)
+        ? arcanas.filter((arcana) => arcana?.name !== remoteFilesArcana)
+        : []
+    );
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.post("/arcana-v2/arcanas", async (req, res) => {
+  try {
+    const name = String(req.body?.name ?? "").trim();
+    if (!name) {
+      return res.status(422).json({ error: "An Arcana name is required" });
+    }
+    const embeddingModel =
+      typeof req.body?.embedding_model === "string"
+        ? req.body.embedding_model
+        : "";
+    const result = await proxyArcanaJson(req, "/arcana/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, embedding_model: embeddingModel }),
+    });
+    return res.status(200).json(result ?? { name });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-v2/arcanas/:name", async (req, res) => {
+  try {
+    const arcana = await proxyArcanaJson(req, arcanaV2Path(req.params.name));
+    return res.status(200).json(arcana);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-v2/arcanas/:name/files", async (req, res) => {
+  try {
+    const files = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/files/?grouped=false`
+    );
+    return res.status(200).json(files);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-v2/arcanas/:name/files/:file/download", async (req, res) => {
+  try {
+    const response = await remoteApi(
+      req,
+      `${arcanaV2Path(req.params.name)}/files/${encodeArcana(req.params.file)}/download`
+    );
+    if (!response.ok) throw await remoteRequestError(response);
+    const content = Buffer.from(await response.arrayBuffer());
+    const encoding = req.query?.encoding === "base64" ? "base64" : "utf8";
+    return res.status(200).json({
+      arcana: req.params.name,
+      file: req.params.file,
+      encoding,
+      content: content.toString(encoding),
+      size: content.length,
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+async function handleArcanaFileWrite(req, res, replace) {
+  try {
+    const name = req.params.name;
+    const filename = replace
+      ? req.params.file
+      : String(req.body?.filename ?? "").trim();
+    if (!filename) {
+      return res.status(422).json({ error: "A file name is required" });
+    }
+    if (typeof req.body?.content !== "string") {
+      return res.status(422).json({ error: "content must be a string" });
+    }
+    const encoding = req.body?.encoding === "base64" ? "base64" : "utf8";
+    const data = Buffer.from(req.body.content, encoding);
+    const form = new globalThis.FormData();
+    form.append(
+      "file",
+      new Blob([data], { type: "application/octet-stream" }),
+      filename
+    );
+    const pathname = replace
+      ? `${arcanaV2Path(name)}/files/${encodeArcana(filename)}`
+      : `${arcanaV2Path(name)}/files/`;
+    const result = await proxyArcanaJson(req, pathname, {
+      method: replace ? "PUT" : "POST",
+      body: form,
+    });
+    return res.status(200).json({
+      arcana: name,
+      file: filename,
+      [replace ? "replaced" : "uploaded"]: true,
+      size: data.length,
+      result,
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+}
+
+app.post("/arcana-v2/arcanas/:name/files", (req, res) =>
+  handleArcanaFileWrite(req, res, false)
+);
+app.put("/arcana-v2/arcanas/:name/files/:file", (req, res) =>
+  handleArcanaFileWrite(req, res, true)
+);
+
+app.delete("/arcana-v2/arcanas/:name/files/:file", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/files/${encodeArcana(req.params.file)}`,
+      { method: "DELETE" }
+    );
+    return res.status(200).json({
+      arcana: req.params.name,
+      file: req.params.file,
+      deleted: true,
+      result,
+    });
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.post("/arcana-v2/arcanas/:name/index", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/generate-index`,
+      { method: "POST" }
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-v2/arcanas/:name/index/status", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/index-status`
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-v2/arcanas/:name/index/running", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/index-job-running`
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-v2/arcanas/:name/index/jobs/:jobId", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/index-job/${encodeArcana(req.params.jobId)}`
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.delete("/arcana-v2/arcanas/:name/index", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/delete-index`,
+      { method: "DELETE" }
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.get("/arcana-v2/arcanas/:name/members", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/members`
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.post("/arcana-v2/arcanas/:name/members", async (req, res) => {
+  try {
+    const user = String(req.body?.user ?? "").trim();
+    if (!user) {
+      return res.status(422).json({ error: "A user name is required" });
+    }
+    const role = req.body?.role === "editor" ? "editor" : "reader";
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/members`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, role }),
+      }
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
+app.delete("/arcana-v2/arcanas/:name/members/:member", async (req, res) => {
+  try {
+    const result = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/members/${encodeArcana(req.params.member)}`,
+      { method: "DELETE" }
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
 
 // Build a sophisticated JSON form for a requested tool in test mode. The shape
 // matches what the frontend's ToolForm component renders: { tool_id, title,
@@ -656,6 +1251,9 @@ app.post("/chat/completions", async (req, res) => {
           }
           if (tool.type === "audio_generation") {
             params.tools.push({type: "audio_generation"});
+          }
+          if (tool.type === "remote_file_access" || tool.type === "arcana_v2") {
+            params.tools.push({type: "arcana_v2"});
           }
           if (tool.type === "arcana" && (!params.arcana || !params.arcana.id)) {
             params.tools.push({type: "arcana_list_files"});

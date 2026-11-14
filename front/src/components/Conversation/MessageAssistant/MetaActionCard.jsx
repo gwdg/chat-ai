@@ -34,6 +34,16 @@ import {
 
 const cloneMcpServers = (servers) => JSON.parse(JSON.stringify(servers ?? []));
 
+const CONVERSATION_TOOL_SETTING_KEYS = new Set([
+  "browser_storage",
+  "arcana_v2",
+]);
+
+const readConversationSetting = (settings, key) =>
+  CONVERSATION_TOOL_SETTING_KEYS.has(key)
+    ? settings?.tools?.[key]
+    : settings?.[key];
+
 const readMcpServers = (settings) => {
   const raw = settings?.mcp_servers;
   if (Array.isArray(raw)) return raw.map((server) => ({ ...server }));
@@ -149,6 +159,7 @@ export default function MetaActionCard({
     set_title_once:
       "user_settings.chat_preferences.suggestions.title_once.label",
     conversation_summaries: "user_settings.chat_preferences.summaries.label",
+    show_timestamps: "user_settings.chat_preferences.messages.timestamps.label",
     send_with_enter: "user_settings.chat_preferences.submission.label",
     html_render_mode: "user_settings.chat_preferences.html_render.label",
     html_load_external:
@@ -157,6 +168,9 @@ export default function MetaActionCard({
       "user_settings.chat_preferences.html_render.sanitization.label",
     render_typst: "user_settings.chat_preferences.typst.label",
     render_latex: "user_settings.chat_preferences.latex.label",
+    render_graphviz: "user_settings.chat_preferences.graphviz.label",
+    render_vega: "user_settings.chat_preferences.vega.label",
+    render_chartjs: "user_settings.chat_preferences.chartjs.label",
     collapse_reasoning_while_streaming:
       "user_settings.chat_preferences.reasoning_streaming.label",
     document_conversion_mode:
@@ -168,6 +182,8 @@ export default function MetaActionCard({
     memory_mode_override: "settings.memory_mode.label",
     enable_tools: "settings.tools_title",
     enable_web_search: "settings.label_web_search",
+    browser_storage: "settings.label_browser_storage",
+    arcana_v2: "settings.label_arcana_v2",
   };
 
   const formatSettingValue = (key, value) => {
@@ -519,7 +535,10 @@ export default function MetaActionCard({
             if (!model) throw new Error("Model not found");
             nextValue = model;
           }
-          entry.previous[action.key] = conversation.settings?.[action.key];
+          entry.previous[action.key] = readConversationSetting(
+            conversation.settings,
+            action.key,
+          );
           entry.expected[action.key] = nextValue;
           conversationSettingsPlan.set(conversation.id, entry);
         }
@@ -712,12 +731,23 @@ export default function MetaActionCard({
 
   const applyConversationSettingValues = (settings, values) => {
     const next = { ...(settings || {}) };
+    let tools;
     for (const [key, value] of Object.entries(values)) {
+      if (CONVERSATION_TOOL_SETTING_KEYS.has(key)) {
+        tools ??= { ...(next.tools || {}) };
+        if (value === undefined) delete tools[key];
+        else tools[key] = value;
+        continue;
+      }
       if (value === undefined) {
         delete next[key];
       } else {
         next[key] = value;
       }
+    }
+    if (tools) {
+      if (Object.keys(tools).length) next.tools = tools;
+      else delete next.tools;
     }
     return next;
   };
@@ -769,7 +799,8 @@ export default function MetaActionCard({
         const current = await getConversationMeta(entry.id);
         if (!current) throw new Error("Conversation not found");
         for (const [key, expected] of Object.entries(entry.expected)) {
-          if (!conversationSettingMatches(key, current.settings?.[key], expected)) {
+          const currentValue = readConversationSetting(current.settings, key);
+          if (!conversationSettingMatches(key, currentValue, expected)) {
             throw new Error("Conversation setting changed");
           }
         }

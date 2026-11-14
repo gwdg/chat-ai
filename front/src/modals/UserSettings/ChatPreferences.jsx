@@ -10,9 +10,15 @@ import {
   setSetTitleOnce,
   selectRenderLatex,
   selectRenderTypst,
+  selectRenderGraphviz,
+  selectRenderVega,
+  selectRenderChartjs,
   selectCollapseReasoningWhileStreaming,
   setRenderLatex,
   setRenderTypst,
+  setRenderGraphviz,
+  setRenderVega,
+  setRenderChartjs,
   setCollapseReasoningWhileStreaming,
   setSuggestUserPrompts,
   selectHtmlRenderMode,
@@ -25,6 +31,8 @@ import {
   setDocumentConversionMode,
   selectConversationSummaries,
   setConversationSummaries,
+  selectShowTimestamps,
+  setShowTimestamps,
   setSendWithEnter,
 } from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../ModalContext";
@@ -235,6 +243,30 @@ export function ConversationSummaryPreference() {
   );
 }
 
+export function MessageDisplayPreference() {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const showTimestamps = useSelector(selectShowTimestamps);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="px-2 text-sm font-medium text-base-content">
+        {t("user_settings.chat_preferences.messages.section_label")}
+      </h3>
+      <div data-guide="message-timestamps-preference">
+        <ProfilePreferenceSwitch
+          label={t("user_settings.chat_preferences.messages.timestamps.label")}
+          description={t(
+            "user_settings.chat_preferences.messages.timestamps.description",
+          )}
+          checked={showTimestamps}
+          onChange={(checked) => dispatch(setShowTimestamps(checked))}
+        />
+      </div>
+    </section>
+  );
+}
+
 export function HtmlRenderPreference() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -370,6 +402,9 @@ export function RenderingPreferences() {
   const { t } = useTranslation();
   const renderTypst = useSelector(selectRenderTypst);
   const renderLatex = useSelector(selectRenderLatex);
+  const renderGraphviz = useSelector(selectRenderGraphviz);
+  const renderVega = useSelector(selectRenderVega);
+  const renderChartjs = useSelector(selectRenderChartjs);
   const collapseReasoningWhileStreaming = useSelector(
     selectCollapseReasoningWhileStreaming,
   );
@@ -404,6 +439,24 @@ export function RenderingPreferences() {
         description={t("user_settings.chat_preferences.latex.description")}
         checked={renderLatex}
         onChange={(checked) => dispatch(setRenderLatex(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.graphviz.label")}
+        description={t("user_settings.chat_preferences.graphviz.description")}
+        checked={renderGraphviz}
+        onChange={(checked) => dispatch(setRenderGraphviz(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.vega.label")}
+        description={t("user_settings.chat_preferences.vega.description")}
+        checked={renderVega}
+        onChange={(checked) => dispatch(setRenderVega(checked))}
+      />
+      <ProfilePreferenceSwitch
+        label={t("user_settings.chat_preferences.chartjs.label")}
+        description={t("user_settings.chat_preferences.chartjs.description")}
+        checked={renderChartjs}
+        onChange={(checked) => dispatch(setRenderChartjs(checked))}
       />
       <HtmlRenderPreference />
     </section>

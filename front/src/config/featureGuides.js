@@ -48,7 +48,7 @@ export const featureGuides = {
   upload_file: {
     titleKey: "feature_guide.upload_file.title",
     prompt:
-      "Attach a file to the current chat. The paperclip button in the prompt box opens the file picker. After attaching, PDF and DOCX files may need to be processed. Then add a message and send it.",
+      "Attach a file to the current chat. The paperclip button in the prompt box opens the file picker. After attaching, PDF and DOCX files may need to be processed, unless the selected model supports binary file input. Then add a message and send it.",
     keywords: ["attach", "attachment", "upload"],
     steps: [
       {
@@ -272,6 +272,25 @@ export const featureGuides = {
       },
     ],
   },
+  browser_storage: {
+    titleKey: "feature_guide.browser_storage.title",
+    prompt:
+      "Let the agent use this chat's browser workspace. Open Browser & local tools from the prompt box, then select Browser storage to allow reading and writing files.",
+    keywords: ["browser storage", "browser workspace", "opfs", "local files"],
+    steps: [
+      {
+        target: '[data-guide="local-tools"]',
+        textKey: "feature_guide.browser_storage.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="tool-browser_storage"]',
+        prepare: openLocalTools,
+        textKey: "feature_guide.browser_storage.step2",
+        check: () => isToolActive("browser_storage"),
+      },
+    ],
+  },
   image_analysis: {
     titleKey: "feature_guide.image_analysis.title",
     prompt:
@@ -316,6 +335,48 @@ export const featureGuides = {
       },
     ],
   },
+  arcana_v2: {
+    titleKey: "feature_guide.arcana_v2.title",
+    prompt:
+      "Use ArcanaV2 from GWDG Tools. Enable tools, then select ArcanaV2 so the assistant can inspect Arcana collections, manage their files and indexes, and handle sharing.",
+    keywords: ["arcana v2", "arcanav2", "arcana", "rag index", "sharing"],
+    steps: [
+      {
+        target: '[data-guide="tools"]',
+        textKey: "feature_guide.arcana_v2.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="tools-enable"]',
+        prepare: openTools,
+        textKey: "feature_guide.arcana_v2.step2",
+        check: toolsAreEnabled,
+      },
+      {
+        target: '[data-guide="tool-arcana_v2"]',
+        prepare: ensureToolsEnabled,
+        textKey: "feature_guide.arcana_v2.step3",
+        check: () => isToolActive("arcana_v2"),
+      },
+    ],
+  },
+  diagram_renderers: {
+    titleKey: "feature_guide.diagram_renderers.title",
+    prompt:
+      "Render diagrams and charts from fenced code blocks. Use ```dot or ```graphviz for Graphviz, ```vega-lite or ```vega for Vega-Lite, and ```chart or ```chartjs for a Chart.js JSON config. They are rendered locally in the browser.",
+    keywords: ["graphviz", "dot graph", "vega-lite", "vega", "chart.js", "chartjs", "diagram", "chart"],
+    steps: [
+      {
+        target: ".prompt-area",
+        textKey: "feature_guide.diagram_renderers.step1",
+      },
+      {
+        target: '[data-guide="send"]',
+        textKey: "feature_guide.diagram_renderers.step2",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
   mcp_server: {
     titleKey: "feature_guide.mcp_server.title",
     prompt:
@@ -350,7 +411,7 @@ export const featureGuides = {
   tools_overview: {
     titleKey: "feature_guide.tools_overview.title",
     prompt:
-      "GWDG Tools add web search, image, audio, and video generation, Arcana, and MCP servers. Open Tools and enable them to see the available buttons.",
+      "GWDG Tools add web search, image, audio, and video generation, Arcana, ArcanaV2, and MCP servers. Open Tools and enable them to see the available buttons.",
     keywords: ["tools", "gwdg tools", "tool use"],
     steps: [
       {
@@ -447,8 +508,8 @@ export const featureGuides = {
   sort_group_chats: {
     titleKey: "feature_guide.sort_group_chats.title",
     prompt:
-      "Sort and group chats by topic, date, or creation date from the sidebar sort menu.",
-    keywords: ["sort chats", "group chats", "grouping", "sort by date", "sort"],
+      "Sort and group chats by topic, date, creation date, or browser storage size from the sidebar sort menu.",
+    keywords: ["sort chats", "group chats", "grouping", "sort by date", "sort by size", "storage size"],
     steps: [
       {
         target: '[data-guide="sort-chats"]',
@@ -703,6 +764,37 @@ export const featureGuides = {
         target: '[data-guide="settings-tab-chat"]',
         prepare: openUserSettings,
         textKey: "feature_guide.chat_preferences.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
+  message_timestamps: {
+    titleKey: "feature_guide.message_timestamps.title",
+    prompt:
+      "Show the date and time each message was sent. Open user settings, choose the Chat tab, and enable Show message timestamps in the Messages section.",
+    keywords: [
+      "message timestamps",
+      "message time",
+      "timestamp",
+      "zeitstempel",
+      "uhrzeit",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.message_timestamps.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-chat"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.message_timestamps.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="message-timestamps-preference"]',
+        prepare: () => selectSettingsTab("chat"),
+        textKey: "feature_guide.message_timestamps.step3",
         completeOnTargetClick: true,
       },
     ],
@@ -1043,7 +1135,9 @@ export const FEATURE_CATEGORIES = {
     "image_generation",
     "image_modification",
     "image_analysis",
+    "browser_storage",
     "audio_generation",
+    "arcana_v2",
     "mcp_server",
   ],
   chats: [
@@ -1064,6 +1158,7 @@ export const FEATURE_CATEGORIES = {
   settings: [
     "settings_overview",
     "chat_preferences",
+    "message_timestamps",
     "memories",
     "rendering",
     "reasoning_streaming",
@@ -1071,7 +1166,7 @@ export const FEATURE_CATEGORIES = {
     "data_management",
     "dark_mode",
   ],
-  other: ["feedback", "speech_output"],
+  other: ["feedback", "speech_output", "diagram_renderers"],
 };
 
 export function getFeatureCategory(featureId) {
@@ -1121,11 +1216,14 @@ const germanGuideKeywords = {
   image_generation: ["bilder erzeug", "bild erzeug", "bild generier", "bilder generier", "bild erstell", "bilder erstell", "text zu bild"],
   image_modification: ["bild bearbeit", "bilder bearbeit", "bild änder", "bilder änder", "bild modifizier", "bilder modifizier"],
   audio_generation: ["audio erzeug", "audio generier", "audio", "sprache erzeug", "sprache generier", "ton erzeug"],
+  arcana_v2: ["arcana v2", "arcanav2", "arcana", "rag index", "freigabe", "teilen"],
   mcp_server: ["mcp", "mcp server", "mcp-server", "model context protocol"],
+  diagram_renderers: ["graphviz", "dot", "vega", "vega-lite", "chart.js", "chartjs", "diagramm", "diagramme", "diagramm zeichnen", "chart"],
+  browser_storage: ["browserspeicher", "browser speicher", "arbeitsbereich", "arbeitsfläche", "opfs", "lokale dateien"],
   tools_overview: ["werkzeuge", "tools", "gwdg tools", "tool nutzung", "werkzeug verwend"],
   search_chats: ["chats durchsuch", "chat durchsuch", "chat such", "unterhaltung such", "chat find", "suche nach chat"],
   manage_topics: ["thema", "themen", "topic", "themen erstell", "chats organisier"],
-  sort_group_chats: ["chats sortier", "chats gruppier", "sortier", "gruppier", "nach datum sortier"],
+  sort_group_chats: ["chats sortier", "chats gruppier", "sortier", "gruppier", "nach datum sortier", "speichergröße", "nach größe sortier"],
   sort_organize: ["sortieren", "organisieren", "sort & organize", "chats aufräum", "chats organisier", "themen vorschlag", "ki organisation", "duplikate finden", "chats umbenenn", "sortieren und organisieren"],
   export_conversation: ["chat exportier", "unterhaltung exportier", "chat herunterlad", "chat speicher", "exportier"],
   import_conversation: ["chat importier", "unterhaltung importier", "importier", "chat wiederherstell"],
