@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-import OpenAI from "openai";
 import { useSelector } from "react-redux";
 import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/userSettingsReducer";
 import { chatCompletions } from "../apis/chatCompletions";

@@ -6,7 +6,6 @@ import icon_file_pdf from "../../../assets/icons/file_pdf.svg";
 import icon_file_text from "../../../assets/icons/file_text.svg";
 import { getConversation } from "../../../db";
 import { useToast } from "../../../hooks/useToast";
-import { jsPDF } from "jspdf";
 import Logo from "../../../assets/logos/chat_ai.png"
 import { processContentItems } from "../../../utils/sendMessage";
 import { hasMcpServerValue, withoutHeaders } from "../../../agent/mcp";
@@ -247,6 +246,8 @@ export default function ExportChatModal({
   // Export conversation as PDF
   const exportPDF = async () => {
     try {
+      // jsPDF (and the html2canvas it pulls in) only loads when exporting.
+      const { jsPDF } = await import("jspdf");
       // Initialize PDF document
       const doc = new jsPDF();
       doc.setProperties({

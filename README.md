@@ -109,6 +109,7 @@ The `front` service uses the following configurable attributes in `front.json`:
 - `titleGenerationModel`: Model ID for title generation
 - `memoryGenerationModel`: Model ID for memory generation and updates
 - `announcement`: Text to be displayed in the announcement bar at the top of the window
+- `useOpenAISdk`: (Optional) `true` sends chat requests through the official `openai` SDK instead of the built-in lightweight `fetch` client. The SDK is then loaded on first use. Default: `false`
 
 The `back` service listens to requests from `front` and interacts with an OpenAI-compatible API endpoint to produce responses. It uses the following configurable attributes in `back.json`:
 - `port`: Port number to listen on. Default: 8081
@@ -145,6 +146,8 @@ Without Docker, the same bundle comes from `cd front && npm i && npm run build`,
 Two things matter when serving it:
 
 - Every `VITE_*` value — including `backendPath`, `modelsPath` and `userDataPath` — is compiled into the JavaScript during the build, so `front/dist` is a snapshot. After changing `front.json`, rerun the build (`docker compose up front` or `docker compose restart front` both re-run the entrypoint) and redeploy the new files; editing the config does not change an already-built or already-copied bundle.
+- The build writes a Brotli (`.br`) and gzip (`.gz`) copy next to every compressible file, including the large Typst WASM files. Let the web server send those instead of compressing on every request (see the examples below). `vite preview` (`"mode": "prod"`) already does this.
+- The build also emits `sw.js`, a service worker that keeps the hashed `assets/` files and the vendored `typst-assets/` and `tikzjax/` files in the browser's cache across visits. Serve `sw.js` with `Cache-Control: no-cache`, like `index.html`, so a new deployment is picked up.
 - The app uses client-side routing (`/chat/<id>`, `/landing`, ...) and Vite's `base` is `"/"`. Unknown paths must fall back to `index.html`, and the bundle must be served from the domain root. For a sub-path deployment, change `base` in `front/vite.config.js` and rebuild.
 
 To keep the browser on a single origin, proxy the `back` service under the same host. With such a setup, the relevant parts of `front.json` are:
@@ -168,10 +171,21 @@ server {
     # Attachments are capped at 50 MB by the back service.
     client_max_body_size 50m;
 
+    # Serve the precompressed .gz files written by the build.
+    # brotli_static needs the ngx_brotli module; drop that line without it.
+    gzip_static on;
+    brotli_static on;
+
     # Vite fingerprints these file names, so they can be cached forever.
     location /assets/ {
         try_files $uri =404;
         add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Vendored Typst fonts and TikZJax files: not fingerprinted.
+    location ~ ^/(typst-assets|tikzjax)/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=604800";
     }
 
     # Client-side routes fall back to the SPA shell.
@@ -194,7 +208,7 @@ server {
 }
 ```
 
-Apache (enable the modules with `a2enmod headers proxy proxy_http`):
+Apache (enable the modules with `a2enmod headers proxy proxy_http rewrite`):
 
 ```apache
 <VirtualHost *:80>
@@ -214,8 +228,37 @@ Apache (enable the modules with `a2enmod headers proxy proxy_http`):
         Header set Cache-Control "public, max-age=31536000, immutable"
     </Directory>
 
-    <FilesMatch "index\.html$">
+    <FilesMatch "(index\.html|sw\.js)$">
         Header set Cache-Control "no-cache"
+    </FilesMatch>
+
+    # Serve the precompressed .br / .gz files written by the build. The
+    # encoding header is tied to the rewrite, so TikZJax's own .gz files
+    # (requested by name) are still sent as-is.
+    RewriteEngine On
+    RewriteCond %{HTTP:Accept-Encoding} \bbr\b
+    RewriteCond %{REQUEST_FILENAME}.br -f
+    RewriteRule ^(.+)$ $1.br [E=precompressed_br:1,L]
+    RewriteCond %{HTTP:Accept-Encoding} \bgzip\b
+    RewriteCond %{REQUEST_FILENAME}.gz -f
+    RewriteRule ^(.+)$ $1.gz [E=precompressed_gz:1,L]
+    Header set Content-Encoding br   env=REDIRECT_precompressed_br
+    Header set Content-Encoding br   env=precompressed_br
+    Header set Content-Encoding gzip env=REDIRECT_precompressed_gz
+    Header set Content-Encoding gzip env=precompressed_gz
+    Header append Vary Accept-Encoding
+    SetEnvIf Request_URI "\.(br|gz)$" no-gzip no-brotli
+    <FilesMatch "\.js\.(br|gz)$">
+        ForceType text/javascript
+    </FilesMatch>
+    <FilesMatch "\.css\.(br|gz)$">
+        ForceType text/css
+    </FilesMatch>
+    <FilesMatch "\.wasm\.(br|gz)$">
+        ForceType application/wasm
+    </FilesMatch>
+    <FilesMatch "\.svg\.(br|gz)$">
+        ForceType image/svg+xml
     </FilesMatch>
 
     ProxyPreserveHost On

@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import fs from "fs";
 import path from "path";
 import { createRequire } from "module";
+import { servePrecompressed, staticAssetsBuild } from "./vite-plugins/staticAssets.js";
 
 const require = createRequire(import.meta.url);
 const fasterLatexRoot = path.dirname(
@@ -87,6 +88,9 @@ try {
     } else if (key == "agentGatewayTools") {
       process.env["VITE_AGENT_GATEWAY_TOOLS"] = value;
       console.log("Agent gateway tools:", value);
+    } else if (key == "useOpenAISdk") {
+      process.env["VITE_USE_OPENAI_SDK"] = value === true ? "true" : "false";
+      console.log("Use openai SDK:", value === true);
     } else if (key == "explainImageModel") {
       process.env["VITE_EXPLAIN_IMAGE_MODEL"] = value;
       console.log("Explain-image model:", value);
@@ -173,6 +177,8 @@ export default defineConfig({
     nodeShimsPlugin(),
     codemodeWithoutIsolation(),
     tikzAssetsPlugin,
+    servePrecompressed(),
+    staticAssetsBuild(),
   ],
   resolve: {
     alias: [

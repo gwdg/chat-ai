@@ -14,11 +14,9 @@ import {
 } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import DOMPurify from "dompurify";
 
-import "katex/dist/katex.min.css";
 import ThinkingBlock from "./ThinkingBlock";
 import ReferencesSection from "./ReferencesSection";
 import Code from "./Code";
@@ -863,6 +861,41 @@ const useStreamingProcessor = (content, isLoading) => {
   };
 };
 
+// KaTeX (JS + CSS + fonts) is only fetched once some message contains math.
+// Until it arrives, math falls back to the plain math/inlineMath components.
+const MATH_HINT = /\$|\\\(|\\\[|\\begin\{/;
+let rehypeKatexPlugin = null;
+let katexPromise;
+const loadKatex = () => {
+  if (!katexPromise) {
+    katexPromise = Promise.all([
+      import("rehype-katex"),
+      import("katex/dist/katex.min.css"),
+    ])
+      .then(([mod]) => (rehypeKatexPlugin = mod.default))
+      .catch((err) => {
+        katexPromise = undefined;
+        throw err;
+      });
+  }
+  return katexPromise;
+};
+
+const useRehypeKatex = (wanted) => {
+  const [plugin, setPlugin] = useState(rehypeKatexPlugin);
+  useEffect(() => {
+    if (!wanted || plugin) return;
+    let active = true;
+    loadKatex()
+      .then((p) => active && setPlugin(() => p))
+      .catch((err) => console.error("Failed to load KaTeX:", err));
+    return () => {
+      active = false;
+    };
+  }, [wanted, plugin]);
+  return plugin;
+};
+
 export const SafeMarkdown = ({
   children: markdownContent,
   components,
@@ -870,6 +903,11 @@ export const SafeMarkdown = ({
   renderHtml = false,
   loadExternal = true,
 }) => {
+  const rehypeKatex = useRehypeKatex(
+    enableKatex &&
+      typeof markdownContent === "string" &&
+      MATH_HINT.test(markdownContent)
+  );
   if (!markdownContent || typeof markdownContent !== "string") return null;
 
   try {
@@ -884,7 +922,7 @@ export const SafeMarkdown = ({
 
     const rehypePlugins = [];
     if (renderHtml) rehypePlugins.push(rehypeRaw);
-    if (enableKatex)
+    if (enableKatex && rehypeKatex)
       rehypePlugins.push([
         rehypeKatex,
         {

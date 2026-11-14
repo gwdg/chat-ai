@@ -178,7 +178,7 @@ inside `db/`. UI strings and i18n keys say topic.
 `secrets/front.json` is read **at Vite startup** and hand-mapped into `process.env.VITE_*`:
 `VITE_BACKEND_ENDPOINT`, `VITE_MODELS_ENDPOINT`, `VITE_USERDATA_ENDPOINT`,
 `VITE_DEFAULT_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`,
-`VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
@@ -452,6 +452,47 @@ categories, tour targets, and the en/de keys.
 **Every new proper user-facing feature should ship with at least one feature guide (tutorial).**
 Use cases are optional and compose existing tutorials into longer workflows; they do not replace
 the tutorial for the feature itself.
+
+### 4.19 Chat requests use a fetch client; the openai SDK is opt-in
+
+`apis/openaiClient.js` `createBackendClient()` returns `{ chat: { completions: { create } } }`
+from `apis/fetchClient.js`, a small fetch + SSE client that mirrors openai v6 behaviour the app
+relies on: `APIError` with `status` / `error` / `code` / `type` and a `"<status> <msg>"`
+message (read by `sendMessage.jsx`), a timeout that only covers waiting for response headers, two
+retries on 408/409/429/5xx and connection errors, `"Request was aborted."` when aborted before
+the response, and a stream that **ends quietly** when aborted mid-stream. Gateway chunks with
+`object: "error"` pass through as data (`chatCompletions.jsx` throws on them); a chunk with an
+`error` key throws. `"useOpenAISdk": true` in `front.json` switches back to the SDK, which is then
+dynamically imported. The browser agent does not use either: it talks to the API through pi-ai's
+own `openai-completions` client (`agent/runAgent.ts`).
+
+### 4.20 Heavy renderers and libraries load on demand
+
+Keep these out of the entry chunk; a static import of any of them undoes it:
+
+- **KaTeX**: `SafeMarkdown` imports `rehype-katex` + `katex.min.css` only once some content
+  matches `MATH_HINT` (`$`, `\(`, `\[`, `\begin{`); until then math renders through the plain
+  `math` / `inlineMath` components.
+- **Mermaid**: `MermaidDiagram.jsx` `loadMermaid()`.
+- **Syntax highlighting**: `Code.jsx` uses `PrismAsyncLight`, which fetches the Prism core and
+  each grammar on first use. Its loader map only knows canonical names, so aliases (`js`, `py`,
+  `sh`, `html`, …) go through `LANGUAGE_ALIASES`; add one there when a fence name renders unhighlighted.
+- **jsPDF** (PDF export) and **Joyride** (tour) are imported when used. The agent
+  (`agent/runAgent`) is dynamically imported on send and **prefetched on idle** by `ChatPage` when
+  `VITE_MODULE_AGENT` is on.
+
+### 4.21 The build precompresses assets and emits a service worker
+
+`vite-plugins/staticAssets.js`: `staticAssetsBuild()` writes `dist/sw.js` and then a `.br` + `.gz`
+next to every compressible file (one plugin on purpose: Rollup runs `closeBundle` hooks of
+different plugins in parallel). Brotli quality is tiered by size and type to keep this at ~10 s;
+q11 on fonts/WASM tripled the build time for little gain. `servePrecompressed()` serves those in
+`vite preview` with immutable caching for `/assets/`; Vite's own preview compression gzips on the
+fly and never compresses `application/wasm`. `sw.js` is registered only in production builds
+(`main.jsx`). It caches on first use, never precaches, handles only paths in its build manifest
+(hashed `assets/` and the vendored `typst-assets/` / `tikzjax/`, the latter keyed by content
+hash), and prunes stale entries on activate. TikZJax's own `.gz` files are real payloads, not
+precompressed siblings: never serve them with `Content-Encoding` (see §4.11).
 
 ## 5. Conventions
 

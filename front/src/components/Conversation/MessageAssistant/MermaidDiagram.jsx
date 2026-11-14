@@ -1,12 +1,26 @@
 import { useState, useEffect, memo } from "react";
 import { useSelector } from "react-redux";
-import mermaid from "mermaid";
 import DOMPurify from "dompurify";
 import { selectHtmlLoadExternal } from "../../../Redux/reducers/userSettingsReducer";
 import { sanitizeExternalRefs } from "../../../utils/externalRefs";
 
 // Initialize mermaid once
-mermaid.initialize({ startOnLoad: false, theme: "forest" });
+// mermaid (plus its diagram/layout deps) is large; load it on first diagram.
+let mermaidPromise;
+const loadMermaid = () => {
+  if (!mermaidPromise) {
+    mermaidPromise = import("mermaid")
+      .then(({ default: mermaid }) => {
+        mermaid.initialize({ startOnLoad: false, theme: "forest" });
+        return mermaid;
+      })
+      .catch((err) => {
+        mermaidPromise = undefined;
+        throw err;
+      });
+  }
+  return mermaidPromise;
+};
 
 const MermaidDiagram = memo(({ content }) => {
   const loadExternal = useSelector(selectHtmlLoadExternal);
@@ -25,6 +39,7 @@ const MermaidDiagram = memo(({ content }) => {
       try {
         const id = `mermaid-${Math.random().toString(36).substring(2, 10)}`;
         // Parse returns true/false; suppress errors keeps console quieter
+        const mermaid = await loadMermaid();
         const ok = await mermaid.parse(content, { suppressErrors: true });
         if (!ok) {
           if (!cancelled) setError(true);
