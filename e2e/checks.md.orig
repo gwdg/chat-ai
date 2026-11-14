@@ -1,0 +1,17 @@
+# Common defects
+
+Check every screenshot for these, in addition to the scenario's expectations.
+Any of them fails the scenario, even if the scenario's own steps succeeded.
+
+- Unrendered markup: raw markdown (`**bold**`, `#`, `|---|`), footnote markers like `[^1]`,
+  LaTeX source (`$x^2$`, `\frac`), HTML tags or escaped entities (`&amp;`) shown as text.
+- Mixed languages: UI text in a language other than the active one, e.g. English labels in a
+  German UI or vice versa. Model answers and the user's own input are excluded.
+- Untranslated message keys or placeholders: `login_email_label`, `{name}`, `undefined`, `null`,
+  `NaN`, `[object Object]`.
+- Errors: error toasts, alerts, stack traces, "500", "Failed to fetch", empty error boxes.
+- Stuck states: spinners or skeletons that never resolve, buttons that stay disabled.
+- Layout: horizontal scrolling, overlapping or cut-off text, elements outside the viewport,
+  unreadable contrast, overlays covering content without a way to close them.
+- Broken assets: missing images or icons (empty boxes, alt text instead of image).
+- Empty states without explanation, e.g. a blank page or an empty list with no message.
