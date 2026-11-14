@@ -74,6 +74,16 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Memory mode: ${memoryMode}`,
     `- Saved memories: ${userSettings.memories?.length ?? 0} (stored in this browser)`,
     `- Memory groups: ${memoryGroupsSummary}`,
+    `- Configured MCP servers: ${
+      Array.isArray(userSettings.mcp_servers) && userSettings.mcp_servers.length
+        ? userSettings.mcp_servers
+            .map(
+              (server) =>
+                `${server.name || server.url || server.serverId} (${server.kind})`,
+            )
+            .join(", ")
+        : "none"
+    }`,
     `- Default memory group: ${memoryGroupName(userSettings, userSettings.default_memory_group)} (id: ${userSettings.default_memory_group ?? "default"})`,
     `- Request timeout: ${Math.round((userSettings.timeout ?? 300000) / 1000)} seconds`,
     `- Suggest follow-up prompts: ${yesNo(userSettings.suggest_user_prompts)}`,

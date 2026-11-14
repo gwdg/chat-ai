@@ -7,6 +7,7 @@ import { MetaChatSendContext } from "../context/MetaChatContext";
 import {
   selectAllMemories,
   selectDefaultMemoryGroup,
+  selectGlobalMcpServers,
   selectMemoryGroups,
   selectMemoryMode,
   selectSetTitleOnce,
@@ -20,6 +21,7 @@ export function useSendMessage() {
   const { notifyError, notifySuccess } = useToast();
   const timeout = useSelector(selectTimeout);
   const memories = useSelector(selectAllMemories);
+  const globalMcpServers = useSelector(selectGlobalMcpServers);
   const memoryGroups = useSelector(selectMemoryGroups);
   const defaultMemoryGroup = useSelector(selectDefaultMemoryGroup);
   const memoryMode = useSelector(selectMemoryMode);
@@ -58,6 +60,7 @@ export function useSendMessage() {
         localState,
         setLocalState,
         memories: groupMemories,
+        globalMcpServers,
         dispatch,
         openModal,
         notifyError,

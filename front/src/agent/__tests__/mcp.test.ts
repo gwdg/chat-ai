@@ -7,6 +7,7 @@ import {
   hasRemoteMcpServerValue,
   isRemoteMcpServer,
   remoteMcpEnabled,
+  resolveMcpServers,
 } from "../mcp";
 
 const sdk = vi.hoisted(() => ({ names: new Map<string, string>() }));
@@ -50,6 +51,34 @@ describe("MCP server entries", () => {
     expect(hasRemoteMcpServerValue([local])).toBe(false);
     expect(hasLocalMcpServerValue([remote])).toBe(false);
     expect(hasMcpServerValue([remote, local])).toBe(true);
+  });
+
+  it("resolves globally configured selections for a chat", () => {
+    const globals = [
+      {
+        id: "g-local",
+        name: "Files",
+        kind: "local" as const,
+        url: "http://localhost:9000/mcp",
+      },
+      {
+        id: "g-remote",
+        name: "GWDG",
+        kind: "remote" as const,
+        serverId: "server-1",
+      },
+    ];
+    const resolved = resolveMcpServers(
+      {
+        mcp_local_server_ids: ["g-local"],
+        mcp_remote_server_ids: ["g-remote"],
+      },
+      globals,
+    );
+    expect(resolved).toEqual([
+      expect.objectContaining({ url: "http://localhost:9000/mcp" }),
+      expect.objectContaining({ id: "server-1", name: "GWDG" }),
+    ]);
   });
 
   it("keeps the enable flags separate", () => {

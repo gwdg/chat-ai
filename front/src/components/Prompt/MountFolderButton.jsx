@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Code, FileText, ScanEye, Server } from "lucide-react";
 import { ToolBox } from "@carbon/icons-react";
 import Tooltip from "../Others/Tooltip";
-import MCPContainer from "../SettingsPanel/MCPContainer";
+import McpServerPicker from "../SettingsPanel/McpServerPicker";
 import MiniToolButton from "../SettingsPanel/MiniToolButton";
 import ToolLimit from "../SettingsPanel/ToolLimit";
 import { isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
@@ -217,7 +217,11 @@ export default function MountFolderButton({ localState, setLocalState }) {
               )}
               {showMcpConfig && (
                 <div className="border-t border-base-300 pt-3">
-                  <MCPContainer localState={localState} setLocalState={setLocalState} />
+                  <McpServerPicker
+                    localState={localState}
+                    setLocalState={setLocalState}
+                    kind="local"
+                  />
                 </div>
               )}
             </div>

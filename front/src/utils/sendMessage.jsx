@@ -8,7 +8,7 @@ import generateTitle from "../apis/generateTitle";
 import { loadFile, loadFileMeta, saveFile, updateConversation, updateConversationMeta } from "../db";
 import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 import { isAgentEnabled } from "../apis/agentEndpoints";
-import { remoteMcpEnabled } from "../agent/mcp";
+import { remoteMcpEnabled, resolveMcpServers } from "../agent/mcp";
 import { isArcanasEnabled } from "./modules";
 import { confirmMcpNameChange } from "./mcpNameChange";
 import { BINARY_DOCUMENT_TYPES, modelSupportsFileType } from "./modelCapabilities";
@@ -312,12 +312,17 @@ const sendMessage = async ({
   timeout,
   memoryMode = 0,
   memoryGroupId = "default",
+  globalMcpServers = [],
   suggestUserPrompts = false,
   formSubmission = null,
   setTitleOnce = true,
   speechMode = false,
 }) => {
   const conversationId = localState.id
+  const effectiveMcpServers = resolveMcpServers(
+    localState.settings,
+    globalMcpServers,
+  )
   // Index of the assistant placeholder this turn will stream into. Using a
   // fixed index keeps updates correct when a barge-in starts another turn
   // before this one has fully unwound.
@@ -340,6 +345,7 @@ const sendMessage = async ({
     let conversationForAPI = await buildConversationForAPI(localState, {
       forceAudioInput: speechMode,
     });
+    conversationForAPI.settings.mcp_servers = effectiveMcpServers;
     // Prepare system prompt
     let systemPromptAPI = localState.messages[0].role == "system"
       ? localState.messages[0].content[0].text
@@ -371,7 +377,14 @@ const sendMessage = async ({
         if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {
           conversationForAPI.settings.arcana.limit = 3;
         }
-        if (!remoteMcpEnabled(localState.settings)) delete conversationForAPI.settings.mcp_servers;
+        if (
+          !remoteMcpEnabled({
+            ...localState.settings,
+            mcp_servers: effectiveMcpServers,
+          })
+        ) {
+          delete conversationForAPI.settings.mcp_servers;
+        }
         if (!arcanasModule || !localState.settings.tools.arcana) {
           delete conversationForAPI.settings.arcana;
         }
@@ -681,7 +694,7 @@ const sendMessage = async ({
         // Up to and including the new user message
         uiMessages: localState.messages,
         systemPrompt: systemPromptAPI,
-        settings: localState.settings,
+        settings: { ...localState.settings, mcp_servers: effectiveMcpServers },
         onUpdate: showTurn,
         onMcpNameMismatch: handleMcpNameMismatch,
       });

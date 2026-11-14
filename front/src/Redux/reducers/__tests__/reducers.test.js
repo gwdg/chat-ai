@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import userSettingsReducer, {
+  addMcpServer,
   addMemory,
   addMemoryGroup,
   deleteAllMemories,
@@ -7,15 +8,18 @@ import userSettingsReducer, {
   deleteMemoryGroup,
   editMemory,
   importUserSettings,
+  removeMcpServer,
   renameMemoryGroup,
   setDefaultMemoryGroup,
   setMemoryGroup,
   setMemoryMode,
+  updateMcpServer,
   setSendWithEnter,
   setRenderGraphviz,
   setRenderVega,
   setRenderChartjs,
   selectMemoryMode,
+  selectGlobalMcpServers,
   selectMemoryGroups,
   selectDefaultMemoryGroup,
   selectRenderGraphviz,
@@ -114,6 +118,42 @@ describe("user settings reducer", () => {
     ]);
     expect(selectMemoryGroups({ user_settings: state })).toEqual([]);
     expect(selectDefaultMemoryGroup({ user_settings: state })).toBe("default");
+  });
+
+  it("manages globally configured MCP servers", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addMcpServer({
+        id: "mcp-1",
+        name: "Local files",
+        kind: "local",
+        url: "http://localhost:9000/mcp",
+      }),
+    );
+    state = userSettingsReducer(
+      state,
+      addMcpServer({
+        id: "mcp-2",
+        name: "GWDG",
+        kind: "remote",
+        serverId: "server-1",
+      }),
+    );
+    expect(selectGlobalMcpServers({ user_settings: state })).toHaveLength(2);
+
+    state = userSettingsReducer(
+      state,
+      updateMcpServer({ id: "mcp-1", patch: { name: "Files" } }),
+    );
+    expect(
+      selectGlobalMcpServers({ user_settings: state }).find(
+        (server) => server.id === "mcp-1",
+      )?.name,
+    ).toBe("Files");
+
+    state = userSettingsReducer(state, removeMcpServer("mcp-2"));
+    expect(selectGlobalMcpServers({ user_settings: state })).toHaveLength(1);
   });
 
   it("validates memory mode and send shortcut", () => {

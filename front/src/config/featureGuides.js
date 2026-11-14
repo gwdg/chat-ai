@@ -401,31 +401,24 @@ export const featureGuides = {
   mcp_server: {
     titleKey: "feature_guide.mcp_server.title",
     prompt:
-      "Connect an MCP server. Open Tools, enable tools, select MCP Server, then enter the server configuration.",
+      "Configure an MCP server once in the sidebar's MCP Servers section, test the connection, then select the server for this chat from Local tools or GWDG Tools.",
     keywords: ["mcp", "mcp server", "model context protocol"],
     steps: [
       {
-        target: '[data-guide="tools"]',
+        target: '[data-guide="mcp-servers-add"]',
         textKey: "feature_guide.mcp_server.step1",
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="tools-enable"]',
-        prepare: openTools,
-        textKey: "feature_guide.mcp_server.step2",
-        check: toolsAreEnabled,
-      },
-      {
-        target: '[data-guide="tool-mcp_remote"]',
-        prepare: ensureToolsEnabled,
-        textKey: "feature_guide.mcp_server.step3",
-        check: () => isToolActive("mcp_remote"),
-      },
-      {
         target: '[data-guide="mcp-input"]',
-        prepare: () => ensureTool("mcp_remote"),
-        textKey: "feature_guide.mcp_server.step4",
+        textKey: "feature_guide.mcp_server.step2",
         check: mcpConfigured,
+      },
+      {
+        target: '[data-guide="tool-mcp_local"]',
+        prepare: () => ensureTool("mcp_local"),
+        textKey: "feature_guide.mcp_server.step3",
+        check: () => isToolActive("mcp_local"),
       },
     ],
   },

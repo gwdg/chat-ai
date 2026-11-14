@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getDefaultConversation } from "../utils/conversationUtils";
 
 import { useSyncConversation } from "../hooks/useSyncConversation";
@@ -19,10 +19,15 @@ import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
 import HallucinationWarning from "../components/Conversation/HallucinationWarning";
 import TourManager from "../components/SettingsPanel/TourManager";
 import { useEffect, useState } from "react";
-import { activeMcpServers, prefetchMcpServers } from "../agent/mcp";
+import {
+  activeMcpServers,
+  prefetchMcpServers,
+  resolveMcpServers,
+} from "../agent/mcp";
 import { resetMcpConfirmationSession } from "../agent/mcpConfirmation";
 import { isAgentEnabled } from "../apis/agentEndpoints";
 import { setLastConversation } from "../Redux/reducers/lastConversationSlice";
+import { selectGlobalMcpServers } from "../Redux/reducers/userSettingsReducer";
 
 import { useNavigate } from "react-router";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
@@ -40,6 +45,7 @@ export default function ChatPage() {
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
   const sendMessage = useSendMessage();
+  const globalMcpServers = useSelector(selectGlobalMcpServers);
 
   useSettingsDeepLink({ localState, userData, modelsData });
 
@@ -52,7 +58,17 @@ export default function ChatPage() {
 
   // Connect to the conversation's MCP servers before the first message, so a turn does not
   // wait for it. Debounced, as the list changes with every keystroke while a URL is typed.
-  const mcpServers = JSON.stringify(isAgentEnabled() ? activeMcpServers(localState?.settings) : []);
+  const mcpServers = JSON.stringify(
+    isAgentEnabled()
+      ? activeMcpServers({
+          ...localState?.settings,
+          mcp_servers: resolveMcpServers(
+            localState?.settings,
+            globalMcpServers,
+          ),
+        })
+      : [],
+  );
   // The agent loop is a large lazy chunk; fetch it while idle so the first
   // message does not wait for it.
   useEffect(() => {

@@ -52,6 +52,7 @@ const getDefaultState = () => {
       memories: [],
       memory_groups: [],
       default_memory_group: "default",
+      mcp_servers: [],
       timeout: 300000,
       memory_mode: 0,
       suggest_user_prompts: false,

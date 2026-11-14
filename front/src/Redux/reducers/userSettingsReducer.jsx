@@ -5,6 +5,7 @@ const initialState = {
   memories: [],
   memory_groups: [],
   default_memory_group: "default",
+  mcp_servers: [],
   timeout: 300000,
   memory_mode: 0,
   suggest_user_prompts: false,
@@ -79,6 +80,31 @@ function importUserSettingsState(state, incoming) {
       groupId: validGroupIds.has(groupId) ? groupId : "default",
     };
   });
+  if (Array.isArray(incoming.mcp_servers)) {
+    state.mcp_servers = incoming.mcp_servers
+      .filter(
+        (server) =>
+          server &&
+          typeof server.id === "string" &&
+          (server.kind === "local" || server.kind === "remote") &&
+          typeof (server.kind === "local" ? server.url : server.serverId) ===
+            "string" &&
+          String(
+            server.kind === "local" ? server.url : server.serverId,
+          ).trim(),
+      )
+      .map((server) => ({
+        id: server.id,
+        name: typeof server.name === "string" ? server.name : undefined,
+        kind: server.kind,
+        url: server.kind === "local" ? server.url.trim() : undefined,
+        serverId:
+          server.kind === "remote" ? server.serverId.trim() : undefined,
+        ...(server.headers && typeof server.headers === "object"
+          ? { headers: { ...server.headers } }
+          : {}),
+      }));
+  }
   const timeout = Number(incoming.timeout);
   if (Number.isFinite(timeout)) {
     state.timeout = Math.min(Math.max(timeout, 5000), 900000);
@@ -333,6 +359,30 @@ const userSettingsSlice = createSlice({
       state.send_with_enter = Boolean(action.payload);
     },
 
+    addMcpServer: (state, action) => {
+      if (!Array.isArray(state.mcp_servers)) state.mcp_servers = [];
+      const server = action.payload;
+      if (!server?.id || !server?.kind) return;
+      if (state.mcp_servers.some((item) => item.id === server.id)) return;
+      state.mcp_servers.push(server);
+    },
+    updateMcpServer: (state, action) => {
+      if (!Array.isArray(state.mcp_servers)) state.mcp_servers = [];
+      const { id, patch } = action.payload || {};
+      const index = state.mcp_servers.findIndex((item) => item.id === id);
+      if (index >= 0 && patch) state.mcp_servers[index] = {
+        ...state.mcp_servers[index],
+        ...patch,
+        id,
+      };
+    },
+    removeMcpServer: (state, action) => {
+      if (!Array.isArray(state.mcp_servers)) state.mcp_servers = [];
+      state.mcp_servers = state.mcp_servers.filter(
+        (item) => item.id !== action.payload,
+      );
+    },
+
     importUserSettings: (state, action) => {
       importUserSettingsState(state, action.payload);
     },
@@ -361,6 +411,7 @@ export const {
   addMemory, editMemory, deleteMemory, deleteAllMemories,
   addMemoryGroup, renameMemoryGroup, deleteMemoryGroup,
   setDefaultMemoryGroup, setMemoryGroup,
+  addMcpServer, updateMcpServer, removeMcpServer,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
@@ -372,6 +423,8 @@ export const {
 
 // Selectors
 export const selectAllMemories = (state) => state.user_settings.memories;
+export const selectGlobalMcpServers = (state) =>
+  state.user_settings.mcp_servers ?? [];
 export const selectMemoryGroups = (state) =>
   state.user_settings.memory_groups ?? [];
 export const selectDefaultMemoryGroup = (state) =>

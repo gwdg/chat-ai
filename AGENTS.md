@@ -602,6 +602,17 @@ The `workspace_overview` feature guide targets `[data-guide="workspace-add-sourc
 `workspace-sources` and `workspace-files`.
 
 
+### 4.25 MCP servers are configured globally and selected per chat
+
+`user_settings.mcp_servers` holds the global definitions (`{id, name, kind: "local" | "remote",
+url?, serverId?, headers?}`), managed by the sidebar's `McpServerList` and `McpServerModal`
+(including the connection test). Per-chat settings store only the selected ids in
+`mcp_local_server_ids` / `mcp_remote_server_ids`; `agent/mcp.ts#resolveMcpServers` expands them for
+the agent, gateway request and prefetch, and still merges legacy full entries from
+`settings.mcp_servers`. Local tools and GWDG Tools show only checkboxes for already configured
+servers, never URL/id/auth fields; `remoteMcpEnabled` also treats selected remote ids as a value.
+
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

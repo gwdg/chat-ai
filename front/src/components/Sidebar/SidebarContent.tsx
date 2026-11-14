@@ -81,6 +81,7 @@ import DeleteChatButton from "./Buttons/DeleteChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
 import TutorialStatus from "../Others/TutorialStatus";
 import WorkspaceList from "../Workspace/WorkspaceList";
+import McpServerList from "./McpServerList";
 
 export default function SidebarContent({
   localState,
@@ -1026,6 +1027,8 @@ export default function SidebarContent({
             <>
               <div className="mx-3 border-t border-base-300" />
               <WorkspaceList />
+              <div className="mx-3 border-t border-base-300" />
+              <McpServerList />
             </>
           )}
         </div>

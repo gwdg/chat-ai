@@ -6,7 +6,7 @@ const agentMocks = vi.hoisted(() => ({ agent: false, gateway: true }));
 
 vi.mock("react-redux", () => ({
   useDispatch: () => vi.fn(),
-  useSelector: () => true,
+  useSelector: () => [],
 }));
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: vi.fn() }),

@@ -4,6 +4,9 @@ import MountFolderButton from "../MountFolderButton";
 
 const workspaceMocks = vi.hoisted(() => ({ attached: false }));
 
+vi.mock("react-redux", () => ({
+  useSelector: () => [],
+}));
 vi.mock("../../../db/workspaceDb", () => ({
   useChatWorkspaces: () =>
     workspaceMocks.attached ? [{ workspaceId: "workspace-1" }] : [],

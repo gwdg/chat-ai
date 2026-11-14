@@ -19,7 +19,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import ArcanaContainer from "./ArcanaContainer";
-import MCPContainer from "./MCPContainer";
+import McpServerPicker from "./McpServerPicker";
 import MiniToolButton from "./MiniToolButton";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
 import { remoteMcpEnabled } from "../../agent/mcp";
@@ -332,10 +332,10 @@ export default function ToolsContainer({ localState, setLocalState }) {
       )}
       {/* MCP box (only when enabled AND has a value) */}
       {showMCPBox && (
-        <MCPContainer
+        <McpServerPicker
           localState={localState}
           setLocalState={setLocalState}
-          remote
+          kind="remote"
         />
       )}
     </div>
