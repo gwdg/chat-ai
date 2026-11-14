@@ -8,7 +8,7 @@ import {
 
 import { getWhatsNew } from "../../utils/metaTools";
 import {
-  rendererComponents,
+  plainRendererComponents,
   SafeMarkdown,
 } from "../Conversation/MessageAssistant/MarkdownRenderer";
 import {
@@ -206,7 +206,7 @@ export default function MetaChangesPanel({ userSettings, children }) {
           <p className="text-xs text-error">{error}</p>
         ) : state.text ? (
           <div className="text-xs leading-relaxed text-base-content/80">
-            <SafeMarkdown components={rendererComponents}>
+            <SafeMarkdown components={plainRendererComponents}>
               {state.text}
             </SafeMarkdown>
           </div>

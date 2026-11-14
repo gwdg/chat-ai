@@ -56,12 +56,13 @@ const MarkdownImage = ({ src, alt, ...props }) => {
 };
 
 // Conversation links produced by the Meta chat navigate inside the SPA.
-const MarkdownLink = ({ href, children }) => {
+const MarkdownLink = ({ href, children, plain = false }) => {
   const navigate = useNavigate();
   const className =
     "text-info hover:text-info underline transition-colors text-sm";
   const actionLinkClassName =
     "btn btn-accent btn-xs ml-1 inline-flex w-fit gap-1 align-middle";
+  const linkClassName = plain ? className : actionLinkClassName;
 
   if (
     typeof href === "string" &&
@@ -74,13 +75,13 @@ const MarkdownLink = ({ href, children }) => {
       <a
         href={href}
         data-guide={isMessage ? "message-citation" : undefined}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           navigate(href);
         }}
       >
-        <Icon size={12} aria-hidden="true" />
+        {!plain && <Icon size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -95,7 +96,7 @@ const MarkdownLink = ({ href, children }) => {
     return (
       <a
         href={href}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           const handled = !window.dispatchEvent(
@@ -107,7 +108,7 @@ const MarkdownLink = ({ href, children }) => {
           if (!handled) navigate(href);
         }}
       >
-        <FileText size={12} aria-hidden="true" />
+        {!plain && <FileText size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -117,13 +118,13 @@ const MarkdownLink = ({ href, children }) => {
     return (
       <a
         href={href}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           navigate(href);
         }}
       >
-        <Bot size={12} aria-hidden="true" />
+        {!plain && <Bot size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -136,7 +137,7 @@ const MarkdownLink = ({ href, children }) => {
     return (
       <a
         href={href}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           window.dispatchEvent(
@@ -146,7 +147,7 @@ const MarkdownLink = ({ href, children }) => {
           );
         }}
       >
-        <Settings size={12} aria-hidden="true" />
+        {!plain && <Settings size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -158,7 +159,7 @@ const MarkdownLink = ({ href, children }) => {
     return (
       <a
         href={href}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           window.dispatchEvent(
@@ -168,7 +169,7 @@ const MarkdownLink = ({ href, children }) => {
           );
         }}
       >
-        <GraduationCap size={12} aria-hidden="true" />
+        {!plain && <GraduationCap size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -181,7 +182,7 @@ const MarkdownLink = ({ href, children }) => {
     return (
       <a
         href={href}
-        className={actionLinkClassName}
+        className={linkClassName}
         onClick={(event) => {
           event.preventDefault();
           window.dispatchEvent(
@@ -191,7 +192,7 @@ const MarkdownLink = ({ href, children }) => {
           );
         }}
       >
-        <PlayCircle size={12} aria-hidden="true" />
+        {!plain && <PlayCircle size={12} aria-hidden="true" />}
         {children}
       </a>
     );
@@ -428,6 +429,13 @@ export const rendererComponents = {
 export const thinkingRendererComponents = {
   ...rendererComponents,
   code: plainCode,
+};
+
+const PlainMarkdownLink = (props) => <MarkdownLink {...props} plain />;
+
+export const plainRendererComponents = {
+  ...rendererComponents,
+  a: PlainMarkdownLink,
 };
 
 /* ------------------------------------------------
