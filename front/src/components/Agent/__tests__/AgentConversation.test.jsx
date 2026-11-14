@@ -220,7 +220,7 @@ describe("AgentConversation control commands", () => {
         { name: "Alice" },
       ),
     );
-    expect(await screen.findByText("Form results")).toBeInTheDocument();
+    expect(await screen.findByText("Choose a name")).toBeInTheDocument();
     expect(screen.getByText("Submitted")).toBeInTheDocument();
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
@@ -243,13 +243,14 @@ describe("AgentConversation control commands", () => {
     const first = render(<AgentConversation agent={agent} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Submit" }));
-    expect(await screen.findByText("Form results")).toBeInTheDocument();
+    await waitFor(() => expect(apiMocks.replyForm).toHaveBeenCalled());
+    expect(await screen.findByText("Remember this")).toBeInTheDocument();
 
     first.unmount();
     apiMocks.forms.mockResolvedValue([]);
     render(<AgentConversation agent={agent} />);
 
-    expect(await screen.findByText("Form results")).toBeInTheDocument();
+    expect(await screen.findByText("Remember this")).toBeInTheDocument();
     expect(screen.getByText("Bob")).toBeInTheDocument();
   });
 

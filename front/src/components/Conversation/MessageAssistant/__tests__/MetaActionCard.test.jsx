@@ -33,6 +33,7 @@ vi.mock("../../../../db", () => ({
   ensureFolder: vi.fn(async () => "folder-1"),
   getConversationMeta: vi.fn(async () => conversation),
   getFolder: vi.fn(async () => null),
+  newId: vi.fn(() => "new-mcp-id"),
   setConversationPinned: vi.fn(async () => {}),
   setFolderPinned: vi.fn(async () => {}),
   updateConversationMeta: vi.fn(async () => {}),
@@ -118,6 +119,52 @@ describe("MetaActionCard", () => {
         },
       }),
     );
+  });
+
+  it("adds a global MCP copy even when the URL already exists", async () => {
+    mockState.user_settings.mcp_servers = [
+      {
+        id: "crm-1",
+        name: "crm-mcp",
+        kind: "local",
+        url: "http://localhost:9000/mcp",
+      },
+    ];
+    render(
+      <MetaActionCard
+        actions={[
+          {
+            type: "mcp_server",
+            op: "add",
+            serverScope: "local",
+            scope: "global",
+            conversationId: null,
+            entryId: "",
+            name: "crm-mcp2",
+            url: "http://localhost:9000/mcp",
+            serverId: "",
+          },
+        ]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /accept changes/i }));
+    await waitFor(() =>
+      expect(dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            mcp_servers: [
+              expect.objectContaining({ id: "crm-1", name: "crm-mcp" }),
+              expect.objectContaining({ id: "new-mcp-id", name: "crm-mcp2" }),
+            ],
+          }),
+        }),
+      ),
+    );
+    mockState.user_settings.mcp_servers = [];
   });
 
   it("applies an ArcanaV2 tool setting", async () => {

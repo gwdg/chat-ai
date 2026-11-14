@@ -77,7 +77,7 @@ export default function AgentList() {
   const [statuses, setStatuses] = useState<
     Record<string, "ready" | "working" | "error" | "checking">
   >({});
-  const statusPollingRef = useRef(false);
+  const statusPollingRef = useRef<Promise<void> | null>(null);
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__agents__");
   const activeId = location.pathname.startsWith("/agent/")
@@ -86,40 +86,48 @@ export default function AgentList() {
 
   useEffect(() => {
     let cancelled = false;
-    const poll = async () => {
-      if (statusPollingRef.current || document.visibilityState === "hidden") {
-        return;
-      }
-      statusPollingRef.current = true;
-      try {
-        const next: Record<
-          string,
-          "ready" | "working" | "error" | "checking"
-        > = {};
-        await Promise.all(
-          agents.map(async (agent) => {
-            if (!agent.sessionId) {
-              next[agent.id] = "error";
-              return;
-            }
+    const runPoll = async () => {
+      if (cancelled || document.visibilityState === "hidden") return;
+      const next: Record<
+        string,
+        "ready" | "working" | "error" | "checking"
+      > = {};
+      await Promise.all(
+        agents.map(async (agent) => {
+          if (!agent.sessionId) {
+            next[agent.id] = "error";
+            return;
+          }
+          try {
+            const statusMap = await getOpencodeSessionStatus(agent);
+            next[agent.id] = classifySessionStatus(
+              statusMap?.[agent.sessionId],
+            );
+          } catch {
             try {
-              const statusMap = await getOpencodeSessionStatus(agent);
-              next[agent.id] = classifySessionStatus(
-                statusMap?.[agent.sessionId],
-              );
+              await getOpencodeInfo(agent);
+              next[agent.id] = "ready";
             } catch {
-              try {
-                await getOpencodeInfo(agent);
-                next[agent.id] = "ready";
-              } catch {
-                next[agent.id] = "error";
-              }
+              next[agent.id] = "error";
             }
-          }),
-        );
-        if (!cancelled) setStatuses(next);
+          }
+        }),
+      );
+      if (!cancelled) setStatuses(next);
+    };
+    const poll = async () => {
+      while (statusPollingRef.current) {
+        await statusPollingRef.current.catch(() => {});
+      }
+      if (cancelled || document.visibilityState === "hidden") return;
+      const current = runPoll();
+      statusPollingRef.current = current;
+      try {
+        await current;
       } finally {
-        statusPollingRef.current = false;
+        if (statusPollingRef.current === current) {
+          statusPollingRef.current = null;
+        }
       }
     };
     void poll();

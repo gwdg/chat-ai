@@ -8,7 +8,11 @@ import {
 import { buildFeatureGuidePrompt, featureGuides } from "../config/featureGuides";
 import { buildUseCasePrompt, useCases } from "../config/useCases";
 import { loadPersonaCatalog } from "./personaCatalog";
-import { remoteMcpEnabled } from "../agent/mcp";
+import {
+  normalizeMcpUrl,
+  remoteMcpEnabled,
+  testMcpServer,
+} from "../agent/mcp";
 
 const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
@@ -79,7 +83,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
         ? userSettings.mcp_servers
             .map(
               (server) =>
-                `${server.name || server.url || server.serverId} (${server.kind})`,
+                `${server.name || server.url || server.serverId} (${server.kind}, id: ${server.id}${server.url ? `, url: ${server.url}` : ""})`,
             )
             .join(", ")
         : "none"
@@ -269,7 +273,13 @@ export const META_TOOL_DEFINITIONS = [
   ),
   tool(
     "get_user_settings",
-    "Get the current global user preferences, interface settings, module flags, and the Meta chat's own settings.",
+    "Get the current global user preferences, interface settings, module flags, MCP servers, and the Meta chat's own settings.",
+  ),
+  tool(
+    "test_mcp_server",
+    "Test a configured local MCP server by its id, name, or URL and report whether it is reachable.",
+    { server: { type: "string", description: "MCP server id, name, or URL" } },
+    ["server"],
   ),
   tool("list_models", "List the models available in this deployment with their ids and names."),
   tool("list_personas", "List the recommended persona catalog with ids, titles, categories, and descriptions."),
@@ -415,6 +425,42 @@ export function createMetaToolRunner({
           ...buildSettingsLines(userSettings, interfaceSettings),
           `- Meta chat settings: ${buildConversationSettingsSummary(metaSettings)}`,
         ].join("\n");
+      }
+
+      case "test_mcp_server": {
+        const target = String(args.server || "").trim();
+        const server = (userSettings.mcp_servers ?? []).find(
+          (item) =>
+            item?.id === target ||
+            item?.name === target ||
+            item?.url === target,
+        );
+        if (!server) return "MCP server not found.";
+        if (server.kind !== "local" || !normalizeMcpUrl(server.url)) {
+          return "This MCP server cannot be tested from the browser.";
+        }
+        try {
+          const result = await testMcpServer({
+            url: normalizeMcpUrl(server.url),
+            headers: server.headers,
+            enabled: true,
+          });
+          window.dispatchEvent(
+            new CustomEvent("chatai:mcp-status", {
+              detail: { id: server.id, status: "ready" },
+            }),
+          );
+          return `Connected: ${result.name} (${result.toolCount} tools).`;
+        } catch (error) {
+          window.dispatchEvent(
+            new CustomEvent("chatai:mcp-status", {
+              detail: { id: server.id, status: "error" },
+            }),
+          );
+          return `Connection failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`;
+        }
       }
 
       case "list_models": {

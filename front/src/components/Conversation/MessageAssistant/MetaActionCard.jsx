@@ -16,15 +16,20 @@ import { normalizeMcpUrl } from "../../../agent/mcp";
 
 import {
   assignConversationToFolder,
+  createConversation,
+  deleteConversation,
   ensureFolder,
+  getConversation,
   getConversationMeta,
   getFolder,
+  newId,
   setConversationPinned,
   setFolderPinned,
   updateConversationMeta,
   useConversationList,
   useFolderList,
 } from "../../../db";
+import { getDefaultSettings } from "../../../utils/conversationUtils";
 import { useToast } from "../../../hooks/useToast";
 import {
   importUserSettings,
@@ -91,6 +96,7 @@ const applyMcpAction = (servers, action) => {
   if (action.op === "add") {
     if (index >= 0) {
       const entry = { ...next[index] };
+      if (action.name) entry.name = action.name;
       if (action.enabled !== undefined) entry.enabled = action.enabled;
       if (action.authorization !== undefined) withAuthorization(entry, action.authorization);
       next[index] = entry;
@@ -111,6 +117,158 @@ const applyMcpAction = (servers, action) => {
   if (action.authorization !== undefined) withAuthorization(entry, action.authorization);
   next[index] = entry;
   return next;
+};
+
+const globalMcpMatches = (server, action, forAdd = false) => {
+  if (action.entryId && server.id === action.entryId) return true;
+  if (action.serverScope === "local") {
+    const url = normalizeMcpUrl(action.url);
+    const sameUrl =
+      !!url && server.kind === "local" && normalizeMcpUrl(server.url) === url;
+    if (!sameUrl) return false;
+    if (forAdd && action.name) {
+      return (server.name || "").trim() === action.name.trim();
+    }
+    return true;
+  }
+  if (server.kind !== "remote" || server.serverId !== action.serverId) {
+    return false;
+  }
+  return !forAdd || !action.name || (server.name || "").trim() === action.name.trim();
+};
+
+const applyGlobalMcpAction = (servers, action) => {
+  if (
+    action.serverScope === "local" &&
+    (action.op === "add" || action.url) &&
+    !normalizeMcpUrl(action.url)
+  ) {
+    throw new Error("Invalid MCP server URL");
+  }
+  const next = cloneMcpServers(servers);
+  const index = next.findIndex((server) =>
+    globalMcpMatches(server, action, action.op === "add"),
+  );
+
+  if (action.op === "remove") {
+    if (index < 0) throw new Error("MCP server not found");
+    next.splice(index, 1);
+    return next;
+  }
+
+  const entry =
+    index >= 0
+      ? { ...next[index] }
+      : { id: newId(), kind: action.serverScope };
+  if (action.name) entry.name = action.name;
+  if (action.serverScope === "local" && action.url) entry.url = action.url;
+  if (action.serverScope === "remote" && action.serverId) {
+    entry.serverId = action.serverId;
+  }
+  if (action.authorization !== undefined) {
+    withAuthorization(entry, action.authorization);
+  }
+  if (index >= 0) next[index] = entry;
+  else next.push(entry);
+  return next;
+};
+
+const normalizeCreatedMessage = (message) => ({
+  role: message?.role,
+  text: Array.isArray(message?.content)
+    ? message.content
+        .filter((part) => part?.type === "text")
+        .map((part) => part.text || "")
+        .join("\n")
+    : String(message?.content ?? ""),
+});
+
+const buildCreateChatPayload = (
+  action,
+  userSettings,
+  modelsData,
+  folderId = null,
+) => {
+  const base = getDefaultSettings(userSettings);
+  const settings = {
+    ...base,
+    tools: { ...(base.tools || {}) },
+    audio: { ...(base.audio || {}) },
+    arcana: { ...(base.arcana || {}) },
+  };
+  const overrides = action.settings || {};
+
+  if (overrides.model) {
+    const model = (modelsData || []).find(
+      (item) => item.id === overrides.model || item.name === overrides.model,
+    );
+    if (!model) throw new Error("Model not found");
+    settings.model = model;
+  }
+  if (overrides.temperature !== undefined) {
+    settings.temperature = overrides.temperature;
+  }
+  if (overrides.top_p !== undefined) settings.top_p = overrides.top_p;
+  if (overrides.reasoning_effort !== undefined) {
+    settings.reasoning_effort = overrides.reasoning_effort;
+  }
+  if (overrides.memory_mode_override !== undefined) {
+    settings.memory_mode_override = overrides.memory_mode_override;
+  }
+  if (overrides.memory_group_override !== undefined) {
+    const groups = new Set([
+      "default",
+      ...(userSettings.memory_groups || []).map((group) => group.id),
+    ]);
+    if (!groups.has(overrides.memory_group_override)) {
+      throw new Error("Memory group not found");
+    }
+    settings.memory_group_override = overrides.memory_group_override;
+  }
+  if (overrides.enable_tools !== undefined) {
+    settings.enable_tools = overrides.enable_tools;
+  }
+  if (overrides.enable_web_search !== undefined) {
+    settings.enable_web_search = overrides.enable_web_search;
+  }
+  if (overrides.tools) {
+    settings.tools = { ...settings.tools, ...overrides.tools };
+  }
+
+  const globalServers = userSettings.mcp_servers || [];
+  const localIds = new Set(
+    globalServers
+      .filter((server) => server.kind === "local")
+      .map((server) => server.id),
+  );
+  const remoteIds = new Set(
+    globalServers
+      .filter((server) => server.kind === "remote")
+      .map((server) => server.id),
+  );
+  if (Array.isArray(overrides.mcp_local_server_ids)) {
+    settings.mcp_local_server_ids = overrides.mcp_local_server_ids.filter(
+      (id) => localIds.has(id),
+    );
+  }
+  if (Array.isArray(overrides.mcp_remote_server_ids)) {
+    settings.mcp_remote_server_ids = overrides.mcp_remote_server_ids.filter(
+      (id) => remoteIds.has(id),
+    );
+  }
+
+  const messages = (action.messages || []).map((message, index) => ({
+    idx: index,
+    role: message.role,
+    content: [{ type: "text", text: message.text }],
+  }));
+
+  return {
+    title: action.title || "New Chat",
+    settings,
+    messages,
+    folderId,
+  };
 };
 
 export default function MetaActionCard({
@@ -350,13 +508,22 @@ export default function MetaActionCard({
         title: titleFor(action.conversationId),
       });
     }
+    if (action.type === "create_chat") {
+      return t("meta_chat.create_chat_summary", {
+        title: action.title || t("conversation.untitled"),
+        count: action.messages?.length ?? 0,
+      });
+    }
     if (action.type === "mcp_server") {
       const target =
-        action.scope === "all"
-          ? t("meta_chat.mcp_target_all")
-          : titleFor(action.conversationId);
+        action.scope === "global"
+          ? t("meta_chat.mcp_target_global")
+          : action.scope === "all"
+            ? t("meta_chat.mcp_target_all")
+            : titleFor(action.conversationId);
       const name =
-        action.serverScope === "local" ? action.url : action.serverId;
+        action.name ||
+        (action.serverScope === "local" ? action.url : action.serverId);
       return t(
         `meta_chat.mcp_${action.op}_${action.serverScope}_summary`,
         { name, target },
@@ -427,6 +594,7 @@ export default function MetaActionCard({
 
     try {
       const prepared = [];
+      const createdChats = [];
       const settingUpdates = {};
       const memoryActions = actions.filter((action) =>
         [
@@ -445,6 +613,10 @@ export default function MetaActionCard({
         }
 
         if (action.type === "conversation_setting") {
+          continue;
+        }
+
+        if (action.type === "mcp_server" || action.type === "create_chat") {
           continue;
         }
 
@@ -607,7 +779,9 @@ export default function MetaActionCard({
       }
 
       const mcpPlan = new Map();
-      for (const action of actions.filter((item) => item.type === "mcp_server")) {
+      for (const action of actions.filter(
+        (item) => item.type === "mcp_server" && item.scope !== "global",
+      )) {
         const targets =
           action.scope === "all"
             ? conversations
@@ -627,10 +801,26 @@ export default function MetaActionCard({
         }
       }
       if (
-        actions.some((action) => action.type === "mcp_server") &&
+        actions.some(
+          (action) =>
+            action.type === "mcp_server" && action.scope !== "global",
+        ) &&
         mcpPlan.size === 0
       ) {
         throw new Error("No conversations found");
+      }
+
+      const globalMcpActions = actions.filter(
+        (action) => action.type === "mcp_server" && action.scope === "global",
+      );
+      let globalMcpSnapshot = null;
+      if (globalMcpActions.length > 0) {
+        const previous = cloneMcpServers(userSettings.mcp_servers);
+        let expected = previous;
+        for (const action of globalMcpActions) {
+          expected = applyGlobalMcpAction(expected, action);
+        }
+        globalMcpSnapshot = { previous, expected };
       }
 
       previousState.current = {
@@ -690,6 +880,13 @@ export default function MetaActionCard({
           previous: cloneMcpServers(entry.previous),
           expected: cloneMcpServers(entry.expected),
         })),
+        globalMcpServers: globalMcpSnapshot
+          ? {
+              previous: cloneMcpServers(globalMcpSnapshot.previous),
+              expected: cloneMcpServers(globalMcpSnapshot.expected),
+            }
+          : null,
+        createdChats,
       };
 
       for (const action of prepared) {
@@ -754,6 +951,40 @@ export default function MetaActionCard({
         );
       }
 
+      const createChatActions = actions.filter(
+        (action) => action.type === "create_chat",
+      );
+      for (const action of createChatActions) {
+        let folderId = action.folderId || null;
+        if (folderId) {
+          const folder = await getFolder(folderId);
+          if (!folder) throw new Error("Topic not found");
+        } else if (action.folderName) {
+          folderId = await ensureFolder(action.folderName);
+        }
+        const payload = buildCreateChatPayload(
+          action,
+          userSettings,
+          modelsData,
+          folderId,
+        );
+        const id = await createConversation(payload);
+        if (action.pinned) {
+          await updateConversationMeta(id, { pinned: true });
+        }
+        createdChats.push({
+          id,
+          title: payload.title,
+          settings: payload.settings,
+          messages: payload.messages.map(normalizeCreatedMessage),
+        });
+      }
+
+      if (globalMcpSnapshot) {
+        dispatch(
+          importUserSettings({ mcp_servers: globalMcpSnapshot.expected }),
+        );
+      }
       if (Object.keys(settingUpdates).length > 0) {
         dispatch(importUserSettings(settingUpdates));
       }
@@ -871,6 +1102,31 @@ export default function MetaActionCard({
       }
 
       if (
+        snapshot.globalMcpServers &&
+        !valuesEqual(
+          userSettings.mcp_servers ?? [],
+          snapshot.globalMcpServers.expected,
+        )
+      ) {
+        throw new Error("MCP servers changed");
+      }
+
+      for (const chat of snapshot.createdChats || []) {
+        const current = await getConversation(chat.id);
+        if (!current) throw new Error("Created chat no longer exists");
+        if ((current.title || "") !== chat.title) {
+          throw new Error("Created chat changed");
+        }
+        if (!valuesEqual(current.settings, chat.settings)) {
+          throw new Error("Created chat changed");
+        }
+        const messages = (current.messages || []).map(normalizeCreatedMessage);
+        if (!valuesEqual(messages, chat.messages)) {
+          throw new Error("Created chat changed");
+        }
+      }
+
+      if (
         snapshot.memories &&
         !valuesEqual(memories, snapshot.memories.expected)
       ) {
@@ -939,12 +1195,23 @@ export default function MetaActionCard({
         );
       }
 
+      for (const chat of snapshot.createdChats || []) {
+        await deleteConversation(chat.id);
+      }
+
       const previousSettings = Object.fromEntries(
         Object.entries(snapshot.settings).map(([key, values]) => [
           key,
           values.previous,
         ]),
       );
+      if (snapshot.globalMcpServers) {
+        dispatch(
+          importUserSettings({
+            mcp_servers: snapshot.globalMcpServers.previous,
+          }),
+        );
+      }
       if (Object.keys(previousSettings).length > 0) {
         dispatch(importUserSettings(previousSettings));
       }

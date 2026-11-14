@@ -407,11 +407,15 @@ Tutorials and use cases start through the `start_tutorial` / `start_use_case` to
 `MarkdownLink`. The legacy `[[GUIDE:...]]` and `[[USE_CASE:...]]` markers still start them when no
 tool already did, and `[[PERSONA:...]]` remains supported.
 
-Mutating chat actions are proposals, never applied by the model. It emits `RENAME_CHAT` /
+Mutating chat actions are proposals, never applied by the model. It emits `CREATE_CHAT`, which
+creates a new conversation with validated settings and text-only initial messages, plus `RENAME_CHAT` /
 `MOVE_CHAT`, `PIN_CHAT`, `PIN_TOPIC`, `SET_SETTING`, `MCP_SERVER`, and memory markers
 (`utils/metaActions.js`), which `MetaActionCard` renders below the message with a warning icon and
 an explicit Accept button. `MCP_SERVER` adds, updates, or removes per-chat MCP servers (local URL
-entries or remote gateway ids). Only that click calls `updateConversationMeta` /
+entries or remote gateway ids), and with `target: "global"` it changes the sidebar MCP server list
+in `user_settings.mcp_servers`; the Meta chat reads the entry ids from `get_user_settings`.
+`test_mcp_server` tests a configured local server by id, name, or URL. Reverting a created chat
+deletes it only if its title, settings, and messages still match what was created. Only that click calls `updateConversationMeta` /
 `assignConversationToFolder` / `setConversationPinned` / `setFolderPinned` or dispatches
 `importUserSettings`; markers
 are stripped from rendered markdown and from Meta-chat history. Memory indices come from the
@@ -646,7 +650,8 @@ The `workspace_overview` feature guide targets `[data-guide="workspace-add-sourc
 
 `user_settings.mcp_servers` holds the global definitions (`{id, name, kind: "local" | "remote",
 url?, serverId?, headers?}`), managed by the sidebar's `McpServerList` and `McpServerModal`
-(including the connection test). Per-chat settings store only the selected ids in
+(including the connection test). Local servers show a status light: amber until tested, red on a
+failed test, green when reachable; clicking the light runs `testMcpServer`. Per-chat settings store only the selected ids in
 `mcp_local_server_ids` / `mcp_remote_server_ids`; `agent/mcp.ts#resolveMcpServers` expands them for
 the agent, gateway request and prefetch, and still merges legacy full entries from
 `settings.mcp_servers`. GWDG Tools has one MCP Servers tool that switches every configured

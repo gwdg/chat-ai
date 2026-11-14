@@ -41,6 +41,51 @@ describe("Meta chat action markers", () => {
     expect(proposals[8]).toMatchObject({ type: "delete_memory", index: 1 });
   });
 
+  it("parses global MCP server proposals", () => {
+    const proposals = getMetaActionProposals(
+      '[[MCP_SERVER:{"op":"add","server":"local","target":"global","name":"Files","url":"localhost:9000"}]]',
+    );
+    expect(proposals).toEqual([
+      {
+        type: "mcp_server",
+        op: "add",
+        serverScope: "local",
+        scope: "global",
+        conversationId: null,
+        entryId: "",
+        name: "Files",
+        url: "localhost:9000",
+        serverId: "",
+        enabled: undefined,
+        authorization: undefined,
+      },
+    ]);
+  });
+
+  it("parses well-formed CREATE_CHAT proposals", () => {
+    const proposals = getMetaActionProposals(
+      '[[CREATE_CHAT:{"title":"Plan","folderName":"Work","settings":{"model":"m1","temperature":0.7,"tools":{"web_search":true}},"messages":[{"role":"system","content":"Be concise"},{"role":"user","content":"Start"}]}]]',
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      type: "create_chat",
+      title: "Plan",
+      folderName: "Work",
+      settings: { model: "m1", temperature: 0.7, tools: { web_search: true } },
+      messages: [
+        { role: "system", text: "Be concise" },
+        { role: "user", text: "Start" },
+      ],
+    });
+  });
+
+  it("rejects malformed CREATE_CHAT proposals", () => {
+    const proposals = getMetaActionProposals(
+      '[[CREATE_CHAT:{"title":"Bad","messages":[{"role":"tool","content":"nope"}]}]]',
+    );
+    expect(proposals).toEqual([]);
+  });
+
   it("accepts an optional target group for memory proposals", () => {
     const proposals = getMetaActionProposals(
       '[[ADD_MEMORY:{"text":"remember this","group":"Private"}]]',

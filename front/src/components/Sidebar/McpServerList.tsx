@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -15,6 +16,7 @@ import { ChevronDown, Plus, Server, TriangleAlert } from "lucide-react";
 import Tooltip from "../Others/Tooltip";
 
 import { useModal } from "../../modals/ModalContext";
+import { useToast } from "../../hooks/useToast";
 import {
   removeMcpServer,
   selectGlobalMcpServers,
@@ -23,19 +25,66 @@ import {
   selectCollapsedTopics,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
-import { normalizeMcpUrl } from "../../agent/mcp";
+import { normalizeMcpUrl, testMcpServer } from "../../agent/mcp";
 import type { GlobalMcpServer } from "../../agent/mcp";
 
 export default function McpServerList() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { openModal } = useModal();
+  const { notifySuccess, notifyError } = useToast();
   const servers = useSelector(selectGlobalMcpServers) as GlobalMcpServer[];
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__mcp_servers__");
+  const [statuses, setStatuses] = useState<
+    Record<string, "unchecked" | "checking" | "ready" | "error">
+  >({});
+
+  useEffect(() => {
+    setStatuses({});
+  }, [servers]);
+
+  useEffect(() => {
+    const onStatus = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail?.id || !detail?.status) return;
+      setStatuses((current) => ({
+        ...current,
+        [detail.id]: detail.status,
+      }));
+    };
+    window.addEventListener("chatai:mcp-status", onStatus);
+    return () => window.removeEventListener("chatai:mcp-status", onStatus);
+  }, []);
 
   const edit = (server?: GlobalMcpServer) =>
     openModal("mcpServerEdit", { server });
+
+  const test = async (server: GlobalMcpServer) => {
+    if (server.kind !== "local" || statuses[server.id] === "checking") return;
+    setStatuses((current) => ({ ...current, [server.id]: "checking" }));
+    try {
+      const result = await testMcpServer({
+        url: normalizeMcpUrl(server.url),
+        headers: server.headers,
+        enabled: true,
+      });
+      setStatuses((current) => ({ ...current, [server.id]: "ready" }));
+      notifySuccess(
+        t("settings.mcp_test_success", {
+          name: result.name,
+          count: result.toolCount,
+        }),
+      );
+    } catch (error) {
+      setStatuses((current) => ({ ...current, [server.id]: "error" }));
+      notifyError(
+        t("settings.mcp_test_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  };
 
   return (
     <div className="px-3 pt-2 pb-1">
@@ -82,7 +131,48 @@ export default function McpServerList() {
               key={server.id}
               className="group flex items-center gap-1 rounded-xl px-2 py-1.5 text-base-content transition hover:bg-base-200"
             >
-              <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+              {(() => {
+                const status = statuses[server.id] ?? "unchecked";
+                const statusLabel = t(`mcp.status_${status}`);
+                const dotClass =
+                  status === "ready"
+                    ? "bg-success"
+                    : status === "checking"
+                      ? "bg-base-content/25 animate-pulse"
+                      : status === "error"
+                        ? "bg-error"
+                        : "bg-warning";
+                return server.kind === "local" ? (
+                  <button
+                    type="button"
+                    onClick={() => void test(server)}
+                    disabled={status === "checking"}
+                    className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+                    title={statusLabel}
+                    aria-label={`${server.name || server.url}: ${statusLabel}`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                  </button>
+                ) : (
+                  <span
+                    className="flex h-4 w-4 shrink-0 items-center justify-center"
+                    title={statusLabel}
+                    aria-label={statusLabel}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                  </span>
+                );
+              })()}
+              <button
+                type="button"
+                onClick={() => void test(server)}
+                disabled={
+                  server.kind !== "local" ||
+                  statuses[server.id] === "checking"
+                }
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                title={server.kind === "local" ? t("mcp.test") : undefined}
+              >
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-base-200 text-base-content/55">
                   <Server size={14} />
                 </span>
@@ -108,7 +198,7 @@ export default function McpServerList() {
                     <TriangleAlert size={13} />
                   </span>
                 )}
-              </span>
+              </button>
               <Popover className="relative shrink-0">
                 <PopoverButton
                   className={`flex h-6 w-6 items-center justify-center rounded-md text-base-content/40 transition hover:bg-base-300 hover:text-base-content focus:opacity-100 group-hover:opacity-100 ${

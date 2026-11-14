@@ -39,6 +39,7 @@ describe("AddAgentModal", () => {
       <AddAgentModal isOpen onClose={onClose} onCreate={onCreate} />,
     );
 
+    fireEvent.click(screen.getByLabelText("Local agent"));
     expect(screen.getByLabelText("HPC project")).toHaveValue("hpc-project-1");
     fireEvent.click(screen.getByRole("button", { name: "Add agent" }));
 
@@ -51,6 +52,7 @@ describe("AddAgentModal", () => {
     );
     expect(onCreate).toHaveBeenCalledWith({
       id: "agent-1",
+      local: false,
       projectId: "hpc-project-1",
       name: "HPC project 1",
       serverUrl: "http://127.0.0.1:9000",
@@ -66,6 +68,7 @@ describe("AddAgentModal", () => {
     const onCreate = vi.fn();
     render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={onCreate} />);
 
+    fireEvent.click(screen.getByLabelText("Local agent"));
     fireEvent.change(screen.getByLabelText("HPC project"), {
       target: { value: "hpc-project-2" },
     });

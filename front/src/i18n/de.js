@@ -249,7 +249,9 @@ export default {
       "{{setting}} für alle Chats auf „{{value}}“ setzen",
     conversation_setting_summary:
       "{{setting}} in „{{title}}“ auf „{{value}}“ setzen",
+    create_chat_summary: "Chat „{{title}}“ mit {{count}} Anfangsnachrichten erstellen",
     mcp_target_all: "alle Chats",
+    mcp_target_global: "die MCP-Serverliste",
     mcp_add_local_summary:
       "Lokalen MCP-Server {{name}} zu {{target}} hinzufügen",
     mcp_add_remote_summary:
@@ -1571,6 +1573,10 @@ export default {
     tooltip: "MCP-Server stellen dem Assistenten über das Model Context Protocol zusätzliche Werkzeuge und Dateien bereit. Lokale Server laufen auf diesem Gerät; GWDG-Server werden über das Gateway erreicht.",
     configured: "Konfigurierte MCP-Server",
     invalid_url: "Ungültige MCP-Server-URL. Bearbeiten Sie den Server, um sie zu korrigieren.",
+    status_unchecked: "Nicht getestet – zum Testen klicken",
+    status_checking: "Verbindung wird getestet",
+    status_ready: "Verbunden",
+    status_error: "Nicht erreichbar – zum Wiederholen klicken",
     none_configured: "Fügen Sie zuerst einen Server im Bereich MCP-Server hinzu.",
     group_local: "Lokale MCP-Tools aktivieren",
     group_remote: "GWDG-MCP-Tools aktivieren",

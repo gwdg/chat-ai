@@ -13,6 +13,7 @@ const shell = (id, created, patch = {}) => ({
   shellID: id,
   command: `command ${id}`,
   status: "exited",
+  aborted: false,
   exit: 0,
   time: { created },
   ...patch,

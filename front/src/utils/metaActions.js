@@ -1,5 +1,5 @@
 const ACTION_TYPES =
-  "RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
+  "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
 const ACTION_SOURCE = `\\[\\[(${ACTION_TYPES}):\\s*(\\{[\\s\\S]*?\\})\\]\\]`;
 
 const BARE_CLEAR_SOURCE =
@@ -53,6 +53,132 @@ function isValidConversationSetting(key, value) {
   return typeof value === "boolean";
 }
 
+const CREATE_CHAT_TOOL_KEYS = new Set([
+  "web_search",
+  "image_generation",
+  "image_modification",
+  "audio_generation",
+  "arcana_v2",
+  "arcana",
+  "mcp",
+  "mcp_remote",
+  "write_access",
+  "browser_storage",
+  "codemode",
+  "create_docx",
+]);
+
+const CREATE_CHAT_SETTING_KEYS = new Set([
+  "model",
+  "temperature",
+  "top_p",
+  "reasoning_effort",
+  "memory_mode_override",
+  "memory_group_override",
+  "enable_tools",
+  "enable_web_search",
+  "tools",
+  "mcp_local_server_ids",
+  "mcp_remote_server_ids",
+]);
+
+function normalizeCreateChat(payload) {
+  const title = String(payload?.title || "").trim().slice(0, 200);
+  const folderId =
+    payload?.folderId === null || payload?.folder_id === null
+      ? null
+      : String(payload?.folderId ?? payload?.folder_id ?? "").trim() || null;
+  const folderName = String(
+    payload?.folderName ?? payload?.folder_name ?? "",
+  ).trim().slice(0, 120);
+
+  const rawMessages = Array.isArray(payload?.messages) ? payload.messages : [];
+  if (rawMessages.length > 200) return null;
+  const messages = [];
+  let totalChars = 0;
+  for (const rawMessage of rawMessages) {
+    const role = String(rawMessage?.role || "").trim().toLowerCase();
+    if (!["system", "user", "assistant"].includes(role)) return null;
+    let text = "";
+    if (typeof rawMessage?.content === "string") {
+      text = rawMessage.content;
+    } else if (Array.isArray(rawMessage?.content)) {
+      if (rawMessage.content.some((part) => part?.type !== "text")) return null;
+      text = rawMessage.content
+        .map((part) => (typeof part?.text === "string" ? part.text : ""))
+        .join("\n");
+    } else {
+      return null;
+    }
+    text = text.trim();
+    if (!text || text.length > 20000) return null;
+    totalChars += text.length;
+    if (totalChars > 100000) return null;
+    messages.push({ role, text });
+  }
+
+  const rawSettings =
+    payload?.settings && typeof payload.settings === "object"
+      ? payload.settings
+      : {};
+  const settings = {};
+  for (const [key, value] of Object.entries(rawSettings)) {
+    if (!CREATE_CHAT_SETTING_KEYS.has(key)) continue;
+    if (key === "model") {
+      const id =
+        typeof value === "string"
+          ? value.trim()
+          : String(value?.id || "").trim();
+      if (id) settings.model = id;
+    } else if (key === "temperature" || key === "top_p") {
+      if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 2) {
+        settings[key] = value;
+      }
+    } else if (key === "reasoning_effort") {
+      if (value === null || (Number.isInteger(value) && value >= 0 && value <= 10)) {
+        settings[key] = value;
+      }
+    } else if (key === "memory_mode_override") {
+      if (value === "default" || [0, 1, 2].includes(Number(value))) {
+        settings[key] = value === "default" ? "default" : Number(value);
+      }
+    } else if (key === "memory_group_override") {
+      const group = String(value || "").trim();
+      if (group) settings.memory_group_override = group.slice(0, 120);
+    } else if (key === "enable_tools" || key === "enable_web_search") {
+      if (typeof value === "boolean") settings[key] = value;
+    } else if (key === "tools" && value && typeof value === "object" && !Array.isArray(value)) {
+      const tools = {};
+      for (const [name, enabled] of Object.entries(value)) {
+        if (CREATE_CHAT_TOOL_KEYS.has(name) && typeof enabled === "boolean") {
+          tools[name] = enabled;
+        }
+      }
+      if (Object.keys(tools).length) settings.tools = tools;
+    } else if (
+      (key === "mcp_local_server_ids" || key === "mcp_remote_server_ids") &&
+      Array.isArray(value)
+    ) {
+      settings[key] = value
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+        .slice(0, 50);
+    }
+  }
+
+  const pinned =
+    typeof payload?.pinned === "boolean" ? payload.pinned : undefined;
+  return {
+    type: "create_chat",
+    title,
+    folderId,
+    folderName,
+    settings,
+    messages,
+    ...(pinned !== undefined ? { pinned } : {}),
+  };
+}
+
 function normalizeFolderId(payload) {
   const hasFolderId =
     Object.prototype.hasOwnProperty.call(payload, "folderId") ||
@@ -82,6 +208,17 @@ export function getMetaActionProposals(text) {
     if (!payload || typeof payload !== "object") continue;
 
     const type = match[1].toUpperCase();
+
+    if (type === "CREATE_CHAT") {
+      const proposal = normalizeCreateChat(payload);
+      if (proposal) {
+        proposals.set(
+          `create-chat:${proposal.title}:${proposal.folderId || proposal.folderName}:${proposal.messages.length}`,
+          proposal,
+        );
+      }
+      continue;
+    }
 
     if (type === "SET_SETTING") {
       const key = String(payload.key || "").trim();
@@ -130,18 +267,40 @@ export function getMetaActionProposals(text) {
 
       const rawTarget =
         payload.target ?? payload.conversationId ?? payload.conversation_id;
+      const targetGlobal = rawTarget === "global";
       const targetAll =
-        rawTarget === "all" || rawTarget === undefined ||
-        rawTarget === null || rawTarget === "";
+        !targetGlobal &&
+        (rawTarget === "all" || rawTarget === undefined ||
+          rawTarget === null || rawTarget === "");
       const conversationId = String(rawTarget ?? "").trim();
-      if (!targetAll && !conversationId) continue;
+      if (!targetGlobal && !targetAll && !conversationId) continue;
 
       const url = String(payload.url || "").trim();
-      const serverId = String(
-        payload.serverId ?? payload.server_id ?? payload.id ?? "",
+      const entryId = String(
+        payload.entryId ?? payload.entry_id ?? "",
       ).trim();
-      if (serverScope === "local" && !url) continue;
-      if (serverScope === "remote" && !serverId) continue;
+      const serverId = String(
+        payload.serverId ??
+          payload.server_id ??
+          (serverScope === "remote" && !entryId ? payload.id : "") ??
+          "",
+      ).trim();
+      const name = String(payload.name || "").trim();
+      const scope = targetGlobal
+        ? "global"
+        : targetAll
+          ? "all"
+          : "conversation";
+      if (serverScope === "local" && !url && !(scope === "global" && entryId)) {
+        continue;
+      }
+      if (
+        serverScope === "remote" &&
+        !serverId &&
+        !(scope === "global" && entryId)
+      ) {
+        continue;
+      }
 
       const enabled =
         typeof payload.enabled === "boolean" ? payload.enabled : undefined;
@@ -149,20 +308,29 @@ export function getMetaActionProposals(text) {
         typeof payload.authorization === "string"
           ? payload.authorization
           : undefined;
-      if (op === "update" && enabled === undefined && authorization === undefined) {
+      if (
+        scope !== "global" &&
+        op === "update" &&
+        enabled === undefined &&
+        authorization === undefined
+      ) {
+        continue;
+      }
+      if (scope === "global" && op === "update" && !entryId && !url && !serverId) {
         continue;
       }
 
-      const scope = targetAll ? "all" : "conversation";
-      const name = serverScope === "local" ? url : serverId;
+      const key = serverScope === "local" ? url : serverId;
       proposals.set(
-        `mcp:${scope}:${conversationId || "all"}:${op}:${serverScope}:${name}`,
+        `mcp:${scope}:${conversationId || "all"}:${op}:${serverScope}:${entryId || key}`,
         {
           type: "mcp_server",
           op,
           serverScope,
           scope,
-          conversationId: targetAll ? null : conversationId,
+          conversationId: targetGlobal || targetAll ? null : conversationId,
+          entryId,
+          name,
           url,
           serverId,
           enabled,

@@ -100,6 +100,7 @@ describe("Meta chat local tools", () => {
       "search_messages",
       "list_memories",
       "get_user_settings",
+      "test_mcp_server",
       "list_models",
       "list_personas",
       "list_tutorials",
