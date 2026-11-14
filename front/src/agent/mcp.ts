@@ -39,10 +39,16 @@ const selectedIds = (value: unknown): string[] =>
 /** Per-chat settings with legacy server entries plus the globally configured selections. */
 export function resolveMcpServers(settings: any, globals: GlobalMcpServer[] = []) {
   const legacy = Array.isArray(settings?.mcp_servers) ? settings.mcp_servers : [];
-  const legacyLocal = legacy.filter((server: unknown) => !isRemoteMcpServer(server));
-  const legacyRemote = legacy.filter((server: unknown) => isRemoteMcpServer(server));
   const localIds = new Set(selectedIds(settings?.mcp_local_server_ids));
   const remoteIds = new Set(selectedIds(settings?.mcp_remote_server_ids));
+  // Once a chat selects globally configured servers, those definitions win over legacy per-chat
+  // entries; this keeps the connection on the address stored in the global settings.
+  const legacyLocal = localIds.size
+    ? []
+    : legacy.filter((server: unknown) => !isRemoteMcpServer(server));
+  const legacyRemote = remoteIds.size
+    ? []
+    : legacy.filter((server: unknown) => isRemoteMcpServer(server));
   const byId = new Map((globals ?? []).map((server) => [server.id, server]));
   const local = [...localIds]
     .map((id) => byId.get(id))

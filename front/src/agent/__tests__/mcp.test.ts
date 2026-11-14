@@ -81,6 +81,27 @@ describe("MCP server entries", () => {
     ]);
   });
 
+  it("uses the global address instead of a legacy per-chat entry", () => {
+    const resolved = resolveMcpServers(
+      {
+        mcp_servers: [{ url: "http://old-host:9000/mcp", enabled: true }],
+        mcp_local_server_ids: ["g-local"],
+      },
+      [
+        {
+          id: "g-local",
+          name: "Files",
+          kind: "local" as const,
+          url: "http://new-host:9000/mcp",
+        },
+      ],
+    );
+    expect(resolved).toHaveLength(1);
+    expect(resolved[0]).toEqual(
+      expect.objectContaining({ url: "http://new-host:9000/mcp" }),
+    );
+  });
+
   it("keeps the enable flags separate", () => {
     expect(remoteMcpEnabled({ tools: { mcp_remote: true } })).toBe(true);
     expect(remoteMcpEnabled({ tools: { mcp_remote: false, mcp: true } })).toBe(false);

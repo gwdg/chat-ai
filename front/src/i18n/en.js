@@ -404,7 +404,7 @@ export default {
     },
     image_analysis: {
       title: "Analyze images",
-      step1: "Open Browser & local tools from the prompt box.",
+      step1: "Open GWDG Tools from the prompt box.",
       step2: "Select Analyze images so the assistant can analyze image files with SAIA's Gemma vision model.",
     },
     audio_generation: {
@@ -429,7 +429,7 @@ export default {
       title: "Connect an MCP server",
       step1: "Add an MCP server in the sidebar's MCP Servers section.",
       step2: "Enter the server URL or gateway id and test the connection.",
-      step3: "Enable the MCP tool in Local tools and select the configured server.",
+      step3: "Open GWDG Tools and select the configured server under MCP Servers.",
     },
     tools_overview: {
       title: "Use GWDG Tools",
@@ -1520,7 +1520,8 @@ export default {
     auth_label: "Authorization (optional)",
     test: "Test connection",
     remove: "Remove",
-    configured: "Configured servers",
+    tooltip: "MCP servers expose extra tools and files to the assistant through the Model Context Protocol. Local servers run on this device; GWDG servers are reached through the gateway.",
+    configured: "Configured MCP Servers",
     none_configured: "Add a server in the MCP Servers section first.",
     group_local: "Enable local MCP tools",
     group_remote: "Enable GWDG MCP tools",

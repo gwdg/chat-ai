@@ -10,7 +10,6 @@ import WarningExternalModel from "../Header/WarningExternalModel";
 import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
-import MountFolderButton from "./MountFolderButton";
 import WorkspaceAttachButton from "./WorkspaceAttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
@@ -203,11 +202,6 @@ export default function Prompt({
             {!metaChatSend && (
               <>
                 <WorkspaceAttachButton localState={localState} />
-                {/* Local folder and write access for the agent */}
-                <MountFolderButton
-                  localState={localState}
-                  setLocalState={setLocalState}
-                />
                 {/* Tools Button */}
                 <ToolsButton
                   localState={localState}

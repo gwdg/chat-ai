@@ -8,7 +8,6 @@ import {
   mcpConfigured,
   openConversationMenu,
   openConversationSettings,
-  openLocalTools,
   openSearch,
   openSortMenu,
   openTools,
@@ -293,39 +292,20 @@ export const featureGuides = {
       },
     ],
   },
-  browser_storage: {
-    titleKey: "feature_guide.browser_storage.title",
-    prompt:
-      "Let the agent use this chat's browser workspace. Open Browser & local tools from the prompt box, then select Browser storage to allow reading and writing files.",
-    keywords: ["browser storage", "browser workspace", "opfs", "local files"],
-    steps: [
-      {
-        target: '[data-guide="local-tools"]',
-        textKey: "feature_guide.browser_storage.step1",
-        completeOnTargetClick: true,
-      },
-      {
-        target: '[data-guide="tool-browser_storage"]',
-        prepare: openLocalTools,
-        textKey: "feature_guide.browser_storage.step2",
-        check: () => isToolActive("browser_storage"),
-      },
-    ],
-  },
   image_analysis: {
     titleKey: "feature_guide.image_analysis.title",
     prompt:
-      "Analyze images with SAIA's Gemma vision model. Open Browser & local tools from the prompt box, then select Analyze images.",
+      "Analyze images with SAIA's Gemma vision model. Open GWDG Tools from the prompt box, then select Analyze images.",
     keywords: ["analyze image", "analyse image", "read image", "image text", "vision"],
     steps: [
       {
-        target: '[data-guide="local-tools"]',
+        target: '[data-guide="tools"]',
         textKey: "feature_guide.image_analysis.step1",
         completeOnTargetClick: true,
       },
       {
         target: '[data-guide="tool-image_analysis"]',
-        prepare: openLocalTools,
+        prepare: openTools,
         textKey: "feature_guide.image_analysis.step2",
         check: () => isToolActive("image_analysis"),
       },
@@ -401,7 +381,7 @@ export const featureGuides = {
   mcp_server: {
     titleKey: "feature_guide.mcp_server.title",
     prompt:
-      "Configure an MCP server once in the sidebar's MCP Servers section, test the connection, then select the server for this chat from Local tools or GWDG Tools.",
+      "Configure an MCP server once in the sidebar's MCP Servers section, test the connection, then select the server for this chat under MCP Servers in GWDG Tools.",
     keywords: ["mcp", "mcp server", "model context protocol"],
     steps: [
       {
@@ -415,10 +395,9 @@ export const featureGuides = {
         check: mcpConfigured,
       },
       {
-        target: '[data-guide="tool-mcp_local"]',
-        prepare: () => ensureTool("mcp_local"),
+        target: '[data-guide="mcp-server-picker"]',
+        prepare: openTools,
         textKey: "feature_guide.mcp_server.step3",
-        check: () => isToolActive("mcp_local"),
       },
     ],
   },
@@ -1149,7 +1128,6 @@ export const FEATURE_CATEGORIES = {
     "image_generation",
     "image_modification",
     "image_analysis",
-    "browser_storage",
     "audio_generation",
     "arcana_v2",
     "mcp_server",

@@ -417,7 +417,7 @@ export default {
     },
     image_analysis: {
       title: "Bilder analysieren",
-      step1: "Öffnen Sie Browser & lokale Werkzeuge im Eingabefeld.",
+      step1: "Öffnen Sie die GWDG-Tools im Eingabefeld.",
       step2:
         "Wählen Sie Bilder analysieren, damit der Assistent Bilddateien mit dem Gemma-Visionsmodell von SAIA analysieren kann.",
     },
@@ -444,7 +444,7 @@ export default {
       title: "Einen MCP-Server verbinden",
       step1: "Fügen Sie einen MCP-Server im Bereich MCP-Server der Seitenleiste hinzu.",
       step2: "Geben Sie die Server-URL oder Gateway-ID ein und testen Sie die Verbindung.",
-      step3: "Aktivieren Sie das MCP-Tool in den lokalen Tools und wählen Sie den konfigurierten Server.",
+      step3: "Öffnen Sie die GWDG-Tools und wählen Sie den konfigurierten Server unter MCP-Server aus.",
     },
     tools_overview: {
       title: "GWDG Tools verwenden",
@@ -1542,7 +1542,8 @@ export default {
     auth_label: "Autorisierung (optional)",
     test: "Verbindung testen",
     remove: "Entfernen",
-    configured: "Konfigurierte Server",
+    tooltip: "MCP-Server stellen dem Assistenten über das Model Context Protocol zusätzliche Werkzeuge und Dateien bereit. Lokale Server laufen auf diesem Gerät; GWDG-Server werden über das Gateway erreicht.",
+    configured: "Konfigurierte MCP-Server",
     none_configured: "Fügen Sie zuerst einen Server im Bereich MCP-Server hinzu.",
     group_local: "Lokale MCP-Tools aktivieren",
     group_remote: "GWDG-MCP-Tools aktivieren",

@@ -3,10 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ToolsContainer from "../ToolsContainer";
 
 const agentMocks = vi.hoisted(() => ({ agent: false, gateway: true }));
+const mcpMocks = vi.hoisted(() => ({ servers: [] }));
 
 vi.mock("react-redux", () => ({
   useDispatch: () => vi.fn(),
-  useSelector: () => [],
+  useSelector: (selector) =>
+    selector({
+      user_settings: { mcp_servers: mcpMocks.servers },
+      interface_settings: { agree_web_search: true },
+    }),
 }));
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: vi.fn() }),
@@ -20,6 +25,7 @@ vi.mock("../../../apis/agentEndpoints", () => ({
 beforeEach(() => {
   agentMocks.agent = false;
   agentMocks.gateway = true;
+  mcpMocks.servers = [];
 });
 
 const stateWith = (tools) => ({
@@ -30,33 +36,62 @@ const stateWith = (tools) => ({
   },
 });
 
-describe("ToolsContainer MCP switch", () => {
-  it("toggles the remote MCP flag without changing the local one", () => {
-    const localState = stateWith({ mcp: true, mcp_remote: false });
+describe("ToolsContainer MCP selector", () => {
+  it("lists configured local and remote servers with their kind", () => {
+    mcpMocks.servers = [
+      { id: "l1", name: "Files", kind: "local", url: "http://localhost:9000/mcp" },
+      { id: "r1", name: "Gateway", kind: "remote", serverId: "server-1" },
+    ];
+    render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
+
+    expect(screen.getByText("Files")).toBeInTheDocument();
+    expect(screen.getByText("Gateway")).toBeInTheDocument();
+    expect(screen.getByText("GWDG")).toBeInTheDocument();
+    expect(screen.getByText("Local")).toBeInTheDocument();
+    expect(screen.getByText("Gateway")).toBeInTheDocument();
+    expect(screen.getByText("GWDG")).toBeInTheDocument();
+  });
+
+  it("selects a local server for the chat", () => {
+    mcpMocks.servers = [
+      { id: "l1", name: "Files", kind: "local", url: "http://localhost:9000/mcp" },
+    ];
+    const localState = stateWith({});
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /mcp server/i }));
+    const picker = document.querySelector('[data-guide="mcp-server-picker"]');
+    fireEvent.click(picker.querySelector('input[type="checkbox"]'));
 
-    expect(setLocalState).toHaveBeenCalled();
     const next = setLocalState.mock.results[0].value;
-    expect(next.settings.tools.mcp_remote).toBe(true);
+    expect(next.settings.mcp_local_server_ids).toEqual(["l1"]);
     expect(next.settings.tools.mcp).toBe(true);
   });
 
-  it("shows the remote MCP configuration only when its flag is on", () => {
-    const localState = stateWith({ mcp: true, mcp_remote: false });
-    render(<ToolsContainer localState={localState} setLocalState={vi.fn()} />);
+  it("selects a remote server for the chat", () => {
+    mcpMocks.servers = [
+      { id: "r1", name: "Gateway", kind: "remote", serverId: "server-1" },
+    ];
+    const localState = stateWith({});
+    const setLocalState = vi.fn((updater) => updater(localState));
+    render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    const picker = document.querySelector('[data-guide="mcp-server-picker"]');
+    fireEvent.click(picker.querySelector('input[type="checkbox"]'));
+
+    const next = setLocalState.mock.results[0].value;
+    expect(next.settings.mcp_remote_server_ids).toEqual(["r1"]);
+    expect(next.settings.tools.mcp_remote).toBe(true);
   });
 
-  it("marks the remote MCP button as a data-transfer risk", () => {
-    const localState = stateWith({ mcp: true, mcp_remote: false });
-    render(<ToolsContainer localState={localState} setLocalState={vi.fn()} />);
+  it("marks the MCP selector as a data-transfer risk", () => {
+    mcpMocks.servers = [
+      { id: "l1", name: "Files", kind: "local", url: "http://localhost:9000/mcp" },
+    ];
+    render(<ToolsContainer localState={stateWith({})} setLocalState={vi.fn()} />);
 
-    const button = screen.getByRole("button", { name: /mcp server/i });
-    expect(button.querySelector("svg.lucide-triangle-alert")).toBeTruthy();
+    const picker = document.querySelector('[data-guide="mcp-server-picker"]');
+    expect(picker?.querySelector("svg.lucide-triangle-alert")).toBeTruthy();
   });
 });
 
@@ -107,7 +142,7 @@ describe("ToolsContainer ArcanaV2", () => {
 
 describe("ToolsContainer bulk actions", () => {
   it("enables every tool and the master switch", () => {
-    const localState = stateWith({ web_search: false, mcp_remote: false });
+    const localState = stateWith({ web_search: false });
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
@@ -123,14 +158,13 @@ describe("ToolsContainer bulk actions", () => {
       "audio_generation",
       "arcana_v2",
       "arcana",
-      "mcp_remote",
     ]) {
       expect(next.settings.tools[key]).toBe(true);
     }
   });
 
   it("disables every tool while keeping the master switch", () => {
-    const localState = stateWith({ web_search: true, mcp_remote: true });
+    const localState = stateWith({ web_search: true });
     const setLocalState = vi.fn((updater) => updater(localState));
     render(<ToolsContainer localState={localState} setLocalState={setLocalState} />);
 
@@ -146,7 +180,6 @@ describe("ToolsContainer bulk actions", () => {
       "audio_generation",
       "arcana_v2",
       "arcana",
-      "mcp_remote",
     ]) {
       expect(next.settings.tools[key]).toBe(false);
     }

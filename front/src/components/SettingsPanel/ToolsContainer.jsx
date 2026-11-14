@@ -13,16 +13,18 @@ import {
   Image as ImageIcon,
   Wand2,
   AudioLines,
+  Code,
   Database,
-  Server, // MCP
+  FileText,
+  ScanEye,
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import ArcanaContainer from "./ArcanaContainer";
 import McpServerPicker from "./McpServerPicker";
 import MiniToolButton from "./MiniToolButton";
+import ToolLimit from "./ToolLimit";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
-import { remoteMcpEnabled } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
 
 // Tools the agent has no counterpart for
@@ -41,7 +43,12 @@ const AGENT_OPT_IN = new Set([
   "mcp_remote",
 ]);
 // Tools that only exist in agent mode
-const AGENT_ONLY = new Set(["write_access", "codemode", "create_docx"]);
+const AGENT_ONLY = new Set([
+  "write_access",
+  "codemode",
+  "create_docx",
+  "image_analysis",
+]);
 
 export default function ToolsContainer({ localState, setLocalState }) {
   const { t } = useTranslation();
@@ -57,7 +64,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
 
   const toolsState = settings.tools || {};
   const toolsEnabled = !!settings.enable_tools && !isExternalModel;
-  const remoteMcpOn = remoteMcpEnabled(settings);
   // In agent mode every tool is switched on its own and a missing key counts as on
   // (as in agent/tools.ts); the master switch and the server-side tools do not apply.
   const agentMode = isAgentEnabled();
@@ -70,8 +76,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
     (agentMode
       ? agentGatewayTools() && toolsState.arcana === true
       : !!settings?.enable_tools && !!toolsState.arcana);
-  const showMCPBox =
-    (agentMode ? !agentWithoutTools : !!settings?.enable_tools) && remoteMcpOn;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
@@ -112,9 +116,20 @@ export default function ToolsContainer({ localState, setLocalState }) {
         ),
         label: t("settings.label_arcana"),
       },
-      { key: "mcp_remote",
-        Icon: Server,
-        label: t("settings.label_mcp_server")
+      {
+        key: "image_analysis",
+        Icon: ScanEye,
+        label: t("settings.label_image_analysis"),
+      },
+      {
+        key: "codemode",
+        Icon: Code,
+        label: t("settings.label_codemode"),
+      },
+      {
+        key: "create_docx",
+        Icon: FileText,
+        label: t("settings.label_create_docx"),
       },
     ],
     [t, arcanasEnabled]
@@ -195,9 +210,6 @@ export default function ToolsContainer({ localState, setLocalState }) {
   // Arcana/MCP toggles
   const handleToggleArcana = (nextValue) => {
     toggleTool("arcana", nextValue);
-  };
-  const handleToggleMCP = (nextValue) => {
-    toggleTool("mcp_remote", nextValue);
   };
 
   return (
@@ -293,16 +305,13 @@ export default function ToolsContainer({ localState, setLocalState }) {
       >
         {TOOL_DEFS.map(({ key, Icon, label }) => {
           const unavailable = agentMode && AGENT_UNAVAILABLE.has(key);
-          const active =
-            key === "mcp_remote"
-              ? remoteMcpOn
-              : !agentMode
-                ? !!toolsState[key]
-                : unavailable
-                  ? false
-                  : AGENT_OPT_IN.has(key)
-                    ? toolsState[key] === true
-                    : toolsState[key] !== false;
+          const active = !agentMode
+            ? !!toolsState[key]
+            : unavailable
+              ? false
+              : AGENT_OPT_IN.has(key)
+                ? toolsState[key] === true
+                : toolsState[key] !== false;
           const onToggle =
             key === "web_search"
               ? () => handleToggleWebSearch(!active)
@@ -318,7 +327,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
               label={label}
               title={unavailable ? `${label}: ${t("settings.tools_agent_unavailable")}` : label}
               guideKey={key}
-              warning={key === "web_search" || key === "mcp_remote"}
+              warning={key === "web_search"}
             />
           );
         })}
@@ -330,13 +339,15 @@ export default function ToolsContainer({ localState, setLocalState }) {
           setLocalState={setLocalState}
         />
       )}
-      {/* MCP box (only when enabled AND has a value) */}
-      {showMCPBox && (
+      {(agentMode ? !agentWithoutTools : toolsEnabled) && (
         <McpServerPicker
           localState={localState}
           setLocalState={setLocalState}
-          kind="remote"
+          kind="all"
         />
+      )}
+      {(agentMode ? !agentWithoutTools : toolsEnabled) && (
+        <ToolLimit localState={localState} setLocalState={setLocalState} />
       )}
     </div>
   );

@@ -570,9 +570,10 @@ by a configured local MCP server (the option only appears when `tools.mcp` is on
 configured). Providers declare `capabilities`, and the UI must offer only what a provider reports.
 `WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, deletes, mkdir,
 move and copy throw `PERMISSION_DENIED`), and `WorkspaceMountRow.readOnly` blocks writes/moves
-through that mount while still allowing reads and copies out. The Local tools panel no longer
-offers browser storage or sharing a local folder: when a chat has a workspace link, `runAgent`
-uses `workspace/agentVfs.ts` over that workspace's root and mounts for the file tools.
+through that mount while still allowing reads and copies out. The Local tools panel was removed;
+GWDG Tools now contains every tool toggle (including codemode, document creation and image
+analysis). When a chat has a workspace link, `runAgent` uses `workspace/agentVfs.ts` over that
+workspace's root and mounts for the file tools.
 `agent/prepare.ts` writes attachments and their converted variants under `/artefacts` in the
 attached workspace root (or the conversation OPFS when no workspace is linked); the agent VFS keeps
 `/uploads` routed to the conversation OPFS for legacy paths.
@@ -609,8 +610,9 @@ url?, serverId?, headers?}`), managed by the sidebar's `McpServerList` and `McpS
 (including the connection test). Per-chat settings store only the selected ids in
 `mcp_local_server_ids` / `mcp_remote_server_ids`; `agent/mcp.ts#resolveMcpServers` expands them for
 the agent, gateway request and prefetch, and still merges legacy full entries from
-`settings.mcp_servers`. Local tools and GWDG Tools show only checkboxes for already configured
-servers, never URL/id/auth fields; `remoteMcpEnabled` also treats selected remote ids as a value.
+`settings.mcp_servers`. GWDG Tools shows one MCP selector that lists every configured server and
+badges it local or GWDG; it never shows URL/id/auth fields. `remoteMcpEnabled` also treats selected
+remote ids as a value.
 
 
 ## 5. Conventions

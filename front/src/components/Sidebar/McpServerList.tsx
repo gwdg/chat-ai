@@ -2,6 +2,8 @@ import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { ChevronDown, Plus, Server, Trash2 } from "lucide-react";
 
+import Tooltip from "../Others/Tooltip";
+
 import { useModal } from "../../modals/ModalContext";
 import {
   removeMcpServer,
@@ -37,7 +39,9 @@ export default function McpServerList() {
             size={12}
             className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
           />
-          <span className="truncate">{t("mcp.section_title")}</span>
+          <Tooltip text={t("mcp.tooltip")}>
+            <span className="truncate">{t("mcp.section_title")}</span>
+          </Tooltip>
         </button>
         <button
           type="button"
