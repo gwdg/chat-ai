@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router";
 import {
   Add,
-  Bot,
   ChevronDown,
   Edit,
   OverflowMenuVertical,
@@ -30,6 +29,8 @@ import {
 } from "../../db/workspaceDb";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
+import { topicIconById } from "../Sidebar/topicIcons";
+import { topicColor, withAlpha } from "../Sidebar/topicColors";
 
 export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
@@ -131,7 +132,6 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
           onClick={create}
           className="flex w-full items-center gap-1.5 rounded-xl border border-dashed border-base-300 px-3 py-2 text-left text-xs text-base-content/60 transition hover:border-accent/40 hover:bg-base-200/60"
         >
-          <Bot size={14} className="text-accent" />
           {t("workspace.empty_sidebar_title")}
         </button>
       ) : (
@@ -140,6 +140,11 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
             const active = location.pathname === `/workspace/${workspace.id}`;
             const chats = chatsByWorkspace.get(workspace.id) ?? [];
             const expanded = expandedChats.has(workspace.id);
+            const WorkspaceIcon = topicIconById(workspace.icon).Icon;
+            const workspaceColor = topicColor({
+              id: workspace.id,
+              color: workspace.color,
+            });
             return (
               <div key={workspace.id}>
                 <div
@@ -149,43 +154,49 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                       : "text-base-content hover:bg-base-200"
                   }`}
                 >
-                  {chats.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedChats((current) => {
-                          const next = new Set(current);
-                          if (next.has(workspace.id)) next.delete(workspace.id);
-                          else next.add(workspace.id);
-                          return next;
-                        })
-                      }
-                      className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 hover:text-base-content"
-                      aria-expanded={expanded}
-                      aria-label={t("workspace.attached_chats")}
-                    >
-                      <ChevronDown
-                        size={12}
-                        className={`transition-transform ${expanded ? "" : "-rotate-90"}`}
-                      />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedChats((current) => {
+                        const next = new Set(current);
+                        if (next.has(workspace.id)) next.delete(workspace.id);
+                        else next.add(workspace.id);
+                        return next;
+                      })
+                    }
+                    disabled={chats.length === 0}
+                    className={`ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 ${
+                      chats.length > 0
+                        ? "hover:text-base-content"
+                        : "cursor-default opacity-40"
+                    }`}
+                    aria-expanded={expanded}
+                    aria-label={t("workspace.attached_chats")}
+                  >
+                    <ChevronDown
+                      size={12}
+                      className={`transition-transform ${expanded ? "" : "-rotate-90"}`}
+                    />
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
                       navigate(`/workspace/${workspace.id}`);
                       onNavigate?.();
                     }}
-                    className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left ${chats.length ? "" : "pl-2"}`}
+                    className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
                   >
                     <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                        active
-                          ? "bg-accent/15 text-accent"
-                          : "bg-base-200 text-base-content/55"
-                      }`}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                      style={{
+                        color: workspaceColor.hex,
+                        backgroundColor: withAlpha(
+                          workspaceColor.hex,
+                          active ? 0.2 : 0.12,
+                        ),
+                      }}
                     >
-                      <Bot size={15} />
+                      <WorkspaceIcon size={15} />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-xs font-medium">
                       {workspace.name}
@@ -227,6 +238,8 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                               openModal("workspaceRename", {
                                 workspaceId: workspace.id,
                                 initialName: workspace.name,
+                                initialIcon: workspace.icon,
+                                initialColor: workspaceColor.id,
                               });
                             }}
                             className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"

@@ -293,6 +293,42 @@ export function prefetchMcpServers(servers: McpServer[]) {
   for (const server of servers) connect(server).catch(() => {});
 }
 
+const mcpResultText = (result: any) => {
+  const lines: string[] = [];
+  for (const block of result?.content ?? []) {
+    if (block.type === "text") lines.push(block.text);
+    else if (block.type === "image") lines.push(`[image ${block.mimeType ?? "image"}]`);
+    else if (block.type === "resource") lines.push(block.resource?.text ?? `[resource ${block.resource?.uri}]`);
+    else if (block.type === "resource_link") lines.push(`[resource ${block.uri}]`);
+    else lines.push(`[${block.type ?? "unsupported"} content]`);
+  }
+  return lines.filter(Boolean).join("\n") || "(no output)";
+};
+
+export async function listMcpServerTools(server: McpServer) {
+  const { tools } = await connect(server);
+  return tools.map((tool) => ({
+    name: tool.name,
+    title: tool.title,
+    description: tool.description,
+    inputSchema: tool.inputSchema,
+  }));
+}
+
+export async function callMcpServerTool(
+  server: McpServer,
+  toolName: string,
+  args: unknown,
+) {
+  const { client } = await connect(server);
+  const result = await client.callTool({
+    name: toolName,
+    arguments: (args as Record<string, unknown>) ?? {},
+  });
+  const text = mcpResultText(result);
+  return result?.isError ? `MCP error: ${text}` : text;
+}
+
 export interface McpTools {
   tools: AgentTool<any>[];
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
@@ -8,6 +8,7 @@ import {
   Locked,
   TrashCan,
 } from "@carbon/icons-react";
+import { GitBranch } from "lucide-react";
 
 import type { RootEntry } from "../../workspace/workspaceRoot";
 
@@ -15,6 +16,8 @@ type TreeProps = {
   entries: RootEntry[];
   loadChildren: (path: string) => Promise<RootEntry[]>;
   onOpen: (entry: RootEntry) => void;
+  onShowGitLog?: (entry: RootEntry) => void;
+  checkGit?: (entry: RootEntry) => Promise<boolean>;
   onRemoveLocal: (entry: RootEntry) => void;
   onRemoveMount: (entry: RootEntry) => void;
   onToggleMountReadOnly: (entry: RootEntry) => void;
@@ -31,12 +34,54 @@ function TreeRow({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [children, setChildren] = useState<RootEntry[] | null>(null);
+  const [hasGit, setHasGit] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMount = !!entry.mount;
   const isDir = entry.kind === "dir";
   const expandable = isDir && !isMount;
   const readOnly = props.isReadOnly(entry);
   const sourceReadOnly = props.isSourceReadOnly(entry);
+
+  useEffect(() => {
+    if (!isDir) return;
+    if (expandable && children === null) {
+      let cancelled = false;
+      props
+        .loadChildren(entry.path)
+        .then((next) => {
+          if (cancelled) return;
+          setChildren(next);
+          setHasGit(
+            next.some((child) => child.kind === "dir" && child.name === ".git"),
+          );
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (isMount && props.checkGit) {
+      let cancelled = false;
+      props
+        .checkGit(entry)
+        .then((result) => {
+          if (!cancelled) setHasGit(result);
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }
+    return undefined;
+  }, [
+    children,
+    entry,
+    expandable,
+    isDir,
+    isMount,
+    props.checkGit,
+    props.loadChildren,
+  ]);
 
   const toggle = async () => {
     if (!isDir) {
@@ -51,7 +96,11 @@ function TreeRow({
     if (!open && children === null) {
       setLoading(true);
       try {
-        setChildren(await props.loadChildren(entry.path));
+        const next = await props.loadChildren(entry.path);
+        setChildren(next);
+        setHasGit(
+          next.some((child) => child.kind === "dir" && child.name === ".git"),
+        );
       } finally {
         setLoading(false);
       }
@@ -94,6 +143,17 @@ function TreeRow({
             </span>
           )}
         </button>
+        {hasGit && props.onShowGitLog && (
+          <button
+            type="button"
+            onClick={() => props.onShowGitLog?.(entry)}
+            className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-base-200 hover:text-accent group-hover:opacity-100"
+            title={t("workspace.git_log")}
+            aria-label={t("workspace.git_log")}
+          >
+            <GitBranch size={11} />
+          </button>
+        )}
         {entry.local ? (
           <button
             type="button"

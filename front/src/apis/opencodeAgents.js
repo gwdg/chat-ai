@@ -388,6 +388,79 @@ export async function runOpencodeShell(agent, sessionId, command) {
   });
 }
 
+const shellResultText = (result) => {
+  const parts = result?.parts ?? result?.data?.parts ?? [];
+  return parts
+    .map((part) => {
+      const value =
+        part?.text ??
+        part?.state?.output ??
+        part?.output ??
+        part?.state?.metadata?.output;
+      if (value === undefined || value === null) return "";
+      return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    })
+    .filter(Boolean)
+    .join("\n");
+};
+
+export async function runOpencodeShellAndWait(
+  agent,
+  sessionId,
+  command,
+  timeoutMs = 15000,
+) {
+  const controller = new AbortController();
+  let shellId = null;
+  let markConnected;
+  const connected = new Promise((resolve) => {
+    markConnected = resolve;
+  });
+  let markDone;
+  const finished = new Promise((resolve) => {
+    markDone = resolve;
+  });
+
+  void subscribeOpencodeEvents(
+    agent,
+    (event) => {
+      markConnected?.();
+      const type = event?.type;
+      const shell = event?.data?.shell;
+      if (type === "session.shell.started" && shell?.id) shellId = shell.id;
+      if (type !== "session.shell.ended" || !shell) return;
+      if (shellId) {
+        if (shell.id && shell.id !== shellId) return;
+      } else if (shell.command && shell.command !== command) {
+        return;
+      }
+      markDone?.(event?.data?.output?.output ?? "");
+    },
+    controller.signal,
+  ).catch(() => {
+    markConnected?.();
+    markDone?.("");
+  });
+
+  await Promise.race([
+    connected,
+    new Promise((resolve) => setTimeout(resolve, 1000)),
+  ]);
+
+  try {
+    const result = await runOpencodeShell(agent, sessionId, command);
+    const fromResult = shellResultText(result);
+    if (fromResult.trim()) return fromResult;
+    const output = await Promise.race([
+      finished,
+      new Promise((resolve) => setTimeout(() => resolve(""), timeoutMs)),
+    ]);
+    return String(output ?? "");
+  } finally {
+    controller.abort();
+  }
+}
+
 export async function cancelOpencodeInbox(agent, sessionId, inboxId) {
   return request(
     agent,

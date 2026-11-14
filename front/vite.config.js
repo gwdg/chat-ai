@@ -131,6 +131,9 @@ try {
     } else if (key == "opencodeServerPassword") {
       process.env["VITE_OPENCODE_SERVER_PASSWORD"] = value;
       console.log("opencode server password:", value ? "set" : "not set");
+    } else if (key == "opencodeBridgeSidecarCommand") {
+      process.env["VITE_OPENCODE_BRIDGE_SIDECAR_COMMAND"] = JSON.stringify(value);
+      console.log("opencode bridge sidecar:", JSON.stringify(value));
     } else if (key == "explainImageModel") {
       process.env["VITE_EXPLAIN_IMAGE_MODEL"] = value;
       console.log("Explain-image model:", value);

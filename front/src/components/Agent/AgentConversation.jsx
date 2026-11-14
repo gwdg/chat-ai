@@ -11,6 +11,11 @@ import {
 import { X } from "lucide-react";
 
 import {
+  clearAgentDraft,
+  loadAgentDraft,
+  saveAgentDraft,
+} from "../../agents/agentDrafts";
+import {
   clearAgentFormHistory,
   loadAgentFormHistory,
   saveAgentFormHistory,
@@ -26,6 +31,7 @@ import {
   loadAgentPermissionPolicies,
   matchPermissionPolicy,
 } from "../../agents/agentPermissionPolicies";
+import { isInternalGitLogCommand } from "../../utils/gitLog";
 import {
   compactOpencodeSession,
   createOpencodeSession,
@@ -52,6 +58,7 @@ import Tooltip from "../Others/Tooltip";
 import ModelButton from "../Prompt/ModelButton";
 import SendButton from "../Prompt/SendButton";
 import AgentAssistantParts from "./AgentAssistantParts";
+import AgentWorkspaceButton from "./AgentWorkspaceButton";
 import AgentFormCard from "./AgentFormCard";
 import AgentFormResultCard from "./AgentFormResultCard";
 import { useModal } from "../../modals/ModalContext";
@@ -140,6 +147,15 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     pendingShellRef.current = value;
     setPendingShell(value);
   }, []);
+  const updateInput = useCallback(
+    (value) => {
+      setInput(value);
+      if (agent?.id && agent?.sessionId) {
+        saveAgentDraft(agent.id, agent.sessionId, value);
+      }
+    },
+    [agent?.id, agent?.sessionId],
+  );
   const chatAIModelKey = useMemo(
     () =>
       (modelsData ?? [])
@@ -189,8 +205,11 @@ export default function AgentConversation({ agent, modelsData = [] }) {
 
   const mergeShellMessages = useCallback(
     (next) => {
+      const visible = next.filter(
+        (message) => !isInternalGitLogCommand(message),
+      );
       let changed = false;
-      for (const message of next) {
+      for (const message of visible) {
         if (message.type !== "shell" || !message.shellID) continue;
         const existing = shellMessagesRef.current.get(message.shellID);
         if (!existing) {
@@ -215,7 +234,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
         }
       }
       if (changed) persistShellMessages();
-      return mergeAgentMessages(next, shellMessagesRef.current);
+      return mergeAgentMessages(visible, shellMessagesRef.current);
     },
     [persistShellMessages],
   );
@@ -378,7 +397,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       ]),
     );
     updatePendingShell(null);
-    setInput("");
+    setInput(loadAgentDraft(agent.id, agent.sessionId));
     setError("");
     setSending(false);
     setStopping(false);
@@ -500,6 +519,12 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       const type = event?.type;
       const data = event?.data;
       const shell = data?.shell;
+      if (
+        (type === "session.shell.started" || type === "session.shell.ended") &&
+        isInternalGitLogCommand(shell)
+      ) {
+        return;
+      }
       if (type === "session.shell.started" && shell?.id) {
         const existing = shellMessagesRef.current.get(shell.id);
         shellMessagesRef.current.set(shell.id, {
@@ -644,6 +669,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       setFormHistory([]);
       setReplyingForm(null);
       setAttachments([]);
+      clearAgentDraft(agent.id, previousSessionId);
       setInput("");
       setSending(false);
       setStopping(false);
@@ -833,7 +859,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     setSending(true);
     setAborted(false);
     setError("");
-    setInput("");
+    updateInput("");
     try {
       if (shellMode) {
         const baseline = new Set(
@@ -886,7 +912,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
       updatePendingShell(null);
-      setInput(text);
+      updateInput(text);
       setSending(false);
     }
   };
@@ -1179,7 +1205,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
         {error && <p className="mb-2 text-xs text-error">{error}</p>}
         <textarea
           value={input}
-          onChange={(event) => setInput(event.target.value)}
+          onChange={(event) => updateInput(event.target.value)}
           onKeyDown={(event) => {
             if (
               sending &&
@@ -1305,6 +1331,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
                 ))}
               </select>
             </Tooltip>
+            <AgentWorkspaceButton agent={agent} />
             <button
               type="button"
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-accent hover:bg-base-200"

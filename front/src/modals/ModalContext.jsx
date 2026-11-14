@@ -52,6 +52,7 @@ import TransferConfirmModal from "./Workspace/TransferConfirmModal";
 import MoveToModal from "./Workspace/MoveToModal";
 import AddMountModal from "./Workspace/AddMountModal";
 import AttachChatModal from "./Workspace/AttachChatModal";
+import AttachAgentModal from "./Workspace/AttachAgentModal";
 import CreateEntryModal from "./Workspace/CreateEntryModal";
 import RenameWorkspaceModal from "./Workspace/RenameWorkspaceModal";
 import McpServerModal from "./McpServer/McpServerModal";
@@ -220,6 +221,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "workspaceAttachChat" && (
         <AttachChatModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAttachAgent" && (
+        <AttachAgentModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "workspaceCreateEntry" && (
         <CreateEntryModal isOpen onClose={closeModal} {...modalProps} />

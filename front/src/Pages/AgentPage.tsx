@@ -9,10 +9,19 @@ import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import AgentConversation from "../components/Agent/AgentConversation";
 import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
 import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
-import { useAgent } from "../agents/agentStore";
+import { updateAgent, useAgent } from "../agents/agentStore";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
+import { useAgentBridge } from "../hooks/useAgentBridge";
+import {
+  useWorkspace,
+  useWorkspaceList,
+  useWorkspaceMounts,
+  useWorkspaceSources,
+} from "../db/workspaceDb";
+import { useWorkspaceProviders } from "../workspace/useWorkspaceProviders";
+import { createWorkspaceRootProvider } from "../workspace/workspaceRoot";
 
 export default function AgentPage() {
   const { t } = useTranslation();
@@ -20,8 +29,27 @@ export default function AgentPage() {
   const agent = useAgent(agentId);
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
-  const { preview, openFile, closePreview, download } =
+  const { preview, openFile, openText, closePreview, download } =
     useOpencodeFilePreview(agent);
+  const workspaces = useWorkspaceList();
+  const workspaceId = agent?.bridgeWorkspaceId ?? null;
+  const workspace = useWorkspace(workspaceId ?? undefined);
+  const sources = useWorkspaceSources(workspaceId ?? undefined);
+  const mounts = useWorkspaceMounts(workspaceId ?? undefined);
+  const { providers } = useWorkspaceProviders(sources);
+  const rootProvider = useMemo(
+    () => (workspaceId ? createWorkspaceRootProvider(workspaceId) : null),
+    [workspaceId],
+  );
+  const bridge = useAgentBridge({
+    agent,
+    workspaceId,
+    writable: agent?.bridgeWritable === true,
+    mcp: agent?.bridgeMcp === true,
+    mounts,
+    providers,
+    rootProvider,
+  });
 
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
@@ -49,7 +77,29 @@ export default function AgentPage() {
         />
         <div className="flex min-h-0 min-w-0 gap-2">
           {agent && (
-            <AgentFilesPanel agent={agent} onOpenFile={openFile} />
+            <AgentFilesPanel
+              agent={agent}
+              onOpenFile={openFile}
+              onShowText={openText}
+              workspaces={workspaces}
+              workspaceId={workspaceId}
+              workspaceName={workspace?.name}
+              bridgeStatus={bridge.status}
+              bridgeError={bridge.error}
+              bridgeWritable={agent?.bridgeWritable === true}
+              bridgeMcp={agent?.bridgeMcp === true}
+              onWorkspaceChange={(nextWorkspaceId) =>
+                updateAgent(agent.id, {
+                  bridgeWorkspaceId: nextWorkspaceId || null,
+                })
+              }
+              onBridgeWritableChange={(value) =>
+                updateAgent(agent.id, { bridgeWritable: value })
+              }
+              onBridgeMcpChange={(value) =>
+                updateAgent(agent.id, { bridgeMcp: value })
+              }
+            />
           )}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {agent ? (

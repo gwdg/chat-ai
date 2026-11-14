@@ -10,6 +10,7 @@ import type {
   TransferJobRow,
   WorkspaceMountRow,
   WorkspaceChatRow,
+  WorkspaceAgentRow,
   WorkspaceFileReferenceRow,
 } from "./dbTypes";
 import { defaultCapabilities } from "../workspace/capabilities";
@@ -103,6 +104,7 @@ export async function createWorkspace(name: string): Promise<string> {
   const workspace: WorkspaceRow = {
     id,
     name: trimmed,
+    icon: "rocket",
     createdAt: now(),
     lastModified: now(),
   };
@@ -156,7 +158,7 @@ export async function getWorkspace(id: string): Promise<WorkspaceRow | undefined
 
 export async function updateWorkspace(
   id: string,
-  patch: Partial<Pick<WorkspaceRow, "name">>,
+  patch: Partial<Pick<WorkspaceRow, "name" | "icon" | "color">>,
 ): Promise<void> {
   const trimmed = patch.name?.trim();
   if (patch.name !== undefined && !trimmed) {
@@ -176,6 +178,8 @@ export async function updateWorkspace(
   }
   const patchRow = {
     ...(trimmed ? { name: trimmed } : {}),
+    ...(patch.icon ? { icon: patch.icon } : {}),
+    ...(patch.color ? { color: patch.color } : {}),
     lastModified: now(),
   };
   await db.workspaces.update(id, patchRow);
@@ -195,11 +199,13 @@ export async function deleteWorkspace(id: string): Promise<void> {
       db.workspace_transfers,
       db.workspace_mounts,
       db.workspace_chats,
+      db.workspace_agents,
     ],
     async () => {
       await db.workspace_transfers.where("workspaceId").equals(id).delete();
       await db.workspace_mounts.where("workspaceId").equals(id).delete();
       await db.workspace_chats.where("workspaceId").equals(id).delete();
+      await db.workspace_agents.where("workspaceId").equals(id).delete();
       await db.workspace_sources.where("workspaceId").equals(id).delete();
       await db.workspaces.delete(id);
     },
@@ -483,4 +489,69 @@ export function useWorkspaceChatLinks(): WorkspaceChatRow[] {
   return (
     useLiveQuery(() => db.workspace_chats.toArray(), [], [] as WorkspaceChatRow[]) ?? []
   );
+}
+
+export async function attachWorkspaceAgent(
+  workspaceId: string,
+  agentId: string,
+): Promise<void> {
+  const existing = await db.workspace_agents
+    .where("[workspaceId+agentId]")
+    .equals([workspaceId, agentId])
+    .first();
+  if (existing) return;
+  await db.workspace_agents.add({
+    id: newId(),
+    workspaceId,
+    agentId,
+    createdAt: now(),
+  });
+}
+
+export async function detachWorkspaceAgent(
+  workspaceId: string,
+  agentId: string,
+): Promise<void> {
+  const link = await db.workspace_agents
+    .where("[workspaceId+agentId]")
+    .equals([workspaceId, agentId])
+    .first();
+  if (link) await db.workspace_agents.delete(link.id);
+}
+
+export function useWorkspaceAgents(workspaceId?: string): WorkspaceAgentRow[] {
+  return (
+    useLiveQuery(
+      () =>
+        workspaceId
+          ? db.workspace_agents.where("workspaceId").equals(workspaceId).toArray()
+          : [],
+      [workspaceId],
+      [] as WorkspaceAgentRow[],
+    ) ?? []
+  );
+}
+
+export function useAgentWorkspaceLinks(agentId?: string): WorkspaceAgentRow[] {
+  return (
+    useLiveQuery(
+      () =>
+        agentId
+          ? db.workspace_agents.where("agentId").equals(agentId).toArray()
+          : [],
+      [agentId],
+      [] as WorkspaceAgentRow[],
+    ) ?? []
+  );
+}
+
+export async function removeOrphanWorkspaceAgents(
+  agentIds: Iterable<string>,
+): Promise<void> {
+  const known = new Set(agentIds);
+  const links = await db.workspace_agents.toArray();
+  const orphans = links.filter((link) => !known.has(link.agentId));
+  if (orphans.length) {
+    await db.workspace_agents.bulkDelete(orphans.map((link) => link.id));
+  }
 }

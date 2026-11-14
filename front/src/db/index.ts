@@ -28,6 +28,7 @@ import type {
   TransferJobRow,
   WorkspaceMountRow,
   WorkspaceChatRow,
+  WorkspaceAgentRow,
   WorkspaceNodeRow,
   WorkspaceBlobRow,
   WorkspaceFileReferenceRow
@@ -48,6 +49,7 @@ export class AppDB extends Dexie {
   workspace_transfers!: Table<TransferJobRow, string>
   workspace_mounts!: Table<WorkspaceMountRow, string>
   workspace_chats!: Table<WorkspaceChatRow, string>
+  workspace_agents!: Table<WorkspaceAgentRow, string>
   workspace_nodes!: Table<WorkspaceNodeRow, string>
   workspace_blobs!: Table<WorkspaceBlobRow, string>
   workspace_file_references!: Table<WorkspaceFileReferenceRow, string>
@@ -316,6 +318,10 @@ export class AppDB extends Dexie {
           });
         }
       }
+    });
+
+    this.version(12).stores({
+      workspace_agents: 'id, workspaceId, agentId, [workspaceId+agentId]',
     });
   }
 }

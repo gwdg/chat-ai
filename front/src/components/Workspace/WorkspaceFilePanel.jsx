@@ -5,6 +5,20 @@ import PanelShell from "../DocumentPanel/PanelShell";
 import SandboxedHtmlPreview from "../Others/SandboxedHtmlPreview";
 import { formatBytes } from "../../utils/formatBytes";
 
+const gitStatLine = (line) => {
+  if (!line.startsWith(" ")) return null;
+  const pipe = line.indexOf(" | ");
+  if (pipe < 0) return null;
+  const suffix = line.slice(pipe);
+  if (!/^\|\s+(?:\d+|Bin)\b/.test(suffix.slice(1))) return null;
+  let path = line.slice(0, pipe).trim();
+  if (path.startsWith('"') && path.endsWith('"')) path = path.slice(1, -1);
+  const renamed = path.match(/^(.*)\{(.*) => (.*)\}(.*)$/);
+  if (renamed) path = `${renamed[1]}${renamed[3]}${renamed[4]}`;
+  else if (path.includes(" => ")) path = path.split(" => ").pop().trim();
+  return { path, suffix: line.slice(pipe) };
+};
+
 export default function WorkspaceFilePanel({ preview, onClose, onDownload }) {
   const { t } = useTranslation();
   const entry = preview.entry;
@@ -55,6 +69,34 @@ export default function WorkspaceFilePanel({ preview, onClose, onDownload }) {
               title={entry.name}
               className="h-full min-h-[70vh] w-full rounded border border-base-300 bg-base-100"
             />
+          ) : preview.onOpenPath ? (
+            <div className="whitespace-pre-wrap break-words rounded-lg bg-base-200 p-4 font-mono text-xs leading-relaxed text-base-content">
+              {preview.text.split("\n").map((line, index) => {
+                const file = gitStatLine(line);
+                return file ? (
+                  <div
+                    key={index}
+                    className="flex min-w-0 items-baseline gap-1"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => preview.onOpenPath(file.path)}
+                      title={file.path}
+                      className="min-w-0 truncate text-left text-accent underline decoration-dotted underline-offset-2 hover:text-primary"
+                    >
+                      {file.path}
+                    </button>
+                    <span className="shrink-0 text-base-content/60">
+                      {file.suffix}
+                    </span>
+                  </div>
+                ) : (
+                  <div key={index} className="whitespace-pre-wrap">
+                    {line || "\u00a0"}
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <pre className="whitespace-pre-wrap break-words rounded-lg bg-base-200 p-4 font-mono text-xs leading-relaxed text-base-content">
               {preview.text}

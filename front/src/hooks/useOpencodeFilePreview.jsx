@@ -67,6 +67,20 @@ export function useOpencodeFilePreview(agent) {
     [agent, closePreview],
   );
 
+  const openText = useCallback(
+    (entry, text, error = "", options = {}) => {
+      closePreview();
+      setPreview({
+        entry,
+        loading: false,
+        text: error ? undefined : text,
+        error: error || undefined,
+        ...options,
+      });
+    },
+    [closePreview],
+  );
+
   const download = useCallback(() => {
     if (!preview?.url) return;
     const link = document.createElement("a");
@@ -75,5 +89,5 @@ export function useOpencodeFilePreview(agent) {
     link.click();
   }, [preview]);
 
-  return { preview, openFile, closePreview, download };
+  return { preview, openFile, openText, closePreview, download };
 }

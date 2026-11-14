@@ -29,6 +29,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const [projectId, setProjectId] = useState(
     agent?.projectId ?? projects[0]?.id ?? "",
   );
+  const [local, setLocal] = useState(agent?.local !== false);
   const [serverUrl, setServerUrl] = useState(
     agent?.serverUrl ?? defaults.serverUrl,
   );
@@ -43,16 +44,21 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
     if (!project || saving) return;
     setSaving(true);
     setError("");
+    const effectiveServerUrl = local
+      ? serverUrl.trim()
+      : defaults.serverUrl;
+    const effectivePassword = local ? password : defaults.password;
     const next = {
       ...(agent ?? {}),
       id: agent?.id ?? newId(),
       projectId: project.id,
       name: name.trim() || project.name,
-      serverUrl: serverUrl.trim(),
+      local,
+      serverUrl: effectiveServerUrl,
       username: agent?.username ?? defaults.username,
-      password,
+      password: effectivePassword,
       passwordSource:
-        password === defaults.password ? "config" : "custom",
+        effectivePassword === defaults.password ? "config" : "custom",
     };
     const connectionChanged =
       !editing ||
@@ -86,6 +92,15 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="agents.add_title">
       <div className="flex flex-col gap-3 pb-2 text-sm">
         <p className="text-xs text-base-content/70">{t("agents.add_hint")}</p>
+        <label className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            className="toggle toggle-sm"
+            checked={local}
+            onChange={(event) => setLocal(event.target.checked)}
+          />
+          {t("agents.local")}
+        </label>
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
             {t("agents.name_label")}
@@ -97,48 +112,54 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             className="input input-bordered w-full"
           />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-base-content/70">
-            {t("agents.hpc_project_label")}
-          </span>
-          <select
-            value={projectId}
-            onChange={(event) => setProjectId(event.target.value)}
-            className="select select-bordered w-full"
-          >
-            {projects.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-base-content/70">
-            {t("agents.server_url_label")}
-          </span>
-          <input
-            value={serverUrl}
-            onChange={(event) => setServerUrl(event.target.value)}
-            placeholder="http://127.0.0.1:9000"
-            className="input input-bordered w-full"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-base-content/70">
-            {t("agents.server_password_label")}
-          </span>
-          <input
-            type="password"
-            autoComplete="off"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="input input-bordered w-full"
-          />
-        </label>
-        <p className="text-[11px] leading-relaxed text-base-content/50">
-          {t("agents.connect_hint")}
-        </p>
+        {!local && (
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-base-content/70">
+              {t("agents.hpc_project_label")}
+            </span>
+            <select
+              value={projectId}
+              onChange={(event) => setProjectId(event.target.value)}
+              className="select select-bordered w-full"
+            >
+              {projects.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {local && (
+          <>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-base-content/70">
+                {t("agents.server_url_label")}
+              </span>
+              <input
+                value={serverUrl}
+                onChange={(event) => setServerUrl(event.target.value)}
+                placeholder="http://127.0.0.1:9000"
+                className="input input-bordered w-full"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-base-content/70">
+                {t("agents.server_password_label")}
+              </span>
+              <input
+                type="password"
+                autoComplete="off"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="input input-bordered w-full"
+              />
+            </label>
+            <p className="text-[11px] leading-relaxed text-base-content/50">
+              {t("agents.connect_hint")}
+            </p>
+          </>
+        )}
         {error && <p className="text-xs text-error">{error}</p>}
         <div className="mt-2 flex justify-end gap-2">
           <button type="button" className="btn" onClick={onClose}>

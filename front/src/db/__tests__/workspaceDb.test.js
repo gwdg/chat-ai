@@ -6,12 +6,15 @@ import {
   addSource,
   addWorkspaceMount,
   attachWorkspaceChat,
+  attachWorkspaceAgent,
   createWorkspace,
   deleteWorkspace,
   detachWorkspaceChat,
+  detachWorkspaceAgent,
   getChatWorkspaceId,
   getSourceHandle,
   getWorkspace,
+  removeOrphanWorkspaceAgents,
   removeSource,
   saveSourceHandle,
   setWorkspaceMountReadOnly,
@@ -28,6 +31,7 @@ const reset = async () => {
   await db.workspace_transfers.clear();
   await db.workspace_mounts.clear();
   await db.workspace_chats.clear();
+  await db.workspace_agents.clear();
   await db.workspace_nodes.clear();
   await db.workspace_blobs.clear();
   await db.workspace_file_references.clear();
@@ -144,6 +148,21 @@ describe("workspace database", () => {
     await deleteWorkspace(workspaceId);
     expect(await db.workspace_mounts.count()).toBe(0);
     expect(await db.workspace_chats.count()).toBe(0);
+  });
+
+  it("attaches agents to workspaces and removes orphan links", async () => {
+    const workspaceId = await createWorkspace("Agent links");
+    await attachWorkspaceAgent(workspaceId, "agent-1");
+    await attachWorkspaceAgent(workspaceId, "agent-1");
+    expect(await db.workspace_agents.count()).toBe(1);
+
+    await attachWorkspaceAgent(workspaceId, "agent-2");
+    await removeOrphanWorkspaceAgents(["agent-1"]);
+    const links = await db.workspace_agents.toArray();
+    expect(links.map((link) => link.agentId)).toEqual(["agent-1"]);
+
+    await detachWorkspaceAgent(workspaceId, "agent-1");
+    expect(await db.workspace_agents.count()).toBe(0);
   });
 
   it("marks a source read-only", async () => {

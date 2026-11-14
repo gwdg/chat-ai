@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 import { opencodeDefaults } from "../apis/opencodeAgents";
+import { clearAgentDrafts } from "./agentDrafts";
 import { clearAgentFormHistory } from "./agentFormHistory";
 import { clearAgentPermissionPolicies } from "./agentPermissionPolicies";
 import { clearAgentShellHistory } from "./agentShellHistory";
@@ -83,6 +84,7 @@ export const updateAgent = (id, patch) => {
 
 export const removeAgent = (id) => {
   agents = agents.filter((agent) => agent.id !== id);
+  clearAgentDrafts(id);
   clearAgentFormHistory(id);
   clearAgentPermissionPolicies(id);
   clearAgentShellHistory(id);

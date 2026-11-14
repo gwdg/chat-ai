@@ -218,6 +218,8 @@ export type SourceConfig =
 export type WorkspaceRow = {
   id: string
   name: string
+  icon?: string
+  color?: string
   createdAt: number
   lastModified: number
 }
@@ -285,6 +287,13 @@ export type WorkspaceChatRow = {
   id: string
   workspaceId: string
   conversationId: string
+  createdAt: number
+}
+
+export type WorkspaceAgentRow = {
+  id: string
+  workspaceId: string
+  agentId: string
   createdAt: number
 }
 

@@ -28,7 +28,9 @@ import { useToast } from "../hooks/useToast";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { formatBytes } from "../utils/formatBytes";
+import { formatGitLog } from "../utils/gitLog";
 import { useConversationList } from "../db";
+import { useAgents } from "../agents/agentStore";
 import {
   deleteWorkspace,
   detachWorkspaceChat,
@@ -43,6 +45,9 @@ import {
   useWorkspaceChats,
   useWorkspaceMounts,
   useWorkspaceSources,
+  useWorkspaceAgents,
+  detachWorkspaceAgent,
+  removeOrphanWorkspaceAgents,
 } from "../db/workspaceDb";
 import type { WorkspaceFileEntry, WorkspaceMountRow } from "../db/dbTypes";
 import { DEVICE_PLANE_KINDS } from "../workspace/deviceId";
@@ -81,6 +86,28 @@ const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> 
 };
 
 const PREVIEW_LIMIT = 8 * 1024 * 1024;
+
+const readProviderText = async (provider: FileProvider, path: string) => {
+  const bytes = await readAll(await provider.read(path));
+  return new TextDecoder().decode(bytes);
+};
+
+const readGitLog = async (provider: FileProvider, gitPath: string) => {
+  try {
+    return formatGitLog(
+      await readProviderText(provider, joinPath(gitPath, "logs/HEAD")),
+    );
+  } catch {
+    const head = (
+      await readProviderText(provider, joinPath(gitPath, "HEAD"))
+    ).trim();
+    const branch = head.replace(/^ref:\s*/, "");
+    if (!branch) throw new Error("No Git history found.");
+    return formatGitLog(
+      await readProviderText(provider, joinPath(gitPath, `logs/${branch}`)),
+    );
+  }
+};
 
 
 
@@ -142,6 +169,18 @@ export default function WorkspacePage() {
         .filter(Boolean),
     [workspaceChats, conversations],
   );
+  const agents = useAgents();
+  const workspaceAgents = useWorkspaceAgents(workspaceId);
+  const attachedAgents = useMemo(
+    () =>
+      workspaceAgents
+        .map((link) => agents.find((agent) => agent.id === link.agentId))
+        .filter(Boolean),
+    [workspaceAgents, agents],
+  );
+  useEffect(() => {
+    void removeOrphanWorkspaceAgents(agents.map((agent) => agent.id));
+  }, [agents]);
   const pendingTransfers = usePendingTransfers(workspaceId);
   const resumedRef = useRef<Set<string>>(new Set());
   const { providers, reconnect } = useWorkspaceProviders(sources);
@@ -175,6 +214,7 @@ export default function WorkspacePage() {
     url?: string;
     error?: string;
     loading: boolean;
+    onOpenPath?: (path: string) => void;
   } | null>(null);
   const [quotas, setQuotas] = useState<Record<string, QuotaInfo | null>>({});
   const [transferring, setTransferring] = useState(false);
@@ -604,6 +644,73 @@ export default function WorkspacePage() {
     void openFile(entry, rootProvider);
   };
 
+  const gitProviderFor = (entry: RootEntry) => {
+    if (entry.mount) {
+      return {
+        provider: providers.get(entry.mount.sourceId),
+        basePath: entry.mount.sourcePath,
+      };
+    }
+    return { provider: rootProvider, basePath: entry.path };
+  };
+
+  const checkRootGit = useCallback(
+    async (entry: RootEntry) => {
+      const { provider, basePath } = gitProviderFor(entry);
+      if (!provider) return false;
+      if (provider.status !== "connected") await provider.connect();
+      const page = await provider.list(basePath);
+      return page.entries.some(
+        (child) => child.kind === "dir" && child.name === ".git",
+      );
+    },
+    [providers, rootProvider],
+  );
+
+  const showRootGitLog = async (entry: RootEntry) => {
+    const { provider, basePath } = gitProviderFor(entry);
+    if (!provider) return;
+    const gitPath = joinPath(basePath, ".git");
+    const previewEntry = {
+      ...entry,
+      name: `${entry.name} · ${t("workspace.git_log")}`,
+      path: gitPath,
+      kind: "file" as const,
+    };
+    const openGitFile = (relativePath: string) => {
+      const relative = String(relativePath).replace(/^\.\/+/, "");
+      const path = joinPath(basePath, relative);
+      void openFile(
+        {
+          sourceId: entry.sourceId,
+          path,
+          name: baseName(relative) || relative,
+          kind: "file",
+        },
+        provider,
+      );
+    };
+    closePreview();
+    setPreview({ entry: previewEntry, loading: true });
+    try {
+      if (provider.status !== "connected") await provider.connect();
+      const text = await readGitLog(provider, gitPath);
+      setPreview({
+        entry: previewEntry,
+        loading: false,
+        text: text || t("workspace.git_log_empty"),
+        onOpenPath: openGitFile,
+      });
+    } catch (error) {
+      setPreview({
+        entry: previewEntry,
+        loading: false,
+        error: error instanceof Error ? error.message : String(error),
+        onOpenPath: openGitFile,
+      });
+    }
+  };
+
   const rootEntryReadOnly = (entry: RootEntry) => {
     if (!entry.mount) return false;
     const source = sources.find((candidate) => candidate.id === entry.mount!.sourceId);
@@ -839,6 +946,18 @@ export default function WorkspacePage() {
 
   const detachChat = (conversationId: string) => {
     void detachWorkspaceChat(workspaceId!, conversationId);
+  };
+
+  const attachAgent = () => {
+    openModal("workspaceAttachAgent", {
+      workspaceId,
+      agents,
+      attachedIds: workspaceAgents.map((link) => link.agentId),
+    });
+  };
+
+  const detachAgent = (agentId: string) => {
+    void detachWorkspaceAgent(workspaceId!, agentId);
   };
 
   const toggleSourceReadOnly = (source: { id: string; readOnly?: boolean }) => {
@@ -1343,6 +1462,8 @@ export default function WorkspacePage() {
                           entries={rootTreeEntries}
                           loadChildren={listRoot}
                           onOpen={openRootEntry}
+                          onShowGitLog={(entry) => void showRootGitLog(entry)}
+                          checkGit={checkRootGit}
                           onRemoveLocal={requestDeleteRootEntry}
                           onRemoveMount={removeRootMount}
                           onToggleMountReadOnly={toggleRootMountReadOnly}
@@ -1401,6 +1522,56 @@ export default function WorkspacePage() {
                               aria-label={t("workspace.detach_chat")}
                             >
                               <TrashCan size={12} />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <div className="border-t border-base-300 p-1.5">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+                        {t("workspace.agents")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={attachAgent}
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
+                        title={t("workspace.attach_agent")}
+                        aria-label={t("workspace.attach_agent")}
+                      >
+                        <Add size={15} />
+                      </button>
+                    </div>
+                    <div className="mt-1 max-h-44 overflow-y-auto">
+                      {attachedAgents.length === 0 ? (
+                        <p className="px-1 py-1 text-[10px] text-base-content/50">
+                          {t("workspace.no_attached_agents")}
+                        </p>
+                      ) : (
+                        attachedAgents.map((agent) => (
+                          <div
+                            key={agent.id}
+                            className="group flex items-center gap-1 rounded-md px-1 py-1 hover:bg-base-200"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/agent/${agent.id}`)}
+                              className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                            >
+                              <Bot size={12} className="shrink-0 text-base-content/50" />
+                              <span className="min-w-0 flex-1 truncate text-[11px] text-base-content/80">
+                                {agent.name}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => detachAgent(agent.id)}
+                              className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover:opacity-100"
+                              title={t("workspace.detach_agent")}
+                              aria-label={t("workspace.detach_agent")}
+                            >
+                              ×
                             </button>
                           </div>
                         ))
