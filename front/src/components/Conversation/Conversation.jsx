@@ -21,6 +21,7 @@ export default function Conversation({
   setLocalState,
   modelsData,
   userData,
+  hideCloseButton = false,
 }) {
   const showSettings = useSelector(selectShowSettings);
   const { t } = useTranslation();
@@ -375,7 +376,7 @@ export default function Conversation({
       className={`w-full flex flex-col gap-2 relative min-h-0 h-full overflow-hidden
                   ${emptyConversation ? "justify-start" : "justify-between"}`}
     >
-      {showCloseButton && (
+      {showCloseButton && !hideCloseButton && (
         <CloseChatButton localState={localState} setLocalState={setLocalState} />
       )}
 

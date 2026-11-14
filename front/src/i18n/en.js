@@ -213,7 +213,13 @@ export default {
     help_label: "Help/Meta Assistant Chatty",
     help_tooltip:
       "Open the Meta chat: ask about your chats, topics, settings, and memories, or get step-by-step guidance for Chat AI features. Proposed changes apply only after you confirm them.",
-    last_checked: "Last change check: {{date}}",
+    last_checked: "Last checked: {{date}}",
+    changes_title: "What's new",
+    collapse_changes: "Collapse What's new",
+    expand_changes: "Expand What's new",
+    resize_changes: "Resize What's new",
+    check_now: "Check now",
+    changes_empty: "No check yet. Click “Check now” to inspect chats, agents, MCP servers, and recent agent files.",
     banner_description: "Metachat can help you in two ways:",
     purposes: {
       tutor: "Learn how to use Chat AI features",
@@ -665,7 +671,7 @@ export default {
     meta_chat_digest: {
       title: "Get a what's-new digest",
       step1: "Open the Meta chat from the AI icon in the sidebar.",
-      step2: "The banner shows the last change check. It is updated after each what's-new answer.",
+      step2: "The banner shows when the last check ran. It is updated after each what's-new answer.",
       step3: "Ask “What's new?” to see changed chats, new topics and memories, agent status, and recently modified agent files.",
     },
     meta_chat_mcp: {
@@ -1790,6 +1796,13 @@ export default {
       "Attach an agent to this workspace. The agent can then use it as a bridge workspace.",
     no_available_agents: "No unattached agents available.",
     agents: "Agents",
+    agent_sidebar_title: "Connected agents",
+    agent_details: "Show agent details",
+    agent_settings: "Settings",
+    agent_history: "Recent history",
+    no_agent_history: "No recent messages.",
+    agent_files: "Files",
+    no_agent_files: "No files found.",
     no_attached_agents: "No agents attached yet.",
     detach_agent: "Detach agent",
     chat_workspaces: "Workspace",

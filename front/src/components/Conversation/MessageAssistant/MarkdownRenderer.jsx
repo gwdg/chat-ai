@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router";
 import {
   Bot,
+  FileText,
   Folder,
   GraduationCap,
   MessageCircle,
@@ -80,6 +81,33 @@ const MarkdownLink = ({ href, children }) => {
         }}
       >
         <Icon size={12} aria-hidden="true" />
+        {children}
+      </a>
+    );
+  }
+
+  const agentFileMatch =
+    typeof href === "string" &&
+    href.match(/^\/agent\/([^/?#]+)\?file=(.+)$/);
+  if (agentFileMatch) {
+    const agentId = decodeURIComponent(agentFileMatch[1]);
+    const filePath = decodeURIComponent(agentFileMatch[2]);
+    return (
+      <a
+        href={href}
+        className={actionLinkClassName}
+        onClick={(event) => {
+          event.preventDefault();
+          const handled = !window.dispatchEvent(
+            new CustomEvent("chatai:preview-agent-file", {
+              detail: { agentId, path: filePath },
+              cancelable: true,
+            }),
+          );
+          if (!handled) navigate(href);
+        }}
+      >
+        <FileText size={12} aria-hidden="true" />
         {children}
       </a>
     );

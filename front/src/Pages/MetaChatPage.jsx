@@ -9,18 +9,18 @@ import { selectUserSettings } from "../Redux/reducers/userSettingsReducer";
 import { abortRequest } from "../apis/chatCompletions";
 import { createConversation, getConversation, updateConversation } from "../db";
 
-import {
-  META_LAST_CHECK_KEY,
-  useMetaChatSend,
-} from "../hooks/useMetaChatSend";
+import { useMetaChatSend } from "../hooks/useMetaChatSend";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
+import MetaChangesPanel from "../components/Meta/MetaChangesPanel";
+import AgentFilePreviewPanel from "../components/Agent/AgentFilePreviewPanel";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
+import CloseChatButton from "../components/Conversation/CloseChatButton";
 import TourManager from "../components/SettingsPanel/TourManager";
 import AnnouncementBar from "../components/Header/AnnouncementBar";
 import FeatureGuideCard from "../components/Others/FeatureGuideCard";
@@ -29,6 +29,8 @@ import UseCaseCatalog from "../components/Others/UseCaseCatalog";
 import HallucinationWarning from "../components/Conversation/HallucinationWarning";
 import { MetaChatSendContext } from "../context/MetaChatContext";
 import { useFeatureGuide } from "../context/FeatureGuideContext";
+import { useAgents } from "../agents/agentStore";
+
 
 export default function MetaChatPage() {
   const { t } = useTranslation();
@@ -47,14 +49,9 @@ export default function MetaChatPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [loaded, setLoaded] = useState(false);
-  const [lastCheck, setLastCheck] = useState(() => {
-    try {
-      return Number(localStorage.getItem(META_LAST_CHECK_KEY)) || 0;
-    } catch {
-      return 0;
-    }
-  });
   const [openCatalog, setOpenCatalog] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const agents = useAgents();
   const catalogRef = useRef(null);
   const latestStateRef = useRef(localState);
   const loadedRef = useRef(false);
@@ -64,12 +61,21 @@ export default function MetaChatPage() {
   }, [isActive]);
 
   useEffect(() => {
-    const onCheck = (event) => {
-      setLastCheck(Number(event.detail?.at) || Date.now());
+    const onPreview = (event) => {
+      const agent = agents.find(
+        (item) => item.id === event.detail?.agentId,
+      );
+      if (!agent || !event.detail?.path) return;
+      event.preventDefault();
+      setFilePreview({
+        agentId: agent.id,
+        path: event.detail.path,
+      });
     };
-    window.addEventListener("chatai:meta-last-check", onCheck);
-    return () => window.removeEventListener("chatai:meta-last-check", onCheck);
-  }, []);
+    window.addEventListener("chatai:preview-agent-file", onPreview);
+    return () =>
+      window.removeEventListener("chatai:preview-agent-file", onPreview);
+  }, [agents]);
 
   useEffect(() => {
     if (!openCatalog) return;
@@ -217,7 +223,8 @@ export default function MetaChatPage() {
             modelsData={modelsData}
           />
 
-          <div className="flex min-h-0 min-w-0 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 gap-2">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="mx-auto w-full md:max-w-[85vw] xl:max-w-[1300px]">
               <HallucinationWarning />
             </div>
@@ -231,16 +238,13 @@ export default function MetaChatPage() {
                       · {t("meta_chat.title")}
                     </span>
                   </p>
-                  {lastCheck > 0 && (
-                    <span
-                      data-guide="meta-last-check"
-                      className="ml-auto shrink-0 text-[10px] font-bold text-base-content/60"
-                    >
-                      {t("meta_chat.last_checked", {
-                        date: new Date(lastCheck).toLocaleString(),
-                      })}
-                    </span>
-                  )}
+                  <div className="ml-auto flex shrink-0 items-center gap-2">
+                    <CloseChatButton
+                      localState={localState}
+                      setLocalState={setLocalState}
+                      inline
+                    />
+                  </div>
                 </div>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-base-content/70">
                   {t("meta_chat.banner_description")}
@@ -287,8 +291,19 @@ export default function MetaChatPage() {
                 setLocalState={setLocalState}
                 userData={userData}
                 modelsData={modelsData}
+                hideCloseButton
               />
             </div>
+            </div>
+            {filePreview ? (
+              <AgentFilePreviewPanel
+                agent={agents.find((item) => item.id === filePreview.agentId)}
+                path={filePreview.path}
+                onClose={() => setFilePreview(null)}
+              />
+            ) : (
+              <MetaChangesPanel userSettings={userSettings} />
+            )}
           </div>
 
           <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3" />

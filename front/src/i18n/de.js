@@ -216,7 +216,13 @@ export default {
     help_label: "Hilfe/Meta-Assistent Chatty",
     help_tooltip:
       "Öffnet den Metachat: Fragen Sie nach Ihren Chats, Themen, Einstellungen und Erinnerungen oder lassen Sie sich Funktionen von Chat AI Schritt für Schritt erklären. Vorgeschlagene Änderungen werden erst nach Ihrer Bestätigung übernommen.",
-    last_checked: "Letzte Änderungsprüfung: {{date}}",
+    last_checked: "Zuletzt geprüft: {{date}}",
+    changes_title: "Was ist neu",
+    collapse_changes: "Was ist neu einklappen",
+    expand_changes: "Was ist neu ausklappen",
+    resize_changes: "Breite von Was ist neu ändern",
+    check_now: "Jetzt prüfen",
+    changes_empty: "Noch keine Prüfung. Klicken Sie auf „Jetzt prüfen“, um Chats, Agenten, MCP-Server und neue Agentendateien zu prüfen.",
     banner_description: "Metachat kann Ihnen auf zwei Arten helfen:",
     purposes: {
       tutor: "Die Funktionen von Chat AI kennenlernen",
@@ -681,7 +687,7 @@ export default {
     meta_chat_digest: {
       title: "Eine Was-ist-neu-Übersicht erhalten",
       step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
-      step2: "Das Banner zeigt die letzte Änderungsprüfung. Sie wird nach jeder Was-ist-neu-Antwort aktualisiert.",
+      step2: "Das Banner zeigt, wann zuletzt geprüft wurde. Es wird nach jeder Was-ist-neu-Antwort aktualisiert.",
       step3: "Fragen Sie „Was gibt es Neues?“, um geänderte Chats, neue Themen und Erinnerungen, Agentenstatus und neue Agentendateien zu sehen.",
     },
     meta_chat_mcp: {
@@ -1812,6 +1818,13 @@ export default {
       "Verknüpfen Sie einen Agenten mit diesem Arbeitsbereich. Der Agent kann ihn anschließend als Brücken-Arbeitsbereich verwenden.",
     no_available_agents: "Keine nicht verknüpften Agenten verfügbar.",
     agents: "Agenten",
+    agent_sidebar_title: "Verbundene Agenten",
+    agent_details: "Agentendetails anzeigen",
+    agent_settings: "Einstellungen",
+    agent_history: "Letzter Verlauf",
+    no_agent_history: "Keine neuen Nachrichten.",
+    agent_files: "Dateien",
+    no_agent_files: "Keine Dateien gefunden.",
     no_attached_agents: "Noch keine Agenten verknüpft.",
     detach_agent: "Agent trennen",
     chat_workspaces: "Arbeitsbereich",

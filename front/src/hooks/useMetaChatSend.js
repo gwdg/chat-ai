@@ -36,6 +36,7 @@ import { saveFileReady } from "../db";
 
 const MAX_TOOL_ROUNDS = 6;
 export const META_LAST_CHECK_KEY = "chatai.meta.last-check";
+export const META_LAST_CHECK_RESULT_KEY = "chatai.meta.last-check-result";
 
 function buildSystemPrompt() {
   return `You are the Meta chat assistant and a helpful tutor for a local chat application. You help the user understand and use Chat AI, including its features and workflows, and find and understand their past conversations and topics. You are the only assistant that can start in-app tutorials.
@@ -259,6 +260,7 @@ export function useMetaChatSend(modelsData = []) {
           newUserMessage,
         );
       let systemPrompt = buildSystemPrompt();
+      let whatsNewResult = "";
       const metaCheckStartedAt = Date.now();
       if (asksForNew) {
         let lastCheck = 0;
@@ -269,6 +271,7 @@ export function useMetaChatSend(modelsData = []) {
         const changes = await runTool("get_whats_new", {
           since: new Date(since).toISOString(),
         });
+        whatsNewResult = String(changes);
         systemPrompt += `\n\nChanges checked at ${new Date(metaCheckStartedAt).toISOString()} since ${new Date(since).toISOString()}:\n${changes}`;
       } else if (asksForAgentStatus) {
         const status = await runTool("check_agents");
@@ -475,6 +478,13 @@ export function useMetaChatSend(modelsData = []) {
             localStorage.setItem(
               META_LAST_CHECK_KEY,
               String(metaCheckStartedAt),
+            );
+            localStorage.setItem(
+              META_LAST_CHECK_RESULT_KEY,
+              JSON.stringify({
+                at: metaCheckStartedAt,
+                text: whatsNewResult,
+              }),
             );
             window.dispatchEvent(
               new CustomEvent("chatai:meta-last-check", {

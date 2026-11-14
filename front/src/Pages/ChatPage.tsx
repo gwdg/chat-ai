@@ -15,6 +15,7 @@ import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
+import ChatAgentSidebar from "../components/Workspace/ChatAgentSidebar";
 import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
 import HallucinationWarning from "../components/Conversation/HallucinationWarning";
 import TourManager from "../components/SettingsPanel/TourManager";
@@ -143,23 +144,26 @@ export default function ChatPage() {
           modelsData={modelsData}
         />
 
-        <div className="flex min-h-0 min-w-0 flex-col">
-          {localState?.persona && (
-            <>
-              <div className="mx-auto w-full md:max-w-[85vw] xl:max-w-[1300px]">
-                <HallucinationWarning />
-              </div>
-              <PersonaChatBanner persona={localState.persona} />
-            </>
-          )}
-          <div className="min-h-0 flex-1">
-            <Conversation
-              localState={localState}
-              setLocalState={setLocalState}
-              userData={userData}
-              modelsData={modelsData}
-            />
+        <div className="flex min-h-0 min-w-0 flex-1 gap-2">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {localState?.persona && (
+              <>
+                <div className="mx-auto w-full md:max-w-[85vw] xl:max-w-[1300px]">
+                  <HallucinationWarning />
+                </div>
+                <PersonaChatBanner persona={localState.persona} />
+              </>
+            )}
+            <div className="min-h-0 flex-1">
+              <Conversation
+                localState={localState}
+                setLocalState={setLocalState}
+                userData={userData}
+                modelsData={modelsData}
+              />
+            </div>
           </div>
+          <ChatAgentSidebar conversationId={localState?.id} />
         </div>
 
         <CollapsibleFooter

@@ -9,7 +9,11 @@ import { deleteConversation } from "../../db";
 import { getDefaultConversation } from "../../utils/conversationUtils";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
-export default function CloseChatButton({ localState, setLocalState }) {
+export default function CloseChatButton({
+  localState,
+  setLocalState,
+  inline = false,
+}) {
   const { t } = useTranslation();
   const { confirmAction } = useModal();
   const navigate = useNavigate();
@@ -64,7 +68,11 @@ export default function CloseChatButton({ localState, setLocalState }) {
     : t("conversation.close_chat");
 
   return (
-    <div className="absolute right-2 top-2 z-20">
+    <div
+      className={
+        inline ? "shrink-0" : "absolute right-2 top-2 z-20"
+      }
+    >
       <Tooltip text={label}>
         <button
           type="button"

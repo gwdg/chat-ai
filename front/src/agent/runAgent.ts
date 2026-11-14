@@ -18,6 +18,7 @@ import i18n from "../i18n";
 import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpTools } from "./mcp";
 import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
+import { createConnectedAgentTools } from "./connectedAgentTools";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
 import { WorkspaceAgentVfs } from "../workspace/agentVfs";
@@ -342,6 +343,19 @@ export async function runAgentTurn({
         hasLocalFolder: mounts.length > 0 || !!attachedWorkspace,
       })
     : [];
+  let hasConnectedAgentTools = false;
+  if (useTools) {
+    try {
+      const connectedTools = await createConnectedAgentTools(
+        conversationId,
+        workspace,
+      );
+      tools.push(...connectedTools);
+      hasConnectedAgentTools = connectedTools.length > 0;
+    } catch (error) {
+      console.warn("Could not load connected agent tools", error);
+    }
+  }
   // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it
   const servers = useTools ? activeMcpServers(settings) : [];
   let mcp: McpTools | undefined;
@@ -368,6 +382,9 @@ export async function runAgentTurn({
             : NO_BROWSER_STORAGE_PROMPT
           : NO_TOOLS_PROMPT,
         useTools && arcanaV2 ? ARCANA_V2_PROMPT : "",
+        hasConnectedAgentTools
+          ? "Agents connected to this chat's workspace are available through connected_agents_status, connected_agent_history, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents. Use connected_agent_fetch_file for images, PDFs, and other binary files."
+          : "",
         useTools && storageAccess && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
         useTools &&
         storageAccess &&

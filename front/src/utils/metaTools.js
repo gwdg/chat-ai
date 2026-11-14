@@ -598,6 +598,107 @@ export const META_TOOL_DEFINITIONS = [
   ),
 ];
 
+export async function getAgentFileChanges({
+  agents = [],
+  since: sinceInput,
+} = {}) {
+  const since =
+    parseSince(sinceInput) || Date.now() - 24 * 60 * 60 * 1000;
+  if (!agents.length) return "No connected agents.";
+  const recent = await recentAgentFiles(agents, since);
+  return [
+    `Agent files modified since ${new Date(since).toISOString()}:`,
+    ...(recent.files.length
+      ? recent.files
+          .slice(0, 200)
+          .map(
+            (file) =>
+              `- ${new Date(file.time).toISOString()} — ${file.agentName}: [${file.path}](${agentFileLink({ id: file.agentId }, file.path)})${typeof file.size === "number" ? ` (${file.size} bytes)` : ""}`,
+          )
+      : ["(none)"]),
+    ...(recent.withoutTimestamp
+      ? [`(${recent.withoutTimestamp} file(s) had no timestamp metadata.)`]
+      : []),
+  ].join("\n");
+}
+
+export async function getWhatsNew({ userSettings = {}, since: sinceInput } = {}) {
+  const since =
+    parseSince(sinceInput) || Date.now() - 24 * 60 * 60 * 1000;
+const [rows, folders, agents] = await Promise.all([
+  listConversationMetas(),
+  listFolders(),
+  Promise.resolve(getAgents()),
+]);
+const chats = (rows || [])
+  .filter(
+    (row) =>
+      !row.isMetaChat &&
+      row.id !== "meta-chat" &&
+      (row.lastModified ?? row.createdAt ?? 0) >= since,
+  )
+  .sort(
+    (left, right) =>
+      (right.lastModified ?? 0) - (left.lastModified ?? 0),
+  )
+  .slice(0, 20);
+const topics = (folders || []).filter(
+  (folder) => (folder.createdAt ?? 0) >= since,
+);
+const memories = (userSettings.memories || []).filter((memory) => {
+  const created = new Date(memory.createdAt || 0).getTime();
+  return Number.isFinite(created) && created >= since;
+});
+const status = agents.length
+  ? (await agentStatusLines(agents)).join("\n")
+  : "No agents configured.";
+const recent = agents.length
+  ? await recentAgentFiles(agents, since)
+  : { files: [], withoutTimestamp: 0 };
+return [
+  `Changes since ${new Date(since).toISOString()}:`,
+  "",
+  "Chats:",
+  chats.length
+    ? chats
+        .map(
+          (chat) =>
+            `- [${chat.title || "Untitled Chat"}](/chat/${chat.id}) — ${new Date(chat.lastModified ?? chat.createdAt ?? 0).toISOString()}`,
+        )
+        .join("\n")
+    : "(no changed chats)",
+  "",
+  "New topics:",
+  topics.length
+    ? topics
+        .map((topic) => `- ${topic.name} (id: ${topic.id})`)
+        .join("\n")
+    : "(none)",
+  "",
+  "New memories:",
+  memories.length
+    ? memories.map((memory) => `- ${memory.text}`).join("\n")
+    : "(none)",
+  "",
+  "Agents:",
+  status,
+  "",
+  "Recently modified agent files:",
+  recent.files.length
+    ? recent.files
+        .slice(0, 100)
+        .map(
+          (file) =>
+            `- ${new Date(file.time).toISOString()} — ${file.agentName}: [${file.path}](${agentFileLink({ id: file.agentId }, file.path)})${typeof file.size === "number" ? ` (${file.size} bytes)` : ""}`,
+        )
+        .join("\n")
+    : "(none)",
+  ...(recent.withoutTimestamp
+    ? [`(${recent.withoutTimestamp} file(s) had no timestamp metadata.)`]
+    : []),
+].join("\n");
+}
+
 export function createMetaToolRunner({
   userSettings,
   interfaceSettings,
@@ -997,81 +1098,8 @@ export function createMetaToolRunner({
         return (await agentStatusLines(agents)).join("\n");
       }
 
-      case "get_whats_new": {
-        const since = parseSince(args.since) || Date.now() - 24 * 60 * 60 * 1000;
-        const [rows, folders, agents] = await Promise.all([
-          listConversationMetas(),
-          listFolders(),
-          Promise.resolve(getAgents()),
-        ]);
-        const chats = (rows || [])
-          .filter(
-            (row) =>
-              !row.isMetaChat &&
-              row.id !== "meta-chat" &&
-              (row.lastModified ?? row.createdAt ?? 0) >= since,
-          )
-          .sort(
-            (left, right) =>
-              (right.lastModified ?? 0) - (left.lastModified ?? 0),
-          )
-          .slice(0, 20);
-        const topics = (folders || []).filter(
-          (folder) => (folder.createdAt ?? 0) >= since,
-        );
-        const memories = (userSettings.memories || []).filter((memory) => {
-          const created = new Date(memory.createdAt || 0).getTime();
-          return Number.isFinite(created) && created >= since;
-        });
-        const status = agents.length
-          ? (await agentStatusLines(agents)).join("\n")
-          : "No agents configured.";
-        const recent = agents.length
-          ? await recentAgentFiles(agents, since)
-          : { files: [], withoutTimestamp: 0 };
-        return [
-          `Changes since ${new Date(since).toISOString()}:`,
-          "",
-          "Chats:",
-          chats.length
-            ? chats
-                .map(
-                  (chat) =>
-                    `- [${chat.title || "Untitled Chat"}](/chat/${chat.id}) — ${new Date(chat.lastModified ?? chat.createdAt ?? 0).toISOString()}`,
-                )
-                .join("\n")
-            : "(no changed chats)",
-          "",
-          "New topics:",
-          topics.length
-            ? topics
-                .map((topic) => `- ${topic.name} (id: ${topic.id})`)
-                .join("\n")
-            : "(none)",
-          "",
-          "New memories:",
-          memories.length
-            ? memories.map((memory) => `- ${memory.text}`).join("\n")
-            : "(none)",
-          "",
-          "Agents:",
-          status,
-          "",
-          "Recently modified agent files:",
-          recent.files.length
-            ? recent.files
-                .slice(0, 100)
-                .map(
-                  (file) =>
-                    `- ${new Date(file.time).toISOString()} — ${file.agentName}: [${file.path}](${agentFileLink({ id: file.agentId }, file.path)})${typeof file.size === "number" ? ` (${file.size} bytes)` : ""}`,
-                )
-                .join("\n")
-            : "(none)",
-          ...(recent.withoutTimestamp
-            ? [`(${recent.withoutTimestamp} file(s) had no timestamp metadata.)`]
-            : []),
-        ].join("\n");
-      }
+      case "get_whats_new":
+        return getWhatsNew({ userSettings, since: args.since });
 
       case "get_agent_history": {
         const agent = findAgent(args.agent);

@@ -579,6 +579,38 @@ export function useWorkspaceAgents(workspaceId?: string): WorkspaceAgentRow[] {
   );
 }
 
+export async function getConversationWorkspaceIds(
+  conversationId: string,
+): Promise<string[]> {
+  if (!conversationId) return [];
+  const links = await db.workspace_chats
+    .where("conversationId")
+    .equals(conversationId)
+    .toArray();
+  return [...new Set(links.map((link) => link.workspaceId))];
+}
+
+export async function getWorkspaceAgentIds(
+  workspaceIds: string[],
+): Promise<string[]> {
+  if (!workspaceIds.length) return [];
+  const links = await db.workspace_agents
+    .where("workspaceId")
+    .anyOf(workspaceIds)
+    .toArray();
+  return [...new Set(links.map((link) => link.agentId))];
+}
+
+export function useWorkspaceAgentLinks(): WorkspaceAgentRow[] {
+  return (
+    useLiveQuery(
+      () => db.workspace_agents.toArray(),
+      [],
+      [] as WorkspaceAgentRow[],
+    ) ?? []
+  );
+}
+
 export function useAgentWorkspaceLinks(agentId?: string): WorkspaceAgentRow[] {
   return (
     useLiveQuery(
