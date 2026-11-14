@@ -32,7 +32,7 @@ import {
   loadAgentPermissionPolicies,
   matchPermissionPolicy,
 } from "../../agents/agentPermissionPolicies";
-import { isInternalGitLogCommand } from "../../utils/gitLog";
+import { isInternalShellCommand } from "../../utils/gitLog";
 import {
   compactOpencodeSession,
   createOpencodeSession,
@@ -247,7 +247,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const mergeShellMessages = useCallback(
     (next) => {
       const visible = next.filter(
-        (message) => !isInternalGitLogCommand(message),
+        (message) => !isInternalShellCommand(message),
       );
       let changed = false;
       for (const message of visible) {
@@ -593,7 +593,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       const shell = data?.shell;
       if (
         (type === "session.shell.started" || type === "session.shell.ended") &&
-        isInternalGitLogCommand(shell)
+        isInternalShellCommand(shell)
       ) {
         return;
       }

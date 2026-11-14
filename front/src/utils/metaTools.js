@@ -20,7 +20,9 @@ import {
   listOpencodeFiles,
   listOpencodeMessages,
   readOpencodeFile,
+  runOpencodeShellAndWait,
 } from "../apis/opencodeAgents";
+import { FILE_STAT_MARKER } from "./gitLog";
 
 const MAX_CONVERSATIONS = 400;
 const MAX_CONTEXT_CHARS = 60000;
@@ -265,6 +267,75 @@ const agentMessageText = (message) => {
     .trim();
 };
 
+const fileTime = (item) => {
+  const raw =
+    item?.mtime ??
+    item?.modified ??
+    item?.modifiedAt ??
+    item?.time?.modified ??
+    item?.time?.updated ??
+    item?.time?.created ??
+    item?.createdAt;
+  if (raw === undefined || raw === null || raw === "") return 0;
+  const numeric = typeof raw === "number" ? raw : new Date(raw).getTime();
+  if (!Number.isFinite(numeric)) return 0;
+  return numeric < 1e12 ? numeric * 1000 : numeric;
+};
+
+const readAgentFileStats = async (agent) => {
+  if (!agent?.sessionId) return null;
+  const command = `node -e "const fs=require('fs'),path=require('path');function walk(d,out){for(const e of fs.readdirSync(d,{withFileTypes:true})){if(e.name==='.git'||e.name==='node_modules')continue;const p=path.join(d,e.name);if(e.isDirectory())walk(p,out);else{const s=fs.statSync(p);out.push({path:path.relative(process.cwd(),p),size:s.size,mtime:s.mtimeMs})}if(out.length>=2000)return out}return out}console.log(JSON.stringify(walk('.',[])))" # ${FILE_STAT_MARKER}`;
+  try {
+    const output = await runOpencodeShellAndWait(
+      agent,
+      agent.sessionId,
+      command,
+      20000,
+    );
+    const line = output
+      .split("\n")
+      .find((entry) => entry.trim().startsWith("["));
+    if (!line) return null;
+    const rows = JSON.parse(line);
+    return Array.isArray(rows)
+      ? rows.filter((row) => row?.path && typeof row.path === "string")
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const collectAgentFiles = async (
+  agent,
+  path = "",
+  depth = 0,
+  output = [],
+) => {
+  if (depth > 3 || output.length >= 500) return output;
+  let rows = [];
+  try {
+    rows = await listOpencodeFiles(agent, path);
+  } catch {
+    return output;
+  }
+  for (const row of rows) {
+    if (output.length >= 500) break;
+    const rowPath = String(row?.path || "");
+    if (
+      row?.type === "directory" &&
+      rowPath.split("/").filter(Boolean).includes(".git")
+    ) {
+      continue;
+    }
+    if (row?.type === "directory") {
+      await collectAgentFiles(agent, rowPath, depth + 1, output);
+    } else {
+      output.push({ ...row, agentId: agent.id, agentName: agent.name || agent.id });
+    }
+  }
+  return output;
+};
+
 const tool = (name, description, properties = {}, required = []) => ({
   type: "function",
   function: {
@@ -337,12 +408,29 @@ export const META_TOOL_DEFINITIONS = [
     ["agent"],
   ),
   tool(
+    "list_recent_agent_files",
+    "List files recently modified in any agent's OpenCode project, sorted newest first.",
+    {
+      hours: { type: "integer", description: "How far back to look, default 24, max 720" },
+      agent: { type: "string", description: "Optional agent id or name" },
+    },
+  ),
+  tool(
     "read_agent_file",
     "Read a UTF-8 file from one agent's OpenCode project by its id or name.",
     {
       agent: { type: "string", description: "Agent id or name" },
       path: { type: "string", description: "Project-relative file path" },
       maxChars: { type: "integer", description: "Maximum characters (default 20000, max 100000)" },
+    },
+    ["agent", "path"],
+  ),
+  tool(
+    "fetch_agent_file",
+    "Fetch a file from one agent's OpenCode project and attach it to this Meta chat so it can be displayed or downloaded. Use this for images, PDFs, and other binary files.",
+    {
+      agent: { type: "string", description: "Agent id or name" },
+      path: { type: "string", description: "Project-relative file path" },
     },
     ["agent", "path"],
   ),
@@ -621,16 +709,68 @@ export function createMetaToolRunner({
         try {
           const rows = await listOpencodeFiles(agent, path);
           return rows
-            .map(
-              (entry) =>
-                `- ${entry.type === "directory" ? "dir " : "file"} ${entry.path}${typeof entry.size === "number" ? ` (${entry.size} bytes)` : ""}`,
-            )
+            .map((entry) => {
+              const time = fileTime(entry);
+              return `- ${entry.type === "directory" ? "dir " : "file"} ${entry.path}${typeof entry.size === "number" ? ` (${entry.size} bytes)` : ""}${time ? ` — ${new Date(time).toISOString()}` : ""}`;
+            })
             .join("\n") || "(empty folder)";
         } catch (error) {
           return `Could not list agent files: ${
             error instanceof Error ? error.message : String(error)
           }`;
         }
+      }
+
+      case "list_recent_agent_files": {
+        const hours = Math.min(
+          720,
+          Math.max(1, Number.parseInt(args.hours, 10) || 24),
+        );
+        const since = Date.now() - hours * 60 * 60 * 1000;
+        const agents = args.agent
+          ? [findAgent(args.agent)].filter(Boolean)
+          : getAgents();
+        if (!agents.length) return "Agent not found.";
+        const files = [];
+        let withoutTimestamp = 0;
+        await Promise.all(
+          agents.map(async (agent) => {
+            const rows = (
+              (await readAgentFileStats(agent)) ??
+              (await collectAgentFiles(agent))
+            ).map((row) => ({
+              ...row,
+              agentId: agent.id,
+              agentName: agent.name || agent.id,
+            }));
+            for (const row of rows) {
+              const time = fileTime(row);
+              if (!time) {
+                withoutTimestamp += 1;
+                continue;
+              }
+              if (time >= since) files.push({ ...row, time });
+            }
+          }),
+        );
+        files.sort((left, right) => right.time - left.time);
+        if (!files.length) {
+          return `No agent files modified in the last ${hours} hours.${
+            withoutTimestamp
+              ? ` ${withoutTimestamp} file(s) had no timestamp metadata.`
+              : ""
+          }`;
+        }
+        return [
+          `Agent files modified in the last ${hours} hours:`,
+          ...files.slice(0, 100).map(
+            (file) =>
+              `- ${new Date(file.time).toISOString()} — ${file.agentName}: ${file.path}${typeof file.size === "number" ? ` (${file.size} bytes)` : ""}`,
+          ),
+          ...(withoutTimestamp
+            ? [`(${withoutTimestamp} file(s) had no timestamp metadata.)`]
+            : []),
+        ].join("\n");
       }
 
       case "read_agent_file": {
@@ -654,6 +794,38 @@ export function createMetaToolRunner({
           return text.slice(0, maxChars) || "(empty file)";
         } catch (error) {
           return `Could not read the agent file: ${
+            error instanceof Error ? error.message : String(error)
+          }`;
+        }
+      }
+
+      case "fetch_agent_file": {
+        const agent = findAgent(args.agent);
+        if (!agent) return "Agent not found.";
+        const path = String(args.path || "").trim();
+        if (!path) return "A file path is required.";
+        try {
+          const { blob, type } = await readOpencodeFile(agent, path);
+          if (blob.size > 10 * 1024 * 1024) {
+            return `File is too large to attach (${blob.size} bytes).`;
+          }
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          let binary = "";
+          for (let index = 0; index < bytes.length; index += 0x8000) {
+            binary += String.fromCharCode(
+              ...bytes.subarray(index, index + 0x8000),
+            );
+          }
+          return {
+            summary: `Fetched ${path} (${type || "application/octet-stream"}, ${blob.size} bytes).`,
+            attachment: {
+              name: path.split("/").filter(Boolean).pop() || path,
+              mime: type || "application/octet-stream",
+              base64: btoa(binary),
+            },
+          };
+        } catch (error) {
+          return `Could not fetch the agent file: ${
             error instanceof Error ? error.message : String(error)
           }`;
         }

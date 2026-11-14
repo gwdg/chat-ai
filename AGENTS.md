@@ -415,9 +415,14 @@ an explicit Accept button. `MCP_SERVER` adds, updates, or removes per-chat MCP s
 entries or remote gateway ids), and with `target: "global"` it changes the sidebar MCP server list
 in `user_settings.mcp_servers`; the Meta chat reads the entry ids from `get_user_settings`.
 `test_mcp_server` tests a configured local server by id, name, or URL. `list_agents`, `check_agents`,
-`get_agent_history`, `list_agent_files`, and `read_agent_file` use the existing direct OpenCode
-connection to inspect agents, their messages, and project files. Agent links use `/agent/<id>` so
-`MarkdownLink` renders them as internal cards. Reverting a created chat deletes it only if its title,
+`get_agent_history`, `list_agent_files`, `list_recent_agent_files`, `read_agent_file`, and
+`fetch_agent_file` use the existing direct OpenCode connection to inspect agents, their messages, and
+project files. File listings preserve modification/access timestamps when the server returns them;
+recent-file queries sort by modification time and, because `/fs/list` may omit timestamps, run a
+fixed Node `fs.stat` listing through the OpenCode shell tagged `CHATAI_FILE_STAT`. Internal shell
+commands carrying `CHATAI_GIT_LOG` or `CHATAI_FILE_STAT` are filtered from the agent chat. `fetch_agent_file`
+attaches the file to the Meta chat through `saveFileReady`, so images and other binaries render as
+normal attachments. Agent links use `/agent/<id>` so `MarkdownLink` renders them as internal cards. Reverting a created chat deletes it only if its title,
 settings, and messages still match what was created. Only that click calls `updateConversationMeta` /
 `assignConversationToFolder` / `setConversationPinned` / `setFolderPinned` or dispatches
 `importUserSettings`; markers

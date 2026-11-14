@@ -32,6 +32,7 @@ import {
   selectUserSettings,
 } from "../Redux/reducers/userSettingsReducer";
 import { createMetaToolRunner, META_TOOL_DEFINITIONS } from "../utils/metaTools";
+import { saveFileReady } from "../db";
 
 const MAX_TOOL_ROUNDS = 6;
 
@@ -77,7 +78,7 @@ To propose changes, include one marker per change on its own line at the end of 
 [[DELETE_MEMORY:{"index":0}]]
 [[CLEAR_MEMORIES:{}]]
 
-Use only ids returned by the tools. Use "folderId": null for Unsorted, or provide a new folderName to create a topic. Use "pinned": true to pin a chat or topic and "pinned": false to unpin it. CREATE_CHAT messages must be text-only, use only system/user/assistant roles, and total at most 200 messages. Settings are optional and are validated before the chat is created. Use MCP_SERVER "target":"global" to change the sidebar MCP server list; get the entryId from get_user_settings. To link to an agent, call list_agents and use [Agent name](/agent/<agent id>).
+Use only ids returned by the tools. Use "folderId": null for Unsorted, or provide a new folderName to create a topic. Use "pinned": true to pin a chat or topic and "pinned": false to unpin it. CREATE_CHAT messages must be text-only, use only system/user/assistant roles, and total at most 200 messages. Settings are optional and are validated before the chat is created. Use MCP_SERVER "target":"global" to change the sidebar MCP server list; get the entryId from get_user_settings. To link to an agent, call list_agents and use [Agent name](/agent/<agent id>). To download or display a file from an agent, call list_agent_files and then fetch_agent_file; that attaches the file to this Meta chat. Use read_agent_file only for text. Do not claim that binary files cannot be accessed or shown. When the user asks what is new, which files are new, or for recent activity, call check_agents and list_recent_agent_files, then report the recently modified files and their agents.
 
 Supported setting keys and values:
 - memory_mode: 0 (none), 1 (recall), 2 (learn)
@@ -248,8 +249,11 @@ export function useMetaChatSend(modelsData = []) {
         );
       let systemPrompt = buildSystemPrompt();
       if (asksForNewStatus) {
-        const status = await runTool("check_agents");
-        systemPrompt += `\n\nCurrent agent status (checked now with check_agents):\n${status}`;
+        const [status, files] = await Promise.all([
+          runTool("check_agents"),
+          runTool("list_recent_agent_files", { hours: 24 }),
+        ]);
+        systemPrompt += `\n\nCurrent agent status (checked now with check_agents):\n${status}\n\n${files}`;
       }
 
       const payload = {
@@ -295,6 +299,7 @@ export function useMetaChatSend(modelsData = []) {
       });
 
       let accumulated = "";
+      const fileAttachments = [];
       let errorMeta = null;
       let startedGuide = false;
 
@@ -306,7 +311,10 @@ export function useMetaChatSend(modelsData = []) {
           if (messages[index]?.role !== "assistant") return prev;
           messages[index] = {
             ...messages[index],
-            content: [{ type: "text", text: accumulated }],
+            content: [
+              { type: "text", text: accumulated },
+              ...fileAttachments,
+            ],
           };
           return { ...prev, messages };
         });
@@ -359,6 +367,26 @@ export function useMetaChatSend(modelsData = []) {
                 ? JSON.parse(call.function.arguments)
                 : {};
               result = await runTool(call.function.name, args);
+              if (result?.attachment) {
+                try {
+                  const bytes = Uint8Array.from(
+                    atob(result.attachment.base64),
+                    (character) => character.charCodeAt(0),
+                  );
+                  const file = new File(
+                    [bytes],
+                    result.attachment.name,
+                    { type: result.attachment.mime },
+                  );
+                  const fileId = await saveFileReady(conversationId, file);
+                  fileAttachments.push({ type: "file", fileId });
+                  result =
+                    result.summary || `Attached ${result.attachment.name}.`;
+                  updateAssistant();
+                } catch (attachError) {
+                  result = `Could not attach the file: ${attachError.message}`;
+                }
+              }
               if (
                 call.function.name === "start_tutorial" ||
                 call.function.name === "start_use_case"
@@ -388,11 +416,13 @@ export function useMetaChatSend(modelsData = []) {
           if (messages[index]?.role !== "assistant") return prev;
           if (!messages[index].loading) return prev;
           const finalText = accumulated;
+          const content = [
+            ...(finalText ? [{ type: "text", text: finalText }] : []),
+            ...fileAttachments,
+          ];
           messages[index] = {
             ...messages[index],
-            content: finalText
-              ? [{ type: "text", text: finalText }]
-              : messages[index].content,
+            content: content.length ? content : messages[index].content,
             loading: false,
             ...(errorMeta ? { meta: errorMeta } : {}),
           };

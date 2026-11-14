@@ -16,11 +16,27 @@ import { formatGitLog, GIT_LOG_MARKER } from "../../utils/gitLog";
 const toRootEntry = (sourceId, item) => {
   const path = String(item?.path ?? "").replace(/\/+$/, "");
   const name = path.split("/").filter(Boolean).pop() ?? path;
+  const mtime =
+    item?.mtime ??
+    item?.modified ??
+    item?.modifiedAt ??
+    item?.time?.modified ??
+    item?.time?.updated ??
+    item?.time?.created ??
+    item?.createdAt;
+  const atime =
+    item?.atime ??
+    item?.accessed ??
+    item?.accessedAt ??
+    item?.time?.accessed;
   return {
     sourceId,
     path,
     name,
     kind: item?.type === "directory" ? "dir" : "file",
+    size: typeof item?.size === "number" ? item.size : undefined,
+    mtime,
+    atime,
     local: false,
   };
 };

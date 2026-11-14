@@ -13,6 +13,17 @@ import {
 import { baseName, parentPath } from "../../workspace/paths";
 import { formatBytes } from "../../utils/formatBytes";
 
+const formatModified = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
 export default function WorkspaceRootBrowser({
   path,
   rootPath = "/",
@@ -245,6 +256,14 @@ export default function WorkspaceRootBrowser({
                   {isReadOnly?.(entry) && (
                     <span className="badge badge-warning badge-xs">
                       {t("workspace.mount_read_only")}
+                    </span>
+                  )}
+                  {entry.mtime && (
+                    <span
+                      className="shrink-0 text-[10px] text-base-content/40"
+                      title={new Date(entry.mtime).toLocaleString()}
+                    >
+                      {formatModified(entry.mtime)}
                     </span>
                   )}
                   {entry.kind === "file" && typeof entry.size === "number" && (
