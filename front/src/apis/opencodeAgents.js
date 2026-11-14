@@ -54,6 +54,38 @@ export async function createOpencodeSession(agent, title) {
   return result?.data ?? result;
 }
 
+export async function listOpencodeCommands(agent) {
+  const result = await request(agent, "/command");
+  return result?.data ?? [];
+}
+
+export async function listOpencodeModels(agent) {
+  const result = await request(agent, "/model");
+  return result?.data ?? [];
+}
+
+export async function getOpencodeDefaultModel(agent) {
+  const result = await request(agent, "/model/default");
+  return result?.data ?? null;
+}
+
+export async function getOpencodeSession(agent, sessionId) {
+  const result = await request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}`,
+  );
+  return result?.data ?? result;
+}
+
+export async function setOpencodeModel(agent, sessionId, model) {
+  return request(agent, `/session/${encodeURIComponent(sessionId)}/model`, {
+    method: "POST",
+    body: JSON.stringify({
+      model: { id: model.id, providerID: model.providerID },
+    }),
+  });
+}
+
 export async function listOpencodeMessages(agent, sessionId) {
   const result = await request(
     agent,
@@ -73,4 +105,69 @@ export async function deleteOpencodeSession(agent, sessionId) {
   return request(agent, `/session/${encodeURIComponent(sessionId)}`, {
     method: "DELETE",
   });
+}
+
+export async function interruptOpencodeSession(agent, sessionId, resume = false) {
+  return request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/interrupt${resume ? "?resume=true" : ""}`,
+    { method: "POST" },
+  );
+}
+
+export async function sendOpencodeCommand(agent, sessionId, name, text = "") {
+  return request(agent, `/session/${encodeURIComponent(sessionId)}/command`, {
+    method: "POST",
+    body: JSON.stringify({ name, text }),
+  });
+}
+
+export async function listOpencodePermissions(agent, sessionId) {
+  const result = await request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/permission`,
+  );
+  return result?.data ?? [];
+}
+
+export async function replyOpencodePermission(
+  agent,
+  sessionId,
+  requestId,
+  decision,
+  message,
+) {
+  return request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/permission/${encodeURIComponent(requestId)}/reply`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        decision,
+        ...(message ? { message } : {}),
+      }),
+    },
+  );
+}
+
+export async function compactOpencodeSession(agent, sessionId) {
+  return request(agent, `/session/${encodeURIComponent(sessionId)}/compact`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function runOpencodeShell(agent, sessionId, command) {
+  return request(agent, `/session/${encodeURIComponent(sessionId)}/shell`, {
+    method: "POST",
+    body: JSON.stringify({ command }),
+  });
+}
+
+export async function cancelOpencodeInbox(agent, sessionId, inboxId) {
+  return request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/inbox/${encodeURIComponent(inboxId)}`,
+    { method: "DELETE" },
+  );
 }

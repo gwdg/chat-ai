@@ -646,7 +646,13 @@ chat pane; assistant text renders through `SafeMarkdown` with `rendererComponent
 `modals/Agent/AddAgentModal`, which only offers the placeholder HPC project list. Adding an agent calls the local `opencode serve` HTTP API through
 `apis/opencodeAgents.js`: `GET /api/info` verifies the server, `POST /api/session` creates the chat
 session, and `AgentConversation` sends `POST /api/session/:id/prompt` and polls
-`GET /api/session/:id/message?order=asc` until an `idle` message appears. The server URL and
+`GET /api/session/:id/message?order=asc` until an `idle` message appears. It also exposes the
+control API: interrupt (`/interrupt`), slash commands (`/command`), `!` shell input (`/shell`), and
+permission replies (`/permission/{requestID}/reply`). The composer's command dropdown is populated
+from `GET /api/command` (plus the built-in `compact`). The composer reuses `SendButton` and
+`ModelButton`; the model list is the intersection of `GET /api/model` (falling back to
+`/api/model/default`) with the app's ChatAI models, the selector is centred in the composer, and a
+selection is sent to `POST /api/session/:id/model`. The server URL and
 HTTP-basic credentials default from `opencodeServerUrl` / `opencodeServerUsername` /
 `opencodeServerPassword` in `front.json` (mapped to `VITE_OPENCODE_SERVER_*`) and stay editable per
 agent. The browser talks to the server directly (opencode allows the app origin via CORS), so the

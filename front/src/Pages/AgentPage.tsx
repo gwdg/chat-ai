@@ -44,7 +44,7 @@ export default function AgentPage() {
         />
         <div className="flex min-h-0 min-w-0 flex-col">
           {agent ? (
-            <AgentConversation agent={agent} />
+            <AgentConversation agent={agent} modelsData={modelsData} />
           ) : (
             <div className="flex flex-1 items-center justify-center text-sm text-base-content/60">
               {t("agents.not_found")}
