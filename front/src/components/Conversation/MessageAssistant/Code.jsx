@@ -1,6 +1,8 @@
 import { memo, useCallback, useState, useMemo, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import CodeCopyBtn from "../../Others/CodeCopyBtn";
 
 // PrismAsyncLight fetches the Prism core and each grammar on first use, but
@@ -47,7 +49,9 @@ function findScrollContainer(el) {
 }
 
 const Code = memo(({ language, children }) => {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
+  const [userOpen, setUserOpen] = useState(null);
   const [btnOffset, setBtnOffset] = useState(0);
   const codeRef = useRef(null);
   const handleMouseEnter = useCallback(() => setHovered(true), []);
@@ -57,6 +61,9 @@ const Code = memo(({ language, children }) => {
   if (!codeString.trim()) return null;
 
   const cacheKey = `${language || "text"}-${codeString}`;
+  const lineCount = codeString.split("\n").length;
+  const collapsible = lineCount >= 10;
+  const open = userOpen ?? !collapsible;
 
   const highlighted = useMemo(() => {
     if (highlightCache.has(cacheKey)) {
@@ -128,17 +135,48 @@ const Code = memo(({ language, children }) => {
   return (
     <div
       ref={codeRef}
-      className="relative block bg-neutral-800 rounded-lg p-1 my-4"
+      className={`relative block rounded-lg p-1 my-4 ${
+        collapsible && !open
+          ? "border border-base-300 bg-base-100"
+          : "bg-neutral-800"
+      }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {highlighted}
-      <div
-        className="absolute top-2 right-2 z-10"
-        style={{ transform: `translateY(${btnOffset}px)` }}
-      >
-        <CodeCopyBtn hovered={hovered} language={language}>{children}</CodeCopyBtn>
-      </div>
+      {collapsible && (
+        <div className="flex items-center gap-1 rounded-t-md border-b border-base-300 bg-base-100 px-2 py-1 text-xs text-base-content/80">
+          <button
+            type="button"
+            onClick={() => setUserOpen(!open)}
+            className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-0.5 py-0.5 text-left hover:bg-base-300"
+            aria-expanded={open}
+            title={open ? t("conversation.hide_code") : t("conversation.show_code")}
+          >
+            {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            <span className="font-medium">{t("conversation.code")}</span>
+            {language && (
+              <span className="text-[10px] uppercase tracking-wide text-base-content/50">
+                {language}
+              </span>
+            )}
+            <span className="text-[10px] text-base-content/50">
+              {t("conversation.code_lines", { count: lineCount })}
+            </span>
+          </button>
+          <CodeCopyBtn hovered={hovered || open} language={language}>
+            {children}
+          </CodeCopyBtn>
+        </div>
+      )}
+      {(!collapsible || open) && highlighted}
+      {!collapsible && (
+        <div
+          className="absolute top-2 right-2 z-10"
+          style={{ transform: `translateY(${btnOffset}px)` }}
+        >
+          <CodeCopyBtn hovered={hovered} language={language}>{children}</CodeCopyBtn>
+        </div>
+      )}
     </div>
   );
 });
