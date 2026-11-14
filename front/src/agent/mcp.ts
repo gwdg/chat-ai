@@ -14,6 +14,81 @@ export interface McpServer {
   headers?: Record<string, string>;
 }
 
+export interface GlobalMcpServer {
+  id: string;
+  name?: string;
+  kind: "local" | "remote";
+  url?: string;
+  serverId?: string;
+  headers?: Record<string, string>;
+}
+
+const selectedIds = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value
+        .map((item) =>
+          typeof item === "string"
+            ? item
+            : item && typeof item === "object" && typeof (item as any).id === "string"
+              ? (item as any).id
+              : "",
+        )
+        .filter(Boolean)
+    : [];
+
+/** Per-chat settings with legacy server entries plus the globally configured selections. */
+export function resolveMcpServers(settings: any, globals: GlobalMcpServer[] = []) {
+  const legacy = Array.isArray(settings?.mcp_servers) ? settings.mcp_servers : [];
+  const localIds = new Set(selectedIds(settings?.mcp_local_server_ids));
+  const remoteIds = new Set(selectedIds(settings?.mcp_remote_server_ids));
+  // Once a chat selects globally configured servers, those definitions win over legacy per-chat
+  // entries; this keeps the connection on the address stored in the global settings.
+  const legacyLocal = localIds.size
+    ? []
+    : legacy.filter((server: unknown) => !isRemoteMcpServer(server));
+  const legacyRemote = remoteIds.size
+    ? []
+    : legacy.filter((server: unknown) => isRemoteMcpServer(server));
+  const byId = new Map((globals ?? []).map((server) => [server.id, server]));
+  const local = [...localIds]
+    .map((id) => byId.get(id))
+    .filter((server): server is GlobalMcpServer => server?.kind === "local" && !!server.url)
+    .map((server) => ({
+      url: server.url!,
+      name: server.name,
+      headers: server.headers,
+      enabled: true,
+      globalId: server.id,
+    }));
+  const remote = [...remoteIds]
+    .map((id) => byId.get(id))
+    .filter(
+      (server): server is GlobalMcpServer =>
+        server?.kind === "remote" && !!server.serverId,
+    )
+    .map((server) => ({
+      id: server.serverId!,
+      name: server.name,
+      headers: server.headers,
+      enabled: true,
+      globalId: server.id,
+    }));
+  const merged: any[] = [...legacyLocal, ...local, ...legacyRemote, ...remote];
+  const seen = new Set<string>();
+  return merged.filter((server) => {
+    const key = `${isRemoteMcpServer(server) ? "remote" : "local"}:${server?.url ?? server?.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export const hasSelectedRemoteMcpServers = (settings: any) =>
+  selectedIds(settings?.mcp_remote_server_ids).length > 0;
+
+export const hasSelectedLocalMcpServers = (settings: any) =>
+  selectedIds(settings?.mcp_local_server_ids).length > 0;
+
 /** A gateway server entry: a server id. Older conversations store it as a bare string. */
 export function isRemoteMcpServer(server: unknown): server is { id: string; enabled?: boolean } {
   return (
@@ -25,6 +100,18 @@ export function isRemoteMcpServer(server: unknown): server is { id: string; enab
 }
 
 const LOCAL_HOST = /^(localhost|127(?:\.\d{1,3}){3}|\[?::1\]?|0\.0\.0\.0)(?::\d+)?(?:[/?#]|$)/i;
+const HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+
+/**
+ * URL accepts host names that DNS does not, such as `julian_kunkel`; a bare word like that is
+ * usually a user name or a label, not a server address. Reject those instead of contacting them.
+ */
+function isValidMcpHost(hostname: string): boolean {
+  if (!hostname) return false;
+  if (hostname.startsWith("[")) return true; // IPv6 literal, already validated by URL
+  const labels = hostname.replace(/\.$/, "").split(".");
+  return labels.every((label) => HOST_LABEL.test(label));
+}
 
 /** A server URL with a scheme; bare hosts like `localhost:9000` default to http on this machine. */
 export function normalizeMcpUrl(value: unknown): string {
@@ -35,7 +122,8 @@ export function normalizeMcpUrl(value: unknown): string {
     : `${LOCAL_HOST.test(raw) ? "http" : "https"}://${raw}`;
   try {
     const url = new URL(candidate);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : "";
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    return isValidMcpHost(url.hostname) ? url.toString() : "";
   } catch {
     return "";
   }
@@ -90,7 +178,11 @@ export const hasMcpServerValue = (value: unknown) =>
 export const remoteMcpEnabled = (settings: any) => {
   const flag = settings?.tools?.mcp_remote;
   if (typeof flag === "boolean") return flag;
-  return settings?.tools?.mcp === true && hasRemoteMcpServerValue(settings?.mcp_servers);
+  return (
+    settings?.tools?.mcp === true &&
+    (hasRemoteMcpServerValue(settings?.mcp_servers) ||
+      hasSelectedRemoteMcpServers(settings))
+  );
 };
 
 /** The servers without their headers, for sharing and exporting. */
@@ -199,6 +291,42 @@ export function prefetchMcpServers(servers: McpServer[]) {
   const keep = new Set(servers.map(keyOf));
   for (const key of [...connections.keys()]) if (!keep.has(key)) drop(key);
   for (const server of servers) connect(server).catch(() => {});
+}
+
+const mcpResultText = (result: any) => {
+  const lines: string[] = [];
+  for (const block of result?.content ?? []) {
+    if (block.type === "text") lines.push(block.text);
+    else if (block.type === "image") lines.push(`[image ${block.mimeType ?? "image"}]`);
+    else if (block.type === "resource") lines.push(block.resource?.text ?? `[resource ${block.resource?.uri}]`);
+    else if (block.type === "resource_link") lines.push(`[resource ${block.uri}]`);
+    else lines.push(`[${block.type ?? "unsupported"} content]`);
+  }
+  return lines.filter(Boolean).join("\n") || "(no output)";
+};
+
+export async function listMcpServerTools(server: McpServer) {
+  const { tools } = await connect(server);
+  return tools.map((tool) => ({
+    name: tool.name,
+    title: tool.title,
+    description: tool.description,
+    inputSchema: tool.inputSchema,
+  }));
+}
+
+export async function callMcpServerTool(
+  server: McpServer,
+  toolName: string,
+  args: unknown,
+) {
+  const { client } = await connect(server);
+  const result = await client.callTool({
+    name: toolName,
+    arguments: (args as Record<string, unknown>) ?? {},
+  });
+  const text = mcpResultText(result);
+  return result?.isError ? `MCP error: ${text}` : text;
 }
 
 export interface McpTools {

@@ -8,7 +8,6 @@ import {
   mcpConfigured,
   openConversationMenu,
   openConversationSettings,
-  openLocalTools,
   openSearch,
   openSortMenu,
   openTools,
@@ -20,8 +19,107 @@ import {
   toolsAreEnabled,
   topicNameEntered,
 } from "./featureGuideActions.js";
+import { isAgentsEnabled } from "../utils/modules.js";
 
 export const featureGuides = {
+  workspace_overview: {
+    titleKey: "feature_guide.workspace_overview.title",
+    prompt:
+      "Open a workspace from the sidebar. A workspace groups browser storage, local folders, Arcana collections and MCP file servers in one place. Add a source, click it to browse its files, and drag files between sources to copy or move them.",
+    keywords: ["workspace", "workspaces", "files", "browser storage", "local folder", "arcana files", "mcp files"],
+    steps: [
+      {
+        target: '[data-guide="workspace-add-source"]',
+        textKey: "feature_guide.workspace_overview.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-sources"]',
+        textKey: "feature_guide.workspace_overview.step2",
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_overview.step3",
+      },
+    ],
+  },
+  workspace_upload: {
+    titleKey: "feature_guide.workspace_upload.title",
+    prompt:
+      "Upload a file from your computer into a workspace. Open a workspace and use Upload file in the file browser; it writes into the folder you are viewing.",
+    keywords: ["upload file", "workspace upload", "add file to workspace", "local file"],
+    steps: [
+      {
+        target: '[data-guide="workspace-upload"]',
+        textKey: "feature_guide.workspace_upload.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_upload.step2",
+      },
+    ],
+  },
+  arcana_filesystem: {
+    titleKey: "feature_guide.arcana_filesystem.title",
+    prompt:
+      "Every workspace includes an Arcana filesystem source. It lists every Arcana as a folder, and each collection's files inside it.",
+    keywords: ["arcana filesystem", "arcana files", "browse arcanas", "arcana folder"],
+    steps: [
+      {
+        target: '[data-guide="workspace-sources"]',
+        textKey: "feature_guide.arcana_filesystem.step1",
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.arcana_filesystem.step2",
+      },
+    ],
+  },
+  attach_from_workspace: {
+    titleKey: "feature_guide.attach_from_workspace.title",
+    prompt:
+      "Attach a file from a workspace to the current chat. Attach the chat to a workspace with the workspace button in the prompt box, then open Attach from workspace and pick a file from the tree.",
+    keywords: ["attach from workspace", "workspace file", "workspace attachment", "workspace tree"],
+    steps: [
+      {
+        target: '[data-guide="chat-workspaces"]',
+        textKey: "feature_guide.attach_from_workspace.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="attach-from-workspace"]',
+        textKey: "feature_guide.attach_from_workspace.step2",
+        check: hasAttachmentCard,
+      },
+      {
+        target: '[data-guide="send"]',
+        textKey: "feature_guide.attach_from_workspace.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
+  remote_agents: {
+    titleKey: "feature_guide.remote_agents.title",
+    prompt:
+      "Spawn a remote agent from the Agents section in the sidebar. Agents run on GWDG infrastructure; each HPC project shows its chat underneath.",
+    keywords: ["agent", "agents", "remote agent", "hpc project", "gwdg infrastructure"],
+    steps: [
+      {
+        target: '[data-guide="agents-spawn"]',
+        textKey: "feature_guide.remote_agents.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="agents-list"]',
+        textKey: "feature_guide.remote_agents.step2",
+      },
+      {
+        target: '[data-guide="agent-clear-history"]',
+        textKey: "feature_guide.remote_agents.step3",
+      },
+    ],
+  },
   attach_media: {
     titleKey: "feature_guide.attach_media.title",
     prompt:
@@ -272,39 +370,20 @@ export const featureGuides = {
       },
     ],
   },
-  browser_storage: {
-    titleKey: "feature_guide.browser_storage.title",
-    prompt:
-      "Let the agent use this chat's browser workspace. Open Browser & local tools from the prompt box, then select Browser storage to allow reading and writing files.",
-    keywords: ["browser storage", "browser workspace", "opfs", "local files"],
-    steps: [
-      {
-        target: '[data-guide="local-tools"]',
-        textKey: "feature_guide.browser_storage.step1",
-        completeOnTargetClick: true,
-      },
-      {
-        target: '[data-guide="tool-browser_storage"]',
-        prepare: openLocalTools,
-        textKey: "feature_guide.browser_storage.step2",
-        check: () => isToolActive("browser_storage"),
-      },
-    ],
-  },
   image_analysis: {
     titleKey: "feature_guide.image_analysis.title",
     prompt:
-      "Analyze images with SAIA's Gemma vision model. Open Browser & local tools from the prompt box, then select Analyze images.",
+      "Analyze images with SAIA's Gemma vision model. Open GWDG Tools from the prompt box, then select Analyze images.",
     keywords: ["analyze image", "analyse image", "read image", "image text", "vision"],
     steps: [
       {
-        target: '[data-guide="local-tools"]',
+        target: '[data-guide="tools"]',
         textKey: "feature_guide.image_analysis.step1",
         completeOnTargetClick: true,
       },
       {
         target: '[data-guide="tool-image_analysis"]',
-        prepare: openLocalTools,
+        prepare: openTools,
         textKey: "feature_guide.image_analysis.step2",
         check: () => isToolActive("image_analysis"),
       },
@@ -380,31 +459,23 @@ export const featureGuides = {
   mcp_server: {
     titleKey: "feature_guide.mcp_server.title",
     prompt:
-      "Connect an MCP server. Open Tools, enable tools, select MCP Server, then enter the server configuration.",
+      "Configure an MCP server once in the sidebar's MCP Servers section, test the connection, then select the server for this chat under MCP Servers in GWDG Tools.",
     keywords: ["mcp", "mcp server", "model context protocol"],
     steps: [
       {
-        target: '[data-guide="tools"]',
+        target: '[data-guide="mcp-servers-add"]',
         textKey: "feature_guide.mcp_server.step1",
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="tools-enable"]',
-        prepare: openTools,
-        textKey: "feature_guide.mcp_server.step2",
-        check: toolsAreEnabled,
-      },
-      {
-        target: '[data-guide="tool-mcp_remote"]',
-        prepare: ensureToolsEnabled,
-        textKey: "feature_guide.mcp_server.step3",
-        check: () => isToolActive("mcp_remote"),
-      },
-      {
         target: '[data-guide="mcp-input"]',
-        prepare: () => ensureTool("mcp_remote"),
-        textKey: "feature_guide.mcp_server.step4",
+        textKey: "feature_guide.mcp_server.step2",
         check: mcpConfigured,
+      },
+      {
+        target: '[data-guide="mcp-server-picker"]',
+        prepare: () => ensureTool("mcp"),
+        textKey: "feature_guide.mcp_server.step3",
       },
     ],
   },
@@ -1135,7 +1206,6 @@ export const FEATURE_CATEGORIES = {
     "image_generation",
     "image_modification",
     "image_analysis",
-    "browser_storage",
     "audio_generation",
     "arcana_v2",
     "mcp_server",
@@ -1154,6 +1224,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
+  workspace: ["workspace_overview", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
@@ -1324,6 +1395,7 @@ export function findFeatureGuideForText(text) {
 
 export function buildFeatureGuidePrompt() {
   return Object.entries(featureGuides)
+    .filter(([featureId]) => featureId !== "remote_agents" || isAgentsEnabled())
     .map(([featureId, guide]) => `- ${featureId}: ${guide.prompt}`)
     .join("\n");
 }

@@ -41,6 +41,15 @@ describe("Meta chat action markers", () => {
     expect(proposals[8]).toMatchObject({ type: "delete_memory", index: 1 });
   });
 
+  it("accepts an optional target group for memory proposals", () => {
+    const proposals = getMetaActionProposals(
+      '[[ADD_MEMORY:{"text":"remember this","group":"Private"}]]',
+    );
+    expect(proposals).toEqual([
+      { type: "add_memory", text: "remember this", group: "Private" },
+    ]);
+  });
+
   it("accepts the browser storage tool setting", () => {
     const proposals = getMetaActionProposals(
       '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"browser_storage","value":true}]]',

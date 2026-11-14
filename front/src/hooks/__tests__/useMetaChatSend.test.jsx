@@ -10,11 +10,18 @@ vi.mock("react-redux", () => ({
       user_settings: {
         model: { id: "test-model", name: "Test Model" },
         memories: [{ text: "one memory" }],
+        memory_groups: [],
+        default_memory_group: "default",
         timeout: 300000,
         memory_mode: 0,
       },
       interface_settings: {},
     }),
+  useDispatch: () => vi.fn(),
+}));
+
+vi.mock("../useToast", () => ({
+  useToast: () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }),
 }));
 
 vi.mock("react-i18next", () => ({

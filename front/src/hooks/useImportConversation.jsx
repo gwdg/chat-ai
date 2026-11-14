@@ -313,6 +313,12 @@ export function useImportConversation() {
         settings.memory_mode_override = Number(memory_mode_override);
       }
 
+      // per-conversation memory group
+      const memory_group_override = extractParameter(data, "memory_group_override");
+      if (typeof memory_group_override === "string") {
+        settings.memory_group_override = memory_group_override;
+      }
+
       // arcana
       let arcana = {};
       const arcana_id = extractParameter(data, "arcana");

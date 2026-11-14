@@ -1,8 +1,10 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import { chatCompletions } from "../apis/chatCompletions";
+import { useToast } from "./useToast";
+import generateMemory from "../apis/generateMemory";
 import { extractMessageText } from "../utils/conversationSummary";
 import {
   getMetaActionProposals,
@@ -20,7 +22,12 @@ import {
 } from "../config/featureGuides";
 import { getUseCaseMarker, stripUseCaseMarkers } from "../config/useCases";
 import {
+  addMemory,
+  editMemory,
   selectAllMemories,
+  selectDefaultMemoryGroup,
+  selectMemoryGroups,
+  selectMemoryMode,
   selectTimeout,
   selectUserSettings,
 } from "../Redux/reducers/userSettingsReducer";
@@ -31,7 +38,7 @@ const MAX_TOOL_ROUNDS = 6;
 function buildSystemPrompt() {
   return `You are the Meta chat assistant and a helpful tutor for a local chat application. You help the user understand and use Chat AI, including its features and workflows, and find and understand their past conversations and topics. You are the only assistant that can start in-app tutorials.
 
-The app data is not embedded in this prompt. Use the provided tools to read it when needed: list_chats, list_topics, get_chat, search_messages, list_memories, get_user_settings, list_models, list_personas, list_tutorials, start_tutorial, and start_use_case. The data can change between user messages, so call the relevant tool again instead of assuming an earlier value still applies. Never invent a conversation, topic, title, id, setting, memory, model, persona, tutorial, or use case. If a tool returns nothing useful, say so plainly.
+The app data is not embedded in this prompt. Use the provided tools to read it when needed: list_chats, list_topics, get_chat, search_messages, list_memories, get_user_settings, list_models, list_personas, list_tutorials, start_tutorial, and start_use_case. The data can change between user messages, so call the relevant tool again instead of assuming an earlier value still applies. Never invent a conversation, topic, title, id, setting, memory, model, persona, tutorial, or use case. If a tool returns nothing useful, say so plainly. Memories can be grouped: list_memories returns the available memory groups, each memory's group, and the default memory group. Use it when the user asks about memory groups instead of saying memories are not grouped.
 
 For navigation, give the user an inline Markdown link:
 - Conversation: [<conversation title>](/chat/<conversation id>)
@@ -60,8 +67,8 @@ To propose changes, include one marker per change on its own line at the end of 
 [[MCP_SERVER:{"op":"add","server":"remote","target":"<conversation id>","serverId":"<server id>","enabled":true,"authorization":"<optional>"}]]
 [[MCP_SERVER:{"op":"update","server":"local","target":"all","url":"localhost:9000","enabled":false}]]
 [[MCP_SERVER:{"op":"remove","server":"remote","target":"<conversation id>","serverId":"<server id>"}]]
-[[ADD_MEMORY:{"text":"<new memory>"}]]
-[[UPDATE_MEMORY:{"index":0,"text":"<updated memory>"}]]
+[[ADD_MEMORY:{"text":"<new memory>","group":"<group name>"}]]
+[[UPDATE_MEMORY:{"index":0,"text":"<updated memory>","group":"<group name>"}]]
 [[DELETE_MEMORY:{"index":0}]]
 [[CLEAR_MEMORIES:{}]]
 
@@ -89,21 +96,50 @@ Use SET_CONVERSATION_SETTING with "target":"all" only when the user explicitly a
 
 MCP servers are per-chat. "local" servers are added to Local tools with a URL; "remote" servers are added to GWDG Tools with a gateway server id. The target is "all" or a conversation id; use "all" when the user does not name a chat. For a local server, provide its URL (for example localhost:9000). For a remote server, provide its server id as serverId. authorization is optional and must only contain a value the user gave you; never invent credentials.
 
-For any other setting, do not propose a marker; use get_user_settings to find the relevant settings tab and give its deep link instead. Use list_memories before ADD_MEMORY, UPDATE_MEMORY, DELETE_MEMORY, or CLEAR_MEMORIES; indices come from that tool. Do not combine proposal markers with persona links or tutorial requests in the same answer.
+For any other setting, do not propose a marker; use get_user_settings to find the relevant settings tab and give its deep link instead. Use list_memories before ADD_MEMORY, UPDATE_MEMORY, DELETE_MEMORY, or CLEAR_MEMORIES; indices come from that tool. Memories can be grouped: set group to an existing group name from list_memories, or omit it to use this chat's effective memory group. Never invent a group name. Do not combine proposal markers with persona links or tutorial requests in the same answer.
 
 Answer in the same language as the user's question. Be concise and concrete.`;
 }
 
 export function useMetaChatSend(modelsData = []) {
+  const dispatch = useDispatch();
   const timeout = useSelector(selectTimeout);
   const userSettings = useSelector(selectUserSettings);
   const interfaceSettings = useSelector((state) => state.interface_settings);
   const memories = useSelector(selectAllMemories);
+  const memoryGroups = useSelector(selectMemoryGroups);
+  const defaultMemoryGroup = useSelector(selectDefaultMemoryGroup);
+  const memoryMode = useSelector(selectMemoryMode);
   const { t } = useTranslation();
+  const { notifySuccess } = useToast();
 
   return useCallback(
     async ({ localState, setLocalState }) => {
       if (!setLocalState) return;
+
+      const modeOverride = localState.settings?.memory_mode_override;
+      const effectiveMemoryMode =
+        modeOverride === undefined ||
+        modeOverride === null ||
+        modeOverride === "default"
+          ? memoryMode
+          : [0, 1, 2].includes(Number(modeOverride))
+            ? Number(modeOverride)
+            : memoryMode;
+
+      const groupOverride = localState.settings?.memory_group_override;
+      const requestedGroup =
+        groupOverride && groupOverride !== "default"
+          ? groupOverride
+          : defaultMemoryGroup;
+      const effectiveMemoryGroup =
+        requestedGroup === "default" ||
+        memoryGroups.some((group) => group.id === requestedGroup)
+          ? requestedGroup
+          : "default";
+      const groupMemories = (memories || []).filter(
+        (memory) => (memory.groupId ?? "default") === effectiveMemoryGroup,
+      );
 
       const modelId =
         (typeof localState.settings?.model === "string"
@@ -215,6 +251,9 @@ export function useMetaChatSend(modelsData = []) {
       };
 
       const conversationId = localState.id;
+      const newUserMessage = extractMessageText(
+        localState.messages[localState.messages.length - 1],
+      ).trim();
       const timeoutMs =
         timeout >= 5000 && timeout <= 900000 ? timeout : 300000;
 
@@ -369,7 +408,61 @@ export function useMetaChatSend(modelsData = []) {
 
         window.dispatchEvent(new Event("chatai:message-complete"));
       }
+
+      if (
+        effectiveMemoryMode === 2 &&
+        newUserMessage &&
+        accumulated.trim() &&
+        !errorMeta
+      ) {
+        try {
+          const memoryResponse = await generateMemory(
+            newUserMessage,
+            groupMemories,
+          );
+          const cleanedResponse = memoryResponse.replace(
+            /,(\s*[}$])/g,
+            "$1",
+          );
+          const jsonResponse = JSON.parse(cleanedResponse);
+          if (jsonResponse.store) {
+            const memoryText = jsonResponse.memory_sentence.trim();
+            if (jsonResponse.replace) {
+              const lineNumber = jsonResponse.line_number - 1;
+              dispatch(
+                editMemory({
+                  index: lineNumber,
+                  text: memoryText,
+                  groupId: effectiveMemoryGroup,
+                }),
+              );
+            } else {
+              dispatch(
+                addMemory({
+                  text: memoryText,
+                  groupId: effectiveMemoryGroup,
+                }),
+              );
+            }
+            notifySuccess("Memory updated successfully.");
+          }
+        } catch (error) {
+          console.error("Meta chat memory update failed", error);
+        }
+      }
     },
-    [timeout, userSettings, interfaceSettings, memories, modelsData, t],
+    [
+      timeout,
+      userSettings,
+      interfaceSettings,
+      memories,
+      memoryGroups,
+      defaultMemoryGroup,
+      memoryMode,
+      dispatch,
+      notifySuccess,
+      modelsData,
+      t,
+    ],
   );
 }

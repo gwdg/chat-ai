@@ -6,7 +6,9 @@ import {
   hasMcpServerValue,
   hasRemoteMcpServerValue,
   isRemoteMcpServer,
+  normalizeMcpUrl,
   remoteMcpEnabled,
+  resolveMcpServers,
 } from "../mcp";
 
 const sdk = vi.hoisted(() => ({ names: new Map<string, string>() }));
@@ -52,6 +54,55 @@ describe("MCP server entries", () => {
     expect(hasMcpServerValue([remote, local])).toBe(true);
   });
 
+  it("resolves globally configured selections for a chat", () => {
+    const globals = [
+      {
+        id: "g-local",
+        name: "Files",
+        kind: "local" as const,
+        url: "http://localhost:9000/mcp",
+      },
+      {
+        id: "g-remote",
+        name: "GWDG",
+        kind: "remote" as const,
+        serverId: "server-1",
+      },
+    ];
+    const resolved = resolveMcpServers(
+      {
+        mcp_local_server_ids: ["g-local"],
+        mcp_remote_server_ids: ["g-remote"],
+      },
+      globals,
+    );
+    expect(resolved).toEqual([
+      expect.objectContaining({ url: "http://localhost:9000/mcp" }),
+      expect.objectContaining({ id: "server-1", name: "GWDG" }),
+    ]);
+  });
+
+  it("uses the global address instead of a legacy per-chat entry", () => {
+    const resolved = resolveMcpServers(
+      {
+        mcp_servers: [{ url: "http://old-host:9000/mcp", enabled: true }],
+        mcp_local_server_ids: ["g-local"],
+      },
+      [
+        {
+          id: "g-local",
+          name: "Files",
+          kind: "local" as const,
+          url: "http://new-host:9000/mcp",
+        },
+      ],
+    );
+    expect(resolved).toHaveLength(1);
+    expect(resolved[0]).toEqual(
+      expect.objectContaining({ url: "http://new-host:9000/mcp" }),
+    );
+  });
+
   it("keeps the enable flags separate", () => {
     expect(remoteMcpEnabled({ tools: { mcp_remote: true } })).toBe(true);
     expect(remoteMcpEnabled({ tools: { mcp_remote: false, mcp: true } })).toBe(false);
@@ -69,6 +120,44 @@ describe("MCP server entries", () => {
         mcp_servers: [remote, local],
       }),
     ).toEqual([local]);
+  });
+
+  it("skips a server whose stored address is not a URL", () => {
+    expect(
+      activeMcpServers({
+        tools: { mcp: true },
+        mcp_servers: [
+          { url: "julian_kunkel", enabled: true },
+          { url: "https://julian_kunkel/", enabled: true },
+          local,
+        ],
+      }),
+    ).toEqual([local]);
+  });
+});
+
+describe("MCP URL normalization", () => {
+  it("adds a scheme to bare local addresses", () => {
+    expect(normalizeMcpUrl("localhost:9000/mcp")).toBe(
+      "http://localhost:9000/mcp",
+    );
+    expect(normalizeMcpUrl("127.0.0.1:9000")).toBe("http://127.0.0.1:9000/");
+  });
+
+  it("defaults other bare hosts to https", () => {
+    expect(normalizeMcpUrl("example.com/mcp")).toBe(
+      "https://example.com/mcp",
+    );
+  });
+
+  it("rejects names that are not valid host names", () => {
+    expect(normalizeMcpUrl("julian_kunkel")).toBe("");
+    expect(normalizeMcpUrl("https://julian_kunkel/")).toBe("");
+    expect(normalizeMcpUrl("https://foo_bar.example.com/")).toBe("");
+  });
+
+  it("rejects unsupported protocols", () => {
+    expect(normalizeMcpUrl("ftp://example.com")).toBe("");
   });
 });
 

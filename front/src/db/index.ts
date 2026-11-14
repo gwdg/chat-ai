@@ -3,6 +3,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid';
 import { deleteAllWorkspaces, deleteWorkspace } from '../agent/workspace'
+import i18n from '../i18n'
+import { isArcanasEnabled } from '../utils/modules'
+import { defaultCapabilities } from '../workspace/capabilities'
+import { SHARED_BROWSER_STORAGE_ID } from '../workspace/browserStorage'
 
 import type { 
   ConversationRow, 
@@ -17,7 +21,17 @@ import type {
   ContentItemInput,
   FolderRow,
   FeedbackRow,
-  PersonaInfo
+  PersonaInfo,
+  WorkspaceRow,
+  WorkspaceSourceRow,
+  WorkspaceHandleRow,
+  TransferJobRow,
+  WorkspaceMountRow,
+  WorkspaceChatRow,
+  WorkspaceAgentRow,
+  WorkspaceNodeRow,
+  WorkspaceBlobRow,
+  WorkspaceFileReferenceRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -29,6 +43,16 @@ export class AppDB extends Dexie {
   files_meta!: Table<FileMetaRow, string>
   files_data!: Table<FileDataRow, string>
   folders!: Table<FolderRow, string>
+  workspaces!: Table<WorkspaceRow, string>
+  workspace_sources!: Table<WorkspaceSourceRow, string>
+  workspace_handles!: Table<WorkspaceHandleRow, string>
+  workspace_transfers!: Table<TransferJobRow, string>
+  workspace_mounts!: Table<WorkspaceMountRow, string>
+  workspace_chats!: Table<WorkspaceChatRow, string>
+  workspace_agents!: Table<WorkspaceAgentRow, string>
+  workspace_nodes!: Table<WorkspaceNodeRow, string>
+  workspace_blobs!: Table<WorkspaceBlobRow, string>
+  workspace_file_references!: Table<WorkspaceFileReferenceRow, string>
 
   constructor() {
     super('app-conversations-db')
@@ -88,6 +112,216 @@ export class AppDB extends Dexie {
           conv.lastOpenedAt = conv.lastModified ?? conv.createdAt ?? Date.now();
         }
       });
+    });
+
+    this.version(6).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt'
+    });
+
+    this.version(7).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]'
+    });
+
+    this.version(8).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]',
+      workspace_nodes: 'id, sourceId, path, [sourceId+path], [sourceId+parentPath]',
+      workspace_blobs: 'id, sourceId'
+    });
+
+    this.version(9).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]',
+      workspace_nodes: 'id, sourceId, path, [sourceId+path], [sourceId+parentPath]',
+      workspace_blobs: 'id, sourceId',
+      workspace_file_references: 'id, conversationId, workspaceId, sourceId, nodeId'
+    });
+
+    this.version(10).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]',
+      workspace_nodes: 'id, sourceId, path, [sourceId+path], [sourceId+parentPath]',
+      workspace_blobs: 'id, sourceId',
+      workspace_file_references: 'id, conversationId, workspaceId, sourceId, nodeId'
+    }).upgrade(async (tx) => {
+      if (!isArcanasEnabled()) return;
+      const workspaces = await tx.table('workspaces').toArray();
+      const sources = tx.table('workspace_sources');
+      for (const workspace of workspaces) {
+        const existing = await sources
+          .where('[workspaceId+kind]')
+          .equals([workspace.id, 'arcana-filesystem'])
+          .first();
+        if (existing) continue;
+        const now = Date.now();
+        await sources.add({
+          id: uuidv4(),
+          workspaceId: workspace.id,
+          kind: 'arcana-filesystem',
+          label: i18n.t('workspace.kind_arcana-filesystem'),
+          config: {},
+          capabilities: defaultCapabilities('arcana-filesystem'),
+          readOnly: false,
+          status: 'offline',
+          createdAt: now,
+          lastModified: now,
+        });
+      }
+    });
+
+    this.version(11).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]',
+      workspace_nodes: 'id, sourceId, path, [sourceId+path], [sourceId+parentPath]',
+      workspace_blobs: 'id, sourceId',
+      workspace_file_references: 'id, conversationId, workspaceId, sourceId, nodeId'
+    }).upgrade(async (tx) => {
+      const now = Date.now();
+      const workspaces = await tx.table('workspaces').toArray();
+      const sources = tx.table('workspace_sources');
+      for (const workspace of workspaces) {
+        const existing = await sources
+          .where('[workspaceId+kind]')
+          .equals([workspace.id, 'browser'])
+          .first();
+        if (existing) continue;
+        await sources.add({
+          id: uuidv4(),
+          workspaceId: workspace.id,
+          kind: 'browser',
+          label: i18n.t('workspace.source_browser'),
+          config: { storage: 'indexeddb' },
+          capabilities: defaultCapabilities('browser'),
+          readOnly: false,
+          status: 'offline',
+          createdAt: now,
+          lastModified: now,
+        });
+      }
+
+      // Every browser source and every workspace root now uses one shared IndexedDB tree.
+      const allSources = await sources.toArray();
+      const browserSourceIds = new Set(
+        allSources
+          .filter((source: any) => source.kind === 'browser')
+          .map((source: any) => source.id),
+      );
+      const nodesTable = tx.table('workspace_nodes');
+      const blobsTable = tx.table('workspace_blobs');
+      const refsTable = tx.table('workspace_file_references');
+      const nodes = await nodesTable.toArray();
+      const candidates = nodes.filter(
+        (node: any) =>
+          node.sourceId !== SHARED_BROWSER_STORAGE_ID &&
+          (browserSourceIds.has(node.sourceId) ||
+            String(node.sourceId).startsWith('workspace-root:')),
+      );
+      if (!candidates.length) return;
+
+      const keepByPath = new Map<string, any>();
+      const dropToKeep = new Map<string, string>();
+      for (const node of candidates) {
+        const kept = keepByPath.get(node.path);
+        if (!kept) keepByPath.set(node.path, node);
+        else dropToKeep.set(node.id, kept.id);
+      }
+      const keepIds = new Set(
+        [...keepByPath.values()].map((node: any) => node.id),
+      );
+      const dropIds = candidates
+        .filter((node: any) => !keepIds.has(node.id))
+        .map((node: any) => node.id);
+
+      await refsTable.toCollection().modify((reference: any) => {
+        if (dropToKeep.has(reference.nodeId)) {
+          reference.nodeId = dropToKeep.get(reference.nodeId);
+        }
+        if (keepIds.has(reference.nodeId)) {
+          reference.sourceId = SHARED_BROWSER_STORAGE_ID;
+        }
+      });
+
+      if (dropIds.length) {
+        await nodesTable.bulkDelete(dropIds);
+        await blobsTable.bulkDelete(dropIds);
+      }
+      for (const node of keepByPath.values()) {
+        await nodesTable.update(node.id, {
+          sourceId: SHARED_BROWSER_STORAGE_ID,
+        });
+      }
+      const blobs = await blobsTable.toArray();
+      for (const blob of blobs) {
+        if (keepIds.has(blob.id)) {
+          await blobsTable.update(blob.id, {
+            sourceId: SHARED_BROWSER_STORAGE_ID,
+          });
+        }
+      }
+    });
+
+    this.version(12).stores({
+      workspace_agents: 'id, workspaceId, agentId, [workspaceId+agentId]',
     });
   }
 }
@@ -720,13 +954,19 @@ export async function setConversationSummary(
 
 // Delete entire conversation (messages + content items + files)
 export async function deleteConversation(conversationId: string) {
+  const chatLinks = await db.workspace_chats
+    .where('conversationId')
+    .equals(conversationId)
+    .toArray();
   await db.transaction(
     'rw',
     [db.messages,
     db.content_items,
     db.files_meta,
     db.files_data,
-    db.conversations],
+    db.conversations,
+    db.workspace_chats,
+    db.workspace_file_references],
     async () => {
       // Delete all files for this conversation (meta + data)
       const fileIds = await db.files_meta
@@ -754,6 +994,11 @@ export async function deleteConversation(conversationId: string) {
 
       // Finally, delete the conversation record itself
       await db.conversations.delete(conversationId);
+      await db.workspace_chats.where('conversationId').equals(conversationId).delete();
+      await db.workspace_file_references
+        .where('conversationId')
+        .equals(conversationId)
+        .delete();
     }
   );
   // The agent's files live in OPFS, outside the database

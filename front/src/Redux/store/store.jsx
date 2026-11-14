@@ -18,7 +18,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 7,
+  version: 8,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -36,6 +36,8 @@ const getDefaultState = () => {
       warn_clear_settings: true,
       warn_regenerate: true,
       warn_fork: true,
+      warn_workspace_delete: true,
+      warn_workspace_file_delete: true,
       count_hallucination: 0,
       count_announcement: 0,
       show_usage_in_sidebar: true,
@@ -49,6 +51,9 @@ const getDefaultState = () => {
     // Conditionally preserve memories
     user_settings: {
       memories: [],
+      memory_groups: [],
+      default_memory_group: "default",
+      mcp_servers: [],
       timeout: 300000,
       memory_mode: 0,
       suggest_user_prompts: false,

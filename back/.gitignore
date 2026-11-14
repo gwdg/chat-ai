@@ -24,3 +24,4 @@ remote-files/
 *.sln
 *.sw?
 .env
+workspaces.json

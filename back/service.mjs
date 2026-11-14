@@ -8,6 +8,8 @@ import FormData from "form-data";
 import fs from "fs";
 import path from "path";
 import { Readable, pipeline } from "stream"; // Node's stream module
+import { randomBytes, randomUUID } from "crypto";
+import { WebSocketServer } from "ws";
 import OpenAI from "openai";
 
 const app = express();
@@ -30,6 +32,7 @@ let remoteFilesArcana =
   process.env.REMOTE_FILES_ARCANA ||
   process.env.SAIA_RAG_WEB_ARCANA ||
   "remote-files";
+let bridgePublicUrl = process.env.BRIDGE_PUBLIC_URL || "";
 
 // Load configuration
 try {
@@ -61,6 +64,12 @@ try {
     configuredRemoteFilesArcana.trim()
   ) {
     remoteFilesArcana = configuredRemoteFilesArcana.trim();
+  }
+  if (
+    typeof config.bridgePublicUrl === "string" &&
+    config.bridgePublicUrl.trim()
+  ) {
+    bridgePublicUrl = config.bridgePublicUrl.trim();
   }
   if (testMode) {
     console.log("TEST MODE ENABLED: no upstream calls will be made.");
@@ -754,6 +763,18 @@ app.get("/arcana-v2/arcanas/:name", async (req, res) => {
   }
 });
 
+app.get("/arcana-v2/arcanas/:name/quota", async (req, res) => {
+  try {
+    const quota = await proxyArcanaJson(
+      req,
+      `${arcanaV2Path(req.params.name)}/quota`
+    );
+    return res.status(200).json(quota);
+  } catch (error) {
+    return sendRemoteError(res, error);
+  }
+});
+
 app.get("/arcana-v2/arcanas/:name/files", async (req, res) => {
   try {
     const files = await proxyArcanaJson(
@@ -1379,7 +1400,349 @@ app.post("/chat/completions", async (req, res) => {
   }
 });
 
+
+
+// Browser/OpenCode bridge: the browser keeps one WebSocket open, OpenCode talks MCP to this
+// process, and tool calls are relayed to the browser's workspace/MCP providers.
+const bridgeSessions = new Map();
+
+const bridgeBaseUrl = (req) =>
+  (bridgePublicUrl || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+
+const bridgeAuthorized = (req, session) =>
+  !!session &&
+  req.headers.authorization === `Bearer ${session.token}`;
+
+const bridgeToolDefinitions = (session) => {
+  const tools = [
+    {
+      name: "workspace_list",
+      description:
+        "List a folder in the user's selected workspace. Paths use the workspace root; the browser must stay connected.",
+      inputSchema: {
+        type: "object",
+        properties: { path: { type: "string", description: "Folder path, for example /docs" } },
+        required: ["path"],
+      },
+    },
+    {
+      name: "workspace_stat",
+      description: "Show whether a workspace path is a file or folder.",
+      inputSchema: {
+        type: "object",
+        properties: { path: { type: "string" } },
+        required: ["path"],
+      },
+    },
+    {
+      name: "workspace_read",
+      description:
+        "Read a text file from the user's workspace. Large or binary files return metadata instead of content.",
+      inputSchema: {
+        type: "object",
+        properties: { path: { type: "string" } },
+        required: ["path"],
+      },
+    },
+  ];
+  if (session.writable) {
+    tools.push(
+      {
+        name: "workspace_write",
+        description:
+          "Write a text file in the user's workspace. The user explicitly enabled workspace writes for this agent.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            content: { type: "string" },
+          },
+          required: ["path", "content"],
+        },
+      },
+      {
+        name: "workspace_mkdir",
+        description: "Create a folder in the user's workspace.",
+        inputSchema: {
+          type: "object",
+          properties: { path: { type: "string" } },
+          required: ["path"],
+        },
+      },
+      {
+        name: "workspace_remove",
+        description: "Delete a file or folder, including subfolders, from the user's workspace.",
+        inputSchema: {
+          type: "object",
+          properties: { path: { type: "string" } },
+          required: ["path"],
+        },
+      },
+    );
+  }
+  if (session.mcp) {
+    tools.push(
+      {
+        name: "mcp_list_servers",
+        description: "List the user's local MCP servers that are bridged to this agent.",
+        inputSchema: { type: "object", properties: {} },
+      },
+      {
+        name: "mcp_list_tools",
+        description: "List tools exposed by one bridged local MCP server.",
+        inputSchema: {
+          type: "object",
+          properties: { server: { type: "string" } },
+          required: ["server"],
+        },
+      },
+      {
+        name: "mcp_call",
+        description:
+          "Call a tool on one bridged local MCP server. Use mcp_list_tools first to discover tool names and schemas.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            server: { type: "string" },
+            tool: { type: "string" },
+            arguments: { type: "object" },
+          },
+          required: ["server", "tool"],
+        },
+      },
+    );
+  }
+  return tools;
+};
+
+const callBridgeBrowser = (session, name, args) =>
+  new Promise((resolve) => {
+    const socket = session.socket;
+    if (!socket || socket.readyState !== 1) {
+      resolve({
+        ok: false,
+        error:
+          "BRIDGE_OFFLINE: the browser is not connected. Continue with the tools available in OpenCode.",
+      });
+      return;
+    }
+    const requestId = randomUUID();
+    const timer = setTimeout(() => {
+      session.pending.delete(requestId);
+      resolve({
+        ok: false,
+        error:
+          "BRIDGE_TIMEOUT: the browser did not answer. Continue with other tools or retry later.",
+      });
+    }, 30000);
+    session.pending.set(requestId, { resolve, timer });
+    socket.send(
+      JSON.stringify({
+        type: "tool_call",
+        requestId,
+        name,
+        arguments: args ?? {},
+      }),
+    );
+  });
+
+app.post("/bridge/sessions", (req, res) => {
+  const workspaceId = String(req.body?.workspaceId ?? "").trim();
+  if (!workspaceId) {
+    return res.status(400).json({ error: "workspaceId is required" });
+  }
+  const id = randomUUID();
+  const token = randomBytes(24).toString("base64url");
+  const agentToken = randomBytes(24).toString("base64url");
+  bridgeSessions.set(id, {
+    id,
+    token,
+    agentToken,
+    agentId: String(req.body?.agentId ?? ""),
+    workspaceId,
+    writable: req.body?.writable === true,
+    mcp: req.body?.mcp === true,
+    socket: null,
+    agentSocket: null,
+    pending: new Map(),
+    createdAt: Date.now(),
+  });
+  const base = bridgeBaseUrl(req);
+  const wsBase = base.replace(/^http/, "ws");
+  res.json({
+    id,
+    token,
+    agentToken,
+    runId: id,
+    wsUrl: `${wsBase}/bridge/ws?id=${id}&token=${token}`,
+    agentWsUrl: `${wsBase}/bridge/agent?id=${id}&token=${agentToken}`,
+    mcpUrl: `${base}/bridge/mcp/${id}`,
+  });
+});
+
+app.delete("/bridge/sessions/:id", (req, res) => {
+  const session = bridgeSessions.get(req.params.id);
+  if (!bridgeAuthorized(req, session)) {
+    return res.status(404).end();
+  }
+  session.socket?.close();
+  session.agentSocket?.close();
+  bridgeSessions.delete(session.id);
+  res.status(204).end();
+});
+
+app.post("/bridge/mcp/:id", async (req, res) => {
+  const session = bridgeSessions.get(req.params.id);
+  if (!bridgeAuthorized(req, session)) {
+    return res.status(401).json({ error: "bridge token rejected" });
+  }
+  const rpc = req.body ?? {};
+  const id = rpc.id;
+  const method = rpc.method;
+  const respond = (result) => res.json({ jsonrpc: "2.0", id, result });
+  const fail = (code, message) =>
+    res.status(200).json({ jsonrpc: "2.0", id, error: { code, message } });
+
+  if (method === "initialize") {
+    return respond({
+      protocolVersion: "2025-03-26",
+      capabilities: { tools: {} },
+      serverInfo: { name: "chat-ai-bridge", version: "1.0.0" },
+    });
+  }
+  if (method === "notifications/initialized") {
+    return res.status(202).end();
+  }
+  if (method === "ping") {
+    return respond({});
+  }
+  if (method === "tools/list") {
+    return respond({ tools: bridgeToolDefinitions(session) });
+  }
+  if (method === "tools/call") {
+    const name = String(rpc.params?.name ?? "");
+    const args = rpc.params?.arguments ?? {};
+    const definitions = bridgeToolDefinitions(session);
+    if (!definitions.some((tool) => tool.name === name)) {
+      return fail(-32602, `Unknown tool: ${name}`);
+    }
+    const result = await callBridgeBrowser(session, name, args);
+    if (!result.ok) {
+      return respond({
+        content: [{ type: "text", text: result.error }],
+        isError: true,
+      });
+    }
+    const text =
+      typeof result.result === "string"
+        ? result.result
+        : JSON.stringify(result.result ?? null, null, 2);
+    return respond({ content: [{ type: "text", text }], isError: false });
+  }
+  return fail(-32601, `Unsupported method: ${method}`);
+});
+
 // Start Chat AI Backend App
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Chat AI backend listening on port ${port}`);
 });
+
+const bridgeWss = new WebSocketServer({ noServer: true });
+
+server.on("upgrade", (request, socket, head) => {
+  const url = new URL(
+    request.url,
+    `http://${request.headers.host || "localhost"}`,
+  );
+  if (url.pathname !== "/bridge/ws" && url.pathname !== "/bridge/agent") {
+    socket.destroy();
+    return;
+  }
+  const session = bridgeSessions.get(url.searchParams.get("id"));
+  const expected =
+    url.pathname === "/bridge/agent" ? session?.agentToken : session?.token;
+  if (!session || expected !== url.searchParams.get("token")) {
+    socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+  bridgeWss.handleUpgrade(request, socket, head, (ws) => {
+    if (url.pathname === "/bridge/agent") {
+      attachAgentSocket(ws, session);
+    } else {
+      attachBrowserSocket(ws, session);
+    }
+  });
+});
+
+const attachBrowserSocket = (ws, session) => {
+  if (session.socket && session.socket !== ws) session.socket.close();
+  session.socket = ws;
+  ws.send(JSON.stringify({ type: "ready" }));
+  ws.on("message", (data) => {
+    let message;
+    try {
+      message = JSON.parse(String(data));
+    } catch {
+      return;
+    }
+    if (message?.type !== "tool_result") return;
+    const pending = session.pending.get(message.requestId);
+    if (!pending) return;
+    session.pending.delete(message.requestId);
+    clearTimeout(pending.timer);
+    pending.resolve(
+      message.ok
+        ? { ok: true, result: message.result }
+        : { ok: false, error: String(message.error ?? "Bridge tool failed") },
+    );
+  });
+  ws.on("close", () => {
+    if (session.socket !== ws) return;
+    session.socket = null;
+    for (const [requestId, pending] of session.pending) {
+      clearTimeout(pending.timer);
+      pending.resolve({
+        ok: false,
+        error:
+          "BRIDGE_OFFLINE: the browser disconnected. Continue with other OpenCode tools.",
+      });
+      session.pending.delete(requestId);
+    }
+  });
+};
+
+const attachAgentSocket = (ws, session) => {
+  if (session.agentSocket && session.agentSocket !== ws) {
+    session.agentSocket.close();
+  }
+  session.agentSocket = ws;
+  ws.send(JSON.stringify({ type: "ready" }));
+  ws.on("message", async (data) => {
+    let message;
+    try {
+      message = JSON.parse(String(data));
+    } catch {
+      return;
+    }
+    if (message?.type !== "tool_call") return;
+    const result = await callBridgeBrowser(
+      session,
+      message.name,
+      message.arguments,
+    );
+    if (ws.readyState !== 1) return;
+    ws.send(
+      JSON.stringify({
+        type: "tool_result",
+        requestId: message.requestId,
+        ok: result.ok,
+        result: result.result,
+        error: result.error,
+      }),
+    );
+  });
+  ws.on("close", () => {
+    if (session.agentSocket === ws) session.agentSocket = null;
+  });
+};

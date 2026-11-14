@@ -160,9 +160,11 @@ into the nested shape the UI uses. Raw table access (`db.messages`, `db.content_
 
 ### 4.3 Dexie migrations
 
-`db/index.ts` is at **version 5**. A new *indexed* field needs a new `this.version(n).stores({...})`
+`db/index.ts` is at **version 12**. A new *indexed* field needs a new `this.version(n).stores({...})`
 block plus an `.upgrade()` that backfills existing rows — this is how `folderId` (v3),
-`hasFirstPrompt` (v4) and `lastOpenedAt` (v5) were added. A field that is only stored and never
+`hasFirstPrompt` (v4), `lastOpenedAt` (v5), the workspace tables (v6-v8),
+`workspace_file_references` (v9), the default Arcana filesystem source (v10) and the default
+browser source with the shared browser tree (v11) were added. A field that is only stored and never
 queried needs **no** version bump; Dexie keeps unindexed properties on the row as-is. A version
 bump and `.upgrade()` are still appropriate when existing rows need a backfill. Never edit an
 existing version block: users have live databases.
@@ -178,13 +180,16 @@ inside `db/`. UI strings and i18n keys say topic.
 `secrets/front.json` is read **at Vite startup** and hand-mapped into `process.env.VITE_*`:
 `VITE_BACKEND_ENDPOINT`, `VITE_MODELS_ENDPOINT`, `VITE_USERDATA_ENDPOINT`,
 `VITE_DEFAULT_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`,
-`VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
+`VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
+`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
 
 Feature modules are gated this way — `VITE_MODULE_TOOLS`, `VITE_MODULE_FEEDBACK`,
-`VITE_MODULE_CHOICES`, `VITE_MODULE_AGENT` (the browser agent), `VITE_MODULE_ARCANAS` (Arcana and ArcanaV2, on by default), `VITE_MODULE_SPEECH` (JSON, with `model` and `voice`). A deployment can
+`VITE_MODULE_CHOICES`, `VITE_MODULE_AGENT` (the browser agent), `VITE_MODULE_AGENTS` (the sidebar
+Agents section, on by default), `VITE_MODULE_ARCANAS` (Arcana and ArcanaV2, on by default), `VITE_MODULE_SPEECH` (JSON, with `model` and `voice`). A deployment can
 switch these parts of the UI off, so new code in those areas must still behave with the flag off.
 
 ### 4.6 Model capabilities are data, not code
@@ -423,6 +428,10 @@ feature-specific setting, expose its current value through a Meta-chat read tool
 tool’s output) and add a confirmable mutation marker with `MetaActionCard` apply/revert support. Do
 not ship a setting that the Meta chat cannot read or propose to change.
 
+The Meta chat honors the conversation's effective memory mode and group for memory learning: in
+Learn mode it runs the same memory update path as normal chat and writes learned/replaced memories
+to the effective group.
+
 ### 4.17 Per-conversation memory mode overrides the global preference
 
 `ConversationSettings.memory_mode_override` is `"default"`, `0` (off), `1` (recall), or `2`
@@ -521,6 +530,230 @@ The legacy `/remote-files` routes use the same backend but store generic files i
 Arcana `remoteFilesArcana` (default `remote-files`), which is created on first write. Remote paths
 are encoded into flat Arcana filenames (`rf_` + base64url), so the same path lists, reads, writes
 and deletes through the saia-rag-web file endpoints.
+
+### 4.23 Memories can be grouped; conversations choose a group
+
+`user_settings.memory_groups` holds custom groups (`{id, name}`) and `user_settings.default_memory_group`
+selects the group used by default. The implicit id `"default"` is the normal/ungrouped memory group.
+Each memory's optional `groupId` defaults to `"default"`. `UserMemoryContainer` shows the groups
+directly under User Memories and manages the default group; clicking a group opens
+`UserMemoryModal` filtered to that group, where memories can be reassigned.
+
+`ConversationSettings.memory_group_override` is `"default"` (follow the global default group) or a
+group id. `useSendMessage` resolves the effective group, filters the memories passed to
+`sendMessage`, and passes `memoryGroupId` so learned/replaced memories stay in that group. Deleting a
+group moves its memories to `"default"` and resets the global default if needed. Selecting a specific
+(non-default) group in the per-chat control also switches the per-chat mode from off to recall so
+the selection takes effect. Groups live inside `user_settings`, so they are exported/imported with
+settings; the conversation override is part of
+the conversation settings. Redux persist migration 8 initializes `memory_groups` /
+`default_memory_group` and assigns every existing memory to `"default"`; old conversations without
+`memory_group_override` follow the global default group. No Dexie version bump is needed (all fields
+are unindexed). The Meta chat exposes the grouping through `list_memories` (default group, available
+groups, and each memory's group) and `get_user_settings` (group list and default group). Its
+`ADD_MEMORY` / `UPDATE_MEMORY` proposals accept an optional `group` name; additions without one use
+the Meta conversation's effective group.
+
+### 4.24 Workspaces group sources behind one file-provider contract
+
+The sidebar's Workspace section (`components/Workspace/WorkspaceList.tsx`) sits below the Chats subpanel;
+`/workspace/:workspaceId` renders `Pages/WorkspacePage.tsx`. Workspace and Chats are separate
+collapsible subpanels; their collapse state reuses `interface_settings.collapsed_topics` under the
+synthetic ids `__workspaces__` and `__chats__`. Workspace rows use the topic icon and colour sets
+(`WorkspaceRow.icon`, `WorkspaceRow.color`, editable in `RenameWorkspaceModal`) and always show the
+chat-expand chevron, disabled when no chat is attached. The Agents section (`Sidebar/AgentList.tsx`) sits
+between Workspace and MCP Servers and uses `__agents__`; its + button opens a placeholder add-agent
+modal with a dummy HPC project list, and agent metadata is kept in localStorage. Workspace, source, mount and chat-link metadata
+lives entirely in IndexedDB; the back service does not store it. Dexie schema v6 adds
+`workspaces`, `workspace_sources`, `workspace_handles` and `workspace_transfers`; v7 adds
+`workspace_mounts` and `workspace_chats`; v8 adds the browser source's `workspace_nodes` /
+`workspace_blobs` file tree; v9 adds `workspace_file_references`; v10 adds the default Arcana
+filesystem source; v11 adds the default browser source and moves every browser source and workspace
+root onto the single `browser-storage` tree; v12 adds `workspace_agents` links. Handles and the transfer journal never leave the device. A persisted
+`chatai.workspace.deviceId` binds `browser`, `local` and `mcp` sources to this device; `arcana`
+sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
+source whose stored `deviceId` differs as unavailable.
+
+Attaching a file from a workspace to a chat records a `workspace_file_references` row for the
+browser node; deleting a chat removes its reference rows. All browser sources and every workspace
+root share the single `browser-storage` tree, so deleting a workspace removes its source rows but
+not the shared browser files.
+
+Every source kind is a `FileProvider` (`workspace/providers/`) built from its `WorkspaceSourceRow`:
+Every new workspace automatically gets a `browser` source and, unless the Arcanas module is off, an
+`arcana-filesystem` source; Dexie v10/v11 backfill them into existing workspaces.
+
+browser = the shared IndexedDB tree in `workspace_nodes` / `workspace_blobs`, local = a
+`FileSystemDirectoryHandle` in `workspace_handles`, arcana = one ArcanaV2 collection through
+`agent/arcanaV2.ts`, arcana-filesystem = every Arcana as a folder with its files, mcp = file tools exposed
+by a configured local MCP server (the option only appears when `tools.mcp` is on and a local URL is
+configured). Providers declare `capabilities`, and the UI must offer only what a provider reports.
+`WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, deletes, mkdir,
+move and copy throw `PERMISSION_DENIED`), and `WorkspaceMountRow.readOnly` blocks writes/moves
+through that mount while still allowing reads and copies out. The Local tools panel was removed;
+GWDG Tools now contains the document-creation and image-analysis toggles, while codemode and the
+tool-call limit moved to the Workspace popover. When a chat has a workspace link, `runAgent` uses
+`workspace/agentVfs.ts` over that workspace's root and mounts for the file tools.
+`agent/prepare.ts` writes attachments and their converted variants under `/artefacts` in the
+attached workspace root (or the conversation OPFS when no workspace is linked); the agent VFS keeps
+`/uploads` routed to the conversation OPFS for legacy paths.
+
+Every workspace also has an implicit browser-backed root: files and directories created there are
+stored in `workspace_nodes` / `workspace_blobs` under the synthetic source id
+`workspace-root:<workspaceId>`. The root browser lists those local entries and overlays mounted
+source folders, so normalized local directories/files and mounts coexist.
+
+`workspace_mounts` maps a folder inside a source (`sourcePath`) to a workspace path (`path`), so
+several sources can appear side by side in one workspace; the workspace browser starts at that
+mount list. `workspace_chats` is the
+many-to-many chat link: a chat can be attached to any number of workspaces, shown under the
+workspace in the sidebar and in the workspace's Chats panel, and toggled from the `Workspace` icon
+left of the Local tools icon in the prompt box. `workspace_agents` is the matching many-to-many link
+between workspaces and localStorage-backed agent entries; the workspace page's Agents panel attaches
+or detaches them, and links whose agent no longer exists are removed when that page loads. Storage
+is shown for every source in the always visible "Available storage" panel.
+
+Transfers are orchestrated in the browser: `workspace/transferPlanner.ts` always moves on drag and
+drop, regardless of source; an explicit "copy" intent is the only copy path. It blocks read-only
+targets, folder-into-descendant moves and over-quota transfers. The workspace root
+browser uses the same drag-and-drop flow as source folders, but mounted folder rows are not
+draggable (the workspace root provider is resolved by `providerFor` for both drag source and drop
+target). `workspace/transfer.ts` streams the copy, verifies SHA-256, then deletes the source for a
+move, and journals progress in `workspace_transfers`. Arcana quota is read through the
+`/arcana-v2/arcanas/:name/quota` proxy; local and MCP quota is shown as `—` because browsers cannot
+read disk free space.
+
+The file browser's Upload file action writes files from the computer into the folder currently
+shown (workspace root or the selected source) through `workspace/upload.ts`; it is disabled for
+read-only sources and mounts. Entries can be downloaded, renamed through the shared create-entry
+modal, and deleted recursively after confirmation; sources with the matching capabilities also
+offer new file/folder creation. A tree folder that contains a `.git` directory gets a Git button;
+the workspace preview parses `.git/logs/HEAD` (falling back to the branch reflog) without a shell,
+while the agent file panel runs `git log --stat` through the OpenCode shell and falls back to the
+same reflog parsing. That internal command is tagged `CHATAI_GIT_LOG`, and agent chat/state filters
+it out so the log appears only in the preview panel. HTML previews render in `SandboxedHtmlPreview`: an empty-sandbox
+iframe with an opaque origin, strict CSP (no scripts or network), and external references stripped.
+
+The prompt box's Workspace popover (`WorkspaceAttachButton`) also holds the agent settings that
+apply to workspace files: the codemode toggle (`tools.codemode`) and the tool-call limit
+(`settings.max_tool_calls`). GWDG Tools no longer renders either.
+
+The `workspace_overview` feature guide targets `[data-guide="workspace-add-source"]`,
+`workspace-sources` and `workspace-files`.
+
+
+### 4.25 MCP servers are configured globally and selected per chat
+
+`user_settings.mcp_servers` holds the global definitions (`{id, name, kind: "local" | "remote",
+url?, serverId?, headers?}`), managed by the sidebar's `McpServerList` and `McpServerModal`
+(including the connection test). Per-chat settings store only the selected ids in
+`mcp_local_server_ids` / `mcp_remote_server_ids`; `agent/mcp.ts#resolveMcpServers` expands them for
+the agent, gateway request and prefetch, and still merges legacy full entries from
+`settings.mcp_servers`. GWDG Tools has one MCP Servers tool that switches every configured
+server on or off; enabling it reveals the selector, which lists every configured server and
+badges it local or GWDG and never shows URL/id/auth fields. `remoteMcpEnabled` also treats selected
+remote ids as a value.
+
+
+### 4.26 Sidebar agents connect to a local opencode server
+
+`Sidebar/AgentList.tsx` lists remote agents like conversation rows and polls
+`GET /api/session/status` every 5 s for the status dot (green idle, yellow working, red connection
+error). Clicking one navigates to
+`Pages/AgentPage.tsx` (`/agent/:agentId`), whose `components/Agent/AgentConversation.jsx` is the
+chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`, and tool or
+reasoning parts render as inline expandable cards (`AgentAssistantParts`). The left
+`AgentFilesPanel` reuses the central `WorkspaceRootBrowser` (the same component used for the
+workspace root file browser) and reads/writes the OpenCode project filesystem through
+`GET /api/fs/list`, `GET /api/fs/read/<path>`, `POST /api/experimental/fs/write` and
+`GET /api/fs/find`. Its file list polls the current directory every 5 s while the page is visible,
+searches through `/api/fs/find`, and refreshes on navigation, upload, new file, or an explicit
+refresh. The
+`WorkspaceFilePanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
+file list. The sidebar's `+` opens
+`modals/Agent/AddAgentModal`, which offers a name and the placeholder HPC project list. The row's
+vertical menu edits (`agentEdit`, all creation fields; changing the server or password opens a new
+session) or removes the agent. The creation form has a `local` toggle; only local agents show the
+editable OpenCode server URL and password (non-local agents use the `front.json` defaults), and the
+HPC project selector is shown only for non-local agents. Adding an agent calls the local `opencode serve` HTTP API through
+`apis/opencodeAgents.js`: `GET /api/info` verifies the server, `POST /api/session` creates the chat
+session, and `AgentConversation` sends `POST /api/session/:id/prompt` and polls
+`GET /api/session/:id/message?order=asc` until an `idle` message appears. It also exposes the
+control API: interrupt (`/interrupt`), slash commands (`/command`), `!` shell input (`/shell`), and
+permission replies (`/permission/{requestID}/reply`). The composer's command dropdown is populated
+from `GET /api/command` (plus the built-in `compact`). The composer has a yellow Shell toggle that sends the input directly to
+`/api/session/:id/shell`; shell output is rendered inline in the conversation, and the Tools modal
+no longer has a terminal tab. Shell messages are persisted per agent/session in localStorage
+(`agents/agentShellHistory.js`) and merged with the server timeline by creation time. The header X
+confirms, interrupts and deletes the OpenCode session, creates a replacement session, updates the
+agent entry, and clears the remembered shell history. Unsent composer text is persisted per
+agent/session in localStorage (`agents/agentDrafts.js`) and restored on return. The composer also
+accepts file attachments and sends them inline to the prompt API. The
+`AgentFormCard` renders OpenCode forms inline in the conversation; form cards are persisted per
+agent/session in localStorage (`agents/agentFormHistory.js`), so a card remains in the timeline
+after reloads. After a successful reply, the same history entry receives the answers and renders
+as `AgentFormResultCard`. `AgentToolsModal` exposes a live step/todo timeline, session
+diff/revert with VCS and tracked-file status, saved permissions, local permission policies
+(`agents/agentPermissionPolicies.js`, auto-answered by `AgentConversation`), usage stats, MCP
+reconnect/refresh, connection diagnostics, and Markdown/JSON transcript export. The Composer's
+shell output can be copied and a running shell command can be aborted from its card.
+`subscribeOpencodeEvents`
+refreshes messages and permissions from the `/api/event` stream. The composer reuses `SendButton` and
+`ModelButton`; the model list is the intersection of `GET /api/model` (falling back to
+`/api/model/default`) with the app's ChatAI models, the selector is centred in the composer, and a
+selection is sent to `POST /api/session/:id/model`. A second dropdown lists `GET /api/agent`
+(non-hidden primary agents) and switches with `POST /api/session/:id/agent`. The server URL and
+HTTP-basic credentials default from `opencodeServerUrl` / `opencodeServerUsername` /
+`opencodeServerPassword` in `front.json` (mapped to `VITE_OPENCODE_SERVER_*`) and stay editable per
+agent. The browser talks to the server directly (opencode allows the app origin via CORS), so the
+back service is not involved. `agents/agentStore.js` persists the agent metadata in localStorage.
+A custom per-agent password is persisted with it; agents left on the configured default re-read that
+password from `front.json` on load. `modules.agents: false` in
+`front.json` sets `VITE_MODULE_AGENTS=false`, hiding the sidebar section and its route. Removing an
+agent interrupts its running session first, then deletes the OpenCode session; the local agent is
+dropped only after that succeeds; if the server is unreachable or rejects authentication, the local
+agent entry can still be removed.
+
+
+### 4.27 The browser-to-OpenCode bridge keeps workspace data in the browser
+
+The agent workspace bridge lets OpenCode read the user's selected workspace and bridged local MCP
+servers without uploading files. The browser is the data plane: `hooks/useAgentBridge.ts` opens an
+outbound WebSocket to the back service. The agent side is a local stdio MCP sidecar
+(`back/bridge-sidecar.mjs`) started by OpenCode from `opencodeBridgeSidecarCommand`; it opens its own
+outbound WebSocket to the back. The back pairs browser and sidecar by run id, so OpenCode never needs
+an inbound endpoint. If no sidecar command is configured, the hook retains the older remote-MCP
+registration through `/experimental/mcp/:name` for compatibility.
+
+Back routes: `POST /bridge/sessions` creates a session and returns browser/agent tokens and URLs,
+`WS /bridge/ws` attaches the browser, `WS /bridge/agent` attaches the sidecar, `POST /bridge/mcp/:id`
+remains as the fallback MCP endpoint, and `DELETE /bridge/sessions/:id` tears it down. Tool calls are
+relayed to the browser and answered over the browser WebSocket. If the browser is disconnected, the
+sidecar still lists tools but calls return an `isError` content result with `BRIDGE_OFFLINE` so the
+agent can continue with OpenCode's own tools.
+
+The bridge exposes `workspace_list`, `workspace_stat`, `workspace_read`, and, only when the agent's
+write toggle is on, `workspace_write`, `workspace_mkdir`, `workspace_remove`. Local MCP tools are
+exposed as `mcp_list_servers`, `mcp_list_tools`, and `mcp_call` only when its toggle is on; headers
+and tokens stay in the browser. Workspace operations go through `WorkspaceAgentVfs`, so provider
+capabilities, source/mount read-only flags, and IndexedDB/local/Arcana behavior stay authoritative.
+The agent page's workspace selector stores `bridgeWorkspaceId`, `bridgeWritable`, and `bridgeMcp`
+on the agent entry in localStorage; `bridgeWorkspaceId` is per agent, not per session. While a
+bridge is active the page warns that the tab must stay open, sets a warning title when hidden,
+shows a toast on return, and registers `beforeunload`. In production behind SAIA, the initial
+invocation must be able to spawn the sidecar and open the outbound WebSocket; the back must be
+reachable from the agent host, optionally through `bridgePublicUrl` in `back.json`.
+
+### 4.28 The local-files skill is documentation, not installation
+
+`.opencode/skills/local-files/SKILL.md` describes the read-only
+`local-folder-mcp` server in `chat-ai-tools/tools/local-folder-mcp/`. The skill is bundled through
+`docker/opencode-skills/skills/local-files/` into `chat-ai-skills.tgz`, but the server itself is not
+packaged by this repository. It must be copied to a stable path available to OpenCode and added
+under `mcp.servers` in `opencode.json`, then OpenCode must be restarted. Linux needs `zenity` or
+`kdialog` for the native folder-approval dialog; headless hosts deny access. If the MCP tools are
+missing, do not fall back to shell access outside the project.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

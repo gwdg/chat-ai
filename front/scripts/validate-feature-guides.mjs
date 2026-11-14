@@ -30,7 +30,10 @@ const sourceText = walk(srcDir)
   .join("\n");
 
 const staticGuideValues = new Set(
-  [...sourceText.matchAll(/data-guide="([^"]+)"/g)].map((match) => match[1]),
+  [
+    ...sourceText.matchAll(/data-guide="([^"]+)"/g),
+    ...sourceText.matchAll(/dataGuide="([^"]+)"/g),
+  ].map((match) => match[1]),
 );
 const hasDynamicTools = sourceText.includes(
   "data-guide={`tool-${guideKey}`}",

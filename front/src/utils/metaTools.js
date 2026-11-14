@@ -17,6 +17,22 @@ function yesNo(value) {
   return value ? "yes" : "no";
 }
 
+function memoryGroupsFor(userSettings = {}) {
+  return [
+    { id: "default", name: "Default" },
+    ...(Array.isArray(userSettings.memory_groups)
+      ? userSettings.memory_groups
+      : []),
+  ];
+}
+
+function memoryGroupName(userSettings, groupId) {
+  const id = groupId ?? "default";
+  return (
+    memoryGroupsFor(userSettings).find((group) => group.id === id)?.name || id
+  );
+}
+
 function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
   const memoryMode =
     userSettings.memory_mode === 1
@@ -24,6 +40,16 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
       : userSettings.memory_mode === 2
         ? "learn"
         : "off";
+  const memories = userSettings.memories ?? [];
+  const memoryGroups = memoryGroupsFor(userSettings);
+  const memoryGroupsSummary = memoryGroups
+    .map((group) => {
+      const count = memories.filter(
+        (memory) => (memory.groupId ?? "default") === group.id,
+      ).length;
+      return `${group.name} (${count} memories)`;
+    })
+    .join(", ");
   const sendWithEnter =
     userSettings.send_with_enter === null ||
     userSettings.send_with_enter === undefined
@@ -47,6 +73,18 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Default model: ${modelName}`,
     `- Memory mode: ${memoryMode}`,
     `- Saved memories: ${userSettings.memories?.length ?? 0} (stored in this browser)`,
+    `- Memory groups: ${memoryGroupsSummary}`,
+    `- Configured MCP servers: ${
+      Array.isArray(userSettings.mcp_servers) && userSettings.mcp_servers.length
+        ? userSettings.mcp_servers
+            .map(
+              (server) =>
+                `${server.name || server.url || server.serverId} (${server.kind})`,
+            )
+            .join(", ")
+        : "none"
+    }`,
+    `- Default memory group: ${memoryGroupName(userSettings, userSettings.default_memory_group)} (id: ${userSettings.default_memory_group ?? "default"})`,
     `- Request timeout: ${Math.round((userSettings.timeout ?? 300000) / 1000)} seconds`,
     `- Suggest follow-up prompts: ${yesNo(userSettings.suggest_user_prompts)}`,
     `- Set title only on first prompt: ${yesNo(userSettings.set_title_once)}`,
@@ -63,7 +101,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Render Chart.js: ${yesNo(userSettings.render_chartjs ?? false)}`,
     `- Keep reasoning collapsed while streaming: ${yesNo(userSettings.collapse_reasoning_while_streaming)}`,
     `- Document conversion: ${documentConversion}`,
-    `- Modules: tools ${import.meta.env.VITE_MODULE_TOOLS === "true" ? "enabled" : "disabled"}, feedback ${import.meta.env.VITE_MODULE_FEEDBACK === "true" ? "enabled" : "disabled"}, choices ${import.meta.env.VITE_MODULE_CHOICES === "true" ? "enabled" : "disabled"}, arcanas ${import.meta.env.VITE_MODULE_ARCANAS !== "false" ? "enabled" : "disabled"}, speech ${import.meta.env.VITE_MODULE_SPEECH === "true" ? "enabled" : "disabled"}`,
+    `- Modules: tools ${import.meta.env.VITE_MODULE_TOOLS === "true" ? "enabled" : "disabled"}, feedback ${import.meta.env.VITE_MODULE_FEEDBACK === "true" ? "enabled" : "disabled"}, choices ${import.meta.env.VITE_MODULE_CHOICES === "true" ? "enabled" : "disabled"}, arcanas ${import.meta.env.VITE_MODULE_ARCANAS !== "false" ? "enabled" : "disabled"}, agents ${import.meta.env.VITE_MODULE_AGENTS !== "false" ? "enabled" : "disabled"}, speech ${import.meta.env.VITE_MODULE_SPEECH === "true" ? "enabled" : "disabled"}`,
     `- Dark mode: ${yesNo(interfaceSettings.dark_mode)}`,
     `- Show usage in sidebar: ${yesNo(interfaceSettings.show_usage_in_sidebar)}`,
     `- Chat sorting: ${interfaceSettings.conversation_sort ?? "created_desc"}`,
@@ -225,7 +263,10 @@ export const META_TOOL_DEFINITIONS = [
     { query: { type: "string", description: "Text to search for" } },
     ["query"],
   ),
-  tool("list_memories", "List the user's saved memories with their indices."),
+  tool(
+    "list_memories",
+    "List the user's memory groups and saved memories with their indices and group names.",
+  ),
   tool(
     "get_user_settings",
     "Get the current global user preferences, interface settings, module flags, and the Meta chat's own settings.",
@@ -331,13 +372,42 @@ export function createMetaToolRunner({
       }
 
       case "list_memories": {
+        const memoryGroups = memoryGroupsFor(userSettings);
+        const groupLines = memoryGroups.map((group) => {
+          const count = (memories || []).filter(
+            (memory) => (memory.groupId ?? "default") === group.id,
+          ).length;
+          return `- ${group.name} (${count} memories)`;
+        });
+        const defaultGroupId = userSettings.default_memory_group ?? "default";
+        const groupOverride = metaSettings?.memory_group_override;
+        const requestedGroup =
+          groupOverride && groupOverride !== "default"
+            ? groupOverride
+            : defaultGroupId;
+        const effectiveGroupId =
+          requestedGroup === "default" ||
+          memoryGroups.some((group) => group.id === requestedGroup)
+            ? requestedGroup
+            : "default";
         const lines = (memories || [])
           .map((memory, index) => {
             const text = String(memory?.text || "").trim();
-            return text ? `- index: ${index}\n  text: ${text}` : "";
+            if (!text) return "";
+            const groupId = memory?.groupId ?? "default";
+            return `- index: ${index}\n  group: ${memoryGroupName(userSettings, groupId)}\n  text: ${text}`;
           })
           .filter(Boolean);
-        return lines.join("\n") || "(no saved memories)";
+        return [
+          `Default memory group: ${memoryGroupName(userSettings, defaultGroupId)}`,
+          `This chat's effective memory group: ${memoryGroupName(userSettings, effectiveGroupId)}`,
+          "",
+          "Memory groups:",
+          groupLines.join("\n"),
+          "",
+          "Memories:",
+          lines.join("\n") || "(no saved memories)",
+        ].join("\n");
       }
 
       case "get_user_settings": {

@@ -10,7 +10,8 @@ import WarningExternalModel from "../Header/WarningExternalModel";
 import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
-import MountFolderButton from "./MountFolderButton";
+import AttachFromWorkspaceButton from "./AttachFromWorkspaceButton";
+import WorkspaceAttachButton from "./WorkspaceAttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
 import SpeechModeButton from "./SpeechModeButton";
@@ -189,6 +190,10 @@ export default function Prompt({
               localState={localState}
               setLocalState={setLocalState}
             />
+            <AttachFromWorkspaceButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
                {/* Mic Button */}
             <MicButton
               localState={localState}
@@ -201,8 +206,7 @@ export default function Prompt({
           <div className="flex gap-4 items-center justify-center">
             {!metaChatSend && (
               <>
-                {/* Local folder and write access for the agent */}
-                <MountFolderButton
+                <WorkspaceAttachButton
                   localState={localState}
                   setLocalState={setLocalState}
                 />

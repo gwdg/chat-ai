@@ -10,10 +10,10 @@ import {
 } from "@headlessui/react";
 
 import {
-  AiLabel,
   ArrangeHorizontal,
   Calendar,
   Checkmark,
+  ChevronDown,
   ChevronLeft,
   Close,
   DataBase,
@@ -36,12 +36,14 @@ import { useModal } from "../../modals/ModalContext";
 
 import {
   collapseTopics,
+  selectCollapsedTopics,
   selectConversationGrouping,
   selectConversationSort,
   selectDarkMode,
   selectShowUsageInSidebar,
   setConversationGrouping,
   toggleSidebar,
+  toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import { selectConversationSummaries } from "../../Redux/reducers/userSettingsReducer";
 
@@ -49,6 +51,7 @@ import { useWindowSize } from "../../hooks/useWindowSize";
 import { getWorkspaceSize } from "../../agent/workspace";
 import { sortConversations } from "../../utils/conversationSort";
 import { formatBytes } from "../../utils/formatBytes";
+import { isAgentsEnabled } from "../../utils/modules";
 import {
   formatCompactDate,
   formatModifiedTime,
@@ -68,6 +71,8 @@ import AiServicesMenu from "./AiServicesMenu";
 import { useToast } from "../../hooks/useToast";
 import SidebarUsageSummary from "../../modals/UserSettings/SidebarUsageSummary";
 import ShortcutTooltip from "./ShortcutTooltip";
+import Tooltip from "../Others/Tooltip";
+import ChattyLogo from "../Others/ChattyLogo";
 import ImportChatButton from "./Buttons/ImportChatButton";
 import ImportPersonaButton from "./Buttons/ImportPersonaButton";
 import NewChatButton from "./Buttons/NewChatButton";
@@ -76,6 +81,9 @@ import ExportChatButton from "./Buttons/ExportChatButton";
 import DeleteChatButton from "./Buttons/DeleteChatButton";
 import RenameChatButton from "./Buttons/RenameChatButton";
 import TutorialStatus from "../Others/TutorialStatus";
+import WorkspaceList from "../Workspace/WorkspaceList";
+import AgentList from "./AgentList";
+import McpServerList from "./McpServerList";
 
 export default function SidebarContent({
   localState,
@@ -102,6 +110,8 @@ export default function SidebarContent({
   const conversationSort = useSelector(selectConversationSort);
   const conversationGrouping = useSelector(selectConversationGrouping);
   const summariesEnabled = useSelector(selectConversationSummaries);
+  const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
+  const chatsCollapsed = collapsedTopicIds.includes("__chats__");
 
   const { isDesktop, windowWidth } = useWindowSize();
   // Below this the sidebar is an overlay drawer (see Sidebar.jsx), which leaves
@@ -714,10 +724,36 @@ export default function SidebarContent({
         </ShortcutTooltip>
       </div>
 
+      <div className="px-3 pb-1">
+        <Tooltip text={t("meta_chat.help_tooltip")}>
+          <button
+            type="button"
+            onClick={() => navigate("/meta")}
+            data-guide="meta-chat"
+            className={`flex w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-xs transition ${
+              location.pathname === "/meta"
+                ? "bg-accent/10 text-accent"
+                : "text-base-content/80 hover:bg-base-200 hover:text-base-content"
+            }`}
+          >
+            <ChattyLogo className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate font-medium">
+              {t("meta_chat.help_label")}
+            </span>
+          </button>
+        </Tooltip>
+      </div>
+
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Conversations header, with the search field it reveals */}
-        <div className="sticky top-0 z-20 bg-base-100 px-3 pt-3 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+        <div className="px-3 pb-1">
           <TutorialStatus />
+        </div>
+        <div
+          className="flex-1 overflow-y-auto overflow-x-hidden"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <div className="sticky top-0 z-20 bg-base-100 px-3 pt-2 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+          {(!chatsCollapsed || hasSearch) && (
           <div className="flex items-center justify-between gap-1 pb-3">
             <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
           <div className="flex items-center justify-between gap-1">
@@ -725,10 +761,24 @@ export default function SidebarContent({
             <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
           </div>
           </div>
+          )}
           <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase tracking-wide text-base-content/70">
-              {t("folders.title")}
-            </span>
+            <button
+              type="button"
+              onClick={() => dispatch(toggleTopic("__chats__"))}
+              className="flex min-w-0 items-center gap-1 rounded-md text-left text-[11px] uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+              aria-expanded={!chatsCollapsed}
+            >
+              <ChevronDown
+                size={12}
+                className={`shrink-0 transition-transform ${chatsCollapsed ? "-rotate-90" : ""}`}
+              />
+              <span className="truncate">{t("folders.title")}</span>
+              <span className="ml-1 font-normal tabular-nums text-base-content/35">
+                {conversations.length}
+              </span>
+            </button>
+            {(!chatsCollapsed || hasSearch) && (
             <div className="flex items-center gap-1">
               <Popover className="relative">
                 <PopoverButton
@@ -861,18 +911,6 @@ export default function SidebarContent({
               </button>
               <button
                 type="button"
-                onClick={() => navigate("/meta")}
-                data-guide="meta-chat"
-                className={`btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content ${
-                  location.pathname === "/meta" ? "btn-active" : ""
-                }`}
-                aria-label={t("meta_chat.open")}
-                title={t("meta_chat.open")}
-              >
-                <AiLabel size={16} />
-              </button>
-              <button
-                type="button"
                 onClick={openSearch}
                 data-guide="search-chats"
                 className={`flex items-center rounded-lg p-1.5 text-base-content/70 hover:text-base-content hover:bg-base-200 transition cursor-pointer ${
@@ -883,7 +921,8 @@ export default function SidebarContent({
                 <Search size={16} />
               </button>
             </div>
-          </div>
+            )}          </div>
+          {(!chatsCollapsed || hasSearch) && (
           <div
             className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               searchVisible
@@ -936,13 +975,11 @@ export default function SidebarContent({
               )}
             </div>
           </div>
+          )}
         </div>
 
-        <div
-          className="flex-1 overflow-y-auto overflow-x-hidden"
-          style={{ WebkitOverflowScrolling: "touch" }}
-        >
           {/* Conversations, grouped by topic */}
+          {(!chatsCollapsed || hasSearch) && (
           <div className="pl-3 pr-2 pt-2 pb-1 space-y-1">
             {hasSearch ? (
               <div className="space-y-1">
@@ -987,6 +1024,21 @@ export default function SidebarContent({
               />
             )}
           </div>
+          )}
+          {!hasSearch && (
+            <>
+              <div className="mx-3 border-t border-base-300" />
+              <WorkspaceList />
+              {isAgentsEnabled() && (
+                <>
+                  <div className="mx-3 border-t border-base-300" />
+                  <AgentList />
+                </>
+              )}
+              <div className="mx-3 border-t border-base-300" />
+              <McpServerList />
+            </>
+          )}
         </div>
 
         {/* Pinned footer: the user block */}

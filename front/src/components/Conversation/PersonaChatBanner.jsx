@@ -11,7 +11,7 @@ export default function PersonaChatBanner({ persona }) {
   if (!title && !description) return null;
 
   return (
-    <div className="mx-1 mb-1 flex items-start gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm">
+    <div className="mx-auto mb-2 flex w-full md:max-w-[85vw] xl:max-w-[1300px] items-start gap-2 rounded-xl border border-base-300 bg-base-100 px-3 py-2 shadow-sm">
       <Bot
         size={16}
         className="mt-0.5 shrink-0 text-accent"
