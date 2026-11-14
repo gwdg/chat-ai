@@ -7,6 +7,7 @@ import {
   ensureFolder,
   getConversation,
   getConversationMeta,
+  getLastModifiedConversationMeta,
   loadFile,
   saveFileReady,
   searchMessages,
@@ -123,6 +124,131 @@ describe("conversation persistence", () => {
     const conversation = await getConversation("chat-1");
     expect(conversation.messages).toHaveLength(1);
     expect(conversation.messages[0].content[0].text).toBe("important message");
+  });
+
+  it("protects stored messages even when the stale empty write is forced", async () => {
+    await createConversation({
+      id: "chat-1",
+      title: "Keep me",
+      settings,
+      messages: [
+        {
+          idx: 0,
+          role: "user",
+          content: [{ type: "text", text: "important message" }],
+        },
+      ],
+    });
+
+    const result = await updateConversation(
+      "chat-1",
+      { title: "Keep me", settings, messages: [] },
+      true,
+    );
+
+    expect(result).toBe(-1);
+    const conversation = await getConversation("chat-1");
+    expect(conversation.messages).toHaveLength(1);
+  });
+
+  it("allows an empty snapshot when no messages are stored", async () => {
+    await createConversation({ id: "chat-1", title: "Empty", settings, messages: [] });
+    const meta = await getConversationMeta("chat-1");
+
+    const result = await updateConversation("chat-1", {
+      title: "Renamed",
+      settings,
+      messages: [],
+      lastModified: meta.lastModified,
+    });
+
+    expect(result).not.toBe(-1);
+    expect((await getConversationMeta("chat-1")).title).toBe("Renamed");
+  });
+
+  it("lets forced writes bypass a stale lastModified", async () => {
+    await createConversation({
+      id: "chat-1",
+      title: "Original",
+      settings,
+      messages: [
+        {
+          idx: 0,
+          role: "user",
+          content: [{ type: "text", text: "hello" }],
+        },
+      ],
+    });
+    const meta = await getConversationMeta("chat-1");
+
+    const result = await updateConversation(
+      "chat-1",
+      {
+        title: "Forced",
+        settings,
+        messages: [
+          {
+            idx: 0,
+            role: "user",
+            content: [{ type: "text", text: "hello" }],
+          },
+        ],
+        lastModified: meta.lastModified - 1,
+      },
+      true,
+    );
+
+    expect(result).not.toBe(-1);
+    expect((await getConversationMeta("chat-1")).title).toBe("Forced");
+  });
+
+  it("returns the most recent conversation and skips the meta chat", async () => {
+    await createConversation({ id: "older", title: "Older", settings, messages: [] });
+    await createConversation({ id: "newer", title: "Newer", settings, messages: [] });
+    await createConversation({
+      id: "meta-chat",
+      title: "Meta",
+      settings,
+      messages: [],
+      isMetaChat: true,
+    });
+    await db.conversations.update("older", { lastModified: 100 });
+    await db.conversations.update("newer", { lastModified: 200 });
+    await db.conversations.update("meta-chat", { lastModified: 300 });
+
+    const latest = await getLastModifiedConversationMeta();
+    expect(latest.id).toBe("newer");
+  });
+
+  it("falls back to createdAt and lastOpenedAt when lastModified is missing", async () => {
+    const base = {
+      title: "Chat",
+      settings,
+      messageCount: 0,
+      folderId: null,
+      hasFirstPrompt: false,
+    };
+    await db.conversations.put({
+      ...base,
+      id: "created-only",
+      createdAt: 500,
+      lastOpenedAt: 100,
+    });
+    await db.conversations.put({
+      ...base,
+      id: "opened-only",
+      lastOpenedAt: 400,
+    });
+    await db.conversations.put({
+      ...base,
+      id: "modified",
+      createdAt: 1,
+      lastModified: 300,
+      lastOpenedAt: 1,
+    });
+
+    const latest = await getLastModifiedConversationMeta();
+    expect(latest.id).toBe("created-only");
   });
 
   it("searches message contents", async () => {

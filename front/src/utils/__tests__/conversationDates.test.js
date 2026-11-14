@@ -55,6 +55,20 @@ describe("conversation dates and sorting", () => {
     ).toEqual(["new", "old"]);
   });
 
+  it("uses lastModified for every createdAt-based order when createdAt is missing", () => {
+    const conversations = [
+      { id: "fallback-old", lastModified: 2 },
+      { id: "explicit-new", createdAt: 5 },
+      { id: "explicit-old", createdAt: 1 },
+    ];
+    expect(
+      sortConversations(conversations, "created_asc").map((c) => c.id),
+    ).toEqual(["explicit-old", "fallback-old", "explicit-new"]);
+    expect(
+      sortConversations(conversations, "updated_desc").map((c) => c.id),
+    ).toEqual(["explicit-new", "fallback-old", "explicit-old"]);
+  });
+
   it("sorts by browser storage size", () => {
     const conversations = [
       { id: "small", createdAt: 1, storageSize: 10 },

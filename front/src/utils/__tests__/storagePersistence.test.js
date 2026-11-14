@@ -36,4 +36,36 @@ describe("storage persistence", () => {
       persisted: false,
     });
   });
+
+  it("reports supported storage when optional APIs are missing", async () => {
+    vi.stubGlobal("navigator", { storage: {} });
+
+    await expect(requestPersistentStorage()).resolves.toBe(false);
+    await expect(getStorageStatus()).resolves.toEqual({
+      supported: true,
+      persisted: false,
+    });
+  });
+
+  it("falls back safely when the storage API throws", async () => {
+    vi.stubGlobal("navigator", {
+      storage: {
+        persist: vi.fn(async () => {
+          throw new Error("denied");
+        }),
+        persisted: vi.fn(async () => {
+          throw new Error("unavailable");
+        }),
+        estimate: vi.fn(async () => {
+          throw new Error("unavailable");
+        }),
+      },
+    });
+
+    await expect(requestPersistentStorage()).resolves.toBe(false);
+    await expect(getStorageStatus()).resolves.toEqual({
+      supported: true,
+      persisted: false,
+    });
+  });
 });
