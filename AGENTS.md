@@ -160,10 +160,11 @@ into the nested shape the UI uses. Raw table access (`db.messages`, `db.content_
 
 ### 4.3 Dexie migrations
 
-`db/index.ts` is at **version 9**. A new *indexed* field needs a new `this.version(n).stores({...})`
+`db/index.ts` is at **version 11**. A new *indexed* field needs a new `this.version(n).stores({...})`
 block plus an `.upgrade()` that backfills existing rows — this is how `folderId` (v3),
-`hasFirstPrompt` (v4), `lastOpenedAt` (v5), the workspace tables (v6-v8) and
-`workspace_file_references` (v9) were added. A field that is only stored and never
+`hasFirstPrompt` (v4), `lastOpenedAt` (v5), the workspace tables (v6-v8),
+`workspace_file_references` (v9), the default Arcana filesystem source (v10) and the default
+browser source with the shared browser tree (v11) were added. A field that is only stored and never
 queried needs **no** version bump; Dexie keeps unindexed properties on the row as-is. A version
 bump and `.upgrade()` are still appropriate when existing rows need a backfill. Never edit an
 existing version block: users have live databases.
@@ -564,20 +565,25 @@ modal with a dummy HPC project list, and agent metadata is kept in localStorage.
 lives entirely in IndexedDB; the back service does not store it. Dexie schema v6 adds
 `workspaces`, `workspace_sources`, `workspace_handles` and `workspace_transfers`; v7 adds
 `workspace_mounts` and `workspace_chats`; v8 adds the browser source's `workspace_nodes` /
-`workspace_blobs` file tree; v9 adds `workspace_file_references`. Handles and the transfer journal
-never leave the device. A persisted
+`workspace_blobs` file tree; v9 adds `workspace_file_references`; v10 adds the default Arcana
+filesystem source; v11 adds the default browser source and moves every browser source and workspace
+root onto the single `browser-storage` tree. Handles and the transfer journal never leave the device. A persisted
 `chatai.workspace.deviceId` binds `browser`, `local` and `mcp` sources to this device; `arcana`
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
 
 Attaching a file from a workspace to a chat records a `workspace_file_references` row for the
-browser node. `deleteWorkspace` removes only browser nodes/blobs that no longer have such a
-reference (plus their unreferenced siblings); referenced files and their ancestor directories stay.
-Deleting a chat removes its reference rows.
+browser node; deleting a chat removes its reference rows. All browser sources and every workspace
+root share the single `browser-storage` tree, so deleting a workspace removes its source rows but
+not the shared browser files.
 
 Every source kind is a `FileProvider` (`workspace/providers/`) built from its `WorkspaceSourceRow`:
-browser = an IndexedDB file tree in `workspace_nodes` / `workspace_blobs`, local = a
-`FileSystemDirectoryHandle` in `workspace_handles`, arcana = ArcanaV2 files through `agent/arcanaV2.ts`, mcp = file tools exposed
+Every new workspace automatically gets a `browser` source and, unless the Arcanas module is off, an
+`arcana-filesystem` source; Dexie v10/v11 backfill them into existing workspaces.
+
+browser = the shared IndexedDB tree in `workspace_nodes` / `workspace_blobs`, local = a
+`FileSystemDirectoryHandle` in `workspace_handles`, arcana = one ArcanaV2 collection through
+`agent/arcanaV2.ts`, arcana-filesystem = every Arcana as a folder with its files, mcp = file tools exposed
 by a configured local MCP server (the option only appears when `tools.mcp` is on and a local URL is
 configured). Providers declare `capabilities`, and the UI must offer only what a provider reports.
 `WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, deletes, mkdir,
@@ -615,7 +621,8 @@ read disk free space.
 
 The file browser's Upload file action writes files from the computer into the folder currently
 shown (workspace root or the selected source) through `workspace/upload.ts`; it is disabled for
-read-only sources and mounts.
+read-only sources and mounts. HTML previews render in `SandboxedHtmlPreview`: an empty-sandbox
+iframe with an opaque origin, strict CSP (no scripts or network), and external references stripped.
 
 The prompt box's Workspace popover (`WorkspaceAttachButton`) also holds the agent settings that
 apply to workspace files: the codemode toggle (`tools.codemode`) and the tool-call limit
@@ -642,7 +649,12 @@ remote ids as a value.
 
 `Sidebar/AgentList.tsx` lists remote agents like conversation rows; clicking one navigates to
 `Pages/AgentPage.tsx` (`/agent/:agentId`), whose `components/Agent/AgentConversation.jsx` is the
-chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`. Its `+` opens
+chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`. The left
+`AgentFilesPanel` reuses the central `WorkspaceRootBrowser` (the same component used for the
+workspace root file browser) and reads/writes the OpenCode project filesystem through
+`GET /api/fs/list`, `GET /api/fs/read/<path>` and `POST /api/experimental/fs/write`. The
+`WorkspaceFilePanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
+file list. The sidebar's `+` opens
 `modals/Agent/AddAgentModal`, which only offers the placeholder HPC project list. Adding an agent calls the local `opencode serve` HTTP API through
 `apis/opencodeAgents.js`: `GET /api/info` verifies the server, `POST /api/session` creates the chat
 session, and `AgentConversation` sends `POST /api/session/:id/prompt` and polls
@@ -658,7 +670,9 @@ HTTP-basic credentials default from `opencodeServerUrl` / `opencodeServerUsernam
 agent. The browser talks to the server directly (opencode allows the app origin via CORS), so the
 back service is not involved. `agents/agentStore.js` persists the agent metadata in localStorage,
 but never the password; it is re-read from the config on load. `modules.agents: false` in
-`front.json` sets `VITE_MODULE_AGENTS=false`, hiding the sidebar section and its route.
+`front.json` sets `VITE_MODULE_AGENTS=false`, hiding the sidebar section and its route. Removing an
+agent interrupts its running session first, then deletes the OpenCode session; the local agent is
+dropped only after that succeeds.
 
 
 ## 5. Conventions

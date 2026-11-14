@@ -20,6 +20,8 @@ export type QuotaInfo = {
 
 export interface FileProvider {
   readonly sourceId: string;
+  /** The IndexedDB tree backing a browser source, when it differs from `sourceId`. */
+  readonly storageId?: string;
   readonly kind: SourceKind;
   readonly capabilities: WorkspaceCapabilities;
   readonly status: "connected" | "needs-permission" | "offline" | "error";

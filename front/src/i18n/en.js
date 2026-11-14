@@ -278,7 +278,7 @@ export default {
   feature_guide: {
     workspace_overview: {
       title: "Workspaces",
-      step1: "Create a workspace or open an existing one from the sidebar, then add a source.",
+      step1: "Create a workspace or open an existing one from the sidebar; it already includes browser storage and an Arcana filesystem source.",
       step2: "Pick a source on the left. Device sources carry a \"This device only\" badge.",
       step3: "Browse the files here. Drag a file onto another source to copy it; hold Alt for a move.",
     },
@@ -286,6 +286,11 @@ export default {
       title: "Upload files into a workspace",
       step1: "Open a workspace and choose Upload file in the file browser; the browser asks for a file from this computer.",
       step2: "The uploaded file appears in the folder you are viewing.",
+    },
+    arcana_filesystem: {
+      title: "Use an Arcana filesystem",
+      step1: "Every workspace already includes an Arcana filesystem source.",
+      step2: "Each Arcana appears as a folder; open one to browse its files.",
     },
     attach_from_workspace: {
       title: "Attach files from a workspace",
@@ -1562,6 +1567,7 @@ export default {
     hpc_project: "HPC project {{n}}",
     remote_hint: "Runs on GWDG infrastructure",
     chat_empty: "No messages yet. Ask the agent something.",
+    files: "Files",
     send: "Send",
     working: "Agent is working…",
     chat_timeout: "The agent did not finish in time.",
@@ -1651,14 +1657,11 @@ export default {
     kind_browser: "Browser",
     kind_local: "Local folder",
     kind_arcana: "Arcana",
+    "kind_arcana-filesystem": "Arcana filesystem",
     kind_mcp: "MCP",
     local_hint:
       "The browser asks for access to the folder. The folder stays on this device and is never uploaded.",
     local_unsupported: "This browser cannot open local folders.",
-    arcana_collection: "Arcana collection",
-    arcana_required: "Select an Arcana collection",
-    arcana_hint:
-      "Arcana files are reachable from every device where you sign in.",
     mcp_endpoint: "MCP endpoint",
     mcp_transport: "Transport",
     mcp_allowlist: "Tool allowlist (comma separated, optional)",

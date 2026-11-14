@@ -19,6 +19,7 @@ import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import WorkspaceRootTree from "../components/Workspace/WorkspaceRootTree";
+import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
 import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "../hooks/useToast";
@@ -480,6 +481,76 @@ export default function WorkspacePage() {
     if (entry.mount) toggleMountReadOnly(entry.mount);
   };
 
+  const rootEntrySourceLabel = (entry: RootEntry) => {
+    if (!entry.mount) return undefined;
+    const source = sources.find(
+      (candidate) => candidate.id === entry.mount!.sourceId,
+    );
+    return source?.label ?? entry.mount.sourceId;
+  };
+
+  const renderRootEntryActions = (entry: RootEntry) => {
+    if (entry.local) {
+      return (
+        <button
+          type="button"
+          onClick={() => void removeRootEntry(entry)}
+          className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
+          title={t("workspace.remove_mount")}
+          aria-label={t("workspace.remove_mount")}
+        >
+          <TrashCan size={12} />
+        </button>
+      );
+    }
+    if (!entry.mount) return null;
+    const source = sources.find(
+      (candidate) => candidate.id === entry.mount!.sourceId,
+    );
+    const sourceReadOnly = source?.readOnly === true;
+    const effectiveReadOnly =
+      entry.mount.readOnly === true || sourceReadOnly;
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => !sourceReadOnly && toggleRootMountReadOnly(entry)}
+          disabled={sourceReadOnly}
+          className={`flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition ${
+            sourceReadOnly
+              ? "cursor-default text-warning"
+              : "opacity-0 hover:bg-base-200 hover:text-base-content group-hover:opacity-100"
+          }`}
+          title={
+            sourceReadOnly
+              ? t("workspace.source_read_only")
+              : entry.mount.readOnly
+                ? t("workspace.make_writable")
+                : t("workspace.make_read_only")
+          }
+          aria-label={
+            sourceReadOnly
+              ? t("workspace.source_read_only")
+              : entry.mount.readOnly
+                ? t("workspace.make_writable")
+                : t("workspace.make_read_only")
+          }
+        >
+          {effectiveReadOnly ? <Locked size={12} /> : <Unlocked size={12} />}
+        </button>
+        <button
+          type="button"
+          onClick={() => removeRootMount(entry)}
+          className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
+          title={t("workspace.remove_mount")}
+          aria-label={t("workspace.remove_mount")}
+        >
+          <TrashCan size={12} />
+        </button>
+      </>
+    );
+  };
+
   const download = (entry: WorkspaceFileEntry) => {
     if (!preview?.url) return;
     const link = document.createElement("a");
@@ -560,11 +631,12 @@ export default function WorkspacePage() {
     });
   };
 
-  const addFolder = () => {
+  const addFolder = (sourceId?: string) => {
     openModal("workspaceAddMount", {
       workspaceId,
       sources,
       mounts,
+      initialSourceId: sourceId,
       onAdded: () => setSelectedSourceId(null),
     });
   };
@@ -889,15 +961,6 @@ export default function WorkspacePage() {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={addFolder}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
-                        title={t("workspace.add_folder")}
-                        aria-label={t("workspace.add_folder")}
-                      >
-                        <FolderAdd size={15} />
-                      </button>
-                      <button
-                        type="button"
                         onClick={addSource}
                         className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
                         title={t("workspace.add_source")}
@@ -969,6 +1032,18 @@ export default function WorkspacePage() {
                                 <span className="badge badge-ghost badge-xs capitalize">
                                   {t(`workspace.kind_${source.kind}`)}
                                 </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  addFolder(source.id);
+                                }}
+                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-accent"
+                                title={t("workspace.add_folder")}
+                                aria-label={t("workspace.add_folder")}
+                              >
+                                <FolderAdd size={12} />
                               </button>
                               <button
                                 type="button"
@@ -1078,7 +1153,7 @@ export default function WorkspacePage() {
                       </span>
                       <button
                         type="button"
-                        onClick={addFolder}
+                        onClick={() => addFolder()}
                         className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
                         title={t("workspace.add_folder")}
                         aria-label={t("workspace.add_folder")}
@@ -1165,518 +1240,223 @@ export default function WorkspacePage() {
                 <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100">
                   {!selectedProvider ? (
                     <div className="flex flex-1 flex-col">
-                      <div className="flex flex-wrap items-center gap-1 border-b border-base-300 px-3 py-2 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => setRootPath("/")}
-                          className="flex h-5 w-5 items-center justify-center rounded text-base-content/60 hover:bg-base-200"
-                          title={t("workspace.root")}
-                        >
-                          <Home size={14} />
-                        </button>
-                        {rootBreadcrumbs.map((crumb, index) => (
-                          <span key={crumb.path} className="flex items-center gap-1">
-                            {index > 0 && (
-                              <ChevronRight size={12} className="text-base-content/30" />
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setRootPath(crumb.path)}
-                              className="max-w-[10rem] truncate rounded px-1 py-0.5 hover:bg-base-200"
-                            >
-                              {crumb.label}
-                            </button>
-                          </span>
-                        ))}
-                        <div className="ml-auto flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={triggerUpload}
-                            disabled={uploadDisabled}
-                            data-guide="workspace-upload"
-                            className="btn btn-ghost btn-xs"
-                            title={t("workspace.upload_file")}
-                          >
-                            {uploading ? (
-                              <span className="loading loading-spinner loading-xs" />
-                            ) : (
-                              <Upload size={14} />
-                            )}
-                            {t("workspace.upload_file")}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => createRootEntry("dir")}
-                            className="btn btn-ghost btn-xs"
-                            title={t("workspace.new_folder")}
-                          >
-                            <FolderAdd size={14} />
-                            {t("workspace.new_folder")}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => createRootEntry("file")}
-                            className="btn btn-ghost btn-xs"
-                            title={t("workspace.new_file")}
-                          >
-                            <Add size={14} />
-                            {t("workspace.new_file")}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={addFolder}
-                            className="btn btn-ghost btn-xs"
-                            title={t("workspace.add_folder")}
-                          >
-                            <Folder size={14} />
-                            {t("workspace.add_folder")}
-                          </button>
-                        </div>
-                      </div>
-                      <div
-                        data-guide="workspace-files"
-                        className="flex-1 overflow-y-auto p-1.5"
-                        onDragOver={(event) => {
+                      <WorkspaceRootBrowser
+                        path={rootPath}
+                        rootPath="/"
+                        breadcrumbs={rootBreadcrumbs}
+                        entries={rootEntries}
+                        loading={rootLoading}
+                        error={rootError}
+                        onNavigate={setRootPath}
+                        onRetry={() => void loadRoot()}
+                        onOpen={(entry) => {
+                          if (entry.mount) {
+                            openMount(entry.mount);
+                            return;
+                          }
+                          if (entry.kind === "dir") {
+                            setRootPath(entry.path);
+                            return;
+                          }
+                          void openFile(entry, rootProvider);
+                        }}
+                        onUpload={triggerUpload}
+                        uploading={uploading}
+                        uploadDisabled={uploadDisabled}
+                        onNewFolder={() => createRootEntry("dir")}
+                        onNewFile={() => createRootEntry("file")}
+                        onAddFolder={() => addFolder()}
+                        canDragEntry={(entry) => entry.local && !entry.mount}
+                        onDragStart={(entry, event) => {
+                          if (!entry.local || entry.mount) return;
+                          setDraggingEntry({
+                            sourceId: entry.sourceId,
+                            entry,
+                          });
+                          event.dataTransfer.setData(
+                            "application/x-chat-ai-workspace",
+                            JSON.stringify({
+                              sourceId: entry.sourceId,
+                              entry,
+                            }),
+                          );
+                          event.dataTransfer.effectAllowed = "move";
+                        }}
+                        onDragEnd={() => {
+                          setDraggingEntry(null);
+                          setDragHint(null);
+                        }}
+                        onDragOverEntry={(entry, event) => {
+                          if (entry.kind !== "dir") return;
                           event.preventDefault();
                           if (!draggingEntry) return;
                           setDragHint("move");
                         }}
-                        onDragLeave={() => setDragHint(null)}
-                        onDrop={(event) => {
+                        onDragLeaveEntry={() => setDragHint(null)}
+                        onDropEntry={(entry, event) => {
+                          if (entry.kind === "dir" && !entry.mount) {
+                            onDrop(event, entry.sourceId, entry.path);
+                          } else if (entry.mount) {
+                            onDrop(
+                              event,
+                              entry.mount.sourceId,
+                              entry.mount.sourcePath,
+                            );
+                          }
+                        }}
+                        onDragOverFiles={(event) => {
+                          event.preventDefault();
+                          if (!draggingEntry) return;
+                          setDragHint("move");
+                        }}
+                        onDragLeaveFiles={() => setDragHint(null)}
+                        onDropFiles={(event) => {
                           setDragHint(null);
                           onDrop(event, rootSourceId, rootPath);
                         }}
-                      >
-                        {rootLoading && rootEntries.length === 0 ? (
-                          <div className="space-y-1 p-2">
-                            {Array.from({ length: 4 }).map((_, index) => (
-                              <div
-                                key={index}
-                                className="h-8 animate-pulse rounded bg-base-200"
-                              />
-                            ))}
-                          </div>
-                        ) : rootError ? (
-                          <div className="flex flex-col items-center gap-2 p-8 text-center text-xs text-base-content/60">
-                            <WarningAltFilled size={20} className="text-warning" />
-                            <p>{rootError}</p>
-                            <button className="btn btn-xs" onClick={() => loadRoot()}>
-                              {t("workspace.retry")}
-                            </button>
-                          </div>
-                        ) : rootEntries.length === 0 ? (
-                          <div className="flex flex-col items-center gap-2 p-8 text-center text-xs text-base-content/60">
-                            <Folder size={20} className="text-base-content/30" />
-                            <p>{t("workspace.empty_folder")}</p>
-                            <p className="text-[10px] text-base-content/40">
-                              {t("workspace.root_empty_hint")}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-0.5">
-                            {rootPath !== "/" && (
-                              <button
-                                type="button"
-                                onClick={() => setRootPath(parentPath(rootPath))}
-                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/70 hover:bg-base-200"
-                              >
-                                <Folder size={14} />
-                                ..
-                              </button>
-                            )}
-                            {rootEntries.map((entry) => {
-                              const source = entry.mount
-                                ? sources.find(
-                                    (candidate) => candidate.id === entry.mount!.sourceId,
-                                  )
-                                : undefined;
-                              const sourceReadOnly = source?.readOnly === true;
-                              const effectiveReadOnly =
-                                entry.mount?.readOnly === true || sourceReadOnly;
-                              return (
-                                <div
-                                  key={entry.path}
-                                  draggable={entry.local && !entry.mount}
-                                  onDragStart={(event) => {
-                                    if (!entry.local || entry.mount) return;
-                                    setDraggingEntry({
-                                      sourceId: entry.sourceId,
-                                      entry,
-                                    });
-                                    event.dataTransfer.setData(
-                                      "application/x-chat-ai-workspace",
-                                      JSON.stringify({
-                                        sourceId: entry.sourceId,
-                                        entry,
-                                      }),
-                                    );
-                                    event.dataTransfer.effectAllowed = "move";
-                                  }}
-                                  onDragEnd={() => {
-                                    setDraggingEntry(null);
-                                    setDragHint(null);
-                                  }}
-                                  onDragOver={
-                                    entry.kind === "dir"
-                                      ? (event) => {
-                                          event.preventDefault();
-                                          if (!draggingEntry) return;
-                                          setDragHint("move");
-                                        }
-                                      : undefined
-                                  }
-                                  onDragLeave={
-                                    entry.kind === "dir"
-                                      ? () => setDragHint(null)
-                                      : undefined
-                                  }
-                                  onDrop={
-                                    entry.kind === "dir" && !entry.mount
-                                      ? (event) =>
-                                          onDrop(
-                                            event,
-                                            entry.sourceId,
-                                            entry.path,
-                                          )
-                                      : entry.mount
-                                        ? (event) =>
-                                            onDrop(
-                                              event,
-                                              entry.mount!.sourceId,
-                                              entry.mount!.sourcePath,
-                                            )
-                                        : undefined
-                                  }
-                                  className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition hover:bg-base-200"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (entry.mount) {
-                                        openMount(entry.mount);
-                                        return;
-                                      }
-                                      if (entry.kind === "dir") {
-                                        setRootPath(entry.path);
-                                        return;
-                                      }
-                                      void openFile(entry, rootProvider);
-                                    }}
-                                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                                  >
-                                    {entry.kind === "dir" ? (
-                                      <Folder size={14} className="text-accent" />
-                                    ) : (
-                                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-base-200 text-[8px] font-semibold uppercase text-base-content/50">
-                                        {baseName(entry.name).split(".").pop()?.slice(0, 3) ||
-                                          "file"}
-                                      </span>
-                                    )}
-                                    <span className="min-w-0 flex-1 truncate text-base-content">
-                                      {entry.name}
-                                    </span>
-                                    {entry.mount && (
-                                      <span className="shrink-0 text-[10px] font-semibold text-base-content/60">
-                                        {source?.label ?? entry.mount.sourceId}
-                                      </span>
-                                    )}
-                                    {effectiveReadOnly && (
-                                      <span className="badge badge-warning badge-xs">
-                                        {t("workspace.mount_read_only")}
-                                      </span>
-                                    )}
-                                    {!entry.mount &&
-                                      entry.kind === "file" &&
-                                      typeof entry.size === "number" && (
-                                        <span className="shrink-0 text-[10px] text-base-content/40">
-                                          {formatBytes(entry.size)}
-                                        </span>
-                                      )}
-                                  </button>
-                                  {entry.local ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => void removeRootEntry(entry)}
-                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
-                                      title={t("workspace.remove_mount")}
-                                      aria-label={t("workspace.remove_mount")}
-                                    >
-                                      <TrashCan size={12} />
-                                    </button>
-                                  ) : entry.mount ? (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        !sourceReadOnly && toggleMountReadOnly(entry.mount!)
-                                      }
-                                      disabled={sourceReadOnly}
-                                      className={`flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition ${
-                                        sourceReadOnly
-                                          ? "cursor-default text-warning"
-                                          : "opacity-0 hover:bg-base-200 hover:text-base-content group-hover:opacity-100"
-                                      }`}
-                                      title={
-                                        sourceReadOnly
-                                          ? t("workspace.source_read_only")
-                                          : entry.mount.readOnly
-                                            ? t("workspace.make_writable")
-                                            : t("workspace.make_read_only")
-                                      }
-                                      aria-label={
-                                        sourceReadOnly
-                                          ? t("workspace.source_read_only")
-                                          : entry.mount.readOnly
-                                            ? t("workspace.make_writable")
-                                            : t("workspace.make_read_only")
-                                      }
-                                    >
-                                      {effectiveReadOnly ? (
-                                        <Locked size={12} />
-                                      ) : (
-                                        <Unlocked size={12} />
-                                      )}
-                                    </button>
-                                  ) : null}
-                                  {entry.mount ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => removeMount(entry.mount!.id)}
-                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
-                                      title={t("workspace.remove_mount")}
-                                      aria-label={t("workspace.remove_mount")}
-                                    >
-                                      <TrashCan size={12} />
-                                    </button>
-                                  ) : null}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                        isReadOnly={rootEntryReadOnly}
+                        sourceLabel={rootEntrySourceLabel}
+                        entryActions={renderRootEntryActions}
+                        emptyHint={t("workspace.root_empty_hint")}
+                      />
                     </div>
                   ) : (
-                    <>
-                      <div className="flex items-center gap-1 border-b border-base-300 px-3 py-2 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveMountId(null);
-                            setSelectedSourceId(null);
-                          }}
-                          className="flex h-5 w-5 items-center justify-center rounded text-base-content/60 hover:bg-base-200"
-                          title={t("workspace.root")}
-                        >
-                          <Home size={14} />
-                        </button>
-                        {breadcrumbs.map((crumb, index) => (
-                          <span key={crumb.path} className="flex items-center gap-1">
-                            {index > 0 && (
-                              <ChevronRight size={12} className="text-base-content/30" />
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (index === 0) {
-                                  setActiveMountId(null);
-                                  setSelectedSourceId(null);
-                                  return;
-                                }
-                                setPathBySource((current) => ({
-                                  ...current,
-                                  [selectedSourceId!]: crumb.path,
-                                }));
-                              }}
-                              className="max-w-[12rem] truncate rounded px-1 py-0.5 hover:bg-base-200"
-                            >
-                              {crumb.label}
-                            </button>
-                          </span>
-                        ))}
-                        {activeMount?.readOnly && (
-                          <span className="badge badge-warning badge-xs">
-                            {t("workspace.mount_read_only")}
-                          </span>
-                        )}
-                        <div className="ml-auto flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={triggerUpload}
-                            disabled={uploadDisabled}
-                            data-guide="workspace-upload"
-                            className="btn btn-ghost btn-xs"
-                            title={t("workspace.upload_file")}
-                          >
-                            {uploading ? (
-                              <span className="loading loading-spinner loading-xs" />
-                            ) : (
-                              <Upload size={14} />
-                            )}
-                            {t("workspace.upload_file")}
-                          </button>
+                    <WorkspaceRootBrowser
+                      path={currentPath}
+                      rootPath="/"
+                      breadcrumbs={breadcrumbs}
+                      entries={entries}
+                      loading={loading}
+                      error={listError}
+                      onHome={() => {
+                        setActiveMountId(null);
+                        setSelectedSourceId(null);
+                      }}
+                      onBreadcrumb={(crumb, index) => {
+                        if (index === 0) {
+                          setActiveMountId(null);
+                          setSelectedSourceId(null);
+                          return;
+                        }
+                        setPathBySource((current) => ({
+                          ...current,
+                          [selectedSourceId!]: crumb.path,
+                        }));
+                      }}
+                      onNavigate={(nextPath) =>
+                        setPathBySource((current) => ({
+                          ...current,
+                          [selectedSourceId!]: nextPath,
+                        }))
+                      }
+                      onRetry={() => void loadEntries(false)}
+                      onOpen={(entry) => {
+                        if (entry.kind === "dir") {
+                          setPathBySource((current) => ({
+                            ...current,
+                            [selectedSourceId!]: entry.path,
+                          }));
+                          return;
+                        }
+                        void openFile(entry);
+                      }}
+                      onUpload={triggerUpload}
+                      uploading={uploading}
+                      uploadDisabled={uploadDisabled}
+                      toolbarInfo={
+                        <>
+                          {activeMount?.readOnly && (
+                            <span className="badge badge-warning badge-xs">
+                              {t("workspace.mount_read_only")}
+                            </span>
+                          )}
                           <span className="text-[10px] text-base-content/50">
                             {selectedSource?.label}
                           </span>
-                        </div>
-                      </div>
-
-                      <div
-                        data-guide="workspace-files"
-                        className="flex-1 overflow-y-auto p-1.5"
-                        onDragOver={(event) => {
-                          event.preventDefault();
-                          if (draggingEntry) {
-                            setDragHint("move");
-                          }
-                        }}
-                        onDragLeave={() => setDragHint(null)}
-                        onDrop={(event) => {
-                          setDragHint(null);
-                          if (activeMount?.readOnly) {
-                            notifyError(t("workspace.mount_read_only_error"));
-                            return;
-                          }
-                          if (selectedSource?.readOnly) {
-                            notifyError(t("workspace.source_read_only_error"));
-                            return;
-                          }
-                          onDrop(event, selectedSourceId!, currentPath);
-                        }}
-                      >
-                        {loading && entries.length === 0 ? (
-                          <div className="space-y-1 p-2">
-                            {Array.from({ length: 5 }).map((_, index) => (
-                              <div
-                                key={index}
-                                className="h-8 animate-pulse rounded bg-base-200"
-                              />
-                            ))}
-                          </div>
-                        ) : listError ? (
-                          <div className="flex flex-col items-center gap-2 p-8 text-center text-xs text-base-content/60">
-                            <WarningAltFilled size={20} className="text-warning" />
-                            <p>{listError}</p>
-                            <button className="btn btn-xs" onClick={() => loadEntries(false)}>
-                              {t("workspace.retry")}
-                            </button>
-                          </div>
-                        ) : entries.length === 0 ? (
-                          <div className="flex flex-col items-center gap-2 p-8 text-center text-xs text-base-content/60">
-                            <Folder size={20} className="text-base-content/30" />
-                            <p>{t("workspace.empty_folder")}</p>
-                            <p className="text-[10px] text-base-content/40">
-                              {t("workspace.drop_hint")}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-0.5">
-                            {currentPath !== "/" && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setPathBySource((current) => ({
-                                    ...current,
-                                    [selectedSourceId!]: parentPath(currentPath),
-                                  }))
-                                }
-                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/70 hover:bg-base-200"
-                              >
-                                <Folder size={14} />
-                                ..
-                              </button>
-                            )}
-                            {entries.map((entry) => (
-                              <div
-                                key={entry.path}
-                                draggable
-                                onDragStart={(event) => {
-                                  setDraggingEntry({
-                                    sourceId: selectedSourceId!,
+                        </>
+                      }
+                      canDragEntry={() => true}
+                      onDragStart={(entry, event) => {
+                        setDraggingEntry({
+                          sourceId: selectedSourceId!,
+                          entry,
+                        });
+                        event.dataTransfer.setData(
+                          "application/x-chat-ai-workspace",
+                          JSON.stringify({
+                            sourceId: selectedSourceId,
+                            entry,
+                          }),
+                        );
+                        event.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragEnd={() => {
+                        setDraggingEntry(null);
+                        setDragHint(null);
+                      }}
+                      onDragOverEntry={(entry, event) => {
+                        if (entry.kind !== "dir") return;
+                        event.preventDefault();
+                        if (!draggingEntry) return;
+                        setDragHint("move");
+                      }}
+                      onDragLeaveEntry={() => setDragHint(null)}
+                      onDropEntry={(entry, event) => {
+                        if (entry.kind === "dir") {
+                          onDrop(event, selectedSourceId!, entry.path);
+                        }
+                      }}
+                      onDragOverFiles={(event) => {
+                        event.preventDefault();
+                        if (!draggingEntry) return;
+                        setDragHint("move");
+                      }}
+                      onDragLeaveFiles={() => setDragHint(null)}
+                      onDropFiles={(event) => {
+                        setDragHint(null);
+                        if (activeMount?.readOnly) {
+                          notifyError(t("workspace.mount_read_only_error"));
+                          return;
+                        }
+                        if (selectedSource?.readOnly) {
+                          notifyError(t("workspace.source_read_only_error"));
+                          return;
+                        }
+                        onDrop(event, selectedSourceId!, currentPath);
+                      }}
+                      entryActions={(entry) =>
+                        entry.kind === "file" ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openModal("workspaceMoveTo", {
+                                entry,
+                                sources: sources.filter(
+                                  (candidate) =>
+                                    candidate.id !== selectedSourceId &&
+                                    candidate.status !== "error" &&
+                                    !candidate.readOnly,
+                                ),
+                                onSelect: (targetId: string) =>
+                                  requestTransfer({
+                                    fromSourceId: selectedSourceId!,
+                                    toSourceId: targetId,
                                     entry,
-                                  });
-                                  event.dataTransfer.setData(
-                                    "application/x-chat-ai-workspace",
-                                    JSON.stringify({
-                                      sourceId: selectedSourceId,
-                                      entry,
-                                    }),
-                                  );
-                                  event.dataTransfer.effectAllowed = "move";
-                                }}
-                                onDragEnd={() => {
-                                  setDraggingEntry(null);
-                                  setDragHint(null);
-                                }}
-                                onDragOver={
-                                  entry.kind === "dir"
-                                    ? (event) => event.preventDefault()
-                                    : undefined
-                                }
-                                onDrop={
-                                  entry.kind === "dir"
-                                    ? (event) =>
-                                        onDrop(event, selectedSourceId!, entry.path)
-                                    : undefined
-                                }
-                                onClick={() => openFile(entry)}
-                                className="group flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition hover:bg-base-200"
-                              >
-                                {entry.kind === "dir" ? (
-                                  <Folder size={14} className="text-accent" />
-                                ) : (
-                                  <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-base-200 text-[8px] font-semibold uppercase text-base-content/50">
-                                    {baseName(entry.name).split(".").pop()?.slice(0, 3) ||
-                                      "file"}
-                                  </span>
-                                )}
-                                <span className="min-w-0 flex-1 truncate text-base-content">
-                                  {entry.name}
-                                </span>
-                                {entry.kind === "file" && (
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      openModal("workspaceMoveTo", {
-                                        entry,
-                                        sources: sources.filter(
-                                          (candidate) =>
-                                            candidate.id !== selectedSourceId &&
-                                            candidate.status !== "error" &&
-                                            !candidate.readOnly,
-                                        ),
-                                        onSelect: (targetId: string) =>
-                                          requestTransfer({
-                                            fromSourceId: selectedSourceId!,
-                                            toSourceId: targetId,
-                                            entry,
-                                            targetDir: "/",
-                                            intent: "move",
-                                          }),
-                                      });
-                                    }}
-                                    className="shrink-0 rounded px-1 text-[10px] text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content group-hover:opacity-100"
-                                    title={t("workspace.move_to")}
-                                  >
-                                    {t("workspace.move_to")}
-                                  </button>
-                                )}
-                                {entry.kind === "file" && typeof entry.size === "number" && (
-                                  <span className="shrink-0 text-[10px] text-base-content/40">
-                                    {formatBytes(entry.size)}
-                                  </span>
-                                )}
-                                {entry.kind === "dir" &&
-                                  typeof entry.childCount === "number" && (
-                                    <span className="shrink-0 text-[10px] text-base-content/40">
-                                      {entry.childCount}
-                                    </span>
-                                  )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {nextCursor && (
+                                    targetDir: "/",
+                                    intent: "move",
+                                  }),
+                              });
+                            }}
+                            className="shrink-0 rounded px-1 text-[10px] text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content group-hover:opacity-100"
+                            title={t("workspace.move_to")}
+                          >
+                            {t("workspace.move_to")}
+                          </button>
+                        ) : null
+                      }
+                      footer={
+                        nextCursor ? (
                           <div className="p-2 text-center">
                             <button
                               type="button"
@@ -1687,9 +1467,11 @@ export default function WorkspacePage() {
                               {t("workspace.load_more")}
                             </button>
                           </div>
-                        )}
-                      </div>
-                    </>
+                        ) : null
+                      }
+                      emptyHint={t("workspace.drop_hint")}
+                      dataGuide="workspace-files"
+                    />
                   )}
                 </section>
 

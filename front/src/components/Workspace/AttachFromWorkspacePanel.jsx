@@ -241,12 +241,13 @@ function WorkspaceAttachmentSection({
         setLocalState,
         selectedFiles: [file],
       });
-      const node = await getSourceNode(entry.sourceId, entry.path);
+      const storageId = entry.provider.storageId ?? entry.sourceId;
+      const node = await getSourceNode(storageId, entry.path);
       if (node && localState.id) {
         await addFileReference({
           conversationId: localState.id,
           workspaceId,
-          sourceId: entry.sourceId,
+          sourceId: storageId,
           nodeId: node.id,
           name: entry.name,
           path: entry.path,

@@ -44,10 +44,13 @@ export class BrowserProvider implements FileProvider {
   readonly capabilities: WorkspaceCapabilities = defaultCapabilities("browser");
   status: "connected" | "needs-permission" | "offline" | "error" = "offline";
 
-  constructor(readonly sourceId: string) {}
+  constructor(
+    readonly sourceId: string,
+    readonly storageId: string = sourceId,
+  ) {}
 
   async connect() {
-    await ensureSourceDir(this.sourceId, "/");
+    await ensureSourceDir(this.storageId, "/");
     this.status = "connected";
   }
 
@@ -61,7 +64,7 @@ export class BrowserProvider implements FileProvider {
   }): Promise<WorkspaceFileEntry> {
     let childCount: number | undefined;
     if (node.kind === "dir") {
-      const children = await listSourceNodes(this.sourceId, node.path);
+      const children = await listSourceNodes(this.storageId, node.path);
       childCount = children.length;
     }
     return {
@@ -78,7 +81,7 @@ export class BrowserProvider implements FileProvider {
 
   async list(path: string, cursor?: string): Promise<DirectoryPage> {
     const normalized = normalizePath(path);
-    const nodes = await listSourceNodes(this.sourceId, normalized);
+    const nodes = await listSourceNodes(this.storageId, normalized);
     const start = cursor ? Number(cursor) : 0;
     const page = nodes.slice(start, start + 200);
     return {
@@ -93,18 +96,18 @@ export class BrowserProvider implements FileProvider {
     if (normalized === "/") {
       return { sourceId: this.sourceId, path: "/", name: "/", kind: "dir" };
     }
-    const node = await getSourceNode(this.sourceId, normalized);
+    const node = await getSourceNode(this.storageId, normalized);
     if (!node) throw new WorkspaceError("NOT_FOUND", normalized);
     return this.entry(node);
   }
 
   async read(path: string, range?: { start: number; end: number }) {
     const normalized = normalizePath(path);
-    const node = await getSourceNode(this.sourceId, normalized);
+    const node = await getSourceNode(this.storageId, normalized);
     if (!node || node.kind !== "file") {
       throw new WorkspaceError("NOT_FOUND", normalized);
     }
-    const blob = await getSourceBlob(this.sourceId, node.id);
+    const blob = await getSourceBlob(this.storageId, node.id);
     if (!blob) throw new WorkspaceError("NOT_FOUND", normalized);
     const bytes = range ? blob.slice(range.start, range.end) : blob;
     return new ReadableStream<Uint8Array>({
@@ -121,21 +124,21 @@ export class BrowserProvider implements FileProvider {
     opts: { size?: number; overwrite: boolean },
   ): Promise<WorkspaceFileEntry> {
     const normalized = normalizePath(path);
-    const existing = await getSourceNode(this.sourceId, normalized);
+    const existing = await getSourceNode(this.storageId, normalized);
     if (existing && !opts.overwrite) {
       throw new WorkspaceError("CONFLICT", normalized);
     }
     const bytes = await readAll(data);
-    const node = await writeSourceFile(this.sourceId, normalized, bytes);
+    const node = await writeSourceFile(this.storageId, normalized, bytes);
     return this.entry(node);
   }
 
   async mkdir(path: string) {
-    await ensureSourceDir(this.sourceId, path);
+    await ensureSourceDir(this.storageId, path);
   }
 
   async remove(path: string, opts: { recursive: boolean }) {
-    await removeSourcePath(this.sourceId, path, opts.recursive);
+    await removeSourcePath(this.storageId, path, opts.recursive);
   }
 
   async copy(from: string, to: string) {
@@ -160,7 +163,7 @@ export class BrowserProvider implements FileProvider {
   }
 
   async quota(): Promise<QuotaInfo | null> {
-    const usage = await sourceUsage(this.sourceId);
+    const usage = await sourceUsage(this.storageId);
     try {
       const estimate = await navigator.storage.estimate();
       const quota = estimate.quota ?? 0;

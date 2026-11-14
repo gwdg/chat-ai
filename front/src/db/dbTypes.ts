@@ -175,7 +175,7 @@ export type FolderRow = {
 
 // ---------- Workspaces ----------
 
-export type SourceKind = 'browser' | 'local' | 'mcp' | 'arcana'
+export type SourceKind = 'browser' | 'local' | 'mcp' | 'arcana' | 'arcana-filesystem'
 
 export type SourceStatus =
   | 'connected'

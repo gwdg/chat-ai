@@ -5,26 +5,21 @@ import { useSelector } from "react-redux";
 import BaseModal from "../BaseModal";
 import { addSource } from "../../db/workspaceDb";
 import { newId } from "../../db";
-import { listArcanas } from "../../agent/arcanaV2";
 import { hasLocalMcpServerValue } from "../../agent/mcp";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import { defaultCapabilities } from "../../workspace/capabilities";
 import { DEVICE_PLANE_KINDS } from "../../workspace/deviceId";
 
-const KINDS: SourceKind[] = ["browser", "local", "arcana", "mcp"];
-
-type ArcanaOption = { name: string };
+const KINDS: SourceKind[] = ["local", "mcp"];
 
 export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }) {
   const { t } = useTranslation();
   const userSettings = useSelector(selectUserSettings);
-  const [kind, setKind] = useState<SourceKind>("browser");
+  const [kind, setKind] = useState<SourceKind>("local");
   const [label, setLabel] = useState("");
   const [readOnly, setReadOnly] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [arcanas, setArcanas] = useState<ArcanaOption[]>([]);
-  const [arcanaId, setArcanaId] = useState("");
   const [mcpEndpoint, setMcpEndpoint] = useState("");
   const [mcpTransport, setMcpTransport] = useState<"streamable-http" | "sse">(
     "streamable-http",
@@ -41,38 +36,15 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
   );
 
   useEffect(() => {
-    if (!availableKinds.includes(kind)) setKind("browser");
+    if (!availableKinds.includes(kind)) setKind(availableKinds[0] ?? "local");
   }, [availableKinds, kind]);
 
-  useEffect(() => {
-    if (!isOpen || kind !== "arcana") return;
-    let cancelled = false;
-    void listArcanas()
-      .then((rows) => {
-        if (cancelled) return;
-        const options = (Array.isArray(rows) ? rows : [])
-          .map((row: any) => ({ name: String(row?.name ?? row?.id ?? "") }))
-          .filter((row) => row.name);
-        setArcanas(options);
-        setArcanaId((current) => current || options[0]?.name || "");
-      })
-      .catch((event) => {
-        if (!cancelled) {
-          setError(event instanceof Error ? event.message : String(event));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, kind]);
-
   const reset = () => {
-    setKind("browser");
+    setKind("local");
     setLabel("");
     setReadOnly(false);
     setError("");
     setBusy(false);
-    setArcanaId("");
     setMcpEndpoint("");
     setMcpTransport("streamable-http");
     setMcpAllowlist("");
@@ -111,15 +83,6 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
     setError("");
     setBusy(true);
     try {
-      if (kind === "browser") {
-        await finish({
-          kind,
-          label: label.trim() || t("workspace.source_browser"),
-          config: { storage: "indexeddb" },
-          status: "offline",
-        });
-        return;
-      }
       if (kind === "local") {
         if (!("showDirectoryPicker" in window)) {
           throw new Error(t("workspace.local_unsupported"));
@@ -132,16 +95,6 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
           label: label.trim() || handle.name,
           config: { handleKey: "" },
           handle,
-          status: "offline",
-        });
-        return;
-      }
-      if (kind === "arcana") {
-        if (!arcanaId) throw new Error(t("workspace.arcana_required"));
-        await finish({
-          kind,
-          label: label.trim() || arcanaId,
-          config: { remoteWorkspaceId: arcanaId },
           status: "offline",
         });
         return;
@@ -208,25 +161,6 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
           </p>
         )}
 
-        {kind === "arcana" && (
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs font-medium text-base-content/70">
-              {t("workspace.arcana_collection")}
-            </span>
-            <select
-              value={arcanaId}
-              onChange={(event) => setArcanaId(event.target.value)}
-              className="select select-bordered w-full"
-            >
-              {arcanas.map((arcana) => (
-                <option key={arcana.name} value={arcana.name}>
-                  {arcana.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
         {kind === "mcp" && (
           <>
             <label className="flex flex-col gap-1 text-sm">
@@ -272,16 +206,9 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
           </>
         )}
 
-        {(kind === "browser" || kind === "local" || kind === "mcp") &&
-          DEVICE_PLANE_KINDS.has(kind) && (
-            <p className="text-xs text-warning">{t("workspace.device_only_hint")}</p>
-          )}
-        {kind === "arcana" && (
-          <p className="text-xs text-base-content/60">
-            {t("workspace.arcana_hint")}
-          </p>
+        {DEVICE_PLANE_KINDS.has(kind) && (
+          <p className="text-xs text-warning">{t("workspace.device_only_hint")}</p>
         )}
-
         <label className="flex items-center gap-2 text-xs text-base-content/70">
           <input
             type="checkbox"

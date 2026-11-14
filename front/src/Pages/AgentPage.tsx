@@ -7,9 +7,12 @@ import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import AgentConversation from "../components/Agent/AgentConversation";
+import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
+import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
 import { useAgent } from "../agents/agentStore";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
+import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
 
 export default function AgentPage() {
   const { t } = useTranslation();
@@ -17,6 +20,8 @@ export default function AgentPage() {
   const agent = useAgent(agentId);
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
+  const { preview, openFile, closePreview, download } =
+    useOpencodeFilePreview(agent);
 
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
@@ -42,13 +47,25 @@ export default function AgentPage() {
           userData={userData}
           modelsData={modelsData}
         />
-        <div className="flex min-h-0 min-w-0 flex-col">
-          {agent ? (
-            <AgentConversation agent={agent} modelsData={modelsData} />
-          ) : (
-            <div className="flex flex-1 items-center justify-center text-sm text-base-content/60">
-              {t("agents.not_found")}
-            </div>
+        <div className="flex min-h-0 min-w-0 gap-2">
+          {agent && (
+            <AgentFilesPanel agent={agent} onOpenFile={openFile} />
+          )}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {agent ? (
+              <AgentConversation agent={agent} modelsData={modelsData} />
+            ) : (
+              <div className="flex flex-1 items-center justify-center text-sm text-base-content/60">
+                {t("agents.not_found")}
+              </div>
+            )}
+          </div>
+          {agent && preview && (
+            <WorkspaceFilePanel
+              preview={preview}
+              onClose={closePreview}
+              onDownload={download}
+            />
           )}
         </div>
         <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3" />

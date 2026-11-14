@@ -60,6 +60,22 @@ export const featureGuides = {
       },
     ],
   },
+  arcana_filesystem: {
+    titleKey: "feature_guide.arcana_filesystem.title",
+    prompt:
+      "Every workspace includes an Arcana filesystem source. It lists every Arcana as a folder, and each collection's files inside it.",
+    keywords: ["arcana filesystem", "arcana files", "browse arcanas", "arcana folder"],
+    steps: [
+      {
+        target: '[data-guide="workspace-sources"]',
+        textKey: "feature_guide.arcana_filesystem.step1",
+      },
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.arcana_filesystem.step2",
+      },
+    ],
+  },
   attach_from_workspace: {
     titleKey: "feature_guide.attach_from_workspace.title",
     prompt:
@@ -1204,7 +1220,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "workspace_upload", "attach_from_workspace", "remote_agents"],
+  workspace: ["workspace_overview", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

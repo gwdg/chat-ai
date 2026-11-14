@@ -53,6 +53,39 @@ describe("workspace database", () => {
     );
   });
 
+  it("adds browser and Arcana filesystem sources to new workspaces", async () => {
+    const workspaceId = await createWorkspace("With defaults");
+    const sources = await db.workspace_sources
+      .where("workspaceId")
+      .equals(workspaceId)
+      .toArray();
+    expect(sources.map((source) => source.kind).sort()).toEqual([
+      "arcana-filesystem",
+      "browser",
+    ]);
+    expect(
+      sources.find((source) => source.kind === "browser"),
+    ).toMatchObject({
+      config: { storage: "indexeddb" },
+      readOnly: false,
+    });
+  });
+
+  it("keeps the browser source when Arcanas are disabled", async () => {
+    const original = import.meta.env.VITE_MODULE_ARCANAS;
+    import.meta.env.VITE_MODULE_ARCANAS = "false";
+    try {
+      const workspaceId = await createWorkspace("Without Arcana");
+      const sources = await db.workspace_sources
+        .where("workspaceId")
+        .equals(workspaceId)
+        .toArray();
+      expect(sources.map((source) => source.kind)).toEqual(["browser"]);
+    } finally {
+      import.meta.env.VITE_MODULE_ARCANAS = original;
+    }
+  });
+
   it("binds device-plane sources to this device and leaves Arcana device-free", async () => {
     const workspaceId = await createWorkspace("Mixed");
     const browserId = await addSource({

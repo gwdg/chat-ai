@@ -288,7 +288,7 @@ export default {
   feature_guide: {
     workspace_overview: {
       title: "Arbeitsbereiche",
-      step1: "Erstellen Sie einen Arbeitsbereich oder öffnen Sie einen in der Seitenleiste und fügen Sie eine Quelle hinzu.",
+      step1: "Erstellen Sie einen Arbeitsbereich oder öffnen Sie einen in der Seitenleiste; er enthält bereits Browserspeicher und eine Arcana-Dateisystem-Quelle.",
       step2: "Wählen Sie links eine Quelle. Gerätequellen tragen die Markierung \"Nur dieses Gerät\".",
       step3: "Durchsuchen Sie hier die Dateien. Ziehen Sie eine Datei auf eine andere Quelle zum Kopieren; mit Alt zum Verschieben.",
     },
@@ -296,6 +296,11 @@ export default {
       title: "Dateien in einen Arbeitsbereich hochladen",
       step1: "Öffnen Sie einen Arbeitsbereich und wählen Sie Datei hochladen in der Dateiansicht; der Browser fragt nach einer Datei von diesem Computer.",
       step2: "Die hochgeladene Datei erscheint in dem Ordner, den Sie gerade ansehen.",
+    },
+    arcana_filesystem: {
+      title: "Ein Arcana-Dateisystem verwenden",
+      step1: "Jeder Arbeitsbereich enthält bereits eine Arcana-Dateisystem-Quelle.",
+      step2: "Jede Arcana erscheint als Ordner; öffnen Sie einen, um seine Dateien zu durchsuchen.",
     },
     attach_from_workspace: {
       title: "Dateien aus einem Arbeitsbereich anhängen",
@@ -1584,6 +1589,7 @@ export default {
     hpc_project: "HPC-Projekt {{n}}",
     remote_hint: "Läuft auf der GWDG-Infrastruktur",
     chat_empty: "Noch keine Nachrichten. Fragen Sie den Agenten etwas.",
+    files: "Dateien",
     send: "Senden",
     working: "Der Agent arbeitet…",
     chat_timeout: "Der Agent hat nicht rechtzeitig geantwortet.",
@@ -1673,14 +1679,11 @@ export default {
     kind_browser: "Browser",
     kind_local: "Lokaler Ordner",
     kind_arcana: "Arcana",
+    "kind_arcana-filesystem": "Arcana-Dateisystem",
     kind_mcp: "MCP",
     local_hint:
       "Der Browser fragt nach Zugriff auf den Ordner. Der Ordner bleibt auf diesem Gerät und wird nie hochgeladen.",
     local_unsupported: "Dieser Browser kann keine lokalen Ordner öffnen.",
-    arcana_collection: "Arcana-Sammlung",
-    arcana_required: "Wählen Sie eine Arcana-Sammlung",
-    arcana_hint:
-      "Arcana-Dateien sind von jedem Gerät erreichbar, an dem Sie angemeldet sind.",
     mcp_endpoint: "MCP-Endpunkt",
     mcp_transport: "Transport",
     mcp_allowlist: "Tool-Allowlist (kommagetrennt, optional)",

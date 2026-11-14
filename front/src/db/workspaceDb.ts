@@ -1,4 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import i18n from "../i18n";
+import { isArcanasEnabled } from "../utils/modules";
 
 import { db, newId } from "./index";
 import type {
@@ -105,7 +107,46 @@ export async function createWorkspace(name: string): Promise<string> {
     lastModified: now(),
   };
   await db.workspaces.add(workspace);
+  await ensureBrowserSource(id);
+  await ensureArcanaFilesystemSource(id);
   return id;
+}
+
+/** Every workspace gets a browser-storage source; all browser sources share one IndexedDB tree. */
+export async function ensureBrowserSource(
+  workspaceId: string,
+): Promise<string> {
+  const existing = await db.workspace_sources
+    .where("[workspaceId+kind]")
+    .equals([workspaceId, "browser"])
+    .first();
+  if (existing) return existing.id;
+  return addSource({
+    workspaceId,
+    kind: "browser",
+    label: i18n.t("workspace.source_browser"),
+    config: { storage: "indexeddb" },
+    status: "offline",
+  });
+}
+
+/** Every workspace gets the ArcanaV2 filesystem unless the Arcanas module is off. */
+export async function ensureArcanaFilesystemSource(
+  workspaceId: string,
+): Promise<string | undefined> {
+  if (!isArcanasEnabled()) return undefined;
+  const existing = await db.workspace_sources
+    .where("[workspaceId+kind]")
+    .equals([workspaceId, "arcana-filesystem"])
+    .first();
+  if (existing) return existing.id;
+  return addSource({
+    workspaceId,
+    kind: "arcana-filesystem",
+    label: i18n.t("workspace.kind_arcana-filesystem"),
+    config: {},
+    status: "offline",
+  });
 }
 
 

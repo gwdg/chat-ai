@@ -20,7 +20,7 @@ const authHeaders = (agent) => {
   return { Authorization: `Basic ${btoa(`${username}:${password}`)}` };
 };
 
-async function request(agent, path, init = {}) {
+async function rawRequest(agent, path, init = {}) {
   const response = await fetch(`${baseUrl(agent)}/api${path}`, {
     ...init,
     headers: {
@@ -38,6 +38,11 @@ async function request(agent, path, init = {}) {
       `opencode server responded with ${response.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`,
     );
   }
+  return response;
+}
+
+async function request(agent, path, init = {}) {
+  const response = await rawRequest(agent, path, init);
   if (response.status === 204) return null;
   return response.json();
 }
@@ -52,6 +57,44 @@ export async function createOpencodeSession(agent, title) {
     body: JSON.stringify({ title }),
   });
   return result?.data ?? result;
+}
+
+export async function listOpencodeFiles(agent, path = "") {
+  const query = path ? `?path=${encodeURIComponent(path)}` : "";
+  const result = await request(agent, `/fs/list${query}`);
+  return result?.data ?? [];
+}
+
+export async function readOpencodeFile(agent, path) {
+  const encoded = String(path)
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const response = await rawRequest(agent, `/fs/read/${encoded}`);
+  return {
+    blob: await response.blob(),
+    type: response.headers.get("content-type") ?? "",
+  };
+}
+
+export async function writeOpencodeFile(
+  agent,
+  path,
+  data,
+  type = "application/octet-stream",
+) {
+  const query = new URLSearchParams({ path });
+  const response = await rawRequest(
+    agent,
+    `/experimental/fs/write?${query.toString()}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": type },
+      body: data,
+    },
+  );
+  if (response.status === 204) return null;
+  return response.json();
 }
 
 export async function listOpencodeCommands(agent) {

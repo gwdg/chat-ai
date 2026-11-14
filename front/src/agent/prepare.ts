@@ -9,7 +9,7 @@ import { loadFile } from "../db";
 import { getFileType } from "../utils/attachments";
 import { getWorkspace } from "./workspace";
 import { getChatWorkspaceId } from "../db/workspaceDb";
-import { workspaceRootSourceId } from "../workspace/workspaceRoot";
+import { SHARED_BROWSER_STORAGE_ID } from "../workspace/browserStorage";
 import { getSourceBlob, getSourceNode, writeSourceFile } from "../db/workspaceVfs";
 
 export const ARTEFACTS = "/artefacts";
@@ -65,7 +65,7 @@ async function prepare(
   key: string,
   file?: File,
 ): Promise<string | null> {
-  const rootId = workspaceId ? workspaceRootSourceId(workspaceId) : null;
+  const rootId = workspaceId ? SHARED_BROWSER_STORAGE_ID : null;
   const fs = rootId ? null : await getWorkspace(conversationId);
   file ??= (await loadFile(fileId)) ?? undefined;
   if (!file) {

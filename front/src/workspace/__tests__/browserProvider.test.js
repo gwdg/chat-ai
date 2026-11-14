@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { db } from "../../db";
 import { BrowserProvider } from "../providers/browser";
+import { SHARED_BROWSER_STORAGE_ID } from "../browserStorage";
 
 const streamOf = (text) =>
   new ReadableStream({
@@ -50,6 +51,26 @@ describe("browser provider", () => {
     expect((await provider.list("/")).entries.map((entry) => entry.name)).toEqual([
       "root.txt",
     ]);
+  });
+
+  it("shares one IndexedDB tree across browser sources", async () => {
+    const first = new BrowserProvider("source-a", SHARED_BROWSER_STORAGE_ID);
+    const second = new BrowserProvider(
+      "workspace-root:one",
+      SHARED_BROWSER_STORAGE_ID,
+    );
+    await first.connect();
+    await second.connect();
+
+    await first.write("/shared.txt", streamOf("shared"), { overwrite: false });
+
+    expect(
+      (await second.list("/")).entries.map((entry) => entry.name),
+    ).toContain("shared.txt");
+    expect(await readText(await second.read("/shared.txt"))).toBe("shared");
+    expect((await second.stat("/shared.txt")).sourceId).toBe(
+      "workspace-root:one",
+    );
   });
 
   it("rejects writes that would overwrite without permission", async () => {

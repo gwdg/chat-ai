@@ -42,16 +42,16 @@ export function defaultCapabilities(kind: SourceKind): WorkspaceCapabilities {
       range: true,
     };
   }
-  if (kind === "arcana") {
+  if (kind === "arcana" || kind === "arcana-filesystem") {
     return {
       ...FULL_CAPABILITIES,
-      mkdir: false,
+      mkdir: kind === "arcana-filesystem",
       rename: false,
       move: true,
       copy: true,
       serverSideMove: false,
       serverSideCopy: false,
-      quota: true,
+      quota: kind === "arcana",
       watch: false,
       range: false,
     };

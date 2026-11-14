@@ -1,6 +1,8 @@
 import type { WorkspaceSourceRow } from "../../db/dbTypes";
 import { ArcanaProvider } from "./arcana";
+import { ArcanaFilesystemProvider } from "./arcanaFilesystem";
 import { BrowserProvider } from "./browser";
+import { SHARED_BROWSER_STORAGE_ID } from "../browserStorage";
 import { LocalProvider } from "./local";
 import { McpProvider } from "./mcp";
 import { ReadOnlyProvider } from "./readOnly";
@@ -8,7 +10,9 @@ import type { FileProvider } from "./types";
 
 export function createProvider(source: WorkspaceSourceRow): FileProvider {
   let provider: FileProvider;
-  if (source.kind === "browser") provider = new BrowserProvider(source.id);
+  if (source.kind === "browser") {
+    provider = new BrowserProvider(source.id, SHARED_BROWSER_STORAGE_ID);
+  }
   else if (source.kind === "local") {
     provider = new LocalProvider(
       source.id,
@@ -19,6 +23,8 @@ export function createProvider(source: WorkspaceSourceRow): FileProvider {
       source.id,
       String((source.config as any)?.remoteWorkspaceId ?? ""),
     );
+  } else if (source.kind === "arcana-filesystem") {
+    provider = new ArcanaFilesystemProvider(source.id);
   } else {
     provider = new McpProvider(
       source.id,

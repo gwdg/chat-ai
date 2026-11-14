@@ -11,10 +11,16 @@ export default function AddMountModal({
   workspaceId,
   sources = [],
   mounts = [],
+  initialSourceId,
   onAdded,
 }) {
   const { t } = useTranslation();
-  const [sourceId, setSourceId] = useState(sources[0]?.id ?? "");
+  const fixedSource = initialSourceId
+    ? sources.find((source) => source.id === initialSourceId)
+    : undefined;
+  const [sourceId, setSourceId] = useState(
+    fixedSource?.id ?? sources[0]?.id ?? "",
+  );
   const [sourcePath, setSourcePath] = useState("/");
   const [mountPath, setMountPath] = useState("/");
   const [readOnly, setReadOnly] = useState(false);
@@ -63,22 +69,33 @@ export default function AddMountModal({
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="workspace.add_folder">
       <div className="flex flex-col gap-3 pb-2 text-sm">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-base-content/70">
-            {t("workspace.mount_source")}
-          </span>
-          <select
-            value={sourceId}
-            onChange={(event) => setSourceId(event.target.value)}
-            className="select select-bordered w-full"
-          >
-            {sources.map((source) => (
-              <option key={source.id} value={source.id}>
-                {source.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {fixedSource ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-base-content/70">
+              {t("workspace.mount_source")}
+            </span>
+            <p className="rounded-lg border border-base-300 px-3 py-2 text-sm">
+              {fixedSource.label}
+            </p>
+          </div>
+        ) : (
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-base-content/70">
+              {t("workspace.mount_source")}
+            </span>
+            <select
+              value={sourceId}
+              onChange={(event) => setSourceId(event.target.value)}
+              className="select select-bordered w-full"
+            >
+              {sources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
             {t("workspace.mount_source_path")}

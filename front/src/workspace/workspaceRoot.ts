@@ -1,10 +1,14 @@
 import { BrowserProvider } from "./providers/browser";
+import { SHARED_BROWSER_STORAGE_ID } from "./browserStorage";
 
 export const workspaceRootSourceId = (workspaceId: string) =>
   `workspace-root:${workspaceId}`;
 
 export function createWorkspaceRootProvider(workspaceId: string): BrowserProvider {
-  return new BrowserProvider(workspaceRootSourceId(workspaceId));
+  return new BrowserProvider(
+    workspaceRootSourceId(workspaceId),
+    SHARED_BROWSER_STORAGE_ID,
+  );
 }
 
 export const emptyStream = (): ReadableStream<Uint8Array> =>

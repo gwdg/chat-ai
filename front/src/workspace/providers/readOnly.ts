@@ -25,6 +25,10 @@ export class ReadOnlyProvider implements FileProvider {
     return this.inner.sourceId;
   }
 
+  get storageId() {
+    return this.inner.storageId;
+  }
+
   get kind() {
     return this.inner.kind;
   }
