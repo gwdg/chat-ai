@@ -20,6 +20,7 @@ type TreeProps = {
   onToggleMountReadOnly: (entry: RootEntry) => void;
   isReadOnly: (entry: RootEntry) => boolean;
   isSourceReadOnly: (entry: RootEntry) => boolean;
+  sourceLabel?: (entry: RootEntry) => string | undefined;
 };
 
 function TreeRow({
@@ -87,7 +88,11 @@ function TreeRow({
           <span className="min-w-0 flex-1 truncate text-base-content">
             {entry.name}
           </span>
-          {readOnly && <Locked size={11} className="shrink-0 text-warning" />}
+          {isMount && props.sourceLabel?.(entry) && (
+            <span className="shrink-0 text-[9px] font-semibold text-base-content/55">
+              {props.sourceLabel?.(entry)}
+            </span>
+          )}
         </button>
         {entry.local ? (
           <button

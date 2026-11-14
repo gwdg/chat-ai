@@ -1620,6 +1620,7 @@ export default {
     source_read_only: "Schreibgeschützte Quelle",
     source_read_only_hint: "Schreib- und Löschvorgänge in dieser Quelle blockieren.",
     mount_read_only_error: "Dieser Einhängepunkt ist schreibgeschützt.",
+    cannot_move_mount: "Eingehängte Ordner können nicht verschoben werden.",
     mount_read_only: "Nur lesen",
     mount_read_only_hint: "Keine Änderungen über diesen Einhängepunkt erlauben.",
     mount_path_hint: "Wo er im Arbeitsbereich erscheint, zum Beispiel /{{name}}.",

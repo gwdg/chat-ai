@@ -603,11 +603,13 @@ workspace in the sidebar and in the workspace's Chats panel, and toggled from th
 left of the Local tools icon in the prompt box. Storage is shown for every source in the always
 visible "Available storage" panel.
 
-Transfers are orchestrated in the browser: `workspace/transferPlanner.ts` decides move vs copy
-(same source → move, cross source → copy, Alt cross source → move, explicit "Move to…" → move) and
-blocks read-only targets, folder-into-descendant moves and over-quota transfers.
-`workspace/transfer.ts` streams the copy, verifies SHA-256, then deletes the source for a move, and
-journals progress in `workspace_transfers`. Arcana quota is read through the
+Transfers are orchestrated in the browser: `workspace/transferPlanner.ts` always moves on drag and
+drop, regardless of source; an explicit "copy" intent is the only copy path. It blocks read-only
+targets, folder-into-descendant moves and over-quota transfers. The workspace root
+browser uses the same drag-and-drop flow as source folders, but mounted folder rows are not
+draggable (the workspace root provider is resolved by `providerFor` for both drag source and drop
+target). `workspace/transfer.ts` streams the copy, verifies SHA-256, then deletes the source for a
+move, and journals progress in `workspace_transfers`. Arcana quota is read through the
 `/arcana-v2/arcanas/:name/quota` proxy; local and MCP quota is shown as `—` because browsers cannot
 read disk free space.
 

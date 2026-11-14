@@ -36,7 +36,6 @@ const entry = {
 
 const base = {
   intent: "auto" as const,
-  alt: false,
   sameSource: false,
   sourceKind: "browser",
   targetKind: "browser",
@@ -57,11 +56,16 @@ describe("planTransfer", () => {
     expect(plan.requiresDelete).toBe(true);
   });
 
-  it("copies across sources by default and moves with Alt", () => {
-    expect(planTransfer({ ...base }).strategy).toBe("copy");
-    const alt = planTransfer({ ...base, alt: true });
-    expect(alt.strategy).toBe("move");
-    expect(alt.requiresConfirmation).toBe(true);
+  it("moves across sources by default", () => {
+    const plan = planTransfer({ ...base });
+    expect(plan.strategy).toBe("move");
+    expect(plan.requiresConfirmation).toBe(true);
+  });
+
+  it("copies only with an explicit copy intent", () => {
+    const plan = planTransfer({ ...base, intent: "copy" });
+    expect(plan.strategy).toBe("copy");
+    expect(plan.requiresDelete).toBe(false);
   });
 
   it("always confirms an explicit move", () => {

@@ -6,7 +6,6 @@ export type TransferIntent = "auto" | "move" | "copy";
 
 export type TransferPlanInput = {
   intent: TransferIntent;
-  alt?: boolean;
   sameSource: boolean;
   sourceKind: string;
   targetKind: string;
@@ -36,17 +35,8 @@ export function planTransfer(input: TransferPlanInput): TransferPlan {
   const explicitMove = input.intent === "move";
   const explicitCopy = input.intent === "copy";
   const sameSource = input.sameSource;
-  const strategy: TransferStrategy = explicitMove
-    ? "move"
-    : explicitCopy
-      ? "copy"
-      : sameSource
-        ? input.alt
-          ? "copy"
-          : "move"
-        : input.alt
-          ? "move"
-          : "copy";
+  // Drag and drop always moves; an explicit copy intent is the only way to keep the source.
+  const strategy: TransferStrategy = explicitCopy ? "copy" : "move";
 
   if (
     strategy === "move" &&

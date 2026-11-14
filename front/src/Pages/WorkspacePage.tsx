@@ -190,6 +190,9 @@ export default function WorkspacePage() {
   const currentPath = selectedSourceId
     ? pathBySource[selectedSourceId] ?? "/"
     : "/";
+  const rootSourceId = workspaceId ? workspaceRootSourceId(workspaceId) : "";
+  const providerFor = (sourceId: string) =>
+    sourceId === rootSourceId ? rootProvider : providers.get(sourceId);
 
   useEffect(() => {
     if (
@@ -654,8 +657,8 @@ export default function WorkspacePage() {
     targetDir: string;
     strategy: "copy" | "move";
   }) => {
-    const from = providers.get(fromSourceId);
-    const to = providers.get(toSourceId);
+    const from = providerFor(fromSourceId);
+    const to = providerFor(toSourceId);
     if (!from || !to) return;
     setTransferring(true);
     try {
@@ -671,6 +674,9 @@ export default function WorkspacePage() {
       });
       if (from.sourceId === selectedSourceId) await loadEntries(false);
       if (to.sourceId === selectedSourceId) await loadEntries(false);
+      if (from.sourceId === rootSourceId || to.sourceId === rootSourceId) {
+        await loadRoot();
+      }
       void refreshQuota(from);
       void refreshQuota(to);
     } catch (error) {
@@ -685,23 +691,31 @@ export default function WorkspacePage() {
     toSourceId,
     entry,
     targetDir,
-    altKey,
     intent = "auto",
   }: {
     fromSourceId: string;
     toSourceId: string;
     entry: WorkspaceFileEntry;
     targetDir: string;
-    altKey: boolean;
     intent?: "auto" | "move" | "copy";
   }) => {
-    const from = providers.get(fromSourceId);
-    const to = providers.get(toSourceId);
+    const from = providerFor(fromSourceId);
+    const to = providerFor(toSourceId);
     if (!from || !to) return;
+    if ((entry as { mount?: unknown }).mount) {
+      notifyError(t("workspace.cannot_move_mount"));
+      return;
+    }
     const sameSource = fromSourceId === toSourceId;
+    if (
+      sameSource &&
+      entry.kind === "file" &&
+      parentPath(entry.path) === normalizePath(targetDir)
+    ) {
+      return;
+    }
     const plan = planTransfer({
       intent,
-      alt: altKey,
       sameSource,
       sourceKind: from.kind,
       targetKind: to.kind,
@@ -734,8 +748,12 @@ export default function WorkspacePage() {
       notifyError(t("workspace.source_read_only_error"));
       return;
     }
-    const fromLabel = sources.find((source) => source.id === fromSourceId)?.label ?? "";
-    const toLabel = sources.find((source) => source.id === toSourceId)?.label ?? "";
+    const labelFor = (sourceId: string) =>
+      sourceId === rootSourceId
+        ? t("workspace.workspace_root")
+        : (sources.find((source) => source.id === sourceId)?.label ?? "");
+    const fromLabel = labelFor(fromSourceId);
+    const toLabel = labelFor(toSourceId);
     if (plan.requiresConfirmation) {
       openModal("workspaceTransfer", {
         plan,
@@ -778,7 +796,6 @@ export default function WorkspacePage() {
         toSourceId,
         entry: payload.entry,
         targetDir,
-        altKey: event.altKey,
       });
     } catch {
       // ignore malformed drag data
@@ -914,8 +931,7 @@ export default function WorkspacePage() {
                             onDragOver={(event) => {
                               event.preventDefault();
                               if (!draggingEntry || unavailable) return;
-                              const same = draggingEntry.sourceId === source.id;
-                              setDragHint(event.altKey ? "move" : same ? "move" : "copy");
+                              setDragHint("move");
                             }}
                             onDragLeave={() => setDragHint(null)}
                             onDragEnd={() => setDragHint(null)}
@@ -1085,6 +1101,14 @@ export default function WorkspacePage() {
                           onToggleMountReadOnly={toggleRootMountReadOnly}
                           isReadOnly={rootEntryReadOnly}
                           isSourceReadOnly={rootEntrySourceReadOnly}
+                          sourceLabel={(entry) =>
+                            entry.mount
+                              ? sources.find(
+                                  (candidate) =>
+                                    candidate.id === entry.mount!.sourceId,
+                                )?.label ?? entry.mount.sourceId
+                              : undefined
+                          }
                         />
                       )}
                     </div>
@@ -1212,6 +1236,16 @@ export default function WorkspacePage() {
                       <div
                         data-guide="workspace-files"
                         className="flex-1 overflow-y-auto p-1.5"
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          if (!draggingEntry) return;
+                          setDragHint("move");
+                        }}
+                        onDragLeave={() => setDragHint(null)}
+                        onDrop={(event) => {
+                          setDragHint(null);
+                          onDrop(event, rootSourceId, rootPath);
+                        }}
                       >
                         {rootLoading && rootEntries.length === 0 ? (
                           <div className="space-y-1 p-2">
@@ -1262,6 +1296,57 @@ export default function WorkspacePage() {
                               return (
                                 <div
                                   key={entry.path}
+                                  draggable={entry.local && !entry.mount}
+                                  onDragStart={(event) => {
+                                    if (!entry.local || entry.mount) return;
+                                    setDraggingEntry({
+                                      sourceId: entry.sourceId,
+                                      entry,
+                                    });
+                                    event.dataTransfer.setData(
+                                      "application/x-chat-ai-workspace",
+                                      JSON.stringify({
+                                        sourceId: entry.sourceId,
+                                        entry,
+                                      }),
+                                    );
+                                    event.dataTransfer.effectAllowed = "move";
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggingEntry(null);
+                                    setDragHint(null);
+                                  }}
+                                  onDragOver={
+                                    entry.kind === "dir"
+                                      ? (event) => {
+                                          event.preventDefault();
+                                          if (!draggingEntry) return;
+                                          setDragHint("move");
+                                        }
+                                      : undefined
+                                  }
+                                  onDragLeave={
+                                    entry.kind === "dir"
+                                      ? () => setDragHint(null)
+                                      : undefined
+                                  }
+                                  onDrop={
+                                    entry.kind === "dir" && !entry.mount
+                                      ? (event) =>
+                                          onDrop(
+                                            event,
+                                            entry.sourceId,
+                                            entry.path,
+                                          )
+                                      : entry.mount
+                                        ? (event) =>
+                                            onDrop(
+                                              event,
+                                              entry.mount!.sourceId,
+                                              entry.mount!.sourcePath,
+                                            )
+                                        : undefined
+                                  }
                                   className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition hover:bg-base-200"
                                 >
                                   <button
@@ -1291,7 +1376,7 @@ export default function WorkspacePage() {
                                       {entry.name}
                                     </span>
                                     {entry.mount && (
-                                      <span className="shrink-0 text-[10px] text-base-content/40">
+                                      <span className="shrink-0 text-[10px] font-semibold text-base-content/60">
                                         {source?.label ?? entry.mount.sourceId}
                                       </span>
                                     )}
@@ -1441,8 +1526,7 @@ export default function WorkspacePage() {
                         onDragOver={(event) => {
                           event.preventDefault();
                           if (draggingEntry) {
-                            const same = draggingEntry.sourceId === selectedSourceId;
-                            setDragHint(event.altKey ? "move" : same ? "move" : "copy");
+                            setDragHint("move");
                           }
                         }}
                         onDragLeave={() => setDragHint(null)}
@@ -1517,7 +1601,7 @@ export default function WorkspacePage() {
                                       entry,
                                     }),
                                   );
-                                  event.dataTransfer.effectAllowed = "copyMove";
+                                  event.dataTransfer.effectAllowed = "move";
                                 }}
                                 onDragEnd={() => {
                                   setDraggingEntry(null);
@@ -1567,7 +1651,6 @@ export default function WorkspacePage() {
                                             toSourceId: targetId,
                                             entry,
                                             targetDir: "/",
-                                            altKey: false,
                                             intent: "move",
                                           }),
                                       });

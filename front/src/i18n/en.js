@@ -1598,6 +1598,7 @@ export default {
     source_read_only: "Read-only source",
     source_read_only_hint: "Block writes and deletions in this source.",
     mount_read_only_error: "This mount is read-only.",
+    cannot_move_mount: "Mounted folders cannot be moved.",
     mount_read_only: "Read-only",
     mount_read_only_hint: "Do not allow changes through this mount.",
     mount_path_hint: "Where it appears in the workspace, for example /{{name}}.",
