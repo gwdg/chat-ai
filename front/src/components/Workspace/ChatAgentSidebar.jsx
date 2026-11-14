@@ -304,13 +304,28 @@ export default function ChatAgentSidebar({ conversationId }) {
                     {data?.files?.length ? (
                       <ul className="space-y-0.5">
                         {data.files.slice(0, 8).map((file, index) => (
-                          <li
-                            key={file.path ?? index}
-                            className="truncate"
-                            title={file.path}
-                          >
-                            {file.type === "directory" ? "dir " : "file "}
-                            {file.path}
+                          <li key={file.path ?? index} className="truncate">
+                            {file.type === "directory" ? (
+                              <span title={file.path}>dir {file.path}</span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="w-full truncate text-left hover:text-accent hover:underline"
+                                title={file.path}
+                                onClick={() =>
+                                  window.dispatchEvent(
+                                    new CustomEvent("chatai:preview-agent-file", {
+                                      detail: {
+                                        agentId: agent.id,
+                                        path: file.path,
+                                      },
+                                    }),
+                                  )
+                                }
+                              >
+                                file {file.path}
+                              </button>
+                            )}
                           </li>
                         ))}
                       </ul>

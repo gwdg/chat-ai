@@ -1875,6 +1875,7 @@ export default {
     source_browser: "Browserspeicher",
     kind_browser: "Browser",
     kind_local: "Lokaler Ordner",
+    kind_agent: "Agent-Dateisystem",
     kind_arcana: "Arcana",
     "kind_arcana-filesystem": "Arcana-Dateisystem",
     kind_mcp: "MCP",

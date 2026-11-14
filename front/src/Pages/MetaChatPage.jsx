@@ -193,7 +193,8 @@ export default function MetaChatPage() {
 
   return (
     <MetaChatSendContext.Provider value={metaChatSend}>
-      <div className="h-dvh grid grid-rows-[auto_1fr]">
+      <div className="flex h-dvh min-h-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="min-w-0 overflow-hidden">
           <TourManager />
           <AnnouncementBar />
@@ -208,6 +209,7 @@ export default function MetaChatPage() {
 
         <div
           className="
+            flex-1 min-h-0
             grid
             grid-cols-1 grid-rows-[1fr_auto]
             md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto]
@@ -295,19 +297,21 @@ export default function MetaChatPage() {
               />
             </div>
             </div>
-            {filePreview ? (
-              <AgentFilePreviewPanel
-                agent={agents.find((item) => item.id === filePreview.agentId)}
-                path={filePreview.path}
-                onClose={() => setFilePreview(null)}
-              />
-            ) : (
+            {!filePreview && (
               <MetaChangesPanel userSettings={userSettings} />
             )}
           </div>
 
           <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3" />
         </div>
+        </div>
+        {filePreview && (
+          <AgentFilePreviewPanel
+            agent={agents.find((item) => item.id === filePreview.agentId)}
+            path={filePreview.path}
+            onClose={() => setFilePreview(null)}
+          />
+        )}
       </div>
     </MetaChatSendContext.Provider>
   );

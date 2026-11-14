@@ -132,6 +132,59 @@ export async function ensureBrowserSource(
   });
 }
 
+const AGENT_FILES_SOURCE_PREFIX = "agent-files:";
+
+/** A read-only workspace source backed by a local agent's OpenCode filesystem. */
+export async function ensureAgentFilesSource(
+  workspaceId: string,
+  agent: { id: string; name?: string },
+): Promise<string> {
+  const id = `${AGENT_FILES_SOURCE_PREFIX}${workspaceId}:${agent.id}`;
+  const label = String(agent.name || "").trim() || "Agent files";
+  const existing = await db.workspace_sources.get(id);
+  if (existing) {
+    if (
+      existing.label !== label ||
+      (existing.config as any)?.agentId !== agent.id
+    ) {
+      await updateSource(id, { label, config: { agentId: agent.id } });
+    }
+    return id;
+  }
+  return addSource({
+    id,
+    workspaceId,
+    kind: "agent",
+    label,
+    config: { agentId: agent.id },
+    readOnly: true,
+    status: "offline",
+  });
+}
+
+/** Keep one agent-files source per local agent attached to the workspace. */
+export async function syncAgentFilesSources(
+  workspaceId: string,
+  agents: { id: string; name?: string; local?: boolean }[],
+): Promise<void> {
+  if (!workspaceId) return;
+  const localAgents = (agents || []).filter(
+    (agent) => agent?.id && agent.local !== false,
+  );
+  await Promise.all(
+    localAgents.map((agent) => ensureAgentFilesSource(workspaceId, agent)),
+  );
+  // Do not remove sources here: live-query data starts empty, and removing on an
+  // intermediate render would also delete mounts. Explicit detach removes them.
+}
+
+export async function removeAgentFilesSource(
+  workspaceId: string,
+  agentId: string,
+): Promise<void> {
+  await removeSource(`${AGENT_FILES_SOURCE_PREFIX}${workspaceId}:${agentId}`);
+}
+
 /** Every workspace gets the ArcanaV2 filesystem unless the Arcanas module is off. */
 export async function ensureArcanaFilesystemSource(
   workspaceId: string,

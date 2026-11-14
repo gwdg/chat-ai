@@ -23,7 +23,7 @@ export default function AddMountModal({
   );
   const [sourcePath, setSourcePath] = useState("/");
   const [mountPath, setMountPath] = useState("/");
-  const [readOnly, setReadOnly] = useState(false);
+  const [readOnly, setReadOnly] = useState(fixedSource?.readOnly === true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -132,8 +132,9 @@ export default function AddMountModal({
         <label className="flex items-center gap-2 text-xs text-base-content/70">
           <input
             type="checkbox"
-            checked={readOnly}
+            checked={readOnly || fixedSource?.readOnly === true}
             onChange={(event) => setReadOnly(event.target.checked)}
+            disabled={fixedSource?.readOnly === true}
             className="checkbox checkbox-sm"
           />
           <span>

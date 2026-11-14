@@ -54,7 +54,9 @@ import {
   useWorkspaceSources,
   useWorkspaceAgents,
   detachWorkspaceAgent,
+  removeAgentFilesSource,
   removeOrphanWorkspaceAgents,
+  syncAgentFilesSources,
 } from "../db/workspaceDb";
 import type { WorkspaceFileEntry, WorkspaceMountRow } from "../db/dbTypes";
 import { DEVICE_PLANE_KINDS } from "../workspace/deviceId";
@@ -134,7 +136,7 @@ const quotaLabel = (
   kind: string,
   quota: QuotaInfo | null | undefined,
 ): { label: string; percent: number | null } => {
-  if (kind === "local" || kind === "mcp") {
+  if (kind === "local" || kind === "mcp" || kind === "agent") {
     return { label: "—", percent: null };
   }
   if (!quota || (!quota.quota && !quota.usage)) {
@@ -196,6 +198,18 @@ export default function WorkspacePage() {
   useEffect(() => {
     void removeOrphanWorkspaceAgents(agents.map((agent) => agent.id));
   }, [agents]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    const attachedIds = new Set(attachedAgents.map((agent) => agent.id));
+    const bridged = agents.filter(
+      (agent) =>
+        agent.local !== false &&
+        agent.bridgeWorkspaceId === workspaceId &&
+        !attachedIds.has(agent.id),
+    );
+    void syncAgentFilesSources(workspaceId, [...attachedAgents, ...bridged]);
+  }, [workspaceId, attachedAgents, agents]);
 
   useEffect(() => {
     for (const agentId of expandedAgentSessions) {
@@ -1006,7 +1020,9 @@ export default function WorkspacePage() {
   };
 
   const detachAgent = (agentId: string) => {
-    void detachWorkspaceAgent(workspaceId!, agentId);
+    void detachWorkspaceAgent(workspaceId!, agentId).then(() =>
+      removeAgentFilesSource(workspaceId!, agentId),
+    );
   };
 
   const toggleAgentSessions = (agentId: string) => {
@@ -1264,7 +1280,7 @@ export default function WorkspacePage() {
   }, [rootPath, t]);
 
   return (
-    <div className="h-dvh grid grid-rows-[auto_1fr]">
+    <div className="flex h-dvh min-h-0">
       <input
         ref={uploadInputRef}
         type="file"
@@ -1272,6 +1288,7 @@ export default function WorkspacePage() {
         className="hidden"
         onChange={uploadFiles}
       />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="min-w-0 overflow-hidden">
         <Header
           className="md:hidden"
@@ -1281,7 +1298,7 @@ export default function WorkspacePage() {
           userData={userData}
         />
       </div>
-      <div className="grid grid-cols-1 grid-rows-[1fr_auto] md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto] md:gap-x-2 gap-y-1 md:pt-1 bg-base-200 overflow-hidden">
+      <div className="flex-1 min-h-0 grid grid-cols-1 grid-rows-[1fr_auto] md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto] md:gap-x-2 gap-y-1 md:pt-1 bg-base-200 overflow-hidden">
         <SidebarWrapper
           localState={sidebarState}
           setLocalState={() => {}}
@@ -1355,6 +1372,7 @@ export default function WorkspacePage() {
                         const quota = quotas[source.id];
                         const storage = quotaLabel(source.kind, quota);
                         const isDevicePlane = DEVICE_PLANE_KINDS.has(source.kind);
+                        const fixedSource = source.kind === "agent";
                         return (
                           <div
                             key={source.id}
@@ -1412,42 +1430,46 @@ export default function WorkspacePage() {
                               >
                                 <FolderAdd size={12} />
                               </button>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  toggleSourceReadOnly(source);
-                                }}
-                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
-                                title={
-                                  source.readOnly
-                                    ? t("workspace.make_source_writable")
-                                    : t("workspace.make_source_read_only")
-                                }
-                                aria-label={
-                                  source.readOnly
-                                    ? t("workspace.make_source_writable")
-                                    : t("workspace.make_source_read_only")
-                                }
-                              >
-                                {source.readOnly ? (
-                                  <Locked size={12} />
-                                ) : (
-                                  <Unlocked size={12} />
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  removeSelectedSource(source.id, source.label);
-                                }}
-                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-error/10 hover:text-error"
-                                aria-label={t("workspace.remove_source")}
-                                title={t("workspace.remove_source")}
-                              >
-                                <TrashCan size={12} />
-                              </button>
+                              {!fixedSource && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      toggleSourceReadOnly(source);
+                                    }}
+                                    className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
+                                    title={
+                                      source.readOnly
+                                        ? t("workspace.make_source_writable")
+                                        : t("workspace.make_source_read_only")
+                                    }
+                                    aria-label={
+                                      source.readOnly
+                                        ? t("workspace.make_source_writable")
+                                        : t("workspace.make_source_read_only")
+                                    }
+                                  >
+                                    {source.readOnly ? (
+                                      <Locked size={12} />
+                                    ) : (
+                                      <Unlocked size={12} />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      removeSelectedSource(source.id, source.label);
+                                    }}
+                                    className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-error/10 hover:text-error"
+                                    aria-label={t("workspace.remove_source")}
+                                    title={t("workspace.remove_source")}
+                                  >
+                                    <TrashCan size={12} />
+                                  </button>
+                                </>
+                              )}
                             </div>
                             <div className="mt-1 flex flex-wrap items-center gap-1">
                               {isDevicePlane && (
@@ -1986,13 +2008,6 @@ export default function WorkspacePage() {
                   )}
                 </section>
 
-                {preview && (
-                  <WorkspaceFilePanel
-                    preview={preview}
-                    onClose={closePreview}
-                    onDownload={download}
-                  />
-                )}
               </div>
             </>
           )}
@@ -2011,6 +2026,14 @@ export default function WorkspacePage() {
         )}
         <CollapsibleFooter className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3" />
       </div>
+      </div>
+      {preview && (
+        <WorkspaceFilePanel
+          preview={preview}
+          onClose={closePreview}
+          onDownload={download}
+        />
+      )}
     </div>
   );
 }

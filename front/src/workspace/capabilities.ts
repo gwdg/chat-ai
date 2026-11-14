@@ -42,6 +42,14 @@ export function defaultCapabilities(kind: SourceKind): WorkspaceCapabilities {
       range: true,
     };
   }
+  if (kind === "agent") {
+    return {
+      ...READ_ONLY_CAPABILITIES,
+      quota: false,
+      watch: false,
+      range: true,
+    };
+  }
   if (kind === "arcana" || kind === "arcana-filesystem") {
     return {
       ...FULL_CAPABILITIES,

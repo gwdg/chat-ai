@@ -1853,6 +1853,7 @@ export default {
     source_browser: "Browser storage",
     kind_browser: "Browser",
     kind_local: "Local folder",
+    kind_agent: "Agent filesystem",
     kind_arcana: "Arcana",
     "kind_arcana-filesystem": "Arcana filesystem",
     kind_mcp: "MCP",

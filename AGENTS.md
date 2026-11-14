@@ -614,7 +614,10 @@ browser = the shared IndexedDB tree in `workspace_nodes` / `workspace_blobs`, lo
 `FileSystemDirectoryHandle` in `workspace_handles`, arcana = one ArcanaV2 collection through
 `agent/arcanaV2.ts`, arcana-filesystem = every Arcana as a folder with its files, mcp = file tools exposed
 by a configured local MCP server (the option only appears when `tools.mcp` is on and a local URL is
-configured). Providers declare `capabilities`, and the UI must offer only what a provider reports.
+configured), agent = a read-only view of a local agent's OpenCode project filesystem. A local agent
+attached to a workspace gets one deterministic `agent` source per workspace through
+`syncAgentFilesSources()`; it uses the same `/fs/list` and `/fs/read` endpoints as the agent file
+panel. Providers declare `capabilities`, and the UI must offer only what a provider reports.
 `WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, deletes, mkdir,
 move and copy throw `PERMISSION_DENIED`), and `WorkspaceMountRow.readOnly` blocks writes/moves
 through that mount while still allowing reads and copies out. The Local tools panel was removed;

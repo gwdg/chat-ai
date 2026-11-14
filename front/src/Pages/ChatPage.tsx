@@ -6,6 +6,7 @@ import { useSyncConversation } from "../hooks/useSyncConversation";
 import { useSendMessage } from "../hooks/useSendMessage";
 import { usePendingPrompt } from "../hooks/usePendingPrompt";
 import { useConversationSummaries } from "../hooks/useConversationSummaries";
+import { useAgents } from "../agents/agentStore";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
@@ -16,6 +17,7 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
 import ChatAgentSidebar from "../components/Workspace/ChatAgentSidebar";
+import AgentFilePreviewPanel from "../components/Agent/AgentFilePreviewPanel";
 import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
 import HallucinationWarning from "../components/Conversation/HallucinationWarning";
 import TourManager from "../components/SettingsPanel/TourManager";
@@ -42,6 +44,11 @@ export default function ChatPage() {
   const { isMobile } = useWindowSize();
 
   const [localState, setLocalState] = useState(() => getDefaultConversation());
+  const [filePreview, setFilePreview] = useState<{
+    agentId: string;
+    path: string;
+  } | null>(null);
+  const agents = useAgents();
 
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
@@ -99,6 +106,19 @@ export default function ChatPage() {
 
   useConversationSummaries({ localState, conversationId });
 
+  useEffect(() => {
+    const onPreview = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      const agent = agents.find((item) => item.id === detail?.agentId);
+      if (!agent || !detail?.path) return;
+      event.preventDefault();
+      setFilePreview({ agentId: agent.id, path: detail.path });
+    };
+    window.addEventListener("chatai:preview-agent-file", onPreview);
+    return () =>
+      window.removeEventListener("chatai:preview-agent-file", onPreview);
+  }, [agents]);
+
   // Save last conversation when current conversation changes
   useEffect(() => {
     if (conversationId) {
@@ -112,7 +132,8 @@ export default function ChatPage() {
   }, [conversationId]);
 
   return (
-    <div className="h-dvh grid grid-rows-[auto_1fr]">
+    <div className="flex h-dvh min-h-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Header + optional Announcement */}
       <div className="min-w-0 overflow-hidden">
         <TourManager />
@@ -129,6 +150,7 @@ export default function ChatPage() {
       {/* Middle content exactly fills leftover space */}
       <div
         className="
+          flex-1 min-h-0
           grid
           grid-cols-1 grid-rows-[1fr_auto]
           md:grid-cols-[auto_1fr] md:grid-rows-[1fr_auto]
@@ -163,13 +185,23 @@ export default function ChatPage() {
               />
             </div>
           </div>
-          <ChatAgentSidebar conversationId={localState?.id} />
+          {!filePreview && (
+            <ChatAgentSidebar conversationId={localState?.id} />
+          )}
         </div>
 
         <CollapsibleFooter
           className="row-start-3 col-span-full md:row-start-2 md:col-start-1 md:col-end-3"
         />
       </div>
+      </div>
+      {filePreview && (
+        <AgentFilePreviewPanel
+          agent={agents.find((item) => item.id === filePreview.agentId)}
+          path={filePreview.path}
+          onClose={() => setFilePreview(null)}
+        />
+      )}
     </div>
   );
 }

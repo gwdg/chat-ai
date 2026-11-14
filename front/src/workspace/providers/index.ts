@@ -1,6 +1,7 @@
 import type { WorkspaceSourceRow } from "../../db/dbTypes";
 import { ArcanaProvider } from "./arcana";
 import { ArcanaFilesystemProvider } from "./arcanaFilesystem";
+import { AgentFilesProvider } from "./agent";
 import { BrowserProvider } from "./browser";
 import { SHARED_BROWSER_STORAGE_ID } from "../browserStorage";
 import { LocalProvider } from "./local";
@@ -17,6 +18,11 @@ export function createProvider(source: WorkspaceSourceRow): FileProvider {
     provider = new LocalProvider(
       source.id,
       String((source.config as any)?.handleKey || source.id),
+    );
+  } else if (source.kind === "agent") {
+    provider = new AgentFilesProvider(
+      source.id,
+      String((source.config as any)?.agentId ?? ""),
     );
   } else if (source.kind === "arcana") {
     provider = new ArcanaProvider(

@@ -175,7 +175,7 @@ export type FolderRow = {
 
 // ---------- Workspaces ----------
 
-export type SourceKind = 'browser' | 'local' | 'mcp' | 'arcana' | 'arcana-filesystem'
+export type SourceKind = 'browser' | 'local' | 'mcp' | 'arcana' | 'arcana-filesystem' | 'agent'
 
 export type SourceStatus =
   | 'connected'
@@ -208,12 +208,14 @@ export type McpConfig = {
   toolAllowlist: string[]
 }
 export type ArcanaConfig = { remoteWorkspaceId: string; baseUrl?: string }
+export type AgentFilesConfig = { agentId: string }
 
 export type SourceConfig =
   | BrowserConfig
   | LocalConfig
   | McpConfig
   | ArcanaConfig
+  | AgentFilesConfig
 
 export type WorkspaceRow = {
   id: string
