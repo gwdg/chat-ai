@@ -5,7 +5,6 @@ import {
   Add,
   Bot,
   ChevronRight,
-  Download,
   Folder,
   FolderAdd,
   Home,
@@ -18,6 +17,8 @@ import {
 import Header from "../components/Header/Header";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
+import WorkspaceRootTree from "../components/Workspace/WorkspaceRootTree";
+import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "../hooks/useToast";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
@@ -46,6 +47,7 @@ import {
   emptyStream,
   workspaceRootSourceId,
 } from "../workspace/workspaceRoot";
+import type { RootEntry } from "../workspace/workspaceRoot";
 import { useWorkspaceProviders } from "../workspace/useWorkspaceProviders";
 import { planTransfer } from "../workspace/transferPlanner";
 import { runTransfer } from "../workspace/transfer";
@@ -75,10 +77,7 @@ const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> 
 
 const PREVIEW_LIMIT = 8 * 1024 * 1024;
 
-type RootEntry = WorkspaceFileEntry & {
-  local: boolean;
-  mount?: WorkspaceMountRow;
-};
+
 
 const isTextFile = (entry: WorkspaceFileEntry): boolean => {
   const name = entry.name.toLowerCase();
@@ -147,6 +146,7 @@ export default function WorkspacePage() {
   );
   const [rootPath, setRootPath] = useState("/");
   const [rootEntries, setRootEntries] = useState<RootEntry[]>([]);
+  const [rootTreeEntries, setRootTreeEntries] = useState<RootEntry[]>([]);
   const [rootLoading, setRootLoading] = useState(false);
   const [rootError, setRootError] = useState("");
 
@@ -288,51 +288,73 @@ export default function WorkspacePage() {
     void loadEntries(false);
   }, [selectedSourceId, currentPath, selectedProvider]);
 
+  const listRoot = useCallback(
+    async (path: string): Promise<RootEntry[]> => {
+      if (!rootProvider || !workspaceId) return [];
+      await rootProvider.connect();
+      const page = await rootProvider.list(path);
+      const local: RootEntry[] = page.entries.map((entry) => ({
+        ...entry,
+        local: true,
+      }));
+      const prefix = path === "/" ? "/" : `${path}/`;
+      const virtual = new Map<string, RootEntry>();
+      for (const mount of mounts) {
+        const mountPath = normalizePath(mount.path);
+        if (mountPath === path || !mountPath.startsWith(prefix)) continue;
+        const rest = mountPath.slice(prefix.length);
+        const first = rest.split("/")[0];
+        if (!first || local.some((entry) => entry.name === first)) continue;
+        const entryPath = joinPath(path, first);
+        if (virtual.has(first)) continue;
+        virtual.set(first, {
+          sourceId: workspaceRootSourceId(workspaceId),
+          path: entryPath,
+          name: first,
+          kind: "dir",
+          local: false,
+          mount: mountPath === entryPath ? mount : undefined,
+        });
+      }
+      return [...local, ...virtual.values()];
+    },
+    [rootProvider, workspaceId, mounts],
+  );
+
   const loadRoot = useCallback(async () => {
-    if (!rootProvider || !workspaceId) {
+    if (!rootProvider) {
       setRootEntries([]);
       return;
     }
     setRootLoading(true);
     setRootError("");
     try {
-      await rootProvider.connect();
-      const page = await rootProvider.list(rootPath);
-      const local: RootEntry[] = page.entries.map((entry) => ({
-        ...entry,
-        local: true,
-      }));
-      const prefix = rootPath === "/" ? "/" : `${rootPath}/`;
-      const virtual = new Map<string, RootEntry>();
-      for (const mount of mounts) {
-        const mountPath = normalizePath(mount.path);
-        if (mountPath === rootPath || !mountPath.startsWith(prefix)) continue;
-        const rest = mountPath.slice(prefix.length);
-        const first = rest.split("/")[0];
-        if (!first || local.some((entry) => entry.name === first)) continue;
-        const path = joinPath(rootPath, first);
-        if (virtual.has(first)) continue;
-        virtual.set(first, {
-          sourceId: workspaceRootSourceId(workspaceId),
-          path,
-          name: first,
-          kind: "dir",
-          local: false,
-          mount: mountPath === path ? mount : undefined,
-        });
-      }
-      setRootEntries([...local, ...virtual.values()]);
+      setRootEntries(await listRoot(rootPath));
     } catch (error) {
       setRootError(error instanceof Error ? error.message : String(error));
       setRootEntries([]);
     } finally {
       setRootLoading(false);
     }
-  }, [rootProvider, workspaceId, rootPath, mounts]);
+  }, [rootProvider, rootPath, listRoot]);
 
   useEffect(() => {
     void loadRoot();
   }, [loadRoot]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void listRoot("/")
+      .then((entries) => {
+        if (!cancelled) setRootTreeEntries(entries);
+      })
+      .catch(() => {
+        if (!cancelled) setRootTreeEntries([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listRoot]);
 
   const createRootEntry = (kind: "dir" | "file") => {
     openModal("workspaceCreateEntry", {
@@ -417,6 +439,38 @@ export default function WorkspacePage() {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  };
+
+  const openRootEntry = (entry: RootEntry) => {
+    if (entry.mount) {
+      openMount(entry.mount);
+      return;
+    }
+    if (entry.kind === "dir") {
+      setRootPath(entry.path);
+      return;
+    }
+    void openFile(entry, rootProvider);
+  };
+
+  const rootEntryReadOnly = (entry: RootEntry) => {
+    if (!entry.mount) return false;
+    const source = sources.find((candidate) => candidate.id === entry.mount!.sourceId);
+    return entry.mount.readOnly === true || source?.readOnly === true;
+  };
+
+  const rootEntrySourceReadOnly = (entry: RootEntry) => {
+    if (!entry.mount) return false;
+    const source = sources.find((candidate) => candidate.id === entry.mount!.sourceId);
+    return source?.readOnly === true;
+  };
+
+  const removeRootMount = (entry: RootEntry) => {
+    if (entry.mount) removeMount(entry.mount.id);
+  };
+
+  const toggleRootMountReadOnly = (entry: RootEntry) => {
+    if (entry.mount) toggleMountReadOnly(entry.mount);
   };
 
   const download = (entry: WorkspaceFileEntry) => {
@@ -941,71 +995,21 @@ export default function WorkspacePage() {
                       </button>
                     </div>
                     <div className="mt-1 max-h-44 overflow-y-auto">
-                      {mounts.length === 0 ? (
+                      {rootTreeEntries.length === 0 ? (
                         <p className="px-1 py-1 text-[10px] text-base-content/50">
-                          {t("workspace.no_mounts")}
+                          {t("workspace.empty_folder")}
                         </p>
                       ) : (
-                        mounts.map((mount) => {
-                          const source = sources.find(
-                            (candidate) => candidate.id === mount.sourceId,
-                          );
-                          const sourceReadOnly = source?.readOnly === true;
-                          const effectiveReadOnly =
-                            mount.readOnly === true || sourceReadOnly;
-                          return (
-                            <div
-                              key={mount.id}
-                              className="group flex items-center gap-1 rounded-md px-1 py-1 hover:bg-base-200"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => openMount(mount)}
-                                className="flex min-w-0 flex-1 items-center gap-1 text-left text-xs text-base-content"
-                                title={mount.path}
-                              >
-                                <Folder size={13} className="shrink-0 text-accent" />
-                                <span className="min-w-0 flex-1 truncate font-mono">
-                                  {mount.path}
-                                </span>
-                                <span className="shrink-0 text-[10px] text-base-content/40">
-                                  {source?.label ?? mount.sourceId}
-                                </span>
-                              </button>
-                              {effectiveReadOnly && (
-                                <button
-                                  type="button"
-                                  onClick={() => !sourceReadOnly && toggleMountReadOnly(mount)}
-                                  disabled={sourceReadOnly}
-                                  className={`flex h-5 w-5 items-center justify-center rounded text-warning transition ${
-                                    sourceReadOnly ? "cursor-default" : "hover:bg-base-200"
-                                  }`}
-                                  title={
-                                    sourceReadOnly
-                                      ? t("workspace.source_read_only")
-                                      : t("workspace.make_writable")
-                                  }
-                                  aria-label={
-                                    sourceReadOnly
-                                      ? t("workspace.source_read_only")
-                                      : t("workspace.make_writable")
-                                  }
-                                >
-                                  <Locked size={12} />
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => removeMount(mount.id)}
-                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
-                                title={t("workspace.remove_mount")}
-                                aria-label={t("workspace.remove_mount")}
-                              >
-                                <TrashCan size={12} />
-                              </button>
-                            </div>
-                          );
-                        })
+                        <WorkspaceRootTree
+                          entries={rootTreeEntries}
+                          loadChildren={listRoot}
+                          onOpen={openRootEntry}
+                          onRemoveLocal={(entry) => void removeRootEntry(entry)}
+                          onRemoveMount={removeRootMount}
+                          onToggleMountReadOnly={toggleRootMountReadOnly}
+                          isReadOnly={rootEntryReadOnly}
+                          isSourceReadOnly={rootEntrySourceReadOnly}
+                        />
                       )}
                     </div>
                   </div>
@@ -1499,64 +1503,11 @@ export default function WorkspacePage() {
                 </section>
 
                 {preview && (
-                  <aside className="flex w-80 shrink-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100">
-                    <div className="flex items-center gap-2 border-b border-base-300 px-3 py-2">
-                      <span className="min-w-0 flex-1 truncate text-xs font-medium">
-                        {preview.entry.name}
-                      </span>
-                      {preview.url && (
-                        <button
-                          type="button"
-                          className="flex h-6 w-6 items-center justify-center rounded text-base-content/60 hover:bg-base-200"
-                          onClick={() => download(preview.entry)}
-                          title={t("workspace.download")}
-                        >
-                          <Download size={14} />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="text-base-content/50 hover:text-base-content"
-                        onClick={closePreview}
-                        aria-label={t("common.close")}
-                      >
-                        ×
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-auto p-3 text-xs">
-                      {preview.loading ? (
-                        <div className="h-24 animate-pulse rounded bg-base-200" />
-                      ) : preview.error ? (
-                        <p className="text-error">{preview.error}</p>
-                      ) : preview.text !== undefined ? (
-                        <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-base-content">
-                          {preview.text}
-                        </pre>
-                      ) : preview.url ? (
-                        preview.entry.mime?.startsWith("image/") ? (
-                          <img
-                            src={preview.url}
-                            alt={preview.entry.name}
-                            className="max-w-full rounded"
-                          />
-                        ) : preview.entry.mime === "application/pdf" ? (
-                          <iframe
-                            src={preview.url}
-                            title={preview.entry.name}
-                            className="h-[70vh] w-full rounded"
-                          />
-                        ) : preview.entry.mime?.startsWith("audio/") ? (
-                          <audio src={preview.url} controls className="w-full" />
-                        ) : preview.entry.mime?.startsWith("video/") ? (
-                          <video src={preview.url} controls className="w-full rounded" />
-                        ) : (
-                          <p className="text-base-content/60">
-                            {t("workspace.preview_unavailable")}
-                          </p>
-                        )
-                      ) : null}
-                    </div>
-                  </aside>
+                  <WorkspaceFilePanel
+                    preview={preview}
+                    onClose={closePreview}
+                    onDownload={download}
+                  />
                 )}
               </div>
             </>

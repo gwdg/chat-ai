@@ -570,7 +570,12 @@ by a configured local MCP server (the option only appears when `tools.mcp` is on
 configured). Providers declare `capabilities`, and the UI must offer only what a provider reports.
 `WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, deletes, mkdir,
 move and copy throw `PERMISSION_DENIED`), and `WorkspaceMountRow.readOnly` blocks writes/moves
-through that mount while still allowing reads and copies out.
+through that mount while still allowing reads and copies out. The Local tools panel no longer
+offers browser storage or sharing a local folder: when a chat has a workspace link, `runAgent`
+uses `workspace/agentVfs.ts` over that workspace's root and mounts for the file tools.
+`agent/prepare.ts` writes attachments and their converted variants under `/artefacts` in the
+attached workspace root (or the conversation OPFS when no workspace is linked); the agent VFS keeps
+`/uploads` routed to the conversation OPFS for legacy paths.
 
 Every workspace also has an implicit browser-backed root: files and directories created there are
 stored in `workspace_nodes` / `workspace_blobs` under the synthetic source id

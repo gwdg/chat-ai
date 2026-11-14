@@ -13,3 +13,8 @@ export const emptyStream = (): ReadableStream<Uint8Array> =>
       controller.close();
     },
   });
+
+export type RootEntry = import("../db/dbTypes").WorkspaceFileEntry & {
+  local: boolean;
+  mount?: import("../db/dbTypes").WorkspaceMountRow;
+};

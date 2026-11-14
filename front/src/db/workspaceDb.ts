@@ -342,6 +342,18 @@ export function useWorkspaceChats(workspaceId?: string): WorkspaceChatRow[] {
   );
 }
 
+export async function getChatWorkspaceId(
+  conversationId: string,
+): Promise<string | null> {
+  if (!conversationId) return null;
+  const links = await db.workspace_chats
+    .where("conversationId")
+    .equals(conversationId)
+    .toArray();
+  if (!links.length) return null;
+  return links.sort((a, b) => a.createdAt - b.createdAt)[0]?.workspaceId ?? null;
+}
+
 export function useChatWorkspaces(conversationId?: string): WorkspaceChatRow[] {
   return (
     useLiveQuery(

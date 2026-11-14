@@ -856,6 +856,7 @@ export default {
     label_codemode: "Codemode",
     label_create_docx: "Word document",
     tools_requires_browser_storage: "Enable browser storage or share a local folder first",
+    tools_requires_workspace: "Attach a workspace first",
     tools_agent_unavailable: "Not available in agent mode",
     label_tool_limit: "Limit tool calls per response",
     tool_limit_hint: "Maximum tool invocations per response; calls made together count once",
@@ -1498,6 +1499,10 @@ export default {
     import_mcp_disclaimer:
       `MCP servers can be hosted outside of GWDG. When enabled, the AI may send data to configured MCP servers to fulfill tool requests.\n\nOnly allow this if you trust the configured MCP servers and you will not share any confidential, personal, or sensitive information with them.`,
     web_search_disclaimer: `When web search is enabled, the AI may generate search queries based on your message and the full conversation history, and send them to a search engine (e.g., Google) to retrieve up-to-date information. This helps provide more accurate and current responses.\n\nBy clicking “I Understand,” you agree that your input may be processed in this way and acknowledge that you will not share any confidential, personal, or sensitive information while web search is active.`,
+  },
+  document_panel: {
+    resize: "Resize preview",
+    back_to_chat: "Back",
   },
   workspace: {
     new_folder: "New folder",

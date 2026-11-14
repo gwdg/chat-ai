@@ -8,6 +8,7 @@ import {
   createWorkspace,
   deleteWorkspace,
   detachWorkspaceChat,
+  getChatWorkspaceId,
   getSourceHandle,
   getWorkspace,
   removeSource,
@@ -97,6 +98,7 @@ describe("workspace database", () => {
     await attachWorkspaceChat(workspaceId, "chat-1");
     await attachWorkspaceChat(workspaceId, "chat-1");
     expect(await db.workspace_chats.count()).toBe(1);
+    expect(await getChatWorkspaceId("chat-1")).toBe(workspaceId);
     await detachWorkspaceChat(workspaceId, "chat-1");
     expect(await db.workspace_chats.count()).toBe(0);
 

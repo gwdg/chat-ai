@@ -12,7 +12,7 @@ import { agentEndpoint, agentGatewayTools, markToolless, modelSupportsTools } fr
 import { onAbortRequest, reasoningParams } from "../apis/chatCompletions";
 import { loadFileMeta, saveFile } from "../db";
 import { getFileType } from "../utils/attachments";
-import { prepareAttachment, UPLOADS, uploadPath } from "./prepare";
+import { ARTEFACTS, prepareAttachment, uploadPath } from "./prepare";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
 import i18n from "../i18n";
 import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpTools } from "./mcp";
@@ -20,13 +20,15 @@ import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
+import { WorkspaceAgentVfs } from "../workspace/agentVfs";
+import { getChatWorkspaceBundle } from "../workspace/agentBridge";
 
 const PROVIDER = "chat-ai";
 // pi-ai insists on a key; the backend ignores it and adds the real one.
 const PROXY_KEY = "set-by-backend";
 
 const AGENT_PROMPT = `You have a virtual filesystem rooted at "/" that belongs to this conversation. There is no shell.
-Files the user attaches are placed under ${UPLOADS}/; documents and audio come with a converted text variant next to them.
+Files the user attaches are placed under ${ARTEFACTS}/; documents and audio come with a converted text variant next to them.
 Use the tools to read, write and edit files, to convert documents, to transcribe audio, to analyze images, and to generate speech, images and Word documents.
 Every file you write is shown to the user in the chat, so do not repeat a file's whole content in your answer.`;
 
@@ -234,18 +236,32 @@ export async function runAgentTurn({
   const vision = model.input.includes("image");
 
   const storage = await getWorkspace(conversationId);
-  // Files written under UPLOADS are inputs (uploads and their converted variants), not results to show
+  const attachedWorkspace = await getChatWorkspaceBundle(conversationId).catch(
+    () => null,
+  );
+  const agentStorage = attachedWorkspace
+    ? new WorkspaceAgentVfs(
+        storage,
+        attachedWorkspace.workspaceId,
+        attachedWorkspace.root,
+        attachedWorkspace.mounts,
+      )
+    : storage;
+  // Files written under ARTEFACTS are inputs (uploads and their converted variants), not results to show
   const written = new Set<string>();
-  const workspace = observe(storage, (change: Change) => {
-    if (change.kind === "write" && !change.path.startsWith(`${UPLOADS}/`)) written.add(change.path);
+  const workspace = observe(agentStorage, (change: Change) => {
+    if (change.kind === "write" && !change.path.startsWith(`${ARTEFACTS}/`)) written.add(change.path);
   });
-  // A mounted folder is an alternative to the browser workspace for the file tools.
-  const mounts = listMounts(conversationId);
-  const storageAccess = browserStorage || mounts.length > 0;
+  // A mounted folder or an attached workspace provides storage for the file tools.
+  const mounts = [
+    ...listMounts(conversationId),
+    ...(attachedWorkspace?.mounts.map(({ mount }) => mount.path) ?? []),
+  ];
+  const storageAccess = browserStorage || mounts.length > 0 || !!attachedWorkspace;
 
   // Audio files by upload path, sent as audio to models that take it
   const audio = spec.input?.includes("audio") ? new Map<string, InputAudio>() : null;
-  const conversation = await toAgentMessages(conversationId, storage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio);
+  const conversation = await toAgentMessages(conversationId, agentStorage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio);
   const prompt = conversation.pop();
   if (!prompt || prompt.role !== "user") throw new Error("Nothing to send");
 
@@ -320,8 +336,10 @@ export async function runAgentTurn({
   const tools = useTools
     ? createTools(workspace, {
         vision,
-        enabled: settings.tools,
-        hasLocalFolder: mounts.length > 0,
+        enabled: attachedWorkspace
+          ? { ...settings.tools, browser_storage: true, write_access: true }
+          : settings.tools,
+        hasLocalFolder: mounts.length > 0 || !!attachedWorkspace,
       })
     : [];
   // An enabled MCP server that cannot be reached stops the turn: the user turns it off or starts it
@@ -350,8 +368,11 @@ export async function runAgentTurn({
             : NO_BROWSER_STORAGE_PROMPT
           : NO_TOOLS_PROMPT,
         useTools && arcanaV2 ? ARCANA_V2_PROMPT : "",
-        useTools && storageAccess && mounts.length ? `The user's local folders are mounted at: ${mounts.join(", ")}.` : "",
-        useTools && storageAccess && settings.tools?.write_access !== true
+        useTools && storageAccess && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
+        useTools &&
+        storageAccess &&
+        !attachedWorkspace &&
+        settings.tools?.write_access !== true
           ? "The user has turned off writing and editing files: you can read files but not change them."
           : "",
         `Current date: ${new Date().toLocaleString()}`,
@@ -376,7 +397,7 @@ export async function runAgentTurn({
     for (const path of [...written]) {
       written.delete(path);
       try {
-        const bytes = await storage.readFile(path);
+        const bytes = await workspace.readFile(path);
         const name = path.split("/").pop() || "file";
         const file = new File([bytes as Uint8Array<ArrayBuffer>], name, { type: guessType(name) });
         files.set(path, saveFile(conversationId, file));

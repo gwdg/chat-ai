@@ -870,6 +870,7 @@ export default {
     label_codemode: "Codemode",
     label_create_docx: "Word-Dokument",
     tools_requires_browser_storage: "Zuerst den Browserspeicher aktivieren oder einen lokalen Ordner freigeben",
+    tools_requires_workspace: "Zuerst einen Arbeitsbereich verknüpfen",
     tools_agent_unavailable: "Im Agentenmodus nicht verfügbar",
     label_tool_limit: "Werkzeugaufrufe pro Antwort begrenzen",
     tool_limit_hint: "Maximale Werkzeugaufrufe pro Antwort; gemeinsam ausgeführte Aufrufe zählen einmal",
@@ -1520,6 +1521,10 @@ export default {
     import_mcp_disclaimer:
       `MCP-Server können außerhalb der GWDG betrieben werden. Wenn aktiviert, kann die KI Daten an konfigurierte MCP-Server senden, um Tool-Anfragen auszuführen.\n\nErlauben Sie dies nur, wenn Sie den konfigurierten MCP-Servern vertrauen und keine vertraulichen, persönlichen oder sensiblen Informationen mit ihnen teilen.`,
     web_search_disclaimer: `Wenn die Websuche aktiviert ist, kann die KI auf Grundlage Ihrer Nachricht und des gesamten Gesprächsverlaufs Suchanfragen erstellen und diese an eine Suchmaschine (z. B. Google) senden, um aktuelle Informationen abzurufen. Dies hilft, genauere und aktuellere Antworten bereitzustellen.\n\nDurch Klicken auf „Ich verstehe“ stimmen Sie zu, dass Ihre Eingaben auf diese Weise verarbeitet werden, und bestätigen, dass Sie während der aktiven Websuche keine vertraulichen, persönlichen oder sensiblen Informationen teilen.`,
+  },
+  document_panel: {
+    resize: "Vorschau skalieren",
+    back_to_chat: "Zurück",
   },
   workspace: {
     new_folder: "Neuer Ordner",
