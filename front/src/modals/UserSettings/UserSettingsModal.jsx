@@ -29,6 +29,7 @@ import { getExportData } from "../../utils/conversationUtils";
 import { useToast } from "../../hooks/useToast";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import ImportChatButton from "../../components/Sidebar/Buttons/ImportChatButton";
+import StorageStatus from "./StorageStatus";
 
 const PROFILE_TABS = [
   {
@@ -189,6 +190,7 @@ export default function UserSettingsModal({
             {t("user_settings.data.description")}
           </p>
         </div>
+        <StorageStatus />
         <div className="grid gap-3 sm:grid-cols-3">
           <ImportChatButton
             variant={"userData"}

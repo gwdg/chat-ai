@@ -1,4 +1,19 @@
 export default {
+  errors: {
+    app_title: "Something went wrong",
+    app_message:
+      "The interface could not be rendered. Your saved chats are still in this browser unless you clear site data. Reload to try again.",
+    database_title: "Local database unavailable",
+    database_version:
+      "This browser contains a newer local database version than this app build supports. Open the matching app version or a newer build. Do not clear site data.",
+    database_blocked:
+      "Another Chat AI tab is blocking the local database. Close the other tabs and reload.",
+    database_quota:
+      "The browser storage is full or unavailable. Export a backup, free some space, and reload.",
+    database_generic:
+      "The local database could not be opened. Your data may still be present. Reload or close other Chat AI tabs.",
+    reload: "Reload",
+  },
   // Common phrases
   common: {
     loading: "Loading...",
@@ -1197,8 +1212,17 @@ export default {
         "Export a copy of your local data or permanently remove chats, memories, settings, and attachments from this browser.",
       export_success: "Local data exported successfully.",
       export_error: "Local data could not be exported.",
+      storage_title: "Browser storage",
+      storage_unavailable: "Storage information is not available in this browser.",
+      storage_persisted:
+        "Persistent storage is enabled. The browser should keep your chats when storage is low.",
+      storage_not_persisted:
+        "Persistent storage is not enabled. The browser may remove local chats when storage is low or the site is inactive. Export a backup regularly.",
+      storage_usage: "Using {{used}} of {{quota}}.",
+      storage_request: "Request persistent storage",
+      storage_requesting: "Requesting…",
     },
-    clear_data_button: "Clear Data",
+    clear_data_button: "Delete All Local Data",
     import_data_button: "Import Data",
     export_data_button: "Export Data",
     memory: {
@@ -1380,7 +1404,7 @@ export default {
     bad_request:
       "Bad request was sent: Please clear conversation, reattempt within the limit, and save your chat history for future reference.",
     clear_data:
-      "Caution! Clearing data will erase all your conversations, history, and settings. Are you sure?",
+      "Caution! This permanently deletes all conversations, attachments, and local settings from this browser. Export a backup first if you may need them. Are you sure?",
     clear_messages:
       "Are you sure you want to erase all messages in this conversation?",
     close_chat:

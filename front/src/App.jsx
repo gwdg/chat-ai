@@ -7,6 +7,7 @@ import { BrowserRouter } from "react-router";
 import { ToastProvider } from "./components/Others/ToastProvider";
 import { ModalProvider } from "./modals/ModalContext";
 import { FeatureGuideProvider } from "./context/FeatureGuideContext";
+import { requestPersistentStorage } from "./utils/storagePersistence";
 
 function App() {
   const { i18n } = useTranslation();
@@ -24,6 +25,19 @@ function App() {
       document.body.classList.add("lightScrollbar");
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    void requestPersistentStorage();
+    const request = () => {
+      void requestPersistentStorage();
+    };
+    window.addEventListener("pointerdown", request, { once: true });
+    window.addEventListener("keydown", request, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", request);
+      window.removeEventListener("keydown", request);
+    };
+  }, []);
 
   // Render the PublicRoute component
   return (

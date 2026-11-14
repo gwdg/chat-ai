@@ -751,11 +751,13 @@ const sendMessage = async ({
             { role: "assistant", content: responseContent, loading: false, meta, createdAt: Date.now() },
             { role: "user", content: [{ type: "text", text: "" }] },
           ];
-          updateConversation(
+          void updateConversation(
             conversationId,
             { ...localState, messages, hasFirstPrompt: true },
             true
-          );
+          ).catch((error) => {
+            console.error("Failed to save inactive conversation:", error);
+          });
           return prev;
         }
         const choices = choicesProposed;
