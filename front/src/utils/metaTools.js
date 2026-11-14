@@ -330,6 +330,21 @@ const fileTime = (item) => {
   return numeric < 1e12 ? numeric * 1000 : numeric;
 };
 
+const tableCell = (value) =>
+  String(value ?? "")
+    .replace(/\|/g, "\\|")
+    .replace(/\r?\n/g, " ")
+    .trim();
+
+const markdownTable = (headers, rows) =>
+  [
+    `| ${headers.map(tableCell).join(" | ")} |`,
+    `| ${headers.map(() => "---").join(" | ")} |`,
+    ...rows.map(
+      (row) => `| ${row.map(tableCell).join(" | ")} |`,
+    ),
+  ].join("\n");
+
 const shellQuote = (value) =>
   `'${String(value).replace(/'/g, "'\\''")}'`;
 
@@ -453,8 +468,8 @@ const loadAgentSessionTrees = async (agents) => {
   return new Map(entries);
 };
 
-const agentStatusLines = async (agents, sessionTrees = null) => {
-  const lines = await Promise.all(
+const agentStatusRows = async (agents, sessionTrees = null) => {
+  return Promise.all(
     agents.map(async (agent) => {
       const treeResult = sessionTrees
         ? Promise.resolve({
@@ -484,7 +499,11 @@ const agentStatusLines = async (agents, sessionTrees = null) => {
       const connected =
         info.status === "fulfilled" || statuses.status === "fulfilled";
       if (!agent.sessionId && !sessions.length) {
-        return `- ${agent.name || agent.id}: no OpenCode session configured.`;
+        return {
+          missing: true,
+          name: agent.name || agent.id,
+          server: agent.serverUrl,
+        };
       }
       const active = sessions.find((session) => session.id === agent.sessionId);
       const activeState = sessionActivity(statusMap[agent.sessionId]);
@@ -503,16 +522,36 @@ const agentStatusLines = async (agents, sessionTrees = null) => {
             ? info.reason.message
             : String(info.reason)
           : "";
-      return [
-        `- ${agent.name || agent.id}: ${connected ? "connected" : "unreachable"}`,
-        `  server: ${agent.serverUrl}`,
-        `  active session: ${active?.title || agent.sessionId || "none"} — ${activeState}`,
-        `  all sessions: ${sessions.length} total, ${workingCount} working, ${errorCount} error${subagents ? `, ${subagents} subagent session(s)` : ""}`,
-        ...(error ? [`  error: ${error}`] : []),
-      ].join("\n");
+      return {
+        missing: false,
+        name: agent.name || agent.id,
+        server: agent.serverUrl,
+        connected,
+        activeTitle: active?.title || agent.sessionId || "none",
+        activeState,
+        total: sessions.length,
+        working: workingCount,
+        errors: errorCount,
+        subagents,
+        error,
+      };
     }),
   );
-  return lines;
+};
+
+const agentStatusLines = async (agents, sessionTrees = null) => {
+  const rows = await agentStatusRows(agents, sessionTrees);
+  return rows.map((row) =>
+    row.missing
+      ? `- ${row.name}: no OpenCode session configured.`
+      : [
+          `- ${row.name}: ${row.connected ? "connected" : "unreachable"}`,
+          `  server: ${row.server}`,
+          `  active session: ${row.activeTitle} — ${row.activeState}`,
+          `  all sessions: ${row.total} total, ${row.working} working, ${row.errors} error${row.subagents ? `, ${row.subagents} subagent session(s)` : ""}`,
+          ...(row.error ? [`  error: ${row.error}`] : []),
+        ].join("\n"),
+  );
 };
 
 const agentSessionChanges = async (agents, since, sessionTrees = null) => {
@@ -778,74 +817,108 @@ const memories = (userSettings.memories || []).filter((memory) => {
 const sessionTrees = agents.length
   ? await loadAgentSessionTrees(agents)
   : new Map();
-const status = agents.length
-  ? (await agentStatusLines(agents, sessionTrees)).join("\n")
-  : "No agents configured.";
+const statusRows = agents.length
+  ? await agentStatusRows(agents, sessionTrees)
+  : [];
 const sessionChanges = agents.length
   ? await agentSessionChanges(agents, since, sessionTrees)
   : [];
 const recent = agents.length
   ? await recentAgentFiles(agents, since)
   : { files: [], withoutTimestamp: 0 };
-return [
-  `Changes since ${new Date(since).toISOString()}:`,
-  "",
-  "Chats:",
+const lines = [`Changes since ${new Date(since).toISOString()}:`];
+let sectionCount = 0;
+const addSection = (title, body) => {
+  if (!body) return;
+  sectionCount += 1;
+  lines.push("", `### ${title}`, "", body);
+};
+
+addSection(
+  "Chats",
   chats.length
-    ? chats
-        .map(
-          (chat) =>
-            `- [${chat.title || "Untitled Chat"}](/chat/${chat.id}) — ${new Date(chat.lastModified ?? chat.createdAt ?? 0).toISOString()}`,
-        )
-        .join("\n")
-    : "(no changed chats)",
-  "",
-  "New topics:",
+    ? markdownTable(
+        ["Chat", "Changed"],
+        chats.map((chat) => [
+          `[${chat.title || "Untitled Chat"}](/chat/${chat.id})`,
+          new Date(chat.lastModified ?? chat.createdAt ?? 0).toISOString(),
+        ]),
+      )
+    : "",
+);
+addSection(
+  "New topics",
   topics.length
-    ? topics
-        .map((topic) => `- ${topic.name} (id: ${topic.id})`)
-        .join("\n")
-    : "(none)",
-  "",
-  "New memories:",
+    ? markdownTable(
+        ["Topic", "Id"],
+        topics.map((topic) => [topic.name, topic.id]),
+      )
+    : "",
+);
+addSection(
+  "New memories",
   memories.length
-    ? memories.map((memory) => `- ${memory.text}`).join("\n")
-    : "(none)",
-  "",
-  "Agents:",
-  status,
-  "",
-  "New or changed agent sessions:",
+    ? markdownTable(
+        ["Memory"],
+        memories.map((memory) => [memory.text]),
+      )
+    : "",
+);
+if (statusRows.length) {
+  addSection(
+    "Agents",
+    markdownTable(
+      ["Agent", "State", "Active session", "Sessions", "Subagents"],
+      statusRows.map((row) =>
+        row.missing
+          ? [row.name, "No session", "—", "0", "0"]
+          : [
+              row.name,
+              row.connected ? "Connected" : "Unreachable",
+              `${row.activeTitle} (${row.activeState})`,
+              `${row.total} total, ${row.working} working, ${row.errors} error`,
+              String(row.subagents),
+            ],
+      ),
+    ),
+  );
+}
+addSection(
+  "New or changed agent sessions",
   sessionChanges.length
-    ? sessionChanges
-        .slice(0, 100)
-        .map(({ agent, session, updated, active, parent }) => {
-          const suffix = [
-            active ? "active" : "",
-            parent ? `subagent of ${parent.title || parent.id}` : "",
+    ? markdownTable(
+        ["Agent", "Session", "Active", "Parent", "Updated"],
+        sessionChanges.slice(0, 100).map(
+          ({ agent, session, updated, active, parent }) => [
+            agent.name || agent.id,
+            `[${session.title || "Untitled session"}](/agent/${agent.id}?session=${session.id})`,
+            active ? "yes" : "",
+            parent ? parent.title || parent.id : "",
             new Date(updated).toISOString(),
-          ]
-            .filter(Boolean)
-            .join(" — ");
-          return `- ${agent.name || agent.id}: [${session.title || "Untitled session"}](/agent/${agent.id}?session=${session.id}) — ${suffix}`;
-        })
-        .join("\n")
-    : "(no new or changed sessions)",
-  "",
-  "Recently modified agent files:",
+          ],
+        ),
+      )
+    : "",
+);
+addSection(
+  "Recently modified agent files",
   recent.files.length
-    ? recent.files
-        .slice(0, 100)
-        .map(
-          (file) =>
-            `- ${new Date(file.time).toISOString()} — ${file.agentName}: [${file.path}](${agentFileLink({ id: file.agentId }, file.path)})${typeof file.size === "number" ? ` (${file.size} bytes)` : ""}`,
-        )
-        .join("\n")
-    : "(none)",
-  ...(recent.withoutTimestamp
-    ? [`(${recent.withoutTimestamp} file(s) had no timestamp metadata.)`]
-    : []),
-].join("\n");
+    ? markdownTable(
+        ["Modified", "Agent", "File", "Size"],
+        recent.files.slice(0, 100).map((file) => [
+          new Date(file.time).toISOString(),
+          file.agentName,
+          `[${file.path}](${agentFileLink({ id: file.agentId }, file.path)})`,
+          typeof file.size === "number" ? `${file.size} B` : "",
+        ]),
+      ) +
+        (recent.withoutTimestamp
+          ? `\n\n${recent.withoutTimestamp} file(s) had no timestamp metadata.`
+          : "")
+    : "",
+);
+if (sectionCount === 0) lines.push("", "No changes found.");
+return lines.join("\n");
 }
 
 export function createMetaToolRunner({

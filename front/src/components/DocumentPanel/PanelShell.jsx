@@ -84,7 +84,7 @@ export default function PanelShell({ title, subtitle, actions, onClose, children
         className="absolute inset-y-0 -left-1.5 z-10 hidden w-3 cursor-col-resize touch-none md:block after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:bg-primary after:opacity-0 after:transition-opacity hover:after:opacity-60 focus-visible:outline-none focus-visible:after:opacity-100 group-data-[resizing]/doc:after:opacity-100"
       />
 
-      <header className="flex items-center gap-2 border-b border-base-300 px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] md:pt-2.5">
+      <header className="relative flex items-center gap-2 border-b border-base-300 px-3 py-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] md:pt-2.5">
         <button
           type="button"
           className="btn btn-ghost btn-sm btn-square md:hidden"
@@ -97,11 +97,15 @@ export default function PanelShell({ title, subtitle, actions, onClose, children
         <span className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-base-200 text-accent md:flex">
           <Document size={17} />
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 pr-12">
           <h2 className="truncate text-sm font-semibold">{title}</h2>
           {subtitle && <p className="truncate text-[11px] text-base-content/50">{subtitle}</p>}
         </div>
-        {actions}
+        {actions && (
+          <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+            {actions}
+          </div>
+        )}
         <button
           type="button"
           className="btn btn-ghost btn-sm btn-square hidden md:inline-flex"

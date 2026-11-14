@@ -17,10 +17,10 @@ import {
 } from "../../hooks/useMetaChatSend";
 
 const COLLAPSED_KEY = "chatai.meta.changes-collapsed";
-const WIDTH_KEY = "chatai.meta.changes-width";
-const DEFAULT_WIDTH = 448;
-const MIN_WIDTH = 280;
-const MAX_WIDTH = 720;
+const WIDTH_KEY = "chatai.meta.changes-width-v2";
+const DEFAULT_WIDTH = 640;
+const MIN_WIDTH = 320;
+const MAX_WIDTH = 1024;
 
 const clampWidth = (value) =>
   Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, value));

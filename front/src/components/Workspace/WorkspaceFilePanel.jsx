@@ -38,17 +38,36 @@ export default function WorkspaceFilePanel({ preview, onClose, onDownload }) {
     .filter(Boolean)
     .join(" · ");
 
+  const canDownload = Boolean(preview.url) || preview.text !== undefined;
+
+  const handleDownload = () => {
+    if (preview.url && onDownload) {
+      onDownload(entry);
+      return;
+    }
+    if (preview.text === undefined) return;
+    const blob = new Blob([preview.text], {
+      type: entry.mime || "text/plain;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = entry.name;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
   return (
     <PanelShell
       title={entry.name}
       subtitle={subtitle}
       onClose={onClose}
       actions={
-        preview.url ? (
+        canDownload ? (
           <button
             type="button"
             className="btn btn-ghost btn-sm btn-square"
-            onClick={() => onDownload(entry)}
+            onClick={handleDownload}
             aria-label={t("workspace.download")}
             title={t("workspace.download")}
           >
