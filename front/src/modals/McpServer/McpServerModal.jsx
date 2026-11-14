@@ -10,7 +10,7 @@ import {
   removeMcpServer,
   updateMcpServer,
 } from "../../Redux/reducers/userSettingsReducer";
-import { testMcpServer } from "../../agent/mcp";
+import { normalizeMcpUrl, testMcpServer } from "../../agent/mcp";
 import { useToast } from "../../hooks/useToast";
 
 export default function McpServerModal({ isOpen, onClose, server }) {
@@ -44,6 +44,10 @@ export default function McpServerModal({ isOpen, onClose, server }) {
             : "settings.placeholder_mcp_id",
         ),
       );
+      return;
+    }
+    if (kind === "local" && !normalizeMcpUrl(url)) {
+      notifyError(t("settings.mcp_test_invalid_url"));
       return;
     }
     const patch = {

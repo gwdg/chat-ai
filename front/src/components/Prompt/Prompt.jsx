@@ -10,6 +10,7 @@ import WarningExternalModel from "../Header/WarningExternalModel";
 import ModelButton from "./ModelButton";
 import ToolsButton from "./ToolsButton";
 import AttachButton from "./AttachButton";
+import AttachFromWorkspaceButton from "./AttachFromWorkspaceButton";
 import WorkspaceAttachButton from "./WorkspaceAttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
@@ -189,6 +190,10 @@ export default function Prompt({
               localState={localState}
               setLocalState={setLocalState}
             />
+            <AttachFromWorkspaceButton
+              localState={localState}
+              setLocalState={setLocalState}
+            />
                {/* Mic Button */}
             <MicButton
               localState={localState}
@@ -201,7 +206,10 @@ export default function Prompt({
           <div className="flex gap-4 items-center justify-center">
             {!metaChatSend && (
               <>
-                <WorkspaceAttachButton localState={localState} />
+                <WorkspaceAttachButton
+                  localState={localState}
+                  setLocalState={setLocalState}
+                />
                 {/* Tools Button */}
                 <ToolsButton
                   localState={localState}

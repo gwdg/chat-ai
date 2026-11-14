@@ -6,6 +6,7 @@ import {
   hasMcpServerValue,
   hasRemoteMcpServerValue,
   isRemoteMcpServer,
+  normalizeMcpUrl,
   remoteMcpEnabled,
   resolveMcpServers,
 } from "../mcp";
@@ -119,6 +120,44 @@ describe("MCP server entries", () => {
         mcp_servers: [remote, local],
       }),
     ).toEqual([local]);
+  });
+
+  it("skips a server whose stored address is not a URL", () => {
+    expect(
+      activeMcpServers({
+        tools: { mcp: true },
+        mcp_servers: [
+          { url: "julian_kunkel", enabled: true },
+          { url: "https://julian_kunkel/", enabled: true },
+          local,
+        ],
+      }),
+    ).toEqual([local]);
+  });
+});
+
+describe("MCP URL normalization", () => {
+  it("adds a scheme to bare local addresses", () => {
+    expect(normalizeMcpUrl("localhost:9000/mcp")).toBe(
+      "http://localhost:9000/mcp",
+    );
+    expect(normalizeMcpUrl("127.0.0.1:9000")).toBe("http://127.0.0.1:9000/");
+  });
+
+  it("defaults other bare hosts to https", () => {
+    expect(normalizeMcpUrl("example.com/mcp")).toBe(
+      "https://example.com/mcp",
+    );
+  });
+
+  it("rejects names that are not valid host names", () => {
+    expect(normalizeMcpUrl("julian_kunkel")).toBe("");
+    expect(normalizeMcpUrl("https://julian_kunkel/")).toBe("");
+    expect(normalizeMcpUrl("https://foo_bar.example.com/")).toBe("");
+  });
+
+  it("rejects unsupported protocols", () => {
+    expect(normalizeMcpUrl("ftp://example.com")).toBe("");
   });
 });
 

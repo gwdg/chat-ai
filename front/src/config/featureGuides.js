@@ -42,6 +42,29 @@ export const featureGuides = {
       },
     ],
   },
+  attach_from_workspace: {
+    titleKey: "feature_guide.attach_from_workspace.title",
+    prompt:
+      "Attach a file from a workspace to the current chat. Attach the chat to a workspace with the workspace button in the prompt box, then open Attach from workspace and pick a file from the tree.",
+    keywords: ["attach from workspace", "workspace file", "workspace attachment", "workspace tree"],
+    steps: [
+      {
+        target: '[data-guide="chat-workspaces"]',
+        textKey: "feature_guide.attach_from_workspace.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="attach-from-workspace"]',
+        textKey: "feature_guide.attach_from_workspace.step2",
+        check: hasAttachmentCard,
+      },
+      {
+        target: '[data-guide="send"]',
+        textKey: "feature_guide.attach_from_workspace.step3",
+        completeOnEvent: "message-complete",
+      },
+    ],
+  },
   attach_media: {
     titleKey: "feature_guide.attach_media.title",
     prompt:
@@ -396,7 +419,7 @@ export const featureGuides = {
       },
       {
         target: '[data-guide="mcp-server-picker"]',
-        prepare: openTools,
+        prepare: () => ensureTool("mcp"),
         textKey: "feature_guide.mcp_server.step3",
       },
     ],
@@ -1146,7 +1169,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview"],
+  workspace: ["workspace_overview", "attach_from_workspace"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

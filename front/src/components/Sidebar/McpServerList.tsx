@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { ChevronDown, Plus, Server, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Server, Trash2, TriangleAlert } from "lucide-react";
 
 import Tooltip from "../Others/Tooltip";
 
@@ -13,6 +13,7 @@ import {
   selectCollapsedTopics,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
+import { normalizeMcpUrl } from "../../agent/mcp";
 import type { GlobalMcpServer } from "../../agent/mcp";
 
 export default function McpServerList() {
@@ -92,6 +93,15 @@ export default function McpServerList() {
                     )}
                   </span>
                 </span>
+                {server.kind === "local" && !normalizeMcpUrl(server.url) && (
+                  <span
+                    className="shrink-0 text-warning"
+                    title={t("mcp.invalid_url")}
+                    aria-label={t("mcp.invalid_url")}
+                  >
+                    <TriangleAlert size={13} />
+                  </span>
+                )}
               </button>
               <button
                 type="button"

@@ -571,9 +571,9 @@ configured). Providers declare `capabilities`, and the UI must offer only what a
 `WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, deletes, mkdir,
 move and copy throw `PERMISSION_DENIED`), and `WorkspaceMountRow.readOnly` blocks writes/moves
 through that mount while still allowing reads and copies out. The Local tools panel was removed;
-GWDG Tools now contains every tool toggle (including codemode, document creation and image
-analysis). When a chat has a workspace link, `runAgent` uses `workspace/agentVfs.ts` over that
-workspace's root and mounts for the file tools.
+GWDG Tools now contains the document-creation and image-analysis toggles, while codemode and the
+tool-call limit moved to the Workspace popover. When a chat has a workspace link, `runAgent` uses
+`workspace/agentVfs.ts` over that workspace's root and mounts for the file tools.
 `agent/prepare.ts` writes attachments and their converted variants under `/artefacts` in the
 attached workspace root (or the conversation OPFS when no workspace is linked); the agent VFS keeps
 `/uploads` routed to the conversation OPFS for legacy paths.
@@ -599,6 +599,10 @@ journals progress in `workspace_transfers`. Arcana quota is read through the
 `/arcana-v2/arcanas/:name/quota` proxy; local and MCP quota is shown as `—` because browsers cannot
 read disk free space.
 
+The prompt box's Workspace popover (`WorkspaceAttachButton`) also holds the agent settings that
+apply to workspace files: the codemode toggle (`tools.codemode`) and the tool-call limit
+(`settings.max_tool_calls`). GWDG Tools no longer renders either.
+
 The `workspace_overview` feature guide targets `[data-guide="workspace-add-source"]`,
 `workspace-sources` and `workspace-files`.
 
@@ -610,8 +614,9 @@ url?, serverId?, headers?}`), managed by the sidebar's `McpServerList` and `McpS
 (including the connection test). Per-chat settings store only the selected ids in
 `mcp_local_server_ids` / `mcp_remote_server_ids`; `agent/mcp.ts#resolveMcpServers` expands them for
 the agent, gateway request and prefetch, and still merges legacy full entries from
-`settings.mcp_servers`. GWDG Tools shows one MCP selector that lists every configured server and
-badges it local or GWDG; it never shows URL/id/auth fields. `remoteMcpEnabled` also treats selected
+`settings.mcp_servers`. GWDG Tools has one MCP Servers tool that switches every configured
+server on or off; enabling it reveals the selector, which lists every configured server and
+badges it local or GWDG and never shows URL/id/auth fields. `remoteMcpEnabled` also treats selected
 remote ids as a value.
 
 

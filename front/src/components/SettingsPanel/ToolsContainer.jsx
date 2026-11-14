@@ -13,18 +13,18 @@ import {
   Image as ImageIcon,
   Wand2,
   AudioLines,
-  Code,
   Database,
   FileText,
   ScanEye,
+  Server,
 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import ArcanaContainer from "./ArcanaContainer";
 import McpServerPicker from "./McpServerPicker";
 import MiniToolButton from "./MiniToolButton";
-import ToolLimit from "./ToolLimit";
 import { agentGatewayTools, isAgentEnabled, modelSupportsTools } from "../../apis/agentEndpoints";
+import { remoteMcpEnabled } from "../../agent/mcp";
 import { isArcanasEnabled } from "../../utils/modules";
 
 // Tools the agent has no counterpart for
@@ -45,7 +45,6 @@ const AGENT_OPT_IN = new Set([
 // Tools that only exist in agent mode
 const AGENT_ONLY = new Set([
   "write_access",
-  "codemode",
   "create_docx",
   "image_analysis",
 ]);
@@ -76,6 +75,11 @@ export default function ToolsContainer({ localState, setLocalState }) {
     (agentMode
       ? agentGatewayTools() && toolsState.arcana === true
       : !!settings?.enable_tools && !!toolsState.arcana);
+  // One switch for every configured MCP server. It also turns on the gateway-side flag so
+  // previously selected remote servers keep working after the tool is switched off and on.
+  const mcpEnabled = !!toolsState.mcp || remoteMcpEnabled(settings);
+  const showMcpBox =
+    (agentMode ? !agentWithoutTools : toolsEnabled) && mcpEnabled;
 
   // Tool list (labels are translated)
   const TOOL_DEFS = useMemo(
@@ -117,14 +121,14 @@ export default function ToolsContainer({ localState, setLocalState }) {
         label: t("settings.label_arcana"),
       },
       {
+        key: "mcp",
+        Icon: Server,
+        label: t("mcp.section_title"),
+      },
+      {
         key: "image_analysis",
         Icon: ScanEye,
         label: t("settings.label_image_analysis"),
-      },
-      {
-        key: "codemode",
-        Icon: Code,
-        label: t("settings.label_codemode"),
       },
       {
         key: "create_docx",
@@ -160,7 +164,9 @@ export default function ToolsContainer({ localState, setLocalState }) {
     const patch = { fetch_url: true };
     TOOL_DEFS.forEach(({ key }) => {
       patch[key] = true;
+      if (key === "mcp") patch.mcp_remote = true;
     });
+    if (agentMode) patch.codemode = true;
     const apply = () =>
       setLocalState((prev) => ({
         ...prev,
@@ -187,7 +193,9 @@ export default function ToolsContainer({ localState, setLocalState }) {
     const patch = { fetch_url: false };
     TOOL_DEFS.forEach(({ key }) => {
       patch[key] = false;
+      if (key === "mcp") patch.mcp_remote = false;
     });
+    if (agentMode) patch.codemode = false;
     setTools(patch);
   };
 
@@ -210,6 +218,9 @@ export default function ToolsContainer({ localState, setLocalState }) {
   // Arcana/MCP toggles
   const handleToggleArcana = (nextValue) => {
     toggleTool("arcana", nextValue);
+  };
+  const handleToggleMcp = (nextValue) => {
+    setTools({ mcp: nextValue, mcp_remote: nextValue });
   };
 
   return (
@@ -305,17 +316,22 @@ export default function ToolsContainer({ localState, setLocalState }) {
       >
         {TOOL_DEFS.map(({ key, Icon, label }) => {
           const unavailable = agentMode && AGENT_UNAVAILABLE.has(key);
-          const active = !agentMode
-            ? !!toolsState[key]
-            : unavailable
-              ? false
-              : AGENT_OPT_IN.has(key)
-                ? toolsState[key] === true
-                : toolsState[key] !== false;
+          const active =
+            key === "mcp"
+              ? mcpEnabled
+              : !agentMode
+                ? !!toolsState[key]
+                : unavailable
+                  ? false
+                  : AGENT_OPT_IN.has(key)
+                    ? toolsState[key] === true
+                    : toolsState[key] !== false;
           const onToggle =
             key === "web_search"
               ? () => handleToggleWebSearch(!active)
-              : () => toggleTool(key, !active);
+              : key === "mcp"
+                ? () => handleToggleMcp(!active)
+                : () => toggleTool(key, !active);
 
           return (
             <MiniToolButton
@@ -327,7 +343,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
               label={label}
               title={unavailable ? `${label}: ${t("settings.tools_agent_unavailable")}` : label}
               guideKey={key}
-              warning={key === "web_search"}
+              warning={key === "web_search" || key === "mcp"}
             />
           );
         })}
@@ -339,15 +355,12 @@ export default function ToolsContainer({ localState, setLocalState }) {
           setLocalState={setLocalState}
         />
       )}
-      {(agentMode ? !agentWithoutTools : toolsEnabled) && (
+      {showMcpBox && (
         <McpServerPicker
           localState={localState}
           setLocalState={setLocalState}
           kind="all"
         />
-      )}
-      {(agentMode ? !agentWithoutTools : toolsEnabled) && (
-        <ToolLimit localState={localState} setLocalState={setLocalState} />
       )}
     </div>
   );

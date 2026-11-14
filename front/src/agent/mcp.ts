@@ -100,6 +100,18 @@ export function isRemoteMcpServer(server: unknown): server is { id: string; enab
 }
 
 const LOCAL_HOST = /^(localhost|127(?:\.\d{1,3}){3}|\[?::1\]?|0\.0\.0\.0)(?::\d+)?(?:[/?#]|$)/i;
+const HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+
+/**
+ * URL accepts host names that DNS does not, such as `julian_kunkel`; a bare word like that is
+ * usually a user name or a label, not a server address. Reject those instead of contacting them.
+ */
+function isValidMcpHost(hostname: string): boolean {
+  if (!hostname) return false;
+  if (hostname.startsWith("[")) return true; // IPv6 literal, already validated by URL
+  const labels = hostname.replace(/\.$/, "").split(".");
+  return labels.every((label) => HOST_LABEL.test(label));
+}
 
 /** A server URL with a scheme; bare hosts like `localhost:9000` default to http on this machine. */
 export function normalizeMcpUrl(value: unknown): string {
@@ -110,7 +122,8 @@ export function normalizeMcpUrl(value: unknown): string {
     : `${LOCAL_HOST.test(raw) ? "http" : "https"}://${raw}`;
   try {
     const url = new URL(candidate);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : "";
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    return isValidMcpHost(url.hostname) ? url.toString() : "";
   } catch {
     return "";
   }

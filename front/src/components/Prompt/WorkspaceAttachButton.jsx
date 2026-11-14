@@ -10,6 +10,7 @@ import { Check } from "lucide-react";
 import { Workspace } from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
+import WorkspaceSettings from "../Workspace/WorkspaceSettings";
 import {
   attachWorkspaceChat,
   detachWorkspaceChat,
@@ -17,7 +18,7 @@ import {
   useWorkspaceList,
 } from "../../db/workspaceDb";
 
-export default function WorkspaceAttachButton({ localState }) {
+export default function WorkspaceAttachButton({ localState, setLocalState }) {
   const { t } = useTranslation();
   const conversationId = localState?.id;
   const workspaces = useWorkspaceList();
@@ -57,7 +58,7 @@ export default function WorkspaceAttachButton({ localState }) {
       >
         <PopoverPanel
           anchor="bottom"
-          className="z-[60] w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-base-300 bg-base-100 p-3 shadow-xl"
+          className="z-[60] w-72 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-xl border border-base-300 bg-base-100 p-3 shadow-xl"
         >
           <p className="text-sm font-medium">{t("workspace.chat_workspaces")}</p>
           <p className="mt-1 text-[11px] leading-relaxed text-base-content/60">
@@ -93,6 +94,12 @@ export default function WorkspaceAttachButton({ localState }) {
               {t("workspace.chat_workspaces_empty")}
             </p>
           )}
+          <div className="mt-3">
+            <WorkspaceSettings
+              localState={localState}
+              setLocalState={setLocalState}
+            />
+          </div>
         </PopoverPanel>
       </Transition>
     </Popover>
