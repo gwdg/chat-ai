@@ -642,8 +642,8 @@ remote ids as a value.
 
 `Sidebar/AgentList.tsx` lists remote agents like conversation rows; clicking one navigates to
 `Pages/AgentPage.tsx` (`/agent/:agentId`), whose `components/Agent/AgentConversation.jsx` is the
-chat pane. Its `+` opens `modals/Agent/AddAgentModal`, which only offers the placeholder HPC
-project list. Adding an agent calls the local `opencode serve` HTTP API through
+chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`. Its `+` opens
+`modals/Agent/AddAgentModal`, which only offers the placeholder HPC project list. Adding an agent calls the local `opencode serve` HTTP API through
 `apis/opencodeAgents.js`: `GET /api/info` verifies the server, `POST /api/session` creates the chat
 session, and `AgentConversation` sends `POST /api/session/:id/prompt` and polls
 `GET /api/session/:id/message?order=asc` until an `idle` message appears. The server URL and

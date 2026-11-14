@@ -6,6 +6,10 @@ import {
   listOpencodeMessages,
   sendOpencodePrompt,
 } from "../../apis/opencodeAgents";
+import {
+  rendererComponents,
+  SafeMarkdown,
+} from "../Conversation/MessageAssistant/MarkdownRenderer";
 
 const POLL_INTERVAL = 1000;
 const MAX_POLLS = 120;
@@ -150,13 +154,19 @@ export default function AgentConversation({ agent }) {
               }`}
             >
               <div
-                className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm ${
+                className={`max-w-[85%] break-words rounded-2xl px-4 py-2.5 text-sm ${
                   message.type === "user"
-                    ? "bg-accent text-accent-content"
-                    : "bg-base-200 text-base-content"
+                    ? "whitespace-pre-wrap bg-accent text-accent-content"
+                    : "markdown-body bg-base-200 text-base-content"
                 }`}
               >
-                {text}
+                {message.type === "user" ? (
+                  text
+                ) : (
+                  <SafeMarkdown components={rendererComponents}>
+                    {text}
+                  </SafeMarkdown>
+                )}
               </div>
             </div>
           ))
