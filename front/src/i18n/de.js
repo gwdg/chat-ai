@@ -744,6 +744,9 @@ export default {
       description:
         "Legen Sie fest, wie diese Unterhaltung Ihre gespeicherten Erinnerungen verwendet.",
       help_label: "Mehr über Erinnerungen erfahren",
+      default_group_name: "Standard",
+      group_label: "Erinnerungsgruppe",
+      group_default: "Standard ({{group}})",
       options: {
         default: {
           label: "Standard",
@@ -1251,6 +1254,18 @@ export default {
       description:
         "Verwalten Sie Ihre persönlichen Erinnerungen, die der KI helfen, wichtige Details über Sie zu behalten. Sie haben derzeit {{count}} Erinnerungen gespeichert.",
       manage: "Erinnerungen verwalten",
+      groups: {
+        title: "Erinnerungsgruppen",
+        description:
+          "Gruppieren Sie Erinnerungen wie Ordner. Die Standardgruppe wird verwendet, sofern in einem Chat keine andere Gruppe ausgewählt ist.",
+        default_name: "Standard",
+        default_label: "Standardgruppe",
+        default_badge: "Standard",
+        name_placeholder: "Name der neuen Gruppe",
+        add: "Hinzufügen",
+        rename: "Gruppe umbenennen",
+        delete: "Gruppe löschen",
+      },
     },
     logout: "Abmelden",
   },
@@ -1288,6 +1303,7 @@ export default {
   },
   // Memory Modal
   memory: {
+    group: "Gruppe",
     userMemory: "Erinnerungen",
     memoryCount_one: "{{count}} Erinnerung gespeichert",
     memoryCount_other: "{{count}} Erinnerungen gespeichert",

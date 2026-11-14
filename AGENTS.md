@@ -423,6 +423,10 @@ feature-specific setting, expose its current value through a Meta-chat read tool
 tool’s output) and add a confirmable mutation marker with `MetaActionCard` apply/revert support. Do
 not ship a setting that the Meta chat cannot read or propose to change.
 
+The Meta chat honors the conversation's effective memory mode and group for memory learning: in
+Learn mode it runs the same memory update path as normal chat and writes learned/replaced memories
+to the effective group.
+
 ### 4.17 Per-conversation memory mode overrides the global preference
 
 `ConversationSettings.memory_mode_override` is `"default"`, `0` (off), `1` (recall), or `2`
@@ -521,6 +525,27 @@ The legacy `/remote-files` routes use the same backend but store generic files i
 Arcana `remoteFilesArcana` (default `remote-files`), which is created on first write. Remote paths
 are encoded into flat Arcana filenames (`rf_` + base64url), so the same path lists, reads, writes
 and deletes through the saia-rag-web file endpoints.
+
+### 4.23 Memories can be grouped; conversations choose a group
+
+`user_settings.memory_groups` holds custom groups (`{id, name}`) and `user_settings.default_memory_group`
+selects the group used by default. The implicit id `"default"` is the normal/ungrouped memory group.
+Each memory's optional `groupId` defaults to `"default"`. `UserMemoryContainer` shows the groups
+directly under User Memories and manages the default group; clicking a group opens
+`UserMemoryModal` filtered to that group, where memories can be reassigned.
+
+`ConversationSettings.memory_group_override` is `"default"` (follow the global default group) or a
+group id. `useSendMessage` resolves the effective group, filters the memories passed to
+`sendMessage`, and passes `memoryGroupId` so learned/replaced memories stay in that group. Deleting a
+group moves its memories to `"default"` and resets the global default if needed. Selecting a specific
+(non-default) group in the per-chat control also switches the per-chat mode from off to recall so
+the selection takes effect. Groups live inside `user_settings`, so they are exported/imported with
+settings; the conversation override is part of
+the conversation settings. Redux persist migration 8 initializes `memory_groups` /
+`default_memory_group` and assigns every existing memory to `"default"`; old conversations without
+`memory_group_override` follow the global default group. No Dexie version bump is needed (all fields
+are unindexed).
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,

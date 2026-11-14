@@ -1,8 +1,10 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import { chatCompletions } from "../apis/chatCompletions";
+import { useToast } from "./useToast";
+import generateMemory from "../apis/generateMemory";
 import { extractMessageText } from "../utils/conversationSummary";
 import {
   getMetaActionProposals,
@@ -20,7 +22,12 @@ import {
 } from "../config/featureGuides";
 import { getUseCaseMarker, stripUseCaseMarkers } from "../config/useCases";
 import {
+  addMemory,
+  editMemory,
   selectAllMemories,
+  selectDefaultMemoryGroup,
+  selectMemoryGroups,
+  selectMemoryMode,
   selectTimeout,
   selectUserSettings,
 } from "../Redux/reducers/userSettingsReducer";
@@ -95,15 +102,44 @@ Answer in the same language as the user's question. Be concise and concrete.`;
 }
 
 export function useMetaChatSend(modelsData = []) {
+  const dispatch = useDispatch();
   const timeout = useSelector(selectTimeout);
   const userSettings = useSelector(selectUserSettings);
   const interfaceSettings = useSelector((state) => state.interface_settings);
   const memories = useSelector(selectAllMemories);
+  const memoryGroups = useSelector(selectMemoryGroups);
+  const defaultMemoryGroup = useSelector(selectDefaultMemoryGroup);
+  const memoryMode = useSelector(selectMemoryMode);
   const { t } = useTranslation();
+  const { notifySuccess } = useToast();
 
   return useCallback(
     async ({ localState, setLocalState }) => {
       if (!setLocalState) return;
+
+      const modeOverride = localState.settings?.memory_mode_override;
+      const effectiveMemoryMode =
+        modeOverride === undefined ||
+        modeOverride === null ||
+        modeOverride === "default"
+          ? memoryMode
+          : [0, 1, 2].includes(Number(modeOverride))
+            ? Number(modeOverride)
+            : memoryMode;
+
+      const groupOverride = localState.settings?.memory_group_override;
+      const requestedGroup =
+        groupOverride && groupOverride !== "default"
+          ? groupOverride
+          : defaultMemoryGroup;
+      const effectiveMemoryGroup =
+        requestedGroup === "default" ||
+        memoryGroups.some((group) => group.id === requestedGroup)
+          ? requestedGroup
+          : "default";
+      const groupMemories = (memories || []).filter(
+        (memory) => (memory.groupId ?? "default") === effectiveMemoryGroup,
+      );
 
       const modelId =
         (typeof localState.settings?.model === "string"
@@ -215,6 +251,9 @@ export function useMetaChatSend(modelsData = []) {
       };
 
       const conversationId = localState.id;
+      const newUserMessage = extractMessageText(
+        localState.messages[localState.messages.length - 1],
+      ).trim();
       const timeoutMs =
         timeout >= 5000 && timeout <= 900000 ? timeout : 300000;
 
@@ -369,7 +408,61 @@ export function useMetaChatSend(modelsData = []) {
 
         window.dispatchEvent(new Event("chatai:message-complete"));
       }
+
+      if (
+        effectiveMemoryMode === 2 &&
+        newUserMessage &&
+        accumulated.trim() &&
+        !errorMeta
+      ) {
+        try {
+          const memoryResponse = await generateMemory(
+            newUserMessage,
+            groupMemories,
+          );
+          const cleanedResponse = memoryResponse.replace(
+            /,(\s*[}$])/g,
+            "$1",
+          );
+          const jsonResponse = JSON.parse(cleanedResponse);
+          if (jsonResponse.store) {
+            const memoryText = jsonResponse.memory_sentence.trim();
+            if (jsonResponse.replace) {
+              const lineNumber = jsonResponse.line_number - 1;
+              dispatch(
+                editMemory({
+                  index: lineNumber,
+                  text: memoryText,
+                  groupId: effectiveMemoryGroup,
+                }),
+              );
+            } else {
+              dispatch(
+                addMemory({
+                  text: memoryText,
+                  groupId: effectiveMemoryGroup,
+                }),
+              );
+            }
+            notifySuccess("Memory updated successfully.");
+          }
+        } catch (error) {
+          console.error("Meta chat memory update failed", error);
+        }
+      }
     },
-    [timeout, userSettings, interfaceSettings, memories, modelsData, t],
+    [
+      timeout,
+      userSettings,
+      interfaceSettings,
+      memories,
+      memoryGroups,
+      defaultMemoryGroup,
+      memoryMode,
+      dispatch,
+      notifySuccess,
+      modelsData,
+      t,
+    ],
   );
 }

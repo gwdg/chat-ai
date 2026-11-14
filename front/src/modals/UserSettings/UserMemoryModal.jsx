@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import BaseModal from "../BaseModal";
 import { useModal } from "../ModalContext";
@@ -9,6 +9,9 @@ import {
   editMemory,
   deleteMemory,
   selectAllMemories,
+  selectDefaultMemoryGroup,
+  selectMemoryGroups,
+  setMemoryGroup,
 } from "../../Redux/reducers/userSettingsReducer";
 
 export default function UserMemoryModal({
@@ -16,33 +19,53 @@ export default function UserMemoryModal({
   onClose,
   localState,
   notifySuccess,
+  groupId = null,
 }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
-  const memories = useSelector(selectAllMemories);
+  const allMemories = useSelector(selectAllMemories);
+  const memoryGroups = useSelector(selectMemoryGroups);
+  const defaultMemoryGroup = useSelector(selectDefaultMemoryGroup);
   const { openModal } = useModal();
 
+  const memoryEntries = allMemories
+    .map((memory, globalIndex) => ({ memory, globalIndex }))
+    .filter(
+      ({ memory }) =>
+        !groupId || (memory.groupId ?? "default") === groupId,
+    );
+  const memories = memoryEntries.map(({ memory }) => memory);
+
+  const groupOptions = [
+    { id: "default", name: t("settings.memory_mode.default_group_name") },
+    ...memoryGroups,
+  ];
+
   const [newMemoryText, setNewMemoryText] = useState("");
+  const [newMemoryGroup, setNewMemoryGroup] = useState(
+    groupId ?? defaultMemoryGroup,
+  );
   const [editingIndex, setEditingIndex] = useState(null);
   const [editText, setEditText] = useState("");
 
   // Add new memory
   const handleAddMemory = () => {
     if (newMemoryText.trim()) {
-      dispatch(addMemory({ text: newMemoryText }));
+      dispatch(addMemory({ text: newMemoryText, groupId: newMemoryGroup }));
       setNewMemoryText("");
     }
   };
 
   // Start editing
-  const startEditing = (index, memory) => {
-    setEditingIndex(index);
+  const startEditing = (globalIndex, memory) => {
+    setEditingIndex(globalIndex);
     setEditText(memory.text);
   };
 
   // Save edit
-  const handleEditMemory = (index) => {
+  const handleEditMemory = (globalIndex) => {
     if (editText.trim()) {
-      dispatch(editMemory({ index, text: editText }));
+      dispatch(editMemory({ index: globalIndex, text: editText }));
       setEditingIndex(null);
       setEditText("");
     }
@@ -55,8 +78,8 @@ export default function UserMemoryModal({
   };
 
   // Delete single memory
-  const handleDeleteMemory = (index) => {
-    dispatch(deleteMemory({ index }));
+  const handleDeleteMemory = (globalIndex) => {
+    dispatch(deleteMemory({ index: globalIndex }));
   };
 
   // Delete all memories
@@ -97,6 +120,17 @@ export default function UserMemoryModal({
               className="textarea flex-1 h-full text-sm"
               onKeyDown={(e) => e.key === "Enter" && handleAddMemory()}
             />
+            <select
+              value={newMemoryGroup}
+              onChange={(event) => setNewMemoryGroup(event.target.value)}
+              className="select select-bordered select-sm"
+            >
+              {groupOptions.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
             <button
               onClick={handleAddMemory}
               disabled={!newMemoryText.trim()}
@@ -116,7 +150,7 @@ export default function UserMemoryModal({
             defaultValue="Saved Memories"
           />
         </p>
-        {memories.length > 0 && (
+        {!groupId && memories.length > 0 && (
           <button
             onClick={handleDeleteAll}
             className="btn btn-xs btn-error"
@@ -148,7 +182,7 @@ export default function UserMemoryModal({
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {memories.map((memory, index) => (
+            {memoryEntries.map(({ memory, globalIndex }, displayIndex) => (
               <div
                 key={memory.id}
                 className="border border-base-300 rounded-lg p-3 bg-base-200"
@@ -156,10 +190,10 @@ export default function UserMemoryModal({
                 <div className="flex items-start gap-3">
                   {/* Index number */}
                   <span className="text-xs font-medium text-info mt-1 flex-shrink-0">
-                    {index + 1}
+                    {displayIndex + 1}
                   </span>
 
-                  {editingIndex === index ? (
+                  {editingIndex === globalIndex ? (
                     /* Edit Mode */
                     <div className="flex-1 flex flex-col gap-2">
                       <textarea
@@ -169,13 +203,13 @@ export default function UserMemoryModal({
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
-                            handleEditMemory(index);
+                            handleEditMemory(globalIndex);
                           }
                         }}
                       />
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleEditMemory(index)}
+                          onClick={() => handleEditMemory(globalIndex)}
                           className="btn btn-xs btn-success"
                         >
                           <Trans
@@ -200,6 +234,27 @@ export default function UserMemoryModal({
                       <p className="text-base-content break-words text-sm">
                         {memory.text}
                       </p>
+                      <label className="flex items-center gap-2 text-xs text-base-content/70">
+                        <span>{t("memory.group")}</span>
+                        <select
+                          value={memory.groupId ?? "default"}
+                          onChange={(event) =>
+                            dispatch(
+                              setMemoryGroup({
+                                index: globalIndex,
+                                groupId: event.target.value,
+                              }),
+                            )
+                          }
+                          className="select select-bordered select-xs min-w-0 flex-1"
+                        >
+                          {groupOptions.map((group) => (
+                            <option key={group.id} value={group.id}>
+                              {group.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-base-content/70">
                           <Trans
@@ -214,7 +269,7 @@ export default function UserMemoryModal({
                         </span>
                         <div className="flex gap-2">
                           <button
-                            onClick={() => startEditing(index, memory)}
+                            onClick={() => startEditing(globalIndex, memory)}
                             className="btn btn-xs btn-info"
                           >
                             <Trans
@@ -223,7 +278,7 @@ export default function UserMemoryModal({
                             />
                           </button>
                           <button
-                            onClick={() => handleDeleteMemory(index)}
+                            onClick={() => handleDeleteMemory(globalIndex)}
                             className="btn btn-xs btn-error"
                           >
                             <Trans

@@ -727,6 +727,9 @@ export default {
       label: "Memories",
       description: "Choose how this conversation uses your saved memories.",
       help_label: "Learn about memories",
+      default_group_name: "Default",
+      group_label: "Memory group",
+      group_default: "Default ({{group}})",
       options: {
         default: {
           label: "Default",
@@ -1230,6 +1233,18 @@ export default {
       description:
         "Manage your personal memories that help the AI remember important details about you. You currently have {{count}} memories saved.",
       manage: "Manage Memory",
+      groups: {
+        title: "Memory groups",
+        description:
+          "Group memories like folders. The default group is used unless a chat selects another group.",
+        default_name: "Default",
+        default_label: "Default group",
+        default_badge: "Default",
+        name_placeholder: "New group name",
+        add: "Add",
+        rename: "Rename group",
+        delete: "Delete group",
+      },
     },
     logout: "Logout",
   },
@@ -1267,6 +1282,7 @@ export default {
   },
   // Memory Modal
   memory: {
+    group: "Group",
     userMemory: "User Memory",
     memoryCount_one: "{{count}} memory stored",
     memoryCount_other: "{{count}} memories stored",
