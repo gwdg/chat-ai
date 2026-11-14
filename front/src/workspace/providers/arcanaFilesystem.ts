@@ -32,7 +32,13 @@ const normalizeArcanas = (data: any): string[] => {
     ? data
     : Array.isArray(data?.arcanas)
       ? data.arcanas
-      : [];
+      : null;
+  if (!Array.isArray(rows)) {
+    throw new WorkspaceError(
+      "PROVIDER_ERROR",
+      "ArcanaV2 returned an unexpected response",
+    );
+  }
   return rows
     .map((row: any) =>
       String(

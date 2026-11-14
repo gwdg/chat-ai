@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import BaseModal from "../BaseModal";
 import { newId } from "../../db";
+import { updateAgent } from "../../agents/agentStore";
 import {
   createOpencodeSession,
   getOpencodeInfo,
@@ -12,8 +13,9 @@ import {
 // Placeholder project list; the real projects will come from the GWDG backend.
 const PROJECT_COUNT = 3;
 
-export default function AddAgentModal({ isOpen, onClose, onCreate }) {
+export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const { t } = useTranslation();
+  const editing = Boolean(agent?.id);
   const defaults = useMemo(() => opencodeDefaults(), []);
   const projects = useMemo(
     () =>
@@ -23,9 +25,16 @@ export default function AddAgentModal({ isOpen, onClose, onCreate }) {
       })),
     [t],
   );
-  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
-  const [serverUrl, setServerUrl] = useState(defaults.serverUrl);
-  const [password, setPassword] = useState(defaults.password);
+  const [name, setName] = useState(agent?.name ?? "");
+  const [projectId, setProjectId] = useState(
+    agent?.projectId ?? projects[0]?.id ?? "",
+  );
+  const [serverUrl, setServerUrl] = useState(
+    agent?.serverUrl ?? defaults.serverUrl,
+  );
+  const [password, setPassword] = useState(
+    agent?.password ?? defaults.password,
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const project = projects.find((item) => item.id === projectId);
@@ -34,18 +43,33 @@ export default function AddAgentModal({ isOpen, onClose, onCreate }) {
     if (!project || saving) return;
     setSaving(true);
     setError("");
-    const agent = {
-      id: newId(),
+    const next = {
+      ...(agent ?? {}),
+      id: agent?.id ?? newId(),
       projectId: project.id,
-      name: project.name,
+      name: name.trim() || project.name,
       serverUrl: serverUrl.trim(),
-      username: defaults.username,
+      username: agent?.username ?? defaults.username,
       password,
+      passwordSource:
+        password === defaults.password ? "config" : "custom",
     };
+    const connectionChanged =
+      !editing ||
+      next.serverUrl !== agent.serverUrl ||
+      next.password !== agent.password;
     try {
-      await getOpencodeInfo(agent);
-      const session = await createOpencodeSession(agent, `${project.name} agent`);
-      onCreate?.({ ...agent, sessionId: session.id });
+      let patch = next;
+      if (connectionChanged) {
+        await getOpencodeInfo(next);
+        const session = await createOpencodeSession(
+          next,
+          `${next.name || project.name} agent`,
+        );
+        patch = { ...next, sessionId: session.id };
+      }
+      if (editing) updateAgent(agent.id, patch);
+      else onCreate?.(patch);
       onClose();
     } catch (reason) {
       setError(
@@ -62,6 +86,17 @@ export default function AddAgentModal({ isOpen, onClose, onCreate }) {
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="agents.add_title">
       <div className="flex flex-col gap-3 pb-2 text-sm">
         <p className="text-xs text-base-content/70">{t("agents.add_hint")}</p>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-base-content/70">
+            {t("agents.name_label")}
+          </span>
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={t("agents.name_placeholder")}
+            className="input input-bordered w-full"
+          />
+        </label>
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
             {t("agents.hpc_project_label")}
@@ -115,7 +150,11 @@ export default function AddAgentModal({ isOpen, onClose, onCreate }) {
             onClick={submit}
             disabled={!project || saving}
           >
-            {saving ? t("agents.connecting") : t("agents.add")}
+            {saving
+              ? t("agents.connecting")
+              : editing
+                ? t("common.save")
+                : t("agents.add")}
           </button>
         </div>
       </div>

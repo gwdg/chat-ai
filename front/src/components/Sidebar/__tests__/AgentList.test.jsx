@@ -38,6 +38,11 @@ beforeEach(() => {
   removeAgent("agent-1");
 });
 
+const removeAgentThroughMenu = () => {
+  fireEvent.click(screen.getByRole("button", { name: "Agent options" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove agent" }));
+};
+
 const addAgentThroughModal = () => {
   fireEvent.click(screen.getByRole("button", { name: "Spawn agent" }));
   const { onCreate } = mocks.openModal.mock.calls.at(-1)[1];
@@ -101,7 +106,7 @@ describe("AgentList", () => {
       order.push("delete");
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove agent" }));
+    removeAgentThroughMenu();
 
     await waitFor(() => expect(order).toEqual(["interrupt", "delete"]));
     expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument();
@@ -116,9 +121,45 @@ describe("AgentList", () => {
     addAgentThroughModal();
     mocks.deleteSession.mockRejectedValueOnce(new Error("not deleted"));
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove agent" }));
+    removeAgentThroughMenu();
 
     await waitFor(() => expect(mocks.notifyError).toHaveBeenCalled());
     expect(screen.getByText("HPC project 1")).toBeInTheDocument();
+  });
+
+  it("removes the agent locally when authentication fails", async () => {
+    render(
+      <MemoryRouter initialEntries={["/chat"]}>
+        <AgentList />
+      </MemoryRouter>,
+    );
+    addAgentThroughModal();
+    mocks.deleteSession.mockRejectedValueOnce(
+      new Error("The opencode server rejected the password."),
+    );
+
+    removeAgentThroughMenu();
+
+    await waitFor(() =>
+      expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument(),
+    );
+    expect(mocks.notifyError).toHaveBeenCalled();
+  });
+
+  it("removes the agent locally when the server is unreachable", async () => {
+    render(
+      <MemoryRouter initialEntries={["/chat"]}>
+        <AgentList />
+      </MemoryRouter>,
+    );
+    addAgentThroughModal();
+    mocks.deleteSession.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    removeAgentThroughMenu();
+
+    await waitFor(() =>
+      expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument(),
+    );
+    expect(mocks.notifyError).toHaveBeenCalled();
   });
 });

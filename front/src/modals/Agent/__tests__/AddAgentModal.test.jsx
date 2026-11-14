@@ -56,6 +56,7 @@ describe("AddAgentModal", () => {
       serverUrl: "http://127.0.0.1:9000",
       username: "opencode",
       password: "secret",
+      passwordSource: "config",
       sessionId: "session-1",
     });
     expect(onClose).toHaveBeenCalled();

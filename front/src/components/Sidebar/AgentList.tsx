@@ -2,7 +2,19 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router";
-import { Add, Bot, ChevronDown, TrashCan } from "@carbon/icons-react";
+import {
+  Popover,
+  PopoverButton,
+  PopoverPanel,
+} from "@headlessui/react";
+import {
+  Add,
+  Bot,
+  ChevronDown,
+  Edit,
+  OverflowMenuVertical,
+  TrashCan,
+} from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
 import { useModal } from "../../modals/ModalContext";
@@ -20,6 +32,16 @@ import {
   selectCollapsedTopics,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
+
+const canRemoveLocally = (reason: unknown) => {
+  const message = String(reason instanceof Error ? reason.message : reason);
+  return (
+    reason instanceof TypeError ||
+    /failed to fetch|networkerror|load failed|fetch failed|rejected the password|unauthorized|forbidden|not found|\b(401|403|404|502|503|504)\b/i.test(
+      message,
+    )
+  );
+};
 
 // Remote agents that will run on GWDG infrastructure. Each agent is backed by a session on a
 // local opencode server; the HPC project list is still a placeholder.
@@ -59,7 +81,14 @@ export default function AgentList() {
       removeAgent(agent.id);
       if (agent.id === activeId) navigate("/chat");
     } catch (reason) {
-      notifyError(reason instanceof Error ? reason.message : String(reason));
+      if (canRemoveLocally(reason)) {
+        // The agent server is gone; still allow removing the local agent entry.
+        removeAgent(agent.id);
+        if (agent.id === activeId) navigate("/chat");
+        notifyError(t("agents.removed_locally"));
+      } else {
+        notifyError(reason instanceof Error ? reason.message : String(reason));
+      }
     } finally {
       setRemoving(null);
     }
@@ -127,25 +156,52 @@ export default function AgentList() {
                     </span>
                   </span>
                 </button>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void remove(agent);
-                  }}
-                  disabled={removing === agent.id}
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 transition hover:bg-error/10 hover:text-error group-hover:opacity-100 ${
-                    removing === agent.id ? "opacity-100" : "opacity-0"
-                  }`}
-                  title={t("agents.remove")}
-                  aria-label={t("agents.remove")}
-                >
-                  {removing === agent.id ? (
+                {removing === agent.id ? (
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center">
                     <span className="loading loading-spinner loading-xs" />
-                  ) : (
-                    <TrashCan size={13} />
-                  )}
-                </button>
+                  </span>
+                ) : (
+                  <Popover className="relative shrink-0">
+                    <PopoverButton
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content focus:opacity-100 group-hover:opacity-100"
+                      title={t("agents.options")}
+                      aria-label={t("agents.options")}
+                    >
+                      <OverflowMenuVertical size={16} />
+                    </PopoverButton>
+                    <PopoverPanel
+                      anchor="bottom end"
+                      className="z-50 w-44 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
+                    >
+                      {({ close }) => (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              close();
+                              openModal("agentEdit", { agent });
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                          >
+                            <Edit size={14} />
+                            {t("common.edit")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              close();
+                              void remove(agent);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-error transition hover:bg-error/10"
+                          >
+                            <TrashCan size={14} />
+                            {t("agents.remove")}
+                          </button>
+                        </>
+                      )}
+                    </PopoverPanel>
+                  </Popover>
+                )}
               </div>
             );
           })}

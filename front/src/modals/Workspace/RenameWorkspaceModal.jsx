@@ -41,24 +41,29 @@ export default function RenameWorkspaceModal({
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      titleKey="workspace.rename_workspace"
+      titleKey="workspace.edit_title"
     >
       <div className="flex flex-col gap-3 pb-2 text-sm">
-        <input
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            setError("");
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              void submit();
-            }
-          }}
-          autoFocus
-          className="input input-bordered w-full"
-        />
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-base-content/70">
+            {t("workspace.name_label")}
+          </span>
+          <input
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              setError("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void submit();
+              }
+            }}
+            autoFocus
+            className="input input-bordered w-full"
+          />
+        </label>
         {error && <p className="text-xs text-error">{error}</p>}
         <div className="mt-2 flex justify-end gap-2">
           <button type="button" className="btn" onClick={onClose}>

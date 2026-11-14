@@ -232,6 +232,9 @@ export function ModalProvider({ children }) {
       {modalType === "agentAdd" && (
         <AddAgentModal isOpen onClose={closeModal} {...modalProps} />
       )}
+      {modalType === "agentEdit" && (
+        <AddAgentModal isOpen onClose={closeModal} {...modalProps} />
+      )}
       {modalType === "summarizeChat" && (
         <SummarizeChatModal isOpen onClose={closeModal} {...modalProps} />
       )}

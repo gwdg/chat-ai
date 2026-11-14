@@ -21,6 +21,7 @@ const toRootEntry = (sourceId, item) => {
 };
 
 const joinRelative = (dir, name) => (dir ? `${dir}/${name}` : name);
+const POLL_INTERVAL = 5000;
 
 export default function AgentFilesPanel({ agent, onOpenFile }) {
   const { t } = useTranslation();
@@ -33,19 +34,29 @@ export default function AgentFilesPanel({ agent, onOpenFile }) {
   const [creatingFile, setCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState("");
   const uploadInputRef = useRef(null);
+  const requestRef = useRef(0);
+  const pollingRef = useRef(false);
 
   const load = useCallback(
-    async (nextPath) => {
-      setLoading(true);
-      setError("");
+    async (nextPath, { silent = false } = {}) => {
+      const requestId = ++requestRef.current;
+      if (!silent) {
+        setLoading(true);
+        setError("");
+      }
       try {
         const rows = await listOpencodeFiles(agent, nextPath);
+        if (requestId !== requestRef.current) return;
         setEntries(rows.map((row) => toRootEntry(agent.id, row)));
+        if (silent) setError("");
       } catch (reason) {
-        setError(reason instanceof Error ? reason.message : String(reason));
-        setEntries([]);
+        if (requestId !== requestRef.current) return;
+        if (!silent) {
+          setError(reason instanceof Error ? reason.message : String(reason));
+          setEntries([]);
+        }
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     },
     [agent],
@@ -57,6 +68,35 @@ export default function AgentFilesPanel({ agent, onOpenFile }) {
     setNewFileName("");
     void load("");
   }, [agent.id, load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      if (
+        cancelled ||
+        pollingRef.current ||
+        document.visibilityState !== "visible"
+      ) {
+        return;
+      }
+      pollingRef.current = true;
+      try {
+        await load(path, { silent: true });
+      } finally {
+        pollingRef.current = false;
+      }
+    };
+    const timer = window.setInterval(poll, POLL_INTERVAL);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [path, load]);
 
   const breadcrumbs = useMemo(() => {
     const parts = path.split("/").filter(Boolean);

@@ -652,10 +652,14 @@ remote ids as a value.
 chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`. The left
 `AgentFilesPanel` reuses the central `WorkspaceRootBrowser` (the same component used for the
 workspace root file browser) and reads/writes the OpenCode project filesystem through
-`GET /api/fs/list`, `GET /api/fs/read/<path>` and `POST /api/experimental/fs/write`. The
+`GET /api/fs/list`, `GET /api/fs/read/<path>` and `POST /api/experimental/fs/write`. Its file list
+polls the current directory every 5 s while the page is visible, and refreshes on navigation,
+upload, new file, or an explicit refresh. The
 `WorkspaceFilePanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
 file list. The sidebar's `+` opens
-`modals/Agent/AddAgentModal`, which only offers the placeholder HPC project list. Adding an agent calls the local `opencode serve` HTTP API through
+`modals/Agent/AddAgentModal`, which offers a name and the placeholder HPC project list. The row's
+vertical menu edits (`agentEdit`, all creation fields; changing the server or password opens a new
+session) or removes the agent. Adding an agent calls the local `opencode serve` HTTP API through
 `apis/opencodeAgents.js`: `GET /api/info` verifies the server, `POST /api/session` creates the chat
 session, and `AgentConversation` sends `POST /api/session/:id/prompt` and polls
 `GET /api/session/:id/message?order=asc` until an `idle` message appears. It also exposes the
@@ -668,11 +672,13 @@ selection is sent to `POST /api/session/:id/model`. The server URL and
 HTTP-basic credentials default from `opencodeServerUrl` / `opencodeServerUsername` /
 `opencodeServerPassword` in `front.json` (mapped to `VITE_OPENCODE_SERVER_*`) and stay editable per
 agent. The browser talks to the server directly (opencode allows the app origin via CORS), so the
-back service is not involved. `agents/agentStore.js` persists the agent metadata in localStorage,
-but never the password; it is re-read from the config on load. `modules.agents: false` in
+back service is not involved. `agents/agentStore.js` persists the agent metadata in localStorage.
+A custom per-agent password is persisted with it; agents left on the configured default re-read that
+password from `front.json` on load. `modules.agents: false` in
 `front.json` sets `VITE_MODULE_AGENTS=false`, hiding the sidebar section and its route. Removing an
 agent interrupts its running session first, then deletes the OpenCode session; the local agent is
-dropped only after that succeeds.
+dropped only after that succeeds; if the server is unreachable or rejects authentication, the local
+agent entry can still be removed.
 
 
 ## 5. Conventions

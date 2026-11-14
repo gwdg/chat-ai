@@ -1327,7 +1327,11 @@ export default function WorkspacePage() {
                       breadcrumbs={breadcrumbs}
                       entries={entries}
                       loading={loading}
-                      error={listError}
+                      error={
+                        selectedSource?.status === "error"
+                          ? t("workspace.source_unavailable")
+                          : listError
+                      }
                       onHome={() => {
                         setActiveMountId(null);
                         setSelectedSourceId(null);

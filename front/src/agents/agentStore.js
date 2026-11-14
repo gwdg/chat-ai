@@ -10,7 +10,11 @@ const hydrate = (agent) => {
   if (!agent || typeof agent !== "object") return agent;
   return {
     ...agent,
-    password: agent.password ?? opencodeDefaults().password,
+    // Default-password agents follow front.json; only custom passwords are stored locally.
+    password:
+      agent.passwordSource === "custom"
+        ? agent.password
+        : opencodeDefaults().password,
   };
 };
 
@@ -32,10 +36,15 @@ const listeners = new Set();
 const persist = () => {
   if (!canStore()) return;
   try {
-    // The password stays in memory (or comes from front.json); it is never written to disk.
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(agents.map(({ password, ...rest }) => rest)),
+      JSON.stringify(
+        agents.map((agent) => {
+          if (agent.passwordSource === "custom") return agent;
+          const { password, ...rest } = agent;
+          return rest;
+        }),
+      ),
     );
   } catch {
     // Ignore quota and privacy-mode failures.
