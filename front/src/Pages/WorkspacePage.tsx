@@ -150,6 +150,7 @@ export default function WorkspacePage() {
   const [rootPath, setRootPath] = useState("/");
   const [rootEntries, setRootEntries] = useState<RootEntry[]>([]);
   const [rootTreeEntries, setRootTreeEntries] = useState<RootEntry[]>([]);
+  const [rootTreeRevision, setRootTreeRevision] = useState(0);
   const [rootLoading, setRootLoading] = useState(false);
   const [rootError, setRootError] = useState("");
 
@@ -350,19 +351,17 @@ export default function WorkspacePage() {
     void loadRoot();
   }, [loadRoot]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void listRoot("/")
-      .then((entries) => {
-        if (!cancelled) setRootTreeEntries(entries);
-      })
-      .catch(() => {
-        if (!cancelled) setRootTreeEntries([]);
-      });
-    return () => {
-      cancelled = true;
-    };
+  const loadRootTree = useCallback(async () => {
+    try {
+      setRootTreeEntries(await listRoot("/"));
+    } catch {
+      setRootTreeEntries([]);
+    }
   }, [listRoot]);
+
+  useEffect(() => {
+    void loadRootTree();
+  }, [loadRootTree]);
 
   const createRootEntry = (kind: "dir" | "file") => {
     openModal("workspaceCreateEntry", {
@@ -382,12 +381,6 @@ export default function WorkspacePage() {
     });
   };
 
-  const removeRootEntry = async (entry: RootEntry) => {
-    if (!rootProvider || !entry.local) return;
-    await rootProvider.remove(entry.path, { recursive: true });
-    await loadRoot();
-  };
-
   const closePreview = useCallback(() => {
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current);
@@ -402,6 +395,87 @@ export default function WorkspacePage() {
     },
     [],
   );
+
+  const clearDeletedPreview = (path: string) => {
+    if (!preview) return;
+    const deleted = normalizePath(path);
+    const open = normalizePath(preview.entry.path);
+    if (open === deleted || open.startsWith(`${deleted}/`)) closePreview();
+  };
+
+  const deleteRootEntry = async (entry: RootEntry) => {
+    if (!rootProvider || !entry.local || entry.mount) return;
+    const deleted = normalizePath(entry.path);
+    const browsingDeleted =
+      rootPath === deleted || rootPath.startsWith(`${deleted}/`);
+    try {
+      await rootProvider.connect();
+      await rootProvider.remove(entry.path, { recursive: true });
+      clearDeletedPreview(entry.path);
+      if (browsingDeleted) setRootPath(parentPath(entry.path));
+      await loadRootTree();
+      if (!browsingDeleted) await loadRoot();
+      setRootTreeRevision((current) => current + 1);
+      notifySuccess(t("workspace.delete_success", { name: entry.name }));
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const deleteSourceEntry = async (entry: WorkspaceFileEntry) => {
+    if (!selectedProvider) return;
+    const deleted = normalizePath(entry.path);
+    const browsingDeleted =
+      currentPath === deleted || currentPath.startsWith(`${deleted}/`);
+    try {
+      if (selectedProvider.status !== "connected") {
+        await selectedProvider.connect();
+      }
+      await selectedProvider.remove(entry.path, { recursive: true });
+      clearDeletedPreview(entry.path);
+      if (browsingDeleted) {
+        setPathBySource((current) => ({
+          ...current,
+          [selectedSourceId!]: parentPath(entry.path),
+        }));
+      } else {
+        await loadEntries(false);
+      }
+      void refreshQuota(selectedProvider);
+      notifySuccess(t("workspace.delete_success", { name: entry.name }));
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const requestDeleteEntry = (
+    entry: WorkspaceFileEntry,
+    onConfirm: () => void,
+  ) =>
+    confirmAction(
+      {
+        warningKey: "warn_workspace_file_delete",
+        messageKey:
+          entry.kind === "dir"
+            ? "workspace.delete_folder_confirm"
+            : "workspace.delete_file_confirm",
+        confirmKey: "common.delete",
+        danger: true,
+      },
+      onConfirm,
+    );
+
+  const requestDeleteRootEntry = (entry: RootEntry) =>
+    requestDeleteEntry(entry, () => void deleteRootEntry(entry));
+
+  const requestDeleteSourceEntry = (entry: WorkspaceFileEntry) =>
+    requestDeleteEntry(entry, () => void deleteSourceEntry(entry));
+
+  const canDeleteSourceEntry = (entry: WorkspaceFileEntry) =>
+    selectedProvider?.capabilities?.delete === true &&
+    selectedSource?.readOnly !== true &&
+    activeMount?.readOnly !== true &&
+    !(selectedProvider.kind === "arcana-filesystem" && entry.kind === "dir");
 
   const openFile = async (
     entry: WorkspaceFileEntry,
@@ -494,10 +568,10 @@ export default function WorkspacePage() {
       return (
         <button
           type="button"
-          onClick={() => void removeRootEntry(entry)}
+          onClick={() => requestDeleteRootEntry(entry)}
           className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
-          title={t("workspace.remove_mount")}
-          aria-label={t("workspace.remove_mount")}
+          title={t("common.delete")}
+          aria-label={t("common.delete")}
         >
           <TrashCan size={12} />
         </button>
@@ -1168,10 +1242,11 @@ export default function WorkspacePage() {
                         </p>
                       ) : (
                         <WorkspaceRootTree
+                          key={rootTreeRevision}
                           entries={rootTreeEntries}
                           loadChildren={listRoot}
                           onOpen={openRootEntry}
-                          onRemoveLocal={(entry) => void removeRootEntry(entry)}
+                          onRemoveLocal={requestDeleteRootEntry}
                           onRemoveMount={removeRootMount}
                           onToggleMountReadOnly={toggleRootMountReadOnly}
                           isReadOnly={rootEntryReadOnly}
@@ -1428,37 +1503,53 @@ export default function WorkspacePage() {
                         }
                         onDrop(event, selectedSourceId!, currentPath);
                       }}
-                      entryActions={(entry) =>
-                        entry.kind === "file" ? (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openModal("workspaceMoveTo", {
-                                entry,
-                                sources: sources.filter(
-                                  (candidate) =>
-                                    candidate.id !== selectedSourceId &&
-                                    candidate.status !== "error" &&
-                                    !candidate.readOnly,
-                                ),
-                                onSelect: (targetId: string) =>
-                                  requestTransfer({
-                                    fromSourceId: selectedSourceId!,
-                                    toSourceId: targetId,
-                                    entry,
-                                    targetDir: "/",
-                                    intent: "move",
-                                  }),
-                              });
-                            }}
-                            className="shrink-0 rounded px-1 text-[10px] text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content group-hover:opacity-100"
-                            title={t("workspace.move_to")}
-                          >
-                            {t("workspace.move_to")}
-                          </button>
-                        ) : null
-                      }
+                      entryActions={(entry) => (
+                        <>
+                          {entry.kind === "file" && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openModal("workspaceMoveTo", {
+                                  entry,
+                                  sources: sources.filter(
+                                    (candidate) =>
+                                      candidate.id !== selectedSourceId &&
+                                      candidate.status !== "error" &&
+                                      !candidate.readOnly,
+                                  ),
+                                  onSelect: (targetId: string) =>
+                                    requestTransfer({
+                                      fromSourceId: selectedSourceId!,
+                                      toSourceId: targetId,
+                                      entry,
+                                      targetDir: "/",
+                                      intent: "move",
+                                    }),
+                                });
+                              }}
+                              className="shrink-0 rounded px-1 text-[10px] text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content group-hover:opacity-100"
+                              title={t("workspace.move_to")}
+                            >
+                              {t("workspace.move_to")}
+                            </button>
+                          )}
+                          {canDeleteSourceEntry(entry) && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                requestDeleteSourceEntry(entry);
+                              }}
+                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
+                              title={t("common.delete")}
+                              aria-label={t("common.delete")}
+                            >
+                              <TrashCan size={12} />
+                            </button>
+                          )}
+                        </>
+                      )}
                       footer={
                         nextCursor ? (
                           <div className="p-2 text-center">

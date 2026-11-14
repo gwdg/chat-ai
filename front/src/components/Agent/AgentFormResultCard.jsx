@@ -36,22 +36,23 @@ export default function AgentFormResultCard({ form, answers }) {
         {(form.fields ?? [])
           .filter((field) => !field.hidden)
           .map((field) => {
-            const answer = answers?.[field.key];
+            const key = field.key ?? field.name;
+            const answer = answers?.[key];
             const values = displayValues(field, answer, t);
             const isList = Array.isArray(answer) && answer.length > 0;
             return (
               <div
-                key={field.key}
+                key={key}
                 className={isList ? "flex flex-col gap-0.5" : "flex gap-2"}
               >
                 <dt className="shrink-0 text-base-content/60">
-                  {field.title || field.key}
+                  {field.title || field.name || key}
                 </dt>
                 <dd className="min-w-0 flex-1 whitespace-pre-wrap break-words text-base-content">
                   {isList ? (
                     <ul className="list-disc pl-4">
                       {values.map((entry, index) => (
-                        <li key={`${field.key}:${entry}:${index}`}>{entry}</li>
+                        <li key={`${key}:${entry}:${index}`}>{entry}</li>
                       ))}
                     </ul>
                   ) : (

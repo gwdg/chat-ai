@@ -1779,6 +1779,11 @@ export default {
     transfer_move: "Verschieben",
     transfer_copy: "Kopieren",
     move_to: "Verschieben nach…",
+    delete_file_confirm:
+      "Diese Datei löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_folder_confirm:
+      "Diesen Ordner mit dem gesamten Inhalt löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_success: "„{{name}}“ gelöscht.",
     move_to_hint: "„{{name}}“ in eine andere Quelle verschieben? Das Original wird erst nach der Prüfung der Kopie gelöscht.",
     move_to_target: "Zielquelle",
     move_to_no_targets: "Fügen Sie zuerst eine weitere Quelle hinzu.",

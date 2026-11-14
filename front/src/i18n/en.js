@@ -1757,6 +1757,10 @@ export default {
     transfer_move: "Move",
     transfer_copy: "Copy",
     move_to: "Move to…",
+    delete_file_confirm: "Delete this file? This cannot be undone.",
+    delete_folder_confirm:
+      "Delete this folder and everything inside it? This cannot be undone.",
+    delete_success: "Deleted {{name}}.",
     move_to_hint: "Move “{{name}}” to another source? The original is deleted only after the copy is verified.",
     move_to_target: "Destination source",
     move_to_no_targets: "Add another source first.",

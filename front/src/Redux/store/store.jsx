@@ -37,6 +37,7 @@ const getDefaultState = () => {
       warn_regenerate: true,
       warn_fork: true,
       warn_workspace_delete: true,
+      warn_workspace_file_delete: true,
       count_hallucination: 0,
       count_announcement: 0,
       show_usage_in_sidebar: true,
