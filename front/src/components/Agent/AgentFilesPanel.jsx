@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import WorkspaceRootBrowser from "../Workspace/WorkspaceRootBrowser";
 import {
+  findOpencodeFiles,
   listOpencodeFiles,
   writeOpencodeFile,
 } from "../../apis/opencodeAgents";
@@ -33,6 +34,9 @@ export default function AgentFilesPanel({ agent, onOpenFile }) {
   const [uploading, setUploading] = useState(false);
   const [creatingFile, setCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState("");
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searching, setSearching] = useState(false);
   const uploadInputRef = useRef(null);
   const requestRef = useRef(0);
   const pollingRef = useRef(false);
@@ -162,8 +166,32 @@ export default function AgentFilesPanel({ agent, onOpenFile }) {
     }
   };
 
+  const search = async () => {
+    const value = query.trim();
+    if (!value) {
+      setSearchResults(null);
+      return;
+    }
+    setSearching(true);
+    try {
+      const rows = await findOpencodeFiles(agent, value, 100);
+      setSearchResults(rows.map((row) => toRootEntry(agent.id, row)));
+    } catch (reason) {
+      notifyError(reason instanceof Error ? reason.message : String(reason));
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setQuery("");
+    setSearchResults(null);
+  };
+
   const onOpen = (entry) => {
     if (entry.kind === "dir") {
+      clearSearch();
       navigate(entry.path);
       return;
     }
@@ -209,6 +237,68 @@ export default function AgentFilesPanel({ agent, onOpenFile }) {
         className="hidden"
         onChange={uploadFiles}
       />
+      <div className="flex items-center gap-1 border-b border-base-300 px-2 py-1.5">
+        <input
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            if (!event.target.value.trim()) setSearchResults(null);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void search();
+            }
+            if (event.key === "Escape") clearSearch();
+          }}
+          placeholder={t("agents.search_files")}
+          aria-label={t("agents.search_files")}
+          className="input input-xs input-bordered min-w-0 flex-1"
+        />
+        <button
+          type="button"
+          onClick={() => void search()}
+          disabled={searching || !query.trim()}
+          className="btn btn-xs btn-ghost"
+        >
+          {searching ? (
+            <span className="loading loading-spinner loading-xs" />
+          ) : (
+            t("agents.search")
+          )}
+        </button>
+        {searchResults && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            className="btn btn-xs btn-ghost"
+          >
+            {t("common.close")}
+          </button>
+        )}
+      </div>
+      {searchResults ? (
+        <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+          {searchResults.length === 0 ? (
+            <p className="p-2 text-xs text-base-content/60">
+              {t("agents.no_search_results")}
+            </p>
+          ) : (
+            <div className="space-y-0.5">
+              {searchResults.map((entry) => (
+                <button
+                  key={entry.path}
+                  type="button"
+                  onClick={() => onOpen(entry)}
+                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content hover:bg-base-200"
+                >
+                  <span className="min-w-0 flex-1 truncate">{entry.path}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
       <WorkspaceRootBrowser
         path={path}
         rootPath=""
@@ -235,6 +325,7 @@ export default function AgentFilesPanel({ agent, onOpenFile }) {
         newFileEditor={newFileEditor}
         dataGuide="workspace-files"
       />
+      )}
     </div>
   );
 }

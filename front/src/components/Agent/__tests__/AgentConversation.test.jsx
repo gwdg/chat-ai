@@ -8,6 +8,9 @@ const apiMocks = vi.hoisted(() => ({
   interrupt: vi.fn(),
   command: vi.fn(),
   shell: vi.fn(),
+  createSession: vi.fn(),
+  deleteSession: vi.fn(),
+  updateAgent: vi.fn(),
   permissions: vi.fn(),
   replyPermission: vi.fn(),
   compact: vi.fn(),
@@ -16,6 +19,11 @@ const apiMocks = vi.hoisted(() => ({
   sessionInfo: vi.fn(),
   setModel: vi.fn(),
   commands: vi.fn(),
+  agents: vi.fn(),
+  setAgent: vi.fn(),
+  forms: vi.fn(),
+  replyForm: vi.fn(),
+  subscribe: vi.fn(async () => {}),
 }));
 
 vi.mock("../../../apis/opencodeAgents", () => ({
@@ -24,6 +32,8 @@ vi.mock("../../../apis/opencodeAgents", () => ({
   interruptOpencodeSession: (...args) => apiMocks.interrupt(...args),
   sendOpencodeCommand: (...args) => apiMocks.command(...args),
   runOpencodeShell: (...args) => apiMocks.shell(...args),
+  createOpencodeSession: (...args) => apiMocks.createSession(...args),
+  deleteOpencodeSession: (...args) => apiMocks.deleteSession(...args),
   listOpencodePermissions: (...args) => apiMocks.permissions(...args),
   replyOpencodePermission: (...args) => apiMocks.replyPermission(...args),
   compactOpencodeSession: (...args) => apiMocks.compact(...args),
@@ -32,6 +42,14 @@ vi.mock("../../../apis/opencodeAgents", () => ({
   getOpencodeSession: (...args) => apiMocks.sessionInfo(...args),
   setOpencodeModel: (...args) => apiMocks.setModel(...args),
   listOpencodeCommands: (...args) => apiMocks.commands(...args),
+  listOpencodeAgents: (...args) => apiMocks.agents(...args),
+  setOpencodeAgent: (...args) => apiMocks.setAgent(...args),
+  listOpencodeForms: (...args) => apiMocks.forms(...args),
+  replyOpencodeForm: (...args) => apiMocks.replyForm(...args),
+  subscribeOpencodeEvents: (...args) => apiMocks.subscribe(...args),
+}));
+vi.mock("../../../agents/agentStore", () => ({
+  updateAgent: (...args) => apiMocks.updateAgent(...args),
 }));
 vi.mock("react-redux", () => ({
   useSelector: (selector) =>
@@ -41,7 +59,10 @@ vi.mock("react-redux", () => ({
     }),
 }));
 vi.mock("../../../modals/ModalContext", () => ({
-  useModal: () => ({ openModal: vi.fn() }),
+  useModal: () => ({
+    openModal: vi.fn(),
+    confirmAction: (_options, action) => action(),
+  }),
 }));
 
 const agent = {
@@ -54,6 +75,7 @@ const agent = {
 };
 
 beforeEach(() => {
+  localStorage.clear();
   for (const mock of Object.values(apiMocks)) mock.mockReset();
   apiMocks.list.mockResolvedValue([]);
   apiMocks.permissions.mockResolvedValue([]);
@@ -63,6 +85,9 @@ beforeEach(() => {
   apiMocks.interrupt.mockResolvedValue(null);
   apiMocks.command.mockResolvedValue(null);
   apiMocks.shell.mockResolvedValue(null);
+  apiMocks.createSession.mockResolvedValue({ id: "session-2" });
+  apiMocks.deleteSession.mockResolvedValue(null);
+  apiMocks.updateAgent.mockReturnValue(undefined);
   apiMocks.replyPermission.mockResolvedValue(null);
   apiMocks.compact.mockResolvedValue(null);
   apiMocks.models.mockResolvedValue([]);
@@ -70,6 +95,13 @@ beforeEach(() => {
   apiMocks.sessionInfo.mockResolvedValue({ model: null });
   apiMocks.setModel.mockResolvedValue(null);
   apiMocks.commands.mockResolvedValue([]);
+  apiMocks.agents.mockResolvedValue([
+    { id: "build", name: "Build", mode: "primary", hidden: false },
+  ]);
+  apiMocks.setAgent.mockResolvedValue(null);
+  apiMocks.forms.mockResolvedValue([]);
+  apiMocks.replyForm.mockResolvedValue(null);
+  apiMocks.subscribe.mockResolvedValue(undefined);
 });
 
 describe("AgentConversation", () => {
@@ -100,7 +132,12 @@ describe("AgentConversation", () => {
     fireEvent.click(document.querySelector('[data-guide="send"]'));
 
     await waitFor(() =>
-      expect(apiMocks.send).toHaveBeenCalledWith(agent, "session-1", "Hello agent"),
+      expect(apiMocks.send).toHaveBeenCalledWith(
+        agent,
+        "session-1",
+        "Hello agent",
+        [],
+      ),
     );
   });
 });
@@ -135,6 +172,85 @@ describe("AgentConversation control commands", () => {
     await waitFor(() =>
       expect(apiMocks.shell).toHaveBeenCalledWith(agent, "session-1", "ls -la"),
     );
+  });
+
+  it("clears the history by replacing the OpenCode session", async () => {
+    render(<AgentConversation agent={agent} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Clear agent history" }),
+    );
+
+    await waitFor(() =>
+      expect(apiMocks.createSession).toHaveBeenCalledWith(
+        agent,
+        "HPC project 1 agent",
+      ),
+    );
+    expect(apiMocks.updateAgent).toHaveBeenCalledWith("agent-1", {
+      sessionId: "session-2",
+    });
+    expect(apiMocks.deleteSession).toHaveBeenCalledWith(agent, "session-1");
+  });
+
+  it("shows the submitted form answers in the conversation", async () => {
+    apiMocks.forms.mockResolvedValue([
+      {
+        id: "form-1",
+        title: "Choose a name",
+        fields: [
+          {
+            key: "name",
+            title: "Name",
+            type: "text",
+            default: "Alice",
+          },
+        ],
+      },
+    ]);
+    render(<AgentConversation agent={agent} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Submit" }));
+
+    await waitFor(() =>
+      expect(apiMocks.replyForm).toHaveBeenCalledWith(
+        agent,
+        "session-1",
+        "form-1",
+        { name: "Alice" },
+      ),
+    );
+    expect(await screen.findByText("Form results")).toBeInTheDocument();
+    expect(screen.getByText("Submitted")).toBeInTheDocument();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+  });
+
+  it("restores submitted forms after remounting the agent chat", async () => {
+    apiMocks.forms.mockResolvedValue([
+      {
+        id: "form-2",
+        title: "Remember this",
+        fields: [
+          {
+            key: "name",
+            title: "Name",
+            type: "text",
+            default: "Bob",
+          },
+        ],
+      },
+    ]);
+    const first = render(<AgentConversation agent={agent} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Submit" }));
+    expect(await screen.findByText("Form results")).toBeInTheDocument();
+
+    first.unmount();
+    apiMocks.forms.mockResolvedValue([]);
+    render(<AgentConversation agent={agent} />);
+
+    expect(await screen.findByText("Form results")).toBeInTheDocument();
+    expect(screen.getByText("Bob")).toBeInTheDocument();
   });
 
   it("answers pending permission requests", async () => {

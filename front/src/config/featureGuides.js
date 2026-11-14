@@ -114,6 +114,10 @@ export const featureGuides = {
         target: '[data-guide="agents-list"]',
         textKey: "feature_guide.remote_agents.step2",
       },
+      {
+        target: '[data-guide="agent-clear-history"]',
+        textKey: "feature_guide.remote_agents.step3",
+      },
     ],
   },
   attach_media: {

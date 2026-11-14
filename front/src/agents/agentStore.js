@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 
 import { opencodeDefaults } from "../apis/opencodeAgents";
+import { clearAgentFormHistory } from "./agentFormHistory";
+import { clearAgentShellHistory } from "./agentShellHistory";
 
 const STORAGE_KEY = "chatai.agents";
 
@@ -80,6 +82,8 @@ export const updateAgent = (id, patch) => {
 
 export const removeAgent = (id) => {
   agents = agents.filter((agent) => agent.id !== id);
+  clearAgentFormHistory(id);
+  clearAgentShellHistory(id);
   persist();
   emit();
 };

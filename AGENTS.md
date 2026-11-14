@@ -652,9 +652,10 @@ remote ids as a value.
 chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`. The left
 `AgentFilesPanel` reuses the central `WorkspaceRootBrowser` (the same component used for the
 workspace root file browser) and reads/writes the OpenCode project filesystem through
-`GET /api/fs/list`, `GET /api/fs/read/<path>` and `POST /api/experimental/fs/write`. Its file list
-polls the current directory every 5 s while the page is visible, and refreshes on navigation,
-upload, new file, or an explicit refresh. The
+`GET /api/fs/list`, `GET /api/fs/read/<path>`, `POST /api/experimental/fs/write` and
+`GET /api/fs/find`. Its file list polls the current directory every 5 s while the page is visible,
+searches through `/api/fs/find`, and refreshes on navigation, upload, new file, or an explicit
+refresh. The
 `WorkspaceFilePanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
 file list. The sidebar's `+` opens
 `modals/Agent/AddAgentModal`, which offers a name and the placeholder HPC project list. The row's
@@ -665,10 +666,22 @@ session, and `AgentConversation` sends `POST /api/session/:id/prompt` and polls
 `GET /api/session/:id/message?order=asc` until an `idle` message appears. It also exposes the
 control API: interrupt (`/interrupt`), slash commands (`/command`), `!` shell input (`/shell`), and
 permission replies (`/permission/{requestID}/reply`). The composer's command dropdown is populated
-from `GET /api/command` (plus the built-in `compact`). The composer reuses `SendButton` and
+from `GET /api/command` (plus the built-in `compact`). The composer has a yellow Shell toggle that sends the input directly to
+`/api/session/:id/shell`; shell output is rendered inline in the conversation, and the Tools modal
+no longer has a terminal tab. Shell messages are persisted per agent/session in localStorage
+(`agents/agentShellHistory.js`) and merged with the server timeline by creation time. The header X
+confirms, interrupts and deletes the OpenCode session, creates a replacement session, updates the
+agent entry, and clears the remembered shell history. The composer also accepts file attachments and sends them inline to the prompt API. The
+`AgentFormCard` renders OpenCode forms inline in the conversation; form cards are persisted per
+agent/session in localStorage (`agents/agentFormHistory.js`), so a card remains in the timeline
+after reloads. After a successful reply, the same history entry receives the answers and renders
+as `AgentFormResultCard`. `AgentToolsModal` exposes session diff/revert, saved permissions, usage stats, and MCP
+management (syncing ChatAI local MCP servers into OpenCode). `subscribeOpencodeEvents`
+refreshes messages and permissions from the `/api/event` stream. The composer reuses `SendButton` and
 `ModelButton`; the model list is the intersection of `GET /api/model` (falling back to
 `/api/model/default`) with the app's ChatAI models, the selector is centred in the composer, and a
-selection is sent to `POST /api/session/:id/model`. The server URL and
+selection is sent to `POST /api/session/:id/model`. A second dropdown lists `GET /api/agent`
+(non-hidden primary agents) and switches with `POST /api/session/:id/agent`. The server URL and
 HTTP-basic credentials default from `opencodeServerUrl` / `opencodeServerUsername` /
 `opencodeServerPassword` in `front.json` (mapped to `VITE_OPENCODE_SERVER_*`) and stay editable per
 agent. The browser talks to the server directly (opencode allows the app origin via CORS), so the

@@ -10,6 +10,7 @@ import MetaChatPage from "../Pages/MetaChatPage";
 import TopicMasterPage from "../Pages/TopicMasterPage";
 import WorkspacePage from "../Pages/WorkspacePage";
 import AgentPage from "../Pages/AgentPage";
+import ToolFormDemoPage from "../Pages/ToolFormDemoPage";
 import { isAgentsEnabled } from "../utils/modules";
 
 const PublicRoute = () => {
@@ -22,6 +23,9 @@ const PublicRoute = () => {
       <Route path="/workspace/:workspaceId" element={<WorkspacePage />} />
       {isAgentsEnabled() && (
         <Route path="/agent/:agentId" element={<AgentPage />} />
+      )}
+      {import.meta.env.DEV && (
+        <Route path="/dev/tool-form" element={<ToolFormDemoPage />} />
       )}
       <Route path="/chat/:conversationId?" element={<ChatPage />}/>
       <Route path="/chat" element={<ChatPage />} />

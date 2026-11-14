@@ -1,6 +1,16 @@
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { ChevronDown, Plus, Server, Trash2, TriangleAlert } from "lucide-react";
+import {
+  Popover,
+  PopoverButton,
+  PopoverPanel,
+} from "@headlessui/react";
+import {
+  Edit,
+  OverflowMenuVertical,
+  TrashCan,
+} from "@carbon/icons-react";
+import { ChevronDown, Plus, Server, TriangleAlert } from "lucide-react";
 
 import Tooltip from "../Others/Tooltip";
 
@@ -72,11 +82,7 @@ export default function McpServerList() {
               key={server.id}
               className="group flex items-center gap-1 rounded-xl px-2 py-1.5 text-base-content transition hover:bg-base-200"
             >
-              <button
-                type="button"
-                onClick={() => edit(server)}
-                className="flex min-w-0 flex-1 items-center gap-2 text-left"
-              >
+              <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-base-200 text-base-content/55">
                   <Server size={14} />
                 </span>
@@ -102,16 +108,49 @@ export default function McpServerList() {
                     <TriangleAlert size={13} />
                   </span>
                 )}
-              </button>
-              <button
-                type="button"
-                onClick={() => dispatch(removeMcpServer(server.id))}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
-                title={t("mcp.remove")}
-                aria-label={t("mcp.remove")}
-              >
-                <Trash2 size={13} />
-              </button>
+              </span>
+              <Popover className="relative shrink-0">
+                <PopoverButton
+                  className={`flex h-6 w-6 items-center justify-center rounded-md text-base-content/40 transition hover:bg-base-300 hover:text-base-content focus:opacity-100 group-hover:opacity-100 ${
+                    window.innerWidth < 1024 ? "opacity-100" : "opacity-0"
+                  }`}
+                  title={t("mcp.options")}
+                  aria-label={t("mcp.options")}
+                >
+                  <OverflowMenuVertical size={16} />
+                </PopoverButton>
+                <PopoverPanel
+                  anchor="bottom end"
+                  className="z-50 w-44 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
+                >
+                  {({ close }) => (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          edit(server);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Edit size={14} />
+                        {t("common.edit")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          dispatch(removeMcpServer(server.id));
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-error transition hover:bg-error/10"
+                      >
+                        <TrashCan size={14} />
+                        {t("mcp.remove")}
+                      </button>
+                    </>
+                  )}
+                </PopoverPanel>
+              </Popover>
             </div>
           ))}
         </div>

@@ -97,9 +97,157 @@ export async function writeOpencodeFile(
   return response.json();
 }
 
+export async function getOpencodeDiff(agent, sessionId) {
+  const result = await request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/diff`,
+  );
+  return result?.data ?? [];
+}
+
+export async function stageOpencodeRevert(
+  agent,
+  sessionId,
+  messageID,
+  files = true,
+) {
+  return request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/revert/stage`,
+    {
+      method: "POST",
+      body: JSON.stringify({ messageID, files }),
+    },
+  );
+}
+
+export async function clearOpencodeRevert(agent, sessionId) {
+  return request(agent, `/session/${encodeURIComponent(sessionId)}/revert`, {
+    method: "DELETE",
+  });
+}
+
+export async function commitOpencodeRevert(agent, sessionId) {
+  return request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/revert/commit`,
+    { method: "POST" },
+  );
+}
+
+export async function listOpencodeForms(agent, sessionId) {
+  const result = await request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/form`,
+  );
+  return result?.data ?? [];
+}
+
+export async function replyOpencodeForm(agent, sessionId, formId, answer) {
+  return request(
+    agent,
+    `/session/${encodeURIComponent(sessionId)}/form/${encodeURIComponent(formId)}/reply`,
+    { method: "POST", body: JSON.stringify({ answer }) },
+  );
+}
+
+export async function getOpencodeContext(agent, sessionId) {
+  return request(agent, `/session/${encodeURIComponent(sessionId)}/context`);
+}
+
+export async function listSavedOpencodePermissions(agent, projectID) {
+  const query = projectID
+    ? `?projectID=${encodeURIComponent(projectID)}`
+    : "";
+  const result = await request(agent, `/permission/saved${query}`);
+  return result?.data ?? [];
+}
+
+export async function deleteSavedOpencodePermission(agent, id) {
+  return request(agent, `/permission/saved/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function listOpencodeMcpServers(agent) {
+  const result = await request(agent, "/mcp");
+  return result?.data ?? [];
+}
+
+export async function addOpencodeMcpServer(agent, name, config) {
+  return request(agent, `/experimental/mcp/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    body: JSON.stringify({ config }),
+  });
+}
+
+export async function connectOpencodeMcpServer(agent, name) {
+  return request(
+    agent,
+    `/experimental/mcp/${encodeURIComponent(name)}/connect`,
+    { method: "POST" },
+  );
+}
+
+export async function removeOpencodeMcpServer(agent, name) {
+  return request(agent, `/experimental/mcp/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function findOpencodeFiles(agent, query, limit = 100) {
+  const params = new URLSearchParams({ query, limit: String(limit) });
+  const result = await request(agent, `/fs/find?${params.toString()}`);
+  return result?.data ?? [];
+}
+
+export async function subscribeOpencodeEvents(agent, onEvent, signal) {
+  const response = await rawRequest(agent, "/event", { signal });
+  if (!response.body) return;
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const chunks = buffer.split("\n\n");
+      buffer = chunks.pop() ?? "";
+      for (const chunk of chunks) {
+        const data = chunk
+          .split("\n")
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trim())
+          .join("\n");
+        if (!data) continue;
+        try {
+          onEvent(JSON.parse(data));
+        } catch {
+          onEvent(null);
+        }
+      }
+    }
+  } catch (reason) {
+    if (!signal?.aborted) throw reason;
+  }
+}
+
 export async function listOpencodeCommands(agent) {
   const result = await request(agent, "/command");
   return result?.data ?? [];
+}
+
+export async function listOpencodeAgents(agent) {
+  const result = await request(agent, "/agent");
+  return result?.data ?? [];
+}
+
+export async function setOpencodeAgent(agent, sessionId, agentId) {
+  return request(agent, `/session/${encodeURIComponent(sessionId)}/agent`, {
+    method: "POST",
+    body: JSON.stringify({ agent: agentId }),
+  });
 }
 
 export async function listOpencodeModels(agent) {
@@ -137,10 +285,13 @@ export async function listOpencodeMessages(agent, sessionId) {
   return result?.data ?? [];
 }
 
-export async function sendOpencodePrompt(agent, sessionId, text) {
+export async function sendOpencodePrompt(agent, sessionId, text, files = []) {
   return request(agent, `/session/${encodeURIComponent(sessionId)}/prompt`, {
     method: "POST",
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({
+      text,
+      ...(files.length ? { files } : {}),
+    }),
   });
 }
 

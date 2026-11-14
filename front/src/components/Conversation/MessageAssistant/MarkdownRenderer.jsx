@@ -174,6 +174,26 @@ const MarkdownLink = ({ href, children }) => {
 /* --------------------------------------------
  * Shared renderer components (unchanged styles)
  * -------------------------------------------- */
+const plainCode = ({ className, children, node }) => {
+  const match = /language-([\w.-]+)/.exec(className || "");
+  const content = String(children).replace(/\n$/, "");
+  const isCodeBlock = node?.parent?.tagName === "pre";
+  const hasNewlines = content.includes("\n");
+  const isMultiLine =
+    node?.position && node.position.start.line !== node.position.end.line;
+  const isInline = !isCodeBlock && !hasNewlines && !isMultiLine;
+
+  if (isInline) {
+    return (
+      <code className="px-1.5 py-0.5 rounded bg-base-200 text-primary font-mono text-xs">
+        {content}
+      </code>
+    );
+  }
+
+  return <Code language={match ? match[1] : null}>{content}</Code>;
+};
+
 export const rendererComponents = {
   img: MarkdownImage,
   code({ className, children, node }) {
@@ -358,6 +378,11 @@ export const rendererComponents = {
     </div>
   ),
   inlineMath: ({ value }) => <span className="katex">{value}</span>,
+};
+
+export const thinkingRendererComponents = {
+  ...rendererComponents,
+  code: plainCode,
 };
 
 /* ------------------------------------------------
@@ -1113,28 +1138,31 @@ const MarkdownRenderer = memo(
       return isLoading ? referencesContent : processedReferences;
     }, [isLoading, referencesContent, processedReferences]);
 
-    const renderContentByMode = useCallback((content) => {
-      const contentToRender = content.trim();
+    const renderContentByMode = useCallback(
+      (content, { thinking = false } = {}) => {
+        const contentToRender = content.trim();
 
-      // rendererComponents but with the html fence wired to receive isLoading
-      // so HtmlBlock can avoid rendering partial HTML while streaming.
-      const components = {
-        ...rendererComponents,
-        code(props) {
-          const match = /language-(\w+)/.exec(props.className || "");
-          if (match && match[1] === "html") {
-            return (
-              <HtmlBlock
-                content={String(props.children).replace(/\n$/, "")}
-                isLoading={isLoading}
-              />
-            );
-          }
-          return rendererComponents.code(props);
-        },
-      };
+        // rendererComponents but with the html fence wired to receive isLoading
+        // so HtmlBlock can avoid rendering partial HTML while streaming.
+        const components = thinking
+          ? thinkingRendererComponents
+          : {
+              ...rendererComponents,
+              code(props) {
+                const match = /language-(\w+)/.exec(props.className || "");
+                if (match && match[1] === "html") {
+                  return (
+                    <HtmlBlock
+                      content={String(props.children).replace(/\n$/, "")}
+                      isLoading={isLoading}
+                    />
+                  );
+                }
+                return rendererComponents.code(props);
+              },
+            };
 
-      switch (renderMode) {
+        switch (renderMode) {
         case "Plaintext":
           return (
             <pre className="whitespace-pre-wrap font-mono text-sm overflow-x-auto">
@@ -1195,8 +1223,15 @@ const MarkdownRenderer = memo(
               {preprocessLaTeX(contentToRender)}
             </SafeMarkdown>
           );
-      }
-    }, [renderMode, isLoading, loadExternal]);
+        }
+      },
+      [renderMode, isLoading, loadExternal],
+    );
+
+    const renderThinkingContentByMode = useCallback(
+      (content) => renderContentByMode(content, { thinking: true }),
+      [renderContentByMode],
+    );
 
     if (!children) return null;
 
@@ -1213,7 +1248,9 @@ const MarkdownRenderer = memo(
               isStreaming={isStreaming && index === thinkingBlocks.length - 1}
               // Default keeps the block's own rendering, other modes follow the switch
               renderContent={
-                renderMode === "Default" ? undefined : renderContentByMode
+                renderMode === "Default"
+                  ? undefined
+                  : renderThinkingContentByMode
               }
             >
               {content}

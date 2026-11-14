@@ -1,25 +1,55 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bot, StopFilled } from "@carbon/icons-react";
+import {
+  Attachment,
+  Bot,
+  StopFilled,
+  Terminal,
+  Tools,
+} from "@carbon/icons-react";
+import { X } from "lucide-react";
 
 import {
+  clearAgentFormHistory,
+  loadAgentFormHistory,
+  saveAgentFormHistory,
+} from "../../agents/agentFormHistory";
+import {
+  clearAgentShellHistory,
+  loadAgentShellHistory,
+  mergeAgentMessages,
+  saveAgentShellHistory,
+} from "../../agents/agentShellHistory";
+import { updateAgent } from "../../agents/agentStore";
+import {
   compactOpencodeSession,
+  createOpencodeSession,
+  deleteOpencodeSession,
   getOpencodeDefaultModel,
   getOpencodeSession,
   interruptOpencodeSession,
+  listOpencodeAgents,
   listOpencodeCommands,
+  listOpencodeForms,
   listOpencodeMessages,
   listOpencodeModels,
   listOpencodePermissions,
+  replyOpencodeForm,
   replyOpencodePermission,
   runOpencodeShell,
   sendOpencodeCommand,
   sendOpencodePrompt,
+  setOpencodeAgent,
   setOpencodeModel,
+  subscribeOpencodeEvents,
 } from "../../apis/opencodeAgents";
 import Tooltip from "../Others/Tooltip";
 import ModelButton from "../Prompt/ModelButton";
 import SendButton from "../Prompt/SendButton";
+import AgentFormCard from "./AgentFormCard";
+import AgentFormResultCard from "./AgentFormResultCard";
+import { useModal } from "../../modals/ModalContext";
+import { useToast } from "../../hooks/useToast";
 import {
   rendererComponents,
   SafeMarkdown,
@@ -42,6 +72,8 @@ const toModelInfo = (model) => ({
   modelID: model.modelID ?? model.id,
 });
 
+const formHistoryTime = (entry) => entry?.time?.created ?? 0;
+
 const messageText = (message) => {
   if (message.type === "user") return message.text || "";
   if (message.type !== "assistant") return "";
@@ -57,23 +89,45 @@ const messageText = (message) => {
 
 export default function AgentConversation({ agent, modelsData = [] }) {
   const { t } = useTranslation();
+  const { openModal, confirmAction } = useModal();
+  const { notifyError } = useToast();
   const [messages, setMessages] = useState([]);
   const [commands, setCommands] = useState([]);
   const [models, setModels] = useState([]);
+  const [opencodeAgents, setOpencodeAgents] = useState([]);
+  const [selectedAgentId, setSelectedAgentId] = useState("");
+  const [lastNonPlanAgentId, setLastNonPlanAgentId] = useState("");
+  const [changingAgent, setChangingAgent] = useState(false);
+  const [shellMode, setShellMode] = useState(false);
+  const [pendingShell, setPendingShell] = useState(null);
   const [modelState, setModelState] = useState({
     id: agent?.id ?? "",
     settings: { model: null },
   });
   const [permissions, setPermissions] = useState([]);
+  const [forms, setForms] = useState([]);
+  const [formHistory, setFormHistory] = useState([]);
+  const [replyingForm, setReplyingForm] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [aborted, setAborted] = useState(false);
   const [replyingPermission, setReplyingPermission] = useState(null);
   const [error, setError] = useState("");
   const pollRef = useRef(null);
   const scrollRef = useRef(null);
   const modelKeyRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const pendingShellRef = useRef(null);
+  const shellMessagesRef = useRef(new Map());
+  const formHistoryRef = useRef([]);
+
+  const updatePendingShell = useCallback((value) => {
+    pendingShellRef.current = value;
+    setPendingShell(value);
+  }, []);
   const chatAIModelKey = useMemo(
     () =>
       (modelsData ?? [])
@@ -95,12 +149,73 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     }
   }, []);
 
+  const persistShellMessages = useCallback(() => {
+    if (!agent?.id || !agent?.sessionId) return;
+    saveAgentShellHistory(
+      agent.id,
+      agent.sessionId,
+      [...shellMessagesRef.current.values()],
+    );
+  }, [agent?.id, agent?.sessionId]);
+
+  const persistFormHistory = useCallback(
+    (entries) => {
+      if (!agent?.id || !agent?.sessionId) return;
+      saveAgentFormHistory(agent.id, agent.sessionId, entries);
+    },
+    [agent?.id, agent?.sessionId],
+  );
+
+  const replaceFormHistory = useCallback(
+    (entries) => {
+      formHistoryRef.current = entries;
+      setFormHistory(entries);
+      persistFormHistory(entries);
+    },
+    [persistFormHistory],
+  );
+
+  const mergeShellMessages = useCallback(
+    (next) => {
+      let changed = false;
+      for (const message of next) {
+        if (message.type !== "shell" || !message.shellID) continue;
+        const existing = shellMessagesRef.current.get(message.shellID);
+        if (!existing) {
+          shellMessagesRef.current.set(message.shellID, message);
+          changed = true;
+          continue;
+        }
+        const finished =
+          existing.status === "running" &&
+          message.status &&
+          message.status !== "running";
+        const gainedOutput = !existing.output && message.output;
+        if (finished || gainedOutput) {
+          shellMessagesRef.current.set(message.shellID, {
+            ...existing,
+            status: finished ? message.status : existing.status,
+            exit: existing.exit ?? message.exit,
+            output: existing.output ?? message.output,
+            time: { ...existing.time, ...message.time },
+          });
+          changed = true;
+        }
+      }
+      if (changed) persistShellMessages();
+      return mergeAgentMessages(next, shellMessagesRef.current);
+    },
+    [persistShellMessages],
+  );
+
   const refresh = useCallback(async () => {
     if (!agent?.sessionId) return [];
-    const next = await listOpencodeMessages(agent, agent.sessionId);
+    const next = mergeShellMessages(
+      await listOpencodeMessages(agent, agent.sessionId),
+    );
     setMessages(next);
     return next;
-  }, [agent]);
+  }, [agent, mergeShellMessages]);
 
   const refreshPermissions = useCallback(async () => {
     if (!agent?.sessionId) return [];
@@ -109,12 +224,38 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     return next;
   }, [agent]);
 
+  const refreshForms = useCallback(async () => {
+    if (!agent?.sessionId) return [];
+    const next = await listOpencodeForms(agent, agent.sessionId);
+    setForms(next);
+    const known = new Set(formHistoryRef.current.map((entry) => entry.id));
+    const additions = next
+      .filter((form) => form?.id && !known.has(form.id))
+      .map((form) => ({
+        id: form.id,
+        form,
+        time: { created: form.time?.created ?? Date.now() },
+      }));
+    if (additions.length) {
+      replaceFormHistory(
+        [...formHistoryRef.current, ...additions].sort(
+          (left, right) => formHistoryTime(left) - formHistoryTime(right),
+        ),
+      );
+    }
+    return next;
+  }, [agent, replaceFormHistory]);
+
   const startPolling = useCallback(
     (sentAt) => {
       let polls = 0;
       const poll = async () => {
         try {
-          const [next] = await Promise.all([refresh(), refreshPermissions()]);
+          const [next] = await Promise.all([
+            refresh(),
+            refreshPermissions(),
+            refreshForms(),
+          ]);
           const finished = next.some(
             (message) =>
               message.type === "idle" &&
@@ -142,18 +283,67 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     [refresh, refreshPermissions, t],
   );
 
+  const startShellPolling = useCallback(
+    (baseline) => {
+      let polls = 0;
+      const poll = async () => {
+        try {
+          const next = await refresh();
+          const shell = [...next]
+            .reverse()
+            .find(
+              (message) =>
+                message.type === "shell" && !baseline.has(message.id),
+            );
+          if (shell) updatePendingShell(null);
+          if (shell && shell.status !== "running") {
+            setSending(false);
+            return;
+          }
+        } catch (reason) {
+          setError(reason instanceof Error ? reason.message : String(reason));
+          updatePendingShell(null);
+          setSending(false);
+          return;
+        }
+        polls += 1;
+        if (polls >= MAX_POLLS) {
+          setError(t("agents.shell_timeout"));
+          updatePendingShell(null);
+          setSending(false);
+          return;
+        }
+        pollRef.current = setTimeout(poll, POLL_INTERVAL);
+      };
+      pollRef.current = setTimeout(poll, 400);
+    },
+    [refresh, t],
+  );
+
   useEffect(() => {
     if (!agent?.sessionId) return;
     let cancelled = false;
     setMessages([]);
     setPermissions([]);
+    setForms([]);
+    const storedForms = loadAgentFormHistory(agent.id, agent.sessionId);
+    formHistoryRef.current = storedForms;
+    setFormHistory(storedForms);
+    setReplyingForm(null);
+    shellMessagesRef.current = new Map(
+      loadAgentShellHistory(agent.id, agent.sessionId).map((message) => [
+        message.shellID,
+        message,
+      ]),
+    );
+    updatePendingShell(null);
     setInput("");
     setError("");
     setSending(false);
     setStopping(false);
     setAborted(false);
     stopPolling();
-    Promise.all([refresh(), refreshPermissions()]).catch((reason) => {
+    Promise.all([refresh(), refreshPermissions(), refreshForms()]).catch((reason) => {
       if (!cancelled) {
         setError(reason instanceof Error ? reason.message : String(reason));
       }
@@ -162,7 +352,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       cancelled = true;
       stopPolling();
     };
-  }, [agent, refresh, refreshPermissions, stopPolling]);
+  }, [agent, refresh, refreshPermissions, refreshForms, stopPolling]);
 
   useEffect(() => {
     if (!agent?.sessionId) return;
@@ -170,12 +360,33 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     Promise.all([
       listOpencodeModels(agent),
       listOpencodeCommands(agent).catch(() => []),
+      listOpencodeAgents(agent).catch(() => []),
       getOpencodeSession(agent, agent.sessionId).catch(() => null),
       getOpencodeDefaultModel(agent).catch(() => null),
     ])
-      .then(([rawModels, rawCommands, session, defaultModel]) => {
+      .then(([rawModels, rawCommands, rawAgents, session, defaultModel]) => {
         if (cancelled) return;
         setCommands(rawCommands ?? []);
+        const nextAgents = (rawAgents ?? []).filter(
+          (item) => !item.hidden && item.mode !== "subagent",
+        );
+        setOpencodeAgents(nextAgents);
+        const planId = nextAgents.find(
+          (item) => item.id === "plan" || item.name?.toLowerCase() === "plan",
+        )?.id;
+        const sessionAgent =
+          session?.agent ??
+          nextAgents.find((item) => item.id === "build")?.id ??
+          nextAgents[0]?.id ??
+          "";
+        setSelectedAgentId(sessionAgent);
+        setLastNonPlanAgentId(
+          sessionAgent !== planId
+            ? sessionAgent
+            : nextAgents.find((item) => item.id === "build")?.id ??
+                nextAgents.find((item) => item.id !== planId)?.id ??
+                "",
+        );
         const nextModels = (rawModels ?? [])
           .filter((model) => model?.enabled !== false)
           .map(toModelInfo)
@@ -218,9 +429,83 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   }, [agent, modelState.settings.model]);
 
   useEffect(() => {
+    if (!agent?.sessionId) return;
+    const controller = new AbortController();
+    let timer = null;
+    const schedule = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        void refresh().catch(() => {});
+        void refreshPermissions().catch(() => {});
+        void refreshForms().catch(() => {});
+      }, 250);
+    };
+    const handleEvent = (event) => {
+      const type = event?.type;
+      const data = event?.data;
+      const shell = data?.shell;
+      if (type === "session.shell.started" && shell?.id) {
+        const existing = shellMessagesRef.current.get(shell.id);
+        shellMessagesRef.current.set(shell.id, {
+          id: existing?.id ?? `shell:${shell.id}`,
+          type: "shell",
+          shellID: shell.id,
+          command: shell.command ?? existing?.command ?? "",
+          status: shell.status ?? "running",
+          exit: shell.exit,
+          output: existing?.output,
+          time: {
+            ...existing?.time,
+            created: event.created ?? Date.now(),
+          },
+        });
+        persistShellMessages();
+        setMessages((current) => mergeShellMessages(current));
+      } else if (type === "session.shell.ended" && shell?.id) {
+        const existing = shellMessagesRef.current.get(shell.id);
+        shellMessagesRef.current.set(shell.id, {
+          id: existing?.id ?? `shell:${shell.id}`,
+          type: "shell",
+          shellID: shell.id,
+          command: shell.command ?? existing?.command ?? "",
+          status: shell.status ?? "exited",
+          exit: shell.exit ?? existing?.exit,
+          output: data.output ?? existing?.output,
+          time: {
+            ...existing?.time,
+            created: existing?.time?.created ?? event.created ?? Date.now(),
+            completed: event.created ?? Date.now(),
+          },
+        });
+        persistShellMessages();
+        setMessages((current) => mergeShellMessages(current));
+        const pending = pendingShellRef.current;
+        if (pending && shell.command === pending.command) {
+          updatePendingShell(null);
+          setSending(false);
+        }
+      }
+      schedule();
+    };
+    subscribeOpencodeEvents(agent, handleEvent, controller.signal).catch(() => {});
+    return () => {
+      controller.abort();
+      if (timer) clearTimeout(timer);
+    };
+  }, [
+    agent,
+    refresh,
+    refreshPermissions,
+    refreshForms,
+    updatePendingShell,
+    mergeShellMessages,
+    persistShellMessages,
+  ]);
+
+  useEffect(() => {
     const element = scrollRef.current;
     if (element) element.scrollTop = element.scrollHeight;
-  }, [messages, sending, aborted]);
+  }, [messages, sending, aborted, formHistory, forms]);
 
   const stop = async () => {
     if (!sending || !agent?.sessionId || stopping) return;
@@ -236,6 +521,93 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setStopping(false);
+    }
+  };
+
+  const resetSession = async () => {
+    if (!agent?.sessionId || clearing) return;
+    const previousSessionId = agent.sessionId;
+    setClearing(true);
+    setError("");
+    try {
+      await interruptOpencodeSession(agent, previousSessionId).catch(() => {});
+      const session = await createOpencodeSession(
+        agent,
+        `${agent.name} agent`,
+      );
+      clearAgentShellHistory(agent.id);
+      clearAgentFormHistory(agent.id);
+      shellMessagesRef.current = new Map();
+      formHistoryRef.current = [];
+      stopPolling();
+      updatePendingShell(null);
+      setMessages([]);
+      setPermissions([]);
+      setForms([]);
+      setFormHistory([]);
+      setReplyingForm(null);
+      setAttachments([]);
+      setInput("");
+      setSending(false);
+      setStopping(false);
+      setAborted(false);
+      updateAgent(agent.id, { sessionId: session.id });
+      await deleteOpencodeSession(agent, previousSessionId).catch(() => {});
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  const clearHistory = () =>
+    confirmAction(
+      {
+        warningKey: "warn_clear_history",
+        messageKey: "alert.clear_agent_history",
+        confirmKey: "alert.clear_agent_history_yes",
+        danger: true,
+      },
+      resetSession,
+    );
+
+  const answerForm = async (form, answer) => {
+    if (!agent?.sessionId || replyingForm) return;
+    setReplyingForm(form.id);
+    setError("");
+    try {
+      await replyOpencodeForm(agent, agent.sessionId, form.id, answer);
+      setForms((current) => current.filter((item) => item.id !== form.id));
+      const submittedAt = Date.now();
+      const existing = formHistoryRef.current.find(
+        (entry) => entry.id === form.id,
+      );
+      const next = existing
+        ? formHistoryRef.current.map((entry) =>
+            entry.id === form.id
+              ? {
+                  ...entry,
+                  form,
+                  answers: { ...answer },
+                  time: { ...entry.time, submitted: submittedAt },
+                }
+              : entry,
+          )
+        : [
+            ...formHistoryRef.current,
+            {
+              id: form.id,
+              form,
+              answers: { ...answer },
+              time: { created: submittedAt, submitted: submittedAt },
+            },
+          ];
+      replaceFormHistory(next);
+      await refresh().catch(() => {});
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setReplyingForm(null);
     }
   };
 
@@ -292,6 +664,72 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     }
   };
 
+  const addFiles = async (event) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!files.length) return;
+    try {
+      const next = [];
+      for (const file of files) {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () =>
+            resolve(String(reader.result ?? "").split(",")[1] ?? "");
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        next.push({
+          name: file.name,
+          mime: file.type || "application/octet-stream",
+          base64,
+        });
+      }
+      setAttachments((current) => [...current, ...next]);
+    } catch (reason) {
+      notifyError(reason instanceof Error ? reason.message : String(reason));
+    }
+  };
+
+  const planAgent = useMemo(
+    () =>
+      opencodeAgents.find(
+        (item) => item.id === "plan" || item.name?.toLowerCase() === "plan",
+      ),
+    [opencodeAgents],
+  );
+
+  const changeAgent = async (nextAgentId) => {
+    if (!nextAgentId || nextAgentId === selectedAgentId || changingAgent) {
+      return;
+    }
+    const previous = selectedAgentId;
+    setSelectedAgentId(nextAgentId);
+    setChangingAgent(true);
+    setError("");
+    try {
+      await setOpencodeAgent(agent, agent.sessionId, nextAgentId);
+      if (nextAgentId !== planAgent?.id) setLastNonPlanAgentId(nextAgentId);
+    } catch (reason) {
+      setSelectedAgentId(previous);
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setChangingAgent(false);
+    }
+  };
+
+  const togglePlan = (checked) => {
+    if (checked) {
+      if (planAgent) void changeAgent(planAgent.id);
+      return;
+    }
+    const fallback =
+      lastNonPlanAgentId ||
+      opencodeAgents.find((item) => item.id === "build")?.id ||
+      opencodeAgents.find((item) => item.id !== planAgent?.id)?.id ||
+      "";
+    if (fallback) void changeAgent(fallback);
+  };
+
   const send = async () => {
     const text = input.trim();
     if (!text || sending || !agent?.sessionId) return;
@@ -300,6 +738,15 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     setError("");
     setInput("");
     try {
+      if (shellMode) {
+        const baseline = new Set(
+          messages.filter((message) => message.type === "shell").map((message) => message.id),
+        );
+        updatePendingShell({ command: text });
+        await runOpencodeShell(agent, agent.sessionId, text);
+        startShellPolling(baseline);
+        return;
+      }
       if (text.startsWith("/")) {
         const [name, ...rest] = text.slice(1).split(/\s+/);
         if (name === "compact") {
@@ -316,29 +763,83 @@ export default function AgentConversation({ agent, modelsData = [] }) {
         return;
       }
       if (text.startsWith("!")) {
-        await runOpencodeShell(agent, agent.sessionId, text.slice(1).trim());
-        startPolling(Date.now());
+        const command = text.slice(1).trim();
+        const baseline = new Set(
+          messages.filter((message) => message.type === "shell").map((message) => message.id),
+        );
+        updatePendingShell({ command });
+        await runOpencodeShell(agent, agent.sessionId, command);
+        startShellPolling(baseline);
         return;
       }
-      const result = await sendOpencodePrompt(agent, agent.sessionId, text);
+      const files = attachments.map((attachment) => ({
+        uri: `data:${attachment.mime};base64,${attachment.base64}`,
+        name: attachment.name,
+        source: { type: "inline" },
+      }));
+      const result = await sendOpencodePrompt(
+        agent,
+        agent.sessionId,
+        text,
+        files,
+      );
+      setAttachments([]);
       const sentAt = result?.data?.time?.created ?? Date.now();
       startPolling(sentAt);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
+      updatePendingShell(null);
       setInput(text);
       setSending(false);
     }
   };
 
+  const shellRunning = messages.some(
+    (message) => message.type === "shell" && message.status === "running",
+  );
+
+  const shellStatus = (message) => {
+    if (message.status === "running") {
+      return { label: t("agents.shell_status_running"), className: "badge-warning" };
+    }
+    if (message.status === "exited") {
+      const succeeded = message.exit === undefined || message.exit === 0;
+      return {
+        label: succeeded ? t("agents.shell_status_done") : t("agents.shell_status_failed"),
+        className: succeeded ? "badge-success" : "badge-error",
+      };
+    }
+    return { label: message.status, className: "badge-error" };
+  };
+
   const timeline = messages.flatMap((message) => {
+    const time = message.time?.created ?? 0;
     if (message.type === "idle" && message.outcome === "interrupted") {
       // The local marker is shown immediately after an abort; the persisted idle marker
       // takes over after the page mounts or the user switches conversations.
-      return aborted ? [] : [{ kind: "aborted", message }];
+      return aborted ? [] : [{ kind: "aborted", message, time }];
+    }
+    if (message.type === "shell") {
+      return [{ kind: "shell", message, status: shellStatus(message), time }];
     }
     const text = messageText(message);
-    return text.trim() ? [{ kind: "message", message, text }] : [];
+    return text.trim() ? [{ kind: "message", message, text, time }] : [];
   });
+
+  const activeFormIds = new Set(forms.map((form) => form.id));
+  for (const entry of formHistory) {
+    const answered = entry.answers !== undefined;
+    const time = answered
+      ? (entry.time?.submitted ?? entry.time?.created ?? 0)
+      : (entry.time?.created ?? 0);
+    const index = timeline.findIndex((item) => item.time > time);
+    timeline.splice(index === -1 ? timeline.length : index, 0, {
+      kind: answered ? "form-result" : "form",
+      entry,
+      active: activeFormIds.has(entry.id),
+      time,
+    });
+  }
 
   return (
     <section className="mx-auto flex h-full w-full flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm md:max-w-[85vw] xl:max-w-[1300px]">
@@ -354,6 +855,22 @@ export default function AgentConversation({ agent, modelsData = [] }) {
             {agent.serverUrl}
           </p>
         </div>
+        <Tooltip text={t("agents.clear_history")}>
+          <button
+            type="button"
+            onClick={clearHistory}
+            disabled={clearing}
+            data-guide="agent-clear-history"
+            aria-label={t("agents.clear_history")}
+            className="btn btn-ghost btn-sm btn-square shrink-0 rounded-full text-base-content/70 hover:bg-error/10 hover:text-error"
+          >
+            {clearing ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <X className="h-4 w-4" />
+            )}
+          </button>
+        </Tooltip>
       </header>
 
       <div
@@ -373,6 +890,50 @@ export default function AgentConversation({ agent, modelsData = [] }) {
               >
                 {t("agents.aborted_by_user")}
               </p>
+            ) : item.kind === "form" ? (
+              <AgentFormCard
+                key={item.entry.id}
+                form={item.entry.form}
+                readOnly={!item.active}
+                replying={replyingForm === item.entry.id}
+                onReply={answerForm}
+              />
+            ) : item.kind === "form-result" ? (
+              <AgentFormResultCard
+                key={item.entry.id}
+                form={item.entry.form}
+                answers={item.entry.answers}
+              />
+            ) : item.kind === "shell" ? (
+              <div
+                key={item.message.id}
+                className="rounded-xl border border-warning/30 bg-base-300/40 p-2 font-mono text-[11px]"
+              >
+                <div className="flex items-center gap-1.5 text-base-content/70">
+                  <span className="text-warning">$</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {item.message.command}
+                  </span>
+                  <span className={`badge badge-xs ${item.status.className}`}>
+                    {item.status.label}
+                  </span>
+                </div>
+                {item.message.output?.output ? (
+                  <pre className="mt-1 whitespace-pre-wrap break-words text-base-content">
+                    {item.message.output.output}
+                  </pre>
+                ) : item.message.status === "running" ? (
+                  <p className="mt-1 flex items-center gap-1 text-base-content/50">
+                    <span className="loading loading-spinner loading-xs" />
+                    {t("agents.shell_running")}
+                  </p>
+                ) : null}
+                {item.message.exit !== undefined && (
+                  <p className="mt-1 text-base-content/50">
+                    {t("agents.shell_exit", { code: item.message.exit })}
+                  </p>
+                )}
+              </div>
             ) : (
               <div
                 key={item.message.id}
@@ -399,12 +960,34 @@ export default function AgentConversation({ agent, modelsData = [] }) {
             ),
           )
         )}
+        {pendingShell &&
+          !messages.some(
+            (message) =>
+              message.type === "shell" &&
+              message.command === pendingShell.command,
+          ) && (
+          <div className="rounded-xl border border-warning/30 bg-base-300/40 p-2 font-mono text-[11px]">
+            <div className="flex items-center gap-1.5 text-base-content/70">
+              <span className="text-warning">$</span>
+              <span className="min-w-0 flex-1 truncate">
+                {pendingShell.command}
+              </span>
+              <span className="badge badge-warning badge-xs">
+                {t("agents.shell")}
+              </span>
+            </div>
+            <p className="mt-1 flex items-center gap-1 text-base-content/50">
+              <span className="loading loading-spinner loading-xs" />
+              {t("agents.shell_running")}
+            </p>
+          </div>
+        )}
         {aborted && (
           <p className="self-center rounded-full bg-base-200 px-3 py-1 text-xs text-base-content/60">
             {t("agents.aborted_by_user")}
           </p>
         )}
-        {sending && (
+        {sending && !pendingShell && !shellRunning && (
           <p className="flex items-center gap-2 text-xs text-base-content/60">
             <span className="loading loading-spinner loading-xs" />
             {t("agents.working")}
@@ -478,33 +1061,127 @@ export default function AgentConversation({ agent, modelsData = [] }) {
             }
           }}
           rows={2}
-          className="textarea textarea-bordered min-h-16 w-full resize-none"
-          placeholder={t("agents.chat_empty")}
+          className={`textarea min-h-16 w-full resize-none ${
+            shellMode ? "textarea-warning" : "textarea-bordered"
+          }`}
+          placeholder={
+            shellMode ? t("agents.shell_placeholder") : t("agents.chat_empty")
+          }
         />
-        <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-          <select
-            value=""
-            onChange={(event) => {
-              void runCommand(event.target.value);
-              event.target.value = "";
-            }}
-            disabled={sending || commandOptions.length === 0}
-            aria-label={t("agents.commands")}
-            className="select select-bordered select-sm w-full max-w-[14rem]"
-          >
-            <option value="">{t("agents.commands")}</option>
-            {commandOptions.map((command) => (
-              <option key={command.name} value={command.name}>
-                {command.name}
-                {command.description ? ` — ${command.description}` : ""}
-              </option>
+        {attachments.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {attachments.map((attachment, index) => (
+              <span
+                key={`${attachment.name}-${index}`}
+                className="inline-flex items-center gap-1 rounded-full bg-base-200 px-2 py-1 text-[11px]"
+              >
+                <span className="max-w-[12rem] truncate">{attachment.name}</span>
+                <button
+                  type="button"
+                  className="text-base-content/50 hover:text-error"
+                  onClick={() =>
+                    setAttachments((current) =>
+                      current.filter((_, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                  aria-label={t("common.delete")}
+                >
+                  ×
+                </button>
+              </span>
             ))}
-          </select>
-          <ModelButton
-            localState={modelState}
-            setLocalState={setModelState}
-            modelsData={models}
-          />
+          </div>
+        )}
+        <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={addFiles}
+            />
+            <button
+              type="button"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-accent hover:bg-base-200"
+              onClick={() => {
+                fileInputRef.current.value = null;
+                fileInputRef.current.click();
+              }}
+              title={t("conversation.prompt.attach")}
+              aria-label={t("conversation.prompt.attach")}
+            >
+              <Attachment size={20} />
+            </button>
+          </div>
+          <div className="flex min-w-0 items-center justify-center gap-2">
+            <Tooltip text={t("agents.shell_tooltip")}>
+              <label className="flex shrink-0 cursor-pointer items-center gap-1 text-[11px] text-warning">
+                <input
+                  type="checkbox"
+                  className="toggle toggle-warning toggle-xs"
+                  checked={shellMode}
+                  disabled={sending}
+                  onChange={(event) => setShellMode(event.target.checked)}
+                />
+                <Terminal size={14} />
+                {t("agents.shell")}
+              </label>
+            </Tooltip>
+            {planAgent && (
+              <Tooltip text={t("agents.plan_tooltip")}>
+                <label className="flex shrink-0 cursor-pointer items-center gap-1 text-[11px] text-base-content/70">
+
+                <input
+                  type="checkbox"
+                  className={`checkbox checkbox-xs ${
+                    selectedAgentId === planAgent.id
+                      ? "checkbox-success"
+                      : "checkbox-warning"
+                  }`}
+                  checked={selectedAgentId === planAgent.id}
+                  disabled={changingAgent || sending}
+                  onChange={(event) => togglePlan(event.target.checked)}
+                />
+                {t("agents.plan")}
+                </label>
+              </Tooltip>
+            )}
+            <Tooltip text={t("agents.commands_tooltip")} className="min-w-0">
+              <select
+                value=""
+                onChange={(event) => {
+                  void runCommand(event.target.value);
+                  event.target.value = "";
+                }}
+                disabled={sending || commandOptions.length === 0}
+                aria-label={t("agents.commands")}
+                className="select select-bordered select-sm w-[9rem] min-w-0"
+              >
+                <option value="">{t("agents.commands")}</option>
+                {commandOptions.map((command) => (
+                  <option key={command.name} value={command.name}>
+                    {command.name}
+                    {command.description ? ` — ${command.description}` : ""}
+                  </option>
+                ))}
+              </select>
+            </Tooltip>
+            <button
+              type="button"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-accent hover:bg-base-200"
+              onClick={() => openModal("agentTools", { agent })}
+              title={t("agents.tools.title")}
+              aria-label={t("agents.tools.title")}
+            >
+              <Tools size={20} />
+            </button>
+            <ModelButton
+              localState={modelState}
+              setLocalState={setModelState}
+              modelsData={models}
+            />
+          </div>
           <div className="flex items-center justify-end gap-2">
             {sending && (
               <Tooltip text={t("common.abort")}>
@@ -539,9 +1216,6 @@ export default function AgentConversation({ agent, modelsData = [] }) {
             />
           </div>
         </div>
-        <p className="mt-1 text-[10px] text-base-content/50">
-          {t("agents.command_hint")}
-        </p>
       </div>
     </section>
   );
