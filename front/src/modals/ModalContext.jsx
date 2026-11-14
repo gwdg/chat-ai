@@ -52,6 +52,8 @@ import TransferConfirmModal from "./Workspace/TransferConfirmModal";
 import MoveToModal from "./Workspace/MoveToModal";
 import AddMountModal from "./Workspace/AddMountModal";
 import AttachChatModal from "./Workspace/AttachChatModal";
+import CreateEntryModal from "./Workspace/CreateEntryModal";
+import RenameWorkspaceModal from "./Workspace/RenameWorkspaceModal";
 
 const ModalContext = createContext();
 
@@ -215,6 +217,12 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "workspaceAttachChat" && (
         <AttachChatModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceCreateEntry" && (
+        <CreateEntryModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceRename" && (
+        <RenameWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "summarizeChat" && (
         <SummarizeChatModal isOpen onClose={closeModal} {...modalProps} />

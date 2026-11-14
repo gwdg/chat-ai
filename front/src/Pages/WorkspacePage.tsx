@@ -9,6 +9,8 @@ import {
   Folder,
   FolderAdd,
   Home,
+  Locked,
+  Unlocked,
   TrashCan,
   WarningAltFilled,
 } from "@carbon/icons-react";
@@ -28,16 +30,22 @@ import {
   getDeviceId,
   removeSource,
   removeWorkspaceMount,
+  updateSource,
   saveTransfer,
-  syncWorkspacesFromServer,
+  setWorkspaceMountReadOnly,
   usePendingTransfers,
   useWorkspace,
   useWorkspaceChats,
   useWorkspaceMounts,
   useWorkspaceSources,
 } from "../db/workspaceDb";
-import type { WorkspaceFileEntry } from "../db/dbTypes";
+import type { WorkspaceFileEntry, WorkspaceMountRow } from "../db/dbTypes";
 import { DEVICE_PLANE_KINDS } from "../workspace/deviceId";
+import {
+  createWorkspaceRootProvider,
+  emptyStream,
+  workspaceRootSourceId,
+} from "../workspace/workspaceRoot";
 import { useWorkspaceProviders } from "../workspace/useWorkspaceProviders";
 import { planTransfer } from "../workspace/transferPlanner";
 import { runTransfer } from "../workspace/transfer";
@@ -66,6 +74,11 @@ const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> 
 };
 
 const PREVIEW_LIMIT = 8 * 1024 * 1024;
+
+type RootEntry = WorkspaceFileEntry & {
+  local: boolean;
+  mount?: WorkspaceMountRow;
+};
 
 const isTextFile = (entry: WorkspaceFileEntry): boolean => {
   const name = entry.name.toLowerCase();
@@ -128,16 +141,23 @@ export default function WorkspacePage() {
   const pendingTransfers = usePendingTransfers(workspaceId);
   const resumedRef = useRef<Set<string>>(new Set());
   const { providers, reconnect } = useWorkspaceProviders(sources);
+  const rootProvider = useMemo(
+    () => (workspaceId ? createWorkspaceRootProvider(workspaceId) : null),
+    [workspaceId],
+  );
+  const [rootPath, setRootPath] = useState("/");
+  const [rootEntries, setRootEntries] = useState<RootEntry[]>([]);
+  const [rootLoading, setRootLoading] = useState(false);
+  const [rootError, setRootError] = useState("");
 
-  useEffect(() => {
-    void syncWorkspacesFromServer();
-  }, []);
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
     [],
   );
 
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [activeMountId, setActiveMountId] = useState<string | null>(null);
+  const activeMount = mounts.find((mount) => mount.id === activeMountId);
   const [pathBySource, setPathBySource] = useState<Record<string, string>>({});
   const [entries, setEntries] = useState<WorkspaceFileEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
@@ -175,6 +195,12 @@ export default function WorkspacePage() {
       setSelectedSourceId(null);
     }
   }, [sources, selectedSourceId]);
+
+  useEffect(() => {
+    if (activeMountId && !mounts.some((mount) => mount.id === activeMountId)) {
+      setActiveMountId(null);
+    }
+  }, [mounts, activeMountId]);
 
   const refreshQuota = useCallback(async (provider: FileProvider) => {
     if (!provider.quota) return;
@@ -262,6 +288,76 @@ export default function WorkspacePage() {
     void loadEntries(false);
   }, [selectedSourceId, currentPath, selectedProvider]);
 
+  const loadRoot = useCallback(async () => {
+    if (!rootProvider || !workspaceId) {
+      setRootEntries([]);
+      return;
+    }
+    setRootLoading(true);
+    setRootError("");
+    try {
+      await rootProvider.connect();
+      const page = await rootProvider.list(rootPath);
+      const local: RootEntry[] = page.entries.map((entry) => ({
+        ...entry,
+        local: true,
+      }));
+      const prefix = rootPath === "/" ? "/" : `${rootPath}/`;
+      const virtual = new Map<string, RootEntry>();
+      for (const mount of mounts) {
+        const mountPath = normalizePath(mount.path);
+        if (mountPath === rootPath || !mountPath.startsWith(prefix)) continue;
+        const rest = mountPath.slice(prefix.length);
+        const first = rest.split("/")[0];
+        if (!first || local.some((entry) => entry.name === first)) continue;
+        const path = joinPath(rootPath, first);
+        if (virtual.has(first)) continue;
+        virtual.set(first, {
+          sourceId: workspaceRootSourceId(workspaceId),
+          path,
+          name: first,
+          kind: "dir",
+          local: false,
+          mount: mountPath === path ? mount : undefined,
+        });
+      }
+      setRootEntries([...local, ...virtual.values()]);
+    } catch (error) {
+      setRootError(error instanceof Error ? error.message : String(error));
+      setRootEntries([]);
+    } finally {
+      setRootLoading(false);
+    }
+  }, [rootProvider, workspaceId, rootPath, mounts]);
+
+  useEffect(() => {
+    void loadRoot();
+  }, [loadRoot]);
+
+  const createRootEntry = (kind: "dir" | "file") => {
+    openModal("workspaceCreateEntry", {
+      kind,
+      path: rootPath,
+      onCreate: async (name: string) => {
+        if (!rootProvider) return;
+        await rootProvider.connect();
+        const path = joinPath(rootPath, name);
+        if (kind === "dir") {
+          await rootProvider.mkdir(path);
+        } else {
+          await rootProvider.write(path, emptyStream(), { overwrite: false });
+        }
+        await loadRoot();
+      },
+    });
+  };
+
+  const removeRootEntry = async (entry: RootEntry) => {
+    if (!rootProvider || !entry.local) return;
+    await rootProvider.remove(entry.path, { recursive: true });
+    await loadRoot();
+  };
+
   const closePreview = useCallback(() => {
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current);
@@ -277,8 +373,11 @@ export default function WorkspacePage() {
     [],
   );
 
-  const openFile = async (entry: WorkspaceFileEntry) => {
-    if (!selectedProvider) return;
+  const openFile = async (
+    entry: WorkspaceFileEntry,
+    provider = selectedProvider,
+  ) => {
+    if (!provider) return;
     if (entry.kind === "dir") {
       setPathBySource((current) => ({
         ...current,
@@ -298,7 +397,7 @@ export default function WorkspacePage() {
         return;
       }
       if (isTextFile(entry)) {
-        const bytes = await readAll(await selectedProvider.read(entry.path));
+        const bytes = await readAll(await provider.read(entry.path));
         setPreview({
           entry,
           loading: false,
@@ -306,7 +405,7 @@ export default function WorkspacePage() {
         });
         return;
       }
-      const bytes = await readAll(await selectedProvider.read(entry.path));
+      const bytes = await readAll(await provider.read(entry.path));
       const blob = new Blob([bytes], { type: entry.mime || "application/octet-stream" });
       const url = URL.createObjectURL(blob);
       previewUrlRef.current = url;
@@ -344,7 +443,8 @@ export default function WorkspacePage() {
     });
   };
 
-  const openMount = (mount: { sourceId: string; sourcePath: string }) => {
+  const openMount = (mount: { id: string; sourceId: string; sourcePath: string }) => {
+    setActiveMountId(mount.id);
     setSelectedSourceId(mount.sourceId);
     setPathBySource((current) => ({
       ...current,
@@ -354,6 +454,10 @@ export default function WorkspacePage() {
 
   const removeMount = (mountId: string) => {
     void removeWorkspaceMount(workspaceId!, mountId);
+  };
+
+  const toggleMountReadOnly = (mount: WorkspaceMountRow) => {
+    void setWorkspaceMountReadOnly(mount.id, !mount.readOnly);
   };
 
   const attachChat = () => {
@@ -366,6 +470,10 @@ export default function WorkspacePage() {
 
   const detachChat = (conversationId: string) => {
     void detachWorkspaceChat(workspaceId!, conversationId);
+  };
+
+  const toggleSourceReadOnly = (source: { id: string; readOnly?: boolean }) => {
+    void updateSource(source.id, { readOnly: !source.readOnly });
   };
 
   const removeSelectedSource = (sourceId: string, label: string) => {
@@ -485,6 +593,24 @@ export default function WorkspacePage() {
       notifyError(plan.warnings[0] || t("workspace.transfer_blocked"));
       return;
     }
+    if (
+      activeMount?.readOnly &&
+      fromSourceId === selectedSourceId &&
+      plan.strategy === "move"
+    ) {
+      notifyError(t("workspace.mount_read_only_error"));
+      return;
+    }
+    const fromSourceRow = sources.find((source) => source.id === fromSourceId);
+    const toSourceRow = sources.find((source) => source.id === toSourceId);
+    if (toSourceRow?.readOnly) {
+      notifyError(t("workspace.source_read_only_error"));
+      return;
+    }
+    if (fromSourceRow?.readOnly && plan.strategy === "move") {
+      notifyError(t("workspace.source_read_only_error"));
+      return;
+    }
     const fromLabel = sources.find((source) => source.id === fromSourceId)?.label ?? "";
     const toLabel = sources.find((source) => source.id === toSourceId)?.label ?? "";
     if (plan.requiresConfirmation) {
@@ -546,6 +672,17 @@ export default function WorkspacePage() {
     }
     return items;
   }, [currentPath, t]);
+
+  const rootBreadcrumbs = useMemo(() => {
+    const parts = normalizePath(rootPath).split("/").filter(Boolean);
+    const items = [{ label: t("workspace.root"), path: "/" }];
+    let path = "/";
+    for (const part of parts) {
+      path = joinPath(path, part);
+      items.push({ label: part, path });
+    }
+    return items;
+  }, [rootPath, t]);
 
   return (
     <div className="h-dvh grid grid-rows-[auto_1fr]">
@@ -655,9 +792,17 @@ export default function WorkspacePage() {
                             onDrop={(event) => {
                               if (unavailable) return;
                               setDragHint(null);
+                              if (source.readOnly) {
+                                notifyError(t("workspace.source_read_only_error"));
+                                return;
+                              }
                               onDrop(event, source.id, "/");
                             }}
-                            className={`mb-1 rounded-lg border px-2 py-1.5 transition ${
+                            onClick={() => {
+                              setActiveMountId(null);
+                              setSelectedSourceId(source.id);
+                            }}
+                            className={`mb-1 cursor-pointer rounded-lg border px-2 py-1.5 transition ${
                               active
                                 ? "border-accent/40 bg-accent/10"
                                 : "border-transparent hover:bg-base-200"
@@ -666,7 +811,10 @@ export default function WorkspacePage() {
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => setSelectedSourceId(source.id)}
+                                onClick={() => {
+                                  setActiveMountId(null);
+                                  setSelectedSourceId(source.id);
+                                }}
                                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
                               >
                                 <span className="truncate text-xs font-medium text-base-content">
@@ -678,9 +826,34 @@ export default function WorkspacePage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  removeSelectedSource(source.id, source.label)
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleSourceReadOnly(source);
+                                }}
+                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
+                                title={
+                                  source.readOnly
+                                    ? t("workspace.make_source_writable")
+                                    : t("workspace.make_source_read_only")
                                 }
+                                aria-label={
+                                  source.readOnly
+                                    ? t("workspace.make_source_writable")
+                                    : t("workspace.make_source_read_only")
+                                }
+                              >
+                                {source.readOnly ? (
+                                  <Locked size={12} />
+                                ) : (
+                                  <Unlocked size={12} />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  removeSelectedSource(source.id, source.label);
+                                }}
                                 className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-error/10 hover:text-error"
                                 aria-label={t("workspace.remove_source")}
                                 title={t("workspace.remove_source")}
@@ -694,6 +867,11 @@ export default function WorkspacePage() {
                                   {t("workspace.device_only")}
                                 </span>
                               )}
+                              {source.readOnly && (
+                                <span className="badge badge-warning badge-xs">
+                                  {t("workspace.source_read_only")}
+                                </span>
+                              )}
                               {unavailable && (
                                 <span className="badge badge-error badge-xs">
                                   {t("workspace.unavailable_on_device")}
@@ -703,7 +881,10 @@ export default function WorkspacePage() {
                                 <button
                                   type="button"
                                   className="badge badge-warning badge-xs cursor-pointer"
-                                  onClick={() => reconnect(source.id)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    reconnect(source.id);
+                                  }}
                                 >
                                   {t("workspace.reconnect")}
                                 </button>
@@ -712,7 +893,10 @@ export default function WorkspacePage() {
                                 <button
                                   type="button"
                                   className="badge badge-error badge-xs cursor-pointer"
-                                  onClick={() => reconnect(source.id)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    reconnect(source.id);
+                                  }}
                                   title={source.error}
                                 >
                                   {t("workspace.retry")}
@@ -740,6 +924,90 @@ export default function WorkspacePage() {
                         );
                       })
                     )}
+                  </div>
+                  <div className="border-t border-base-300 p-1.5">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+                        {t("workspace.workspace_root")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={addFolder}
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
+                        title={t("workspace.add_folder")}
+                        aria-label={t("workspace.add_folder")}
+                      >
+                        <FolderAdd size={15} />
+                      </button>
+                    </div>
+                    <div className="mt-1 max-h-44 overflow-y-auto">
+                      {mounts.length === 0 ? (
+                        <p className="px-1 py-1 text-[10px] text-base-content/50">
+                          {t("workspace.no_mounts")}
+                        </p>
+                      ) : (
+                        mounts.map((mount) => {
+                          const source = sources.find(
+                            (candidate) => candidate.id === mount.sourceId,
+                          );
+                          const sourceReadOnly = source?.readOnly === true;
+                          const effectiveReadOnly =
+                            mount.readOnly === true || sourceReadOnly;
+                          return (
+                            <div
+                              key={mount.id}
+                              className="group flex items-center gap-1 rounded-md px-1 py-1 hover:bg-base-200"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => openMount(mount)}
+                                className="flex min-w-0 flex-1 items-center gap-1 text-left text-xs text-base-content"
+                                title={mount.path}
+                              >
+                                <Folder size={13} className="shrink-0 text-accent" />
+                                <span className="min-w-0 flex-1 truncate font-mono">
+                                  {mount.path}
+                                </span>
+                                <span className="shrink-0 text-[10px] text-base-content/40">
+                                  {source?.label ?? mount.sourceId}
+                                </span>
+                              </button>
+                              {effectiveReadOnly && (
+                                <button
+                                  type="button"
+                                  onClick={() => !sourceReadOnly && toggleMountReadOnly(mount)}
+                                  disabled={sourceReadOnly}
+                                  className={`flex h-5 w-5 items-center justify-center rounded text-warning transition ${
+                                    sourceReadOnly ? "cursor-default" : "hover:bg-base-200"
+                                  }`}
+                                  title={
+                                    sourceReadOnly
+                                      ? t("workspace.source_read_only")
+                                      : t("workspace.make_writable")
+                                  }
+                                  aria-label={
+                                    sourceReadOnly
+                                      ? t("workspace.source_read_only")
+                                      : t("workspace.make_writable")
+                                  }
+                                >
+                                  <Locked size={12} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeMount(mount.id)}
+                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
+                                title={t("workspace.remove_mount")}
+                                aria-label={t("workspace.remove_mount")}
+                              >
+                                <TrashCan size={12} />
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                   <div className="border-t border-base-300 p-1.5">
                     <div className="flex items-center justify-between px-1">
@@ -793,65 +1061,217 @@ export default function WorkspacePage() {
                 <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100">
                   {!selectedProvider ? (
                     <div className="flex flex-1 flex-col">
-                      <div className="flex items-center gap-2 border-b border-base-300 px-3 py-2 text-xs">
-                        <span className="font-medium">{t("workspace.root")}</span>
+                      <div className="flex flex-wrap items-center gap-1 border-b border-base-300 px-3 py-2 text-xs">
                         <button
                           type="button"
-                          onClick={addFolder}
-                          className="ml-auto btn btn-ghost btn-xs"
+                          onClick={() => setRootPath("/")}
+                          className="flex h-5 w-5 items-center justify-center rounded text-base-content/60 hover:bg-base-200"
+                          title={t("workspace.root")}
                         >
-                          <FolderAdd size={14} />
-                          {t("workspace.add_folder")}
+                          <Home size={14} />
                         </button>
+                        {rootBreadcrumbs.map((crumb, index) => (
+                          <span key={crumb.path} className="flex items-center gap-1">
+                            {index > 0 && (
+                              <ChevronRight size={12} className="text-base-content/30" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setRootPath(crumb.path)}
+                              className="max-w-[10rem] truncate rounded px-1 py-0.5 hover:bg-base-200"
+                            >
+                              {crumb.label}
+                            </button>
+                          </span>
+                        ))}
+                        <div className="ml-auto flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => createRootEntry("dir")}
+                            className="btn btn-ghost btn-xs"
+                            title={t("workspace.new_folder")}
+                          >
+                            <FolderAdd size={14} />
+                            {t("workspace.new_folder")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => createRootEntry("file")}
+                            className="btn btn-ghost btn-xs"
+                            title={t("workspace.new_file")}
+                          >
+                            <Add size={14} />
+                            {t("workspace.new_file")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={addFolder}
+                            className="btn btn-ghost btn-xs"
+                            title={t("workspace.add_folder")}
+                          >
+                            <Folder size={14} />
+                            {t("workspace.add_folder")}
+                          </button>
+                        </div>
                       </div>
                       <div
                         data-guide="workspace-files"
                         className="flex-1 overflow-y-auto p-1.5"
                       >
-                        {mounts.length === 0 ? (
-                          <button
-                            type="button"
-                            onClick={addFolder}
-                            className="flex w-full flex-col items-start gap-1 rounded-lg border border-dashed border-base-300 px-3 py-2 text-left text-xs text-base-content/60 transition hover:border-accent/40 hover:bg-base-200/60"
-                          >
-                            <Folder size={16} className="text-accent" />
-                            {t("workspace.no_mounts")}
-                          </button>
-                        ) : (
-                          mounts.map((mount) => {
-                            const source = sources.find(
-                              (candidate) => candidate.id === mount.sourceId,
-                            );
-                            return (
+                        {rootLoading && rootEntries.length === 0 ? (
+                          <div className="space-y-1 p-2">
+                            {Array.from({ length: 4 }).map((_, index) => (
                               <div
-                                key={mount.id}
-                                className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition hover:bg-base-200"
+                                key={index}
+                                className="h-8 animate-pulse rounded bg-base-200"
+                              />
+                            ))}
+                          </div>
+                        ) : rootError ? (
+                          <div className="flex flex-col items-center gap-2 p-8 text-center text-xs text-base-content/60">
+                            <WarningAltFilled size={20} className="text-warning" />
+                            <p>{rootError}</p>
+                            <button className="btn btn-xs" onClick={() => loadRoot()}>
+                              {t("workspace.retry")}
+                            </button>
+                          </div>
+                        ) : rootEntries.length === 0 ? (
+                          <div className="flex flex-col items-center gap-2 p-8 text-center text-xs text-base-content/60">
+                            <Folder size={20} className="text-base-content/30" />
+                            <p>{t("workspace.empty_folder")}</p>
+                            <p className="text-[10px] text-base-content/40">
+                              {t("workspace.root_empty_hint")}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-0.5">
+                            {rootPath !== "/" && (
+                              <button
+                                type="button"
+                                onClick={() => setRootPath(parentPath(rootPath))}
+                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/70 hover:bg-base-200"
                               >
-                                <button
-                                  type="button"
-                                  onClick={() => openMount(mount)}
-                                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                <Folder size={14} />
+                                ..
+                              </button>
+                            )}
+                            {rootEntries.map((entry) => {
+                              const source = entry.mount
+                                ? sources.find(
+                                    (candidate) => candidate.id === entry.mount!.sourceId,
+                                  )
+                                : undefined;
+                              const sourceReadOnly = source?.readOnly === true;
+                              const effectiveReadOnly =
+                                entry.mount?.readOnly === true || sourceReadOnly;
+                              return (
+                                <div
+                                  key={entry.path}
+                                  className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition hover:bg-base-200"
                                 >
-                                  <Folder size={14} className="text-accent" />
-                                  <span className="min-w-0 flex-1 truncate font-mono text-base-content">
-                                    {mount.path}
-                                  </span>
-                                  <span className="shrink-0 text-[10px] text-base-content/40">
-                                    {source?.label ?? mount.sourceId}
-                                  </span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeMount(mount.id)}
-                                  className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
-                                  title={t("workspace.remove_mount")}
-                                  aria-label={t("workspace.remove_mount")}
-                                >
-                                  <TrashCan size={12} />
-                                </button>
-                              </div>
-                            );
-                          })
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (entry.mount) {
+                                        openMount(entry.mount);
+                                        return;
+                                      }
+                                      if (entry.kind === "dir") {
+                                        setRootPath(entry.path);
+                                        return;
+                                      }
+                                      void openFile(entry, rootProvider);
+                                    }}
+                                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                  >
+                                    {entry.kind === "dir" ? (
+                                      <Folder size={14} className="text-accent" />
+                                    ) : (
+                                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-base-200 text-[8px] font-semibold uppercase text-base-content/50">
+                                        {baseName(entry.name).split(".").pop()?.slice(0, 3) ||
+                                          "file"}
+                                      </span>
+                                    )}
+                                    <span className="min-w-0 flex-1 truncate text-base-content">
+                                      {entry.name}
+                                    </span>
+                                    {entry.mount && (
+                                      <span className="shrink-0 text-[10px] text-base-content/40">
+                                        {source?.label ?? entry.mount.sourceId}
+                                      </span>
+                                    )}
+                                    {effectiveReadOnly && (
+                                      <span className="badge badge-warning badge-xs">
+                                        {t("workspace.mount_read_only")}
+                                      </span>
+                                    )}
+                                    {!entry.mount &&
+                                      entry.kind === "file" &&
+                                      typeof entry.size === "number" && (
+                                        <span className="shrink-0 text-[10px] text-base-content/40">
+                                          {formatBytes(entry.size)}
+                                        </span>
+                                      )}
+                                  </button>
+                                  {entry.local ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => void removeRootEntry(entry)}
+                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
+                                      title={t("workspace.remove_mount")}
+                                      aria-label={t("workspace.remove_mount")}
+                                    >
+                                      <TrashCan size={12} />
+                                    </button>
+                                  ) : entry.mount ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        !sourceReadOnly && toggleMountReadOnly(entry.mount!)
+                                      }
+                                      disabled={sourceReadOnly}
+                                      className={`flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition ${
+                                        sourceReadOnly
+                                          ? "cursor-default text-warning"
+                                          : "opacity-0 hover:bg-base-200 hover:text-base-content group-hover:opacity-100"
+                                      }`}
+                                      title={
+                                        sourceReadOnly
+                                          ? t("workspace.source_read_only")
+                                          : entry.mount.readOnly
+                                            ? t("workspace.make_writable")
+                                            : t("workspace.make_read_only")
+                                      }
+                                      aria-label={
+                                        sourceReadOnly
+                                          ? t("workspace.source_read_only")
+                                          : entry.mount.readOnly
+                                            ? t("workspace.make_writable")
+                                            : t("workspace.make_read_only")
+                                      }
+                                    >
+                                      {effectiveReadOnly ? (
+                                        <Locked size={12} />
+                                      ) : (
+                                        <Unlocked size={12} />
+                                      )}
+                                    </button>
+                                  ) : null}
+                                  {entry.mount ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeMount(entry.mount!.id)}
+                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
+                                      title={t("workspace.remove_mount")}
+                                      aria-label={t("workspace.remove_mount")}
+                                    >
+                                      <TrashCan size={12} />
+                                    </button>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -860,7 +1280,10 @@ export default function WorkspacePage() {
                       <div className="flex items-center gap-1 border-b border-base-300 px-3 py-2 text-xs">
                         <button
                           type="button"
-                          onClick={() => setSelectedSourceId(null)}
+                          onClick={() => {
+                            setActiveMountId(null);
+                            setSelectedSourceId(null);
+                          }}
                           className="flex h-5 w-5 items-center justify-center rounded text-base-content/60 hover:bg-base-200"
                           title={t("workspace.root")}
                         >
@@ -875,6 +1298,7 @@ export default function WorkspacePage() {
                               type="button"
                               onClick={() => {
                                 if (index === 0) {
+                                  setActiveMountId(null);
                                   setSelectedSourceId(null);
                                   return;
                                 }
@@ -889,6 +1313,11 @@ export default function WorkspacePage() {
                             </button>
                           </span>
                         ))}
+                        {activeMount?.readOnly && (
+                          <span className="badge badge-warning badge-xs">
+                            {t("workspace.mount_read_only")}
+                          </span>
+                        )}
                         <span className="ml-auto text-[10px] text-base-content/50">
                           {selectedSource?.label}
                         </span>
@@ -907,6 +1336,14 @@ export default function WorkspacePage() {
                         onDragLeave={() => setDragHint(null)}
                         onDrop={(event) => {
                           setDragHint(null);
+                          if (activeMount?.readOnly) {
+                            notifyError(t("workspace.mount_read_only_error"));
+                            return;
+                          }
+                          if (selectedSource?.readOnly) {
+                            notifyError(t("workspace.source_read_only_error"));
+                            return;
+                          }
                           onDrop(event, selectedSourceId!, currentPath);
                         }}
                       >
@@ -1009,7 +1446,8 @@ export default function WorkspacePage() {
                                         sources: sources.filter(
                                           (candidate) =>
                                             candidate.id !== selectedSourceId &&
-                                            candidate.status !== "error",
+                                            candidate.status !== "error" &&
+                                            !candidate.readOnly,
                                         ),
                                         onSelect: (targetId: string) =>
                                           requestTransfer({

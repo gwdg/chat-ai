@@ -200,7 +200,7 @@ export type WorkspaceCapabilities = {
   maxFileSize?: number
 }
 
-export type BrowserConfig = { storage: 'opfs' }
+export type BrowserConfig = { storage: 'opfs' | 'indexeddb' }
 export type LocalConfig = { handleKey: string }
 export type McpConfig = {
   endpoint: string
@@ -230,6 +230,7 @@ export type WorkspaceSourceRow = {
   deviceId?: string
   config: SourceConfig
   capabilities: WorkspaceCapabilities
+  readOnly?: boolean
   status: SourceStatus
   error?: string
   createdAt: number
@@ -275,6 +276,7 @@ export type WorkspaceMountRow = {
   sourceId: string
   sourcePath: string
   path: string
+  readOnly?: boolean
   createdAt: number
   lastModified: number
 }
@@ -284,4 +286,22 @@ export type WorkspaceChatRow = {
   workspaceId: string
   conversationId: string
   createdAt: number
+}
+
+export type WorkspaceNodeRow = {
+  id: string
+  sourceId: string
+  path: string
+  parentPath: string
+  name: string
+  kind: 'file' | 'dir'
+  size?: number
+  mtime?: string
+  mime?: string
+}
+
+export type WorkspaceBlobRow = {
+  id: string
+  sourceId: string
+  data: Uint8Array
 }

@@ -17,6 +17,7 @@ export default function AddMountModal({
   const [sourceId, setSourceId] = useState(sources[0]?.id ?? "");
   const [sourcePath, setSourcePath] = useState("/");
   const [mountPath, setMountPath] = useState("/");
+  const [readOnly, setReadOnly] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -48,6 +49,7 @@ export default function AddMountModal({
         sourceId,
         sourcePath: normalizePath(sourcePath),
         path: normalizedMount,
+        readOnly,
       });
       onAdded?.(normalizedMount);
       onClose();
@@ -108,6 +110,20 @@ export default function AddMountModal({
             {t("workspace.mount_path_hint", {
               name: baseName(mountPath) || "shoe",
             })}
+          </span>
+        </label>
+        <label className="flex items-center gap-2 text-xs text-base-content/70">
+          <input
+            type="checkbox"
+            checked={readOnly}
+            onChange={(event) => setReadOnly(event.target.checked)}
+            className="checkbox checkbox-sm"
+          />
+          <span>
+            {t("workspace.mount_read_only")}
+            <span className="ml-1 text-base-content/45">
+              {t("workspace.mount_read_only_hint")}
+            </span>
           </span>
         </label>
         {error && <p className="text-xs text-error">{error}</p>}

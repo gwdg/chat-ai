@@ -11,20 +11,8 @@ import type {
 } from "./dbTypes";
 import { defaultCapabilities } from "../workspace/capabilities";
 import { getDeviceId, DEVICE_PLANE_KINDS } from "../workspace/deviceId";
-import { clearBrowserSourceData } from "../workspace/providers/browser";
-import {
-  createChatLinkRemote,
-  createMountRemote,
-  createSourceRemote,
-  createWorkspaceRemote,
-  deleteChatLinkRemote,
-  deleteMountRemote,
-  deleteSourceRemote,
-  deleteWorkspaceRemote,
-  fetchWorkspaceSnapshot,
-  updateSourceRemote,
-  updateWorkspaceRemote,
-} from "../apis/workspaces";
+import { deleteSourceNodes } from "./workspaceVfs";
+
 
 export { getDeviceId } from "../workspace/deviceId";
 
@@ -49,33 +37,9 @@ export async function createWorkspace(name: string): Promise<string> {
     lastModified: now(),
   };
   await db.workspaces.add(workspace);
-  void createWorkspaceRemote(workspace).catch(() => {});
   return id;
 }
 
-export async function syncWorkspacesFromServer(): Promise<void> {
-  try {
-    const snapshot = await fetchWorkspaceSnapshot();
-    const workspaces: WorkspaceRow[] = Array.isArray(snapshot?.workspaces)
-      ? snapshot.workspaces
-      : [];
-    const sources: WorkspaceSourceRow[] = Array.isArray(snapshot?.sources)
-      ? snapshot.sources
-      : [];
-    const mounts: WorkspaceMountRow[] = Array.isArray(snapshot?.mounts)
-      ? snapshot.mounts
-      : [];
-    const chats: WorkspaceChatRow[] = Array.isArray(snapshot?.chats)
-      ? snapshot.chats
-      : [];
-    if (workspaces.length) await db.workspaces.bulkPut(workspaces);
-    if (sources.length) await db.workspace_sources.bulkPut(sources);
-    if (mounts.length) await db.workspace_mounts.bulkPut(mounts);
-    if (chats.length) await db.workspace_chats.bulkPut(chats);
-  } catch {
-    // offline or a deployment without workspace metadata
-  }
-}
 
 export async function getWorkspace(id: string): Promise<WorkspaceRow | undefined> {
   return id ? db.workspaces.get(id) : undefined;
@@ -89,12 +53,23 @@ export async function updateWorkspace(
   if (patch.name !== undefined && !trimmed) {
     throw new Error("Workspace name is required");
   }
+  if (trimmed) {
+    const existing = await db.workspaces.toArray();
+    if (
+      existing.some(
+        (workspace) =>
+          workspace.id !== id &&
+          workspace.name.toLowerCase() === trimmed.toLowerCase(),
+      )
+    ) {
+      throw new Error("A workspace with this name already exists");
+    }
+  }
   const patchRow = {
     ...(trimmed ? { name: trimmed } : {}),
     lastModified: now(),
   };
   await db.workspaces.update(id, patchRow);
-  void updateWorkspaceRemote(id, patchRow).catch(() => {});
 }
 
 export async function deleteWorkspace(id: string): Promise<void> {
@@ -122,9 +97,8 @@ export async function deleteWorkspace(id: string): Promise<void> {
   );
   for (const source of sources) {
     await db.workspace_handles.delete(source.id);
-    if (source.kind === "browser") await clearBrowserSourceData(source.id);
+    if (source.kind === "browser") await deleteSourceNodes(source.id);
   }
-  void deleteWorkspaceRemote(id).catch(() => {});
 }
 
 export function useWorkspaceList(): WorkspaceRow[] {
@@ -164,6 +138,7 @@ export type AddSourceInput = {
   label: string;
   config: WorkspaceSourceRow["config"];
   capabilities?: WorkspaceSourceRow["capabilities"];
+  readOnly?: boolean;
   status?: WorkspaceSourceRow["status"];
   handle?: FileSystemDirectoryHandle;
 };
@@ -179,6 +154,7 @@ export async function addSource(input: AddSourceInput): Promise<string> {
     ...(devicePlane ? { deviceId: getDeviceId() } : {}),
     config: input.config,
     capabilities: input.capabilities ?? defaultCapabilities(input.kind),
+    readOnly: input.readOnly === true,
     status: input.status ?? "offline",
     createdAt: now(),
     lastModified: now(),
@@ -186,7 +162,6 @@ export async function addSource(input: AddSourceInput): Promise<string> {
   await db.workspace_sources.add(source);
   if (input.handle) await saveSourceHandle(id, input.handle);
   await db.workspaces.update(input.workspaceId, { lastModified: now() });
-  void createSourceRemote(input.workspaceId, source).catch(() => {});
   return id;
 }
 
@@ -195,30 +170,21 @@ export async function updateSource(
   patch: Partial<
     Pick<
       WorkspaceSourceRow,
-      "label" | "config" | "capabilities" | "status" | "error"
+      "label" | "config" | "capabilities" | "readOnly" | "status" | "error"
     >
   >,
 ): Promise<void> {
   const nextPatch = { ...patch, lastModified: now() };
   await db.workspace_sources.update(id, nextPatch);
-  const source = await db.workspace_sources.get(id);
-  if (source) {
-    void updateSourceRemote(source.workspaceId, id, nextPatch).catch(() => {});
-  }
 }
 
 export async function removeSource(id: string): Promise<void> {
   const source = await db.workspace_sources.get(id);
   if (!source) return;
-  const mounts = await db.workspace_mounts.where("sourceId").equals(id).toArray();
   await db.workspace_sources.delete(id);
   await db.workspace_handles.delete(id);
   await db.workspace_mounts.where("sourceId").equals(id).delete();
-  if (source.kind === "browser") await clearBrowserSourceData(id);
-  void deleteSourceRemote(source.workspaceId, id).catch(() => {});
-  for (const mount of mounts) {
-    void deleteMountRemote(mount.workspaceId, mount.id).catch(() => {});
-  }
+  if (source.kind === "browser") await deleteSourceNodes(id);
 }
 
 export async function saveSourceHandle(
@@ -286,6 +252,7 @@ export async function addWorkspaceMount(input: {
   sourceId: string;
   sourcePath: string;
   path: string;
+  readOnly?: boolean;
 }): Promise<string> {
   const id = newId();
   const mount: WorkspaceMountRow = {
@@ -294,12 +261,22 @@ export async function addWorkspaceMount(input: {
     sourceId: input.sourceId,
     sourcePath: input.sourcePath,
     path: input.path,
+    readOnly: input.readOnly === true,
     createdAt: now(),
     lastModified: now(),
   };
   await db.workspace_mounts.add(mount);
-  void createMountRemote(input.workspaceId, mount).catch(() => {});
   return id;
+}
+
+export async function setWorkspaceMountReadOnly(
+  mountId: string,
+  readOnly: boolean,
+): Promise<void> {
+  await db.workspace_mounts.update(mountId, {
+    readOnly,
+    lastModified: now(),
+  });
 }
 
 export async function removeWorkspaceMount(
@@ -307,7 +284,6 @@ export async function removeWorkspaceMount(
   mountId: string,
 ): Promise<void> {
   await db.workspace_mounts.delete(mountId);
-  void deleteMountRemote(workspaceId, mountId).catch(() => {});
 }
 
 export function useWorkspaceMounts(workspaceId?: string): WorkspaceMountRow[] {
@@ -339,7 +315,6 @@ export async function attachWorkspaceChat(
     createdAt: now(),
   };
   await db.workspace_chats.add(link);
-  void createChatLinkRemote(workspaceId, link).catch(() => {});
 }
 
 export async function detachWorkspaceChat(
@@ -352,7 +327,6 @@ export async function detachWorkspaceChat(
     .first();
   if (!link) return;
   await db.workspace_chats.delete(link.id);
-  void deleteChatLinkRemote(workspaceId, link.id).catch(() => {});
 }
 
 export function useWorkspaceChats(workspaceId?: string): WorkspaceChatRow[] {

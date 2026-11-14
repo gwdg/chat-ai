@@ -12,6 +12,9 @@ import {
   getWorkspace,
   removeSource,
   saveSourceHandle,
+  setWorkspaceMountReadOnly,
+  updateSource,
+  updateWorkspace,
 } from "../workspaceDb";
 import { getDeviceId } from "../../workspace/deviceId";
 
@@ -35,6 +38,13 @@ describe("workspace database", () => {
 
     await expect(createWorkspace("research")).rejects.toThrow("already exists");
     await expect(createWorkspace("   ")).rejects.toThrow("required");
+
+    await updateWorkspace(id, { name: "Renamed" });
+    expect((await getWorkspace(id))?.name).toBe("Renamed");
+    await createWorkspace("Other");
+    await expect(updateWorkspace(id, { name: "other" })).rejects.toThrow(
+      "already exists",
+    );
   });
 
   it("binds device-plane sources to this device and leaves Arcana device-free", async () => {
@@ -75,10 +85,14 @@ describe("workspace database", () => {
       sourceId,
       sourcePath: "/shoe",
       path: "/shoe",
+      readOnly: true,
     });
     const mount = await db.workspace_mounts.get(mountId);
     expect(mount?.path).toBe("/shoe");
     expect(mount?.sourcePath).toBe("/shoe");
+    expect(mount?.readOnly).toBe(true);
+    await setWorkspaceMountReadOnly(mountId, false);
+    expect((await db.workspace_mounts.get(mountId))?.readOnly).toBe(false);
 
     await attachWorkspaceChat(workspaceId, "chat-1");
     await attachWorkspaceChat(workspaceId, "chat-1");
@@ -90,6 +104,20 @@ describe("workspace database", () => {
     await deleteWorkspace(workspaceId);
     expect(await db.workspace_mounts.count()).toBe(0);
     expect(await db.workspace_chats.count()).toBe(0);
+  });
+
+  it("marks a source read-only", async () => {
+    const workspaceId = await createWorkspace("ReadOnly");
+    const sourceId = await addSource({
+      workspaceId,
+      kind: "browser",
+      label: "Browser",
+      config: { storage: "indexeddb" },
+      readOnly: true,
+    });
+    expect((await db.workspace_sources.get(sourceId))?.readOnly).toBe(true);
+    await updateSource(sourceId, { readOnly: false });
+    expect((await db.workspace_sources.get(sourceId))?.readOnly).toBe(false);
   });
 
   it("stores folder handles and deletes sources with the workspace", async () => {

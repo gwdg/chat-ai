@@ -3,7 +3,6 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useCallback, useEffect, useState } from 'react'
 import {v4 as uuidv4} from 'uuid';
 import { deleteAllWorkspaces, deleteWorkspace } from '../agent/workspace'
-import { deleteChatLinkRemote } from '../apis/workspaces'
 
 import type { 
   ConversationRow, 
@@ -24,7 +23,9 @@ import type {
   WorkspaceHandleRow,
   TransferJobRow,
   WorkspaceMountRow,
-  WorkspaceChatRow
+  WorkspaceChatRow,
+  WorkspaceNodeRow,
+  WorkspaceBlobRow
 } from "./dbTypes"
 
 // ---------- Dexie DB ----------
@@ -42,6 +43,8 @@ export class AppDB extends Dexie {
   workspace_transfers!: Table<TransferJobRow, string>
   workspace_mounts!: Table<WorkspaceMountRow, string>
   workspace_chats!: Table<WorkspaceChatRow, string>
+  workspace_nodes!: Table<WorkspaceNodeRow, string>
+  workspace_blobs!: Table<WorkspaceBlobRow, string>
 
   constructor() {
     super('app-conversations-db')
@@ -129,6 +132,23 @@ export class AppDB extends Dexie {
       workspace_transfers: 'id, workspaceId, status, createdAt',
       workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
       workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]'
+    });
+
+    this.version(8).stores({
+      conversations: 'id, lastModified, createdAt, title, folderId, [folderId+lastModified]',
+      messages: 'id, conversationId, [conversationId+idx], idx, createdAt',
+      content_items: 'id, messageId, [messageId+idx], idx, type',
+      files_meta: 'id, conversationId, type, size, name',
+      files_data: 'id',
+      folders: 'id, name, createdAt',
+      workspaces: 'id, lastModified, name',
+      workspace_sources: 'id, workspaceId, kind, [workspaceId+kind]',
+      workspace_handles: 'sourceId',
+      workspace_transfers: 'id, workspaceId, status, createdAt',
+      workspace_mounts: 'id, workspaceId, sourceId, [workspaceId+path]',
+      workspace_chats: 'id, workspaceId, conversationId, [workspaceId+conversationId]',
+      workspace_nodes: 'id, sourceId, path, [sourceId+path], [sourceId+parentPath]',
+      workspace_blobs: 'id, sourceId'
     });
   }
 }
@@ -803,9 +823,6 @@ export async function deleteConversation(conversationId: string) {
       await db.workspace_chats.where('conversationId').equals(conversationId).delete();
     }
   );
-  for (const link of chatLinks) {
-    void deleteChatLinkRemote(link.workspaceId, link.id).catch(() => {});
-  }
   // The agent's files live in OPFS, outside the database
   await deleteWorkspace(conversationId);
 }

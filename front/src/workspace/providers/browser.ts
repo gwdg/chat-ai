@@ -1,81 +1,42 @@
 import type { WorkspaceCapabilities, WorkspaceFileEntry } from "../../db/dbTypes";
+import {
+  deleteSourceNodes,
+  ensureSourceDir,
+  getSourceBlob,
+  getSourceNode,
+  listSourceNodes,
+  removeSourcePath,
+  sourceUsage,
+  writeSourceFile,
+} from "../../db/workspaceVfs";
 import { defaultCapabilities } from "../capabilities";
-import { baseName, joinPath, normalizePath, parentPath } from "../paths";
+import { baseName, joinPath, normalizePath } from "../paths";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
 
-const ROOT_DIR = "workspaces";
-
-async function rootDir(sourceId: string, create: boolean) {
-  const opfs = await navigator.storage.getDirectory();
-  const root = await opfs.getDirectoryHandle(ROOT_DIR, { create });
-  return root.getDirectoryHandle(sourceId, { create });
-}
-
-async function getDir(
-  sourceId: string,
-  path: string,
-  create = false,
-): Promise<FileSystemDirectoryHandle> {
-  let dir = await rootDir(sourceId, create);
-  for (const segment of normalizePath(path).split("/").filter(Boolean)) {
-    dir = await dir.getDirectoryHandle(segment, { create });
-  }
-  return dir;
-}
-
-async function getFile(
-  sourceId: string,
-  path: string,
-): Promise<FileSystemFileHandle> {
-  const name = baseName(path);
-  if (!name) throw new WorkspaceError("NOT_FOUND", "Not a file path");
-  const dir = await getDir(sourceId, parentPath(path));
-  return dir.getFileHandle(name);
-}
-
-async function entryFor(
-  sourceId: string,
-  path: string,
-  name: string,
-  handle: FileSystemHandle,
-): Promise<WorkspaceFileEntry> {
-  if (handle.kind === "directory") {
-    let childCount = 0;
-    try {
-      // @ts-expect-error entries() is missing from older DOM typings
-      for await (const _ of handle.entries()) childCount += 1;
-    } catch {
-      childCount = 0;
+const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      chunks.push(value);
+      length += value.length;
     }
-    return {
-      sourceId,
-      path,
-      name,
-      kind: "dir",
-      childCount,
-    };
   }
-  const file = await handle.getFile();
-  return {
-    sourceId,
-    path,
-    name,
-    kind: "file",
-    size: file.size,
-    mtime: new Date(file.lastModified).toISOString(),
-    mime: file.type || undefined,
-  };
-}
+  const data = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    data.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return data;
+};
 
 export async function clearBrowserSourceData(sourceId: string): Promise<void> {
-  try {
-    const opfs = await navigator.storage.getDirectory();
-    const root = await opfs.getDirectoryHandle(ROOT_DIR);
-    await root.removeEntry(sourceId, { recursive: true });
-  } catch {
-    // nothing stored yet
-  }
+  await deleteSourceNodes(sourceId);
 }
 
 export class BrowserProvider implements FileProvider {
@@ -86,93 +47,72 @@ export class BrowserProvider implements FileProvider {
   constructor(readonly sourceId: string) {}
 
   async connect() {
-    try {
-      await rootDir(this.sourceId, true);
-      this.status = "connected";
-    } catch (error) {
-      this.status = "error";
-      throw new WorkspaceError(
-        "PROVIDER_ERROR",
-        error instanceof Error ? error.message : String(error),
-      );
+    await ensureSourceDir(this.sourceId, "/");
+    this.status = "connected";
+  }
+
+  private async entry(node: {
+    path: string;
+    name: string;
+    kind: "file" | "dir";
+    size?: number;
+    mtime?: string;
+    mime?: string;
+  }): Promise<WorkspaceFileEntry> {
+    let childCount: number | undefined;
+    if (node.kind === "dir") {
+      const children = await listSourceNodes(this.sourceId, node.path);
+      childCount = children.length;
     }
+    return {
+      sourceId: this.sourceId,
+      path: node.path,
+      name: node.name,
+      kind: node.kind,
+      size: node.size,
+      mtime: node.mtime,
+      mime: node.mime,
+      childCount,
+    };
   }
 
   async list(path: string, cursor?: string): Promise<DirectoryPage> {
     const normalized = normalizePath(path);
-    let dir: FileSystemDirectoryHandle;
-    try {
-      dir = await getDir(this.sourceId, normalized);
-    } catch {
-      throw new WorkspaceError("NOT_FOUND", normalized);
-    }
-    const entries: WorkspaceFileEntry[] = [];
-    // @ts-expect-error entries() is missing from older DOM typings
-    for await (const [name, handle] of dir.entries()) {
-      entries.push(
-        await entryFor(
-          this.sourceId,
-          joinPath(normalized, name),
-          name,
-          handle,
-        ),
-      );
-    }
-    entries.sort(
-      (a, b) =>
-        Number(b.kind === "dir") - Number(a.kind === "dir") ||
-        a.name.localeCompare(b.name),
-    );
+    const nodes = await listSourceNodes(this.sourceId, normalized);
     const start = cursor ? Number(cursor) : 0;
-    const page = entries.slice(start, start + 200);
+    const page = nodes.slice(start, start + 200);
     return {
-      entries: page,
-      next: start + page.length < entries.length ? String(start + page.length) : undefined,
+      entries: await Promise.all(page.map((node) => this.entry(node))),
+      next:
+        start + page.length < nodes.length ? String(start + page.length) : undefined,
     };
   }
 
   async stat(path: string): Promise<WorkspaceFileEntry> {
     const normalized = normalizePath(path);
     if (normalized === "/") {
-      return {
-        sourceId: this.sourceId,
-        path: "/",
-        name: "/",
-        kind: "dir",
-      };
+      return { sourceId: this.sourceId, path: "/", name: "/", kind: "dir" };
     }
-    const name = baseName(normalized);
-    const parent = await getDir(this.sourceId, parentPath(normalized));
-    try {
-      return await entryFor(
-        this.sourceId,
-        normalized,
-        name,
-        await parent.getFileHandle(name),
-      );
-    } catch {
-      try {
-        return await entryFor(
-          this.sourceId,
-          normalized,
-          name,
-          await parent.getDirectoryHandle(name),
-        );
-      } catch {
-        throw new WorkspaceError("NOT_FOUND", normalized);
-      }
-    }
+    const node = await getSourceNode(this.sourceId, normalized);
+    if (!node) throw new WorkspaceError("NOT_FOUND", normalized);
+    return this.entry(node);
   }
 
   async read(path: string, range?: { start: number; end: number }) {
-    let file: File;
-    try {
-      file = await (await getFile(this.sourceId, path)).getFile();
-    } catch {
-      throw new WorkspaceError("NOT_FOUND", path);
+    const normalized = normalizePath(path);
+    const node = await getSourceNode(this.sourceId, normalized);
+    if (!node || node.kind !== "file") {
+      throw new WorkspaceError("NOT_FOUND", normalized);
     }
-    const slice = range ? file.slice(range.start, range.end) : file;
-    return slice.stream();
+    const blob = await getSourceBlob(this.sourceId, node.id);
+    if (!blob) throw new WorkspaceError("NOT_FOUND", normalized);
+    const bytes = range ? blob.slice(range.start, range.end) : blob;
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
   }
 
   async write(
@@ -181,54 +121,37 @@ export class BrowserProvider implements FileProvider {
     opts: { size?: number; overwrite: boolean },
   ): Promise<WorkspaceFileEntry> {
     const normalized = normalizePath(path);
-    const name = baseName(normalized);
-    const dir = await getDir(this.sourceId, parentPath(normalized), true);
-    try {
-      await dir.getFileHandle(name);
-      if (!opts.overwrite) throw new WorkspaceError("CONFLICT", normalized);
-    } catch (error) {
-      if (error instanceof WorkspaceError) throw error;
+    const existing = await getSourceNode(this.sourceId, normalized);
+    if (existing && !opts.overwrite) {
+      throw new WorkspaceError("CONFLICT", normalized);
     }
-    const handle = await dir.getFileHandle(name, { create: true });
-    const writable = await handle.createWritable();
-    try {
-      await data.pipeTo(writable as unknown as WritableStream<Uint8Array>);
-    } catch (error) {
-      await writable.abort().catch(() => {});
-      throw error;
-    }
-    return this.stat(normalized);
+    const bytes = await readAll(data);
+    const node = await writeSourceFile(this.sourceId, normalized, bytes);
+    return this.entry(node);
   }
 
   async mkdir(path: string) {
-    await getDir(this.sourceId, path, true);
+    await ensureSourceDir(this.sourceId, path);
   }
 
   async remove(path: string, opts: { recursive: boolean }) {
-    const normalized = normalizePath(path);
-    const name = baseName(normalized);
-    const dir = await getDir(this.sourceId, parentPath(normalized));
-    await dir.removeEntry(name, { recursive: opts.recursive });
+    await removeSourcePath(this.sourceId, path, opts.recursive);
   }
 
   async copy(from: string, to: string) {
-    if (this.capabilities.copy) {
-      const entry = await this.stat(from);
-      if (entry.kind === "dir") {
-        await this.mkdir(to);
-        const { entries } = await this.list(from);
-        for (const child of entries) {
-          await this.copy(child.path, joinPath(to, child.name));
-        }
-        return;
+    const entry = await this.stat(from);
+    if (entry.kind === "dir") {
+      await this.mkdir(to);
+      const { entries } = await this.list(from);
+      for (const child of entries) {
+        await this.copy(child.path, joinPath(to, child.name));
       }
-      await this.write(to, await this.read(from), {
-        size: entry.size,
-        overwrite: false,
-      });
       return;
     }
-    throw new WorkspaceError("UNSUPPORTED");
+    await this.write(to, await this.read(from), {
+      size: entry.size,
+      overwrite: false,
+    });
   }
 
   async move(from: string, to: string) {
@@ -237,19 +160,18 @@ export class BrowserProvider implements FileProvider {
   }
 
   async quota(): Promise<QuotaInfo | null> {
+    const usage = await sourceUsage(this.sourceId);
     try {
       const estimate = await navigator.storage.estimate();
+      const quota = estimate.quota ?? 0;
       return {
-        usage: estimate.usage ?? 0,
-        quota: estimate.quota ?? 0,
-        free:
-          estimate.quota !== undefined && estimate.usage !== undefined
-            ? estimate.quota - estimate.usage
-            : undefined,
+        usage,
+        quota,
+        free: quota ? Math.max(0, quota - usage) : undefined,
         scope: "origin",
       };
     } catch {
-      return null;
+      return { usage, quota: 0, free: undefined, scope: "origin" };
     }
   }
 }

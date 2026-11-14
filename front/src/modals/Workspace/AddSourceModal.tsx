@@ -20,6 +20,7 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
   const userSettings = useSelector(selectUserSettings);
   const [kind, setKind] = useState<SourceKind>("browser");
   const [label, setLabel] = useState("");
+  const [readOnly, setReadOnly] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [arcanas, setArcanas] = useState<ArcanaOption[]>([]);
@@ -68,6 +69,7 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
   const reset = () => {
     setKind("browser");
     setLabel("");
+    setReadOnly(false);
     setError("");
     setBusy(false);
     setArcanaId("");
@@ -97,6 +99,7 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
       config: payload.config,
       status: payload.status as any,
       capabilities: defaultCapabilities(payload.kind),
+      readOnly,
       handle: payload.handle,
     });
     onAdded?.(id);
@@ -112,7 +115,7 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
         await finish({
           kind,
           label: label.trim() || t("workspace.source_browser"),
-          config: { storage: "opfs" },
+          config: { storage: "indexeddb" },
           status: "offline",
         });
         return;
@@ -278,6 +281,21 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
             {t("workspace.arcana_hint")}
           </p>
         )}
+
+        <label className="flex items-center gap-2 text-xs text-base-content/70">
+          <input
+            type="checkbox"
+            checked={readOnly}
+            onChange={(event) => setReadOnly(event.target.checked)}
+            className="checkbox checkbox-sm"
+          />
+          <span>
+            {t("workspace.source_read_only")}
+            <span className="ml-1 text-base-content/45">
+              {t("workspace.source_read_only_hint")}
+            </span>
+          </span>
+        </label>
 
         {error && <p className="text-xs text-error">{error}</p>}
 

@@ -2,7 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router";
-import { Add, Bot, ChevronDown, ChevronRight, TrashCan } from "@carbon/icons-react";
+import {
+  Add,
+  Bot,
+  ChevronDown,
+  OverflowMenuVertical,
+  TrashCan,
+} from "@carbon/icons-react";
+import {
+  Popover,
+  PopoverButton,
+  PopoverPanel,
+} from "@headlessui/react";
 
 import {
   selectCollapsedTopics,
@@ -13,7 +24,6 @@ import { useConversationList } from "../../db";
 import {
   deleteWorkspace,
   detachWorkspaceChat,
-  syncWorkspacesFromServer,
   useWorkspaceChatLinks,
   useWorkspaceList,
 } from "../../db/workspaceDb";
@@ -64,10 +74,6 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   }, [chatsByWorkspace]);
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__workspaces__");
-
-  useEffect(() => {
-    void syncWorkspacesFromServer();
-  }, []);
 
   const create = () => openModal("workspaceCreate", {});
 
@@ -183,10 +189,6 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                     <span className="min-w-0 flex-1 truncate text-xs font-medium">
                       {workspace.name}
                     </span>
-                    <ChevronRight
-                      size={14}
-                      className="shrink-0 text-base-content/30 transition group-hover:opacity-100"
-                    />
                   </button>
                   <button
                     type="button"
@@ -203,15 +205,48 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                   >
                     <Add size={14} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(workspace)}
-                    className="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-error/10 hover:text-error group-hover:opacity-100"
-                    title={t("workspace.delete_workspace")}
-                    aria-label={t("workspace.delete_workspace")}
-                  >
-                    <TrashCan size={14} />
-                  </button>
+                  <Popover className="relative mr-1">
+                    <PopoverButton
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content group-hover:opacity-100 focus:outline-none"
+                      title={t("workspace.workspace_options")}
+                      aria-label={t("workspace.workspace_options")}
+                    >
+                      <OverflowMenuVertical size={16} />
+                    </PopoverButton>
+                    <PopoverPanel
+                      anchor="bottom end"
+                      className="z-50 w-44 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
+                    >
+                      {({ close }) => (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              close();
+                              openModal("workspaceRename", {
+                                workspaceId: workspace.id,
+                                initialName: workspace.name,
+                              });
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                          >
+                            {t("common.rename")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              close();
+                              remove(workspace);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-error transition hover:bg-error/10"
+                          >
+                            <TrashCan size={14} />
+                            {t("workspace.delete_workspace")}
+                          </button>
+                        </>
+                      )}
+                    </PopoverPanel>
+                  </Popover>
                 </div>
                 {expanded && chats.length > 0 && (
                   <div className="mb-1 ml-8 flex flex-col gap-0.5 border-l border-base-300 pl-2">

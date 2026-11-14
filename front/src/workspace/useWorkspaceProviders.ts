@@ -7,10 +7,11 @@ import type { FileProvider } from "./providers/types";
 import { WorkspaceError } from "./providers/types";
 
 const signature = (source: WorkspaceSourceRow) =>
-  `${source.id}|${source.kind}|${JSON.stringify(source.config ?? {})}`;
+  `${source.id}|${source.kind}|${source.readOnly === true ? "ro" : "rw"}|${JSON.stringify(source.config ?? {})}`;
 
 export function useWorkspaceProviders(sources: WorkspaceSourceRow[]) {
   const providersRef = useRef<Map<string, FileProvider>>(new Map());
+  const signaturesRef = useRef<Map<string, string>>(new Map());
   const [providers, setProviders] = useState<Map<string, FileProvider>>(new Map());
   const connectingRef = useRef<Set<string>>(new Set());
 
@@ -24,6 +25,7 @@ export function useWorkspaceProviders(sources: WorkspaceSourceRow[]) {
       connectingRef.current.add(source.id);
       const provider = createProvider(source);
       providersRef.current.set(source.id, provider);
+      signaturesRef.current.set(source.id, signature(source));
       publish();
       try {
         await provider.connect();
@@ -59,6 +61,13 @@ export function useWorkspaceProviders(sources: WorkspaceSourceRow[]) {
       if (!source) {
         provider.close?.();
         providersRef.current.delete(id);
+        signaturesRef.current.delete(id);
+        continue;
+      }
+      if (signaturesRef.current.get(id) !== signature(source)) {
+        provider.close?.();
+        providersRef.current.delete(id);
+        signaturesRef.current.delete(id);
       }
     }
     for (const source of sources) {
@@ -76,6 +85,7 @@ export function useWorkspaceProviders(sources: WorkspaceSourceRow[]) {
     () => () => {
       for (const provider of providersRef.current.values()) provider.close?.();
       providersRef.current.clear();
+      signaturesRef.current.clear();
     },
     [],
   );
