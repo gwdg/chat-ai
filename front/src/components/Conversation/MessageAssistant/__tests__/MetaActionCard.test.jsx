@@ -10,16 +10,22 @@ const conversation = {
   pinned: false,
 };
 
+const { dispatch, mockState } = vi.hoisted(() => ({
+  dispatch: vi.fn(),
+  mockState: {
+    user_settings: {
+      memories: [],
+      memory_groups: [{ id: "private", name: "Private" }],
+      default_memory_group: "default",
+      memory_mode: 0,
+    },
+    interface_settings: {},
+  },
+}));
+
 vi.mock("react-redux", () => ({
-  useDispatch: () => vi.fn(),
-  useSelector: (selector) =>
-    selector({
-      user_settings: {
-        memories: [],
-        memory_mode: 0,
-      },
-      interface_settings: {},
-    }),
+  useDispatch: () => dispatch,
+  useSelector: (selector) => selector(mockState),
 }));
 
 vi.mock("../../../../db", () => ({
@@ -49,6 +55,7 @@ const localState = {
 describe("MetaActionCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.user_settings.memories = [];
     vi.mocked(getConversationMeta).mockResolvedValue(conversation);
   });
 
@@ -164,5 +171,58 @@ describe("MetaActionCard", () => {
     await waitFor(() =>
       expect(assignConversationToFolder).toHaveBeenCalledWith("chat-1", "folder-1"),
     );
+  });
+
+  it("adds a proposed memory to the named group", async () => {
+    render(
+      <MetaActionCard
+        actions={[
+          { type: "add_memory", text: "Private detail", group: "Private" },
+        ]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /accept changes/i }));
+    await waitFor(() => {
+      const memoryUpdate = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => Array.isArray(action?.payload?.memories));
+      expect(memoryUpdate?.payload.memories).toEqual([
+        expect.objectContaining({
+          text: "Private detail",
+          groupId: "private",
+        }),
+      ]);
+    });
+  });
+
+  it("adds a proposed memory to the chat's effective group by default", async () => {
+    render(
+      <MetaActionCard
+        actions={[{ type: "add_memory", text: "Private detail" }]}
+        localState={{
+          ...localState,
+          settings: { memory_group_override: "private" },
+        }}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /accept changes/i }));
+    await waitFor(() => {
+      const memoryUpdate = dispatch.mock.calls
+        .map(([action]) => action)
+        .find((action) => Array.isArray(action?.payload?.memories));
+      expect(memoryUpdate?.payload.memories).toEqual([
+        expect.objectContaining({
+          text: "Private detail",
+          groupId: "private",
+        }),
+      ]);
+    });
   });
 });

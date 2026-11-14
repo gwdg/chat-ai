@@ -34,7 +34,12 @@ vi.mock("../personaCatalog", () => ({
 const context = {
   userSettings: {
     model: { id: "test-model", name: "Test Model" },
-    memories: [],
+    memories: [
+      { text: "Remember the milk", groupId: "work" },
+      { text: "Call Alice" },
+    ],
+    memory_groups: [{ id: "work", name: "Work" }],
+    default_memory_group: "work",
     memory_mode: 1,
     timeout: 300000,
   },
@@ -51,7 +56,10 @@ const context = {
     { id: "test-model", name: "Test Model" },
     { id: "other-model", name: "Other Model" },
   ],
-  memories: [{ text: "Remember the milk" }, { text: "Call Alice" }],
+  memories: [
+    { text: "Remember the milk", groupId: "work" },
+    { text: "Call Alice" },
+  ],
 };
 
 describe("Meta chat local tools", () => {
@@ -104,7 +112,19 @@ describe("Meta chat local tools", () => {
     const run = createMetaToolRunner(context);
 
     await expect(run("list_memories")).resolves.toContain("Remember the milk");
+    await expect(run("list_memories")).resolves.toContain(
+      "group: Work",
+    );
+    await expect(run("list_memories")).resolves.toContain(
+      "This chat's effective memory group: Work",
+    );
     await expect(run("get_user_settings")).resolves.toContain("Default model: Test Model");
+    await expect(run("get_user_settings")).resolves.toContain(
+      "Memory groups: Default (1 memories), Work (1 memories)",
+    );
+    await expect(run("get_user_settings")).resolves.toContain(
+      "Default memory group: Work",
+    );
     await expect(run("list_models")).resolves.toContain("Other Model");
     await expect(run("list_personas")).resolves.toContain("writing/editor.json");
   });

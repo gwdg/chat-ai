@@ -23,6 +23,7 @@ import AnnouncementBar from "../components/Header/AnnouncementBar";
 import FeatureGuideCard from "../components/Others/FeatureGuideCard";
 import TutorialCatalog from "../components/Others/TutorialCatalog";
 import UseCaseCatalog from "../components/Others/UseCaseCatalog";
+import HallucinationWarning from "../components/Conversation/HallucinationWarning";
 import { MetaChatSendContext } from "../context/MetaChatContext";
 import { useFeatureGuide } from "../context/FeatureGuideContext";
 
@@ -199,6 +200,9 @@ export default function MetaChatPage() {
           />
 
           <div className="flex min-h-0 min-w-0 flex-col">
+            <div className="mx-auto w-full md:max-w-[85vw] xl:max-w-[1300px]">
+              <HallucinationWarning />
+            </div>
             <div className="mx-auto mb-2 flex w-full md:max-w-[85vw] xl:max-w-[1300px] items-start gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 shadow-sm">
               <AiLabel
                 size={16}

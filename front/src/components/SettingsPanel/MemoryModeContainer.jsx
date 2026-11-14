@@ -2,7 +2,12 @@ import { Brain, HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 
-import { selectMemoryMode } from "../../Redux/reducers/userSettingsReducer";
+import {
+  selectAllMemories,
+  selectDefaultMemoryGroup,
+  selectMemoryGroups,
+  selectMemoryMode,
+} from "../../Redux/reducers/userSettingsReducer";
 import { useModal } from "../../modals/ModalContext";
 
 const MEMORY_MODE_OPTIONS = [
@@ -18,7 +23,29 @@ export default function MemoryModeContainer({ localState, setLocalState }) {
   const { t } = useTranslation();
   const { openModal } = useModal();
   const globalMemoryMode = useSelector(selectMemoryMode);
+  const memoryGroups = useSelector(selectMemoryGroups);
+  const defaultMemoryGroup = useSelector(selectDefaultMemoryGroup);
+  const memories = useSelector(selectAllMemories);
   const globalKey = GLOBAL_MEMORY_KEYS[globalMemoryMode] ?? "none";
+
+  const countForGroup = (groupId) =>
+    memories.filter((memory) => (memory.groupId ?? "default") === groupId)
+      .length;
+
+  const groupOptions = [
+    { id: "default", name: t("settings.memory_mode.default_group_name") },
+    ...memoryGroups,
+  ];
+  const defaultGroupName =
+    groupOptions.find((group) => group.id === defaultMemoryGroup)?.name ||
+    t("settings.memory_mode.default_group_name");
+  const rawGroupOverride = localState?.settings?.memory_group_override;
+  const selectedGroup =
+    rawGroupOverride &&
+    rawGroupOverride !== "default" &&
+    memoryGroups.some((group) => group.id === rawGroupOverride)
+      ? rawGroupOverride
+      : "default";
 
   const rawValue = localState?.settings?.memory_mode_override;
   const currentValue =
@@ -28,6 +55,8 @@ export default function MemoryModeContainer({ localState, setLocalState }) {
   const selectedOption =
     MEMORY_MODE_OPTIONS.find((option) => option.value === normalizedValue) ??
     MEMORY_MODE_OPTIONS[0];
+  const effectiveMemoryMode =
+    normalizedValue === "default" ? globalMemoryMode : normalizedValue;
 
   const description =
     selectedOption.value === "default"
@@ -106,6 +135,45 @@ export default function MemoryModeContainer({ localState, setLocalState }) {
       >
         {description}
       </p>
+
+      <label className="flex items-center gap-2">
+        <span className="shrink-0 text-xs font-medium text-accent">
+          {t("settings.memory_mode.group_label")}
+        </span>
+        <select
+          value={selectedGroup}
+          onChange={(event) => {
+            const value = event.target.value;
+            const shouldEnableRecall =
+              value !== "default" && effectiveMemoryMode === 0;
+            setLocalState((prev) => ({
+              ...prev,
+              settings: {
+                ...prev.settings,
+                memory_group_override: value,
+                ...(shouldEnableRecall
+                  ? { memory_mode_override: 1 }
+                  : {}),
+              },
+            }));
+          }}
+          className="select select-bordered select-xs min-w-0 flex-1"
+        >
+          <option value="default">
+            {defaultMemoryGroup === "default"
+              ? t("settings.memory_mode.default_group_name")
+              : t("settings.memory_mode.group_default", {
+                  group: defaultGroupName,
+                })}{" "}
+            ({countForGroup(defaultMemoryGroup)})
+          </option>
+          {memoryGroups.map((group) => (
+            <option key={group.id} value={group.id}>
+              {group.name} ({countForGroup(group.id)})
+            </option>
+          ))}
+        </select>
+      </label>
     </section>
   );
 }

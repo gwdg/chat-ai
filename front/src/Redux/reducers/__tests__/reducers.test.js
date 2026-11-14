@@ -1,16 +1,23 @@
 import { describe, expect, it } from "vitest";
 import userSettingsReducer, {
   addMemory,
+  addMemoryGroup,
   deleteAllMemories,
   deleteMemory,
+  deleteMemoryGroup,
   editMemory,
   importUserSettings,
+  renameMemoryGroup,
+  setDefaultMemoryGroup,
+  setMemoryGroup,
   setMemoryMode,
   setSendWithEnter,
   setRenderGraphviz,
   setRenderVega,
   setRenderChartjs,
   selectMemoryMode,
+  selectMemoryGroups,
+  selectDefaultMemoryGroup,
   selectRenderGraphviz,
   selectRenderVega,
   selectRenderChartjs,
@@ -49,6 +56,64 @@ describe("user settings reducer", () => {
     expect(state.memories).toHaveLength(1);
     state = userSettingsReducer(state, deleteAllMemories());
     expect(state.memories).toEqual([]);
+  });
+
+  it("groups memories and moves them to the default group on delete", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addMemoryGroup({ id: "work", name: "Work" }),
+    );
+    state = userSettingsReducer(
+      state,
+      addMemoryGroup({ id: "work-2", name: "  work  " }),
+    );
+    expect(state.memory_groups).toEqual([{ id: "work", name: "Work" }]);
+
+    state = userSettingsReducer(
+      state,
+      addMemory({ text: "a", groupId: "work" }),
+    );
+    state = userSettingsReducer(state, addMemory({ text: "b" }));
+    state = userSettingsReducer(
+      state,
+      addMemory({ text: "c", groupId: "work" }),
+    );
+    expect(state.memories.map((memory) => memory.groupId)).toEqual([
+      "work",
+      "default",
+      "work",
+    ]);
+
+    state = userSettingsReducer(
+      state,
+      editMemory({ index: 0, text: "a2", groupId: "work" }),
+    );
+    expect(state.memories[0].text).toBe("a2");
+    expect(state.memories[2].text).toBe("c");
+
+    state = userSettingsReducer(state, setDefaultMemoryGroup("work"));
+    expect(state.default_memory_group).toBe("work");
+
+    state = userSettingsReducer(
+      state,
+      setMemoryGroup({ index: 2, groupId: "default" }),
+    );
+    expect(state.memories[2].groupId).toBe("default");
+
+    state = userSettingsReducer(state, renameMemoryGroup({ id: "work", name: "Job" }));
+    expect(state.memory_groups).toEqual([{ id: "work", name: "Job" }]);
+
+    state = userSettingsReducer(state, deleteMemoryGroup({ id: "work" }));
+    expect(state.memory_groups).toEqual([]);
+    expect(state.default_memory_group).toBe("default");
+    expect(state.memories.map((memory) => memory.groupId)).toEqual([
+      "default",
+      "default",
+      "default",
+    ]);
+    expect(selectMemoryGroups({ user_settings: state })).toEqual([]);
+    expect(selectDefaultMemoryGroup({ user_settings: state })).toBe("default");
   });
 
   it("validates memory mode and send shortcut", () => {

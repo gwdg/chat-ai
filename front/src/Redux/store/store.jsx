@@ -18,7 +18,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 7,
+  version: 8,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -49,6 +49,8 @@ const getDefaultState = () => {
     // Conditionally preserve memories
     user_settings: {
       memories: [],
+      memory_groups: [],
+      default_memory_group: "default",
       timeout: 300000,
       memory_mode: 0,
       suggest_user_prompts: false,

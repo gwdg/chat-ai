@@ -259,7 +259,9 @@ export default {
     mcp_update_remote_summary:
       "Entfernten MCP-Server {{name}} in {{target}} aktualisieren",
     add_memory_summary: "Erinnerung „{{text}}“ hinzufügen",
+    add_memory_group_summary: "Erinnerung „{{text}}“ zur Gruppe „{{group}}“ hinzufügen",
     update_memory_summary: "Erinnerung „{{from}}“ in „{{to}}“ ändern",
+    update_memory_group_summary: "Erinnerung „{{from}}“ in „{{to}}“ in Gruppe „{{group}}“ ändern",
     delete_memory_summary: "Erinnerung „{{text}}“ löschen",
     clear_memories_summary: "Alle gespeicherten Erinnerungen löschen",
     memory_item: "Erinnerung {{index}}",
@@ -744,6 +746,9 @@ export default {
       description:
         "Legen Sie fest, wie diese Unterhaltung Ihre gespeicherten Erinnerungen verwendet.",
       help_label: "Mehr über Erinnerungen erfahren",
+      default_group_name: "Standard",
+      group_label: "Erinnerungsgruppe",
+      group_default: "Standard ({{group}})",
       options: {
         default: {
           label: "Standard",
@@ -1251,6 +1256,18 @@ export default {
       description:
         "Verwalten Sie Ihre persönlichen Erinnerungen, die der KI helfen, wichtige Details über Sie zu behalten. Sie haben derzeit {{count}} Erinnerungen gespeichert.",
       manage: "Erinnerungen verwalten",
+      groups: {
+        title: "Erinnerungsgruppen",
+        description:
+          "Gruppieren Sie Erinnerungen wie Ordner. Die Standardgruppe wird verwendet, sofern in einem Chat keine andere Gruppe ausgewählt ist.",
+        default_name: "Standard",
+        default_label: "Standardgruppe",
+        default_badge: "Standard",
+        name_placeholder: "Name der neuen Gruppe",
+        add: "Hinzufügen",
+        rename: "Gruppe umbenennen",
+        delete: "Gruppe löschen",
+      },
     },
     logout: "Abmelden",
   },
@@ -1289,6 +1306,7 @@ export default {
   // Memory Modal
   memory: {
     userMemory: "Erinnerungen",
+    userMemoryGroup: "Erinnerungen (Gruppe: {{group}})",
     memoryCount_one: "{{count}} Erinnerung gespeichert",
     memoryCount_other: "{{count}} Erinnerungen gespeichert",
     addNew: "Neue Erinnerung hinzufügen",
