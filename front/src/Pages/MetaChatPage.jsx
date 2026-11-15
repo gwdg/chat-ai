@@ -268,9 +268,12 @@ export default function MetaChatPage() {
                     {t("meta_chat.purposes.find_example")}
                   </li>
                 </ul>
+                {/* The catalogs anchor their panel to this row, so the panel
+                    stays inside the conversation when the buttons wrap or the
+                    second button sits far right on a phone. */}
                 <div
                   ref={catalogRef}
-                  className="mt-2 flex flex-wrap items-center gap-2"
+                  className="relative mt-2 flex flex-wrap items-center gap-2"
                 >
                   <TutorialCatalog
                     open={openCatalog === "tutorials"}

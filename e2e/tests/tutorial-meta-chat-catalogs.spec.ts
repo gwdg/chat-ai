@@ -45,13 +45,22 @@ test.describe("tutorial: meta chat catalogs", () => {
       async () => {
         // Step 1: open the tutorial catalog.
         await closeSidebarOverlay(page);
-        await page.locator('[data-guide="browse-tutorials"]').click();
+        const tutorials = page.locator('[data-guide="browse-tutorials"]');
+        await tutorials.click();
         panel = await showTutorialPanel(page);
         await panel.getByRole("button", { name: "Next" }).click();
         await expect(panel).toContainText("Step 2 of 4");
-        // Leave the drawer closed so the screenshot shows the conversation and
-        // the opened catalog, not the sidebar that hosts the tutorial panel.
+
+        // Reading the panel means opening the sidebar drawer, and that click is
+        // outside the catalog, so the Meta chat closes it. Re-open it, then
+        // close the drawer again so the screenshot shows the conversation with
+        // the catalog instead of the sidebar.
         await closeSidebarOverlay(page);
+        if ((await tutorials.getAttribute("aria-expanded")) !== "true") {
+          await tutorials.click();
+        }
+        await expect(tutorials).toHaveAttribute("aria-expanded", "true");
+        await expect(page.getByLabel("Search tutorials")).toBeVisible();
       },
     );
 
@@ -60,18 +69,28 @@ test.describe("tutorial: meta chat catalogs", () => {
       {
         user: "The user clicks the use-cases button beside it.",
         system:
-          "Both catalogs are open and the guide advances to Step 3 of 4, which is completed by sending a message.",
+          "The use-case catalog opens in place of the tutorial catalog — the Meta chat keeps one catalog open at a time — and the guide advances to Step 3 of 4, which is completed by sending a message.",
         shows:
-          "the Meta chat with the tutorial and use-case catalogs open above the prompt input",
+          "the Meta chat with the use-case catalog open above the prompt input",
       },
       async () => {
-        // Step 2: open the use-case catalog beside it.
+        // Step 2: open the use-case catalog. It replaces the tutorial catalog.
         await closeSidebarOverlay(page);
-        await page.locator('[data-guide="browse-use-cases"]').click();
+        const useCases = page.locator('[data-guide="browse-use-cases"]');
+        await useCases.click();
         panel = await showTutorialPanel(page);
         await panel.getByRole("button", { name: "Next" }).click();
         await expect(panel).toContainText("Step 3 of 4");
+
+        // Same as above: opening the panel's drawer closes the catalog, so
+        // re-open the use-case catalog for the screenshot.
         await closeSidebarOverlay(page);
+        if ((await useCases.getAttribute("aria-expanded")) !== "true") {
+          await useCases.click();
+        }
+        await expect(useCases).toHaveAttribute("aria-expanded", "true");
+        await expect(page.getByLabel("Search use cases")).toBeVisible();
+        await expect(page.getByLabel("Search tutorials")).toHaveCount(0);
       },
     );
 
