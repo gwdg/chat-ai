@@ -53,6 +53,7 @@ import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import { topicIconById } from "../Sidebar/topicIcons";
+import { pinnedStateId } from "../Sidebar/pinnedState";
 import { groupRowTint, groupRule, topicColor, withAlpha } from "../Sidebar/topicColors";
 
 // Workspace rows and the agent rows inside them default to expanded, so only the
@@ -65,7 +66,14 @@ export const workspaceAgentCollapseId = (
   agentId: string,
 ) => `__workspace_agent__:${workspaceId}:${agentId}`;
 
-export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void }) {
+export default function WorkspaceList({
+  onNavigate,
+  variant = "all",
+}: {
+  onNavigate?: () => void;
+  /** "pinned" renders only pinned workspaces, without the section band. */
+  variant?: "all" | "pinned";
+} = {}) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -74,6 +82,14 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   const { openModal, confirmAction } = useModal();
   const { notifyError } = useToast();
   const workspaces = useWorkspaceList();
+  // The pinned section reuses these rows, so it renders only the pinned ones.
+  const listedWorkspaces = useMemo(
+    () =>
+      variant === "pinned"
+        ? workspaces.filter((workspace) => workspace.pinned === true)
+        : workspaces,
+    [workspaces, variant],
+  );
   const chatLinks = useWorkspaceChatLinks();
   const agentLinks = useWorkspaceAgentLinks();
   const sessionLinks = useWorkspaceAgentSessionLinks();
@@ -110,23 +126,36 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const isDark = useSelector(selectDarkMode);
 
+  // The pinned copy is a second instance of this list, so its folds are keyed
+  // apart from the workspace rows in the Workspace section.
+  const collapseId = (id: string) =>
+    variant === "pinned" ? pinnedStateId(id) : id;
+
   // A workspace row is open unless the user folded it; it is only foldable when
   // something is attached. The same persisted list drives its agent rows below.
   const expandedWorkspaceIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const workspace of workspaces) {
+    for (const workspace of listedWorkspaces) {
       const expandable =
         (chatsByWorkspace.get(workspace.id)?.length ?? 0) > 0 ||
         (agentsByWorkspace.get(workspace.id)?.length ?? 0) > 0;
       if (
         expandable &&
-        !collapsedTopicIds.includes(workspaceRowCollapseId(workspace.id))
+        !collapsedTopicIds.includes(
+          collapseId(workspaceRowCollapseId(workspace.id)),
+        )
       ) {
         ids.add(workspace.id);
       }
     }
     return ids;
-  }, [workspaces, chatsByWorkspace, agentsByWorkspace, collapsedTopicIds]);
+  }, [
+    listedWorkspaces,
+    chatsByWorkspace,
+    agentsByWorkspace,
+    collapsedTopicIds,
+    variant,
+  ]);
 
   // Session titles come from the agent server; load them the first time a workspace with
   // agents is expanded, then keep them until the session list actually changes.
@@ -205,407 +234,419 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
     );
   };
 
-  return (
-    <div className="px-3 pt-3 pb-1">
-      <div className="mb-1 flex items-center gap-1 rounded-lg bg-base-200/70 px-2 py-1">
-        <button
-          type="button"
-          onClick={() => dispatch(toggleTopic("__workspaces__"))}
-          className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
-          aria-expanded={!collapsed}
-        >
-          <ChevronDown
-            size={12}
-            className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
-          />
-          <span className="truncate">{t("workspace.sidebar_title")}</span>
-        </button>
-        <button
-          type="button"
-          onClick={create}
-          data-guide="workspace-add-source"
-          className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
-          title={t("workspace.new_workspace")}
-          aria-label={t("workspace.new_workspace")}
-        >
-          <Add size={15} />
-        </button>
-      </div>
+  const header = variant === "all" && (
+    <div className="mb-1 flex items-center gap-1 rounded-lg bg-base-200/70 px-2 py-1">
+      <button
+        type="button"
+        onClick={() => dispatch(toggleTopic("__workspaces__"))}
+        className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+        aria-expanded={!collapsed}
+      >
+        <ChevronDown
+          size={12}
+          className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
+        />
+        <span className="truncate">{t("workspace.sidebar_title")}</span>
+      </button>
+      <button
+        type="button"
+        onClick={create}
+        data-guide="workspace-add-source"
+        className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
+        title={t("workspace.new_workspace")}
+        aria-label={t("workspace.new_workspace")}
+      >
+        <Add size={15} />
+      </button>
+    </div>
+  );
 
-      {collapsed ? null : workspaces.length === 0 ? (
-        <button
-          type="button"
-          onClick={create}
-          className="flex w-full items-center gap-1.5 rounded-xl border border-dashed border-base-300 px-3 py-2 text-left text-xs text-base-content/60 transition hover:border-accent/40 hover:bg-base-200/60"
-        >
-          {t("workspace.empty_sidebar_title")}
-        </button>
-      ) : (
-        <div className="space-y-0.5">
-          {workspaces.map((workspace) => {
-            const active = location.pathname === `/workspace/${workspace.id}`;
-            const chats = chatsByWorkspace.get(workspace.id) ?? [];
-            const attachedAgents = agentsByWorkspace.get(workspace.id) ?? [];
-            const expandable = chats.length > 0 || attachedAgents.length > 0;
-            const expanded = expandedWorkspaceIds.has(workspace.id);
-            const WorkspaceIcon = topicIconById(workspace.icon).Icon;
-            const workspaceColor = topicColor({
-              id: workspace.id,
-              color: workspace.color,
-            });
-            return (
-              <div key={workspace.id}>
-                <div
-                  className={`group flex items-center rounded-xl transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
-                    active ? "text-accent" : "text-base-content"
-                  }`}
-                  style={
-                    {
-                      "--group-tint": groupRowTint(workspaceColor.hex, isDark, {
-                        active,
-                      }),
-                      "--group-tint-hover": groupRowTint(
-                        workspaceColor.hex,
-                        isDark,
-                        { active, hover: true },
-                      ),
-                    } as CSSProperties
-                  }
+  const body = (variant === "all" && collapsed) ? null : listedWorkspaces.length === 0 ? (
+    <button
+      type="button"
+      onClick={create}
+      className="flex w-full items-center gap-1.5 rounded-xl border border-dashed border-base-300 px-3 py-2 text-left text-xs text-base-content/60 transition hover:border-accent/40 hover:bg-base-200/60"
+    >
+      {t("workspace.empty_sidebar_title")}
+    </button>
+  ) : (
+    <div className="space-y-0.5">
+      {listedWorkspaces.map((workspace) => {
+        const active = location.pathname === `/workspace/${workspace.id}`;
+        const chats = chatsByWorkspace.get(workspace.id) ?? [];
+        const attachedAgents = agentsByWorkspace.get(workspace.id) ?? [];
+        const expandable = chats.length > 0 || attachedAgents.length > 0;
+        const expanded = expandedWorkspaceIds.has(workspace.id);
+        const WorkspaceIcon = topicIconById(workspace.icon).Icon;
+        const workspaceColor = topicColor({
+          id: workspace.id,
+          color: workspace.color,
+        });
+        return (
+          <div key={workspace.id}>
+            <div
+              className={`group flex items-center rounded-xl transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+                active ? "text-accent" : "text-base-content"
+              }`}
+              style={
+                {
+                  "--group-tint": groupRowTint(workspaceColor.hex, isDark, {
+                    active,
+                  }),
+                  "--group-tint-hover": groupRowTint(
+                    workspaceColor.hex,
+                    isDark,
+                    { active, hover: true },
+                  ),
+                } as CSSProperties
+              }
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  dispatch(
+                    toggleTopic(collapseId(workspaceRowCollapseId(workspace.id))),
+                  )
+                }
+                disabled={!expandable}
+                className={`ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 ${
+                  expandable
+                    ? "hover:text-base-content"
+                    : "cursor-default opacity-40"
+                }`}
+                aria-expanded={expanded}
+                aria-label={t("workspace.attached_items")}
+              >
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform ${expanded ? "" : "-rotate-90"}`}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate(`/workspace/${workspace.id}`);
+                  onNavigate?.();
+                }}
+                className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
+              >
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                  style={{
+                    color: workspaceColor.hex,
+                    backgroundColor: withAlpha(
+                      workspaceColor.hex,
+                      active ? 0.2 : 0.12,
+                    ),
+                  }}
                 >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      dispatch(toggleTopic(workspaceRowCollapseId(workspace.id)))
-                    }
-                    disabled={!expandable}
-                    className={`ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 ${
-                      expandable
-                        ? "hover:text-base-content"
-                        : "cursor-default opacity-40"
-                    }`}
-                    aria-expanded={expanded}
-                    aria-label={t("workspace.attached_items")}
-                  >
-                    <ChevronDown
-                      size={12}
-                      className={`transition-transform ${expanded ? "" : "-rotate-90"}`}
-                    />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigate(`/workspace/${workspace.id}`);
-                      onNavigate?.();
-                    }}
-                    className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left"
-                  >
-                    <span
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                      style={{
-                        color: workspaceColor.hex,
-                        backgroundColor: withAlpha(
-                          workspaceColor.hex,
-                          active ? 0.2 : 0.12,
-                        ),
-                      }}
+                  <WorkspaceIcon size={15} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                  {workspace.name}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openModal("workspaceAttachChat", {
+                    workspaceId: workspace.id,
+                    conversations,
+                    attachedIds: chats.map((chat) => chat.id),
+                  })
+                }
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-accent group-hover:opacity-100"
+                title={t("workspace.attach_chat")}
+                aria-label={t("workspace.attach_chat")}
+              >
+                <Add size={14} />
+              </button>
+              <Popover className="relative mr-1">
+                <PopoverButton
+                  data-guide="workspace-menu"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content group-hover:opacity-100 focus:outline-none"
+                  title={t("workspace.workspace_options")}
+                  aria-label={t("workspace.workspace_options")}
+                >
+                  <OverflowMenuVertical size={16} />
+                </PopoverButton>
+                <PopoverPanel
+                  anchor="bottom end"
+                  className="z-50 w-44 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
+                >
+                  {({ close }) => (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          void setWorkspacePinned(
+                            workspace.id,
+                            workspace.pinned !== true,
+                          );
+                        }}
+                        data-guide="pin-workspace-menu-item"
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        {workspace.pinned ? (
+                          <PinFilled size={14} />
+                        ) : (
+                          <Pin size={14} />
+                        )}
+                        {t(
+                          workspace.pinned
+                            ? "workspace.unpin_action"
+                            : "workspace.pin_action",
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          openModal("workspaceRename", {
+                            workspaceId: workspace.id,
+                            initialName: workspace.name,
+                            initialIcon: workspace.icon,
+                            initialColor: workspaceColor.id,
+                          });
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                      >
+                        <Edit size={14} />
+                        {t("common.edit")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          close();
+                          remove(workspace);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-error transition hover:bg-error/10"
+                      >
+                        <TrashCan size={14} />
+                        {t("workspace.delete_workspace")}
+                      </button>
+                    </>
+                  )}
+                </PopoverPanel>
+              </Popover>
+            </div>
+            {expanded && expandable && (
+              <div
+                className="mb-1 ml-8 flex flex-col gap-0.5 border-x-2 px-2"
+                style={{
+                  borderColor: groupRule(workspaceColor.hex, isDark),
+                }}
+              >
+                {chats.map((chat) => {
+                  const chatActive = location.pathname === `/chat/${chat.id}`;
+                  return (
+                    <div
+                      key={chat.id}
+                      className={`group/chat flex items-center gap-1 rounded-md px-1 py-0.5 ${
+                        chatActive
+                          ? "bg-base-200 text-base-content"
+                          : "hover:bg-base-200"
+                      }`}
                     >
-                      <WorkspaceIcon size={15} />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-xs font-medium">
-                      {workspace.name}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openModal("workspaceAttachChat", {
-                        workspaceId: workspace.id,
-                        conversations,
-                        attachedIds: chats.map((chat) => chat.id),
-                      })
-                    }
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-accent group-hover:opacity-100"
-                    title={t("workspace.attach_chat")}
-                    aria-label={t("workspace.attach_chat")}
-                  >
-                    <Add size={14} />
-                  </button>
-                  <Popover className="relative mr-1">
-                    <PopoverButton
-                      data-guide="workspace-menu"
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content group-hover:opacity-100 focus:outline-none"
-                      title={t("workspace.workspace_options")}
-                      aria-label={t("workspace.workspace_options")}
-                    >
-                      <OverflowMenuVertical size={16} />
-                    </PopoverButton>
-                    <PopoverPanel
-                      anchor="bottom end"
-                      className="z-50 w-44 rounded-xl border border-base-300 bg-base-100 p-1 shadow-lg"
-                    >
-                      {({ close }) => (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              close();
-                              void setWorkspacePinned(
-                                workspace.id,
-                                workspace.pinned !== true,
-                              );
-                            }}
-                            data-guide="pin-workspace-menu-item"
-                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                          >
-                            {workspace.pinned ? (
-                              <PinFilled size={14} />
-                            ) : (
-                              <Pin size={14} />
-                            )}
-                            {t(
-                              workspace.pinned
-                                ? "workspace.unpin_action"
-                                : "workspace.pin_action",
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              close();
-                              openModal("workspaceRename", {
-                                workspaceId: workspace.id,
-                                initialName: workspace.name,
-                                initialIcon: workspace.icon,
-                                initialColor: workspaceColor.id,
-                              });
-                            }}
-                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
-                          >
-                            <Edit size={14} />
-                            {t("common.edit")}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              close();
-                              remove(workspace);
-                            }}
-                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-error transition hover:bg-error/10"
-                          >
-                            <TrashCan size={14} />
-                            {t("workspace.delete_workspace")}
-                          </button>
-                        </>
-                      )}
-                    </PopoverPanel>
-                  </Popover>
-                </div>
-                {expanded && expandable && (
-                  <div
-                    className="mb-1 ml-8 flex flex-col gap-0.5 border-x-2 px-2"
-                    style={{
-                      borderColor: groupRule(workspaceColor.hex, isDark),
-                    }}
-                  >
-                    {chats.map((chat) => {
-                      const chatActive = location.pathname === `/chat/${chat.id}`;
-                      return (
-                      <div
-                        key={chat.id}
-                        className={`group/chat flex items-center gap-1 rounded-md px-1 py-0.5 ${
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate(`/chat/${chat.id}`);
+                          onNavigate?.();
+                        }}
+                        aria-current={chatActive ? "page" : undefined}
+                        className={`min-w-0 flex-1 truncate text-left text-[11px] ${
                           chatActive
+                            ? "font-medium text-base-content"
+                            : "text-base-content/80"
+                        }`}
+                      >
+                        {chat.title || t("conversation.untitled")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void detachWorkspaceChat(workspace.id, chat.id)
+                        }
+                        className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover/chat:opacity-100"
+                        title={t("workspace.detach_chat")}
+                        aria-label={t("workspace.detach_chat")}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    );
+                })}
+                {chats.length > 0 && attachedAgents.length > 0 && (
+                  <div className="my-1 border-t border-base-300/70" />
+                )}
+                {attachedAgents.map((agent) => {
+                  const sessionIds = workspaceSessionIds(
+                    sessionLinks,
+                    workspace.id,
+                    agent.id,
+                  );
+                  const tree = sessionTrees[agent.id];
+                  const scoped = tree
+                    ? filterSessionTree(tree, sessionIds)
+                    : null;
+                  // Per workspace and agent, so the same agent can be folded in one
+                  // workspace and open in another. Collapsed ids live in the same
+                  // persisted list the chat topics use, so the fold survives a reload.
+                  const agentKey = collapseId(
+                    workspaceAgentCollapseId(workspace.id, agent.id),
+                  );
+                  const sessionsOpen = !collapsedTopicIds.includes(agentKey);
+                  const hasSessions = sessionIds.size > 0;
+                  const agentActive = openAgent.agentId === agent.id;
+                  return (
+                    <div key={agent.id}>
+                      <div
+                        className={`group/agent flex items-center gap-1 rounded-md px-1 py-0.5 ${
+                          agentActive
                             ? "bg-base-200 text-base-content"
                             : "hover:bg-base-200"
                         }`}
                       >
                         <button
                           type="button"
+                          disabled={!hasSessions}
+                          onClick={() => dispatch(toggleTopic(agentKey))}
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 ${
+                            hasSessions
+                              ? "hover:bg-base-300 hover:text-base-content"
+                              : "cursor-default opacity-30"
+                          }`}
+                          title={t("agents.sessions")}
+                          aria-label={t("agents.sessions")}
+                          aria-expanded={hasSessions ? sessionsOpen : false}
+                        >
+                          <ChevronDown
+                            size={11}
+                            className={`transition-transform ${
+                              sessionsOpen ? "" : "-rotate-90"
+                            }`}
+                          />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => {
-                            navigate(`/chat/${chat.id}`);
+                            navigate(`/agent/${agent.id}`);
                             onNavigate?.();
                           }}
-                          aria-current={chatActive ? "page" : undefined}
-                          className={`min-w-0 flex-1 truncate text-left text-[11px] ${
-                            chatActive
+                          aria-current={agentActive ? "page" : undefined}
+                          className={`flex min-w-0 flex-1 items-center gap-1 text-left text-[11px] ${
+                            agentActive
                               ? "font-medium text-base-content"
                               : "text-base-content/80"
                           }`}
                         >
-                          {chat.title || t("conversation.untitled")}
+                          <Bot
+                            size={11}
+                            className="shrink-0 text-base-content/45"
+                          />
+                          <span className="truncate">
+                            {agent.name || agent.id}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={creatingSession === agent.id}
+                          onClick={async () => {
+                            if (creatingSession) return;
+                            setCreatingSession(agent.id);
+                            try {
+                              await createWorkspaceAgentSession(
+                                workspace.id,
+                                agent,
+                              );
+                              navigate(`/agent/${agent.id}`);
+                            } catch (reason) {
+                              notifyError(
+                                reason instanceof Error
+                                  ? reason.message
+                                  : String(reason),
+                              );
+                            } finally {
+                              setCreatingSession(null);
+                            }
+                          }}
+                          className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-accent group-hover/agent:opacity-100 disabled:opacity-50"
+                          title={t("agents.new_session")}
+                          aria-label={t("agents.new_session")}
+                        >
+                          {creatingSession === agent.id ? (
+                            <span className="loading loading-spinner loading-xs" />
+                          ) : (
+                            <Add size={11} />
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() =>
-                            void detachWorkspaceChat(workspace.id, chat.id)
+                            void detachWorkspaceAgent(workspace.id, agent.id)
                           }
-                          className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover/chat:opacity-100"
-                          title={t("workspace.detach_chat")}
-                          aria-label={t("workspace.detach_chat")}
+                          className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover/agent:opacity-100"
+                          title={t("workspace.detach_agent")}
+                          aria-label={t("workspace.detach_agent")}
                         >
                           ×
                         </button>
                       </div>
-                      );
-                    })}
-                    {chats.length > 0 && attachedAgents.length > 0 && (
-                      <div className="my-1 border-t border-base-300/70" />
-                    )}
-                    {attachedAgents.map((agent) => {
-                      const sessionIds = workspaceSessionIds(
-                        sessionLinks,
-                        workspace.id,
-                        agent.id,
-                      );
-                      const tree = sessionTrees[agent.id];
-                      const scoped = tree
-                        ? filterSessionTree(tree, sessionIds)
-                        : null;
-                      // Per workspace and agent, so the same agent can be folded in one
-                      // workspace and open in another. Collapsed ids live in the same
-                      // persisted list the chat topics use, so the fold survives a reload.
-                      const agentKey = workspaceAgentCollapseId(
-                        workspace.id,
-                        agent.id,
-                      );
-                      const sessionsOpen = !collapsedTopicIds.includes(agentKey);
-                      const hasSessions = sessionIds.size > 0;
-                      const agentActive = openAgent.agentId === agent.id;
-                      return (
-                        <div key={agent.id}>
-                          <div
-                            className={`group/agent flex items-center gap-1 rounded-md px-1 py-0.5 ${
-                              agentActive
-                                ? "bg-base-200 text-base-content"
-                                : "hover:bg-base-200"
-                            }`}
-                          >
-                            <button
-                              type="button"
-                              disabled={!hasSessions}
-                              onClick={() => dispatch(toggleTopic(agentKey))}
-                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 ${
-                                hasSessions
-                                  ? "hover:bg-base-300 hover:text-base-content"
-                                  : "cursor-default opacity-30"
-                              }`}
-                              title={t("agents.sessions")}
-                              aria-label={t("agents.sessions")}
-                              aria-expanded={hasSessions ? sessionsOpen : false}
-                            >
-                              <ChevronDown
-                                size={11}
-                                className={`transition-transform ${
-                                  sessionsOpen ? "" : "-rotate-90"
-                                }`}
-                              />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigate(`/agent/${agent.id}`);
-                                onNavigate?.();
-                              }}
-                              aria-current={agentActive ? "page" : undefined}
-                              className={`flex min-w-0 flex-1 items-center gap-1 text-left text-[11px] ${
-                                agentActive
-                                  ? "font-medium text-base-content"
-                                  : "text-base-content/80"
-                              }`}
-                            >
-                              <Bot
-                                size={11}
-                                className="shrink-0 text-base-content/45"
-                              />
-                              <span className="truncate">
-                                {agent.name || agent.id}
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={creatingSession === agent.id}
-                              onClick={async () => {
-                                if (creatingSession) return;
-                                setCreatingSession(agent.id);
-                                try {
-                                  await createWorkspaceAgentSession(
-                                    workspace.id,
-                                    agent,
-                                  );
-                                  navigate(`/agent/${agent.id}`);
-                                } catch (reason) {
-                                  notifyError(
-                                    reason instanceof Error
-                                      ? reason.message
-                                      : String(reason),
-                                  );
-                                } finally {
-                                  setCreatingSession(null);
-                                }
-                              }}
-                              className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-accent group-hover/agent:opacity-100 disabled:opacity-50"
-                              title={t("agents.new_session")}
-                              aria-label={t("agents.new_session")}
-                            >
-                              {creatingSession === agent.id ? (
-                                <span className="loading loading-spinner loading-xs" />
-                              ) : (
-                                <Add size={11} />
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void detachWorkspaceAgent(workspace.id, agent.id)
-                              }
-                              className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover/agent:opacity-100"
-                              title={t("workspace.detach_agent")}
-                              aria-label={t("workspace.detach_agent")}
-                            >
-                              ×
-                            </button>
-                          </div>
-                          {sessionsOpen && scoped && scoped.all.length > 0 && (
-                            <AgentSessionList
-                              agent={agent}
-                              tree={scoped}
-                              activeSessionId={activeSessionIdFor(
-                                openAgent,
-                                agent,
-                              )}
-                              summaries={sessionSummariesFor(agent)}
-                              onSelect={(session) => {
-                                void (async () => {
-                                  await openWorkspaceAgentSession(
-                                    workspace.id,
-                                    agent,
-                                    session,
-                                  );
-                                  navigate(`/agent/${agent.id}`);
-                                })();
-                                onNavigate?.();
-                              }}
-                              onDetach={(session) =>
-                                void detachSessionFromWorkspace(
-                                  workspace.id,
-                                  agent,
-                                  session,
-                                )
-                              }
-                              showHeader={false}
-                              emptyKey="agents.no_workspace_sessions"
-                              className="ml-4 mt-0.5 border-0 bg-transparent p-0"
-                            />
+                      {sessionsOpen && scoped && scoped.all.length > 0 && (
+                        <AgentSessionList
+                          agent={agent}
+                          tree={scoped}
+                          activeSessionId={activeSessionIdFor(
+                            openAgent,
+                            agent,
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                          summaries={sessionSummariesFor(agent)}
+                          onSelect={(session) => {
+                            void (async () => {
+                              await openWorkspaceAgentSession(
+                                workspace.id,
+                                agent,
+                                session,
+                              );
+                              navigate(`/agent/${agent.id}`);
+                            })();
+                            onNavigate?.();
+                          }}
+                          onDetach={(session) =>
+                            void detachSessionFromWorkspace(
+                              workspace.id,
+                              agent,
+                              session,
+                            )
+                          }
+                          showHeader={false}
+                          emptyKey="agents.no_workspace_sessions"
+                          className="ml-4 mt-0.5 border-0 bg-transparent p-0"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  if (variant === "pinned") {
+    return listedWorkspaces.length === 0 ? null : (
+      <div data-guide="pinned-workspaces">{body}</div>
+    );
+  }
+
+  return (
+    <div className="px-3 pt-3 pb-1" data-guide="workspace-list">
+      {header}
+      {body}
     </div>
   );
 }

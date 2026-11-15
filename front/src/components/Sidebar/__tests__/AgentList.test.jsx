@@ -5,10 +5,12 @@ import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
 import AgentList from "../AgentList";
 import {
+  addAgent,
   getAgent,
   removeAgent,
   setAgentPinned,
 } from "../../../agents/agentStore";
+import { pinnedStateId } from "../pinnedState";
 import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 
 const mocks = vi.hoisted(() => ({
@@ -43,16 +45,17 @@ beforeEach(() => {
   mocks.status.mockResolvedValue({});
   localStorage.clear();
   removeAgent("agent-1");
+  removeAgent("agent-2");
 });
 
 const makeStore = () =>
   configureStore({ reducer: { interface_settings: interfaceSettingsReducer } });
 
-const renderAgentList = (store = makeStore()) =>
+const renderAgentList = (store = makeStore(), variant = "all") =>
   render(
     <Provider store={store}>
       <MemoryRouter initialEntries={["/chat"]}>
-        <AgentList />
+        <AgentList variant={variant} />
       </MemoryRouter>
     </Provider>,
   );
@@ -198,6 +201,64 @@ describe("AgentList", () => {
     act(() => setAgentPinned("agent-1", false));
     expect(getAgent("agent-1")?.pinned).toBe(false);
     expect(await screen.findByText("HPC project 1")).toBeInTheDocument();
+  });
+
+  it("renders only pinned agents with their own row controls in the pinned variant", async () => {
+    const full = renderAgentList();
+    addAgentThroughModal();
+    act(() => {
+      addAgent({ id: "agent-2", name: "Unpinned agent", sessionId: "session-2" });
+      setAgentPinned("agent-1", true);
+    });
+    expect(await screen.findByText("Unpinned agent")).toBeInTheDocument();
+    full.unmount();
+
+    renderAgentList(makeStore(), "pinned");
+
+    expect(await screen.findByText("HPC project 1")).toBeInTheDocument();
+    expect(screen.queryByText("Unpinned agent")).not.toBeInTheDocument();
+    // The pinned row is the real list row, so it keeps the subtree controls.
+    expect(
+      screen.getByRole("button", { name: "Sessions" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Agent options" }),
+    ).toBeInTheDocument();
+    // The Agents section band stays in the full list only.
+    expect(screen.queryByText("Agents")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Spawn agent" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("expands the pinned copy without expanding the agent in its own section", async () => {
+    const store = makeStore();
+    const full = renderAgentList(store);
+    addAgentThroughModal();
+    act(() => setAgentPinned("agent-1", true));
+    full.unmount();
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={["/chat"]}>
+          <AgentList />
+          <AgentList variant="pinned" />
+        </MemoryRouter>
+      </Provider>,
+    );
+
+    const toggles = await screen.findAllByRole("button", { name: "Sessions" });
+    expect(toggles).toHaveLength(2);
+    expect(toggles[0]).toHaveAttribute("aria-expanded", "false");
+    expect(toggles[1]).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(toggles[1]);
+
+    expect(toggles[1]).toHaveAttribute("aria-expanded", "true");
+    expect(toggles[0]).toHaveAttribute("aria-expanded", "false");
+    expect(store.getState().interface_settings.expanded_agents).toEqual([
+      pinnedStateId("agent-1"),
+    ]);
   });
 
   it("remembers an expanded agent after a remount", () => {

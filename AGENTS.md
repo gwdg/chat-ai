@@ -373,13 +373,18 @@ only appear in their own mode; the topic-creation/unsorted rows only appear in t
 Pinned items are a top-level section (`Sidebar/PinnedSection.tsx`) above the sticky Chats band,
 outside the `chatsCollapsed` conditional, with its own `__pinned__` collapse id. It holds pinned
 chats and topics (rendered by `TopicList` with `variant="pinned"`, which renders only those rows and
-no header, collapse logic or create-topic row) plus pinned workspaces and agents as plain links to
-`/workspace/<id>` and `/agent/<id>`. Pinned chats are not groups, so they are marked with a leading
+no header, collapse logic or create-topic row) plus pinned workspaces and agents. Those two lists
+are the real components rendered a second time with `variant="pinned"`, so a pinned row is the whole
+subtree (attached chats, agents and sessions) with its own options menu, not a link row. Pinned chats
+are not groups, so they are marked with a leading
 dash in the slot where a topic shows its collapse chevron, and never with a vertical connector line.
 `SidebarContent` builds one `topicListProps` object and spreads it into both `TopicList` instances.
-Pinned workspaces and agents stay in `WorkspaceList` / `AgentList` as well, so the pinned row is an
-extra shortcut, not a move; they are unpinned from the pinned row (hover pin button) or their options
-menu. `setWorkspacePinned` writes `WorkspaceRow.pinned` (unindexed, no Dexie bump) and
+Pinned workspaces and agents stay in `WorkspaceList` / `AgentList` as well, so the pinned row is a
+second view, not a move; they are unpinned from the pinned row's options menu or their own row's
+menu. The two copies fold independently: the pinned copy keys its `collapsed_topics` /
+`expanded_agents` ids through `Sidebar/pinnedState.ts` (`__pinned__:` prefix), so expanding or
+collapsing the pinned row leaves the same row in its own section untouched. `setWorkspacePinned`
+writes `WorkspaceRow.pinned` (unindexed, no Dexie bump) and
 `setAgentPinned` writes the localStorage agent entry. The new-chat row sits directly below the Chats
 band, above the search panel and the list.
 It is in `interfaceSettingsSlice`'s `initialState` and `getDefaultState()`; an old persisted state

@@ -810,6 +810,8 @@ export default function SidebarContent({
               chatCount={pinnedTopics.length + pinnedConversations.length}
             >
               <TopicList {...topicListProps} variant="pinned" />
+              <WorkspaceList variant="pinned" />
+              {isAgentsEnabled() && <AgentList variant="pinned" />}
             </PinnedSection>
           )}
           <div

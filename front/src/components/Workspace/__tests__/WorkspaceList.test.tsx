@@ -60,6 +60,7 @@ import WorkspaceList, {
   workspaceAgentCollapseId,
   workspaceRowCollapseId,
 } from "../WorkspaceList";
+import { pinnedStateId } from "../../Sidebar/pinnedState";
 import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 
 const session = (id: string, title: string) => ({ id, title });
@@ -70,11 +71,12 @@ const makeStore = () =>
 const renderList = (
   store: ReturnType<typeof makeStore>,
   initialEntries: string[] = ["/"],
+  variant: "all" | "pinned" = "all",
 ) =>
   render(
     <Provider store={store}>
       <MemoryRouter initialEntries={initialEntries}>
-        <WorkspaceList />
+        <WorkspaceList variant={variant} />
       </MemoryRouter>
     </Provider>,
   );
@@ -133,6 +135,98 @@ describe("WorkspaceList pinning", () => {
     expect(
       screen.getByRole("button", { name: "Workspace options" }),
     ).toBeInTheDocument();
+  });
+
+  it("renders only pinned workspaces in the pinned variant", async () => {
+    mocks.workspaces.mockReturnValue([
+      {
+        id: "ws-1",
+        name: "Teaching",
+        icon: "default",
+        color: "violet",
+        pinned: true,
+      },
+      {
+        id: "ws-2",
+        name: "Scratch",
+        icon: "default",
+        color: "violet",
+        pinned: false,
+      },
+    ]);
+    renderList(makeStore(), ["/"], "pinned");
+
+    expect(await screen.findByText("Teaching")).toBeInTheDocument();
+    expect(screen.queryByText("Scratch")).not.toBeInTheDocument();
+    // The pinned variant drops the section band and its create button.
+    expect(
+      screen.queryByRole("button", { name: "New workspace" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the whole subtree of a pinned workspace in the pinned variant", async () => {
+    mocks.workspaces.mockReturnValue([
+      {
+        id: "ws-1",
+        name: "Teaching",
+        icon: "default",
+        color: "violet",
+        pinned: true,
+      },
+    ]);
+    mocks.conversations.mockReturnValue([
+      { id: "chat-1", title: "Workspace chat" },
+    ]);
+    mocks.chatLinks.mockReturnValue([
+      { workspaceId: "ws-1", conversationId: "chat-1" },
+    ]);
+    renderList(makeStore(), ["/"], "pinned");
+
+    expect(await screen.findByText("Teaching")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Workspace chat" }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("HPC agent")).toBeInTheDocument();
+    expect(await screen.findByText("Design session")).toBeInTheDocument();
+  });
+
+  it("folds the pinned copy without folding the workspace in its own section", async () => {
+    const store = makeStore();
+    mocks.workspaces.mockReturnValue([
+      {
+        id: "ws-1",
+        name: "Teaching",
+        icon: "default",
+        color: "violet",
+        pinned: true,
+      },
+    ]);
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={["/"]}>
+          <WorkspaceList variant="pinned" />
+          <WorkspaceList />
+        </MemoryRouter>
+      </Provider>,
+    );
+
+    const toggles = await screen.findAllByRole("button", {
+      name: "Attached chats, agents and sessions",
+    });
+    expect(toggles).toHaveLength(2);
+    expect(toggles[0]).toHaveAttribute("aria-expanded", "true");
+    expect(toggles[1]).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(toggles[0]);
+
+    expect(toggles[0]).toHaveAttribute("aria-expanded", "false");
+    expect(toggles[1]).toHaveAttribute("aria-expanded", "true");
+    expect(store.getState().interface_settings.collapsed_topics).toContain(
+      pinnedStateId(workspaceRowCollapseId("ws-1")),
+    );
+    expect(store.getState().interface_settings.collapsed_topics).not.toContain(
+      workspaceRowCollapseId("ws-1"),
+    );
   });
 });
 
