@@ -636,6 +636,17 @@ export default function SidebarContent({
         >
           {/* Title container */}
           <div className="flex items-center h-full w-full group">
+            {leadingDash && (
+              // Sits exactly where a topic's collapse button sits: that row has
+              // px-1 plus the button's p-1, this row has px-2, so the slot is
+              // pulled 4px left and keeps the same 20px footprint.
+              <span
+                aria-hidden="true"
+                className="-ml-1 mr-2 flex h-5 w-5 shrink-0 select-none items-center justify-center text-xs leading-none text-base-content/50"
+              >
+                -
+              </span>
+            )}
             <div
               className="flex-1 overflow-hidden min-w-0"
               title={showSummary ? undefined : conv.title || "Untitled Chat"}
@@ -643,14 +654,6 @@ export default function SidebarContent({
               style={{ cursor: isDesktop ? "text" : "pointer" }}
             >
               <div className="flex items-center gap-2">
-                {leadingDash && (
-                  <span
-                    aria-hidden="true"
-                    className="shrink-0 select-none text-xs leading-relaxed text-base-content/50"
-                  >
-                    -
-                  </span>
-                )}
                 <div className="truncate text-xs leading-relaxed cursor-pointer flex-1">
                   {highlightText(conv.title)}
                 </div>

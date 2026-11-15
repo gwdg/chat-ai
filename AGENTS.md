@@ -359,8 +359,12 @@ receives the value as `grouping` to render either topic rows or a date-bucket tr
 `groupConversationsByDate` (modified time); `created` uses `groupConversationsByCreationDate`. Both
 date-like modes show a non-collapsible parent label; their date buckets sit at the top level and are
 collapsible. Collapse state reuses `collapsed_topics` with `__by_date__` / `__by_created__`
-prefixes. Created-mode rows also show the creation date beside the title. The date/created labels
+prefixes; the pinned section uses `__pinned__`. Created-mode rows also show the
+creation date beside the title. The date/created labels
 only appear in their own mode; the topic-creation/unsorted rows only appear in topic mode.
+Pinned chats are listed with pinned topics under the collapsible "Pinned" header; they are not
+groups, so they are marked with a leading dash in the slot where a topic shows its collapse
+chevron, and never with a vertical connector line.
 It is in `interfaceSettingsSlice`'s `initialState` and `getDefaultState()`; an old persisted state
 without the key falls back to `"topic"` in the selector, so no migration is needed.
 

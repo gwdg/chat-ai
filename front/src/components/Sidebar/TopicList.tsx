@@ -29,6 +29,8 @@ import { selectCollapsedTopics, toggleTopic } from "../../Redux/reducers/interfa
 export const UNSORTED_TOPIC_ID = "__unsorted__";
 export const DATE_TOPIC_ID = "__by_date__";
 export const CREATED_TOPIC_ID = "__by_created__";
+/** Synthetic collapse id for the pinned section, stored with the topic states. */
+export const PINNED_COLLAPSE_ID = "__pinned__";
 
 type TopicRef = {
   id: string;
@@ -104,6 +106,7 @@ export default function TopicList({
     : null;
 
   const collapsedTopicIds = useSelector(selectCollapsedTopics) || [];
+  const pinnedCollapsed = collapsedTopicIds.includes(PINNED_COLLAPSE_ID);
 
   const [menuTopicId, setMenuTopicId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -323,37 +326,47 @@ export default function TopicList({
           data-guide="pinned-chats"
           className="flex flex-col gap-1 pb-1 mb-1 border-b border-base-300"
         >
-          <div className="flex items-center gap-2 px-2 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-base-content/70">
+          <button
+            type="button"
+            onClick={() => toggleTopicCollapse(PINNED_COLLAPSE_ID)}
+            aria-expanded={!pinnedCollapsed}
+            className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+          >
+            <ChevronDown
+              size={12}
+              className={`shrink-0 transition-transform ${pinnedCollapsed ? "-rotate-90" : ""}`}
+            />
             <PinFilled size={12} className="flex-shrink-0" />
             <span className="truncate">{t("folders.pinned")}</span>
-          </div>
-          {pinnedTopics.map((topic) => {
-            const color = topicColor(topic);
-            const emoji =
-              topic.icon && !isTopicIconId(topic.icon) ? topic.icon : null;
-            return renderRow({
-              id: topic.id,
-              label: topic.name,
-              conversations: conversationsByTopic.get(topic.id) ?? [],
-              hex: color.hex,
-              Icon: emoji ? null : topicIcon(topic),
-              emoji,
-              topic,
-            });
-          })}
-          {pinnedConversations.length > 0 && (
-            // Pinned chats are not inside a topic, but they line up with topic
-            // children so the list has one consistent indent. A dash marks them
-            // instead of the group's vertical line, which would suggest a parent
-            // group (and only real groups get a collapse chevron).
-            <div className="ml-2 pl-2 flex flex-col gap-1">
+            <span className="ml-1 font-normal tabular-nums text-base-content/35">
+              {pinnedTopics.length + pinnedConversations.length}
+            </span>
+          </button>
+          {!pinnedCollapsed && (
+            <>
+              {pinnedTopics.map((topic) => {
+                const color = topicColor(topic);
+                const emoji =
+                  topic.icon && !isTopicIconId(topic.icon) ? topic.icon : null;
+                return renderRow({
+                  id: topic.id,
+                  label: topic.name,
+                  conversations: conversationsByTopic.get(topic.id) ?? [],
+                  hex: color.hex,
+                  Icon: emoji ? null : topicIcon(topic),
+                  emoji,
+                  topic,
+                });
+              })}
               {pinnedConversations.map((conv) =>
+                // Pinned chats are not groups: they get a dash where a group shows
+                // its chevron, instead of ">" or a vertical connector line.
                 renderConversationRow(conv, {
                   showModified: true,
                   leadingDash: true,
                 }),
               )}
-            </div>
+            </>
           )}
         </div>
       )}
