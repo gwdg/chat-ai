@@ -135,7 +135,7 @@ export default function ChatPage() {
     <div className="flex h-dvh min-h-0">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Header + optional Announcement */}
-      <div className="min-w-0 overflow-hidden">
+      <div className="min-w-0 overflow-x-clip">
         <TourManager />
         <AnnouncementBar />
         <Header

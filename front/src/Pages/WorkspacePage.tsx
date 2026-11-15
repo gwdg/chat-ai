@@ -1321,7 +1321,7 @@ export default function WorkspacePage() {
         onChange={uploadFiles}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="min-w-0 overflow-hidden">
+      <div className="min-w-0 overflow-x-clip">
         <Header
           className="md:hidden"
           localState={sidebarState}

@@ -91,7 +91,7 @@ export default function AgentPage() {
 
   return (
     <div className="h-dvh grid grid-rows-[auto_1fr]">
-      <div className="min-w-0 overflow-hidden">
+      <div className="min-w-0 overflow-x-clip">
         <AnnouncementBar />
         <Header
           className="md:hidden"
