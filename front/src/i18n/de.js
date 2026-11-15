@@ -1636,6 +1636,10 @@ export default {
     unassigned_sessions: "Nicht in einem Arbeitsbereich",
     no_unassigned_sessions: "Jede Sitzung ist einem Arbeitsbereich zugeordnet.",
     detach_session: "Aus dem Arbeitsbereich entfernen",
+    offline_cached:
+      "Der Agent ist nicht erreichbar. Angezeigt wird der um {{time}} gespeicherte Verlauf.",
+    offline_no_cache:
+      "Der Agent ist nicht erreichbar und für diese Sitzung wurde noch kein Verlauf gespeichert.",
     subagent_short: "Sub",
     rename_session: "Sitzung umbenennen",
     close_session: "Sitzung schließen",

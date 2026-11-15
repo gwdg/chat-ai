@@ -88,6 +88,12 @@ export const removeAgent = (id) => {
   clearAgentFormHistory(id);
   clearAgentPermissionPolicies(id);
   clearAgentShellHistory(id);
+  // Imported lazily: the DB module pulls in the workspace/agent layer.
+  void import("../db/agentSessionCache")
+    .then(({ removeAgentSessionCacheForAgent }) =>
+      removeAgentSessionCacheForAgent(id),
+    )
+    .catch(() => {});
   persist();
   emit();
 };

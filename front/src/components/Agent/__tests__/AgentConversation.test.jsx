@@ -7,12 +7,15 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import AgentConversation from "../AgentConversation";
+import { db } from "../../../db";
+import { saveAgentSessionMessages } from "../../../db/agentSessionCache";
 
 const render = (ui) =>
   testingLibraryRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 const apiMocks = vi.hoisted(() => ({
   list: vi.fn(),
+  listPage: vi.fn(),
   send: vi.fn(),
   interrupt: vi.fn(),
   command: vi.fn(),
@@ -39,6 +42,7 @@ const apiMocks = vi.hoisted(() => ({
 
 vi.mock("../../../apis/opencodeAgents", () => ({
   listOpencodeMessages: (...args) => apiMocks.list(...args),
+  listOpencodeMessagesPage: (...args) => apiMocks.listPage(...args),
   sendOpencodePrompt: (...args) => apiMocks.send(...args),
   interruptOpencodeSession: (...args) => apiMocks.interrupt(...args),
   sendOpencodeCommand: (...args) => apiMocks.command(...args),
@@ -87,10 +91,16 @@ const agent = {
   sessionId: "session-1",
 };
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await db.agent_session_messages.clear();
+  await db.agent_sessions.clear();
   for (const mock of Object.values(apiMocks)) mock.mockReset();
   apiMocks.list.mockResolvedValue([]);
+  apiMocks.listPage.mockImplementation(async (...args) => ({
+    messages: await apiMocks.list(...args),
+    complete: true,
+  }));
   apiMocks.permissions.mockResolvedValue([]);
   apiMocks.send.mockResolvedValue({
     data: { time: { created: Date.now() } },
@@ -134,6 +144,64 @@ describe("AgentConversation", () => {
 
     expect(await screen.findByText("Hello")).toBeInTheDocument();
     expect(screen.getByText("Hi there")).toBeInTheDocument();
+  });
+
+  it("renders cached history while the agent is offline", async () => {
+    await saveAgentSessionMessages(
+      "agent-1",
+      "session-1",
+      [
+        { id: "cached-1", type: "user", text: "Cached question" },
+        {
+          id: "cached-2",
+          type: "assistant",
+          content: [{ type: "text", text: "Cached answer" }],
+        },
+      ],
+      { replace: true },
+    );
+    apiMocks.list.mockRejectedValue(new Error("connect ECONNREFUSED"));
+
+    render(<AgentConversation agent={agent} />);
+
+    expect(await screen.findByText("Cached question")).toBeInTheDocument();
+    expect(screen.getByText("Cached answer")).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Showing the history cached at/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/connect ECONNREFUSED/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks the server only for messages newer than the cached tail", async () => {
+    await saveAgentSessionMessages(
+      "agent-1",
+      "session-1",
+      [
+        { id: "cached-1", type: "user", text: "Cached question" },
+        { id: "cached-2", type: "assistant", content: [] },
+      ],
+      { replace: true },
+    );
+    apiMocks.listPage.mockResolvedValue({
+      messages: [
+        { id: "cached-2", type: "assistant", content: [] },
+        { id: "cached-3", type: "assistant", content: [] },
+      ],
+      complete: true,
+    });
+
+    render(<AgentConversation agent={agent} />);
+
+    await waitFor(() =>
+      expect(apiMocks.listPage).toHaveBeenCalledWith(
+        agent,
+        "session-1",
+        { newestId: "cached-2" },
+      ),
+    );
+    expect(await screen.findByText("Cached question")).toBeInTheDocument();
   });
 
   it("sends the prompt to the opencode session", async () => {

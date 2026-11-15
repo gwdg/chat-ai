@@ -10,7 +10,7 @@ import {
   Terminal,
   Tools,
 } from "@carbon/icons-react";
-import { X } from "lucide-react";
+import { CloudOff, X } from "lucide-react";
 
 import {
   clearAgentDraft,
@@ -29,10 +29,16 @@ import {
   saveAgentShellHistory,
 } from "../../agents/agentShellHistory";
 import { getAgent, updateAgent } from "../../agents/agentStore";
+import { mergeMessageHistory } from "../../agents/agentSessions";
 import {
   loadAgentPermissionPolicies,
   matchPermissionPolicy,
 } from "../../agents/agentPermissionPolicies";
+import {
+  loadAgentSessionMessages,
+  removeAgentSessionCache,
+  saveAgentSessionMessages,
+} from "../../db/agentSessionCache";
 import { isInternalShellCommand } from "../../utils/gitLog";
 import {
   compactOpencodeSession,
@@ -45,7 +51,7 @@ import {
   listOpencodeAgents,
   listOpencodeCommands,
   listOpencodeForms,
-  listOpencodeMessages,
+  listOpencodeMessagesPage,
   listOpencodeModels,
   listOpencodePermissions,
   replyOpencodeForm,
@@ -171,6 +177,8 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const [aborted, setAborted] = useState(false);
   const [replyingPermission, setReplyingPermission] = useState(null);
   const [error, setError] = useState("");
+  const [offline, setOffline] = useState(false);
+  const [cachedAt, setCachedAt] = useState(null);
   const pollRef = useRef(null);
   const scrollRef = useRef(null);
   const modelKeyRef = useRef(null);
@@ -181,6 +189,8 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const permissionPoliciesRef = useRef([]);
   const autoReplyingRef = useRef(new Set());
   const summaryMessagesRef = useRef(new Map());
+  const serverMessagesRef = useRef([]);
+  const lastServerMessageIdRef = useRef(null);
   const summariesEnabled = useSelector(selectConversationSummaries);
   const summaryUserSettings = useSelector(selectUserSettings);
   const summarySettingsRef = useRef({
@@ -296,11 +306,44 @@ export default function AgentConversation({ agent, modelsData = [] }) {
 
   const refresh = useCallback(async () => {
     if (!agent?.sessionId) return [];
-    const next = mergeShellMessages(
-      await listOpencodeMessages(agent, agent.sessionId),
+    const { messages: fetched } = await listOpencodeMessagesPage(
+      agent,
+      agent.sessionId,
+      { newestId: lastServerMessageIdRef.current },
     );
-    setMessages(next);
-    return next;
+    const merged = fetched.length
+      ? mergeMessageHistory(
+          serverMessagesRef.current,
+          fetched,
+          lastServerMessageIdRef.current,
+        )
+      : { messages: [], startIndex: 0, changed: [], replace: true };
+    serverMessagesRef.current = merged.messages;
+    const newestFetched = [...fetched]
+      .reverse()
+      .find((message) => message?.id);
+    if (newestFetched) lastServerMessageIdRef.current = newestFetched.id;
+    if (!fetched.length) lastServerMessageIdRef.current = null;
+
+    const visible = mergeShellMessages(merged.messages);
+    const syncedAt = Date.now();
+    setMessages(visible);
+    setOffline(false);
+    setCachedAt(syncedAt);
+    if (agent.id) {
+      void saveAgentSessionMessages(
+        agent.id,
+        agent.sessionId,
+        merged.changed,
+        {
+          startIndex: merged.startIndex,
+          replace: merged.replace,
+          lastMessageId: lastServerMessageIdRef.current,
+          syncedAt,
+        },
+      ).catch(() => {});
+    }
+    return visible;
   }, [agent, mergeShellMessages]);
 
   const refreshPermissions = useCallback(async () => {
@@ -360,6 +403,25 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     return next;
   }, [agent, replaceFormHistory]);
 
+  const reportSyncFailure = useCallback((reason) => {
+    // Keep a readable cached conversation when the server is gone instead of replacing it
+    // with a connection error.
+    if (serverMessagesRef.current.length) {
+      setOffline(true);
+      return;
+    }
+    setError(reason instanceof Error ? reason.message : String(reason));
+  }, []);
+
+  const retrySync = useCallback(async () => {
+    try {
+      await Promise.all([refresh(), refreshPermissions(), refreshForms()]);
+      setError("");
+    } catch (reason) {
+      reportSyncFailure(reason);
+    }
+  }, [refresh, refreshPermissions, refreshForms, reportSyncFailure]);
+
   const startPolling = useCallback(
     (sentAt) => {
       let polls = 0;
@@ -380,7 +442,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
             return;
           }
         } catch (reason) {
-          setError(reason instanceof Error ? reason.message : String(reason));
+          reportSyncFailure(reason);
           setSending(false);
           return;
         }
@@ -394,7 +456,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       };
       pollRef.current = setTimeout(poll, 500);
     },
-    [refresh, refreshPermissions, t],
+    [refresh, refreshPermissions, reportSyncFailure, t],
   );
 
   const startStatusPolling = useCallback(() => {
@@ -420,7 +482,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
           return;
         }
       } catch (reason) {
-        setError(reason instanceof Error ? reason.message : String(reason));
+        reportSyncFailure(reason);
         setSending(false);
         return;
       }
@@ -432,7 +494,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       pollRef.current = setTimeout(poll, POLL_INTERVAL);
     };
     pollRef.current = setTimeout(poll, 700);
-  }, [agent, refresh, refreshPermissions, refreshForms]);
+  }, [agent, refresh, refreshPermissions, refreshForms, reportSyncFailure]);
 
   const startShellPolling = useCallback(
     (baseline) => {
@@ -452,7 +514,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
             return;
           }
         } catch (reason) {
-          setError(reason instanceof Error ? reason.message : String(reason));
+          reportSyncFailure(reason);
           updatePendingShell(null);
           setSending(false);
           return;
@@ -468,7 +530,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       };
       pollRef.current = setTimeout(poll, 400);
     },
-    [refresh, t],
+    [refresh, reportSyncFailure, t],
   );
 
   useEffect(() => {
@@ -572,17 +634,45 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     setSending(false);
     setStopping(false);
     setAborted(false);
+    setOffline(false);
+    setCachedAt(null);
+    serverMessagesRef.current = [];
+    lastServerMessageIdRef.current = null;
     stopPolling();
-    Promise.all([refresh(), refreshPermissions(), refreshForms()]).catch((reason) => {
-      if (!cancelled) {
-        setError(reason instanceof Error ? reason.message : String(reason));
+
+    const load = async () => {
+      // Show the cached timeline immediately, then sync only what the server has since then.
+      const cached = await loadAgentSessionMessages(
+        agent.id,
+        agent.sessionId,
+      ).catch(() => null);
+      if (cancelled) return;
+      if (cached?.messages?.length && serverMessagesRef.current.length === 0) {
+        serverMessagesRef.current = cached.messages;
+        lastServerMessageIdRef.current = cached.lastMessageId;
+        setMessages(mergeShellMessages(cached.messages));
+        setCachedAt(cached.syncedAt);
       }
-    });
+      try {
+        await Promise.all([refresh(), refreshPermissions(), refreshForms()]);
+      } catch (reason) {
+        if (!cancelled) reportSyncFailure(reason);
+      }
+    };
+    void load();
     return () => {
       cancelled = true;
       stopPolling();
     };
-  }, [agent, refresh, refreshPermissions, refreshForms, stopPolling]);
+  }, [
+    agent,
+    mergeShellMessages,
+    refresh,
+    refreshPermissions,
+    refreshForms,
+    reportSyncFailure,
+    stopPolling,
+  ]);
 
   useEffect(() => {
     if (!agent?.id || !agent?.sessionId) return;
@@ -864,6 +954,9 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       setAborted(false);
       updateAgent(agent.id, { sessionId: session.id });
       await deleteOpencodeSession(agent, previousSessionId).catch(() => {});
+      await removeAgentSessionCache(agent.id, previousSessionId).catch(
+        () => {},
+      );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
@@ -1114,7 +1207,6 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const shellRunning = messages.some(
     (message) => message.type === "shell" && message.status === "running",
   );
-
   const shellStatus = (message) => {
     if (message.status === "running") {
       return { label: t("agents.shell_status_running"), className: "badge-warning" };
@@ -1215,6 +1307,26 @@ export default function AgentConversation({ agent, modelsData = [] }) {
           </button>
         </Tooltip>
       </header>
+
+      {offline && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-warning/40 bg-warning/10 px-4 py-2 text-xs text-base-content/80">
+          <CloudOff size={14} className="shrink-0 text-warning" />
+          <span className="min-w-0 flex-1">
+            {cachedAt
+              ? t("agents.offline_cached", {
+                  time: new Date(cachedAt).toLocaleString(),
+                })
+              : t("agents.offline_no_cache")}
+          </span>
+          <button
+            type="button"
+            className="btn btn-xs"
+            onClick={() => void retrySync()}
+          >
+            {t("common.refresh")}
+          </button>
+        </div>
+      )}
 
       <div
         ref={scrollRef}

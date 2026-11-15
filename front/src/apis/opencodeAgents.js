@@ -335,18 +335,53 @@ export async function setOpencodeModel(agent, sessionId, model) {
   });
 }
 
-export async function listOpencodeMessages(agent, sessionId) {
+const MESSAGE_PAGE_SIZE = 200;
+const MAX_MESSAGE_PAGES = 20;
+
+/**
+ * Load messages newest-first until `newestId` is reached, so a poll only transfers the
+ * messages that are not cached yet. Without `newestId` this reads the whole history.
+ */
+async function fetchMessagePages(agent, sessionId, newestId = null) {
   const base = `/session/${encodeURIComponent(sessionId)}/message`;
   const messages = [];
-  let params = new URLSearchParams({ order: "desc", limit: "200" });
-  for (let page = 0; page < 20; page += 1) {
+  let params = new URLSearchParams({
+    order: "desc",
+    limit: String(MESSAGE_PAGE_SIZE),
+  });
+  let complete = !newestId;
+  for (let page = 0; page < MAX_MESSAGE_PAGES; page += 1) {
     const result = await request(agent, `${base}?${params.toString()}`);
-    messages.push(...(result?.data ?? []));
+    const data = Array.isArray(result?.data) ? result.data : [];
+    messages.push(...data);
+    if (newestId && data.some((message) => message?.id === newestId)) {
+      complete = true;
+      break;
+    }
     const cursor = result?.cursor?.next;
-    if (!cursor) break;
-    params = new URLSearchParams({ limit: "200", cursor });
+    if (!cursor) {
+      complete = true;
+      break;
+    }
+    params = new URLSearchParams({
+      limit: String(MESSAGE_PAGE_SIZE),
+      cursor,
+    });
   }
-  return messages.reverse();
+  return { messages: messages.reverse(), complete };
+}
+
+export async function listOpencodeMessagesPage(
+  agent,
+  sessionId,
+  options = {},
+) {
+  return fetchMessagePages(agent, sessionId, options.newestId ?? null);
+}
+
+export async function listOpencodeMessages(agent, sessionId) {
+  const { messages } = await fetchMessagePages(agent, sessionId);
+  return messages;
 }
 
 export async function sendOpencodePrompt(agent, sessionId, text, files = []) {

@@ -1614,6 +1614,10 @@ export default {
     unassigned_sessions: "Not in a workspace",
     no_unassigned_sessions: "Every session is attached to a workspace.",
     detach_session: "Remove from workspace",
+    offline_cached:
+      "The agent is offline. Showing the history cached at {{time}}.",
+    offline_no_cache:
+      "The agent is offline and no history has been cached for this session yet.",
     subagent_short: "sub",
     rename_session: "Rename session",
     close_session: "Close session",

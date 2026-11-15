@@ -596,8 +596,9 @@ lives entirely in IndexedDB; the back service does not store it. Dexie schema v6
 `workspace_mounts` and `workspace_chats`; v8 adds the browser source's `workspace_nodes` /
 `workspace_blobs` file tree; v9 adds `workspace_file_references`; v10 adds the default Arcana
 filesystem source; v11 adds the default browser source and moves every browser source and workspace
-root onto the single `browser-storage` tree; v12 adds `workspace_agents` links and v13 adds
-`workspace_agent_sessions` links. Handles and the transfer journal never leave the device. A persisted
+root onto the single `browser-storage` tree; v12 adds `workspace_agents` links, v13 adds
+`workspace_agent_sessions` links and v14 adds the `agent_sessions` /
+`agent_session_messages` history cache. Handles and the transfer journal never leave the device. A persisted
 `chatai.workspace.deviceId` binds `browser`, `local` and `mcp` sources to this device; `arcana`
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
@@ -715,7 +716,20 @@ OpenCode appears without a reload. Leaving an agent session summarizes its messa
 `sessionSummaries`, and shows it in the session row tooltip. Clicking one navigates to
 `Pages/AgentPage.tsx` (`/agent/:agentId`), whose `components/Agent/AgentConversation.jsx` is the
 chat pane; assistant text renders through `SafeMarkdown` with `rendererComponents`, and tool or
-reasoning parts render as inline expandable cards (`AgentAssistantParts`). The left
+reasoning parts render as inline expandable cards (`AgentAssistantParts`).
+
+Session history is cached in IndexedDB by `db/agentSessionCache.ts` (Dexie v14 `agent_sessions` for
+metadata, `agent_session_messages` for one row per message). Re-opening a session does not download
+it again: `AgentConversation` renders the cache first and then syncs,
+`listOpencodeMessagesPage(agent, sessionId, { newestId })` pages newest-first and stops at the
+cached tail, and `mergeMessageHistory()` keeps the cached prefix, replaces the anchor message (it
+can still be streaming) and appends the new tail. Only the changed rows are written back, and
+`listOpencodeMessages` remains the full-history call. `fetchAgentSessions` caches session metadata
+and falls back to it when the session listing fails, so the sidebar and the agent page still list
+sessions while the server is down. A failed message sync keeps the cached timeline and shows a
+warning banner with the cache time and a Refresh button instead of a bare error. Shell output stays
+in its localStorage history and is merged in for display only. Closing a session, clearing the
+history and removing an agent delete the matching cache rows. The left
 `AgentFilesPanel` reuses the central `WorkspaceRootBrowser` (the same component used for the
 workspace root file browser) and reads/writes the OpenCode project filesystem through
 `GET /api/fs/list`, `GET /api/fs/read/<path>`, `POST /api/experimental/fs/write` and

@@ -6,6 +6,11 @@ import {
 } from "../apis/opencodeAgents";
 import { updateAgent } from "./agentStore";
 import { removeWorkspaceAgentSessionLinks } from "../db/workspaceDb";
+import {
+  loadAgentSessions,
+  removeAgentSessionCache,
+  saveAgentSessions,
+} from "../db/agentSessionCache";
 
 const sessionTime = (session) =>
   Number(session?.time?.updated ?? session?.time?.created ?? 0);
@@ -49,8 +54,79 @@ export const buildSessionTree = (sessions = []) => {
   return { roots, children, all };
 };
 
+/**
+ * Combine cached messages with a freshly downloaded tail. `newestId` is the last message we
+ * already had; OpenCode returns that anchor plus everything newer. Without an anchor (or when
+ * the server no longer has it) the downloaded list wins.
+ */
+export const mergeMessageHistory = (
+  cached = [],
+  fetched = [],
+  newestId = null,
+  complete = true,
+) => {
+  const previous = Array.isArray(cached) ? cached : [];
+  const next = Array.isArray(fetched) ? fetched : [];
+  if (!next.length) {
+    return previous.length
+      ? {
+          messages: previous,
+          startIndex: previous.length,
+          changed: [],
+          replace: false,
+        }
+      : { messages: [], startIndex: 0, changed: [], replace: true };
+  }
+  if (!previous.length) {
+    return { messages: next, startIndex: 0, changed: next, replace: true };
+  }
+  const anchorId = newestId || previous[previous.length - 1]?.id;
+  const fetchedIndex = anchorId
+    ? next.findIndex((message) => message?.id === anchorId)
+    : -1;
+  if (fetchedIndex >= 0) {
+    const cachedIndex = previous.findIndex(
+      (message) => message?.id === anchorId,
+    );
+    const prefix =
+      cachedIndex >= 0
+        ? previous.slice(0, cachedIndex)
+        : previous.slice(0, previous.length - 1);
+    return {
+      messages: [...prefix, ...next.slice(fetchedIndex)],
+      startIndex: prefix.length,
+      changed: next.slice(fetchedIndex),
+      replace: false,
+    };
+  }
+  if (!complete) {
+    // A gap larger than the page window: keep the older cache and append the new tail.
+    const known = new Set(previous.map((message) => message?.id));
+    if (!next.some((message) => known.has(message?.id))) {
+      return {
+        messages: [...previous, ...next],
+        startIndex: previous.length,
+        changed: next,
+        replace: false,
+      };
+    }
+  }
+  return { messages: next, startIndex: 0, changed: next, replace: true };
+};
+
 export async function fetchAgentSessions(agent) {
-  const listed = await listOpencodeSessions(agent);
+  let listed;
+  try {
+    listed = await listOpencodeSessions(agent);
+  } catch (reason) {
+    // The agent server is unreachable. Fall back to the session list from the local cache
+    // so an already downloaded conversation can still be opened.
+    const cached = await loadAgentSessions(agent?.id).catch(() => []);
+    if (cached.length) {
+      return { ...buildSessionTree(cached), offline: true };
+    }
+    throw reason;
+  }
   const sessions = new Map();
   for (const session of Array.isArray(listed) ? listed : []) {
     if (session?.id) sessions.set(session.id, session);
@@ -81,7 +157,11 @@ export async function fetchAgentSessions(agent) {
     }
   }
 
-  return buildSessionTree([...sessions.values()]);
+  const tree = buildSessionTree([...sessions.values()]);
+  if (agent?.id) {
+    void saveAgentSessions(agent.id, tree.all).catch(() => {});
+  }
+  return tree;
 }
 
 export async function createAgentSession(agent, title) {
@@ -97,6 +177,7 @@ export async function deleteAgentSession(agent, session, tree = null) {
   if (!agent?.id || !session?.id) return null;
   await deleteOpencodeSession(agent, session.id);
   await removeWorkspaceAgentSessionLinks(agent.id, session.id);
+  await removeAgentSessionCache(agent.id, session.id).catch(() => {});
   let nextSession = null;
   if (agent.sessionId === session.id) {
     const source = tree || (await fetchAgentSessions(agent));

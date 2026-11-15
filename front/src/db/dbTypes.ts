@@ -309,6 +309,31 @@ export type WorkspaceAgentSessionRow = {
   createdAt: number
 }
 
+// Cached OpenCode session metadata (title, parentID, timestamps), so the sidebar and the
+// agent page can still list sessions while the agent server is unreachable.
+export type AgentSessionRow = {
+  id: string
+  agentId: string
+  sessionId: string
+  data: any
+  updatedAt: number
+  messagesSyncedAt?: number
+  lastMessageId?: string | null
+  messageCount?: number
+}
+
+// One OpenCode message of an agent session. Messages are kept separate so a streaming
+// message can be rewritten without cloning the whole history on every poll.
+export type AgentSessionMessageRow = {
+  id: string
+  agentId: string
+  sessionId: string
+  messageId: string
+  position: number
+  data: any
+  updatedAt: number
+}
+
 export type WorkspaceNodeRow = {
   id: string
   sourceId: string
