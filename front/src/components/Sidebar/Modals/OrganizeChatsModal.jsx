@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { TrashCan } from "@carbon/icons-react";
 
 import BaseModal from "../../../modals/BaseModal";
+import ModelProgress from "../../Others/ModelProgress";
 import { useToast } from "../../../hooks/useToast";
 import {
   assignConversationToFolder,
@@ -56,6 +57,7 @@ export default function OrganizeChatsModal({
   const [aiTitles, setAiTitles] = useState([]);
   const [aiAssessment, setAiAssessment] = useState("");
   const [aiMeta, setAiMeta] = useState(null);
+  const [aiProgress, setAiProgress] = useState({ words: 0, reasoningWords: 0 });
   const [analysisRun, setAnalysisRun] = useState(0);
 
   const orderedConversations = useMemo(
@@ -116,6 +118,7 @@ export default function OrganizeChatsModal({
     setAiTitles([]);
     setAiAssessment("");
     setAiMeta(null);
+    setAiProgress({ words: 0, reasoningWords: 0 });
 
     (async () => {
       try {
@@ -123,6 +126,13 @@ export default function OrganizeChatsModal({
           conversations: orderedConversations,
           folders,
           language: i18n.language,
+          onProgress: (progress) => {
+            if (cancelled) return;
+            setAiProgress({
+              words: progress.words ?? 0,
+              reasoningWords: progress.reasoningWords ?? 0,
+            });
+          },
         });
         if (cancelled) return;
         setAiTree(Array.isArray(result.tree) ? result.tree : []);
@@ -510,12 +520,12 @@ export default function OrganizeChatsModal({
           className="max-h-[45vh] space-y-4 overflow-y-auto pr-1"
         >
           {aiStatus === "loading" ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-base-300 px-4 py-10 text-center">
-              <div className="loading loading-spinner loading-md text-accent" />
-              <p className="text-xs text-base-content/70">
-                {t("sorter.ai_analyzing", { model: aiModelName })}
-              </p>
-            </div>
+            <ModelProgress
+              title={t("sorter.ai_analyzing", { model: aiModelName })}
+              words={aiProgress.words}
+              reasoningWords={aiProgress.reasoningWords}
+              dataGuide="sort-organize-progress"
+            />
           ) : (
             <>
               {aiStatus === "error" && (

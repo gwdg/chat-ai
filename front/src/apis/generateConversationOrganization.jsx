@@ -1,4 +1,5 @@
 import { getSecretDefaultChatAIModel } from "../utils/conversationUtils";
+import { createProgressReporter } from "../utils/streamProgress";
 import { createBackendClient } from "./openaiClient";
 
 const MAX_CONVERSATIONS = 400;
@@ -24,6 +25,7 @@ export default async function generateConversationOrganization({
   conversations = [],
   folders = [],
   language = "en",
+  onProgress,
 }) {
   const selected = conversations.slice(0, MAX_CONVERSATIONS);
   if (!selected.length) {
@@ -158,7 +160,7 @@ Return only JSON in exactly this shape:
   };
 
   const openai = createBackendClient(60000);
-  const response = await openai.chat.completions.create({
+  const params = {
     model,
     messages: [
       { role: "system", content: system },
@@ -176,10 +178,48 @@ Return only JSON in exactly this shape:
     temperature: 0.2,
     top_p: 1,
     extra_body: { guided_json: schema },
-    stream: false,
-  });
+  };
 
-  const parsed = parseJson(response?.choices?.[0]?.message?.content);
+  // The answer is streamed so the dialog can report how much of it already
+  // arrived. With guided_json the content is the final JSON; reasoning models
+  // stream their thinking first, which is reported separately.
+  const progress = createProgressReporter({ onProgress });
+
+  const collect = async (stream) => {
+    progress.reset();
+    const response = await openai.chat.completions.create({ ...params, stream });
+    if (!stream) {
+      const content = response?.choices?.[0]?.message?.content;
+      const reasoning = response?.choices?.[0]?.message?.reasoning;
+      progress.setAnswer(typeof content === "string" ? content : "");
+      progress.appendReasoning(typeof reasoning === "string" ? reasoning : "");
+      progress.flush();
+      return;
+    }
+    for await (const chunk of response) {
+      if (chunk?.object === "error") {
+        const err = new Error(chunk?.message || "Unknown error");
+        err.type = chunk?.type;
+        err.status = chunk?.status || chunk?.code;
+        throw err;
+      }
+      const delta = chunk?.choices?.[0]?.delta;
+      if (typeof delta?.content === "string") progress.appendAnswer(delta.content);
+      if (typeof delta?.reasoning === "string") {
+        progress.appendReasoning(delta.reasoning);
+      }
+    }
+    progress.flush();
+  };
+
+  await collect(true);
+  if (!progress.answer.trim()) {
+    // Some gateways ignore `stream` and answer with a single JSON body, which
+    // the SSE reader cannot decode. Ask once more without streaming.
+    await collect(false);
+  }
+
+  const parsed = parseJson(progress.answer);
   if (!parsed || !Array.isArray(parsed.tree)) {
     throw new Error("The model returned an invalid organization");
   }
