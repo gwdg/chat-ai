@@ -11,7 +11,11 @@ import {
   writeOpencodeFile,
 } from "../../apis/opencodeAgents";
 import { useToast } from "../../hooks/useToast";
-import { formatGitLog, GIT_LOG_MARKER } from "../../utils/gitLog";
+import {
+  formatGitLog,
+  GIT_LOG_LIMIT,
+  GIT_LOG_MARKER,
+} from "../../utils/gitLog";
 
 const toRootEntry = (sourceId, item) => {
   const path = String(item?.path ?? "").replace(/\/+$/, "");
@@ -280,7 +284,7 @@ export default function AgentFilesPanel({
     try {
       let text = "";
       try {
-        const command = `git --no-pager -C ${shellQuote(path || ".")} log --stat --decorate --date=short --pretty=format:'%n━━━ %h %d ━━━%nDate:   %ad%nAuthor: %an%n%n    %s%n' -n 20 # ${GIT_LOG_MARKER}`;
+        const command = `git --no-pager -C ${shellQuote(path || ".")} log --stat --decorate --date=short --pretty=format:'%n━━━ %h %d ━━━%nDate:   %ad%nAuthor: %an%n%n    %s%n' -n ${GIT_LOG_LIMIT} # ${GIT_LOG_MARKER}`;
         text = await runOpencodeShellAndWait(
           agent,
           agent.sessionId,

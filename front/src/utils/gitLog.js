@@ -18,10 +18,14 @@ export const isInternalShellCommand = (value) => {
 
 export const isInternalGitLogCommand = isInternalShellCommand;
 
+/** Git log previews keep the newest commits only; the reflog can be arbitrarily long. */
+export const GIT_LOG_LIMIT = 10;
+
 export const formatGitLog = (raw) =>
   raw
     .split("\n")
     .filter(Boolean)
+    .slice(-GIT_LOG_LIMIT)
     .map((line) => {
       const [meta, message = ""] = line.split("\t");
       const match = meta.match(
