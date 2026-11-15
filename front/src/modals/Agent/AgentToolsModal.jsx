@@ -34,6 +34,7 @@ import {
   loadAgentPermissionPolicies,
   saveAgentPermissionPolicies,
 } from "../../agents/agentPermissionPolicies";
+import { notifyAgentHistoryChanged } from "../../agents/agentSessions";
 import { loadAgentFormHistory } from "../../agents/agentFormHistory";
 import { loadAgentShellHistory } from "../../agents/agentShellHistory";
 
@@ -364,6 +365,8 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
                       );
                       await commitOpencodeRevert(agent, agent.sessionId);
                       setDiff(await getOpencodeDiff(agent, agent.sessionId));
+                      // The reverted messages are gone on the server; resync the open chat.
+                      notifyAgentHistoryChanged(agent, agent.sessionId);
                     }, "agents.tools.reverted")
                   }
                 >
@@ -376,6 +379,7 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
                   onClick={() =>
                     void run(async () => {
                       await clearOpencodeRevert(agent, agent.sessionId);
+                      notifyAgentHistoryChanged(agent, agent.sessionId);
                       notifySuccess(t("agents.tools.revert_cleared"));
                     })
                   }

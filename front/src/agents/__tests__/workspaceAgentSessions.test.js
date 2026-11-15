@@ -69,6 +69,14 @@ describe("workspace agent sessions", () => {
     expect(withChild.roots.map((session) => session.id)).toEqual(["root-b"]);
   });
 
+  it("keeps the offline marker of the unfiltered tree", () => {
+    const offline = { ...tree, offline: true };
+    expect(filterSessionTree(offline, new Set(["root-a"])).offline).toBe(true);
+    expect(filterSessionTree(tree, new Set(["root-a"])).offline).toBe(
+      undefined,
+    );
+  });
+
   it("keeps the whole tree when no filter is given", () => {
     expect(filterSessionTree(tree, null)).toBe(tree);
   });

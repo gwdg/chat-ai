@@ -1615,9 +1615,12 @@ export default {
     no_unassigned_sessions: "Every session is attached to a workspace.",
     detach_session: "Remove from workspace",
     offline_cached:
-      "The agent is offline. Showing the history cached at {{time}}.",
+      "The agent is not reachable. Showing the history cached at {{time}}.",
     offline_no_cache:
-      "The agent is offline and no history has been cached for this session yet.",
+      "The agent is not reachable and no history has been cached for this session yet.",
+    sessions_cached:
+      "The agent is not reachable. These sessions come from the local cache.",
+    sessions_cached_short: "cached",
     subagent_short: "sub",
     rename_session: "Rename session",
     close_session: "Close session",

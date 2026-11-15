@@ -37,6 +37,21 @@ describe("AgentSessionList workspace view", () => {
     expect(onDetach).toHaveBeenCalledWith(session);
   });
 
+  it("marks a session list that came from the offline cache", () => {
+    render(
+      <AgentSessionList
+        agent={{ id: "agent-1", sessionId: "session-1" }}
+        tree={{ ...treeOf([session]), offline: true }}
+        activeSessionId="session-1"
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("agent-sessions-cached")).toHaveTextContent(
+      "cached",
+    );
+  });
+
   it("hides the heading and shows a workspace-specific empty message", () => {
     render(
       <AgentSessionList

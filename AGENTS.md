@@ -741,12 +741,22 @@ The server is authoritative once it answers, and the cache follows it:
 A cache older than `CACHE_REVALIDATE_MS` (24 h) is re-read in full once on entry and reconciled by
 id, which also drops messages removed by another client (TUI, compaction elsewhere). Running
 `compact` from the app forces that same full sync because compaction rewrites the timeline in place.
-Full reads reconcile from an empty cache on purpose: a prefix merge would keep messages the server
-no longer has. `fetchAgentSessions` caches session metadata, prunes sessions a complete listing no
-longer reports (together with their messages), and falls back to the cache when the listing fails, so
-the sidebar and the agent page still list sessions while the server is down. Shell output stays in
-its localStorage history and is merged in for display only. Closing a session, clearing the history
-and removing an agent delete the matching cache rows. The left
+Reverting a message or clearing a revert in the tools modal dispatches `chatai:agent-history-changed`
+(`notifyAgentHistoryChanged`), which makes the open conversation re-read the whole history and
+rewrite the cache, because those actions rewrite the timeline rather than append to it. Full reads
+reconcile from an empty cache on purpose: a prefix merge would keep messages the server no longer
+has. `fetchAgentSessions` caches session metadata, prunes sessions a complete listing no longer
+reports (together with their messages), and falls back to the cache when the listing fails, so the
+sidebar and the agent page still list sessions while the server is down.
+
+The offline state is shown, not hidden: the conversation keeps the cached timeline under a warning
+banner with the cache time and a Refresh button (`agents.offline_cached`), or says that nothing has
+been cached yet (`agents.offline_no_cache`); both are driven by `reportSyncFailure`, which never
+writes to the cache. A session list that came from the cache carries `offline: true` through
+`fetchAgentSessions` and `filterSessionTree`, and `AgentSessionList` plus
+`AttachAgentSessionModal` mark it with a "cached" warning. Shell output stays in its localStorage
+history and is merged in for display only. Closing a session, clearing the history and removing an
+agent delete the matching cache rows. The left
 `AgentFilesPanel` reuses the central `WorkspaceRootBrowser` (the same component used for the
 workspace root file browser) and reads/writes the OpenCode project filesystem through
 `GET /api/fs/list`, `GET /api/fs/read/<path>`, `POST /api/experimental/fs/write` and

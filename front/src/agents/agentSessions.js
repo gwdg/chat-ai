@@ -307,3 +307,16 @@ export function notifyAgentSessionsChanged(agentId) {
     }),
   );
 }
+
+/**
+ * Announce that the server rewrote a session's messages in place (revert, clear revert).
+ * The open conversation re-reads the history in full, because the change is not a new tail.
+ */
+export function notifyAgentHistoryChanged(agent, sessionId) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("chatai:agent-history-changed", {
+      detail: { agentId: agent?.id, sessionId },
+    }),
+  );
+}

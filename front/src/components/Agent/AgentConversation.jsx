@@ -399,14 +399,11 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     return next;
   }, [agent, replaceFormHistory]);
 
-  const reportSyncFailure = useCallback((reason) => {
-    // Keep a readable cached conversation when the server is gone instead of replacing it
-    // with a connection error.
-    if (serverMessagesRef.current.length) {
-      setOffline(true);
-      return;
-    }
-    setError(reason instanceof Error ? reason.message : String(reason));
+  const reportSyncFailure = useCallback(() => {
+    // Keep the cached conversation readable when the server is gone. Without a cache the
+    // banner explains the empty timeline, so no raw fetch error is needed.
+    setOffline(true);
+    if (!serverMessagesRef.current.length) setCachedAt(null);
   }, []);
 
   const retrySync = useCallback(async () => {
@@ -675,6 +672,23 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     reportSyncFailure,
     stopPolling,
   ]);
+
+  useEffect(() => {
+    // A revert rewrites the history in place rather than appending, so re-read all of it.
+    const onHistoryChanged = (event) => {
+      const detail = event?.detail || {};
+      if (!agent?.id || detail.agentId !== agent.id) return;
+      if (detail.sessionId && detail.sessionId !== agent.sessionId) return;
+      forceFullSyncRef.current = true;
+      void refresh().catch((reason) => reportSyncFailure(reason));
+    };
+    window.addEventListener("chatai:agent-history-changed", onHistoryChanged);
+    return () =>
+      window.removeEventListener(
+        "chatai:agent-history-changed",
+        onHistoryChanged,
+      );
+  }, [agent?.id, agent?.sessionId, refresh, reportSyncFailure]);
 
   useEffect(() => {
     if (!agent?.id || !agent?.sessionId) return;

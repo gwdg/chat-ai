@@ -12,7 +12,7 @@ import {
   TrashCan,
   Unlink,
 } from "@carbon/icons-react";
-import { GitBranch } from "lucide-react";
+import { CloudOff, GitBranch } from "lucide-react";
 
 import {
   deleteAgentSession,
@@ -20,6 +20,7 @@ import {
 } from "../../agents/agentSessions";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
+import Tooltip from "../Others/Tooltip";
 import ShortcutTooltip from "../Sidebar/ShortcutTooltip";
 
 const SessionRow = ({
@@ -215,9 +216,22 @@ export default function AgentSessionList({
     >
       {showHeader && (
         <div className="mb-1 flex items-center justify-between px-1">
-          <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
-            {t("agents.sessions")}
-            {tree?.all?.length ? ` (${tree.all.length})` : ""}
+          <span className="flex min-w-0 items-center gap-1 truncate text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
+            <span className="truncate">
+              {t("agents.sessions")}
+              {tree?.all?.length ? ` (${tree.all.length})` : ""}
+            </span>
+            {tree?.offline && (
+              <Tooltip text={t("agents.sessions_cached")}>
+                <span
+                  className="flex shrink-0 items-center gap-1 font-normal normal-case tracking-normal text-warning"
+                  data-testid="agent-sessions-cached"
+                >
+                  <CloudOff size={11} />
+                  {t("agents.sessions_cached_short")}
+                </span>
+              </Tooltip>
+            )}
           </span>
           {showCreate && (
             <button

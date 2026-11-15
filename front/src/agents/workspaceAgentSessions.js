@@ -83,9 +83,11 @@ export const agentWorkspaceIds = (links, agentId) => {
 export const filterSessionTree = (tree, ids) => {
   if (!tree || !ids) return tree;
   const { byId, kept } = expandSessionIds(tree, ids);
-  return buildSessionTree(
+  const filtered = buildSessionTree(
     [...kept].map((id) => byId.get(id)).filter(Boolean),
   );
+  // Keep the "this list came from the cache" marker of the unfiltered tree.
+  return tree.offline ? { ...filtered, offline: true } : filtered;
 };
 
 /**

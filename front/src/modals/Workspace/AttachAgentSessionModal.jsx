@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Add, Checkmark } from "@carbon/icons-react";
+import { CloudOff } from "lucide-react";
 
 import BaseModal from "../BaseModal";
 import {
@@ -117,6 +118,12 @@ export default function AttachAgentSessionModal({
         <p className="text-xs text-base-content/70">
           {t("workspace.attach_agent_session_hint")}
         </p>
+        {tree?.offline ? (
+          <p className="flex items-center gap-1 text-xs text-warning">
+            <CloudOff size={12} className="shrink-0" />
+            {t("agents.sessions_cached")}
+          </p>
+        ) : null}
         {error ? <p className="text-xs text-error">{error}</p> : null}
         {loading ? (
           <p className="flex items-center gap-2 text-xs text-base-content/60">

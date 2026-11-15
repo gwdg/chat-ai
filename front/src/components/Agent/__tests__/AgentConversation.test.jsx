@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as testingLibraryRender,
   screen,
@@ -172,6 +173,68 @@ describe("AgentConversation", () => {
     expect(
       screen.queryByText(/connect ECONNREFUSED/),
     ).not.toBeInTheDocument();
+  });
+
+  it("explains an unreachable agent when nothing was cached", async () => {
+    apiMocks.list.mockRejectedValue(new Error("connect ECONNREFUSED"));
+
+    render(<AgentConversation agent={agent} />);
+
+    expect(
+      await screen.findByText(/no history has been cached for this session/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/connect ECONNREFUSED/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("re-reads the history after a revert in the tools modal", async () => {
+    await saveAgentSessionMessages(
+      "agent-1",
+      "session-1",
+      [
+        { id: "cached-1", type: "user", text: "Old question" },
+        {
+          id: "cached-2",
+          type: "assistant",
+          content: [{ type: "text", text: "Reverted answer" }],
+        },
+      ],
+      { replace: true },
+    );
+    // The first sync is a normal tail merge; the revert is applied afterwards.
+    apiMocks.listPage.mockResolvedValue({
+      messages: [
+        {
+          id: "cached-2",
+          type: "assistant",
+          content: [{ type: "text", text: "Reverted answer" }],
+        },
+      ],
+      complete: true,
+    });
+    apiMocks.list.mockResolvedValue([
+      { id: "cached-1", type: "user", text: "Old question" },
+    ]);
+
+    render(<AgentConversation agent={agent} />);
+    expect(await screen.findByText("Reverted answer")).toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("chatai:agent-history-changed", {
+          detail: { agentId: "agent-1", sessionId: "session-1" },
+        }),
+      );
+    });
+
+    await waitFor(() =>
+      expect(apiMocks.list).toHaveBeenCalledWith(agent, "session-1"),
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Reverted answer")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Old question")).toBeInTheDocument();
   });
 
   it("drops cached messages once the server reports a cleared session", async () => {

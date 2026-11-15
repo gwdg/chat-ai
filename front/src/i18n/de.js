@@ -1640,6 +1640,9 @@ export default {
       "Der Agent ist nicht erreichbar. Angezeigt wird der um {{time}} gespeicherte Verlauf.",
     offline_no_cache:
       "Der Agent ist nicht erreichbar und für diese Sitzung wurde noch kein Verlauf gespeichert.",
+    sessions_cached:
+      "Der Agent ist nicht erreichbar. Diese Sitzungen stammen aus dem lokalen Cache.",
+    sessions_cached_short: "gespeichert",
     subagent_short: "Sub",
     rename_session: "Sitzung umbenennen",
     close_session: "Sitzung schließen",
