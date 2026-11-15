@@ -145,38 +145,59 @@ export async function saveAgentSessionMessages(
   );
 }
 
-/** Cache the session metadata returned by `fetchAgentSessions`. */
+/**
+ * Cache the session metadata returned by `fetchAgentSessions`. With `prune`, sessions the
+ * server no longer reports (and their cached history) are dropped, so a session deleted
+ * elsewhere does not reappear while offline. Only pass `prune` for a complete listing.
+ */
 export async function saveAgentSessions(
   agentId: string,
   sessions: any[],
+  options: { prune?: boolean } = {},
 ): Promise<void> {
   if (!agentId) return;
   const list = (Array.isArray(sessions) ? sessions : []).filter(
     (session) => session?.id,
   );
-  if (!list.length) return;
-  await db.transaction("rw", db.agent_sessions, async () => {
-    const existing = await db.agent_sessions
-      .where("agentId")
-      .equals(agentId)
-      .toArray();
-    const bySession = new Map(
-      existing.map((row) => [row.sessionId, row]),
-    );
-    const updatedAt = now();
-    const rows: AgentSessionRow[] = list.map((session) => {
-      const previous = bySession.get(session.id);
-      return {
-        id: sessionKey(agentId, session.id),
-        agentId,
-        sessionId: session.id,
-        ...previous,
-        data: session,
-        updatedAt,
-      };
-    });
-    await db.agent_sessions.bulkPut(rows);
-  });
+  const prune = options.prune === true;
+  if (!list.length && !prune) return;
+  await db.transaction(
+    "rw",
+    [db.agent_sessions, db.agent_session_messages],
+    async () => {
+      const existing = await db.agent_sessions
+        .where("agentId")
+        .equals(agentId)
+        .toArray();
+      const bySession = new Map(existing.map((row) => [row.sessionId, row]));
+      const updatedAt = now();
+      const rows: AgentSessionRow[] = list.map((session) => {
+        const previous = bySession.get(session.id);
+        return {
+          id: sessionKey(agentId, session.id),
+          agentId,
+          sessionId: session.id,
+          ...previous,
+          data: session,
+          updatedAt,
+        };
+      });
+      if (rows.length) await db.agent_sessions.bulkPut(rows);
+      if (prune) {
+        const keep = new Set(list.map((session) => session.id));
+        const removed = existing.filter((row) => !keep.has(row.sessionId));
+        for (const row of removed) {
+          await db.agent_session_messages
+            .where("[agentId+sessionId]")
+            .equals([agentId, row.sessionId])
+            .delete();
+        }
+        if (removed.length) {
+          await db.agent_sessions.bulkDelete(removed.map((row) => row.id));
+        }
+      }
+    },
+  );
 }
 
 export async function loadAgentSessions(agentId?: string): Promise<any[]> {

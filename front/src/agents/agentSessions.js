@@ -1,6 +1,8 @@
 import {
   createOpencodeSession,
   deleteOpencodeSession,
+  listOpencodeMessages,
+  listOpencodeMessagesPage,
   listOpencodeSessionChildren,
   listOpencodeSessions,
 } from "../apis/opencodeAgents";
@@ -56,8 +58,9 @@ export const buildSessionTree = (sessions = []) => {
 
 /**
  * Combine cached messages with a freshly downloaded tail. `newestId` is the last message we
- * already had; OpenCode returns that anchor plus everything newer. Without an anchor (or when
- * the server no longer has it) the downloaded list wins.
+ * already had; OpenCode returns that anchor plus everything newer. `complete` is true when the
+ * download reached the start of the server history, so a missing anchor then means the history
+ * was rewritten (clear, revert, compaction), not that the page window ended early.
  */
 export const mergeMessageHistory = (
   cached = [],
@@ -74,11 +77,24 @@ export const mergeMessageHistory = (
           startIndex: previous.length,
           changed: [],
           replace: false,
+          needsFullHistory: false,
         }
-      : { messages: [], startIndex: 0, changed: [], replace: true };
+      : {
+          messages: [],
+          startIndex: 0,
+          changed: [],
+          replace: true,
+          needsFullHistory: false,
+        };
   }
   if (!previous.length) {
-    return { messages: next, startIndex: 0, changed: next, replace: true };
+    return {
+      messages: next,
+      startIndex: 0,
+      changed: next,
+      replace: true,
+      needsFullHistory: false,
+    };
   }
   const anchorId = newestId || previous[previous.length - 1]?.id;
   const fetchedIndex = anchorId
@@ -97,22 +113,92 @@ export const mergeMessageHistory = (
       startIndex: prefix.length,
       changed: next.slice(fetchedIndex),
       replace: false,
+      needsFullHistory: false,
     };
   }
   if (!complete) {
-    // A gap larger than the page window: keep the older cache and append the new tail.
-    const known = new Set(previous.map((message) => message?.id));
-    if (!next.some((message) => known.has(message?.id))) {
-      return {
-        messages: [...previous, ...next],
-        startIndex: previous.length,
-        changed: next,
-        replace: false,
-      };
-    }
+    // The window ends before the cached anchor. Keep the cache untouched and re-read the whole
+    // history; appending across the gap would silently hide the messages in between.
+    return {
+      messages: previous,
+      startIndex: previous.length,
+      changed: [],
+      replace: false,
+      needsFullHistory: true,
+    };
   }
-  return { messages: next, startIndex: 0, changed: next, replace: true };
+  return {
+    messages: next,
+    startIndex: 0,
+    changed: next,
+    replace: true,
+    needsFullHistory: false,
+  };
 };
+
+/** Age after which a cached history is re-read in full and reconciled by id. */
+export const CACHE_REVALIDATE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Reconcile the cached history with the agent server. Returns the timeline to show plus what
+ * `saveAgentSessionMessages` has to persist.
+ *
+ * The server is authoritative once it answers: if the cached anchor is gone, the history was
+ * rewritten and the download replaces the cache instead of being stitched onto it. An empty
+ * answer is confirmed with a full read first, so one empty page can never wipe the cache. A
+ * full read (`full: true`, a stale cache or a compaction) re-reads everything and reconciles
+ * by id. Network errors propagate, and the caller keeps the cache.
+ */
+export async function syncSessionHistory(
+  agent,
+  sessionId,
+  cached = [],
+  newestId = null,
+  options = {},
+) {
+  const previous = Array.isArray(cached) ? cached : [];
+  const result = (merged, messages) => ({
+    ...merged,
+    lastMessageId: messages.length
+      ? (messages[messages.length - 1]?.id ?? null)
+      : null,
+  });
+  if (!sessionId) {
+    return result(
+      {
+        messages: [],
+        startIndex: 0,
+        changed: [],
+        replace: false,
+        needsFullHistory: false,
+      },
+      [],
+    );
+  }
+
+  if (options.full === true) {
+    const messages = await listOpencodeMessages(agent, sessionId);
+    // Replacing from an empty cache drops messages the server no longer has (middle edits,
+    // compaction), which a prefix merge would keep.
+    return result(mergeMessageHistory([], messages, null, true), messages);
+  }
+
+  const page = await listOpencodeMessagesPage(agent, sessionId, { newestId });
+  const merged = mergeMessageHistory(
+    previous,
+    page.messages,
+    newestId,
+    page.complete,
+  );
+  if (!merged.needsFullHistory && page.messages.length) {
+    return result(merged, page.messages);
+  }
+
+  // Either the anchor is gone or the page came back empty. Confirm against the whole history
+  // before changing anything, so a partial answer cannot truncate or wipe the cache.
+  const messages = await listOpencodeMessages(agent, sessionId);
+  return result(mergeMessageHistory([], messages, null, true), messages);
+}
 
 export async function fetchAgentSessions(agent) {
   let listed;
@@ -137,15 +223,19 @@ export async function fetchAgentSessions(agent) {
   );
   const visited = new Set();
   let requests = 0;
+  // Only a listing that reached every session may prune the cache.
+  let complete = Array.isArray(listed);
   while (queue.length && requests < 80) {
     const parent = queue.shift();
     if (!parent?.id || visited.has(parent.id)) continue;
     visited.add(parent.id);
     requests += 1;
-    const children = await listOpencodeSessionChildren(
-      agent,
-      parent.id,
-    ).catch(() => []);
+    const children = await listOpencodeSessionChildren(agent, parent.id).catch(
+      () => {
+        complete = false;
+        return [];
+      },
+    );
     for (const child of Array.isArray(children) ? children : []) {
       if (!child?.id) continue;
       const normalized = {
@@ -156,10 +246,13 @@ export async function fetchAgentSessions(agent) {
       if (!visited.has(child.id)) queue.push(normalized);
     }
   }
+  if (queue.length) complete = false;
 
   const tree = buildSessionTree([...sessions.values()]);
   if (agent?.id) {
-    void saveAgentSessions(agent.id, tree.all).catch(() => {});
+    await saveAgentSessions(agent.id, tree.all, { prune: complete }).catch(
+      () => {},
+    );
   }
   return tree;
 }

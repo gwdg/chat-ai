@@ -29,7 +29,10 @@ import {
   saveAgentShellHistory,
 } from "../../agents/agentShellHistory";
 import { getAgent, updateAgent } from "../../agents/agentStore";
-import { mergeMessageHistory } from "../../agents/agentSessions";
+import {
+  CACHE_REVALIDATE_MS,
+  syncSessionHistory,
+} from "../../agents/agentSessions";
 import {
   loadAgentPermissionPolicies,
   matchPermissionPolicy,
@@ -51,7 +54,6 @@ import {
   listOpencodeAgents,
   listOpencodeCommands,
   listOpencodeForms,
-  listOpencodeMessagesPage,
   listOpencodeModels,
   listOpencodePermissions,
   replyOpencodeForm,
@@ -191,6 +193,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const summaryMessagesRef = useRef(new Map());
   const serverMessagesRef = useRef([]);
   const lastServerMessageIdRef = useRef(null);
+  const forceFullSyncRef = useRef(false);
   const summariesEnabled = useSelector(selectConversationSummaries);
   const summaryUserSettings = useSelector(selectUserSettings);
   const summarySettingsRef = useRef({
@@ -306,26 +309,19 @@ export default function AgentConversation({ agent, modelsData = [] }) {
 
   const refresh = useCallback(async () => {
     if (!agent?.sessionId) return [];
-    const { messages: fetched } = await listOpencodeMessagesPage(
+    // A compaction rewrites the history in place, so that sync starts from scratch.
+    const synced = await syncSessionHistory(
       agent,
       agent.sessionId,
-      { newestId: lastServerMessageIdRef.current },
+      serverMessagesRef.current,
+      lastServerMessageIdRef.current,
+      { full: forceFullSyncRef.current },
     );
-    const merged = fetched.length
-      ? mergeMessageHistory(
-          serverMessagesRef.current,
-          fetched,
-          lastServerMessageIdRef.current,
-        )
-      : { messages: [], startIndex: 0, changed: [], replace: true };
-    serverMessagesRef.current = merged.messages;
-    const newestFetched = [...fetched]
-      .reverse()
-      .find((message) => message?.id);
-    if (newestFetched) lastServerMessageIdRef.current = newestFetched.id;
-    if (!fetched.length) lastServerMessageIdRef.current = null;
+    forceFullSyncRef.current = false;
+    serverMessagesRef.current = synced.messages;
+    lastServerMessageIdRef.current = synced.lastMessageId;
 
-    const visible = mergeShellMessages(merged.messages);
+    const visible = mergeShellMessages(synced.messages);
     const syncedAt = Date.now();
     setMessages(visible);
     setOffline(false);
@@ -334,11 +330,11 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       void saveAgentSessionMessages(
         agent.id,
         agent.sessionId,
-        merged.changed,
+        synced.changed,
         {
-          startIndex: merged.startIndex,
-          replace: merged.replace,
-          lastMessageId: lastServerMessageIdRef.current,
+          startIndex: synced.startIndex,
+          replace: synced.replace,
+          lastMessageId: synced.lastMessageId,
           syncedAt,
         },
       ).catch(() => {});
@@ -638,6 +634,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     setCachedAt(null);
     serverMessagesRef.current = [];
     lastServerMessageIdRef.current = null;
+    forceFullSyncRef.current = false;
     stopPolling();
 
     const load = async () => {
@@ -652,6 +649,11 @@ export default function AgentConversation({ agent, modelsData = [] }) {
         lastServerMessageIdRef.current = cached.lastMessageId;
         setMessages(mergeShellMessages(cached.messages));
         setCachedAt(cached.syncedAt);
+        // Older caches are reconciled in full once, so a rewrite made by another client
+        // eventually replaces the local copy instead of leaving stale messages behind.
+        forceFullSyncRef.current =
+          !cached.syncedAt ||
+          Date.now() - cached.syncedAt > CACHE_REVALIDATE_MS;
       }
       try {
         await Promise.all([refresh(), refreshPermissions(), refreshForms()]);
@@ -1058,6 +1060,8 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     try {
       if (name === "compact") {
         await compactOpencodeSession(agent, agent.sessionId);
+        // Compaction rewrites the timeline in place; re-read it instead of tail-merging.
+        forceFullSyncRef.current = true;
       } else {
         await sendOpencodeCommand(agent, agent.sessionId, name, "");
       }
@@ -1161,6 +1165,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
         const [name, ...rest] = text.slice(1).split(/\s+/);
         if (name === "compact") {
           await compactOpencodeSession(agent, agent.sessionId);
+          forceFullSyncRef.current = true;
         } else {
           await sendOpencodeCommand(
             agent,

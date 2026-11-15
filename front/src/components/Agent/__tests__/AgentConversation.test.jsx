@@ -174,6 +174,82 @@ describe("AgentConversation", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("drops cached messages once the server reports a cleared session", async () => {
+    await saveAgentSessionMessages(
+      "agent-1",
+      "session-1",
+      [
+        { id: "cached-1", type: "user", text: "Cached question" },
+        {
+          id: "cached-2",
+          type: "assistant",
+          content: [{ type: "text", text: "Cached answer" }],
+        },
+      ],
+      { replace: true },
+    );
+    apiMocks.listPage.mockResolvedValue({ messages: [], complete: true });
+    apiMocks.list.mockResolvedValue([]);
+
+    render(<AgentConversation agent={agent} />);
+
+    await waitFor(() =>
+      expect(screen.queryByText("Cached question")).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText("Cached answer")).not.toBeInTheDocument();
+    expect(
+      await screen.findByPlaceholderText(
+        "No messages yet. Ask the agent something.",
+      ),
+    ).toBeInTheDocument();
+    await waitFor(async () =>
+      expect(
+        await db.agent_session_messages
+          .where("[agentId+sessionId]")
+          .equals(["agent-1", "session-1"])
+          .count(),
+      ).toBe(0),
+    );
+  });
+
+  it("follows a revert that removed the newest cached message", async () => {
+    await saveAgentSessionMessages(
+      "agent-1",
+      "session-1",
+      [
+        { id: "cached-1", type: "user", text: "Cached question" },
+        {
+          id: "cached-2",
+          type: "assistant",
+          content: [{ type: "text", text: "Reverted answer" }],
+        },
+      ],
+      { replace: true },
+    );
+    apiMocks.listPage.mockResolvedValue({
+      messages: [{ id: "cached-1", type: "user", text: "Cached question" }],
+      complete: true,
+    });
+    apiMocks.list.mockResolvedValue([
+      { id: "cached-1", type: "user", text: "Cached question" },
+    ]);
+
+    render(<AgentConversation agent={agent} />);
+
+    expect(await screen.findByText("Cached question")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText("Reverted answer")).not.toBeInTheDocument(),
+    );
+    await waitFor(async () =>
+      expect(
+        await db.agent_session_messages
+          .where("[agentId+sessionId]")
+          .equals(["agent-1", "session-1"])
+          .count(),
+      ).toBe(1),
+    );
+  });
+
   it("asks the server only for messages newer than the cached tail", async () => {
     await saveAgentSessionMessages(
       "agent-1",

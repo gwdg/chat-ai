@@ -120,6 +120,48 @@ describe("agent session cache", () => {
     ).toEqual(["Renamed", "Second"]);
   });
 
+  it("prunes sessions the server no longer reports", async () => {
+    await saveAgentSessions("agent-1", [
+      { id: "session-1", title: "First" },
+      { id: "session-2", title: "Second" },
+    ]);
+    await saveAgentSessionMessages(
+      "agent-1",
+      "session-2",
+      [userMessage("m1", "Gone")],
+      { replace: true },
+    );
+
+    await saveAgentSessions(
+      "agent-1",
+      [{ id: "session-1", title: "First" }],
+      { prune: true },
+    );
+
+    expect((await loadAgentSessions("agent-1")).map((s) => s.id)).toEqual([
+      "session-1",
+    ]);
+    expect(await db.agent_session_messages.count()).toBe(0);
+
+    await saveAgentSessions("agent-1", [], { prune: true });
+    expect(await loadAgentSessions("agent-1")).toEqual([]);
+  });
+
+  it("keeps cached sessions when pruning is not requested", async () => {
+    await saveAgentSessions("agent-1", [
+      { id: "session-1", title: "First" },
+      { id: "session-2", title: "Second" },
+    ]);
+
+    await saveAgentSessions("agent-1", [{ id: "session-1", title: "First" }]);
+
+    expect(
+      (await loadAgentSessions("agent-1"))
+        .map((session) => session.id)
+        .sort(),
+    ).toEqual(["session-1", "session-2"]);
+  });
+
   it("removes one session or every session of an agent", async () => {
     await saveAgentSessionMessages(
       "agent-1",
