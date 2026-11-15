@@ -245,6 +245,18 @@ export default function SidebarContent({
   const menuRef = useRef(null);
   const menuButtonRefs = useRef({}); // Add refs for menu buttons
 
+  // The sticky chats header only casts a shadow while the list is scrolled
+  // underneath it. At rest every sidebar section then has the same flat edge.
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [chatsHeaderElevated, setChatsHeaderElevated] = useState(false);
+  const syncChatsHeaderShadow = useCallback(() => {
+    setChatsHeaderElevated((scrollContainerRef.current?.scrollTop ?? 0) > 0);
+  }, []);
+
+  useEffect(() => {
+    syncChatsHeaderShadow();
+  }, [syncChatsHeaderShadow]);
+
   const visibleConversations = useMemo(() => {
     if (!hasSearch) return orderedConversations;
     return orderedConversations.filter((conv) => {
@@ -761,10 +773,18 @@ export default function SidebarContent({
           <TutorialStatus />
         </div>
         <div
+          ref={scrollContainerRef}
+          onScroll={syncChatsHeaderShadow}
           className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          <div className="sticky top-0 z-20 bg-base-100 px-3 pt-2 pb-2 shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]">
+          <div
+            className={`sticky top-0 z-20 bg-base-100 px-3 pt-2 pb-2 ${
+              chatsHeaderElevated
+                ? "shadow-[0_2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
+                : ""
+            }`}
+          >
           {(!chatsCollapsed || hasSearch) && (
           <div className="flex items-center justify-between gap-1 pb-3">
             <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
@@ -1054,7 +1074,8 @@ export default function SidebarContent({
         </div>
 
         {/* Pinned footer: the user block */}
-        <div className="sticky bottom-0 bg-base-100 pt-3 pb-4 shadow-[0_-2px_6px_rgba(15,23,42,0.08)] dark:shadow-[0_-2px_6px_rgba(0,0,0,0.5)]">
+        <div className="mx-2 my-1.5 border-t border-base-300" />
+        <div className="bg-base-100 pb-4">
           <div className="flex flex-col gap-3 mx-3">
             {showUsageInSidebar && userData && (
               <SidebarUsageSummary data={userData} />
