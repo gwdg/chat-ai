@@ -589,6 +589,7 @@ export default function SidebarContent({
     const showSummary = summary.length > 0;
     const showCreated = options.showCreated === true;
     const showDateModified = options.showModified === true;
+    const leadingDash = options.leadingDash === true;
     const showDates =
       !showCreated &&
       (showDateModified || (isActive && options.showMetadata !== false));
@@ -642,6 +643,14 @@ export default function SidebarContent({
               style={{ cursor: isDesktop ? "text" : "pointer" }}
             >
               <div className="flex items-center gap-2">
+                {leadingDash && (
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 select-none text-xs leading-relaxed text-base-content/50"
+                  >
+                    -
+                  </span>
+                )}
                 <div className="truncate text-xs leading-relaxed cursor-pointer flex-1">
                   {highlightText(conv.title)}
                 </div>

@@ -341,8 +341,19 @@ export default function TopicList({
               topic,
             });
           })}
-          {pinnedConversations.map((conv) =>
-            renderConversationRow(conv, { showModified: true }),
+          {pinnedConversations.length > 0 && (
+            // Pinned chats are not inside a topic, but they line up with topic
+            // children so the list has one consistent indent. A dash marks them
+            // instead of the group's vertical line, which would suggest a parent
+            // group (and only real groups get a collapse chevron).
+            <div className="ml-2 pl-2 flex flex-col gap-1">
+              {pinnedConversations.map((conv) =>
+                renderConversationRow(conv, {
+                  showModified: true,
+                  leadingDash: true,
+                }),
+              )}
+            </div>
           )}
         </div>
       )}
