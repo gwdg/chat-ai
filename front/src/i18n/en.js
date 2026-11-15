@@ -321,6 +321,12 @@ export default {
       step2: "Open Attach from workspace and pick a file from the workspace tree.",
       step3: "Send the message with the attached file.",
     },
+    agent_recovery: {
+      title: "Recover an agent session",
+      step1: "Open the agent's tools from the composer. If the agent server is unreachable, exports use the local cache instead.",
+      step2: "Open the Recovery tab to see how much history is cached for this session.",
+      step3: "Restore into new session writes the cached transcript into the instructions of a new session. Review the size and confirm first.",
+    },
     remote_agents: {
       title: "Spawn a remote agent",
       step1: "Use the + button in the Agents section to add an agent and select its HPC project.",
@@ -1702,12 +1708,34 @@ export default {
         stats: "Usage",
         mcp: "MCP",
         connection: "Connection",
+        recovery: "Recovery",
       },
       workspace: "Workspace / Git",
       tracked_files: "Tracked files",
       export_md: "Export MD",
       export_json: "Export JSON",
       exported: "Agent history exported.",
+      exported_cached:
+        "Agent server unreachable — exported cached history.",
+      export_no_cache:
+        "The agent server is unreachable and no cached history is available.",
+      recovery_hint:
+        "Exports fall back to the local cache when the agent server is unreachable. A cached transcript can also be restored into a new session.",
+      cache_messages: "Cached messages: {{count}}",
+      cache_synced: "Last cached: {{date}}",
+      cache_never: "No cached history for this session yet.",
+      restore_action: "Restore into new session",
+      restore_hint:
+        "Writes the cached transcript into the instructions of a new session.",
+      restore_confirm_title: "Create a new session from the cache?",
+      restore_warning:
+        "This creates a new session and writes {{size}} of cached transcript into its instructions. The current session is not changed. Chat data is sent to this agent's server.",
+      restore_cancel: "Cancel",
+      restore_confirm: "Create session",
+      restore_created: "Restored the cached history into a new session.",
+      restore_empty: "No cached history is available to restore.",
+      restore_session_title: "{{name}} (restored history)",
+      restore_failed: "The new session could not be created.",
       policies_hint:
         "Policies automatically answer future permission requests for this agent. Use a wildcard such as bash* or * carefully.",
       policy_action: "Action pattern",

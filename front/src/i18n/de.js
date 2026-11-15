@@ -331,6 +331,12 @@ export default {
       step2: "Öffnen Sie Aus Arbeitsbereich anhängen und wählen Sie eine Datei aus dem Arbeitsbereichsbaum.",
       step3: "Senden Sie die Nachricht mit der angehängten Datei.",
     },
+    agent_recovery: {
+      title: "Eine Agent-Sitzung wiederherstellen",
+      step1: "Öffnen Sie die Werkzeuge des Agenten im Eingabefeld. Ist der Agent-Server nicht erreichbar, verwenden Exporte den lokalen Cache.",
+      step2: "Öffnen Sie den Tab Wiederherstellung, um zu sehen, wie viel Verlauf für diese Sitzung gespeichert ist.",
+      step3: "In neuer Sitzung wiederherstellen schreibt den zwischengespeicherten Verlauf in die Anweisungen einer neuen Sitzung. Prüfen und bestätigen Sie zuerst die Größe.",
+    },
     remote_agents: {
       title: "Einen Remote-Agenten starten",
       step1: "Verwenden Sie die +-Schaltfläche im Bereich Agenten, um einen Agenten hinzuzufügen und sein HPC-Projekt auszuwählen.",
@@ -1724,12 +1730,36 @@ export default {
         stats: "Nutzung",
         mcp: "MCP",
         connection: "Verbindung",
+        recovery: "Wiederherstellung",
       },
       workspace: "Arbeitsbereich / Git",
       tracked_files: "Verfolgte Dateien",
       export_md: "MD exportieren",
       export_json: "JSON exportieren",
       exported: "Agent-Verlauf exportiert.",
+      exported_cached:
+        "Agent-Server nicht erreichbar – zwischengespeicherter Verlauf exportiert.",
+      export_no_cache:
+        "Der Agent-Server ist nicht erreichbar und es ist kein zwischengespeicherter Verlauf vorhanden.",
+      recovery_hint:
+        "Exporte greifen auf den lokalen Cache zurück, wenn der Agent-Server nicht erreichbar ist. Ein zwischengespeicherter Verlauf kann auch in einer neuen Sitzung wiederhergestellt werden.",
+      cache_messages: "Zwischengespeicherte Nachrichten: {{count}}",
+      cache_synced: "Zuletzt gespeichert: {{date}}",
+      cache_never: "Für diese Sitzung ist noch kein Verlauf gespeichert.",
+      restore_action: "In neuer Sitzung wiederherstellen",
+      restore_hint:
+        "Schreibt den zwischengespeicherten Verlauf in die Anweisungen einer neuen Sitzung.",
+      restore_confirm_title: "Neue Sitzung aus dem Cache erstellen?",
+      restore_warning:
+        "Dies erstellt eine neue Sitzung und schreibt {{size}} des zwischengespeicherten Verlaufs in ihre Anweisungen. Die aktuelle Sitzung bleibt unverändert. Chatdaten werden an den Server dieses Agenten gesendet.",
+      restore_cancel: "Abbrechen",
+      restore_confirm: "Sitzung erstellen",
+      restore_created:
+        "Der zwischengespeicherte Verlauf wurde in einer neuen Sitzung wiederhergestellt.",
+      restore_empty:
+        "Es ist kein zwischengespeicherter Verlauf zum Wiederherstellen vorhanden.",
+      restore_session_title: "{{name}} (wiederhergestellter Verlauf)",
+      restore_failed: "Die neue Sitzung konnte nicht erstellt werden.",
       policies_hint:
         "Richtlinien beantworten künftige Berechtigungsanfragen dieses Agenten automatisch. Verwenden Sie Platzhalter wie bash* oder * mit Bedacht.",
       policy_action: "Aktionsmuster",

@@ -11,6 +11,8 @@ import {
   clearOpencodeRevert,
   commitOpencodeRevert,
   connectOpencodeMcpServer,
+  createOpencodeSession,
+  deleteOpencodeSession,
   deleteSavedOpencodePermission,
   getOpencodeDiff,
   getOpencodeFileStatus,
@@ -22,21 +24,29 @@ import {
   listOpencodeMcpServers,
   listOpencodeMessages,
   listSavedOpencodePermissions,
+  putOpencodeInstructionEntry,
   removeOpencodeMcpServer,
   stageOpencodeRevert,
 } from "../../apis/opencodeAgents";
 import {
   buildAgentHistoryJson,
   buildAgentHistoryMarkdown,
+  buildAgentHistoryRestoreText,
   downloadAgentHistory,
 } from "../../agents/agentHistoryExport";
 import {
   loadAgentPermissionPolicies,
   saveAgentPermissionPolicies,
 } from "../../agents/agentPermissionPolicies";
-import { notifyAgentHistoryChanged } from "../../agents/agentSessions";
+import {
+  notifyAgentHistoryChanged,
+  notifyAgentSessionsChanged,
+  switchAgentSession,
+} from "../../agents/agentSessions";
 import { loadAgentFormHistory } from "../../agents/agentFormHistory";
 import { loadAgentShellHistory } from "../../agents/agentShellHistory";
+import { loadAgentSessionMessages } from "../../db/agentSessionCache";
+import { formatBytes } from "../../utils/formatBytes";
 
 const TABS = [
   "changes",
@@ -45,6 +55,7 @@ const TABS = [
   "stats",
   "mcp",
   "connection",
+  "recovery",
 ];
 
 const ReadJson = ({ value }) => (
@@ -72,6 +83,8 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
   const [connection, setConnection] = useState(null);
   const [vcs, setVcs] = useState(null);
   const [trackedFiles, setTrackedFiles] = useState([]);
+  const [cache, setCache] = useState(null);
+  const [restoreDraft, setRestoreDraft] = useState(null);
 
   const addedMcpNames = useMemo(
     () => new Set(mcpServers.map((server) => server.name)),
@@ -142,10 +155,20 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
     setBusy(true);
     setError("");
     try {
-      const nextMessages = await listOpencodeMessages(
-        agent,
-        agent.sessionId,
-      ).catch(() => []);
+      const cached = await loadAgentSessionMessages(agent.id, agent.sessionId);
+      let source = "server";
+      let cachedAt = null;
+      let nextMessages;
+      try {
+        nextMessages = await listOpencodeMessages(agent, agent.sessionId);
+      } catch (reason) {
+        if (!cached.messages.length) {
+          throw new Error(t("agents.tools.export_no_cache"));
+        }
+        nextMessages = cached.messages;
+        source = "cache";
+        cachedAt = cached.syncedAt;
+      }
       const shells = loadAgentShellHistory(agent.id, agent.sessionId);
       const forms = loadAgentFormHistory(agent.id, agent.sessionId);
       const serialize =
@@ -157,6 +180,8 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
         messages: nextMessages,
         shells,
         forms,
+        source,
+        cachedAt,
       });
       const safeName = String(agent.name || "agent")
         .replace(/[^\w.-]+/g, "-")
@@ -166,8 +191,85 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
         content,
         format === "json" ? "application/json" : "text/markdown",
       );
-      notifySuccess(t("agents.tools.exported"));
+      notifySuccess(
+        t(
+          source === "cache"
+            ? "agents.tools.exported_cached"
+            : "agents.tools.exported",
+        ),
+      );
     } catch (reason) {
+      const message = reason instanceof Error ? reason.message : String(reason);
+      setError(message);
+      notifyError(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const refreshCache = async () => {
+    if (!agent?.id || !agent?.sessionId) return null;
+    const cached = await loadAgentSessionMessages(agent.id, agent.sessionId);
+    setCache({
+      count: cached.messages.length,
+      syncedAt: cached.syncedAt,
+    });
+    return cached;
+  };
+
+  const prepareRestore = async () => {
+    if (!agent?.sessionId || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const cached = await refreshCache();
+      if (!cached?.messages.length) {
+        notifyError(t("agents.tools.restore_empty"));
+        return;
+      }
+      const text = buildAgentHistoryRestoreText({
+        agent,
+        messages: cached.messages,
+        cachedAt: cached.syncedAt,
+      });
+      setRestoreDraft({ text, size: text.length });
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : String(reason);
+      setError(message);
+      notifyError(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restoreHistory = async () => {
+    if (!restoreDraft || !agent?.id || busy) return;
+    setBusy(true);
+    setError("");
+    let session = null;
+    try {
+      session = await createOpencodeSession(
+        agent,
+        t("agents.tools.restore_session_title", {
+          name: agent.name || "Agent",
+        }),
+      );
+      if (!session?.id) throw new Error(t("agents.tools.restore_failed"));
+      await putOpencodeInstructionEntry(
+        agent,
+        session.id,
+        "chat-ai-restored-history",
+        restoreDraft.text,
+      );
+      switchAgentSession(agent, session.id);
+      notifyAgentSessionsChanged(agent.id);
+      setRestoreDraft(null);
+      notifySuccess(t("agents.tools.restore_created"));
+      onClose?.();
+    } catch (reason) {
+      if (session?.id) {
+        await deleteOpencodeSession(agent, session.id).catch(() => {});
+      }
       const message = reason instanceof Error ? reason.message : String(reason);
       setError(message);
       notifyError(message);
@@ -201,6 +303,29 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
     });
     setVcs(value(3));
   };
+
+  useEffect(() => {
+    setRestoreDraft(null);
+    if (!isOpen || !agent?.id || !agent?.sessionId) {
+      setCache(null);
+      return;
+    }
+    let cancelled = false;
+    void loadAgentSessionMessages(agent.id, agent.sessionId)
+      .then((cached) => {
+        if (cancelled) return;
+        setCache({
+          count: cached.messages.length,
+          syncedAt: cached.syncedAt,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setCache(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, agent?.id, agent?.sessionId]);
 
   useEffect(() => {
     if (!isOpen || !agent?.sessionId) return;
@@ -278,6 +403,8 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
               key={item}
               type="button"
               onClick={() => setTab(item)}
+              aria-pressed={tab === item}
+              data-guide={item === "recovery" ? "agent-recovery-tab" : undefined}
               className={`btn btn-xs ${tab === item ? "btn-accent" : "btn-ghost"}`}
             >
               {t(`agents.tools.tabs.${item}`)}
@@ -742,6 +869,74 @@ export default function AgentToolsModal({ isOpen, onClose, agent }) {
                 <p className="text-base-content/60">
                   {t("agents.tools.no_diagnostics")}
                 </p>
+              )}
+            </div>
+          )}
+
+          {tab === "recovery" && (
+            <div className="space-y-3 text-xs" data-guide="agent-recovery">
+              <p className="leading-relaxed text-base-content/70">
+                {t("agents.tools.recovery_hint")}
+              </p>
+              <div className="rounded-lg border border-base-300 p-2">
+                <p>
+                  {t("agents.tools.cache_messages", {
+                    count: cache?.count ?? 0,
+                  })}
+                </p>
+                <p className="mt-0.5 text-base-content/60">
+                  {cache?.syncedAt
+                    ? t("agents.tools.cache_synced", {
+                        date: new Date(cache.syncedAt).toLocaleString(),
+                      })
+                    : t("agents.tools.cache_never")}
+                </p>
+              </div>
+              {restoreDraft ? (
+                <div className="rounded-lg border border-warning/50 bg-warning/10 p-2">
+                  <p className="flex items-center gap-1 font-medium">
+                    <TriangleAlert className="h-3 w-3 shrink-0 text-warning" />
+                    {t("agents.tools.restore_confirm_title")}
+                  </p>
+                  <p className="mt-1 leading-relaxed text-base-content/70">
+                    {t("agents.tools.restore_warning", {
+                      size: formatBytes(restoreDraft.size),
+                    })}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-warning btn-xs"
+                      disabled={busy}
+                      onClick={() => void restoreHistory()}
+                    >
+                      {t("agents.tools.restore_confirm")}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      disabled={busy}
+                      onClick={() => setRestoreDraft(null)}
+                    >
+                      {t("agents.tools.restore_cancel")}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    data-guide="agent-recovery-restore"
+                    className="btn btn-accent btn-xs"
+                    disabled={busy || !cache?.count}
+                    onClick={() => void prepareRestore()}
+                  >
+                    {t("agents.tools.restore_action")}
+                  </button>
+                  <span className="text-base-content/50">
+                    {t("agents.tools.restore_hint")}
+                  </span>
+                </div>
               )}
             </div>
           )}

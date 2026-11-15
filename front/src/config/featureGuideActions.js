@@ -29,6 +29,22 @@ export function openTools() {
   }
 }
 
+export function openAgentTools() {
+  if (!find('[data-guide="agent-recovery-tab"]')) {
+    click('[data-guide="agent-tools-button"]');
+  }
+}
+
+export function openAgentRecovery() {
+  openAgentTools();
+  retry(() => {
+    const tab = find('[data-guide="agent-recovery-tab"]');
+    if (!tab) return false;
+    if (tab.getAttribute("aria-pressed") !== "true") tab.click();
+    return true;
+  });
+}
+
 export function ensureToolsEnabled() {
   openTools();
   retry(() => {

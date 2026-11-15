@@ -6,6 +6,7 @@ import {
   hasAttachmentCard,
   isToolActive,
   mcpConfigured,
+  openAgentRecovery,
   openConversationMenu,
   openConversationSettings,
   openSearch,
@@ -113,6 +114,35 @@ export const featureGuides = {
         target: '[data-guide="send"]',
         textKey: "feature_guide.attach_from_workspace.step3",
         completeOnEvent: "message-complete",
+      },
+    ],
+  },
+  agent_recovery: {
+    titleKey: "feature_guide.agent_recovery.title",
+    prompt:
+      "Open the agent's tools from the composer. Exports fall back to the local cache when the agent server is unreachable, and Recovery can write the cached transcript into the instructions of a new session.",
+    keywords: [
+      "agent recovery",
+      "recover agent",
+      "cached agent history",
+      "restore agent session",
+      "agent offline",
+      "export cached history",
+    ],
+    steps: [
+      {
+        target: '[data-guide="agent-tools-button"]',
+        textKey: "feature_guide.agent_recovery.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="agent-recovery"]',
+        textKey: "feature_guide.agent_recovery.step2",
+        prepare: openAgentRecovery,
+      },
+      {
+        target: '[data-guide="agent-recovery-restore"]',
+        textKey: "feature_guide.agent_recovery.step3",
       },
     ],
   },
@@ -1362,7 +1392,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "workspace_clone", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents"],
+  workspace: ["workspace_overview", "workspace_clone", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

@@ -670,7 +670,10 @@ there, opening one from an attached workspace attaches it, and `AppDB` version 1
 workspace once (`seedWorkspaceAgentSessions`), so existing data upgrades without duplicating
 sessions and a detached session is not re-added. Detaching an agent, deleting a workspace, removing
 an agent, and closing a session all delete the matching session links. Storage
-is shown for every source in the always visible "Available storage" panel.
+is shown for every source in the always visible "Available storage" panel, except the derived
+agent-files source of an agent already listed in the Agents panel:
+`workspace/workspaceSources.ts` hides it so the agent name is not shown twice, while a source for
+an agent that only reaches the workspace through the bridge stays visible.
 
 Transfers are orchestrated in the browser: `workspace/transferPlanner.ts` always moves on drag and
 drop, regardless of source; an explicit "copy" intent is the only copy path. It blocks read-only
@@ -829,8 +832,12 @@ behaviour on `type === "select"`, or question forms collapse to a bare text inpu
 `AgentToolsModal` exposes a live step/todo timeline, session
 diff/revert with VCS and tracked-file status, saved permissions, local permission policies
 (`agents/agentPermissionPolicies.js`, auto-answered by `AgentConversation`), usage stats, MCP
-reconnect/refresh, connection diagnostics, and Markdown/JSON transcript export. The Composer's
-shell output can be copied and a running shell command can be aborted from its card.
+reconnect/refresh, connection diagnostics, and Markdown/JSON transcript export. Export falls back
+to the locally cached messages when the agent server is unreachable and marks the file with
+`source: "cache"`. The Recovery tab lists the cache and restores a size-capped transcript
+(`buildAgentHistoryRestoreText`, 100k characters, newest messages kept) into the instructions of a
+new session under the key `chat-ai-restored-history`; messages are never replayed as chat turns.
+The Composer's shell output can be copied and a running shell command can be aborted from its card.
 `subscribeOpencodeEvents`
 refreshes messages and permissions from the `/api/event` stream. The composer reuses `SendButton` and
 `ModelButton`; the model list is the intersection of `GET /api/model` (falling back to

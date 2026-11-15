@@ -1703,6 +1703,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
             <AgentWorkspaceButton agent={agent} />
             <button
               type="button"
+              data-guide="agent-tools-button"
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-accent hover:bg-base-200"
               onClick={() => openModal("agentTools", { agent })}
               title={t("agents.tools.title")}
