@@ -1,19 +1,50 @@
 import { expect, openApp, sendPrompt, test } from "./fixtures";
 
 test.describe("chat", () => {
-  test("sends a prompt and renders the streamed answer", async ({ page }) => {
-    await openApp(page);
+  test("sends a prompt and renders the streamed answer", async ({
+    page,
+    doc,
+  }) => {
+    await doc.step(
+      "Open the app",
+      {
+        user: "The user opens Chat AI.",
+        system:
+          "The welcome tour is dismissed and an empty conversation with the prompt box is shown.",
+      },
+      () => openApp(page),
+    );
 
-    await sendPrompt(page, "Hello from the deterministic suite");
+    await doc.step(
+      "Send a prompt",
+      {
+        user: "The user types “Hello from the deterministic suite” and clicks Send.",
+        system:
+          "The message appears in the conversation and the assistant streams its answer back token by token.",
+      },
+      async () => {
+        await sendPrompt(page, "Hello from the deterministic suite");
+        await expect(
+          page.getByText("Mocked reply to: Hello from the deterministic suite", {
+            exact: true,
+          }),
+        ).toBeVisible({ timeout: 20_000 });
+      },
+    );
 
-    await expect(
-      page.getByText("Mocked reply to: Hello from the deterministic suite", {
-        exact: true,
-      }),
-    ).toBeVisible({ timeout: 20_000 });
-    await expect(
-      page.getByText("Hello from the deterministic suite", { exact: true }),
-    ).toBeVisible();
-    await expect(page.locator('textarea[name="prompt"]')).toHaveValue("");
+    await doc.step(
+      "Check the finished exchange",
+      {
+        user: "The user reads the answer.",
+        system:
+          "The sent prompt and the full answer stay visible, and the prompt box is empty and ready for the next message.",
+      },
+      async () => {
+        await expect(
+          page.getByText("Hello from the deterministic suite", { exact: true }),
+        ).toBeVisible();
+        await expect(page.locator('textarea[name="prompt"]')).toHaveValue("");
+      },
+    );
   });
 });

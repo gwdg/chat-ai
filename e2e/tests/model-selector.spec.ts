@@ -3,18 +3,55 @@ import { expect, modelSelectorButton, openApp, test } from "./fixtures";
 test.describe("model selector", () => {
   test("switches the conversation model from the prompt box", async ({
     page,
+    doc,
   }) => {
-    await openApp(page);
+    await doc.step(
+      "Open a chat",
+      {
+        user: "The user opens Chat AI.",
+        system:
+          "The conversation starts with the default model, Alpha Mock Model.",
+      },
+      async () => {
+        await openApp(page);
+        await expect(await modelSelectorButton(page)).toContainText(
+          "Alpha Mock Model",
+        );
+      },
+    );
 
-    const selector = await modelSelectorButton(page);
-    await expect(selector).toContainText("Alpha Mock Model");
+    await doc.step(
+      "Open the model picker",
+      {
+        user: "The user clicks the model chip in the prompt box.",
+        system:
+          "A picker lists the models available in this deployment, including Beta Mock Model.",
+      },
+      async () => {
+        const selector = await modelSelectorButton(page);
+        await selector.click();
+        await expect(
+          page.locator('.item[data-id="beta-mock-model"]:visible').first(),
+        ).toBeVisible();
+      },
+    );
 
-    await selector.click();
-    await page
-      .locator('.item[data-id="beta-mock-model"]:visible')
-      .first()
-      .click();
-
-    await expect(selector).toContainText("Beta Mock Model");
+    await doc.step(
+      "Choose another model",
+      {
+        user: "The user selects Beta Mock Model.",
+        system:
+          "The picker closes and the prompt box now shows Beta Mock Model for this conversation.",
+      },
+      async () => {
+        await page
+          .locator('.item[data-id="beta-mock-model"]:visible')
+          .first()
+          .click();
+        await expect(await modelSelectorButton(page)).toContainText(
+          "Beta Mock Model",
+        );
+      },
+    );
   });
 });

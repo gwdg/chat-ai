@@ -5,6 +5,8 @@ import {
   type Route,
 } from "@playwright/test";
 
+import { ScenarioDocumentation } from "./documentation";
+
 /**
  * Shared harness for the deterministic browser suite.
  *
@@ -48,6 +50,12 @@ export interface MockApiOptions {
   reply?: (prompt: string) => string;
   /** Text returned by non-streaming calls, i.e. title generation. */
   title?: string;
+  /**
+   * Emit one function-tool call before the text reply. The second model call
+   * (which carries the tool result) then streams `reply`, so agent turns that
+   * must execute a browser tool can be tested without a real model.
+   */
+  toolCall?: { name: string; arguments: Record<string, unknown> };
 }
 
 const sseChunk = (
@@ -122,6 +130,45 @@ export async function mockApi(
     }
 
     if (body.stream) {
+      const messages = Array.isArray(body.messages)
+        ? (body.messages as Array<{ role?: string }>)
+        : [];
+      const hasToolResult = messages.some(
+        (message) => message.role === "tool" || message.role === "tool_result",
+      );
+
+      if (options.toolCall && !hasToolResult) {
+        const { name, arguments: args } = options.toolCall;
+        await route.fulfill({
+          status: 200,
+          headers: {
+            "content-type": "text/event-stream",
+            "cache-control": "no-cache",
+          },
+          body: [
+            sseChunk({
+              role: "assistant",
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "call_e2e_tool",
+                  type: "function",
+                  function: { name, arguments: "" },
+                },
+              ],
+            }),
+            sseChunk({
+              tool_calls: [
+                { index: 0, function: { arguments: JSON.stringify(args) } },
+              ],
+            }),
+            sseChunk({}, "tool_calls"),
+            "data: [DONE]\n\n",
+          ].join(""),
+        });
+        return;
+      }
+
       const text = reply(lastUserText(body));
       await route.fulfill({
         status: 200,
@@ -297,14 +344,30 @@ export async function showTutorialPanel(page: Page) {
 }
 
 /**
- * Every test gets fresh browser state (localStorage + IndexedDB) and mocked APIs.
+ * Every test gets fresh browser state (localStorage + IndexedDB), mocked APIs
+ * and a documentation recorder.
+ *
  * Overriding `page` guarantees the routes exist before the first navigation.
+ * The `doc` fixture writes per-step screenshots and narratives under
+ * `results/documentation/<scenario>/<project>/`. Tests that never call
+ * `doc.step()` still get one automatic final screenshot from the fixture
+ * teardown, so every scenario produces usable documentation.
  */
-export const test = base.extend({
+export const test = base.extend<{ doc: ScenarioDocumentation }>({
   page: async ({ page }, use) => {
     await mockApi(page);
     await use(page);
   },
+  // `auto` sets the fixture up for every test, even those that never mention
+  // `doc`, so every scenario ends up with at least one screenshot.
+  doc: [
+    async ({ page }, use, testInfo) => {
+      const documentation = new ScenarioDocumentation(page, testInfo);
+      await use(documentation);
+      await documentation.finish(testInfo.error);
+    },
+    { auto: true },
+  ],
 });
 
 export { expect };

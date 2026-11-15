@@ -5,10 +5,16 @@
     "scripts": {
         "e2e": "tsx src/cli.ts",
         "check": "tsc --noEmit",
+        "setup:e2e": "bash scripts/install-browsers.sh",
+        "analyze": "node scripts/analyze.mjs",
+        "analyze:check": "node scripts/analyze.mjs --check",
+        "opencode:serve": "node scripts/opencode-server.mjs",
+        "opencode:check": "node scripts/opencode-server.mjs --check",
         "test:e2e": "playwright test",
         "test:e2e:chrome": "playwright test --project=chrome-desktop --project=chrome-tablet --project=chrome-phone",
         "test:e2e:ui": "playwright test --ui",
-        "test:e2e:report": "playwright show-report results/html"
+        "test:e2e:report": "playwright show-report results/html",
+        "test:opencode": "E2E_OPENCODE=1 playwright test --project=opencode-local"
     },
     "dependencies": {
         "openai": "^4.104.0",
