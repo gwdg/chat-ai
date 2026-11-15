@@ -60,7 +60,7 @@ const cloneMcpServers = (servers) => JSON.parse(JSON.stringify(servers ?? []));
 
 const CONVERSATION_TOOL_SETTING_KEYS = new Set([
   "browser_storage",
-  "arcana_v2",
+  "arcana_tools",
 ]);
 
 const readConversationSetting = (settings, key) =>
@@ -399,7 +399,7 @@ export default function MetaActionCard({
     enable_tools: "settings.tools_title",
     enable_web_search: "settings.label_web_search",
     browser_storage: "settings.label_browser_storage",
-    arcana_v2: "settings.label_arcana_v2",
+    arcana_tools: "settings.label_arcana_tools",
   };
 
   const formatSettingValue = (key, value) => {

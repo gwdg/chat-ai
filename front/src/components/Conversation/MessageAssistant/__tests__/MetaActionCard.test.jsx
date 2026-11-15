@@ -167,10 +167,10 @@ describe("MetaActionCard", () => {
     mockState.user_settings.mcp_servers = [];
   });
 
-  it("applies an ArcanaV2 tool setting", async () => {
+  it("applies an Arcana Tools tool setting", async () => {
     vi.mocked(getConversationMeta).mockResolvedValue({
       ...conversation,
-      settings: { tools: { arcana_v2: false } },
+      settings: { tools: { arcana_tools: false } },
     });
     render(
       <MetaActionCard
@@ -179,7 +179,7 @@ describe("MetaActionCard", () => {
             type: "conversation_setting",
             scope: "conversation",
             conversationId: "chat-1",
-            key: "arcana_v2",
+            key: "arcana_tools",
             value: true,
           },
         ]}
@@ -192,7 +192,7 @@ describe("MetaActionCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /accept changes/i }));
     await waitFor(() =>
       expect(updateConversationMeta).toHaveBeenCalledWith("chat-1", {
-        settings: { tools: { arcana_v2: true } },
+        settings: { tools: { arcana_tools: true } },
       }),
     );
   });

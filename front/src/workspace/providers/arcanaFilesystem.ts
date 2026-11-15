@@ -7,7 +7,7 @@ import {
   readArcanaFile,
   replaceArcanaFile,
   uploadArcanaFile,
-} from "../../agent/arcanaV2";
+} from "../../agent/arcanaTools";
 import { defaultCapabilities } from "../capabilities";
 import { normalizePath } from "../paths";
 import type { DirectoryPage, FileProvider } from "./types";
@@ -36,7 +36,7 @@ const normalizeArcanas = (data: any): string[] => {
   if (!Array.isArray(rows)) {
     throw new WorkspaceError(
       "PROVIDER_ERROR",
-      "ArcanaV2 returned an unexpected response",
+      "Arcana Tools returned an unexpected response",
     );
   }
   return rows

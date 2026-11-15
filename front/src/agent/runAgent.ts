@@ -37,7 +37,7 @@ const NO_TOOLS_PROMPT = "You cannot call tools in this conversation; attached fi
 
 const NO_BROWSER_STORAGE_PROMPT = "The user has turned off browser storage for this conversation, so you cannot read or write local workspace files. Attached files are referenced by name only; do not claim to have read them.";
 
-const ARCANA_V2_PROMPT = "ArcanaV2 is enabled. Use the ArcanaV2 tools to inspect Arcana collections, manage their files, check or start indexing, and manage sharing. Ask the user for explicit confirmation before deleting files or an index, changing sharing, or uploading and replacing files unless they already asked for that exact change.";
+const ARCANA_TOOLS_PROMPT = "Arcana Tools is enabled. Use these tools to inspect Arcana collections, manage their files, check or start indexing, and manage sharing. Ask the user for explicit confirmation before deleting files or an index, changing sharing, or uploading and replacing files unless they already asked for that exact change.";
 
 
 type ModelSpec = { id: string; name?: string; input?: string[] };
@@ -232,7 +232,11 @@ export async function runAgentTurn({
   const external = isExternalModel(spec);
   const useTools = modelSupportsTools(spec);
   const browserStorage = settings.tools?.browser_storage === true;
-  const arcanaV2 = settings.tools?.arcana_v2 === true;
+  // `arcana_v2` and `remote_file_access` are the old names of this toggle.
+  const arcanaTools =
+    settings.tools?.arcana_tools === true ||
+    settings.tools?.arcana_v2 === true ||
+    settings.tools?.remote_file_access === true;
   const model = toModel(spec);
   const vision = model.input.includes("image");
 
@@ -381,7 +385,7 @@ export async function runAgentTurn({
             ? AGENT_PROMPT
             : NO_BROWSER_STORAGE_PROMPT
           : NO_TOOLS_PROMPT,
-        useTools && arcanaV2 ? ARCANA_V2_PROMPT : "",
+        useTools && arcanaTools ? ARCANA_TOOLS_PROMPT : "",
         hasConnectedAgentTools
           ? "Agents connected to this chat's workspace are available through connected_agents_status, connected_agent_list_sessions, connected_agent_history, connected_agent_switch_session, connected_agent_remove_session, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents and to the sessions attached to this chat's workspace; use connected_agent_list_sessions to see them, connected_agent_switch_session to change the active session, connected_agent_remove_session only when the user explicitly asks to remove one, and connected_agent_fetch_file for images, PDFs, and other binary files. Never claim to see sessions that are not listed."
           : "",

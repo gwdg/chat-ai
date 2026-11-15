@@ -95,4 +95,42 @@ describe("useImportConversation", () => {
     const params = dbMocks.createConversation.mock.calls[0][0];
     expect(params.folderId).toBeNull();
   });
+
+  it("maps legacy tool names when importing a tool list", async () => {
+    const { result } = renderHook(() => useImportConversation());
+
+    await act(async () => {
+      await result.current(
+        {
+          title: "Old export",
+          tools: [{ type: "arcana_v2" }, { type: "remote_file_access" }],
+        },
+        true,
+      );
+    });
+
+    const params = dbMocks.createConversation.mock.calls[0][0];
+    expect(params.settings.tools.arcana_tools).toBe(true);
+    expect(params.settings.tools.arcana_v2).toBeUndefined();
+    expect(params.settings.tools.remote_file_access).toBeUndefined();
+  });
+
+  it("maps legacy tool keys when importing a tool object", async () => {
+    const { result } = renderHook(() => useImportConversation());
+
+    await act(async () => {
+      await result.current(
+        {
+          title: "Old export",
+          tools: { arcana_v2: true, browser_storage: true },
+        },
+        true,
+      );
+    });
+
+    const params = dbMocks.createConversation.mock.calls[0][0];
+    expect(params.settings.tools.arcana_tools).toBe(true);
+    expect(params.settings.tools.browser_storage).toBe(true);
+    expect(params.settings.tools.arcana_v2).toBeUndefined();
+  });
 });

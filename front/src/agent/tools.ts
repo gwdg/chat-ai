@@ -28,7 +28,7 @@ import {
   replaceArcanaFile,
   startArcanaIndex,
   uploadArcanaFile,
-} from "./arcanaV2";
+} from "./arcanaTools";
 import { markdownToDocx } from "./docx";
 import { isArcanasEnabled } from "../utils/modules";
 import { enoent, normalize, type Vfs, walk } from "./vfs";
@@ -80,7 +80,7 @@ const TOGGLES: Record<string, string[]> = {
     "generate_image",
     "edit_image",
   ],
-  arcana_v2: [
+  arcana_tools: [
     "list_arcanas",
     "create_arcana",
     "get_arcana",
@@ -242,7 +242,7 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
     },
   );
 
-  const arcanaV2Tools: AgentTool<any>[] = [
+  const arcanaTools: AgentTool<any>[] = [
     tool(
       "list_arcanas",
       "List the user's Arcana collections with file counts, sizes and index status.",
@@ -549,19 +549,22 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
   // is an alternative storage source, so it turns the file tools on as well.
   const OPT_IN = [
     "browser_storage",
-    "arcana_v2",
+    "arcana_tools",
     "write_access",
     "web_search",
   ];
   const storageEnabled = enabled.browser_storage === true || hasLocalFolder;
-  const arcanaV2Enabled =
+  // `arcana_v2` and `remote_file_access` are the previous names of the toggle.
+  const arcanaToolsEnabled =
     isArcanasEnabled() &&
-    (enabled.arcana_v2 === true || enabled.remote_file_access === true);
+    (enabled.arcana_tools === true ||
+      enabled.arcana_v2 === true ||
+      enabled.remote_file_access === true);
   const isOff = (key: string) =>
     key === "browser_storage"
       ? !storageEnabled
-      : key === "arcana_v2"
-        ? !arcanaV2Enabled
+      : key === "arcana_tools"
+        ? !arcanaToolsEnabled
         : OPT_IN.includes(key)
           ? enabled[key] !== true
           : enabled[key] === false;
@@ -569,5 +572,5 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
   const on = (tool: AgentTool<any>) => !off.has(tool.name);
   // Scripts get the same file tools, so they cannot write either when writing is off
   const codemode = createCodemodeTool(fileTools.filter(on));
-  return [...fileTools, codemode, ...arcanaV2Tools, ...mediaTools].filter(on);
+  return [...fileTools, codemode, ...arcanaTools, ...mediaTools].filter(on);
 }

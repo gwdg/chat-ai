@@ -340,7 +340,35 @@ export class AppDB extends Dexie {
       agent_session_messages:
         'id, agentId, sessionId, [agentId+sessionId], [agentId+sessionId+position]',
     });
+
+    // `arcana_v2` / `remote_file_access` were renamed to `arcana_tools`. Chats
+    // store their tool toggles inline, so old rows are rewritten once here.
+    this.version(15).stores({}).upgrade(async (tx) => {
+      const conversations = tx.table('conversations');
+      await conversations.toCollection().modify((conversation) => {
+        migrateLegacyToolKeys(conversation?.settings);
+      });
+    });
   }
+}
+
+/**
+ * Renames the pre-rename tool toggles (`arcana_v2`, `remote_file_access`) to
+ * `arcana_tools` in a conversation's settings object. Mutates and returns it:
+ * an explicit `arcana_tools` value wins over a legacy one, and legacy keys are
+ * always removed so nothing reads two switches.
+ */
+export function migrateLegacyToolKeys(settings: any) {
+  const tools = settings?.tools;
+  if (!tools || typeof tools !== 'object' || Array.isArray(tools)) return settings;
+  if (tools.arcana_tools === undefined) {
+    const legacy =
+      tools.arcana_v2 !== undefined ? tools.arcana_v2 : tools.remote_file_access;
+    if (legacy !== undefined) tools.arcana_tools = legacy;
+  }
+  delete tools.arcana_v2;
+  delete tools.remote_file_access;
+  return settings;
 }
 
 export const db = new AppDB()

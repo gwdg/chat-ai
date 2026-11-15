@@ -32,12 +32,12 @@ const AGENT_UNAVAILABLE = new Set(
   agentGatewayTools() ? [] : ["arcana"],
 );
 // Agent tools that are off unless switched on: web search and writing files (agent/tools.ts),
-// ArcanaV2 (agent/arcanaV2.ts), arcana, which the gateway runs (agent/gateway.ts), and MCP
+// Arcana Tools (agent/arcanaTools.ts), arcana, which the gateway runs (agent/gateway.ts), and MCP
 // servers (agent/mcp.ts)
 const AGENT_OPT_IN = new Set([
   "web_search",
   "arcana",
-  "arcana_v2",
+  "arcana_tools",
   "write_access",
   "mcp",
   "mcp_remote",
@@ -101,9 +101,9 @@ export default function ToolsContainer({ localState, setLocalState }) {
         label: t("settings.label_audio_generation"),
       },
       {
-        key: "arcana_v2",
+        key: "arcana_tools",
         Icon: Database,
-        label: t("settings.label_arcana_v2"),
+        label: t("settings.label_arcana_tools"),
       },
       {
         key: "arcana",
@@ -141,7 +141,7 @@ export default function ToolsContainer({ localState, setLocalState }) {
     .filter(({ key }) => agentMode || !AGENT_ONLY.has(key))
     .filter(
       ({ key }) =>
-        arcanasEnabled || (key !== "arcana" && key !== "arcana_v2")
+        arcanasEnabled || (key !== "arcana" && key !== "arcana_tools")
     );
 
   // Simple setter for per-tool flags

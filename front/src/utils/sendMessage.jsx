@@ -371,7 +371,9 @@ const sendMessage = async ({
                     ([toolKey, enabled]) =>
                       enabled &&
                       (arcanasModule ||
-                        (toolKey !== "arcana" && toolKey !== "arcana_v2"))
+                        (toolKey !== "arcana" &&
+                          toolKey !== "arcana_tools" &&
+                          toolKey !== "arcana_v2"))
                   )
                   .map(([toolKey]) => ({ type: toolKey }));
         if (conversationForAPI.settings?.arcana?.id && conversationForAPI.settings.arcana.id !== "") {

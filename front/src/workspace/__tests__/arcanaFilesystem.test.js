@@ -11,7 +11,7 @@ const api = vi.hoisted(() => ({
   createArcana: vi.fn(),
 }));
 
-vi.mock("../../agent/arcanaV2", () => ({
+vi.mock("../../agent/arcanaTools", () => ({
   createArcana: (...args) => api.createArcana(...args),
   deleteArcanaFile: (...args) => api.deleteFile(...args),
   listArcanaFiles: (...args) => api.listFiles(...args),
@@ -67,7 +67,7 @@ describe("ArcanaFilesystemProvider", () => {
     ]);
   });
 
-  it("reads and writes files through ArcanaV2", async () => {
+  it("reads and writes files through Arcana Tools", async () => {
     const provider = new ArcanaFilesystemProvider("source-1");
     await provider.connect();
 

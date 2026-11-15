@@ -244,7 +244,7 @@ export async function removeAgentFilesSource(
   await removeSource(`${AGENT_FILES_SOURCE_PREFIX}${workspaceId}:${agentId}`);
 }
 
-/** Every workspace gets the ArcanaV2 filesystem unless the Arcanas module is off. */
+/** Every workspace gets the Arcana Tools filesystem unless the Arcanas module is off. */
 export async function ensureArcanaFilesystemSource(
   workspaceId: string,
 ): Promise<string | undefined> {

@@ -109,16 +109,16 @@ describe("Meta chat action markers", () => {
     });
   });
 
-  it("accepts the ArcanaV2 tool setting", () => {
+  it("accepts the Arcana Tools tool setting", () => {
     const proposals = getMetaActionProposals(
-      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"arcana_v2","value":true}]]',
+      '[[SET_CONVERSATION_SETTING:{"id":"c1","key":"arcana_tools","value":true}]]',
     );
     expect(proposals).toHaveLength(1);
     expect(proposals[0]).toMatchObject({
       type: "conversation_setting",
       scope: "conversation",
       conversationId: "c1",
-      key: "arcana_v2",
+      key: "arcana_tools",
       value: true,
     });
   });

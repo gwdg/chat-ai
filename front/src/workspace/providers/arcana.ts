@@ -6,7 +6,7 @@ import {
   readArcanaFile,
   replaceArcanaFile,
   uploadArcanaFile,
-} from "../../agent/arcanaV2";
+} from "../../agent/arcanaTools";
 import { defaultCapabilities } from "../capabilities";
 import { baseName, normalizePath } from "../paths";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";

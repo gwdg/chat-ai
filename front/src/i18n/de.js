@@ -478,12 +478,12 @@ export default {
       step3:
         "Wählen Sie Audioerzeugung und beschreiben Sie das gewünschte Audio.",
     },
-    arcana_v2: {
-      title: "ArcanaV2 verwenden",
+    arcana_tools: {
+      title: "Arcana Tools verwenden",
       step1: "Öffnen Sie GWDG Tools im Eingabefeld.",
       step2: "Aktivieren Sie die Tools.",
       step3:
-        "Wählen Sie ArcanaV2, damit der Assistent Arcana-Sammlungen, ihre Dateien und Indizes sowie Freigaben verwalten kann.",
+        "Wählen Sie Arcana Tools, damit der Assistent Arcana-Sammlungen, ihre Dateien und Indizes sowie Freigaben verwalten kann.",
     },
     diagram_renderers: {
       title: "Diagramme aus Codeblöcken rendern",
@@ -935,7 +935,7 @@ export default {
     label_image_modification: "Bildbearbeitung",
     label_image_analysis: "Bilder analysieren",
     label_audio_generation: "Audiogenerierung",
-    label_arcana_v2: "ArcanaV2",
+    label_arcana_tools: "Arcana Tools",
     label_arcana: "Arcana",
     label_mcp_server: "MCP-Server",
     label_write_access: "Schreiben erlauben",
@@ -1470,7 +1470,7 @@ export default {
     temperature:
       "Eine niedrige Temperatur (z. B. 0-1) erzeugt vorhersehbarere und logischere Antworten, während höhere Temperaturen (z. B. über 1) die Möglichkeit kreativerer und unkonventionellerer Antworten erhöhen. Sie können die Temperatureinstellung anpassen, um verschiedene Stufen der Vorhersagbarkeit und Kreativität zu erreichen.",
     tools:
-      "Tools sind eine neue und experimentelle Funktion, die darauf ausgelegt ist, die Fähigkeiten von Chat-AI zu erweitern. Sie ermöglichen dem Modell, zusätzliche Aktionen auszuführen oder auf weitere Ressourcen zuzugreifen, um nützlichere, genauere oder spezialisierte Antworten zu liefern. Zu den aktuellen Tools gehören Arcana, ArcanaV2, Websuche, Bild- und Audioerzeugung und MCP-Server. Mit ArcanaV2 kann der Assistent Arcana-Sammlungen, ihre Dateien, Indizes und Freigaben verwalten. Da sich diese Funktion noch in Entwicklung befindet, können sich Funktionsumfang und verfügbare Tools im Laufe der Zeit ändern.",
+      "Tools sind eine neue und experimentelle Funktion, die darauf ausgelegt ist, die Fähigkeiten von Chat-AI zu erweitern. Sie ermöglichen dem Modell, zusätzliche Aktionen auszuführen oder auf weitere Ressourcen zuzugreifen, um nützlichere, genauere oder spezialisierte Antworten zu liefern. Zu den aktuellen Tools gehören Arcana, Arcana Tools, Websuche, Bild- und Audioerzeugung und MCP-Server. Mit Arcana Tools kann der Assistent Arcana-Sammlungen, ihre Dateien, Indizes und Freigaben verwalten. Da sich diese Funktion noch in Entwicklung befindet, können sich Funktionsumfang und verfügbare Tools im Laufe der Zeit ändern.",
     web_search:
       "Das Websuche-Werkzeug ermöglicht es der KI, aktuelle Informationen aus dem Internet abzurufen, um ihre Antworten zu verbessern. Wenn es aktiviert ist, kann die KI auf Grundlage Ihrer Frage und des gesamten Gesprächsverlaufs Suchanfragen erstellen, diese an eine Suchmaschine (wie z. B. Google) senden und die erhaltenen Ergebnisse nutzen, um genauere und aktuellere Antworten zu geben. Dies ist besonders nützlich bei Themen, bei denen aktuelle oder sich schnell ändernde Informationen wichtig sind.",
     top_p:

@@ -12,7 +12,7 @@ import {
   readArcanaFile,
   removeArcanaMember,
   uploadArcanaFile,
-} from "../arcanaV2";
+} from "../arcanaTools";
 
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), {
@@ -24,14 +24,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("ArcanaV2 API", () => {
+describe("Arcana Tools API", () => {
   it("lists arcanas through the backend", async () => {
     const fetchMock = vi.fn(async () => json([{ name: "notes" }]));
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(listArcanas()).resolves.toEqual([{ name: "notes" }]);
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://backend.test/arcana-v2/arcanas",
+      "http://backend.test/arcana-tools/arcanas",
       undefined
     );
   });
@@ -42,7 +42,7 @@ describe("ArcanaV2 API", () => {
 
     await createArcana("notes", "embed-model");
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://backend.test/arcana-v2/arcanas",
+      "http://backend.test/arcana-tools/arcanas",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,7 +57,7 @@ describe("ArcanaV2 API", () => {
 
     await readArcanaFile("my arcana", "notes/a b.md", "base64");
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://backend.test/arcana-v2/arcanas/my%20arcana/files/notes%2Fa%20b.md/download?encoding=base64",
+      "http://backend.test/arcana-tools/arcanas/my%20arcana/files/notes%2Fa%20b.md/download?encoding=base64",
       undefined
     );
   });
@@ -68,7 +68,7 @@ describe("ArcanaV2 API", () => {
 
     await uploadArcanaFile("notes", "a.md", "hello", "utf8");
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://backend.test/arcana-v2/arcanas/notes/files",
+      "http://backend.test/arcana-tools/arcanas/notes/files",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -104,7 +104,7 @@ describe("ArcanaV2 API", () => {
     await addArcanaMember("notes", "alice", "editor");
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "http://backend.test/arcana-v2/arcanas/notes/members",
+      "http://backend.test/arcana-tools/arcanas/notes/members",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,7 +115,7 @@ describe("ArcanaV2 API", () => {
     await removeArcanaMember("notes", "alice@example.org");
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      "http://backend.test/arcana-v2/arcanas/notes/members/alice%40example.org",
+      "http://backend.test/arcana-tools/arcanas/notes/members/alice%40example.org",
       { method: "DELETE" }
     );
   });

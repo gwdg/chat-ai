@@ -9,6 +9,29 @@ import { dataURLtoFile } from "../utils/attachments";
 import { selectUserSettings, importUserSettings } from "../Redux/reducers/userSettingsReducer";
 
 /**
+ * `arcana_v2` and `remote_file_access` were the previous names of the
+ * `arcana_tools` tool toggle. Map old exports and tool-type lists onto it.
+ */
+function normalizeImportedToolKey(key) {
+  return key === "arcana_v2" || key === "remote_file_access"
+    ? "arcana_tools"
+    : key;
+}
+
+function normalizeImportedTools(tools) {
+  if (!tools || typeof tools !== "object") return tools;
+  const normalized = {};
+  for (const [key, value] of Object.entries(tools)) {
+    const nextKey = normalizeImportedToolKey(key);
+    // A legacy key must not override an explicit new one.
+    if (nextKey === key || normalized[nextKey] === undefined) {
+      normalized[nextKey] = value;
+    }
+  }
+  return normalized;
+}
+
+/**
  * useImportConversation
  * Returns an async function you can call from a component to import a conversation.
  */
@@ -281,17 +304,17 @@ export function useImportConversation() {
         const allFalse = Object.fromEntries(
           Object.keys(settings.tools || {}).map(key => [key, false])
         );
-        settings.tools = {
+        settings.tools = normalizeImportedTools({
           ...allFalse,
           ...Object.fromEntries(tools
             .filter(t => t.type !== "web_search" && t.type !== "fetch_url")
-            .map(t => [t.type, true]))
-        };
+            .map(t => [normalizeImportedToolKey(t.type), true]))
+        });
         // TODO check if web search can be added
       } else if (tools && typeof tools === "object") {
         tools['web_search'] = false;
         tools['fecth_url'] = false;
-        settings.tools = tools
+        settings.tools = normalizeImportedTools(tools)
       }
 
       // MCP servers

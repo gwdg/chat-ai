@@ -124,5 +124,23 @@ export const migrations = {
     }));
     console.log("Migrating redux to v8");
   },
-  // Future migrations here (e.g., 9: (state) => {...})
+  9: (state) => {
+    // The `arcana_v2` feature guide was renamed to `arcana_tools`.
+    const rename = (list) =>
+      Array.isArray(list)
+        ? list.map((id) => (id === "arcana_v2" ? "arcana_tools" : id))
+        : list;
+    state.interface_settings = state.interface_settings ?? {};
+    state.interface_settings.completed_tutorials = rename(
+      state.interface_settings.completed_tutorials,
+    );
+    state.interface_settings.suppressed_tutorials = rename(
+      state.interface_settings.suppressed_tutorials,
+    );
+    state.interface_settings.completed_use_cases = rename(
+      state.interface_settings.completed_use_cases,
+    );
+    console.log("Migrating redux to v9");
+  },
+  // Future migrations here (e.g., 10: (state) => {...})
 };

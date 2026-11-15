@@ -705,8 +705,19 @@ app.delete(/^\/remote-files\/(.+)$/, (req, res) =>
   deleteRemoteFile(req, res, remoteRouteParam(req.params[0]))
 );
 
+// `/arcana-v2/*` is the old name of these routes; keep it working for older
+// front-end builds and bookmarks. A path-less middleware is required: Express
+// restores `req.url` when a mounted path is trimmed, which undoes the rewrite.
+app.use((req, _res, next) => {
+  const legacy = "/arcana-v2";
+  if (req.url === legacy || req.url.startsWith(`${legacy}/`) || req.url.startsWith(`${legacy}?`)) {
+    req.url = `/arcana-tools${req.url.slice(legacy.length)}`;
+  }
+  next();
+});
+
 const encodeArcana = (value) => encodeURIComponent(String(value ?? ""));
-const arcanaV2Path = (name) => `/arcana/${encodeArcana(name)}`;
+const arcanaToolsPath = (name) => `/arcana/${encodeArcana(name)}`;
 
 async function proxyArcanaJson(req, pathname, init = {}) {
   const response = await remoteApi(req, pathname, init);
@@ -720,7 +731,7 @@ async function proxyArcanaJson(req, pathname, init = {}) {
   }
 }
 
-app.get("/arcana-v2/arcanas", async (req, res) => {
+app.get("/arcana-tools/arcanas", async (req, res) => {
   try {
     const arcanas = await proxyArcanaJson(req, "/arcana/");
     return res.status(200).json(
@@ -733,7 +744,7 @@ app.get("/arcana-v2/arcanas", async (req, res) => {
   }
 });
 
-app.post("/arcana-v2/arcanas", async (req, res) => {
+app.post("/arcana-tools/arcanas", async (req, res) => {
   try {
     const name = String(req.body?.name ?? "").trim();
     if (!name) {
@@ -754,20 +765,20 @@ app.post("/arcana-v2/arcanas", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name", async (req, res) => {
   try {
-    const arcana = await proxyArcanaJson(req, arcanaV2Path(req.params.name));
+    const arcana = await proxyArcanaJson(req, arcanaToolsPath(req.params.name));
     return res.status(200).json(arcana);
   } catch (error) {
     return sendRemoteError(res, error);
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/quota", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/quota", async (req, res) => {
   try {
     const quota = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/quota`
+      `${arcanaToolsPath(req.params.name)}/quota`
     );
     return res.status(200).json(quota);
   } catch (error) {
@@ -775,11 +786,11 @@ app.get("/arcana-v2/arcanas/:name/quota", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/files", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/files", async (req, res) => {
   try {
     const files = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/files/?grouped=false`
+      `${arcanaToolsPath(req.params.name)}/files/?grouped=false`
     );
     return res.status(200).json(files);
   } catch (error) {
@@ -787,11 +798,11 @@ app.get("/arcana-v2/arcanas/:name/files", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/files/:file/download", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/files/:file/download", async (req, res) => {
   try {
     const response = await remoteApi(
       req,
-      `${arcanaV2Path(req.params.name)}/files/${encodeArcana(req.params.file)}/download`
+      `${arcanaToolsPath(req.params.name)}/files/${encodeArcana(req.params.file)}/download`
     );
     if (!response.ok) throw await remoteRequestError(response);
     const content = Buffer.from(await response.arrayBuffer());
@@ -829,8 +840,8 @@ async function handleArcanaFileWrite(req, res, replace) {
       filename
     );
     const pathname = replace
-      ? `${arcanaV2Path(name)}/files/${encodeArcana(filename)}`
-      : `${arcanaV2Path(name)}/files/`;
+      ? `${arcanaToolsPath(name)}/files/${encodeArcana(filename)}`
+      : `${arcanaToolsPath(name)}/files/`;
     const result = await proxyArcanaJson(req, pathname, {
       method: replace ? "PUT" : "POST",
       body: form,
@@ -847,18 +858,18 @@ async function handleArcanaFileWrite(req, res, replace) {
   }
 }
 
-app.post("/arcana-v2/arcanas/:name/files", (req, res) =>
+app.post("/arcana-tools/arcanas/:name/files", (req, res) =>
   handleArcanaFileWrite(req, res, false)
 );
-app.put("/arcana-v2/arcanas/:name/files/:file", (req, res) =>
+app.put("/arcana-tools/arcanas/:name/files/:file", (req, res) =>
   handleArcanaFileWrite(req, res, true)
 );
 
-app.delete("/arcana-v2/arcanas/:name/files/:file", async (req, res) => {
+app.delete("/arcana-tools/arcanas/:name/files/:file", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/files/${encodeArcana(req.params.file)}`,
+      `${arcanaToolsPath(req.params.name)}/files/${encodeArcana(req.params.file)}`,
       { method: "DELETE" }
     );
     return res.status(200).json({
@@ -872,11 +883,11 @@ app.delete("/arcana-v2/arcanas/:name/files/:file", async (req, res) => {
   }
 });
 
-app.post("/arcana-v2/arcanas/:name/index", async (req, res) => {
+app.post("/arcana-tools/arcanas/:name/index", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/generate-index`,
+      `${arcanaToolsPath(req.params.name)}/generate-index`,
       { method: "POST" }
     );
     return res.status(200).json(result);
@@ -885,11 +896,11 @@ app.post("/arcana-v2/arcanas/:name/index", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/index/status", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/index/status", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/index-status`
+      `${arcanaToolsPath(req.params.name)}/index-status`
     );
     return res.status(200).json(result);
   } catch (error) {
@@ -897,11 +908,11 @@ app.get("/arcana-v2/arcanas/:name/index/status", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/index/running", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/index/running", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/index-job-running`
+      `${arcanaToolsPath(req.params.name)}/index-job-running`
     );
     return res.status(200).json(result);
   } catch (error) {
@@ -909,11 +920,11 @@ app.get("/arcana-v2/arcanas/:name/index/running", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/index/jobs/:jobId", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/index/jobs/:jobId", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/index-job/${encodeArcana(req.params.jobId)}`
+      `${arcanaToolsPath(req.params.name)}/index-job/${encodeArcana(req.params.jobId)}`
     );
     return res.status(200).json(result);
   } catch (error) {
@@ -921,11 +932,11 @@ app.get("/arcana-v2/arcanas/:name/index/jobs/:jobId", async (req, res) => {
   }
 });
 
-app.delete("/arcana-v2/arcanas/:name/index", async (req, res) => {
+app.delete("/arcana-tools/arcanas/:name/index", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/delete-index`,
+      `${arcanaToolsPath(req.params.name)}/delete-index`,
       { method: "DELETE" }
     );
     return res.status(200).json(result);
@@ -934,11 +945,11 @@ app.delete("/arcana-v2/arcanas/:name/index", async (req, res) => {
   }
 });
 
-app.get("/arcana-v2/arcanas/:name/members", async (req, res) => {
+app.get("/arcana-tools/arcanas/:name/members", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/members`
+      `${arcanaToolsPath(req.params.name)}/members`
     );
     return res.status(200).json(result);
   } catch (error) {
@@ -946,7 +957,7 @@ app.get("/arcana-v2/arcanas/:name/members", async (req, res) => {
   }
 });
 
-app.post("/arcana-v2/arcanas/:name/members", async (req, res) => {
+app.post("/arcana-tools/arcanas/:name/members", async (req, res) => {
   try {
     const user = String(req.body?.user ?? "").trim();
     if (!user) {
@@ -955,7 +966,7 @@ app.post("/arcana-v2/arcanas/:name/members", async (req, res) => {
     const role = req.body?.role === "editor" ? "editor" : "reader";
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/members`,
+      `${arcanaToolsPath(req.params.name)}/members`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -968,11 +979,11 @@ app.post("/arcana-v2/arcanas/:name/members", async (req, res) => {
   }
 });
 
-app.delete("/arcana-v2/arcanas/:name/members/:member", async (req, res) => {
+app.delete("/arcana-tools/arcanas/:name/members/:member", async (req, res) => {
   try {
     const result = await proxyArcanaJson(
       req,
-      `${arcanaV2Path(req.params.name)}/members/${encodeArcana(req.params.member)}`,
+      `${arcanaToolsPath(req.params.name)}/members/${encodeArcana(req.params.member)}`,
       { method: "DELETE" }
     );
     return res.status(200).json(result);
@@ -1273,7 +1284,13 @@ app.post("/chat/completions", async (req, res) => {
           if (tool.type === "audio_generation") {
             params.tools.push({type: "audio_generation"});
           }
-          if (tool.type === "remote_file_access" || tool.type === "arcana_v2") {
+          // The gateway still calls this tool `arcana_v2`; our own name is
+          // `arcana_tools` (and `remote_file_access` before it).
+          if (
+            tool.type === "remote_file_access" ||
+            tool.type === "arcana_v2" ||
+            tool.type === "arcana_tools"
+          ) {
             params.tools.push({type: "arcana_v2"});
           }
           if (tool.type === "arcana" && (!params.arcana || !params.arcana.id)) {

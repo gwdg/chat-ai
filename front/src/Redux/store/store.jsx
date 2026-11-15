@@ -18,7 +18,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 8,
+  version: 9,
   migrate: createMigrate(migrations, { debug: true })
 };
 

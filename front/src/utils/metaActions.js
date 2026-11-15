@@ -34,7 +34,7 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "enable_tools",
   "enable_web_search",
   "browser_storage",
-  "arcana_v2",
+  "arcana_tools",
 ]);
 
 function isValidConversationSetting(key, value) {
@@ -58,7 +58,7 @@ const CREATE_CHAT_TOOL_KEYS = new Set([
   "image_generation",
   "image_modification",
   "audio_generation",
-  "arcana_v2",
+  "arcana_tools",
   "arcana",
   "mcp",
   "mcp_remote",

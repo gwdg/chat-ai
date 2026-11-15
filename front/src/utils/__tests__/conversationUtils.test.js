@@ -26,14 +26,28 @@ describe("conversation defaults", () => {
     expect(getDefaultSettings().tools.browser_storage).toBe(false);
   });
 
-  it("keeps ArcanaV2 off by default", () => {
-    expect(getDefaultSettings().tools.arcana_v2).toBe(false);
+  it("keeps Arcana Tools off by default", () => {
+    expect(getDefaultSettings().tools.arcana_tools).toBe(false);
   });
 
-  it("maps the old remote file access switch to ArcanaV2", () => {
+  it("maps the old remote file access switch to Arcana Tools", () => {
     expect(
-      getDefaultSettings({ tools: { remote_file_access: true } }).tools.arcana_v2,
+      getDefaultSettings({ tools: { remote_file_access: true } }).tools.arcana_tools,
     ).toBe(true);
+  });
+
+  it("maps the old arcana_v2 switch to Arcana Tools", () => {
+    const settings = getDefaultSettings({ tools: { arcana_v2: true } });
+    expect(settings.tools.arcana_tools).toBe(true);
+    expect(settings.tools.arcana_v2).toBeUndefined();
+    expect(settings.tools.remote_file_access).toBeUndefined();
+  });
+
+  it("prefers the new Arcana Tools switch over a legacy one", () => {
+    expect(
+      getDefaultSettings({ tools: { arcana_tools: false, arcana_v2: true } }).tools
+        .arcana_tools,
+    ).toBe(false);
   });
 
   it("builds a default conversation with a timestamp and message", () => {

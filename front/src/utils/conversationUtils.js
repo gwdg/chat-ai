@@ -34,7 +34,7 @@ export const getDefaultSettings = (userSettings = {}) => {
       "image_generation": true,
       "image_modification": true,
       "audio_generation": true,
-      "arcana_v2": false,
+      "arcana_tools": false,
       "arcana": true,
       "mcp": false,
       "mcp_remote": false,
@@ -60,13 +60,15 @@ export const getDefaultSettings = (userSettings = {}) => {
     ])
   );
   const tools = mergedSettings.tools;
-  if (
-    tools &&
-    typeof tools === "object" &&
-    tools.arcana_v2 === undefined &&
-    tools.remote_file_access !== undefined
-  ) {
-    mergedSettings.tools = { ...tools, arcana_v2: tools.remote_file_access };
+  // `arcana_v2` and `remote_file_access` are the previous names of the toggle.
+  if (tools && typeof tools === "object" && tools.arcana_tools === undefined) {
+    const legacy =
+      tools.arcana_v2 !== undefined ? tools.arcana_v2 : tools.remote_file_access;
+    if (legacy !== undefined) {
+      mergedSettings.tools = { ...tools, arcana_tools: legacy };
+      delete mergedSettings.tools.arcana_v2;
+      delete mergedSettings.tools.remote_file_access;
+    }
   }
   return mergedSettings ;
 };

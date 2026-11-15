@@ -4,7 +4,7 @@ async function request(path: string, init?: RequestInit) {
   const response = await fetch(`${agentEndpoint()}${path}`, init);
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(text || `ArcanaV2 request failed (${response.status})`);
+    throw new Error(text || `Arcana Tools request failed (${response.status})`);
   }
   if (response.status === 204) return null;
   const type = response.headers.get("content-type") ?? "";
@@ -12,14 +12,14 @@ async function request(path: string, init?: RequestInit) {
 }
 
 const arcanaPath = (name: string) =>
-  `/arcana-v2/arcanas/${encodeURIComponent(name)}`;
+  `/arcana-tools/arcanas/${encodeURIComponent(name)}`;
 
 export function listArcanas() {
-  return request("/arcana-v2/arcanas");
+  return request("/arcana-tools/arcanas");
 }
 
 export function createArcana(name: string, embeddingModel = "") {
-  return request("/arcana-v2/arcanas", {
+  return request("/arcana-tools/arcanas", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, embedding_model: embeddingModel }),
