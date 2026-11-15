@@ -310,6 +310,17 @@ export const rendererComponents = {
   },
 
   pre({ children, ...props }) {
+    // The renderers below lay out their own block (toolbar, preview, download
+    // prompt). Wrapping them in <pre> made their prose inherit monospace and
+    // `white-space: pre`, so it was clipped instead of wrapping on narrow
+    // screens. react-markdown passes the raw <code> child here, so decide from
+    // its language class before the code renderer runs.
+    const language = /language-([\w.-]+)/
+      .exec(children?.props?.className || "")?.[1]
+      ?.toLowerCase();
+    if (["html", "latex", "tex", "typst", "typ"].includes(language)) {
+      return <>{children}</>;
+    }
     return <pre {...props}>{children}</pre>;
   },
 

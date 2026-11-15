@@ -33,7 +33,10 @@ test.describe("HTML rendering", () => {
         await openApp(page);
         await sendPrompt(page, "Show me some HTML");
         await expect(
-          page.locator("pre").filter({ hasText: "Rendered HTML" }).first(),
+          page
+            .locator(".custom-syntax-highlighter")
+            .filter({ hasText: "Rendered HTML" })
+            .first(),
         ).toBeVisible({ timeout: 20_000 });
       },
     );
