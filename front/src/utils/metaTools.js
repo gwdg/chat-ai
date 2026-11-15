@@ -835,12 +835,21 @@ const chats = (rows || [])
   )
   .slice(0, 20);
 const topics = (folders || []).filter(
-  (folder) => (folder.createdAt ?? 0) >= since,
+  (folder) =>
+    (folder.createdAt ?? 0) >= since &&
+    // A scoped report only shows a topic if a chat of that scope belongs to it.
+    (!conversationIds ||
+      (rows || []).some(
+        (row) => row.folderId === folder.id && conversationIds.has(row.id),
+      )),
 );
-const memories = (userSettings.memories || []).filter((memory) => {
-  const created = new Date(memory.createdAt || 0).getTime();
-  return Number.isFinite(created) && created >= since;
-});
+// Memories belong to the account, not to a workspace, so a scoped report omits them.
+const memories = scope
+  ? []
+  : (userSettings.memories || []).filter((memory) => {
+      const created = new Date(memory.createdAt || 0).getTime();
+      return Number.isFinite(created) && created >= since;
+    });
 const sessionTrees = agents.length
   ? await loadAgentSessionTrees(agents)
   : new Map();

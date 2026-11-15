@@ -421,8 +421,11 @@ in `user_settings.mcp_servers`; the Meta chat reads the entry ids from `get_user
 it globally, while the panel inside a workspace chat (`ChatAgentSidebar`) passes a `scope` of that
 chat's workspace ids, so `getWhatsNew` only reports the workspace's chats, agents and the sessions
 attached to them (subagents of an attached session are kept; an active session outside the scope is
-not named). Scoped results are stored under `chatai.meta.last-check*:<workspaceIds>` so they never
-mix with the Meta chat's global result. `search_all`
+not named). A scoped report shows a topic only when one of those chats is in it and omits memories,
+which belong to the account rather than to a workspace; agent files stay agent-level because they
+have no session link. Scoped results are stored under
+`chatai.meta.last-check*:<workspaceIds>` so they never mix with the Meta chat's global result.
+`search_all`
 searches chats, messages, topics, memories, agent histories, and agent file names/contents.
 `agent_health` combines agent connectivity with local MCP tests; `list_mcp_tools` exposes tool names.
 `list_workspaces` plus `WORKSPACE_LINK` proposals attach/detach workspaces to agents or chats.

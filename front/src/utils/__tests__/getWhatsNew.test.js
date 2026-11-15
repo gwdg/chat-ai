@@ -148,4 +148,35 @@ describe("getWhatsNew workspace scope", () => {
     expect(text).toContain("Other workspace session");
     expect(text).not.toContain("Workspace chat");
   });
+
+  it("only shows topics of the scoped chats and no account-wide memories", async () => {
+    state.metas.push({
+      id: "chat-3",
+      title: "Second workspace chat",
+      folderId: "topic-related",
+      lastModified: now,
+    });
+    state.folders = [
+      { id: "topic-related", name: "Related topic", createdAt: now },
+      { id: "topic-global", name: "Global topic", createdAt: now },
+    ];
+    const userSettings = {
+      memories: [{ text: "Global memory", createdAt: new Date(now).toISOString() }],
+    };
+    const scope = {
+      agentIds: ["agent-1"],
+      sessionIds: { "agent-1": ["session-1"] },
+      conversationIds: ["chat-1", "chat-3"],
+    };
+
+    const scoped = await getWhatsNew({ userSettings, since: since(), scope });
+    expect(scoped).toContain("Related topic");
+    expect(scoped).not.toContain("Global topic");
+    expect(scoped).not.toContain("Global memory");
+    expect(scoped).not.toContain("New memories");
+
+    const global = await getWhatsNew({ userSettings, since: since() });
+    expect(global).toContain("Global topic");
+    expect(global).toContain("Global memory");
+  });
 });
