@@ -1,5 +1,5 @@
 const ACTION_TYPES =
-  "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|AGENT_SESSION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
+  "CREATE_CHAT|RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|PIN_WORKSPACE|PIN_AGENT|SET_SETTING|SET_CONVERSATION_SETTING|WORKSPACE_LINK|AGENT_ACTION|AGENT_SESSION|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES";
 const ACTION_SOURCE = `\\[\\[(${ACTION_TYPES}):\\s*(\\{[\\s\\S]*?\\})\\]\\]`;
 
 const BARE_CLEAR_SOURCE =
@@ -466,6 +466,40 @@ export function getMetaActionProposals(text) {
       continue;
     }
 
+    if (type === "PIN_WORKSPACE") {
+      const workspaceId = String(
+        payload.id || payload.workspaceId || payload.workspace_id || "",
+      ).trim();
+      if (!workspaceId) continue;
+      const hasPinned = Object.prototype.hasOwnProperty.call(payload, "pinned");
+      const hasValue = Object.prototype.hasOwnProperty.call(payload, "value");
+      const raw = hasPinned ? payload.pinned : payload.value;
+      if ((!hasPinned && !hasValue) || typeof raw !== "boolean") continue;
+      proposals.set(`pin-workspace:${workspaceId}`, {
+        type: "pin_workspace",
+        workspaceId,
+        pinned: raw,
+      });
+      continue;
+    }
+
+    if (type === "PIN_AGENT") {
+      const agentId = String(
+        payload.id || payload.agentId || payload.agent_id || "",
+      ).trim();
+      if (!agentId) continue;
+      const hasPinned = Object.prototype.hasOwnProperty.call(payload, "pinned");
+      const hasValue = Object.prototype.hasOwnProperty.call(payload, "value");
+      const raw = hasPinned ? payload.pinned : payload.value;
+      if ((!hasPinned && !hasValue) || typeof raw !== "boolean") continue;
+      proposals.set(`pin-agent:${agentId}`, {
+        type: "pin_agent",
+        agentId,
+        pinned: raw,
+      });
+      continue;
+    }
+
     const conversationId = String(
       payload.id || payload.conversationId || payload.conversation_id || "",
     ).trim();
@@ -516,7 +550,7 @@ export function stripMetaActionMarkers(text) {
     .replace(new RegExp(ACTION_SOURCE, "gi"), "")
     .replace(new RegExp(BARE_CLEAR_SOURCE, "gi"), "")
     .replace(
-      /\[\[(?:RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|SET_SETTING|SET_CONVERSATION_SETTING|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|CLEAR_ALL_MEMORIES|DELETE_ALL_MEMORIES):[\s\S]*$/i,
+      /\[\[(?:RENAME_CHAT|MOVE_CHAT|PIN_CHAT|PIN_TOPIC|PIN_WORKSPACE|PIN_AGENT|SET_SETTING|SET_CONVERSATION_SETTING|MCP_SERVER|ADD_MEMORY|UPDATE_MEMORY|DELETE_MEMORY|CLEAR_MEMORIES|CLEAR_ALL_MEMORIES|DELETE_ALL_MEMORIES):[\s\S]*$/i,
       "",
     )
     .replace(/\n{3,}/g, "\n\n")

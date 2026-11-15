@@ -370,9 +370,17 @@ collapsible. Collapse state reuses `collapsed_topics` with `__by_date__` / `__by
 prefixes; the pinned section uses `__pinned__`. Created-mode rows also show the
 creation date beside the title. The date/created labels
 only appear in their own mode; the topic-creation/unsorted rows only appear in topic mode.
-Pinned chats are listed with pinned topics under the collapsible "Pinned" header; they are not
-groups, so they are marked with a leading dash in the slot where a topic shows its collapse
-chevron, and never with a vertical connector line.
+Pinned items are a top-level section (`Sidebar/PinnedSection.tsx`) above the sticky Chats band,
+outside the `chatsCollapsed` conditional, with its own `__pinned__` collapse id. It holds pinned
+chats and topics (rendered by `TopicList` with `variant="pinned"`, which renders only those rows and
+no header, collapse logic or create-topic row) plus pinned workspaces and agents as plain links to
+`/workspace/<id>` and `/agent/<id>`. Pinned chats are not groups, so they are marked with a leading
+dash in the slot where a topic shows its collapse chevron, and never with a vertical connector line.
+`SidebarContent` builds one `topicListProps` object and spreads it into both `TopicList` instances.
+Pinned workspaces and agents are filtered out of `WorkspaceList` / `AgentList` and unpinned from the
+pinned row (hover pin button) or their options menu; `setWorkspacePinned` writes `WorkspaceRow.pinned`
+(unindexed, no Dexie bump), `setAgentPinned` writes the localStorage agent entry. The new-chat row
+sits directly below the Chats band, above the search panel and the list.
 It is in `interfaceSettingsSlice`'s `initialState` and `getDefaultState()`; an old persisted state
 without the key falls back to `"topic"` in the selector, so no migration is needed.
 
@@ -389,10 +397,10 @@ ids only — pinned topics, regular topics, and the unsorted bucket once it hold
 expand-all once every one of those ids is collapsed. Sections, date buckets, workspaces and agents
 share the same `collapsed_topics` list and must stay untouched.
 
-The Chats, Workspace, Agents and MCP Servers sections share one header style: an uppercase semibold
-label row on a `bg-base-200/70` band, with `mx-2 my-1.5 border-t border-base-300` rules between the
-sections in `SidebarContent`. A new sidebar section should reuse that pattern so the sections stay
-distinguishable.
+The Pinned, Chats, Workspace, Agents and MCP Servers sections share one header style: an uppercase
+semibold label row on a `bg-base-200/70` band, with `mx-2 my-1.5 border-t border-base-300` rules
+between the sections in `SidebarContent`. A new sidebar section should reuse that pattern so the
+sections stay distinguishable.
 
 ### 4.16 Meta chat works from conversation summaries, not messages
 
@@ -440,7 +448,7 @@ tool already did, and `[[PERSONA:...]]` remains supported.
 
 Mutating chat actions are proposals, never applied by the model. It emits `CREATE_CHAT`, which
 creates a new conversation with validated settings and text-only initial messages, plus `RENAME_CHAT` /
-`MOVE_CHAT`, `PIN_CHAT`, `PIN_TOPIC`, `SET_SETTING`, `MCP_SERVER`, and memory markers
+`MOVE_CHAT`, `PIN_CHAT`, `PIN_TOPIC`, `PIN_WORKSPACE`, `PIN_AGENT`, `SET_SETTING`, `MCP_SERVER`, and memory markers
 (`utils/metaActions.js`), which `MetaActionCard` renders below the message with a warning icon and
 an explicit Accept button. `MCP_SERVER` adds, updates, or removes per-chat MCP servers (local URL
 entries or remote gateway ids), and with `target: "global"` it changes the sidebar MCP server list
@@ -641,7 +649,11 @@ The sidebar's Workspace section (`components/Workspace/WorkspaceList.tsx`) sits 
 collapsible subpanels; their collapse state reuses `interface_settings.collapsed_topics` under the
 synthetic ids `__workspaces__` and `__chats__`. Workspace rows use the topic icon and colour sets
 (`WorkspaceRow.icon`, `WorkspaceRow.color`, editable in `RenameWorkspaceModal`) and always show the
-chat-expand chevron, disabled when no chat is attached. The Agents section (`Sidebar/AgentList.tsx`) sits
+chat-expand chevron, disabled when no chat is attached. `WorkspaceRow.pinned` (unindexed) sends a
+workspace to the top-level pinned section instead of this list; `setWorkspacePinned` reuses
+`updateWorkspace`, so pinning also bumps `lastModified`. Workspaces are created with `createdAt` and
+`lastModified`; `listWorkspaceSummaries` returns both plus `pinned`, and the workspace page header
+shows them. The Agents section (`Sidebar/AgentList.tsx`) sits
 between Workspace and MCP Servers and uses `__agents__`; its + button opens a placeholder add-agent
 modal with a dummy HPC project list, and agent metadata is kept in localStorage. Workspace, source, mount and chat-link metadata
 lives entirely in IndexedDB; the back service does not store it. Dexie schema v6 adds
@@ -908,7 +920,12 @@ HTTP-basic credentials default from `opencodeServerUrl` / `opencodeServerUsernam
 `opencodeServerPassword` in `front.json` (mapped to `VITE_OPENCODE_SERVER_*`) and stay editable per
 agent. The browser talks to the server directly (opencode allows the app origin via CORS), so the
 back service is not involved. `agents/agentStore.js` persists the agent metadata in localStorage.
-A custom per-agent password is persisted with it; agents left on the configured default re-read that
+Every agent carries `createdAt`, `updatedAt` and an optional `pinned` flag. `load()` backfills the
+timestamps of agents created before they existed and persists them once. `updateAgent` bumps
+`updatedAt` for metadata changes but not for session tracking (`sessionId`, `sessionSummaries`);
+`setAgentPinned` pins the agent into the top-level pinned section, and `AgentList` filters pinned
+agents out of its own list. The agent conversation header shows both timestamps. A custom per-agent
+password is persisted with it; agents left on the configured default re-read that
 password from `front.json` on load. `modules.agents: false` in
 `front.json` sets `VITE_MODULE_AGENTS=false`, hiding the sidebar section and its route. Removing an
 agent interrupts its running session first, then deletes the OpenCode session; the local agent is

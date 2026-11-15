@@ -13,6 +13,8 @@ import {
   ChevronDown,
   Edit,
   OverflowMenuVertical,
+  Pin,
+  PinFilled,
   TrashCan,
 } from "@carbon/icons-react";
 
@@ -28,6 +30,7 @@ import {
 import {
   addAgent,
   removeAgent,
+  setAgentPinned,
   useAgents,
 } from "../../agents/agentStore";
 import {
@@ -100,6 +103,8 @@ export default function AgentList() {
   const { openModal } = useModal();
   const { notifyError } = useToast();
   const agents = useAgents();
+  // Pinned agents are listed in the sidebar's pinned section instead of here.
+  const visibleAgents = agents.filter((agent) => agent.pinned !== true);
   const [removing, setRemoving] = useState<string | null>(null);
   const [sessionsByAgent, setSessionsByAgent] = useState<Record<string, any>>(
     {},
@@ -360,7 +365,7 @@ export default function AgentList() {
         </p>
       ) : (
         <div className="space-y-0.5">
-          {agents.map((agent) => {
+          {visibleAgents.map((agent) => {
             const active = agent.id === activeId;
             const status = statuses[agent.id] ?? "checking";
             const statusLabel = t(`agents.status_${status}`);
@@ -441,6 +446,7 @@ export default function AgentList() {
                 ) : (
                   <Popover className="relative shrink-0">
                     <PopoverButton
+                      data-guide="agent-menu"
                       className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content focus:opacity-100 group-hover:opacity-100"
                       title={t("agents.options")}
                       aria-label={t("agents.options")}
@@ -453,6 +459,26 @@ export default function AgentList() {
                     >
                       {({ close }) => (
                         <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              close();
+                              setAgentPinned(agent.id, agent.pinned !== true);
+                            }}
+                            data-guide="pin-agent-menu-item"
+                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                          >
+                            {agent.pinned ? (
+                              <PinFilled size={14} />
+                            ) : (
+                              <Pin size={14} />
+                            )}
+                            {t(
+                              agent.pinned
+                                ? "agents.unpin_action"
+                                : "agents.pin_action",
+                            )}
+                          </button>
                           <button
                             type="button"
                             onClick={() => {

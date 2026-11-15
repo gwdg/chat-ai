@@ -10,8 +10,10 @@ const conversation = {
   pinned: false,
 };
 
-const { dispatch, mockState } = vi.hoisted(() => ({
+const { dispatch, mockState, workspaceState, agentState } = vi.hoisted(() => ({
   dispatch: vi.fn(),
+  workspaceState: { rows: [] },
+  agentState: { rows: [], pinnedCalls: [] },
   mockState: {
     user_settings: {
       memories: [],
@@ -26,6 +28,29 @@ const { dispatch, mockState } = vi.hoisted(() => ({
 vi.mock("react-redux", () => ({
   useDispatch: () => dispatch,
   useSelector: (selector) => selector(mockState),
+}));
+
+vi.mock("../../../../db/workspaceDb", () => ({
+  attachWorkspaceAgent: vi.fn(async () => {}),
+  attachWorkspaceChat: vi.fn(async () => {}),
+  detachWorkspaceAgent: vi.fn(async () => {}),
+  detachWorkspaceChat: vi.fn(async () => {}),
+  getWorkspace: vi.fn(async () => null),
+  hasWorkspaceAgentLink: vi.fn(async () => false),
+  hasWorkspaceChatLink: vi.fn(async () => false),
+  setWorkspacePinned: vi.fn(async () => {}),
+  useWorkspaceList: () => workspaceState.rows,
+}));
+
+vi.mock("../../../../agents/agentStore", () => ({
+  getAgents: () => agentState.rows,
+  useAgents: () => agentState.rows,
+  setAgentPinned: (id, pinned) => {
+    agentState.rows = agentState.rows.map((agent) =>
+      agent.id === id ? { ...agent, pinned } : agent,
+    );
+    agentState.pinnedCalls.push([id, pinned]);
+  },
 }));
 
 vi.mock("../../../../db", () => ({
@@ -46,6 +71,10 @@ import {
   getConversationMeta,
   updateConversationMeta,
 } from "../../../../db";
+import {
+  getWorkspace,
+  setWorkspacePinned,
+} from "../../../../db/workspaceDb";
 
 const localState = {
   id: "meta-chat",
@@ -57,7 +86,11 @@ describe("MetaActionCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.user_settings.memories = [];
+    workspaceState.rows = [];
+    agentState.rows = [];
+    agentState.pinnedCalls = [];
     vi.mocked(getConversationMeta).mockResolvedValue(conversation);
+    vi.mocked(getWorkspace).mockResolvedValue(null);
   });
 
   it("applies and reverts a chat rename", async () => {
@@ -244,6 +277,65 @@ describe("MetaActionCard", () => {
         }),
       ]);
     });
+  });
+
+  it("applies and reverts a workspace pin", async () => {
+    const workspace = { id: "ws-1", name: "Research", pinned: false };
+    workspaceState.rows = [workspace];
+    vi.mocked(getWorkspace).mockResolvedValue(workspace);
+
+    render(
+      <MetaActionCard
+        actions={[
+          { type: "pin_workspace", workspaceId: "ws-1", pinned: true },
+        ]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    expect(screen.getByText(/Pin workspace “Research”/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /accept changes/i }));
+    await waitFor(() =>
+      expect(setWorkspacePinned).toHaveBeenCalledWith("ws-1", true),
+    );
+
+    vi.mocked(getWorkspace).mockResolvedValue({ ...workspace, pinned: true });
+    fireEvent.click(
+      await screen.findByRole("button", { name: /revert changes/i }),
+    );
+    await waitFor(() =>
+      expect(setWorkspacePinned).toHaveBeenCalledWith("ws-1", false),
+    );
+  });
+
+  it("applies and reverts an agent pin", async () => {
+    agentState.rows = [{ id: "agent-1", name: "Research agent" }];
+
+    render(
+      <MetaActionCard
+        actions={[{ type: "pin_agent", agentId: "agent-1", pinned: true }]}
+        localState={localState}
+        setLocalState={vi.fn()}
+        message_index={0}
+      />,
+    );
+
+    expect(screen.getByText(/Pin agent “Research agent”/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /accept changes/i }));
+    await waitFor(() =>
+      expect(agentState.pinnedCalls).toEqual([["agent-1", true]]),
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /revert changes/i }),
+    );
+    await waitFor(() =>
+      expect(agentState.rows[0].pinned).toBe(false),
+    );
   });
 
   it("adds a proposed memory to the chat's effective group by default", async () => {

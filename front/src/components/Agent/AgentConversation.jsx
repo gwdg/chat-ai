@@ -47,6 +47,7 @@ import {
   saveAgentSessionMessages,
 } from "../../db/agentSessionCache";
 import { isInternalShellCommand } from "../../utils/gitLog";
+import { formatModifiedTime } from "../../utils/conversationDates";
 import {
   compactOpencodeSession,
   createOpencodeSession,
@@ -157,7 +158,7 @@ const sessionIsWorking = (value) =>
   );
 
 export default function AgentConversation({ agent, modelsData = [] }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [searchParams] = useSearchParams();
   const focusMessageId = searchParams.get("message");
   const { openModal, confirmAction } = useModal();
@@ -1451,6 +1452,21 @@ export default function AgentConversation({ agent, modelsData = [] }) {
           <p className="truncate text-[11px] text-base-content/60">
             {agent.serverUrl}
           </p>
+          {agent.createdAt ? (
+            <p className="truncate text-[10px] tabular-nums text-base-content/50">
+              {[
+                t("common.created", {
+                  date: formatModifiedTime(agent.createdAt, i18n.language),
+                }),
+                t("common.modified", {
+                  date: formatModifiedTime(
+                    agent.updatedAt ?? agent.createdAt,
+                    i18n.language,
+                  ),
+                }),
+              ].join(" · ")}
+            </p>
+          ) : null}
         </div>
         <Tooltip text={t("agents.clear_history")}>
           <button

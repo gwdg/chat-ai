@@ -30,6 +30,7 @@ import { useToast } from "../hooks/useToast";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { formatBytes } from "../utils/formatBytes";
+import { formatModifiedTime } from "../utils/conversationDates";
 import { formatGitLog } from "../utils/gitLog";
 import { useConversationList } from "../db";
 import { useAgents } from "../agents/agentStore";
@@ -164,7 +165,7 @@ const quotaLabel = (
 };
 
 export default function WorkspacePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const openAgent = useOpenAgent();
   const { workspaceId } = useParams();
@@ -1352,6 +1353,22 @@ export default function WorkspacePage() {
                   </p>
                   <p className="mt-0.5 text-[11px] text-base-content/60">
                     {t("workspace.subtitle")}
+                  </p>
+                  <p className="mt-0.5 text-[10px] tabular-nums text-base-content/50">
+                    {[
+                      t("common.created", {
+                        date: formatModifiedTime(
+                          workspace.createdAt,
+                          i18n.language,
+                        ),
+                      }),
+                      t("common.modified", {
+                        date: formatModifiedTime(
+                          workspace.lastModified,
+                          i18n.language,
+                        ),
+                      }),
+                    ].join(" · ")}
                   </p>
                 </div>
                 <button

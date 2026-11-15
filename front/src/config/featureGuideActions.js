@@ -124,6 +124,18 @@ export function openTopicMenu() {
   }
 }
 
+export function openWorkspaceMenu() {
+  if (!find('[data-guide="pin-workspace-menu-item"]')) {
+    click('[data-guide="workspace-menu"]');
+  }
+}
+
+export function openAgentMenu() {
+  if (!find('[data-guide="pin-agent-menu-item"]')) {
+    click('[data-guide="agent-menu"]');
+  }
+}
+
 export function openSearch() {
   if (!find('[data-guide="search-input"]')) {
     click('[data-guide="search-chats"]');

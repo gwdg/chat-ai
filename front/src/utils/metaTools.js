@@ -331,6 +331,13 @@ const fileTime = (item) => {
   return numeric < 1e12 ? numeric * 1000 : numeric;
 };
 
+/** ISO timestamp for tool output; empty when a row predates the field. */
+const formatToolTimestamp = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return "unknown";
+  return new Date(numeric).toISOString();
+};
+
 const tableCell = (value) =>
   String(value ?? "")
     .replace(/\|/g, "\\|")
@@ -678,11 +685,11 @@ export const META_TOOL_DEFINITIONS = [
   ),
   tool(
     "list_workspaces",
-    "List the user's workspaces with ids, names, attached agent ids, attached chat ids, and source counts.",
+    "List the user's workspaces with ids, names, pinned state, creation and modification times, attached agent ids, attached chat ids, and source counts.",
   ),
   tool(
     "list_agents",
-    "List the user's configured OpenCode agents with id, name, server URL, and local/remote mode.",
+    "List the user's configured OpenCode agents with id, name, server URL, local/remote mode, pinned state, and creation and modification times.",
   ),
   tool(
     "check_agents",
@@ -1339,7 +1346,7 @@ export function createMetaToolRunner({
         return workspaces
           .map(
             (workspace) =>
-              `- id: ${workspace.id}\n  name: ${workspace.name}\n  agents: ${workspace.agentIds.join(", ") || "none"}\n  chats: ${workspace.conversationIds.join(", ") || "none"}\n  sources: ${workspace.sourceCount}`,
+              `- id: ${workspace.id}\n  name: ${workspace.name}\n  pinned: ${workspace.pinned ? "yes" : "no"}\n  created: ${formatToolTimestamp(workspace.createdAt)}\n  modified: ${formatToolTimestamp(workspace.lastModified)}\n  agents: ${workspace.agentIds.join(", ") || "none"}\n  chats: ${workspace.conversationIds.join(", ") || "none"}\n  sources: ${workspace.sourceCount}`,
           )
           .join("\n");
       }
@@ -1353,7 +1360,10 @@ export function createMetaToolRunner({
               `- id: ${agent.id}
   name: ${agent.name || agent.id}
   server: ${agent.serverUrl}
-  mode: ${agent.local === false ? "remote" : "local"}`,
+  mode: ${agent.local === false ? "remote" : "local"}
+  pinned: ${agent.pinned === true ? "yes" : "no"}
+  created: ${formatToolTimestamp(agent.createdAt)}
+  modified: ${formatToolTimestamp(agent.updatedAt ?? agent.createdAt)}`,
           )
           .join("\n");
       }

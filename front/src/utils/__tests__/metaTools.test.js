@@ -9,6 +9,7 @@ import {
   listFolders,
   searchMessages,
 } from "../../db";
+import { listWorkspaceSummaries } from "../../db/workspaceDb";
 import { featureGuides } from "../../config/featureGuides";
 import { useCases } from "../../config/useCases";
 
@@ -104,6 +105,7 @@ describe("Meta chat local tools", () => {
       blob: new Blob(["hello"]),
       type: "text/plain",
     });
+    vi.mocked(listWorkspaceSummaries).mockResolvedValue([]);
     vi.mocked(listConversationMetas).mockResolvedValue([
       {
         id: "chat-1",
@@ -160,6 +162,43 @@ describe("Meta chat local tools", () => {
       "start_tutorial",
       "start_use_case",
     ]);
+  });
+
+  it("reports pinned state and timestamps for workspaces and agents", async () => {
+    vi.mocked(listWorkspaceSummaries).mockResolvedValue([
+      {
+        id: "ws-1",
+        name: "Research",
+        pinned: true,
+        createdAt: Date.UTC(2025, 0, 2),
+        lastModified: Date.UTC(2025, 0, 3),
+        agentIds: [],
+        conversationIds: [],
+        sourceCount: 2,
+      },
+    ]);
+    agentMocks.agents = [
+      {
+        id: "agent-1",
+        name: "Research agent",
+        serverUrl: "http://127.0.0.1:9000",
+        local: true,
+        pinned: false,
+        createdAt: Date.UTC(2025, 1, 1),
+        updatedAt: Date.UTC(2025, 1, 2),
+      },
+    ];
+    const run = createMetaToolRunner(context);
+
+    const workspaces = await run("list_workspaces");
+    expect(workspaces).toContain("pinned: yes");
+    expect(workspaces).toContain("created: 2025-01-02T00:00:00.000Z");
+    expect(workspaces).toContain("modified: 2025-01-03T00:00:00.000Z");
+
+    const agents = await run("list_agents");
+    expect(agents).toContain("pinned: no");
+    expect(agents).toContain("created: 2025-02-01T00:00:00.000Z");
+    expect(agents).toContain("modified: 2025-02-02T00:00:00.000Z");
   });
 
   it("lists configured agents with link ids", async () => {

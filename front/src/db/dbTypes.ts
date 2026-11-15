@@ -222,6 +222,10 @@ export type WorkspaceRow = {
   name: string
   icon?: string
   color?: string
+  // Pinned workspaces are listed in the sidebar's pinned section, next to
+  // pinned chats, topics and agents. Unset means "not pinned"; no backfill or
+  // schema bump is needed because the field is never indexed.
+  pinned?: boolean
   createdAt: number
   lastModified: number
 }

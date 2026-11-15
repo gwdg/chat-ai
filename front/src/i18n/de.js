@@ -36,6 +36,8 @@ export default {
     reasoning_words_one: "Das Modell überlegt — {{count}} Wort empfangen…",
     reasoning_words_other: "Das Modell überlegt — {{count}} Wörter empfangen…",
     elapsed_seconds: "{{count}} s",
+    created: "Erstellt {{date}}",
+    modified: "Geändert {{date}}",
     summarize_success: "Zusammenfassung in einer neuen Unterhaltung erstellt.",
     summary_title: "Zusammenfassung von {{title}}",
     summarize_error: "Zusammenfassung fehlgeschlagen. Ihre Unterhaltung ist unverändert.",
@@ -257,6 +259,10 @@ export default {
     unpin_summary: "„{{title}}“ nicht mehr anheften",
     pin_topic_summary: "Thema „{{topic}}“ anheften",
     unpin_topic_summary: "Thema „{{topic}}“ nicht mehr anheften",
+    pin_workspace_summary: "Arbeitsbereich „{{workspace}}“ anheften",
+    unpin_workspace_summary: "Arbeitsbereich „{{workspace}}“ nicht mehr anheften",
+    pin_agent_summary: "Agenten „{{agent}}“ anheften",
+    unpin_agent_summary: "Agenten „{{agent}}“ nicht mehr anheften",
     setting_summary: "{{setting}} von „{{from}}“ auf „{{to}}“ ändern",
     setting_temperature: "Temperatur",
     setting_top_p: "Top-p",
@@ -550,6 +556,20 @@ export default {
       step2:
         "Wählen Sie „Thema anheften“. Angeheftete Themen bleiben unabhängig von der Gruppierung im Bereich „Angeheftet“ oben.",
     },
+    pin_workspace: {
+      title: "Einen Arbeitsbereich anheften",
+      step1: "Öffnen Sie das Optionenmenü eines Arbeitsbereichs in der Seitenleiste.",
+      step2:
+        "Wählen Sie „Arbeitsbereich anheften“. Er wechselt in den angehefteten Bereich oben über den Chats.",
+      step3:
+        "Klicken Sie im angehefteten Bereich erneut auf die Nadel, um den Arbeitsbereich nicht mehr anzuheften.",
+    },
+    pin_agent: {
+      title: "Einen Agenten anheften",
+      step1: "Öffnen Sie das Optionenmenü eines Agenten in der Seitenleiste.",
+      step2:
+        "Wählen Sie „Agenten anheften“. Er wechselt in den angehefteten Bereich oben über den Chats.",
+    },
     close_chat: {
       title: "Einen Chat schließen",
       step1:
@@ -680,10 +700,10 @@ export default {
         "Klicken Sie auf eine zitierte Nachricht, um zur genauen Nachricht zu springen und sie hervorzuheben.",
     },
     meta_chat_pins: {
-      title: "Chats und Themen mit dem Metachat anheften",
+      title: "Chats, Themen, Arbeitsbereiche und Agenten mit dem Metachat anheften",
       step1: "Öffnen Sie den Metachat über das KI-Symbol in der Seitenleiste.",
       step2:
-        "Bitten Sie ihn, einen Chat oder ein Thema anzuheften oder nicht mehr anzuheften, zum Beispiel: „Hefte den Chat Preisdiskussion an“ oder „Hefte das Thema Forschung nicht mehr an“.",
+        "Bitten Sie ihn, einen Chat, ein Thema, einen Arbeitsbereich oder einen Agenten anzuheften oder nicht mehr anzuheften, zum Beispiel: „Hefte den Chat Preisdiskussion an“ oder „Hefte das Thema Forschung nicht mehr an“.",
       step3:
         "Prüfen Sie die vorgeschlagene Änderung und klicken Sie auf „Änderungen übernehmen“. Erst dann wird sie angewendet.",
     },
@@ -1714,6 +1734,8 @@ export default {
     name_placeholder: "z. B. Recherche-Assistent",
     edit_title: "Agent bearbeiten",
     options: "Agent-Optionen",
+    pin_action: "Agenten anheften",
+    unpin_action: "Agenten nicht mehr anheften",
     add_hint: "Wählen Sie eines der HPC-Projekte aus, die Ihnen zur Verfügung stehen.",
     local: "Lokaler Agent",
     hpc_project_label: "HPC-Projekt",
@@ -1875,6 +1897,8 @@ export default {
     root_empty_hint: "Erstellen Sie einen Ordner oder eine Datei oder hängen Sie einen Quellordner ein.",
     edit_title: "Arbeitsbereich bearbeiten",
     workspace_options: "Arbeitsbereich-Optionen",
+    pin_action: "Arbeitsbereich anheften",
+    unpin_action: "Arbeitsbereich nicht mehr anheften",
     workspace_root: "Arbeitsbereich-Stamm",
     storage: "Speicher",
     available_storage: "Verfügbarer Speicher",

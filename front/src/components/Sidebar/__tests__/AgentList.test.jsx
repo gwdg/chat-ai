@@ -4,7 +4,11 @@ import { MemoryRouter } from "react-router";
 import { configureStore } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
 import AgentList from "../AgentList";
-import { removeAgent } from "../../../agents/agentStore";
+import {
+  getAgent,
+  removeAgent,
+  setAgentPinned,
+} from "../../../agents/agentStore";
 import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 
 const mocks = vi.hoisted(() => ({
@@ -176,6 +180,23 @@ describe("AgentList", () => {
       expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument(),
     );
     expect(mocks.notifyError).toHaveBeenCalled();
+  });
+
+  it("pins an agent from its options menu and hides it from the list", async () => {
+    renderAgentList();
+    addAgentThroughModal();
+
+    fireEvent.click(screen.getByRole("button", { name: "Agent options" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pin agent" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument(),
+    );
+    expect(getAgent("agent-1")?.pinned).toBe(true);
+
+    // Unpinning brings it back into the Agents section.
+    act(() => setAgentPinned("agent-1", false));
+    expect(await screen.findByText("HPC project 1")).toBeInTheDocument();
   });
 
   it("remembers an expanded agent after a remount", () => {

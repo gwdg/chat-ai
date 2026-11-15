@@ -9,6 +9,8 @@ import {
   ChevronDown,
   Edit,
   OverflowMenuVertical,
+  Pin,
+  PinFilled,
   TrashCan,
 } from "@carbon/icons-react";
 import {
@@ -28,6 +30,7 @@ import {
   deleteWorkspace,
   detachWorkspaceAgent,
   detachWorkspaceChat,
+  setWorkspacePinned,
   useWorkspaceAgentLinks,
   useWorkspaceAgentSessionLinks,
   useWorkspaceChatLinks,
@@ -71,6 +74,11 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   const { openModal, confirmAction } = useModal();
   const { notifyError } = useToast();
   const workspaces = useWorkspaceList();
+  // Pinned workspaces are listed in the sidebar's pinned section instead of here.
+  const visibleWorkspaces = useMemo(
+    () => workspaces.filter((workspace) => workspace.pinned !== true),
+    [workspaces],
+  );
   const chatLinks = useWorkspaceChatLinks();
   const agentLinks = useWorkspaceAgentLinks();
   const sessionLinks = useWorkspaceAgentSessionLinks();
@@ -111,7 +119,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   // something is attached. The same persisted list drives its agent rows below.
   const expandedWorkspaceIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const workspace of workspaces) {
+    for (const workspace of visibleWorkspaces) {
       const expandable =
         (chatsByWorkspace.get(workspace.id)?.length ?? 0) > 0 ||
         (agentsByWorkspace.get(workspace.id)?.length ?? 0) > 0;
@@ -123,7 +131,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
       }
     }
     return ids;
-  }, [workspaces, chatsByWorkspace, agentsByWorkspace, collapsedTopicIds]);
+  }, [visibleWorkspaces, chatsByWorkspace, agentsByWorkspace, collapsedTopicIds]);
 
   // Session titles come from the agent server; load them the first time a workspace with
   // agents is expanded, then keep them until the session list actually changes.
@@ -239,7 +247,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
         </button>
       ) : (
         <div className="space-y-0.5">
-          {workspaces.map((workspace) => {
+          {visibleWorkspaces.map((workspace) => {
             const active = location.pathname === `/workspace/${workspace.id}`;
             const chats = chatsByWorkspace.get(workspace.id) ?? [];
             const attachedAgents = agentsByWorkspace.get(workspace.id) ?? [];
@@ -329,6 +337,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                   </button>
                   <Popover className="relative mr-1">
                     <PopoverButton
+                      data-guide="workspace-menu"
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-base-content group-hover:opacity-100 focus:outline-none"
                       title={t("workspace.workspace_options")}
                       aria-label={t("workspace.workspace_options")}
@@ -341,6 +350,29 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                     >
                       {({ close }) => (
                         <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              close();
+                              void setWorkspacePinned(
+                                workspace.id,
+                                workspace.pinned !== true,
+                              );
+                            }}
+                            data-guide="pin-workspace-menu-item"
+                            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                          >
+                            {workspace.pinned ? (
+                              <PinFilled size={14} />
+                            ) : (
+                              <Pin size={14} />
+                            )}
+                            {t(
+                              workspace.pinned
+                                ? "workspace.unpin_action"
+                                : "workspace.pin_action",
+                            )}
+                          </button>
                           <button
                             type="button"
                             onClick={() => {

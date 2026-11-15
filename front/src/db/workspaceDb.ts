@@ -270,7 +270,7 @@ export async function getWorkspace(id: string): Promise<WorkspaceRow | undefined
 
 export async function updateWorkspace(
   id: string,
-  patch: Partial<Pick<WorkspaceRow, "name" | "icon" | "color">>,
+  patch: Partial<Pick<WorkspaceRow, "name" | "icon" | "color" | "pinned">>,
 ): Promise<void> {
   const trimmed = patch.name?.trim();
   if (patch.name !== undefined && !trimmed) {
@@ -292,9 +292,18 @@ export async function updateWorkspace(
     ...(trimmed ? { name: trimmed } : {}),
     ...(patch.icon ? { icon: patch.icon } : {}),
     ...(patch.color ? { color: patch.color } : {}),
+    ...(typeof patch.pinned === "boolean" ? { pinned: patch.pinned } : {}),
     lastModified: now(),
   };
   await db.workspaces.update(id, patchRow);
+}
+
+/** Pin or unpin a workspace; it moves between the pinned section and the workspace list. */
+export async function setWorkspacePinned(
+  id: string,
+  pinned: boolean,
+): Promise<void> {
+  await updateWorkspace(id, { pinned });
 }
 
 export async function deleteWorkspace(id: string): Promise<void> {
@@ -345,6 +354,9 @@ export async function listWorkspaceSummaries() {
     name: workspace.name,
     icon: workspace.icon,
     color: workspace.color,
+    pinned: workspace.pinned === true,
+    createdAt: workspace.createdAt,
+    lastModified: workspace.lastModified,
     agentIds: agents
       .filter((link) => link.workspaceId === workspace.id)
       .map((link) => link.agentId),

@@ -60,52 +60,67 @@ const baseProps = {
 const pinnedChat = { id: "c1", title: "Pinned chat", lastModified: 1 };
 const pinnedTopic = { id: "t1", name: "Pinned topic", color: "#B4388D" };
 
-const pinnedHeader = () =>
-  document.querySelector('[data-guide="pinned-chats"] > button');
-
 beforeEach(() => {
   reduxMocks.collapsed = [];
   reduxMocks.pathname = "/";
   reduxMocks.dispatch.mockClear();
 });
 
-describe("TopicList pinned rows", () => {
+describe("TopicList pinned variant", () => {
+  it("renders only the pinned topics and chats", () => {
+    render(
+      <TopicList
+        {...baseProps}
+        variant="pinned"
+        topics={[{ id: "t9", name: "Other topic", color: "violet" }]}
+        pinnedTopics={[pinnedTopic]}
+        pinnedConversations={[pinnedChat]}
+      />,
+    );
+
+    expect(screen.getByTestId("conv-c1")).toBeInTheDocument();
+    expect(screen.getByText("Pinned topic")).toBeInTheDocument();
+    expect(screen.queryByText("Other topic")).not.toBeInTheDocument();
+    expect(
+      document.querySelector('[data-guide="pinned-items"]'),
+    ).not.toBeNull();
+  });
+
   it("marks pinned chats with a dash instead of a group marker", () => {
     const { container } = render(
-      <TopicList {...baseProps} pinnedConversations={[pinnedChat]} />,
+      <TopicList
+        {...baseProps}
+        variant="pinned"
+        pinnedConversations={[pinnedChat]}
+      />,
     );
 
     expect(screen.getByTestId("conv-c1").dataset.leadingDash).toBe("true");
 
     // No chevron on the chat row and no vertical connector line.
     const chatRow = screen.getByTestId("conv-c1");
-    expect(
-      container.querySelector('[data-guide="pinned-chats"] .border-l'),
-    ).toBeNull();
+    expect(container.querySelector(".border-l")).toBeNull();
     expect(chatRow.closest('[aria-expanded]')).toBeNull();
   });
 
-  it("keeps pinned chats at the group row, not nested under a wrapper", () => {
-    const { container } = render(
-      <TopicList {...baseProps} pinnedConversations={[pinnedChat]} />,
+  it("owns no header or collapse toggle of its own", () => {
+    render(
+      <TopicList
+        {...baseProps}
+        variant="pinned"
+        pinnedTopics={[pinnedTopic]}
+        pinnedConversations={[pinnedChat]}
+      />,
     );
 
-    const section = container.querySelector('[data-guide="pinned-chats"]');
-    expect(screen.getByTestId("conv-c1").parentElement).toBe(section);
+    // The top-level PinnedSection owns both.
+    expect(screen.queryByText("Pinned")).not.toBeInTheDocument();
+    expect(
+      document.querySelector('[data-guide="pinned-section"]'),
+    ).toBeNull();
   });
 
-  it("toggles the pinned section through the persisted topic state", () => {
-    render(<TopicList {...baseProps} pinnedConversations={[pinnedChat]} />);
-
-    fireEvent.click(pinnedHeader());
-
-    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
-      toggleTopic(PINNED_COLLAPSE_ID),
-    );
-  });
-
-  it("hides pinned rows while the section is collapsed", () => {
-    reduxMocks.collapsed = [PINNED_COLLAPSE_ID];
+  it("leaves pinned rows out of the default chats variant", () => {
     render(
       <TopicList
         {...baseProps}
@@ -114,23 +129,8 @@ describe("TopicList pinned rows", () => {
       />,
     );
 
-    expect(pinnedHeader()).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByTestId("conv-c1")).not.toBeInTheDocument();
     expect(screen.queryByText("Pinned topic")).not.toBeInTheDocument();
-  });
-
-  it("shows pinned rows while the section is expanded", () => {
-    render(
-      <TopicList
-        {...baseProps}
-        pinnedTopics={[pinnedTopic]}
-        pinnedConversations={[pinnedChat]}
-      />,
-    );
-
-    expect(pinnedHeader()).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByTestId("conv-c1")).toBeInTheDocument();
-    expect(screen.getByText("Pinned topic")).toBeInTheDocument();
   });
 });
 
@@ -148,7 +148,7 @@ describe("TopicList group colours", () => {
   const rulesFor = () => screen.getByTestId("conv-c2").parentElement;
 
   it("washes the group name in its colour and brackets its chats on both sides", () => {
-    render(<TopicList {...props} />);
+    render(<TopicList {...props} variant="pinned" />);
 
     const row = rowFor("Violet topic");
     expect(row).toHaveAttribute("role", "button");
@@ -170,7 +170,7 @@ describe("TopicList group colours", () => {
   });
 
   it("strengthens the wash and the rules in dark mode", () => {
-    render(<TopicList {...props} isDark />);
+    render(<TopicList {...props} variant="pinned" isDark />);
 
     const row = rowFor("Violet topic");
     expect(row.style.getPropertyValue("--group-tint")).toBe(
@@ -183,7 +183,7 @@ describe("TopicList group colours", () => {
 
   it("marks the open group with a stronger wash and an accent name", () => {
     reduxMocks.pathname = "/topic/t2";
-    render(<TopicList {...props} />);
+    render(<TopicList {...props} variant="pinned" />);
 
     const row = rowFor("Violet topic");
     expect(row.style.getPropertyValue("--group-tint")).toBe(

@@ -66,6 +66,7 @@ import TopicList, {
   dateBucketCollapseId,
 } from "./TopicList";
 import TopicCreateBubble from "./TopicCreateBubble";
+import PinnedSection from "./PinnedSection";
 import SidebarUserCard from "./SidebarUserCard";
 import AiServicesMenu from "./AiServicesMenu";
 import { useToast } from "../../hooks/useToast";
@@ -722,6 +723,32 @@ export default function SidebarContent({
     (conv) => conv.id === activeMenu,
   );
 
+  // Shared by the pinned section and the chats list; each renders its own half.
+  const topicListProps = {
+    topics: unpinnedFolders,
+    pinnedTopics,
+    pinnedConversations,
+    conversationsByTopic,
+    unsortedConversations,
+    sizeConversations: dateGroupableConversations,
+    onCreateTopic: handleCreateFolder,
+    onRenameTopic: handleRenameFolder,
+    onDeleteTopic: handleDeleteFolder,
+    onToggleTopicPinned: handleToggleTopicPinned,
+    onOpenTopic: handleOpenTopic,
+    draggingConversationId,
+    dragOverTopicId,
+    onDragEnterTopic: setDragOverTopicId,
+    onDragLeaveTopic: (topicId: string) =>
+      setDragOverTopicId((current) => (current === topicId ? null : current)),
+    onDropTopic: handleTopicDrop,
+    renderConversationRow,
+    dateGroups,
+    creationDateGroups,
+    isDark,
+    grouping: conversationGrouping,
+  };
+
   return (
     <div
       className="flex flex-col select-none h-full w-full transition-all duration-200 ease-in-out"
@@ -778,6 +805,13 @@ export default function SidebarContent({
           className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
+          {!hasSearch && (
+            <PinnedSection
+              chatCount={pinnedTopics.length + pinnedConversations.length}
+            >
+              <TopicList {...topicListProps} variant="pinned" />
+            </PinnedSection>
+          )}
           <div
             className={`sticky top-0 z-20 bg-base-100 px-3 pt-2 pb-2 ${
               chatsHeaderElevated
@@ -785,15 +819,6 @@ export default function SidebarContent({
                 : ""
             }`}
           >
-          {(!chatsCollapsed || hasSearch) && (
-          <div className="flex items-center justify-between gap-1 pb-3">
-            <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
-          <div className="flex items-center justify-between gap-1">
-            <ImportPersonaButton topicId={localState?.folderId} variant={"sidebar"} />
-            <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
-          </div>
-          </div>
-          )}
           <div className="mb-1 flex items-center justify-between rounded-lg bg-base-200/70 px-2 py-1">
             <button
               type="button"
@@ -955,6 +980,15 @@ export default function SidebarContent({
             </div>
             )}          </div>
           {(!chatsCollapsed || hasSearch) && (
+          <div className="flex items-center justify-between gap-1 pb-2">
+            <NewChatButton topicId={localState?.folderId} variant={"sidebar"} onNewConversation={handleNewConversation} />
+          <div className="flex items-center justify-between gap-1">
+            <ImportPersonaButton topicId={localState?.folderId} variant={"sidebar"} />
+            <ImportChatButton topicId={localState?.folderId} variant={"sidebar"} />
+          </div>
+          </div>
+          )}
+          {(!chatsCollapsed || hasSearch) && (
           <div
             className={`relative overflow-hidden transform-gpu transition-[max-height,opacity,transform,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               searchVisible
@@ -1027,33 +1061,7 @@ export default function SidebarContent({
                 )}
               </div>
             ) : (
-              <TopicList
-                topics={unpinnedFolders}
-                pinnedTopics={pinnedTopics}
-                pinnedConversations={pinnedConversations}
-                conversationsByTopic={conversationsByTopic}
-                unsortedConversations={unsortedConversations}
-                sizeConversations={dateGroupableConversations}
-                onCreateTopic={handleCreateFolder}
-                onRenameTopic={handleRenameFolder}
-                onDeleteTopic={handleDeleteFolder}
-                onToggleTopicPinned={handleToggleTopicPinned}
-                onOpenTopic={handleOpenTopic}
-                draggingConversationId={draggingConversationId}
-                dragOverTopicId={dragOverTopicId}
-                onDragEnterTopic={setDragOverTopicId}
-                onDragLeaveTopic={(topicId) =>
-                  setDragOverTopicId((current) =>
-                    current === topicId ? null : current,
-                  )
-                }
-                onDropTopic={handleTopicDrop}
-                renderConversationRow={renderConversationRow}
-                dateGroups={dateGroups}
-                creationDateGroups={creationDateGroups}
-                isDark={isDark}
-                grouping={conversationGrouping}
-              />
+              <TopicList {...topicListProps} />
             )}
           </div>
           )}

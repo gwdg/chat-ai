@@ -62,6 +62,31 @@ describe("Meta chat action markers", () => {
     ]);
   });
 
+  it("parses workspace and agent pin proposals", () => {
+    const proposals = getMetaActionProposals(
+      [
+        '[[PIN_WORKSPACE:{"id":"w1","pinned":true}]]',
+        '[[PIN_AGENT:{"id":"a1","value":false}]]',
+      ].join("\n"),
+    );
+
+    expect(proposals).toEqual([
+      { type: "pin_workspace", workspaceId: "w1", pinned: true },
+      { type: "pin_agent", agentId: "a1", pinned: false },
+    ]);
+  });
+
+  it("requires an id and a boolean pinned value for the new pin proposals", () => {
+    const proposals = getMetaActionProposals(
+      [
+        '[[PIN_WORKSPACE:{"id":"","pinned":true}]]',
+        '[[PIN_AGENT:{"id":"a1"}]]',
+      ].join("\n"),
+    );
+
+    expect(proposals).toEqual([]);
+  });
+
   it("parses well-formed CREATE_CHAT proposals", () => {
     const proposals = getMetaActionProposals(
       '[[CREATE_CHAT:{"title":"Plan","folderName":"Work","settings":{"model":"m1","temperature":0.7,"tools":{"web_search":true}},"messages":[{"role":"system","content":"Be concise"},{"role":"user","content":"Start"}]}]]',
@@ -151,6 +176,8 @@ describe("Meta chat action markers", () => {
       '[[RENAME_CHAT:{"id":"c1","title":"New"}]]',
       '[[MCP_SERVER:{"op":"remove","server":"remote","target":"all","serverId":"server-1"}]]',
       '[[PIN_CHAT:{"id":"c1","pinned":true}]]',
+      '[[PIN_WORKSPACE:{"id":"w1","pinned":true}]]',
+      '[[PIN_AGENT:{"id":"a1","pinned":false}]]',
     ].join("\n");
     expect(stripMetaActionMarkers(text)).toBe("Done.");
   });

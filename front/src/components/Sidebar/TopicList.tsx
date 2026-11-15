@@ -73,6 +73,7 @@ export default function TopicList({
   creationDateGroups,
   isDark,
   grouping,
+  variant = "all",
 }: {
   topics: FolderRow[];
   pinnedTopics: FolderRow[];
@@ -102,6 +103,12 @@ export default function TopicList({
   creationDateGroups: DateGroup[];
   isDark: boolean;
   grouping: "topic" | "date" | "created" | "size";
+  /**
+   * "pinned" renders only the pinned topics and chats, for the top-level
+   * pinned section (the section itself owns the collapse state and header).
+   * The default renders the chats section without them.
+   */
+  variant?: "all" | "pinned";
 }) {
   const { t } = useTranslation();
   const createButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -113,7 +120,6 @@ export default function TopicList({
     : null;
 
   const collapsedTopicIds = useSelector(selectCollapsedTopics) || [];
-  const pinnedCollapsed = collapsedTopicIds.includes(PINNED_COLLAPSE_ID);
 
   const [menuTopicId, setMenuTopicId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -357,57 +363,39 @@ export default function TopicList({
     );
   };
 
+  // Pinned topics and chats are rendered by the top-level pinned section, which
+  // owns their collapse state through `PINNED_COLLAPSE_ID`.
+  if (variant === "pinned") {
+    return (
+      <div className="flex flex-col gap-1" data-guide="pinned-items">
+        {pinnedTopics.map((topic) => {
+          const color = topicColor(topic);
+          const emoji =
+            topic.icon && !isTopicIconId(topic.icon) ? topic.icon : null;
+          return renderRow({
+            id: topic.id,
+            label: topic.name,
+            conversations: conversationsByTopic.get(topic.id) ?? [],
+            hex: color.hex,
+            Icon: emoji ? null : topicIcon(topic),
+            emoji,
+            topic,
+          });
+        })}
+        {pinnedConversations.map((conv) =>
+          // Pinned chats are not groups: they get a dash where a group shows
+          // its chevron, instead of ">" or a vertical connector line.
+          renderConversationRow(conv, {
+            showModified: true,
+            leadingDash: true,
+          }),
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-1.5 pt-1" data-guide="topic-list">
-      {(pinnedTopics.length > 0 || pinnedConversations.length > 0) && (
-        <div
-          data-guide="pinned-chats"
-          className="flex flex-col gap-1 pb-1 mb-1 border-b border-base-300"
-        >
-          <button
-            type="button"
-            onClick={() => toggleTopicCollapse(PINNED_COLLAPSE_ID)}
-            aria-expanded={!pinnedCollapsed}
-            className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
-          >
-            <ChevronDown
-              size={12}
-              className={`shrink-0 transition-transform ${pinnedCollapsed ? "-rotate-90" : ""}`}
-            />
-            <PinFilled size={12} className="flex-shrink-0" />
-            <span className="truncate">{t("folders.pinned")}</span>
-            <span className="ml-1 font-normal tabular-nums text-base-content/35">
-              {pinnedTopics.length + pinnedConversations.length}
-            </span>
-          </button>
-          {!pinnedCollapsed && (
-            <>
-              {pinnedTopics.map((topic) => {
-                const color = topicColor(topic);
-                const emoji =
-                  topic.icon && !isTopicIconId(topic.icon) ? topic.icon : null;
-                return renderRow({
-                  id: topic.id,
-                  label: topic.name,
-                  conversations: conversationsByTopic.get(topic.id) ?? [],
-                  hex: color.hex,
-                  Icon: emoji ? null : topicIcon(topic),
-                  emoji,
-                  topic,
-                });
-              })}
-              {pinnedConversations.map((conv) =>
-                // Pinned chats are not groups: they get a dash where a group shows
-                // its chevron, instead of ">" or a vertical connector line.
-                renderConversationRow(conv, {
-                  showModified: true,
-                  leadingDash: true,
-                }),
-              )}
-            </>
-          )}
-        </div>
-      )}
       {grouping === "topic" && (
         <>
           <div className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border border-transparent text-base-content hover:bg-base-200`}>

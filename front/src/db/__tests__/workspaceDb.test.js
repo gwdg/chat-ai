@@ -17,6 +17,7 @@ import {
   getSourceHandle,
   getWorkspace,
   getWorkspaceAgentSessionIds,
+  listWorkspaceSummaries,
   hasWorkspaceAgentSessionLink,
   removeOrphanWorkspaceAgents,
   removeWorkspaceAgentSessionLinks,
@@ -24,6 +25,7 @@ import {
   saveSourceHandle,
   seedWorkspaceAgentSessions,
   setWorkspaceMountReadOnly,
+  setWorkspacePinned,
   syncAgentFilesSources,
   updateSource,
   updateWorkspace,
@@ -63,6 +65,29 @@ describe("workspace database", () => {
     await expect(updateWorkspace(id, { name: "other" })).rejects.toThrow(
       "already exists",
     );
+  });
+
+  it("pins workspaces and exposes their timestamps", async () => {
+    const workspaceId = await createWorkspace("Pinned workspace");
+    const created = await getWorkspace(workspaceId);
+
+    await setWorkspacePinned(workspaceId, true);
+    const pinned = await getWorkspace(workspaceId);
+    expect(pinned?.pinned).toBe(true);
+    expect(pinned?.createdAt).toBe(created?.createdAt);
+    expect(pinned?.lastModified).toBeGreaterThanOrEqual(
+      created?.lastModified ?? 0,
+    );
+
+    const summaries = await listWorkspaceSummaries();
+    expect(summaries.find((item) => item.id === workspaceId)).toMatchObject({
+      pinned: true,
+      createdAt: created?.createdAt,
+      lastModified: pinned?.lastModified,
+    });
+
+    await setWorkspacePinned(workspaceId, false);
+    expect((await getWorkspace(workspaceId))?.pinned).toBe(false);
   });
 
   it("adds browser and Arcana filesystem sources to new workspaces", async () => {

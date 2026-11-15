@@ -14,15 +14,16 @@ const mocks = vi.hoisted(() => ({
   chatLinks: vi.fn(),
   conversations: vi.fn(),
   notifyError: vi.fn(),
+  workspaces: vi.fn(),
+  setPinned: vi.fn(async () => {}),
 }));
 
 vi.mock("../../../db", () => ({
   useConversationList: () => mocks.conversations(),
 }));
 vi.mock("../../../db/workspaceDb", () => ({
-  useWorkspaceList: () => [
-    { id: "ws-1", name: "Teaching", icon: "default", color: "violet" },
-  ],
+  useWorkspaceList: () => mocks.workspaces(),
+  setWorkspacePinned: (...args: any[]) => mocks.setPinned(...args),
   useWorkspaceChatLinks: () => mocks.chatLinks(),
   useWorkspaceAgentLinks: () => [{ workspaceId: "ws-1", agentId: "agent-1" }],
   useWorkspaceAgentSessionLinks: () => mocks.sessionLinks(),
@@ -96,6 +97,42 @@ beforeEach(() => {
   ]);
   mocks.chatLinks.mockReset().mockReturnValue([]);
   mocks.conversations.mockReset().mockReturnValue([]);
+  mocks.workspaces.mockReset().mockReturnValue([
+    { id: "ws-1", name: "Teaching", icon: "default", color: "violet" },
+  ]);
+  mocks.setPinned.mockReset();
+});
+
+describe("WorkspaceList pinning", () => {
+  it("pins a workspace from its options menu", async () => {
+    renderList(makeStore());
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Workspace options" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Pin workspace" }));
+
+    await waitFor(() =>
+      expect(mocks.setPinned).toHaveBeenCalledWith("ws-1", true),
+    );
+  });
+
+  it("leaves pinned workspaces to the pinned section", async () => {
+    mocks.workspaces.mockReturnValue([
+      {
+        id: "ws-1",
+        name: "Teaching",
+        icon: "default",
+        color: "violet",
+        pinned: true,
+      },
+    ]);
+    renderList(makeStore());
+
+    await waitFor(() =>
+      expect(screen.queryByText("Teaching")).not.toBeInTheDocument(),
+    );
+  });
 });
 
 describe("WorkspaceList agent sessions", () => {

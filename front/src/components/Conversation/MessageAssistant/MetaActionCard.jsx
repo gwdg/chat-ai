@@ -13,7 +13,11 @@ import {
   Undo2,
 } from "lucide-react";
 import { normalizeMcpUrl } from "../../../agent/mcp";
-import { getAgents } from "../../../agents/agentStore";
+import {
+  getAgents,
+  setAgentPinned,
+  useAgents,
+} from "../../../agents/agentStore";
 import {
   deleteOpencodeSession,
   interruptOpencodeSession,
@@ -45,8 +49,11 @@ import {
   attachWorkspaceChat,
   detachWorkspaceAgent,
   detachWorkspaceChat,
+  getWorkspace,
   hasWorkspaceAgentLink,
   hasWorkspaceChatLink,
+  setWorkspacePinned,
+  useWorkspaceList,
 } from "../../../db/workspaceDb";
 import { getDefaultSettings } from "../../../utils/conversationUtils";
 import { useToast } from "../../../hooks/useToast";
@@ -302,6 +309,8 @@ export default function MetaActionCard({
   const { notifySuccess, notifyError } = useToast();
   const conversations = useConversationList() || [];
   const folders = useFolderList() || [];
+  const workspaces = useWorkspaceList() || [];
+  const agents = useAgents() || [];
   const userSettings = useSelector(selectUserSettings);
   const memories = useSelector(selectAllMemories);
   const memoryGroups = userSettings.memory_groups ?? [];
@@ -367,6 +376,10 @@ export default function MetaActionCard({
     conversations.map((conversation) => [conversation.id, conversation]),
   );
   const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+  const workspaceById = new Map(
+    workspaces.map((workspace) => [workspace.id, workspace]),
+  );
+  const agentById = new Map(agents.map((agent) => [agent.id, agent]));
   const originalTitles = useRef(new Map());
 
   const settingLabels = {
@@ -503,6 +516,27 @@ export default function MetaActionCard({
         {
           topic:
             folderById.get(action.topicId)?.name || action.topicId,
+        },
+      );
+    }
+    if (action.type === "pin_workspace") {
+      return t(
+        action.pinned
+          ? "meta_chat.pin_workspace_summary"
+          : "meta_chat.unpin_workspace_summary",
+        {
+          workspace:
+            workspaceById.get(action.workspaceId)?.name || action.workspaceId,
+        },
+      );
+    }
+    if (action.type === "pin_agent") {
+      return t(
+        action.pinned
+          ? "meta_chat.pin_agent_summary"
+          : "meta_chat.unpin_agent_summary",
+        {
+          agent: agentById.get(action.agentId)?.name || action.agentId,
         },
       );
     }
@@ -700,6 +734,34 @@ export default function MetaActionCard({
           prepared.push({
             ...action,
             previousPinned: folder.pinned === true,
+          });
+          continue;
+        }
+
+        if (action.type === "pin_workspace") {
+          const workspace =
+            workspaceById.get(action.workspaceId) ||
+            (await getWorkspace(action.workspaceId));
+          if (!workspace) {
+            throw new Error("Workspace not found");
+          }
+          prepared.push({
+            ...action,
+            previousPinned: workspace.pinned === true,
+          });
+          continue;
+        }
+
+        if (action.type === "pin_agent") {
+          const agent = getAgents().find(
+            (item) => item.id === action.agentId,
+          );
+          if (!agent) {
+            throw new Error("Agent not found");
+          }
+          prepared.push({
+            ...action,
+            previousPinned: agent.pinned === true,
           });
           continue;
         }
@@ -920,6 +982,22 @@ export default function MetaActionCard({
               previousPinned: action.previousPinned === true,
             };
           }
+          if (action.type === "pin_workspace") {
+            return {
+              type: "pin_workspace",
+              workspaceId: action.workspaceId,
+              expectedPinned: action.pinned === true,
+              previousPinned: action.previousPinned === true,
+            };
+          }
+          if (action.type === "pin_agent") {
+            return {
+              type: "pin_agent",
+              agentId: action.agentId,
+              expectedPinned: action.pinned === true,
+              previousPinned: action.previousPinned === true,
+            };
+          }
           return {
             type: "move",
             conversationId: action.conversationId,
@@ -977,6 +1055,16 @@ export default function MetaActionCard({
 
         if (action.type === "pin_topic") {
           await setFolderPinned(action.topicId, action.pinned);
+          continue;
+        }
+
+        if (action.type === "pin_workspace") {
+          await setWorkspacePinned(action.workspaceId, action.pinned);
+          continue;
+        }
+
+        if (action.type === "pin_agent") {
+          setAgentPinned(action.agentId, action.pinned);
           continue;
         }
 
@@ -1190,6 +1278,27 @@ export default function MetaActionCard({
           continue;
         }
 
+        if (chat.type === "pin_workspace") {
+          const workspace = await getWorkspace(chat.workspaceId);
+          if (
+            !workspace ||
+            (workspace.pinned === true) !== chat.expectedPinned
+          ) {
+            throw new Error("Workspace pinned state changed");
+          }
+          continue;
+        }
+
+        if (chat.type === "pin_agent") {
+          const agent = getAgents().find(
+            (item) => item.id === chat.agentId,
+          );
+          if (!agent || (agent.pinned === true) !== chat.expectedPinned) {
+            throw new Error("Agent pinned state changed");
+          }
+          continue;
+        }
+
         const current = await getConversationMeta(chat.conversationId);
         if (!current) throw new Error("Conversation not found");
         if (chat.type === "rename") {
@@ -1285,6 +1394,16 @@ export default function MetaActionCard({
       for (const chat of snapshot.chats) {
         if (chat.type === "pin_topic") {
           await setFolderPinned(chat.topicId, chat.previousPinned);
+          continue;
+        }
+
+        if (chat.type === "pin_workspace") {
+          await setWorkspacePinned(chat.workspaceId, chat.previousPinned);
+          continue;
+        }
+
+        if (chat.type === "pin_agent") {
+          setAgentPinned(chat.agentId, chat.previousPinned);
           continue;
         }
 
@@ -1430,7 +1549,7 @@ export default function MetaActionCard({
           <ul className="mt-1.5 space-y-0.5 text-[11px] leading-snug text-base-content">
             {actions.map((action, index) => (
               <li
-                key={`${action.type}:${action.conversationId || action.topicId}:${index}`}
+                key={`${action.type}:${action.conversationId || action.topicId || action.workspaceId || action.agentId}:${index}`}
                 className="flex items-start gap-1.5"
               >
                 {action.type === "rename" ? (
@@ -1446,7 +1565,9 @@ export default function MetaActionCard({
                     aria-hidden="true"
                   />
                 ) : action.type === "pin" ||
-                  action.type === "pin_topic" ? (
+                  action.type === "pin_topic" ||
+                  action.type === "pin_workspace" ||
+                  action.type === "pin_agent" ? (
                   <Pin
                     size={12}
                     className="mt-0.5 shrink-0 text-warning"

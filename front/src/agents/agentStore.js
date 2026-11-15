@@ -8,12 +8,31 @@ import { clearAgentShellHistory } from "./agentShellHistory";
 
 const STORAGE_KEY = "chatai.agents";
 
+// Patches that only track which OpenCode session the agent shows are not a
+// modification of the agent itself, so they must not move its timestamp.
+const SESSION_ONLY_FIELDS = new Set(["sessionId", "sessionSummaries"]);
+
 const canStore = () => typeof localStorage !== "undefined";
+
+const withTimestamps = (agent, now = Date.now()) => {
+  const createdAt =
+    Number.isFinite(agent.createdAt) && agent.createdAt > 0
+      ? agent.createdAt
+      : now;
+  return {
+    ...agent,
+    createdAt,
+    updatedAt:
+      Number.isFinite(agent.updatedAt) && agent.updatedAt > 0
+        ? agent.updatedAt
+        : createdAt,
+  };
+};
 
 const hydrate = (agent) => {
   if (!agent || typeof agent !== "object") return agent;
   return {
-    ...agent,
+    ...withTimestamps(agent),
     // Default-password agents follow front.json; only custom passwords are stored locally.
     password:
       agent.passwordSource === "custom"
@@ -28,7 +47,29 @@ const load = () => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map(hydrate) : [];
+    if (!Array.isArray(parsed)) return [];
+    let backfilled = false;
+    const hydrated = parsed.map((agent) => {
+      const next = hydrate(agent);
+      if (
+        next !== agent &&
+        (next.createdAt !== agent.createdAt ||
+          next.updatedAt !== agent.updatedAt)
+      ) {
+        backfilled = true;
+      }
+      return next;
+    });
+    if (backfilled) {
+      // Existing agents predate the timestamps; keep the inferred values so
+      // they do not change again on the next load.
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(hydrated));
+      } catch {
+        // Ignore quota and privacy-mode failures.
+      }
+    }
+    return hydrated;
   } catch {
     return [];
   }
@@ -69,17 +110,32 @@ export const subscribeAgents = (listener) => {
 };
 
 export const addAgent = (agent) => {
-  agents = [...agents, hydrate(agent)];
+  agents = [...agents, hydrate(withTimestamps(agent))];
   persist();
   emit();
 };
 
 export const updateAgent = (id, patch) => {
+  const now = Date.now();
+  const changesMetadata = Object.keys(patch ?? {}).some(
+    (key) => !SESSION_ONLY_FIELDS.has(key),
+  );
   agents = agents.map((agent) =>
-    agent.id === id ? { ...agent, ...patch } : agent,
+    agent.id === id
+      ? {
+          ...agent,
+          ...patch,
+          ...(changesMetadata ? { updatedAt: now } : {}),
+        }
+      : agent,
   );
   persist();
   emit();
+};
+
+/** Pin or unpin an agent; it moves between the pinned section and the agent list. */
+export const setAgentPinned = (id, pinned) => {
+  updateAgent(id, { pinned });
 };
 
 export const removeAgent = (id) => {

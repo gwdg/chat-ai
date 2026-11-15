@@ -36,6 +36,8 @@ export default {
     reasoning_words_one: "Model is reasoning — {{count}} word received…",
     reasoning_words_other: "Model is reasoning — {{count}} words received…",
     elapsed_seconds: "{{count}} s",
+    created: "Created {{date}}",
+    modified: "Modified {{date}}",
     summarize_success: "Summary created in a new conversation.",
     summary_title: "Summary of {{title}}",
     summarize_error: "Summarization failed. Your conversation is unchanged.",
@@ -254,6 +256,10 @@ export default {
     unpin_summary: "Unpin “{{title}}”",
     pin_topic_summary: "Pin topic “{{topic}}”",
     unpin_topic_summary: "Unpin topic “{{topic}}”",
+    pin_workspace_summary: "Pin workspace “{{workspace}}”",
+    unpin_workspace_summary: "Unpin workspace “{{workspace}}”",
+    pin_agent_summary: "Pin agent “{{agent}}”",
+    unpin_agent_summary: "Unpin agent “{{agent}}”",
     setting_summary: "Change {{setting}} from “{{from}}” to “{{to}}”",
     setting_temperature: "Temperature",
     setting_top_p: "Top-p",
@@ -535,6 +541,20 @@ export default {
       step2:
         "Choose Pin topic. Pinned topics stay in the pinned area at the top, regardless of the selected grouping.",
     },
+    pin_workspace: {
+      title: "Pin a workspace",
+      step1: "Open the options menu of a workspace in the sidebar.",
+      step2:
+        "Choose Pin workspace. It moves to the pinned section at the top, above the chats.",
+      step3:
+        "Click the pin again in the pinned section to unpin the workspace.",
+    },
+    pin_agent: {
+      title: "Pin an agent",
+      step1: "Open the options menu of an agent in the sidebar.",
+      step2:
+        "Choose Pin agent. It moves to the pinned section at the top, above the chats.",
+    },
     close_chat: {
       title: "Close a chat",
       step1:
@@ -664,10 +684,10 @@ export default {
         "Click a cited message to jump to the exact message and highlight it.",
     },
     meta_chat_pins: {
-      title: "Pin chats and topics with the Meta chat",
+      title: "Pin chats, topics, workspaces and agents with the Meta chat",
       step1: "Open the Meta chat from the AI icon in the sidebar.",
       step2:
-        "Ask it to pin or unpin a chat or topic, for example: “Pin the Pricing discussion chat” or “Unpin the Research topic.”",
+        "Ask it to pin or unpin a chat, topic, workspace or agent, for example: “Pin the Pricing discussion chat” or “Unpin the Research topic.”",
       step3:
         "Review the proposed pin change and click Accept changes. Nothing is applied before you accept.",
     },
@@ -1691,6 +1711,8 @@ export default {
     name_placeholder: "e.g. Research assistant",
     edit_title: "Edit agent",
     options: "Agent options",
+    pin_action: "Pin agent",
+    unpin_action: "Unpin agent",
     add_hint: "Select one of the HPC projects available to you.",
     local: "Local agent",
     hpc_project_label: "HPC project",
@@ -1850,6 +1872,8 @@ export default {
     root_empty_hint: "Create a folder or file, or mount a folder from a source.",
     edit_title: "Edit workspace",
     workspace_options: "Workspace options",
+    pin_action: "Pin workspace",
+    unpin_action: "Unpin workspace",
     workspace_root: "Workspace Root",
     storage: "Storage",
     available_storage: "Available storage",

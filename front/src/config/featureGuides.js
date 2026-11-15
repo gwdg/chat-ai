@@ -6,6 +6,7 @@ import {
   hasAttachmentCard,
   isToolActive,
   mcpConfigured,
+  openAgentMenu,
   openAgentRecovery,
   openConversationMenu,
   openConversationSettings,
@@ -14,6 +15,7 @@ import {
   openTools,
   openTopicCreate,
   openTopicMenu,
+  openWorkspaceMenu,
   openUserSettings,
   searchHasQuery,
   selectSettingsTab,
@@ -693,6 +695,48 @@ export const featureGuides = {
       },
     ],
   },
+  pin_workspace: {
+    titleKey: "feature_guide.pin_workspace.title",
+    prompt:
+      "Pin a workspace from its options menu so it moves to the pinned section at the top of the sidebar, above the chats.",
+    keywords: ["pin workspace", "pinned workspace", "unpin workspace", "keep workspace on top"],
+    steps: [
+      {
+        target: '[data-guide="workspace-menu"]',
+        textKey: "feature_guide.pin_workspace.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="pin-workspace-menu-item"]',
+        prepare: openWorkspaceMenu,
+        textKey: "feature_guide.pin_workspace.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="pinned-section"]',
+        textKey: "feature_guide.pin_workspace.step3",
+      },
+    ],
+  },
+  pin_agent: {
+    titleKey: "feature_guide.pin_agent.title",
+    prompt:
+      "Pin an agent from its options menu so it moves to the pinned section at the top of the sidebar, above the chats.",
+    keywords: ["pin agent", "pinned agent", "unpin agent", "keep agent on top"],
+    steps: [
+      {
+        target: '[data-guide="agent-menu"]',
+        textKey: "feature_guide.pin_agent.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="pin-agent-menu-item"]',
+        prepare: openAgentMenu,
+        textKey: "feature_guide.pin_agent.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   export_conversation: {
     titleKey: "feature_guide.export_conversation.title",
     prompt:
@@ -1170,7 +1214,7 @@ export const featureGuides = {
   meta_chat_pins: {
     titleKey: "feature_guide.meta_chat_pins.title",
     prompt:
-      "Ask the Meta chat to pin or unpin a chat or topic. Pinned items appear in the pinned area at the top of the sidebar. The change is proposed in a warning card and applied only after the user accepts it.",
+      "Ask the Meta chat to pin or unpin a chat, topic, workspace or agent. Pinned items appear in the pinned section at the top of the sidebar. The change is proposed in a warning card and applied only after the user accepts it.",
     keywords: [
       "meta chat pin",
       "pin chat with meta chat",
@@ -1405,7 +1449,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "workspace_clone", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery"],
+  workspace: ["workspace_overview", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
