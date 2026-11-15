@@ -1761,6 +1761,7 @@ export default {
     form_yes: "Ja",
     form_no: "Nein",
     form_not_answered: "Nicht beantwortet",
+    form_custom_answer: "Eigene Antwort eingeben",
     tool_call: "Werkzeugaufruf",
     tool_input: "Eingabe",
     tool_output: "Ausgabe",

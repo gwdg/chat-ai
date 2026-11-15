@@ -732,7 +732,13 @@ accepts file attachments and sends them inline to the prompt API. The
 `AgentFormCard` renders OpenCode forms inline in the conversation; form cards are persisted per
 agent/session in localStorage (`agents/agentFormHistory.js`), so a card remains in the timeline
 after reloads. After a successful reply, the same history entry receives the answers and renders
-as `AgentFormResultCard`. `AgentToolsModal` exposes a live step/todo timeline, session
+as `AgentFormResultCard`. OpenCode's `question` tool is delivered through the same form API: each
+question becomes a field with `title` = header, `description` = question text, `type` =
+`"string"` or `"multiselect"`, `options` carrying `label`/`description`, and `custom: true` for a
+free-form answer. `AgentFormCard` therefore treats any field with `options` as a choice list,
+renders the field/option descriptions, and offers the custom answer; it must not key that
+behaviour on `type === "select"`, or question forms collapse to a bare text input.
+`AgentToolsModal` exposes a live step/todo timeline, session
 diff/revert with VCS and tracked-file status, saved permissions, local permission policies
 (`agents/agentPermissionPolicies.js`, auto-answered by `AgentConversation`), usage stats, MCP
 reconnect/refresh, connection diagnostics, and Markdown/JSON transcript export. The Composer's

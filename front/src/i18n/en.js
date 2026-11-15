@@ -1739,6 +1739,7 @@ export default {
     form_yes: "Yes",
     form_no: "No",
     form_not_answered: "Not answered",
+    form_custom_answer: "Type your own answer",
     tool_call: "Tool call",
     tool_input: "Input",
     tool_output: "Output",
