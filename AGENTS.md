@@ -668,6 +668,11 @@ tool-call limit moved to the Workspace popover. When a chat has a workspace link
 `agent/prepare.ts` writes attachments and their converted variants under `/artefacts` in the
 attached workspace root (or the conversation OPFS when no workspace is linked); the agent VFS keeps
 `/uploads` routed to the conversation OPFS for legacy paths.
+A chat without file access (no workspace/mount and `tools.browser_storage` off, or a model without
+tool support) gets no file tools, so `agent/attachmentContext.ts` inlines the text of text-like
+attachments and of documents with a converted `.md`/`.txt` variant into the user message; images,
+audio and unconvertible files stay path-only. Without that, a perfectly readable `.md` attachment
+would be unusable in a default chat.
 
 Every workspace also has an implicit browser-backed root: files and directories created there are
 stored in `workspace_nodes` / `workspace_blobs` under the synthetic source id

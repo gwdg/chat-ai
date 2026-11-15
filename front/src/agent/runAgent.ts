@@ -14,6 +14,7 @@ import { loadFileMeta, saveFile } from "../db";
 import { getFileType } from "../utils/attachments";
 import { ARTEFACTS, prepareAttachment, uploadPath } from "./prepare";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
+import { attachmentsNote, hasReadableText, type AttachmentEntry } from "./attachmentContext";
 import i18n from "../i18n";
 import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpTools } from "./mcp";
 import { beginMcpConfirmationSession } from "./mcpConfirmation";
@@ -33,9 +34,9 @@ Files the user attaches are placed under ${ARTEFACTS}/; documents and audio come
 Use the tools to read, write and edit files, to convert documents, to transcribe audio, to analyze images, and to generate speech, images and Word documents.
 Every file you write is shown to the user in the chat, so do not repeat a file's whole content in your answer.`;
 
-const NO_TOOLS_PROMPT = "You cannot call tools in this conversation; attached files are referenced by name only.";
+const NO_TOOLS_PROMPT = "You cannot call tools in this conversation. The text of attached text and document files is included in the message; other attachments are referenced by name only, so do not claim to have read those.";
 
-const NO_BROWSER_STORAGE_PROMPT = "The user has turned off browser storage for this conversation, so you cannot read or write local workspace files. Attached files are referenced by name only; do not claim to have read them.";
+const NO_BROWSER_STORAGE_PROMPT = "The user has turned off browser storage for this conversation, so you cannot read or write local workspace files and have no file tools. The text of attached text and document files is included in the message; attachments whose text could not be extracted are referenced by name only, so do not claim to have read those.";
 
 const ARCANA_TOOLS_PROMPT = "Arcana Tools is enabled. Use these tools to inspect Arcana collections, manage their files, check or start indexing, and manage sharing. Ask the user for explicit confirmation before deleting files or an index, changing sharing, or uploading and replacing files unless they already asked for that exact change.";
 
@@ -119,10 +120,18 @@ const toBase64 = (bytes: Uint8Array) => {
 
 /**
  * Makes sure a message's attachments are in the workspace (see prepare.ts) and returns a note
- * listing them, plus the images to send inline.
+ * listing them, plus the images to send inline. Without file access the agent has no tools to
+ * read them, so the text of readable attachments is inlined into the note instead.
  */
-async function ingestAttachments(conversationId: string, fs, items: any[], vision: boolean, audio: Map<string, InputAudio> | null) {
-  const lines: string[] = [];
+async function ingestAttachments(
+  conversationId: string,
+  fs,
+  items: any[],
+  vision: boolean,
+  audio: Map<string, InputAudio> | null,
+  inlineText: boolean,
+) {
+  const entries: AttachmentEntry[] = [];
   const images: { type: "image"; data: string; mimeType: string }[] = [];
   for (const item of items) {
     if (item.type !== "file" || !item.fileId) continue;
@@ -136,7 +145,16 @@ async function ingestAttachments(conversationId: string, fs, items: any[], visio
     const variants = [`${path}.md`, `${path}.txt`];
     const converted = [];
     for (const variant of variants) if (await fs.stat(variant)) converted.push(variant);
-    lines.push(`- ${path}${converted.length ? ` (text: ${converted.join(", ")})` : ""}`);
+    const text =
+      inlineText && hasReadableText(kind, converted.length > 0)
+        ? new TextDecoder().decode(await fs.readFile(converted[0] ?? path))
+        : undefined;
+    entries.push({
+      path,
+      name: meta.name,
+      variants: inlineText || !converted.length ? undefined : converted,
+      text,
+    });
     if (vision && kind === "image") {
       const bytes = await fs.readFile(path);
       images.push({ type: "image", data: toBase64(bytes), mimeType: meta.type || "image/png" });
@@ -146,7 +164,7 @@ async function ingestAttachments(conversationId: string, fs, items: any[], visio
       audio.set(path, { data: toBase64(await fs.readFile(path)), format });
     }
   }
-  return { note: lines.length ? `\n\n[Attached files]\n${lines.join("\n")}` : "", images };
+  return { note: attachmentsNote(entries), images };
 }
 
 type InputAudio = { data: string; format: "wav" | "mp3" };
@@ -180,13 +198,28 @@ function dropImages(messages: any[]) {
 }
 
 /** The UI conversation as pi messages. The last message must be the user's new prompt. */
-async function toAgentMessages(conversationId: string, fs, uiMessages: any[], spec: ModelSpec, vision: boolean, audio: Map<string, InputAudio> | null) {
+async function toAgentMessages(
+  conversationId: string,
+  fs,
+  uiMessages: any[],
+  spec: ModelSpec,
+  vision: boolean,
+  audio: Map<string, InputAudio> | null,
+  fileAccess: boolean,
+) {
   const out: AgentMessage[] = [];
   for (const message of uiMessages) {
     const items = Array.isArray(message.content) ? message.content : [{ type: "text", text: String(message.content ?? "") }];
     const text = items.filter((item) => item.type === "text").map((item) => item.text ?? "").join("\n");
     if (message.role === "user") {
-      const { note, images } = await ingestAttachments(conversationId, fs, items, vision, audio);
+      const { note, images } = await ingestAttachments(
+        conversationId,
+        fs,
+        items,
+        vision,
+        audio,
+        !fileAccess,
+      );
       const content = [{ type: "text" as const, text: `${text}${note}` }, ...images];
       if (!text.trim() && !note && !images.length) continue;
       out.push({ role: "user", content, timestamp: message.createdAt ?? Date.now() });
@@ -266,7 +299,8 @@ export async function runAgentTurn({
 
   // Audio files by upload path, sent as audio to models that take it
   const audio = spec.input?.includes("audio") ? new Map<string, InputAudio>() : null;
-  const conversation = await toAgentMessages(conversationId, agentStorage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio);
+  // `storageAccess` alone is not enough: a model without tool support cannot read the files either.
+  const conversation = await toAgentMessages(conversationId, agentStorage, uiMessages.filter((m) => m.role !== "system"), spec, vision, audio, useTools && storageAccess);
   const prompt = conversation.pop();
   if (!prompt || prompt.role !== "user") throw new Error("Nothing to send");
 
