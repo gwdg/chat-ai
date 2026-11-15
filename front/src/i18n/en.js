@@ -1522,6 +1522,9 @@ export default {
     close_chat_yes: "Close chat",
     close_agent_session: "Close this session? It will be removed from OpenCode.",
     close_agent_session_yes: "Close session",
+    restore_agent_sessions:
+      "Create new sessions on the agent server and write each cached transcript into its instructions? The old sessions are not recreated, and the cached history is sent to this agent's server.",
+    restore_agent_sessions_yes: "Restore sessions",
     regenerate_confirm:
       "Regenerating will delete this response and every message after it, and will apply your current settings. This cannot be undone. To keep this conversation intact, use “Continue in a new chat” instead.",
     regenerate_yes: "Regenerate",
@@ -1631,6 +1634,22 @@ export default {
     sessions_cached:
       "The agent is not reachable. These sessions come from the local cache.",
     sessions_cached_short: "cached",
+    restore_sessions_banner_one:
+      "The agent is reachable, but 1 cached session no longer exists on its server. Restore it from the local cache?",
+    restore_sessions_banner_other:
+      "The agent is reachable, but {{count}} cached sessions no longer exist on its server. Restore them from the local cache?",
+    restore_sessions_action: "Restore from cache",
+    restore_sessions_busy: "Restoring…",
+    restore_sessions_done_one:
+      "Restored {{count}} session from the local cache.",
+    restore_sessions_done_other:
+      "Restored {{count}} sessions from the local cache.",
+    restore_sessions_none: "There was no cached history to restore.",
+    restored_history:
+      "This transcript was restored into the session's instructions from the local cache. The agent server has no messages for it yet.",
+    restore_session_title: "{{name}} (restored)",
+    session_missing:
+      "This session no longer exists on the agent server and no cached history is available. Clear the history to start a new session.",
     subagent_short: "sub",
     rename_session: "Rename session",
     close_session: "Close session",

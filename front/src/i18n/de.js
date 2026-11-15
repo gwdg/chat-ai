@@ -1542,6 +1542,9 @@ export default {
     close_chat_yes: "Chat schließen",
     close_agent_session: "Diese Sitzung schließen? Sie wird aus OpenCode entfernt.",
     close_agent_session_yes: "Sitzung schließen",
+    restore_agent_sessions:
+      "Neue Sitzungen auf dem Agent-Server erstellen und den jeweiligen zwischengespeicherten Verlauf in ihre Anweisungen schreiben? Die alten Sitzungen werden nicht wiederhergestellt und der zwischengespeicherte Verlauf wird an den Server dieses Agenten gesendet.",
+    restore_agent_sessions_yes: "Sitzungen wiederherstellen",
     regenerate_confirm:
       "Beim Regenerieren werden diese Antwort und alle nachfolgenden Nachrichten gelöscht und die aktuellen Einstellungen angewendet. Dies kann nicht rückgängig gemacht werden. Um diese Unterhaltung zu behalten, verwenden Sie stattdessen „In neuem Chat fortfahren“.",
     regenerate_yes: "Regenerieren",
@@ -1653,6 +1656,23 @@ export default {
     sessions_cached:
       "Der Agent ist nicht erreichbar. Diese Sitzungen stammen aus dem lokalen Cache.",
     sessions_cached_short: "gespeichert",
+    restore_sessions_banner_one:
+      "Der Agent ist erreichbar, aber 1 zwischengespeicherte Sitzung existiert auf seinem Server nicht mehr. Aus dem lokalen Cache wiederherstellen?",
+    restore_sessions_banner_other:
+      "Der Agent ist erreichbar, aber {{count}} zwischengespeicherte Sitzungen existieren auf seinem Server nicht mehr. Aus dem lokalen Cache wiederherstellen?",
+    restore_sessions_action: "Aus Cache wiederherstellen",
+    restore_sessions_busy: "Wird wiederhergestellt…",
+    restore_sessions_done_one:
+      "{{count}} Sitzung aus dem lokalen Cache wiederhergestellt.",
+    restore_sessions_done_other:
+      "{{count}} Sitzungen aus dem lokalen Cache wiederhergestellt.",
+    restore_sessions_none:
+      "Es war kein zwischengespeicherter Verlauf zum Wiederherstellen vorhanden.",
+    restored_history:
+      "Dieser Verlauf wurde aus dem lokalen Cache in die Anweisungen der Sitzung wiederhergestellt. Der Agent-Server hat dafür noch keine Nachrichten.",
+    restore_session_title: "{{name}} (wiederhergestellt)",
+    session_missing:
+      "Diese Sitzung existiert auf dem Agent-Server nicht mehr und es ist kein zwischengespeicherter Verlauf vorhanden. Löschen Sie den Verlauf, um eine neue Sitzung zu starten.",
     subagent_short: "Sub",
     rename_session: "Sitzung umbenennen",
     close_session: "Sitzung schließen",

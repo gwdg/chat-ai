@@ -126,7 +126,7 @@ function buildSettingsLines(userSettings = {}, interfaceSettings = {}) {
     `- Chat grouping: ${interfaceSettings.conversation_grouping ?? "topic"}`,
     `- Web search disclaimer accepted: ${yesNo(interfaceSettings.agree_web_search)}`,
     `- Show welcome tour: ${yesNo(interfaceSettings.show_tour)}`,
-    `- Confirmation warnings: clear history ${yesNo(interfaceSettings.warn_clear_history)}, close chat ${yesNo(interfaceSettings.warn_close_chat)}, share settings ${yesNo(interfaceSettings.warn_share_settings)}, regenerate ${yesNo(interfaceSettings.warn_regenerate)}, fork ${yesNo(interfaceSettings.warn_fork)}`,
+    `- Confirmation warnings: clear history ${yesNo(interfaceSettings.warn_clear_history)}, close chat ${yesNo(interfaceSettings.warn_close_chat)}, share settings ${yesNo(interfaceSettings.warn_share_settings)}, regenerate ${yesNo(interfaceSettings.warn_regenerate)}, fork ${yesNo(interfaceSettings.warn_fork)}, restore agent sessions ${yesNo(interfaceSettings.warn_restore_agent_sessions)}`,
     `- Completed tutorials: ${interfaceSettings.completed_tutorials?.length ?? 0}`,
     `- Completed use cases: ${interfaceSettings.completed_use_cases?.length ?? 0}`,
     `- Suppressed tutorials: ${interfaceSettings.suppressed_tutorials?.length ?? 0}`,

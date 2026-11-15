@@ -178,6 +178,18 @@ export async function syncSessionHistory(
 
   if (options.full === true) {
     const messages = await listOpencodeMessages(agent, sessionId);
+    if (options.keepWhenEmpty === true && !messages.length && previous.length) {
+      return result(
+        {
+          messages: previous,
+          startIndex: previous.length,
+          changed: [],
+          replace: false,
+          needsFullHistory: false,
+        },
+        previous,
+      );
+    }
     // Replacing from an empty cache drops messages the server no longer has (middle edits,
     // compaction), which a prefix merge would keep.
     return result(mergeMessageHistory([], messages, null, true), messages);
@@ -197,6 +209,18 @@ export async function syncSessionHistory(
   // Either the anchor is gone or the page came back empty. Confirm against the whole history
   // before changing anything, so a partial answer cannot truncate or wipe the cache.
   const messages = await listOpencodeMessages(agent, sessionId);
+  if (options.keepWhenEmpty === true && !messages.length && previous.length) {
+    return result(
+      {
+        messages: previous,
+        startIndex: previous.length,
+        changed: [],
+        replace: false,
+        needsFullHistory: false,
+      },
+      previous,
+    );
+  }
   return result(mergeMessageHistory([], messages, null, true), messages);
 }
 
@@ -250,9 +274,11 @@ export async function fetchAgentSessions(agent) {
 
   const tree = buildSessionTree([...sessions.values()]);
   if (agent?.id) {
-    await saveAgentSessions(agent.id, tree.all, { prune: complete }).catch(
-      () => {},
-    );
+    // An empty agent (fresh data directory, lost sessions) must not erase the cache: it is
+    // the only copy left and the recovery offer restores it.
+    const cached = await loadAgentSessions(agent.id).catch(() => []);
+    const prune = complete && (tree.all.length > 0 || cached.length === 0);
+    await saveAgentSessions(agent.id, tree.all, { prune }).catch(() => {});
   }
   return tree;
 }

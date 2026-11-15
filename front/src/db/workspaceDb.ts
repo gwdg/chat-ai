@@ -880,3 +880,29 @@ export async function removeWorkspaceAgentSessionLinks(
     .and((link) => link.agentId === agentId)
     .delete();
 }
+
+/**
+ * Move a workspace's session link to a replacement session. Used when a cached session is
+ * restored under a new server id, so the workspace keeps showing it.
+ */
+export async function renameWorkspaceAgentSession(
+  agentId: string,
+  fromSessionId: string,
+  toSessionId: string,
+): Promise<void> {
+  if (!agentId || !fromSessionId || !toSessionId) return;
+  if (fromSessionId === toSessionId) return;
+  const links = await db.workspace_agent_sessions
+    .where("sessionId")
+    .equals(fromSessionId)
+    .and((link) => link.agentId === agentId)
+    .toArray();
+  for (const link of links) {
+    await attachWorkspaceAgentSession(
+      link.workspaceId,
+      agentId,
+      toSessionId,
+    );
+    await db.workspace_agent_sessions.delete(link.id);
+  }
+}

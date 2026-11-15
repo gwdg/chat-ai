@@ -10,7 +10,7 @@ import {
   Terminal,
   Tools,
 } from "@carbon/icons-react";
-import { CloudOff, X } from "lucide-react";
+import { CloudOff, Info, TriangleAlert, X } from "lucide-react";
 
 import {
   clearAgentDraft,
@@ -29,6 +29,10 @@ import {
   saveAgentShellHistory,
 } from "../../agents/agentShellHistory";
 import { getAgent, updateAgent } from "../../agents/agentStore";
+import {
+  inspectAgentRecovery,
+  restoreCachedSessions,
+} from "../../agents/agentRecovery";
 import {
   CACHE_REVALIDATE_MS,
   syncSessionHistory,
@@ -185,6 +189,9 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const [error, setError] = useState("");
   const [offline, setOffline] = useState(false);
   const [cachedAt, setCachedAt] = useState(null);
+  const [recovery, setRecovery] = useState(null);
+  const [restoring, setRestoring] = useState(false);
+  const [restoredHistory, setRestoredHistory] = useState(false);
   const pollRef = useRef(null);
   const scrollRef = useRef(null);
   const modelKeyRef = useRef(null);
@@ -198,6 +205,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const serverMessagesRef = useRef([]);
   const lastServerMessageIdRef = useRef(null);
   const forceFullSyncRef = useRef(false);
+  const restoredHistoryRef = useRef(false);
   const summariesEnabled = useSelector(selectConversationSummaries);
   const summaryUserSettings = useSelector(selectUserSettings);
   const summarySettingsRef = useRef({
@@ -313,15 +321,37 @@ export default function AgentConversation({ agent, modelsData = [] }) {
 
   const refresh = useCallback(async () => {
     if (!agent?.sessionId) return [];
+    const previousMessages = serverMessagesRef.current;
     // A compaction rewrites the history in place, so that sync starts from scratch.
     const synced = await syncSessionHistory(
       agent,
       agent.sessionId,
-      serverMessagesRef.current,
+      previousMessages,
       lastServerMessageIdRef.current,
-      { full: forceFullSyncRef.current },
+      {
+        full: forceFullSyncRef.current,
+        keepWhenEmpty: restoredHistoryRef.current,
+      },
     );
     forceFullSyncRef.current = false;
+    if (
+      !synced.messages.length &&
+      previousMessages.length &&
+      !restoredHistoryRef.current
+    ) {
+      // An empty answer usually means the session was cleared. If the session is actually gone
+      // from the server, keep the cached history instead of letting the empty read wipe it.
+      const diagnosis = await inspectAgentRecovery(agent).catch(() => null);
+      if (
+        diagnosis?.reachable &&
+        diagnosis.missing.some(
+          (entry) => entry.session.id === agent.sessionId,
+        )
+      ) {
+        setRecovery(diagnosis);
+        return previousMessages;
+      }
+    }
     serverMessagesRef.current = synced.messages;
     lastServerMessageIdRef.current = synced.lastMessageId;
 
@@ -330,6 +360,11 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     setMessages(visible);
     setOffline(false);
     setCachedAt(syncedAt);
+    if (restoredHistoryRef.current && synced.replace) {
+      // The server now has its own timeline, so stop preserving the restored transcript.
+      restoredHistoryRef.current = false;
+      setRestoredHistory(false);
+    }
     if (agent.id) {
       void saveAgentSessionMessages(
         agent.id,
@@ -403,12 +438,36 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     return next;
   }, [agent, replaceFormHistory]);
 
-  const reportSyncFailure = useCallback(() => {
-    // Keep the cached conversation readable when the server is gone. Without a cache the
-    // banner explains the empty timeline, so no raw fetch error is needed.
-    setOffline(true);
-    if (!serverMessagesRef.current.length) setCachedAt(null);
-  }, []);
+  const reportSyncFailure = useCallback(
+    async (reason) => {
+      // Keep the cached conversation readable when the server is gone. Without a cache the
+      // banner explains the empty timeline, so no raw fetch error is needed.
+      setOffline(true);
+      if (!serverMessagesRef.current.length) setCachedAt(null);
+      // A reachable server that lost the session is a different problem: offer to restore the
+      // cached sessions instead of claiming the agent is unreachable.
+      const diagnosis = await inspectAgentRecovery(agent).catch(() => null);
+      if (!diagnosis?.reachable) return;
+      setOffline(false);
+      if (diagnosis.missing.length) {
+        setRecovery(diagnosis);
+        return;
+      }
+      const currentExists = (diagnosis.serverSessions || []).some(
+        (session) => session?.id === agent?.sessionId,
+      );
+      if (agent?.sessionId && !currentExists) {
+        setError(t("agents.session_missing"));
+        return;
+      }
+      if (reason) {
+        setError(
+          reason instanceof Error ? reason.message : String(reason),
+        );
+      }
+    },
+    [agent, t],
+  );
 
   const retrySync = useCallback(async () => {
     try {
@@ -418,6 +477,70 @@ export default function AgentConversation({ agent, modelsData = [] }) {
       reportSyncFailure(reason);
     }
   }, [refresh, refreshPermissions, refreshForms, reportSyncFailure]);
+
+  const restoreMissingSessions = useCallback(() => {
+    const missing = recovery?.missing || [];
+    if (!agent?.id || !missing.length || restoring) return;
+    confirmAction(
+      {
+        warningKey: "warn_restore_agent_sessions",
+        messageKey: "alert.restore_agent_sessions",
+        confirmKey: "alert.restore_agent_sessions_yes",
+      },
+      () => {
+        void (async () => {
+          setRestoring(true);
+          try {
+            const restored = await restoreCachedSessions(agent, missing);
+            setRecovery(null);
+            setOffline(false);
+            if (restored.length) {
+              notifySuccess(
+                t("agents.restore_sessions_done", {
+                  count: restored.length,
+                }),
+              );
+            } else {
+              notifyError(t("agents.restore_sessions_none"));
+            }
+          } catch (reason) {
+            notifyError(
+              reason instanceof Error ? reason.message : String(reason),
+            );
+          } finally {
+            setRestoring(false);
+          }
+        })();
+      },
+    );
+  }, [
+    agent,
+    recovery,
+    restoring,
+    confirmAction,
+    notifySuccess,
+    notifyError,
+    t,
+  ]);
+
+  useEffect(() => {
+    // Without a session id the normal sync never runs, so check the cache directly: an agent
+    // that came back empty can still restore its sessions from here.
+    if (!agent?.id || agent?.sessionId) return;
+    let cancelled = false;
+    setRecovery(null);
+    void inspectAgentRecovery(agent)
+      .then((diagnosis) => {
+        if (cancelled) return;
+        if (diagnosis?.reachable && diagnosis.missing.length) {
+          setRecovery(diagnosis);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [agent?.id, agent?.sessionId]);
 
   const startPolling = useCallback(
     (sentAt) => {
@@ -633,6 +756,9 @@ export default function AgentConversation({ agent, modelsData = [] }) {
     setAborted(false);
     setOffline(false);
     setCachedAt(null);
+    setRecovery(null);
+    restoredHistoryRef.current = false;
+    setRestoredHistory(false);
     serverMessagesRef.current = [];
     lastServerMessageIdRef.current = null;
     forceFullSyncRef.current = false;
@@ -645,6 +771,12 @@ export default function AgentConversation({ agent, modelsData = [] }) {
         agent.sessionId,
       ).catch(() => null);
       if (cancelled) return;
+      if (cached?.restoredFrom) {
+        // The transcript lives in the session's instructions and is not part of the server
+        // timeline, so an empty download must not delete it from view.
+        restoredHistoryRef.current = true;
+        setRestoredHistory(true);
+      }
       if (cached?.messages?.length && serverMessagesRef.current.length === 0) {
         serverMessagesRef.current = cached.messages;
         lastServerMessageIdRef.current = cached.lastMessageId;
@@ -1337,6 +1469,38 @@ export default function AgentConversation({ agent, modelsData = [] }) {
           </button>
         </Tooltip>
       </header>
+
+      {recovery?.missing?.length ? (
+        <div
+          className="flex flex-wrap items-center gap-2 border-b border-warning/40 bg-warning/10 px-4 py-2 text-xs text-base-content/80"
+          data-testid="agent-restore-banner"
+        >
+          <TriangleAlert size={14} className="shrink-0 text-warning" />
+          <span className="min-w-0 flex-1">
+            {t("agents.restore_sessions_banner", {
+              count: recovery.missing.length,
+            })}
+          </span>
+          <button
+            type="button"
+            data-guide="agent-restore-sessions"
+            className="btn btn-accent btn-xs"
+            disabled={restoring}
+            onClick={restoreMissingSessions}
+          >
+            {restoring
+              ? t("agents.restore_sessions_busy")
+              : t("agents.restore_sessions_action")}
+          </button>
+        </div>
+      ) : null}
+
+      {restoredHistory && (
+        <div className="flex items-start gap-2 border-b border-info/40 bg-info/10 px-4 py-2 text-xs text-base-content/80">
+          <Info size={14} className="mt-0.5 shrink-0 text-info" />
+          <span className="min-w-0 flex-1">{t("agents.restored_history")}</span>
+        </div>
+      )}
 
       {offline && (
         <div className="flex flex-wrap items-center gap-2 border-b border-warning/40 bg-warning/10 px-4 py-2 text-xs text-base-content/80">

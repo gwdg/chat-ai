@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import AgentConversation from "../AgentConversation";
 import { db } from "../../../db";
-import { saveAgentSessionMessages } from "../../../db/agentSessionCache";
+import { saveAgentSessionMessages, saveAgentSessions } from "../../../db/agentSessionCache";
 
 const render = (ui) =>
   testingLibraryRender(<MemoryRouter>{ui}</MemoryRouter>);
@@ -39,6 +39,8 @@ const apiMocks = vi.hoisted(() => ({
   replyForm: vi.fn(),
   subscribe: vi.fn(async () => {}),
   getAgent: vi.fn(),
+  listSessions: vi.fn(),
+  writeInstruction: vi.fn(),
 }));
 
 vi.mock("../../../apis/opencodeAgents", () => ({
@@ -64,6 +66,8 @@ vi.mock("../../../apis/opencodeAgents", () => ({
   listOpencodeForms: (...args) => apiMocks.forms(...args),
   replyOpencodeForm: (...args) => apiMocks.replyForm(...args),
   subscribeOpencodeEvents: (...args) => apiMocks.subscribe(...args),
+  listOpencodeSessions: (...args) => apiMocks.listSessions(...args),
+  putOpencodeInstructionEntry: (...args) => apiMocks.writeInstruction(...args),
 }));
 vi.mock("../../../agents/agentStore", () => ({
   getAgent: (...args) => apiMocks.getAgent(...args),
@@ -127,6 +131,8 @@ beforeEach(async () => {
   apiMocks.forms.mockResolvedValue([]);
   apiMocks.replyForm.mockResolvedValue(null);
   apiMocks.subscribe.mockResolvedValue(undefined);
+  apiMocks.listSessions.mockResolvedValue([]);
+  apiMocks.writeInstruction.mockResolvedValue({});
 });
 
 describe("AgentConversation", () => {
@@ -205,6 +211,9 @@ describe("AgentConversation", () => {
       { replace: true },
     );
     apiMocks.list.mockRejectedValue(new Error("connect ECONNREFUSED"));
+    apiMocks.listSessions.mockRejectedValue(
+      new Error("connect ECONNREFUSED"),
+    );
 
     render(<AgentConversation agent={agent} />);
 
@@ -220,6 +229,9 @@ describe("AgentConversation", () => {
 
   it("explains an unreachable agent when nothing was cached", async () => {
     apiMocks.list.mockRejectedValue(new Error("connect ECONNREFUSED"));
+    apiMocks.listSessions.mockRejectedValue(
+      new Error("connect ECONNREFUSED"),
+    );
 
     render(<AgentConversation agent={agent} />);
 
@@ -229,6 +241,116 @@ describe("AgentConversation", () => {
     expect(
       screen.queryByText(/connect ECONNREFUSED/),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers to restore cached sessions when the reachable agent lost them", async () => {
+    await saveAgentSessionMessages(
+      "agent-1",
+      "session-1",
+      [
+        { id: "cached-1", type: "user", text: "Cached question" },
+        {
+          id: "cached-2",
+          type: "assistant",
+          content: [{ type: "text", text: "Cached answer" }],
+        },
+      ],
+      { replace: true },
+    );
+    await saveAgentSessions("agent-1", [
+      { id: "session-1", title: "Design session" },
+    ]);
+    apiMocks.list.mockRejectedValue(
+      new Error("opencode server responded with 404"),
+    );
+    apiMocks.listSessions.mockResolvedValue([]);
+
+    render(<AgentConversation agent={agent} />);
+
+    expect(await screen.findByText(/Restore (it|them) from the local cache/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Showing the history cached at/),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Restore from cache" }),
+    );
+
+    await waitFor(() =>
+      expect(apiMocks.writeInstruction).toHaveBeenCalledWith(
+        agent,
+        "session-2",
+        "chat-ai-restored-history",
+        expect.stringContaining("Cached question"),
+      ),
+    );
+    expect(apiMocks.createSession).toHaveBeenCalledWith(
+      agent,
+      "Design session",
+    );
+    expect(apiMocks.updateAgent).toHaveBeenCalledWith("agent-1", {
+      sessionId: "session-2",
+    });
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-restore-banner")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("keeps the cached transcript when an empty server lost the session", async () => {
+    await saveAgentSessionMessages(
+      "agent-1",
+      "session-1",
+      [
+        { id: "cached-1", type: "user", text: "Cached question" },
+        {
+          id: "cached-2",
+          type: "assistant",
+          content: [{ type: "text", text: "Cached answer" }],
+        },
+      ],
+      { replace: true },
+    );
+    apiMocks.listPage.mockResolvedValue({ messages: [], complete: true });
+    apiMocks.list.mockResolvedValue([]);
+    apiMocks.listSessions.mockResolvedValue([]);
+
+    render(<AgentConversation agent={agent} />);
+
+    expect(await screen.findByText("Cached question")).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Restore (it|them) from the local cache/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Cached answer")).toBeInTheDocument();
+    await waitFor(async () => {
+      const rows = await db.agent_session_messages
+        .where("[agentId+sessionId]")
+        .equals(["agent-1", "session-1"])
+        .toArray();
+      expect(rows).toHaveLength(2);
+    });
+  });
+
+  it("keeps a restored transcript when the server timeline is empty", async () => {
+    await saveAgentSessionMessages(
+      "agent-1",
+      "session-1",
+      [{ id: "cached-1", type: "user", text: "Restored question" }],
+      { replace: true, restoredFrom: "old-session" },
+    );
+    apiMocks.listPage.mockResolvedValue({ messages: [], complete: true });
+    apiMocks.list.mockResolvedValue([]);
+    apiMocks.listSessions.mockResolvedValue([{ id: "session-1" }]);
+
+    render(<AgentConversation agent={agent} />);
+
+    expect(await screen.findByText("Restored question")).toBeInTheDocument();
+    expect(
+      await screen.findByText(/restored into the session's instructions/),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(apiMocks.list).toHaveBeenCalledWith(agent, "session-1"),
+    );
+    expect(screen.getByText("Restored question")).toBeInTheDocument();
   });
 
   it("re-reads the history after a revert in the tools modal", async () => {
@@ -296,18 +418,11 @@ describe("AgentConversation", () => {
     );
     apiMocks.listPage.mockResolvedValue({ messages: [], complete: true });
     apiMocks.list.mockResolvedValue([]);
+    // The session still exists, so this is a cleared history, not a lost agent.
+    apiMocks.listSessions.mockResolvedValue([{ id: "session-1" }]);
 
     render(<AgentConversation agent={agent} />);
 
-    await waitFor(() =>
-      expect(screen.queryByText("Cached question")).not.toBeInTheDocument(),
-    );
-    expect(screen.queryByText("Cached answer")).not.toBeInTheDocument();
-    expect(
-      await screen.findByPlaceholderText(
-        "No messages yet. Ask the agent something.",
-      ),
-    ).toBeInTheDocument();
     await waitFor(async () =>
       expect(
         await db.agent_session_messages
@@ -316,6 +431,13 @@ describe("AgentConversation", () => {
           .count(),
       ).toBe(0),
     );
+    expect(screen.queryByText("Cached question")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cached answer")).not.toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(
+        "No messages yet. Ask the agent something.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("follows a revert that removed the newest cached message", async () => {

@@ -21,6 +21,8 @@ export type CachedAgentSessionMessages = {
   messages: any[];
   lastMessageId: string | null;
   syncedAt: number | null;
+  /** Original server session id when this history was restored into a new session. */
+  restoredFrom: string | null;
 };
 
 export async function loadAgentSessionMessages(
@@ -28,7 +30,12 @@ export async function loadAgentSessionMessages(
   sessionId?: string,
 ): Promise<CachedAgentSessionMessages> {
   if (!agentId || !sessionId) {
-    return { messages: [], lastMessageId: null, syncedAt: null };
+    return {
+      messages: [],
+      lastMessageId: null,
+      syncedAt: null,
+      restoredFrom: null,
+    };
   }
   const [rows, meta] = await Promise.all([
     db.agent_session_messages
@@ -45,6 +52,7 @@ export async function loadAgentSessionMessages(
     messages: rows.map((row) => row.data),
     lastMessageId: meta?.lastMessageId ?? null,
     syncedAt: meta?.messagesSyncedAt ?? null,
+    restoredFrom: meta?.restoredFrom ?? null,
   };
 }
 
@@ -55,6 +63,8 @@ export type SaveAgentSessionMessagesOptions = {
   replace?: boolean;
   lastMessageId?: string | null;
   syncedAt?: number;
+  /** Marks a restored history, so the empty server timeline does not replace it. */
+  restoredFrom?: string | null;
 };
 
 /**
@@ -139,6 +149,10 @@ export async function saveAgentSessionMessages(
             previousMeta?.lastMessageId ??
             null),
         messageCount: replace ? list.length : messageCount,
+        restoredFrom:
+          options.restoredFrom !== undefined
+            ? options.restoredFrom
+            : (previousMeta?.restoredFrom ?? null),
       };
       await db.agent_sessions.put(meta);
     },
@@ -207,6 +221,26 @@ export async function loadAgentSessions(agentId?: string): Promise<any[]> {
     .equals(agentId)
     .toArray();
   return rows.map((row) => row.data).filter(Boolean);
+}
+
+/**
+ * Every session id the cache knows, including sessions that only have cached messages
+ * (a message row can exist without the metadata row).
+ */
+export async function loadCachedAgentSessionIds(
+  agentId?: string,
+): Promise<string[]> {
+  if (!agentId) return [];
+  const [meta, messages] = await Promise.all([
+    db.agent_sessions.where("agentId").equals(agentId).toArray(),
+    db.agent_session_messages.where("agentId").equals(agentId).toArray(),
+  ]);
+  const ids = new Set<string>();
+  for (const row of meta) {
+    if (row.data) ids.add(row.sessionId);
+  }
+  for (const row of messages) ids.add(row.sessionId);
+  return [...ids];
 }
 
 export async function removeAgentSessionCache(

@@ -775,6 +775,17 @@ The server is authoritative once it answers, and the cache follows it:
 - An unreachable server never touches the cache; `AgentConversation` keeps the cached timeline and
   shows a warning banner with the cache time and a Refresh button instead of a bare error.
 
+A reachable server that lost its sessions is handled separately from an unreachable one.
+`agents/agentRecovery.js#inspectAgentRecovery` compares the server's session list with every cached
+session id (metadata or messages), and `AgentConversation` shows a restore banner when cached
+histories are missing. `restoreCachedSessions` creates one new session per cached history, writes the
+size-capped transcript into `chat-ai-restored-history`, copies the cache under the new id with
+`restoredFrom`, moves workspace session links and session summaries, and drops the old cache entry so
+the same session is not offered twice. Restored caches are shown even though the server timeline is
+empty: `syncSessionHistory` is called with `keepWhenEmpty` while `restoredFrom` is set, and an empty
+full read is never allowed to wipe a cached history when the session itself is missing. An empty
+session listing no longer prunes the cache, because that cache is the only copy left.
+
 A cache older than `CACHE_REVALIDATE_MS` (24 h) is re-read in full once on entry and reconciled by
 id, which also drops messages removed by another client (TUI, compaction elsewhere). Running
 `compact` from the app forces that same full sync because compaction rewrites the timeline in place.

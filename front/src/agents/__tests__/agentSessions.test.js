@@ -198,6 +198,38 @@ describe("syncSessionHistory", () => {
     expect(synced.replace).toBe(true);
   });
 
+  it("keeps a restored transcript when the server timeline is empty", async () => {
+    apiMocks.page.mockResolvedValue({ messages: [], complete: true });
+    apiMocks.full.mockResolvedValue([]);
+
+    const synced = await syncSessionHistory(
+      agent,
+      "s1",
+      [message("a"), message("b")],
+      "b",
+      { keepWhenEmpty: true },
+    );
+
+    expect(synced.messages.map((item) => item.id)).toEqual(["a", "b"]);
+    expect(synced.replace).toBe(false);
+    expect(synced.changed).toEqual([]);
+  });
+
+  it("keeps a restored transcript on a stale full read too", async () => {
+    apiMocks.full.mockResolvedValue([]);
+
+    const synced = await syncSessionHistory(
+      agent,
+      "s1",
+      [message("a")],
+      "a",
+      { full: true, keepWhenEmpty: true },
+    );
+
+    expect(synced.messages.map((item) => item.id)).toEqual(["a"]);
+    expect(synced.replace).toBe(false);
+  });
+
   it("keeps the cache when the server cannot be reached", async () => {
     apiMocks.page.mockRejectedValue(new Error("connect ECONNREFUSED"));
 
@@ -241,6 +273,21 @@ describe("fetchAgentSessions", () => {
 
     expect(tree.all.map((session) => session.id)).toEqual(["s1"]);
     expect(await cached()).toEqual(["s1"]);
+  });
+
+  it("keeps the cache when an empty server lost every session", async () => {
+    await saveAgentSessions("agent-1", [
+      { id: "s1", title: "One" },
+      { id: "s2", title: "Two" },
+    ]);
+    apiMocks.sessions.mockResolvedValue([]);
+    apiMocks.children.mockResolvedValue([]);
+
+    const tree = await fetchAgentSessions(agent);
+
+    expect(tree.all).toEqual([]);
+    // The cache is the only copy left, so it must survive for the recovery offer.
+    expect(await cached()).toEqual(["s1", "s2"]);
   });
 
   it("keeps the cache when the listing could not be completed", async () => {

@@ -320,6 +320,8 @@ export type AgentSessionRow = {
   messagesSyncedAt?: number
   lastMessageId?: string | null
   messageCount?: number
+  /** Set when the cached history was written into a restored session's instructions. */
+  restoredFrom?: string | null
 }
 
 // One OpenCode message of an agent session. Messages are kept separate so a streaming
