@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import {
   Popover,
   PopoverButton,
@@ -38,6 +38,7 @@ import {
   switchAgentSession,
 } from "../../agents/agentSessions";
 import AgentSessionList from "../Agent/AgentSessionList";
+import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import {
   selectCollapsedTopics,
   toggleTopic,
@@ -93,7 +94,7 @@ export default function AgentList() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const location = useLocation();
+  const openAgent = useOpenAgent();
   const { openModal } = useModal();
   const { notifyError } = useToast();
   const agents = useAgents();
@@ -118,9 +119,7 @@ export default function AgentList() {
   const seededRef = useRef<Set<string>>(new Set());
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__agents__");
-  const activeId = location.pathname.startsWith("/agent/")
-    ? location.pathname.slice("/agent/".length)
-    : null;
+  const activeId = openAgent.agentId;
 
   // Make sure an agent attached to a workspace shows its active session there, even when the
   // workspace was attached before sessions were tracked per workspace.
@@ -499,7 +498,7 @@ export default function AgentList() {
                     <AgentSessionList
                       agent={agent}
                       tree={sessionTree}
-                      activeSessionId={agent.sessionId}
+                      activeSessionId={activeSessionIdFor(openAgent, agent)}
                       statuses={sessionStatuses[agent.id]}
                       summaries={sessionSummariesFor(agent)}
                       onSelect={(session) => switchSession(agent, session)}
@@ -553,7 +552,7 @@ export default function AgentList() {
                           <AgentSessionList
                             agent={agent}
                             tree={filterSessionTree(sessionTree, sessionIds)}
-                            activeSessionId={agent.sessionId}
+                            activeSessionId={activeSessionIdFor(openAgent, agent)}
                             statuses={sessionStatuses[agent.id]}
                             summaries={sessionSummariesFor(agent)}
                             onSelect={(session) =>
@@ -582,7 +581,7 @@ export default function AgentList() {
                         <AgentSessionList
                           agent={agent}
                           tree={filterSessionTree(sessionTree, unassigned)}
-                          activeSessionId={agent.sessionId}
+                          activeSessionId={activeSessionIdFor(openAgent, agent)}
                           statuses={sessionStatuses[agent.id]}
                           summaries={sessionSummariesFor(agent)}
                           onSelect={(session) => switchSession(agent, session)}

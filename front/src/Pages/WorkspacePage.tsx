@@ -24,6 +24,7 @@ import WorkspaceRootTree from "../components/Workspace/WorkspaceRootTree";
 import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
 import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
 import AgentSessionList from "../components/Agent/AgentSessionList";
+import { activeSessionIdFor, useOpenAgent } from "../hooks/useOpenAgent";
 import { useModal } from "../modals/ModalContext";
 import { useToast } from "../hooks/useToast";
 import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
@@ -79,6 +80,7 @@ import { runTransfer } from "../workspace/transfer";
 import { uploadLocalFiles } from "../workspace/upload";
 import { baseName, joinPath, normalizePath, parentPath } from "../workspace/paths";
 import type { FileProvider, QuotaInfo } from "../workspace/providers/types";
+import { visibleWorkspaceSources } from "../workspace/workspaceSources";
 
 const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
   const reader = stream.getReader();
@@ -165,6 +167,7 @@ const quotaLabel = (
 export default function WorkspacePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const openAgent = useOpenAgent();
   const { workspaceId } = useParams();
   const { openModal, confirmAction } = useModal();
   const { notifyError, notifySuccess } = useToast();
@@ -194,6 +197,10 @@ export default function WorkspacePage() {
         .map((link) => agents.find((agent) => agent.id === link.agentId))
         .filter(Boolean),
     [workspaceAgents, agents],
+  );
+  const visibleSources = useMemo(
+    () => visibleWorkspaceSources(sources, attachedAgents),
+    [sources, attachedAgents],
   );
   const [agentSessions, setAgentSessions] = useState<Record<string, any>>({});
   const [expandedAgentSessions, setExpandedAgentSessions] = useState<Set<string>>(
@@ -1385,7 +1392,7 @@ export default function WorkspacePage() {
                     </div>
                   </div>
                   <div className="max-h-[45%] overflow-y-auto p-1.5">
-                    {sources.length === 0 ? (
+                    {visibleSources.length === 0 ? (
                       <button
                         type="button"
                         onClick={addSource}
@@ -1394,7 +1401,7 @@ export default function WorkspacePage() {
                         {t("workspace.no_sources")}
                       </button>
                     ) : (
-                      sources.map((source) => {
+                      visibleSources.map((source) => {
                         const active = source.id === selectedSourceId;
                         const provider = providers.get(source.id);
                         const unavailable =
@@ -1756,7 +1763,7 @@ export default function WorkspacePage() {
                                     agentSessions[agent.id],
                                     sessionIds,
                                   )}
-                                  activeSessionId={agent.sessionId}
+                                  activeSessionId={activeSessionIdFor(openAgent, agent)}
                                   summaries={sessionSummariesFor(agent)}
                                   onSelect={(session) =>
                                     switchToAgentSession(agent, session)

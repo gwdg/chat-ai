@@ -41,6 +41,7 @@ import {
 } from "../../agents/workspaceAgentSessions";
 import MetaChangesPanel from "../Meta/MetaChangesPanel";
 import AgentSessionList from "../Agent/AgentSessionList";
+import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
 const classifySessionStatus = (value) => {
@@ -74,6 +75,7 @@ export default function ChatAgentSidebar({ conversationId }) {
   const { t } = useTranslation();
   const userSettings = useSelector(selectUserSettings);
   const navigate = useNavigate();
+  const openAgent = useOpenAgent();
   const agents = useAgents();
   const chatLinks = useChatWorkspaces(conversationId);
   const agentLinks = useWorkspaceAgentLinks();
@@ -346,7 +348,7 @@ export default function ChatAgentSidebar({ conversationId }) {
                   <AgentSessionList
                     agent={agent}
                     tree={filterSessionTree(sessions[agent.id], sessionIdsFor(agent))}
-                    activeSessionId={agent.sessionId}
+                    activeSessionId={activeSessionIdFor(openAgent, agent)}
                     statuses={sessionStatuses[agent.id]}
                     summaries={sessionSummariesFor(agent)}
                     onSelect={(session) => switchSession(agent, session)}

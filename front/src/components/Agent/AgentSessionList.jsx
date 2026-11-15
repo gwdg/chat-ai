@@ -56,6 +56,7 @@ const SessionRow = ({
       <button
         type="button"
         onClick={() => onSelect?.(session)}
+        aria-current={active ? "true" : undefined}
         className={`flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left text-[11px] ${
           active ? "font-medium" : ""
         }`}

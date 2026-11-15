@@ -19,6 +19,7 @@ vi.mock("../../../Redux/reducers/userSettingsReducer", () => ({
 }));
 vi.mock("react-router", () => ({
   useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: "/workspace/ws-1", search: "" }),
 }));
 vi.mock("../../../db/workspaceDb", () => ({
   useChatWorkspaces: () => mocks.chatLinks,

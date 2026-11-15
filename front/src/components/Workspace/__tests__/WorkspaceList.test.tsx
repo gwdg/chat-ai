@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   attach: vi.fn(async () => {}),
   hasAgentLink: vi.fn(async () => true),
   sessionLinks: vi.fn(),
+  chatLinks: vi.fn(),
+  conversations: vi.fn(),
   notifyError: vi.fn(),
 }));
 
@@ -21,13 +23,13 @@ vi.mock("../../../Redux/reducers/interfaceSettingsSlice", () => ({
   toggleTopic: (id: string) => ({ type: "toggleTopic", payload: id }),
 }));
 vi.mock("../../../db", () => ({
-  useConversationList: () => [],
+  useConversationList: () => mocks.conversations(),
 }));
 vi.mock("../../../db/workspaceDb", () => ({
   useWorkspaceList: () => [
     { id: "ws-1", name: "Teaching", icon: "default", color: "default" },
   ],
-  useWorkspaceChatLinks: () => [],
+  useWorkspaceChatLinks: () => mocks.chatLinks(),
   useWorkspaceAgentLinks: () => [{ workspaceId: "ws-1", agentId: "agent-1" }],
   useWorkspaceAgentSessionLinks: () => mocks.sessionLinks(),
   deleteWorkspace: vi.fn(),
@@ -79,6 +81,8 @@ beforeEach(() => {
   mocks.sessionLinks.mockReset().mockReturnValue([
     { workspaceId: "ws-1", agentId: "agent-1", sessionId: "session-1" },
   ]);
+  mocks.chatLinks.mockReset().mockReturnValue([]);
+  mocks.conversations.mockReset().mockReturnValue([]);
 });
 
 describe("WorkspaceList agent sessions", () => {
@@ -168,6 +172,43 @@ describe("WorkspaceList agent sessions", () => {
         "agent-1",
         "session-3",
       ),
+    );
+  });
+
+  it("highlights the open chat and no agent session", async () => {
+    mocks.conversations.mockReturnValue([
+      { id: "chat-1", title: "Workspace chat" },
+    ]);
+    mocks.chatLinks.mockReturnValue([
+      { workspaceId: "ws-1", conversationId: "chat-1" },
+    ]);
+    render(
+      <MemoryRouter initialEntries={["/chat/chat-1"]}>
+        <WorkspaceList />
+      </MemoryRouter>,
+    );
+
+    const chat = await screen.findByRole("button", { name: "Workspace chat" });
+    expect(chat).toHaveAttribute("aria-current", "page");
+    const session = await screen.findByText("Design session");
+    expect(session.closest("button")).not.toHaveAttribute("aria-current");
+    expect(
+      screen.getByText("HPC agent").closest("button"),
+    ).not.toHaveAttribute("aria-current");
+  });
+
+  it("highlights the open agent and its session", async () => {
+    render(
+      <MemoryRouter initialEntries={["/agent/agent-1"]}>
+        <WorkspaceList />
+      </MemoryRouter>,
+    );
+
+    const session = await screen.findByText("Design session");
+    expect(session.closest("button")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByText("HPC agent").closest("button")).toHaveAttribute(
+      "aria-current",
+      "page",
     );
   });
 });

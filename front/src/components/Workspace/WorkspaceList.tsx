@@ -46,6 +46,7 @@ import {
 import AgentSessionList from "../Agent/AgentSessionList";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
+import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import { topicIconById } from "../Sidebar/topicIcons";
 import { topicColor, withAlpha } from "../Sidebar/topicColors";
 
@@ -54,6 +55,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const openAgent = useOpenAgent();
   const { openModal, confirmAction } = useModal();
   const { notifyError } = useToast();
   const workspaces = useWorkspaceList();
@@ -369,10 +371,16 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                 </div>
                 {expanded && expandable && (
                   <div className="mb-1 ml-8 flex flex-col gap-0.5 border-l border-base-300 pl-2">
-                    {chats.map((chat) => (
+                    {chats.map((chat) => {
+                      const chatActive = location.pathname === `/chat/${chat.id}`;
+                      return (
                       <div
                         key={chat.id}
-                        className="group/chat flex items-center gap-1 rounded-md px-1 py-0.5 hover:bg-base-200"
+                        className={`group/chat flex items-center gap-1 rounded-md px-1 py-0.5 ${
+                          chatActive
+                            ? "bg-base-200 text-base-content"
+                            : "hover:bg-base-200"
+                        }`}
                       >
                         <button
                           type="button"
@@ -380,7 +388,12 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                             navigate(`/chat/${chat.id}`);
                             onNavigate?.();
                           }}
-                          className="min-w-0 flex-1 truncate text-left text-[11px] text-base-content/80"
+                          aria-current={chatActive ? "page" : undefined}
+                          className={`min-w-0 flex-1 truncate text-left text-[11px] ${
+                            chatActive
+                              ? "font-medium text-base-content"
+                              : "text-base-content/80"
+                          }`}
                         >
                           {chat.title || t("conversation.untitled")}
                         </button>
@@ -396,7 +409,8 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                           ×
                         </button>
                       </div>
-                    ))}
+                      );
+                    })}
                     {chats.length > 0 && attachedAgents.length > 0 && (
                       <div className="my-1 border-t border-base-300/70" />
                     )}
@@ -415,9 +429,16 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                       const agentKey = `${workspace.id}:${agent.id}`;
                       const sessionsOpen = !collapsedAgents.has(agentKey);
                       const hasSessions = sessionIds.size > 0;
+                      const agentActive = openAgent.agentId === agent.id;
                       return (
                         <div key={agent.id}>
-                          <div className="group/agent flex items-center gap-1 rounded-md px-1 py-0.5 hover:bg-base-200">
+                          <div
+                            className={`group/agent flex items-center gap-1 rounded-md px-1 py-0.5 ${
+                              agentActive
+                                ? "bg-base-200 text-base-content"
+                                : "hover:bg-base-200"
+                            }`}
+                          >
                             <button
                               type="button"
                               disabled={!hasSessions}
@@ -451,7 +472,12 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                                 navigate(`/agent/${agent.id}`);
                                 onNavigate?.();
                               }}
-                              className="flex min-w-0 flex-1 items-center gap-1 text-left text-[11px] text-base-content/80"
+                              aria-current={agentActive ? "page" : undefined}
+                              className={`flex min-w-0 flex-1 items-center gap-1 text-left text-[11px] ${
+                                agentActive
+                                  ? "font-medium text-base-content"
+                                  : "text-base-content/80"
+                              }`}
                             >
                               <Bot
                                 size={11}
@@ -509,7 +535,10 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                             <AgentSessionList
                               agent={agent}
                               tree={scoped}
-                              activeSessionId={agent.sessionId}
+                              activeSessionId={activeSessionIdFor(
+                                openAgent,
+                                agent,
+                              )}
                               summaries={sessionSummariesFor(agent)}
                               onSelect={(session) => {
                                 void (async () => {
