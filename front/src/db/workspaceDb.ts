@@ -203,17 +203,38 @@ export async function ensureAgentFilesSource(
 /** Keep one agent-files source per local agent attached to the workspace. */
 export async function syncAgentFilesSources(
   workspaceId: string,
-  agents: { id: string; name?: string; local?: boolean }[],
+  agents: { id: string; name?: string; local?: boolean; bridgeWorkspaceId?: string }[],
 ): Promise<void> {
   if (!workspaceId) return;
-  const localAgents = (agents || []).filter(
-    (agent) => agent?.id && agent.local !== false,
+  // Read the links here instead of trusting a caller's live query: on first render those
+  // queries still return their empty placeholder, which must not delete every source.
+  const links = await db.workspace_agents
+    .where("workspaceId")
+    .equals(workspaceId)
+    .toArray();
+  const attachedIds = new Set(links.map((link) => link.agentId));
+  const desired = (agents || []).filter(
+    (agent) =>
+      agent?.id &&
+      agent.local !== false &&
+      (attachedIds.has(agent.id) || agent.bridgeWorkspaceId === workspaceId),
   );
   await Promise.all(
-    localAgents.map((agent) => ensureAgentFilesSource(workspaceId, agent)),
+    desired.map((agent) => ensureAgentFilesSource(workspaceId, agent)),
   );
-  // Do not remove sources here: live-query data starts empty, and removing on an
-  // intermediate render would also delete mounts. Explicit detach removes them.
+  const wanted = new Set(
+    desired.map((agent) => `${AGENT_FILES_SOURCE_PREFIX}${workspaceId}:${agent.id}`),
+  );
+  const existing = await db.workspace_sources
+    .where("workspaceId")
+    .equals(workspaceId)
+    .and((source) => source.kind === "agent")
+    .toArray();
+  await Promise.all(
+    existing
+      .filter((source) => !wanted.has(source.id))
+      .map((source) => removeSource(source.id)),
+  );
 }
 
 export async function removeAgentFilesSource(

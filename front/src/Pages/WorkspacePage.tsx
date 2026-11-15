@@ -223,15 +223,10 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     if (!workspaceId) return;
-    const attachedIds = new Set(attachedAgents.map((agent) => agent.id));
-    const bridged = agents.filter(
-      (agent) =>
-        agent.local !== false &&
-        agent.bridgeWorkspaceId === workspaceId &&
-        !attachedIds.has(agent.id),
-    );
-    void syncAgentFilesSources(workspaceId, [...attachedAgents, ...bridged]);
-  }, [workspaceId, attachedAgents, agents]);
+    // Reconcile agent-files sources with the workspace links on show and whenever the
+    // agent list changes: attach creates the source, detach or deleting an agent removes it.
+    void syncAgentFilesSources(workspaceId, agents);
+  }, [workspaceId, agents, attachedAgents]);
 
   useEffect(() => {
     for (const agentId of expandedAgentSessions) {

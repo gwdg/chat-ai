@@ -24,6 +24,7 @@ import {
   saveSourceHandle,
   seedWorkspaceAgentSessions,
   setWorkspaceMountReadOnly,
+  syncAgentFilesSources,
   updateSource,
   updateWorkspace,
 } from "../workspaceDb";
@@ -241,6 +242,47 @@ describe("workspace database", () => {
     await attachWorkspaceAgentSession(workspaceId, "agent-1", "session-1");
     await removeOrphanWorkspaceAgents([]);
     expect(await db.workspace_agent_sessions.count()).toBe(0);
+  });
+
+  it("keeps agent-files sources in sync with attach, detach and removal", async () => {
+    const workspaceId = await createWorkspace("Agent files");
+    const workspaceAgentSources = async () =>
+      (
+        await db.workspace_sources
+          .where("workspaceId")
+          .equals(workspaceId)
+          .toArray()
+      ).filter((source) => source.kind === "agent");
+    const agent = { id: "agent-1", name: "HPC agent", local: true };
+
+    await attachWorkspaceAgent(workspaceId, agent.id);
+    await syncAgentFilesSources(workspaceId, [agent]);
+    expect(await workspaceAgentSources()).toMatchObject([
+      {
+        id: `agent-files:${workspaceId}:agent-1`,
+        label: "HPC agent",
+        readOnly: true,
+      },
+    ]);
+
+    // Renaming the agent updates the source label.
+    await syncAgentFilesSources(workspaceId, [{ ...agent, name: "Renamed" }]);
+    expect((await workspaceAgentSources())[0].label).toBe("Renamed");
+
+    // Detaching the agent removes the derived source.
+    await detachWorkspaceAgent(workspaceId, agent.id);
+    await syncAgentFilesSources(workspaceId, [agent]);
+    expect(await workspaceAgentSources()).toHaveLength(0);
+
+    // An agent bridged to the workspace keeps a source without a workspace link.
+    await syncAgentFilesSources(workspaceId, [
+      { ...agent, bridgeWorkspaceId: workspaceId },
+    ]);
+    expect(await workspaceAgentSources()).toHaveLength(1);
+
+    // Deleting the agent removes its source.
+    await syncAgentFilesSources(workspaceId, []);
+    expect(await workspaceAgentSources()).toHaveLength(0);
   });
 
   it("marks a source read-only", async () => {

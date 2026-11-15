@@ -635,8 +635,12 @@ browser = the shared IndexedDB tree in `workspace_nodes` / `workspace_blobs`, lo
 by a configured local MCP server (the option only appears when `tools.mcp` is on and a local URL is
 configured), agent = a read-only view of a local agent's OpenCode project filesystem. A local agent
 attached to a workspace gets one deterministic `agent` source per workspace through
-`syncAgentFilesSources()`; it uses the same `/fs/list` and `/fs/read` endpoints as the agent file
-panel. Providers declare `capabilities`, and the UI must offer only what a provider reports.
+`syncAgentFilesSources()`; the workspace page calls it on show and whenever the agent list or its
+links change. It reads the `workspace_agents` links itself, so a live query that still holds its
+empty placeholder cannot prune sources, and it deletes the derived source when the agent is detached
+or no longer exists (a source for a bridged-only agent is kept). It uses the same `/fs/list` and
+`/fs/read` endpoints as the agent file panel. Providers declare `capabilities`, and the UI must offer
+only what a provider reports.
 `WorkspaceSourceRow.readOnly` wraps the provider in `ReadOnlyProvider` (writes, deletes, mkdir,
 move and copy throw `PERMISSION_DENIED`), and `WorkspaceMountRow.readOnly` blocks writes/moves
 through that mount while still allowing reads and copies out. The Local tools panel was removed;
