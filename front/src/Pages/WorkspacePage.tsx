@@ -1365,10 +1365,10 @@ export default function WorkspacePage() {
                 </button>
               </header>
 
-              <div className="mx-auto flex min-h-0 w-full flex-1 gap-2 md:max-w-[85vw] xl:max-w-[1300px]">
+              <div className="mx-auto flex min-h-0 w-full flex-1 flex-col gap-2 overflow-y-auto md:max-w-[85vw] md:flex-row md:overflow-visible xl:max-w-[1300px]">
                 <aside
                   data-guide="workspace-sources"
-                  className="flex w-64 shrink-0 flex-col gap-2 overflow-y-auto"
+                  className="flex w-full shrink-0 flex-col gap-2 md:w-64 md:overflow-y-auto"
                 >
                   <section className="rounded-xl border border-base-300 bg-base-100">
                   <div className="flex items-center justify-between border-b border-base-300 px-3 py-2">
@@ -1814,7 +1814,7 @@ export default function WorkspacePage() {
                   </section>
                 </aside>
 
-                <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100">
+                <section className="flex min-h-[60dvh] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100 md:min-h-0">
                   {!selectedProvider ? (
                     <div className="flex flex-1 flex-col">
                       <WorkspaceRootBrowser
