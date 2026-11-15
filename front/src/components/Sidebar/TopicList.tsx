@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DragEvent, ReactNode } from "react";
+import type { CSSProperties, DragEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router";
@@ -16,7 +16,7 @@ import {
 } from "@carbon/icons-react";
 
 import type { FolderRow } from "../../db/dbTypes";
-import { topicColor, withAlpha } from "./topicColors";
+import { groupRowTint, groupRule, topicColor, withAlpha } from "./topicColors";
 import { isTopicIconId, topicIcon } from "./topicIcons";
 
 import { useModal } from "../../modals/ModalContext";
@@ -218,12 +218,20 @@ export default function TopicList({
               onOpenTopic(id);
             }
           }}
-          className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer border text-base-content hover:bg-base-200 ${
-            isActiveTopic
-              ? "border-accent/40 bg-base-200"
-              : "border-transparent"
-          } ${isDropTarget ? "border-accent/60" : ""}`}
-          // style={ isDropTarget ? { backgroundColor: topicTint(hex, isDark) } : undefined }
+          className={`group flex items-center gap-2 rounded-2xl px-1 py-2 text-xs transition cursor-pointer bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+            isActiveTopic ? "text-accent" : "text-base-content"
+          } ${isDropTarget ? "ring-2 ring-accent/60" : ""}`}
+          style={
+            {
+              "--group-tint": groupRowTint(hex, isDark, {
+                active: isActiveTopic,
+              }),
+              "--group-tint-hover": groupRowTint(hex, isDark, {
+                active: isActiveTopic,
+                hover: true,
+              }),
+            } as CSSProperties
+          }
         >
           <button
             type="button"
@@ -307,8 +315,8 @@ export default function TopicList({
 
         {!isCollapsed && (
           <div
-            className="ml-2 pl-2 border-l flex flex-col gap-1"
-            style={{ borderColor: withAlpha(hex, isDark ? 0.5 : 0.35) }}
+            className="ml-2 border-x-2 px-2 flex flex-col gap-1"
+            style={{ borderColor: groupRule(hex, isDark) }}
           >
             {count > 0 && (
               conversations.map((conv) => renderConversationRow(conv))

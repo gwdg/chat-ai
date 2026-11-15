@@ -376,6 +376,13 @@ chevron, and never with a vertical connector line.
 It is in `interfaceSettingsSlice`'s `initialState` and `getDefaultState()`; an old persisted state
 without the key falls back to `"topic"` in the selector, so no migration is needed.
 
+A colored group (topic or workspace) tints its name row with a light wash of the group color, and the
+chats, agents and sessions below it are bracketed left and right in the same color. The alphas live
+in `groupRowTint` / `groupRule` (`Sidebar/topicColors.ts`) and differ by theme and by whether the
+group is open. The wash is applied through the `--group-tint` / `--group-tint-hover` CSS variables
+with `bg-[var(--group-tint)]` and `hover:bg-[var(--group-tint-hover)]`, not as an inline
+`backgroundColor`, because inline styles beat the hover utility.
+
 ### 4.16 Meta chat works from conversation summaries, not messages
 
 The AI icon in the sidebar header navigates to `/meta`, rendered by

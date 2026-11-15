@@ -66,7 +66,31 @@ export function withAlpha(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/** Background wash for a topic row while it is a drop target. */
-export function topicTint(hex: string, isDark: boolean) {
-  return withAlpha(hex, isDark ? 0.22 : 0.14);
+/**
+ * Background of a coloured group row (topic, workspace). A light version of the
+ * group colour so the row still reads as a name, not as a button; the open group
+ * is a little stronger and hovering brightens it one more step.
+ */
+export function groupRowTint(
+  hex: string,
+  isDark: boolean,
+  { active = false, hover = false } = {},
+) {
+  const alpha = isDark
+    ? active
+      ? 0.2
+      : hover
+        ? 0.17
+        : 0.12
+    : active
+      ? 0.16
+      : hover
+        ? 0.12
+        : 0.08;
+  return withAlpha(hex, alpha);
+}
+
+/** Colour of the vertical rules bracketing the chats under a group, left and right. */
+export function groupRule(hex: string, isDark: boolean) {
+  return withAlpha(hex, isDark ? 0.5 : 0.35);
 }

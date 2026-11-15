@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router";
@@ -18,6 +19,7 @@ import {
 
 import {
   selectCollapsedTopics,
+  selectDarkMode,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 
@@ -48,7 +50,7 @@ import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import { topicIconById } from "../Sidebar/topicIcons";
-import { topicColor, withAlpha } from "../Sidebar/topicColors";
+import { groupRowTint, groupRule, topicColor, withAlpha } from "../Sidebar/topicColors";
 
 // Workspace rows and the agent rows inside them default to expanded, so only the
 // ids the user folded are persisted. They share `collapsed_topics` with the chat
@@ -103,6 +105,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   const [creatingSession, setCreatingSession] = useState<string | null>(null);
   const loadedSessionAgents = useRef<Set<string>>(new Set());
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
+  const isDark = useSelector(selectDarkMode);
 
   // A workspace row is open unless the user folded it; it is only foldable when
   // something is attached. The same persisted list drives its agent rows below.
@@ -250,11 +253,21 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
             return (
               <div key={workspace.id}>
                 <div
-                  className={`group flex items-center rounded-xl transition ${
-                    active
-                      ? "bg-accent/10 text-accent"
-                      : "text-base-content hover:bg-base-200"
+                  className={`group flex items-center rounded-xl transition bg-[var(--group-tint)] hover:bg-[var(--group-tint-hover)] ${
+                    active ? "text-accent" : "text-base-content"
                   }`}
+                  style={
+                    {
+                      "--group-tint": groupRowTint(workspaceColor.hex, isDark, {
+                        active,
+                      }),
+                      "--group-tint-hover": groupRowTint(
+                        workspaceColor.hex,
+                        isDark,
+                        { active, hover: true },
+                      ),
+                    } as CSSProperties
+                  }
                 >
                   <button
                     type="button"
@@ -361,7 +374,12 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                   </Popover>
                 </div>
                 {expanded && expandable && (
-                  <div className="mb-1 ml-8 flex flex-col gap-0.5 border-l border-base-300 pl-2">
+                  <div
+                    className="mb-1 ml-8 flex flex-col gap-0.5 border-x-2 px-2"
+                    style={{
+                      borderColor: groupRule(workspaceColor.hex, isDark),
+                    }}
+                  >
                     {chats.map((chat) => {
                       const chatActive = location.pathname === `/chat/${chat.id}`;
                       return (

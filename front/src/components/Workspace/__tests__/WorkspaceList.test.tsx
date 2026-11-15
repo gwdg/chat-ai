@@ -21,7 +21,7 @@ vi.mock("../../../db", () => ({
 }));
 vi.mock("../../../db/workspaceDb", () => ({
   useWorkspaceList: () => [
-    { id: "ws-1", name: "Teaching", icon: "default", color: "default" },
+    { id: "ws-1", name: "Teaching", icon: "default", color: "violet" },
   ],
   useWorkspaceChatLinks: () => mocks.chatLinks(),
   useWorkspaceAgentLinks: () => [{ workspaceId: "ws-1", agentId: "agent-1" }],
@@ -241,5 +241,45 @@ describe("WorkspaceList agent sessions", () => {
       "aria-current",
       "page",
     );
+  });
+});
+
+describe("WorkspaceList group colours", () => {
+  const rowFor = () =>
+    screen.getByText("Teaching").closest("[style]") as HTMLElement;
+  const rulesFor = () =>
+    screen.getByText("HPC agent").closest("[style]") as HTMLElement;
+
+  it("washes the workspace name in its colour and brackets its chats on both sides", async () => {
+    renderList(makeStore());
+
+    await screen.findByText("Teaching");
+    const row = rowFor();
+    // #7C3AED: 8% behind the name in light mode.
+    expect(row.style.getPropertyValue("--group-tint")).toBe(
+      "rgba(124, 58, 237, 0.08)",
+    );
+    expect(row.style.getPropertyValue("--group-tint-hover")).toBe(
+      "rgba(124, 58, 237, 0.12)",
+    );
+    // The name row carries no vertical rules; only the rows below are bracketed.
+    expect(row.className).not.toContain("border-l-2");
+    expect(row.className).not.toContain("border-r-2");
+
+    const rules = rulesFor();
+    expect(rules.className).toContain("border-x-2");
+    expect(rules.style.borderLeftColor).toBe("rgba(124, 58, 237, 0.35)");
+    expect(rules.style.borderRightColor).toBe("rgba(124, 58, 237, 0.35)");
+  });
+
+  it("marks the open workspace with a stronger wash and an accent name", async () => {
+    renderList(makeStore(), ["/workspace/ws-1"]);
+
+    await screen.findByText("Teaching");
+    const row = rowFor();
+    expect(row.style.getPropertyValue("--group-tint")).toBe(
+      "rgba(124, 58, 237, 0.16)",
+    );
+    expect(row.className).toContain("text-accent");
   });
 });

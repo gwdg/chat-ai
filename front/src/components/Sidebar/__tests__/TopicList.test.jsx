@@ -5,6 +5,7 @@ import { toggleTopic } from "../../../Redux/reducers/interfaceSettingsSlice";
 
 const reduxMocks = vi.hoisted(() => ({
   collapsed: [],
+  pathname: "/",
   dispatch: vi.fn(),
 }));
 
@@ -13,7 +14,7 @@ vi.mock("react-redux", () => ({
   useSelector: () => reduxMocks.collapsed,
 }));
 vi.mock("react-router", () => ({
-  useLocation: () => ({ pathname: "/" }),
+  useLocation: () => ({ pathname: reduxMocks.pathname }),
 }));
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: vi.fn() }),
@@ -60,6 +61,7 @@ const pinnedHeader = () =>
 
 beforeEach(() => {
   reduxMocks.collapsed = [];
+  reduxMocks.pathname = "/";
   reduxMocks.dispatch.mockClear();
 });
 
@@ -125,5 +127,64 @@ describe("TopicList pinned rows", () => {
     expect(pinnedHeader()).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByTestId("conv-c1")).toBeInTheDocument();
     expect(screen.getByText("Pinned topic")).toBeInTheDocument();
+  });
+});
+
+describe("TopicList group colours", () => {
+  // Violet is a real swatch, so the row colours are deterministic.
+  const violetTopic = { id: "t2", name: "Violet topic", color: "violet" };
+  const violetChat = { id: "c2", title: "Topic chat", lastModified: 1 };
+  const props = {
+    ...baseProps,
+    pinnedTopics: [violetTopic],
+    pinnedConversations: [pinnedChat],
+    conversationsByTopic: new Map([["t2", [violetChat]]]),
+  };
+  const rowFor = (name) => screen.getByText(name).closest("[style]");
+  const rulesFor = () => screen.getByTestId("conv-c2").parentElement;
+
+  it("washes the group name in its colour and brackets its chats on both sides", () => {
+    render(<TopicList {...props} />);
+
+    const row = rowFor("Violet topic");
+    expect(row).toHaveAttribute("role", "button");
+    // #7C3AED: 8% behind the name in light mode.
+    expect(row.style.getPropertyValue("--group-tint")).toBe(
+      "rgba(124, 58, 237, 0.08)",
+    );
+    expect(row.style.getPropertyValue("--group-tint-hover")).toBe(
+      "rgba(124, 58, 237, 0.12)",
+    );
+    // The name row carries no vertical rules; only the chats below it are bracketed.
+    expect(row.className).not.toContain("border-l-2");
+    expect(row.className).not.toContain("border-r-2");
+
+    const rules = rulesFor();
+    expect(rules.className).toContain("border-x-2");
+    expect(rules.style.borderLeftColor).toBe("rgba(124, 58, 237, 0.35)");
+    expect(rules.style.borderRightColor).toBe("rgba(124, 58, 237, 0.35)");
+  });
+
+  it("strengthens the wash and the rules in dark mode", () => {
+    render(<TopicList {...props} isDark />);
+
+    const row = rowFor("Violet topic");
+    expect(row.style.getPropertyValue("--group-tint")).toBe(
+      "rgba(124, 58, 237, 0.12)",
+    );
+    expect(rulesFor().style.borderRightColor).toBe(
+      "rgba(124, 58, 237, 0.5)",
+    );
+  });
+
+  it("marks the open group with a stronger wash and an accent name", () => {
+    reduxMocks.pathname = "/topic/t2";
+    render(<TopicList {...props} />);
+
+    const row = rowFor("Violet topic");
+    expect(row.style.getPropertyValue("--group-tint")).toBe(
+      "rgba(124, 58, 237, 0.16)",
+    );
+    expect(row.className).toContain("text-accent");
   });
 });
