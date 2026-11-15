@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   createSession: vi.fn(),
   attach: vi.fn(async () => {}),
   hasAgentLink: vi.fn(async () => true),
+  sessionLinks: vi.fn(),
   notifyError: vi.fn(),
 }));
 
@@ -28,9 +29,7 @@ vi.mock("../../../db/workspaceDb", () => ({
   ],
   useWorkspaceChatLinks: () => [],
   useWorkspaceAgentLinks: () => [{ workspaceId: "ws-1", agentId: "agent-1" }],
-  useWorkspaceAgentSessionLinks: () => [
-    { workspaceId: "ws-1", agentId: "agent-1", sessionId: "session-1" },
-  ],
+  useWorkspaceAgentSessionLinks: () => mocks.sessionLinks(),
   deleteWorkspace: vi.fn(),
   detachWorkspaceAgent: vi.fn(),
   detachWorkspaceChat: vi.fn(),
@@ -77,6 +76,9 @@ beforeEach(() => {
   mocks.createSession.mockReset();
   mocks.attach.mockReset();
   mocks.hasAgentLink.mockReset().mockResolvedValue(true);
+  mocks.sessionLinks.mockReset().mockReturnValue([
+    { workspaceId: "ws-1", agentId: "agent-1", sessionId: "session-1" },
+  ]);
 });
 
 describe("WorkspaceList agent sessions", () => {
@@ -91,6 +93,38 @@ describe("WorkspaceList agent sessions", () => {
     expect(
       screen.queryByText("Session of another workspace"),
     ).not.toBeInTheDocument();
+  });
+
+  it("collapses and expands the sessions of one agent", async () => {
+    render(
+      <MemoryRouter>
+        <WorkspaceList />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Design session")).toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: "Sessions" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(toggle);
+    expect(screen.queryByText("Design session")).not.toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(toggle);
+    expect(await screen.findByText("Design session")).toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("keeps the toggle of an agent without sessions disabled", async () => {
+    mocks.sessionLinks.mockReturnValue([]);
+    render(
+      <MemoryRouter>
+        <WorkspaceList />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("HPC agent");
+    expect(screen.getByRole("button", { name: "Sessions" })).toBeDisabled();
   });
 
   it("opens an attached session in the agent view", async () => {

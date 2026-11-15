@@ -653,7 +653,8 @@ or detaches them, and links whose agent no longer exists are removed when that p
 `workspace_agent_sessions` (Dexie v13) is the session-level link: it stores
 `{workspaceId, agentId, sessionId}`, so a workspace shows only the sessions attached to it instead
 of every session of an agent. The workspace page's Agents panel, the sidebar's Workspace section
-(each attached agent expands into its sessions for that workspace) and the chat sidebar list those
+(each attached agent has its own expand/collapse toggle for the sessions of that workspace, kept per
+workspace and agent) and the chat sidebar list those
 sessions; the sidebar agent list groups an agent's sessions by workspace and keeps sessions that
 belong to no workspace under "Not in a workspace". Creating a session from a workspace attaches it
 there, opening one from an attached workspace attaches it, and `AppDB` version 13 adds the table.

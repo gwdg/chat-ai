@@ -91,6 +91,9 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   const [sessionTrees, setSessionTrees] = useState<Record<string, any>>({});
   const [sessionRefresh, setSessionRefresh] = useState(0);
   const [creatingSession, setCreatingSession] = useState<string | null>(null);
+  const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(
+    new Set(),
+  );
   const loadedSessionAgents = useRef<Set<string>>(new Set());
 
   // Session titles come from the agent server; load them the first time a workspace with
@@ -407,9 +410,41 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                       const scoped = tree
                         ? filterSessionTree(tree, sessionIds)
                         : null;
+                      // Per workspace and agent, so the same agent can be folded in one
+                      // workspace and open in another.
+                      const agentKey = `${workspace.id}:${agent.id}`;
+                      const sessionsOpen = !collapsedAgents.has(agentKey);
+                      const hasSessions = sessionIds.size > 0;
                       return (
                         <div key={agent.id}>
                           <div className="group/agent flex items-center gap-1 rounded-md px-1 py-0.5 hover:bg-base-200">
+                            <button
+                              type="button"
+                              disabled={!hasSessions}
+                              onClick={() =>
+                                setCollapsedAgents((current) => {
+                                  const next = new Set(current);
+                                  if (next.has(agentKey)) next.delete(agentKey);
+                                  else next.add(agentKey);
+                                  return next;
+                                })
+                              }
+                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 ${
+                                hasSessions
+                                  ? "hover:bg-base-300 hover:text-base-content"
+                                  : "cursor-default opacity-30"
+                              }`}
+                              title={t("agents.sessions")}
+                              aria-label={t("agents.sessions")}
+                              aria-expanded={hasSessions ? sessionsOpen : false}
+                            >
+                              <ChevronDown
+                                size={11}
+                                className={`transition-transform ${
+                                  sessionsOpen ? "" : "-rotate-90"
+                                }`}
+                              />
+                            </button>
                             <button
                               type="button"
                               onClick={() => {
@@ -470,7 +505,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                               ×
                             </button>
                           </div>
-                          {scoped && scoped.all.length > 0 && (
+                          {sessionsOpen && scoped && scoped.all.length > 0 && (
                             <AgentSessionList
                               agent={agent}
                               tree={scoped}
