@@ -4,7 +4,11 @@
     "type": "module",
     "scripts": {
         "e2e": "tsx src/cli.ts",
-        "check": "tsc --noEmit"
+        "check": "tsc --noEmit",
+        "test:e2e": "playwright test",
+        "test:e2e:chrome": "playwright test --project=chrome-desktop --project=chrome-tablet --project=chrome-phone",
+        "test:e2e:ui": "playwright test --ui",
+        "test:e2e:report": "playwright show-report results/html"
     },
     "dependencies": {
         "openai": "^4.104.0",
@@ -12,6 +16,7 @@
         "yaml": "^2.8.1"
     },
     "devDependencies": {
+        "@playwright/test": "^1.65.1",
         "@types/node": "^22.18.0",
         "tsx": "^4.20.5",
         "typescript": "^5.9.2"
