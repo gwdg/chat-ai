@@ -465,7 +465,11 @@ export default function WorkspacePage() {
     setRootLoading(true);
     setRootError("");
     try {
-      setRootEntries(await listRoot(rootPath));
+      const entries = await listRoot(rootPath);
+      setRootEntries(entries);
+      // The left panel always lists the workspace's top level, so keep it in sync while
+      // the centre browser is at the root.
+      if (rootPath === "/") setRootTreeEntries(entries);
     } catch (error) {
       setRootError(error instanceof Error ? error.message : String(error));
       setRootEntries([]);
@@ -1373,11 +1377,12 @@ export default function WorkspacePage() {
               <div className="mx-auto flex min-h-0 w-full flex-1 gap-2 md:max-w-[85vw] xl:max-w-[1300px]">
                 <aside
                   data-guide="workspace-sources"
-                  className="flex w-64 shrink-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100"
+                  className="flex w-64 shrink-0 flex-col gap-2 overflow-y-auto"
                 >
+                  <section className="rounded-xl border border-base-300 bg-base-100">
                   <div className="flex items-center justify-between border-b border-base-300 px-3 py-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-                      {t("workspace.available_storage")}
+                      {t("workspace.storage")}
                     </span>
                     <div className="flex items-center gap-1">
                       <button
@@ -1391,7 +1396,13 @@ export default function WorkspacePage() {
                       </button>
                     </div>
                   </div>
-                  <div className="max-h-[45%] overflow-y-auto p-1.5">
+                  <div className="p-1.5">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+                        {t("workspace.available_storage")}
+                      </span>
+                    </div>
+                  <div className="mt-1 max-h-[45vh] overflow-y-auto">
                     {visibleSources.length === 0 ? (
                       <button
                         type="button"
@@ -1572,6 +1583,7 @@ export default function WorkspacePage() {
                       })
                     )}
                   </div>
+                  </div>
                   <div className="border-t border-base-300 p-1.5">
                     <div className="flex items-center justify-between px-1">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
@@ -1595,6 +1607,7 @@ export default function WorkspacePage() {
                       ) : (
                         <WorkspaceRootTree
                           key={rootTreeRevision}
+                          flat
                           entries={rootTreeEntries}
                           loadChildren={listRoot}
                           onOpen={openRootEntry}
@@ -1617,7 +1630,12 @@ export default function WorkspacePage() {
                       )}
                     </div>
                   </div>
-                  <div className="border-t border-base-300 p-1.5">
+                  </section>
+
+                  <section
+                    className="rounded-xl border border-base-300 bg-base-100 p-1.5"
+                    data-guide="workspace-chats"
+                  >
                     <div className="flex items-center justify-between px-1">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
                         {t("workspace.attached_chats")}
@@ -1663,9 +1681,9 @@ export default function WorkspacePage() {
                         ))
                       )}
                     </div>
-                  </div>
-                  <div
-                    className="border-t border-base-300 p-1.5"
+                  </section>
+                  <section
+                    className="rounded-xl border border-base-300 bg-base-100 p-1.5"
                     data-guide="workspace-agents"
                   >
                     <div className="flex items-center justify-between px-1">
@@ -1782,7 +1800,7 @@ export default function WorkspacePage() {
                         })
                       )}
                     </div>
-                  </div>
+                  </section>
                 </aside>
 
                 <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100">

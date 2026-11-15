@@ -650,7 +650,10 @@ attached workspace root (or the conversation OPFS when no workspace is linked); 
 Every workspace also has an implicit browser-backed root: files and directories created there are
 stored in `workspace_nodes` / `workspace_blobs` under the synthetic source id
 `workspace-root:<workspaceId>`. The root browser lists those local entries and overlays mounted
-source folders, so normalized local directories/files and mounts coexist.
+source folders, so normalized local directories/files and mounts coexist. The workspace page's left
+column is three independent cards: **Storage** (the available sources plus a flat top-level listing
+of the workspace root), **Attached Chats**, and **Attached Agents**. The left root list never
+expands; clicking a folder opens it in the centre browser, whose breadcrumbs show the hierarchy.
 
 `workspace_mounts` maps a folder inside a source (`sourcePath`) to a workspace path (`path`), so
 several sources can appear side by side in one workspace; the workspace browser starts at that
@@ -672,7 +675,7 @@ there, opening one from an attached workspace attaches it, and `AppDB` version 1
 workspace once (`seedWorkspaceAgentSessions`), so existing data upgrades without duplicating
 sessions and a detached session is not re-added. Detaching an agent, deleting a workspace, removing
 an agent, and closing a session all delete the matching session links. Storage
-is shown for every source in the always visible "Available storage" panel, except the derived
+is shown for every source in the Storage card's "Available storage" list, except the derived
 agent-files source of an agent already listed in the Agents panel:
 `workspace/workspaceSources.ts` hides it so the agent name is not shown twice, while a source for
 an agent that only reaches the workspace through the bridge stays visible.

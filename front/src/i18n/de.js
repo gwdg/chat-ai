@@ -1867,6 +1867,7 @@ export default {
     edit_title: "Arbeitsbereich bearbeiten",
     workspace_options: "Arbeitsbereich-Optionen",
     workspace_root: "Arbeitsbereich-Stamm",
+    storage: "Speicher",
     available_storage: "Verfügbarer Speicher",
     add_folder: "Ordner hinzufügen",
     mode_empty: "Leerer Arbeitsbereich",

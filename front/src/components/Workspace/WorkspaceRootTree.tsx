@@ -14,6 +14,7 @@ import type { RootEntry } from "../../workspace/workspaceRoot";
 
 type TreeProps = {
   entries: RootEntry[];
+  flat?: boolean;
   loadChildren: (path: string) => Promise<RootEntry[]>;
   onOpen: (entry: RootEntry) => void;
   onShowGitLog?: (entry: RootEntry) => void;
@@ -38,7 +39,7 @@ function TreeRow({
   const [loading, setLoading] = useState(false);
   const isMount = !!entry.mount;
   const isDir = entry.kind === "dir";
-  const expandable = isDir && !isMount;
+  const expandable = isDir && !isMount && !props.flat;
   const readOnly = props.isReadOnly(entry);
   const sourceReadOnly = props.isSourceReadOnly(entry);
 
@@ -89,6 +90,10 @@ function TreeRow({
       return;
     }
     if (isMount) {
+      props.onOpen(entry);
+      return;
+    }
+    if (props.flat) {
       props.onOpen(entry);
       return;
     }

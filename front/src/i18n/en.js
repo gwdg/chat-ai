@@ -1842,6 +1842,7 @@ export default {
     edit_title: "Edit workspace",
     workspace_options: "Workspace options",
     workspace_root: "Workspace Root",
+    storage: "Storage",
     available_storage: "Available storage",
     add_folder: "Add folder",
     mode_empty: "Empty workspace",
