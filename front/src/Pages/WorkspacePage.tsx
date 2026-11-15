@@ -279,6 +279,7 @@ export default function WorkspacePage() {
   const [rootTreeRevision, setRootTreeRevision] = useState(0);
   const [rootLoading, setRootLoading] = useState(false);
   const [rootError, setRootError] = useState("");
+  const [availableStorageOpen, setAvailableStorageOpen] = useState(true);
 
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),
@@ -1384,7 +1385,23 @@ export default function WorkspacePage() {
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
                       {t("workspace.storage")}
                     </span>
-                    <div className="flex items-center gap-1">
+                  </div>
+                  <div className="p-1.5">
+                    <div className="flex items-center justify-between px-1">
+                      <button
+                        type="button"
+                        onClick={() => setAvailableStorageOpen((open) => !open)}
+                        className="flex min-w-0 items-center gap-1 rounded text-[10px] font-semibold uppercase tracking-wider text-base-content/45 transition hover:text-base-content"
+                        aria-expanded={availableStorageOpen}
+                      >
+                        <ChevronRight
+                          size={12}
+                          className={`shrink-0 transition ${availableStorageOpen ? "rotate-90" : ""}`}
+                        />
+                        <span className="truncate">
+                          {t("workspace.available_storage")}
+                        </span>
+                      </button>
                       <button
                         type="button"
                         onClick={addSource}
@@ -1395,13 +1412,7 @@ export default function WorkspacePage() {
                         <Add size={15} />
                       </button>
                     </div>
-                  </div>
-                  <div className="p-1.5">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
-                        {t("workspace.available_storage")}
-                      </span>
-                    </div>
+                  {availableStorageOpen && (
                   <div className="mt-1 max-h-[45vh] overflow-y-auto">
                     {visibleSources.length === 0 ? (
                       <button
@@ -1583,6 +1594,7 @@ export default function WorkspacePage() {
                       })
                     )}
                   </div>
+                  )}
                   </div>
                   <div className="border-t border-base-300 p-1.5">
                     <div className="flex items-center justify-between px-1">

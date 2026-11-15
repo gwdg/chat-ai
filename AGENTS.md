@@ -651,8 +651,9 @@ Every workspace also has an implicit browser-backed root: files and directories 
 stored in `workspace_nodes` / `workspace_blobs` under the synthetic source id
 `workspace-root:<workspaceId>`. The root browser lists those local entries and overlays mounted
 source folders, so normalized local directories/files and mounts coexist. The workspace page's left
-column is three independent cards: **Storage** (the available sources plus a flat top-level listing
-of the workspace root), **Attached Chats**, and **Attached Agents**. The left root list never
+column is three independent cards: **Storage** (a collapsible "Available storage" source list, whose add
+button sits in that subheader, plus a flat top-level listing of the workspace root), **Attached
+Chats**, and **Attached Agents**. The left root list never
 expands; clicking a folder opens it in the centre browser, whose breadcrumbs show the hierarchy.
 
 `workspace_mounts` maps a folder inside a source (`sourcePath`) to a workspace path (`path`), so
