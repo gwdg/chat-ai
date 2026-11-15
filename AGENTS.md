@@ -431,6 +431,13 @@ creating is revertible by returning to the previous session and deleting the cre
 deleting is not revertible. Normal chats expose the same access only for workspace-connected
 agents through `connected_agent_list_sessions`, `connected_agent_switch_session`,
 `connected_agent_remove_session`, and the `session` argument of `connected_agent_history`.
+Those chat tools are scoped to the workspace: `connectedAgentTools.ts` resolves the chat's
+workspaces, then filters each agent's session tree with the `workspace_agent_sessions` links of the
+workspaces that link that agent (`filterSessionTree`), so a chat can only list, read, switch to or
+delete sessions attached to its own workspace. `connected_agent_history` uses the active session by
+default and refuses when that session is not itself attached, instead of reading it anyway, while the
+names lookup resolves titles inside the filtered tree. An agent attached only through
+`bridgeWorkspaceId` (whole-workspace bridge, no session links) keeps access to all of its sessions.
 
 File listings preserve modification/access timestamps when the server returns them;
 recent-file queries sort by modification time and, because `/fs/list` may omit timestamps, run a
@@ -645,7 +652,8 @@ between workspaces and localStorage-backed agent entries; the workspace page's A
 or detaches them, and links whose agent no longer exists are removed when that page loads.
 `workspace_agent_sessions` (Dexie v13) is the session-level link: it stores
 `{workspaceId, agentId, sessionId}`, so a workspace shows only the sessions attached to it instead
-of every session of an agent. The workspace page's Agents panel and the chat sidebar list those
+of every session of an agent. The workspace page's Agents panel, the sidebar's Workspace section
+(each attached agent expands into its sessions for that workspace) and the chat sidebar list those
 sessions; the sidebar agent list groups an agent's sessions by workspace and keeps sessions that
 belong to no workspace under "Not in a workspace". Creating a session from a workspace attaches it
 there, opening one from an attached workspace attaches it, and `AppDB` version 13 adds the table.

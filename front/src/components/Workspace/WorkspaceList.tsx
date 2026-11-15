@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router";
 import {
   Add,
+  Bot,
   ChevronDown,
   Edit,
   OverflowMenuVertical,
@@ -23,10 +24,26 @@ import {
 import { useConversationList } from "../../db";
 import {
   deleteWorkspace,
+  detachWorkspaceAgent,
   detachWorkspaceChat,
+  useWorkspaceAgentLinks,
+  useWorkspaceAgentSessionLinks,
   useWorkspaceChatLinks,
   useWorkspaceList,
 } from "../../db/workspaceDb";
+import { useAgents } from "../../agents/agentStore";
+import {
+  fetchAgentSessions,
+  sessionSummariesFor,
+} from "../../agents/agentSessions";
+import {
+  createWorkspaceAgentSession,
+  detachSessionFromWorkspace,
+  filterSessionTree,
+  openWorkspaceAgentSession,
+  workspaceSessionIds,
+} from "../../agents/workspaceAgentSessions";
+import AgentSessionList from "../Agent/AgentSessionList";
 import { useModal } from "../../modals/ModalContext";
 import { useToast } from "../../hooks/useToast";
 import { topicIconById } from "../Sidebar/topicIcons";
@@ -41,6 +58,9 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   const { notifyError } = useToast();
   const workspaces = useWorkspaceList();
   const chatLinks = useWorkspaceChatLinks();
+  const agentLinks = useWorkspaceAgentLinks();
+  const sessionLinks = useWorkspaceAgentSessionLinks();
+  const agents = useAgents();
   const conversations = useConversationList() || [];
   const [expandedChats, setExpandedChats] = useState<Set<string>>(new Set());
   const chatsByWorkspace = useMemo(() => {
@@ -56,14 +76,93 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
     }
     return map;
   }, [chatLinks, conversations]);
+  const agentsByWorkspace = useMemo(() => {
+    const map = new Map<string, typeof agents>();
+    for (const link of agentLinks) {
+      const agent = agents.find((item) => item.id === link.agentId);
+      if (!agent) continue;
+      const rows = map.get(link.workspaceId) ?? [];
+      rows.push(agent);
+      map.set(link.workspaceId, rows);
+    }
+    return map;
+  }, [agentLinks, agents]);
   const initializedChatExpansion = useRef<Set<string>>(new Set());
+  const [sessionTrees, setSessionTrees] = useState<Record<string, any>>({});
+  const [sessionRefresh, setSessionRefresh] = useState(0);
+  const [creatingSession, setCreatingSession] = useState<string | null>(null);
+  const loadedSessionAgents = useRef<Set<string>>(new Set());
+
+  // Session titles come from the agent server; load them the first time a workspace with
+  // agents is expanded, then keep them until the session list actually changes.
+  useEffect(() => {
+    const targets: any[] = [];
+    for (const workspaceId of expandedChats) {
+      for (const agent of agentsByWorkspace.get(workspaceId) ?? []) {
+        if (loadedSessionAgents.current.has(agent.id)) continue;
+        loadedSessionAgents.current.add(agent.id);
+        targets.push(agent);
+      }
+    }
+    if (!targets.length) return undefined;
+    let cancelled = false;
+    void Promise.all(
+      targets.map(async (agent) => {
+        try {
+          const tree = await fetchAgentSessions(agent);
+          if (cancelled) return;
+          setSessionTrees((current) => ({ ...current, [agent.id]: tree }));
+        } catch {
+          // Keep the agent row usable; a later expand retries the listing.
+          loadedSessionAgents.current.delete(agent.id);
+        }
+      }),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [agentsByWorkspace, expandedChats, sessionRefresh]);
+
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      const agentId = (event as CustomEvent)?.detail?.agentId;
+      if (agentId) {
+        loadedSessionAgents.current.delete(agentId);
+        setSessionTrees((current) => {
+          if (!(agentId in current)) return current;
+          const next = { ...current };
+          delete next[agentId];
+          return next;
+        });
+      } else {
+        loadedSessionAgents.current.clear();
+        setSessionTrees({});
+      }
+      setSessionRefresh((value) => value + 1);
+    };
+    window.addEventListener("chatai:agent-sessions-changed", refresh);
+    return () => {
+      window.removeEventListener("chatai:agent-sessions-changed", refresh);
+    };
+  }, []);
+
   useEffect(() => {
     setExpandedChats((current) => {
       const next = new Set(current);
       let changed = false;
       for (const [workspaceId, chats] of chatsByWorkspace) {
         if (
-          chats.length > 0 &&
+          (chats.length > 0 || (agentsByWorkspace.get(workspaceId)?.length ?? 0) > 0) &&
+          !initializedChatExpansion.current.has(workspaceId)
+        ) {
+          initializedChatExpansion.current.add(workspaceId);
+          next.add(workspaceId);
+          changed = true;
+        }
+      }
+      for (const [workspaceId, attached] of agentsByWorkspace) {
+        if (
+          attached.length > 0 &&
           !initializedChatExpansion.current.has(workspaceId)
         ) {
           initializedChatExpansion.current.add(workspaceId);
@@ -73,7 +172,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
       }
       return changed ? next : current;
     });
-  }, [chatsByWorkspace]);
+  }, [agentsByWorkspace, chatsByWorkspace]);
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__workspaces__");
 
@@ -139,6 +238,8 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
           {workspaces.map((workspace) => {
             const active = location.pathname === `/workspace/${workspace.id}`;
             const chats = chatsByWorkspace.get(workspace.id) ?? [];
+            const attachedAgents = agentsByWorkspace.get(workspace.id) ?? [];
+            const expandable = chats.length > 0 || attachedAgents.length > 0;
             const expanded = expandedChats.has(workspace.id);
             const WorkspaceIcon = topicIconById(workspace.icon).Icon;
             const workspaceColor = topicColor({
@@ -164,14 +265,14 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                         return next;
                       })
                     }
-                    disabled={chats.length === 0}
+                    disabled={!expandable}
                     className={`ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 ${
-                      chats.length > 0
+                      expandable
                         ? "hover:text-base-content"
                         : "cursor-default opacity-40"
                     }`}
                     aria-expanded={expanded}
-                    aria-label={t("workspace.attached_chats")}
+                    aria-label={t("workspace.attached_items")}
                   >
                     <ChevronDown
                       size={12}
@@ -263,7 +364,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                     </PopoverPanel>
                   </Popover>
                 </div>
-                {expanded && chats.length > 0 && (
+                {expanded && expandable && (
                   <div className="mb-1 ml-8 flex flex-col gap-0.5 border-l border-base-300 pl-2">
                     {chats.map((chat) => (
                       <div
@@ -293,6 +394,114 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                         </button>
                       </div>
                     ))}
+                    {chats.length > 0 && attachedAgents.length > 0 && (
+                      <div className="my-1 border-t border-base-300/70" />
+                    )}
+                    {attachedAgents.map((agent) => {
+                      const sessionIds = workspaceSessionIds(
+                        sessionLinks,
+                        workspace.id,
+                        agent.id,
+                      );
+                      const tree = sessionTrees[agent.id];
+                      const scoped = tree
+                        ? filterSessionTree(tree, sessionIds)
+                        : null;
+                      return (
+                        <div key={agent.id}>
+                          <div className="group/agent flex items-center gap-1 rounded-md px-1 py-0.5 hover:bg-base-200">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigate(`/agent/${agent.id}`);
+                                onNavigate?.();
+                              }}
+                              className="flex min-w-0 flex-1 items-center gap-1 text-left text-[11px] text-base-content/80"
+                            >
+                              <Bot
+                                size={11}
+                                className="shrink-0 text-base-content/45"
+                              />
+                              <span className="truncate">
+                                {agent.name || agent.id}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={creatingSession === agent.id}
+                              onClick={async () => {
+                                if (creatingSession) return;
+                                setCreatingSession(agent.id);
+                                try {
+                                  await createWorkspaceAgentSession(
+                                    workspace.id,
+                                    agent,
+                                  );
+                                  navigate(`/agent/${agent.id}`);
+                                } catch (reason) {
+                                  notifyError(
+                                    reason instanceof Error
+                                      ? reason.message
+                                      : String(reason),
+                                  );
+                                } finally {
+                                  setCreatingSession(null);
+                                }
+                              }}
+                              className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-accent group-hover/agent:opacity-100 disabled:opacity-50"
+                              title={t("agents.new_session")}
+                              aria-label={t("agents.new_session")}
+                            >
+                              {creatingSession === agent.id ? (
+                                <span className="loading loading-spinner loading-xs" />
+                              ) : (
+                                <Add size={11} />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void detachWorkspaceAgent(workspace.id, agent.id)
+                              }
+                              className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover/agent:opacity-100"
+                              title={t("workspace.detach_agent")}
+                              aria-label={t("workspace.detach_agent")}
+                            >
+                              ×
+                            </button>
+                          </div>
+                          {scoped && scoped.all.length > 0 && (
+                            <AgentSessionList
+                              agent={agent}
+                              tree={scoped}
+                              activeSessionId={agent.sessionId}
+                              summaries={sessionSummariesFor(agent)}
+                              onSelect={(session) => {
+                                void (async () => {
+                                  await openWorkspaceAgentSession(
+                                    workspace.id,
+                                    agent,
+                                    session,
+                                  );
+                                  navigate(`/agent/${agent.id}`);
+                                })();
+                                onNavigate?.();
+                              }}
+                              onDetach={(session) =>
+                                void detachSessionFromWorkspace(
+                                  workspace.id,
+                                  agent,
+                                  session,
+                                )
+                              }
+                              showHeader={false}
+                              emptyKey="agents.no_workspace_sessions"
+                              className="ml-4 mt-0.5 border-0 bg-transparent p-0"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

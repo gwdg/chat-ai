@@ -698,6 +698,16 @@ export async function getWorkspaceAgentIds(
   return [...new Set(links.map((link) => link.agentId))];
 }
 
+export async function getWorkspaceAgentLinks(
+  workspaceIds: string[],
+): Promise<WorkspaceAgentRow[]> {
+  if (!workspaceIds.length) return [];
+  return db.workspace_agents
+    .where("workspaceId")
+    .anyOf(workspaceIds)
+    .toArray();
+}
+
 export function useWorkspaceAgentLinks(): WorkspaceAgentRow[] {
   return (
     useLiveQuery(

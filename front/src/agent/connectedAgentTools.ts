@@ -9,9 +9,11 @@ import {
   fetchAgentSessions,
   switchAgentSession,
 } from "../agents/agentSessions";
+import { filterSessionTree } from "../agents/workspaceAgentSessions";
 import {
   getConversationWorkspaceIds,
-  getWorkspaceAgentIds,
+  getWorkspaceAgentLinks,
+  getWorkspaceAgentSessionIds,
 } from "../db/workspaceDb";
 import {
   getOpencodeInfo,
@@ -53,15 +55,38 @@ const classifyStatus = (value: any) => {
   return "ready";
 };
 
-async function connectedAgents(conversationId: string) {
+/**
+ * Agents reachable from a chat, together with the workspaces that connect them to it.
+ * `workspaceIds` is empty when the agent is bridged to a whole workspace instead of being
+ * attached with individual sessions; such an agent keeps access to all of its sessions.
+ */
+type ConnectedAgent = { agent: any; workspaceIds: string[] };
+
+async function connectedAgents(conversationId: string): Promise<ConnectedAgent[]> {
   const workspaceIds = await getConversationWorkspaceIds(conversationId);
   if (!workspaceIds.length) return [];
-  const linkedIds = new Set(await getWorkspaceAgentIds(workspaceIds));
-  return getAgents().filter(
-    (agent) =>
-      linkedIds.has(agent.id) ||
-      (agent.bridgeWorkspaceId && workspaceIds.includes(agent.bridgeWorkspaceId)),
-  );
+  const links = await getWorkspaceAgentLinks(workspaceIds);
+  const linked = new Map<string, string[]>();
+  for (const link of links) {
+    const list = linked.get(link.agentId) ?? [];
+    if (!list.includes(link.workspaceId)) list.push(link.workspaceId);
+    linked.set(link.agentId, list);
+  }
+  const result: ConnectedAgent[] = [];
+  for (const agent of getAgents()) {
+    const attached = linked.get(agent.id);
+    if (attached?.length) {
+      result.push({ agent, workspaceIds: attached });
+      continue;
+    }
+    if (
+      agent.bridgeWorkspaceId &&
+      workspaceIds.includes(agent.bridgeWorkspaceId)
+    ) {
+      result.push({ agent, workspaceIds: [] });
+    }
+  }
+  return result;
 }
 
 export async function createConnectedAgentTools(
@@ -71,15 +96,36 @@ export async function createConnectedAgentTools(
   const agents = await connectedAgents(conversationId);
   if (!agents.length) return [];
 
-  const findAgent = (reference: string) => {
+  const findEntry = (reference: string) => {
     const target = String(reference || "").trim();
     return agents.find(
-      (agent) => agent.id === target || agent.name === target,
+      ({ agent }) => agent.id === target || agent.name === target,
     );
   };
 
-  const findSession = async (agent: any, reference: string) => {
-    const tree = await fetchAgentSessions(agent);
+  /**
+   * Session ids this chat may touch for an agent, or null when the agent is bridged to the
+   * whole workspace and has no session-level links.
+   */
+  const allowedSessionIds = async (entry: ConnectedAgent) => {
+    if (!entry.workspaceIds.length) return null;
+    const allowed = new Set<string>();
+    for (const workspaceId of entry.workspaceIds) {
+      const ids = await getWorkspaceAgentSessionIds(workspaceId, entry.agent.id);
+      for (const id of ids) allowed.add(id);
+    }
+    return allowed;
+  };
+
+  /** The agent's session tree reduced to the sessions this chat's workspace shows. */
+  const scopedTree = async (entry: ConnectedAgent) => {
+    const tree = await fetchAgentSessions(entry.agent);
+    const allowed = await allowedSessionIds(entry);
+    return allowed ? filterSessionTree(tree, allowed) : tree;
+  };
+
+  const findSession = async (entry: ConnectedAgent, reference: string) => {
+    const tree = await scopedTree(entry);
     const target = String(reference || "").trim();
     if (!target) return { tree, session: null };
     const normalized = target.toLowerCase();
@@ -122,10 +168,10 @@ export async function createConnectedAgentTools(
     }),
     execute: async (_id, args) => {
       const selected = args.agent
-        ? [findAgent(args.agent)].filter(Boolean)
+        ? [findEntry(args.agent)].filter(Boolean)
         : agents;
       const lines = await Promise.all(
-        selected.map(async (agent) => {
+        selected.map(async ({ agent }) => {
           if (!agent.sessionId) return `- ${agent.name}: no session`;
           const [info, statuses] = await Promise.allSettled([
             getOpencodeInfo(agent),
@@ -148,20 +194,34 @@ export async function createConnectedAgentTools(
     name: "connected_agent_history",
     label: "Connected agent history",
     description:
-      "Read recent messages from an agent connected to this chat's workspace. Defaults to the active session; pass a session id or title from connected_agent_list_sessions to read another session or subagent.",
+      "Read recent messages from an agent connected to this chat's workspace. Only sessions attached to this chat's workspace are readable; the active session is used by default. Pass a session id or title from connected_agent_list_sessions to read another session or subagent.",
     parameters: Type.Object({
       agent: Type.String(),
       session: Type.Optional(Type.String()),
       limit: Type.Optional(Type.Number()),
     }),
     execute: async (_id, args) => {
-      const agent = findAgent(args.agent);
-      if (!agent || !agent.sessionId) return text("Agent not found.");
+      const entry = findEntry(args.agent);
+      if (!entry) return text("Agent not found.");
+      const { agent } = entry;
       let sessionId = agent.sessionId;
       if (args.session) {
-        const { session } = await findSession(agent, args.session);
-        if (!session) return text("Session not found.");
+        const { session } = await findSession(entry, args.session);
+        if (!session) {
+          return text(
+            "Session not found. Only sessions attached to this chat's workspace are reachable; use connected_agent_list_sessions to see them.",
+          );
+        }
         sessionId = session.id;
+      } else if (!sessionId) {
+        return text("Agent has no active session.");
+      } else if (entry.workspaceIds.length) {
+        const allowed = await allowedSessionIds(entry);
+        if (allowed && !allowed.has(sessionId)) {
+          return text(
+            `The agent's active session (${sessionId}) is not attached to this chat's workspace. Use connected_agent_list_sessions to see the sessions this chat can read.`,
+          );
+        }
       }
       const limit = Math.min(
         100,
@@ -195,19 +255,24 @@ export async function createConnectedAgentTools(
     name: "connected_agent_list_sessions",
     label: "List connected agent sessions",
     description:
-      "List every session of an agent connected to this chat's workspace, including nested subagent sessions, with their ids and the active session.",
+      "List the sessions of an agent connected to this chat's workspace, including nested subagent sessions, with their ids and the active session. Only sessions attached to this chat's workspace are listed.",
     parameters: Type.Object({
       agent: Type.String(),
     }),
     execute: async (_id, args) => {
-      const agent = findAgent(args.agent);
-      if (!agent) return text("Agent not found.");
+      const entry = findEntry(args.agent);
+      if (!entry) return text("Agent not found.");
       try {
-        const tree = await fetchAgentSessions(agent);
+        const tree = await scopedTree(entry);
         return text(
           [
-            `Active session: ${agent.sessionId || "none"}`,
-            ...sessionLines(agent, tree),
+            `Active session: ${entry.agent.sessionId || "none"}`,
+            ...(entry.workspaceIds.length
+              ? [
+                  "Only sessions attached to this chat's workspace are reachable from here.",
+                ]
+              : []),
+            ...sessionLines(entry.agent, tree),
           ].join("\n") || "(no sessions)",
         );
       } catch (error) {
@@ -224,23 +289,28 @@ export async function createConnectedAgentTools(
     name: "connected_agent_switch_session",
     label: "Switch connected agent session",
     description:
-      "Switch an agent connected to this chat's workspace to one of its sessions or subagent sessions. Use connected_agent_list_sessions first to get the session id or title.",
+      "Switch an agent connected to this chat's workspace to one of its sessions or subagent sessions. Only sessions attached to this chat's workspace can be switched to. Use connected_agent_list_sessions first to get the session id or title.",
     parameters: Type.Object({
       agent: Type.String(),
       session: Type.String(),
     }),
     execute: async (_id, args) => {
-      const agent = findAgent(args.agent);
-      if (!agent) return text("Agent not found.");
+      const entry = findEntry(args.agent);
+      if (!entry) return text("Agent not found.");
+      const { agent } = entry;
       try {
-        const { tree, session } = await findSession(agent, args.session);
+        const { tree, session } = await findSession(entry, args.session);
         if (!session) {
           const available = tree.all
             .slice(0, 20)
             .map((item: any) => `${item.id} (${item.title || "Untitled"})`)
             .join(", ");
           return text(
-            `Session not found.${available ? ` Available: ${available}` : ""}`,
+            `Session not found.${available ? ` Available: ${available}` : ""}${
+              entry.workspaceIds.length
+                ? " Only sessions attached to this chat's workspace are reachable from here."
+                : ""
+            }`,
           );
         }
         switchAgentSession(agent, session.id);
@@ -261,16 +331,17 @@ export async function createConnectedAgentTools(
     name: "connected_agent_remove_session",
     label: "Remove connected agent session",
     description:
-      "Delete a session or subagent session from an agent connected to this chat's workspace. Only use this when the user explicitly asks to remove that session. If the active session is removed, another session is selected or a new one is created.",
+      "Delete a session or subagent session from an agent connected to this chat's workspace. Only sessions attached to this chat's workspace can be removed. Only use this when the user explicitly asks to remove that session. If the active session is removed, another session is selected or a new one is created.",
     parameters: Type.Object({
       agent: Type.String(),
       session: Type.String(),
     }),
     execute: async (_id, args) => {
-      const agent = findAgent(args.agent);
-      if (!agent) return text("Agent not found.");
+      const entry = findEntry(args.agent);
+      if (!entry) return text("Agent not found.");
+      const { agent } = entry;
       try {
-        const { tree, session } = await findSession(agent, args.session);
+        const { tree, session } = await findSession(entry, args.session);
         if (!session) return text("Session not found.");
         const next = await deleteAgentSession(agent, session, tree);
         return text(
@@ -298,7 +369,7 @@ export async function createConnectedAgentTools(
       path: Type.Optional(Type.String()),
     }),
     execute: async (_id, args) => {
-      const agent = findAgent(args.agent);
+      const agent = findEntry(args.agent)?.agent;
       if (!agent) return text("Agent not found.");
       try {
         const rows = await listOpencodeFiles(agent, String(args.path || ""));
@@ -336,7 +407,7 @@ export async function createConnectedAgentTools(
       maxChars: Type.Optional(Type.Number()),
     }),
     execute: async (_id, args) => {
-      const agent = findAgent(args.agent);
+      const agent = findEntry(args.agent)?.agent;
       if (!agent) return text("Agent not found.");
       const path = String(args.path || "").trim();
       if (!path) return text("A file path is required.");
@@ -376,7 +447,7 @@ export async function createConnectedAgentTools(
       path: Type.String(),
     }),
     execute: async (_id, args) => {
-      const agent = findAgent(args.agent);
+      const agent = findEntry(args.agent)?.agent;
       if (!agent) return text("Agent not found.");
       const path = String(args.path || "").trim();
       if (!path) return text("A file path is required.");

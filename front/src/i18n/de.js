@@ -1890,6 +1890,7 @@ export default {
     mount_path_required: "Geben Sie einen Pfad unterhalb des Arbeitsbereichs-Stamms ein.",
     mount_path_taken: "Dieser Pfad wird bereits verwendet.",
     attached_chats: "Chats",
+    attached_items: "Verknüpfte Chats, Agenten und Sitzungen",
     no_attached_chats: "Noch keine Chats verknüpft.",
     attach_chat: "Chat verknüpfen",
     detach_chat: "Chat trennen",

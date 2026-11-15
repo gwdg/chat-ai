@@ -383,7 +383,7 @@ export async function runAgentTurn({
           : NO_TOOLS_PROMPT,
         useTools && arcanaV2 ? ARCANA_V2_PROMPT : "",
         hasConnectedAgentTools
-          ? "Agents connected to this chat's workspace are available through connected_agents_status, connected_agent_list_sessions, connected_agent_history, connected_agent_switch_session, connected_agent_remove_session, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents. Use connected_agent_list_sessions to see all sessions and subagents, connected_agent_switch_session to change the active session, connected_agent_remove_session only when the user explicitly asks to remove one, and connected_agent_fetch_file for images, PDFs, and other binary files."
+          ? "Agents connected to this chat's workspace are available through connected_agents_status, connected_agent_list_sessions, connected_agent_history, connected_agent_switch_session, connected_agent_remove_session, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents and to the sessions attached to this chat's workspace; use connected_agent_list_sessions to see them, connected_agent_switch_session to change the active session, connected_agent_remove_session only when the user explicitly asks to remove one, and connected_agent_fetch_file for images, PDFs, and other binary files. Never claim to see sessions that are not listed."
           : "",
         useTools && storageAccess && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
         useTools &&

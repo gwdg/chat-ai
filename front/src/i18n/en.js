@@ -1868,6 +1868,7 @@ export default {
     mount_path_required: "Enter a path below the workspace root.",
     mount_path_taken: "This workspace path is already used.",
     attached_chats: "Chats",
+    attached_items: "Attached chats, agents and sessions",
     no_attached_chats: "No chats attached yet.",
     attach_chat: "Attach chat",
     detach_chat: "Detach chat",
