@@ -1,11 +1,13 @@
 export const GIT_LOG_MARKER = "CHATAI_GIT_LOG";
 export const FILE_STAT_MARKER = "CHATAI_FILE_STAT";
 export const FILE_SEARCH_MARKER = "CHATAI_FILE_SEARCH";
+export const CLONE_MARKER = "CHATAI_GIT_CLONE";
 
 const INTERNAL_SHELL_MARKERS = [
   GIT_LOG_MARKER,
   FILE_STAT_MARKER,
   FILE_SEARCH_MARKER,
+  CLONE_MARKER,
 ];
 
 export const isInternalShellCommand = (value) => {

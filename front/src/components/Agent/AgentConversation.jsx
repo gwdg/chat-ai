@@ -69,6 +69,10 @@ import Tooltip from "../Others/Tooltip";
 import ModelButton from "../Prompt/ModelButton";
 import SendButton from "../Prompt/SendButton";
 import AgentAssistantParts from "./AgentAssistantParts";
+import {
+  rendererComponents,
+  SafeMarkdown,
+} from "../Conversation/MessageAssistant/MarkdownRenderer";
 import AgentWorkspaceButton from "./AgentWorkspaceButton";
 import AgentFormCard from "./AgentFormCard";
 import AgentFormResultCard from "./AgentFormResultCard";
@@ -1226,6 +1230,13 @@ export default function AgentConversation({ agent, modelsData = [] }) {
   const shellRunning = messages.some(
     (message) => message.type === "shell" && message.status === "running",
   );
+  const packageMessage =
+    agent?.initialMessage?.text &&
+    (!agent.initialMessageSessionId ||
+      agent.initialMessageSessionId === agent.sessionId)
+      ? agent.initialMessage
+      : null;
+
   const shellStatus = (message) => {
     if (message.status === "running") {
       return { label: t("agents.shell_status_running"), className: "badge-warning" };
@@ -1351,7 +1362,24 @@ export default function AgentConversation({ agent, modelsData = [] }) {
         ref={scrollRef}
         className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4"
       >
-        {timeline.length === 0 && !sending ? (
+        {packageMessage && (
+          <div className="rounded-xl border border-info/30 bg-info/10 p-3">
+            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+              <span className="badge badge-info badge-xs">
+                {t("agents.package_message")}
+              </span>
+              {packageMessage.title && (
+                <span className="text-xs font-semibold text-base-content">
+                  {packageMessage.title}
+                </span>
+              )}
+            </div>
+            <SafeMarkdown components={rendererComponents}>
+              {packageMessage.text}
+            </SafeMarkdown>
+          </div>
+        )}
+        {timeline.length === 0 && !sending && !packageMessage ? (
           <p className="text-sm text-base-content/50">
             {t("agents.chat_empty")}
           </p>

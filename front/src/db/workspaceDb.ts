@@ -90,6 +90,43 @@ export async function addFileReference(
   return reference.id;
 }
 
+export async function getWorkspaceSource(id: string): Promise<WorkspaceSourceRow | undefined> {
+  return id ? db.workspace_sources.get(id) : undefined;
+}
+
+export async function listCloneTargets() {
+  const [sources, workspaces] = await Promise.all([
+    db.workspace_sources.toArray(),
+    db.workspaces.toArray(),
+  ]);
+  const names = new Map(workspaces.map((workspace) => [workspace.id, workspace.name]));
+  return sources
+    .filter(
+      (source) =>
+        source.kind !== "browser" &&
+        source.kind !== "arcana" &&
+        source.kind !== "arcana-filesystem" &&
+        source.kind !== "agent" &&
+        source.readOnly !== true &&
+        (!source.deviceId || source.deviceId === getDeviceId()) &&
+        source.capabilities?.write === true &&
+        source.capabilities?.mkdir === true,
+    )
+    .map((source) => ({
+      id: source.id,
+      kind: source.kind,
+      label: source.label,
+      workspaceId: source.workspaceId,
+      workspaceName: names.get(source.workspaceId) ?? "",
+      source,
+    }))
+    .sort((left, right) =>
+      `${left.workspaceName}:${left.label}`.localeCompare(
+        `${right.workspaceName}:${right.label}`,
+      ),
+    );
+}
+
 export async function createWorkspace(name: string): Promise<string> {
   const trimmed = name.trim();
   if (!trimmed) throw new Error("Workspace name is required");

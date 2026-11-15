@@ -47,6 +47,19 @@ export const featureGuides = {
       },
     ],
   },
+  workspace_clone: {
+    titleKey: "feature_guide.workspace_clone.title",
+    prompt:
+      "Create a workspace from a public Git repository. Choose Clone Git repository, select a local OpenCode agent for the real git clone, and pick a writable storage target. If the repository contains chat-ai-manifest.json, review the confirmation summary before any agent or chats are created.",
+    keywords: ["clone repository", "import repository", "github workspace", "workspace manifest", "git clone", "chat-ai-manifest"],
+    steps: [
+      {
+        target: '[data-guide="workspace-add-source"]',
+        textKey: "feature_guide.workspace_clone.step1",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   workspace_upload: {
     titleKey: "feature_guide.workspace_upload.title",
     prompt:
@@ -1349,7 +1362,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents"],
+  workspace: ["workspace_overview", "workspace_clone", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

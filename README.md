@@ -95,6 +95,13 @@ Note that in some cases rebuilding the docker image might be necessary.
 
 In `build` mode the container runs the build and exits, so `docker compose restart front` (or `docker compose up front`) runs it again and picks up the new `front.json`. The result is a snapshot, though: if you copied `front/dist` to a web root, copy the new files again (see [Serving a Static Build](#serving-a-static-build-apache--nginx)).
 
+## Workspace import manifests
+
+A public Git repository can bootstrap a workspace. See
+[docs/workspace-manifests.md](docs/workspace-manifests.md) for the
+`chat-ai-manifest.json` schema and confirmation flow. An example repository is
+prepared under `remote-example/`.
+
 ## Configuration
 
 You can set the port numbers for both the `front` and `back` services in the `front.json` and `back.json` files.

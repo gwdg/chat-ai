@@ -197,6 +197,22 @@ export async function replyOpencodeForm(agent, sessionId, formId, answer) {
   );
 }
 
+export async function putOpencodeInstructionEntry(
+  agent,
+  sessionId,
+  key,
+  value,
+) {
+  return request(
+    agent,
+    `/experimental/session/${encodeURIComponent(sessionId)}/instructions/entries/${encodeURIComponent(key)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ value }),
+    },
+  );
+}
+
 export async function getOpencodeContext(agent, sessionId) {
   return request(agent, `/session/${encodeURIComponent(sessionId)}/context`);
 }

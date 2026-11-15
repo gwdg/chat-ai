@@ -683,6 +683,23 @@ apply to workspace files: the codemode toggle (`tools.codemode`) and the tool-ca
 The `workspace_overview` feature guide targets `[data-guide="workspace-add-source"]`,
 `workspace-sources` and `workspace-files`.
 
+Create Workspace can clone a public HTTPS Git repository with a selected local OpenCode agent.
+`workspace/importProject.js` runs `git clone` through the agent's shell into
+`.chat-ai-clones/<id>/repo`, optionally reads `chat-ai-manifest.json`, and copies the complete
+repository tree (including `.git`) into browser, local, or MCP storage, or move the clone into the
+selected local agent's project storage and mount that folder read-only. Flat Arcana sources are
+excluded because they cannot represent a directory tree. The manifest is validated by
+`utils/workspaceManifest.js`, shown in a confirmation summary, and never provides commands,
+scripts, credentials, or server URLs. Confirmed manifests can create an agent using the selected
+agent connection and import full chats attached to the workspace. An agent's optional
+`initialMessage` is stored on the local agent entry and displayed above the session; it is also
+written to the session's OpenCode instruction entries so the agent sees it without executing a
+prompt. The local example repository is
+`remote-example/` (ignored by the main repo); a public reference example, including a working
+`chat-ai-manifest.json`, is
+[`hpc-team-public/gaia-teaching-example`](https://gitlab-ce.gwdg.de/hpc-team-public/gaia-teaching-example.git).
+The schema is documented in `docs/workspace-manifests.md`.
+
 
 ### 4.25 MCP servers are configured globally and selected per chat
 

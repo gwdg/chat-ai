@@ -402,6 +402,7 @@ export function useImportConversation() {
       console.log("Navigating to new chat");
       if (!silent && !options.metaChat) navigate(`/chat/${newId}`, { replace: true });
       if (!silent && !options.metaChat) notifySuccess("Chat imported successfully");
+      return newId;
     } catch (error) {
       console.error("Import error:", error);
       notifyError("Failed to import conversation")

@@ -147,6 +147,49 @@ describe("AgentConversation", () => {
     expect(screen.getByText("Hi there")).toBeInTheDocument();
   });
 
+  it("shows the workspace package message above an empty session", async () => {
+    render(
+      <AgentConversation
+        agent={{
+          ...agent,
+          initialMessage: {
+            title: "Start here",
+            text: "Read the workspace notes first.",
+          },
+          initialMessageSessionId: "session-1",
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText("Message from the package owner"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Read the workspace notes first."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Start here")).toBeInTheDocument();
+    expect(
+      screen.queryByText("No messages yet. Ask the agent something."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the package message in a later session", async () => {
+    render(
+      <AgentConversation
+        agent={{
+          ...agent,
+          initialMessage: { title: "Start here", text: "Read the notes." },
+          initialMessageSessionId: "session-2",
+        }}
+      />,
+    );
+
+    await screen.findByText("No messages yet. Ask the agent something.");
+    expect(
+      screen.queryByText("Message from the package owner"),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders cached history while the agent is offline", async () => {
     await saveAgentSessionMessages(
       "agent-1",
