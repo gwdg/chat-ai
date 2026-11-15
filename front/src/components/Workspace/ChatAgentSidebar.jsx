@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router";
@@ -31,6 +31,7 @@ import {
   seedWorkspaceAgentSessions,
   useWorkspaceAgentLinks,
   useWorkspaceAgentSessionLinks,
+  useWorkspaceChatLinks,
 } from "../../db/workspaceDb";
 import {
   createWorkspaceAgentSession,
@@ -77,6 +78,7 @@ export default function ChatAgentSidebar({ conversationId }) {
   const chatLinks = useChatWorkspaces(conversationId);
   const agentLinks = useWorkspaceAgentLinks();
   const sessionLinks = useWorkspaceAgentSessionLinks();
+  const workspaceChatLinks = useWorkspaceChatLinks();
   const [statuses, setStatuses] = useState({});
   const [sessionStatuses, setSessionStatuses] = useState({});
   const [expanded, setExpanded] = useState(new Set());
@@ -112,22 +114,50 @@ export default function ChatAgentSidebar({ conversationId }) {
 
   // Only sessions attached to one of this chat's workspaces are listed. Agents that reach the
   // chat only through the bridge keep their full list.
-  const sessionIdsFor = (agent) => {
-    const attachedWorkspaceIds = workspaceIds.filter((workspaceId) =>
-      (agentLinks || []).some(
-        (link) =>
-          link.workspaceId === workspaceId && link.agentId === agent.id,
-      ),
-    );
-    if (!attachedWorkspaceIds.length) return null;
-    const ids = new Set();
-    for (const workspaceId of attachedWorkspaceIds) {
-      for (const id of workspaceSessionIds(sessionLinks, workspaceId, agent.id)) {
-        ids.add(id);
+  const sessionIdsFor = useCallback(
+    (agent) => {
+      const attachedWorkspaceIds = workspaceIds.filter((workspaceId) =>
+        (agentLinks || []).some(
+          (link) =>
+            link.workspaceId === workspaceId && link.agentId === agent.id,
+        ),
+      );
+      if (!attachedWorkspaceIds.length) return null;
+      const ids = new Set();
+      for (const workspaceId of attachedWorkspaceIds) {
+        for (const id of workspaceSessionIds(
+          sessionLinks,
+          workspaceId,
+          agent.id,
+        )) {
+          ids.add(id);
+        }
       }
+      return ids;
+    },
+    [agentLinks, sessionLinks, workspaceIds],
+  );
+
+  // The What's new panel reports on this chat's workspaces only: their chats, their agents
+  // and the sessions attached to them. The Meta chat calls getWhatsNew without a scope.
+  const whatsNewScope = useMemo(() => {
+    const sessionIds = {};
+    for (const agent of connectedAgents) {
+      const ids = sessionIdsFor(agent);
+      if (ids) sessionIds[agent.id] = [...ids];
     }
-    return ids;
-  };
+    return {
+      agentIds: connectedAgents.map((agent) => agent.id),
+      sessionIds,
+      conversationIds: [
+        ...new Set(
+          (workspaceChatLinks || [])
+            .filter((link) => workspaceIds.includes(link.workspaceId))
+            .map((link) => link.conversationId),
+        ),
+      ],
+    };
+  }, [connectedAgents, sessionIdsFor, workspaceChatLinks, workspaceIds]);
 
   useEffect(() => {
     if (!connectedAgents.length) {
@@ -266,7 +296,11 @@ export default function ChatAgentSidebar({ conversationId }) {
   };
 
   return (
-    <MetaChangesPanel userSettings={userSettings}>
+    <MetaChangesPanel
+      userSettings={userSettings}
+      scope={whatsNewScope}
+      scopeKey={workspaceIds.join(",")}
+    >
       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
         {t("workspace.agent_sidebar_title")}
       </p>

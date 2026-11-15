@@ -417,7 +417,12 @@ in `user_settings.mcp_servers`; the Meta chat reads the entry ids from `get_user
 `test_mcp_server` tests a configured local server by id, name, or URL. Stateful "what's new" uses
 `get_whats_new`, which checks every session and subagent session of every agent (status and
 `time.updated` since the last check), and stores the last check in localStorage
-(`chatai.meta.last-check`). `search_all`
+(`chatai.meta.last-check`). The same report is rendered by `MetaChangesPanel`: the Meta chat shows
+it globally, while the panel inside a workspace chat (`ChatAgentSidebar`) passes a `scope` of that
+chat's workspace ids, so `getWhatsNew` only reports the workspace's chats, agents and the sessions
+attached to them (subagents of an attached session are kept; an active session outside the scope is
+not named). Scoped results are stored under `chatai.meta.last-check*:<workspaceIds>` so they never
+mix with the Meta chat's global result. `search_all`
 searches chats, messages, topics, memories, agent histories, and agent file names/contents.
 `agent_health` combines agent connectivity with local MCP tests; `list_mcp_tools` exposes tool names.
 `list_workspaces` plus `WORKSPACE_LINK` proposals attach/detach workspaces to agents or chats.

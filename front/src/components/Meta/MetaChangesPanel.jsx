@@ -44,10 +44,16 @@ const readCollapsed = () => {
   }
 };
 
-const readStored = () => {
+const scopedKey = (base, scopeKey) => (scopeKey ? `${base}:${scopeKey}` : base);
+
+const readStored = (scopeKey = "") => {
   try {
-    const at = Number(localStorage.getItem(META_LAST_CHECK_KEY)) || 0;
-    const raw = localStorage.getItem(META_LAST_CHECK_RESULT_KEY);
+    const at =
+      Number(localStorage.getItem(scopedKey(META_LAST_CHECK_KEY, scopeKey))) ||
+      0;
+    const raw = localStorage.getItem(
+      scopedKey(META_LAST_CHECK_RESULT_KEY, scopeKey),
+    );
     const parsed = raw ? JSON.parse(raw) : null;
     return {
       at: Number(parsed?.at) || at,
@@ -58,9 +64,14 @@ const readStored = () => {
   }
 };
 
-export default function MetaChangesPanel({ userSettings, children }) {
+export default function MetaChangesPanel({
+  userSettings,
+  scope = null,
+  scopeKey = "",
+  children,
+}) {
   const { t, i18n } = useTranslation();
-  const [state, setState] = useState(readStored);
+  const [state, setState] = useState(() => readStored(scopeKey));
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [width, setWidth] = useState(readWidth);
   const widthRef = useRef(width);
@@ -68,14 +79,31 @@ export default function MetaChangesPanel({ userSettings, children }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const reload = () => setState(readStored());
+    setState(readStored(scopeKey));
+  }, [scopeKey]);
+
+  useEffect(() => {
+    const reload = (event) => {
+      if (event?.type === "storage") {
+        // Only react to this panel's own keys; a scoped panel must not adopt the
+        // global Meta chat result.
+        const keys = [
+          scopedKey(META_LAST_CHECK_KEY, scopeKey),
+          scopedKey(META_LAST_CHECK_RESULT_KEY, scopeKey),
+        ];
+        if (event.key && !keys.includes(event.key)) return;
+      } else if ((event?.detail?.scopeKey ?? "") !== scopeKey) {
+        return;
+      }
+      setState(readStored(scopeKey));
+    };
     window.addEventListener("chatai:meta-last-check", reload);
     window.addEventListener("storage", reload);
     return () => {
       window.removeEventListener("chatai:meta-last-check", reload);
       window.removeEventListener("storage", reload);
     };
-  }, []);
+  }, [scopeKey]);
 
   const check = async () => {
     if (checking) return;
@@ -87,15 +115,24 @@ export default function MetaChangesPanel({ userSettings, children }) {
       const text = await getWhatsNew({
         userSettings,
         since: new Date(since).toISOString(),
+        scope,
       });
       const next = { at, text };
       setState(next);
       try {
-        localStorage.setItem(META_LAST_CHECK_KEY, String(at));
-        localStorage.setItem(META_LAST_CHECK_RESULT_KEY, JSON.stringify(next));
+        localStorage.setItem(
+          scopedKey(META_LAST_CHECK_KEY, scopeKey),
+          String(at),
+        );
+        localStorage.setItem(
+          scopedKey(META_LAST_CHECK_RESULT_KEY, scopeKey),
+          JSON.stringify(next),
+        );
       } catch {}
       window.dispatchEvent(
-        new CustomEvent("chatai:meta-last-check", { detail: { at } }),
+        new CustomEvent("chatai:meta-last-check", {
+          detail: { at, scopeKey },
+        }),
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));

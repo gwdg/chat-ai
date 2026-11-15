@@ -16,6 +16,7 @@ import {
 } from "../agent/mcp";
 import { getAgents } from "../agents/agentStore";
 import { fetchAgentSessions } from "../agents/agentSessions";
+import { filterSessionTree } from "../agents/workspaceAgentSessions";
 import { listWorkspaceSummaries } from "../db/workspaceDb";
 import {
   getOpencodeInfo,
@@ -468,7 +469,11 @@ const loadAgentSessionTrees = async (agents) => {
   return new Map(entries);
 };
 
-const agentStatusRows = async (agents, sessionTrees = null) => {
+const agentStatusRows = async (
+  agents,
+  sessionTrees = null,
+  { scopedAgentIds = new Set() } = {},
+) => {
   return Promise.all(
     agents.map(async (agent) => {
       const treeResult = sessionTrees
@@ -507,6 +512,9 @@ const agentStatusRows = async (agents, sessionTrees = null) => {
       }
       const active = sessions.find((session) => session.id === agent.sessionId);
       const activeState = sessionActivity(statusMap[agent.sessionId]);
+      // A scoped report must not name a session outside the scope it was given.
+      const activeHidden =
+        scopedAgentIds.has(agent.id) && Boolean(agent.sessionId) && !active;
       const workingCount = sessions.filter(
         (session) => sessionActivity(statusMap[session.id]) === "working",
       ).length;
@@ -527,8 +535,10 @@ const agentStatusRows = async (agents, sessionTrees = null) => {
         name: agent.name || agent.id,
         server: agent.serverUrl,
         connected,
-        activeTitle: active?.title || agent.sessionId || "none",
-        activeState,
+        activeTitle:
+          active?.title ||
+          (activeHidden ? "not in this scope" : agent.sessionId || "none"),
+        activeState: activeHidden ? "—" : activeState,
         total: sessions.length,
         working: workingCount,
         errors: errorCount,
@@ -787,19 +797,36 @@ export async function getAgentFileChanges({
   ].join("\n");
 }
 
-export async function getWhatsNew({ userSettings = {}, since: sinceInput } = {}) {
+export async function getWhatsNew({
+  userSettings = {},
+  since: sinceInput,
+  scope = null,
+} = {}) {
   const since =
     parseSince(sinceInput) || Date.now() - 24 * 60 * 60 * 1000;
-const [rows, folders, agents] = await Promise.all([
+const [rows, folders, allAgents] = await Promise.all([
   listConversationMetas(),
   listFolders(),
   Promise.resolve(getAgents()),
 ]);
+// A workspace-scoped report (the chat sidebar) passes the ids it may show. The Meta chat
+// passes no scope and keeps seeing every chat, agent and session.
+const agentIds = scope?.agentIds ? new Set(scope.agentIds) : null;
+const agents = agentIds
+  ? allAgents.filter((agent) => agentIds.has(agent.id))
+  : allAgents;
+const conversationIds = scope?.conversationIds
+  ? new Set(scope.conversationIds)
+  : null;
+const scopedSessionAgentIds = new Set(
+  scope?.sessionIds ? Object.keys(scope.sessionIds) : [],
+);
 const chats = (rows || [])
   .filter(
     (row) =>
       !row.isMetaChat &&
       row.id !== "meta-chat" &&
+      (!conversationIds || conversationIds.has(row.id)) &&
       (row.lastModified ?? row.createdAt ?? 0) >= since,
   )
   .sort(
@@ -817,8 +844,16 @@ const memories = (userSettings.memories || []).filter((memory) => {
 const sessionTrees = agents.length
   ? await loadAgentSessionTrees(agents)
   : new Map();
+// Restrict each agent's tree to the sessions the caller may show. Agents that are absent
+// from `sessionIds` (workspace bridges without session links) keep their full list.
+for (const [agentId, ids] of Object.entries(scope?.sessionIds ?? {})) {
+  const tree = sessionTrees.get(agentId);
+  if (tree) sessionTrees.set(agentId, filterSessionTree(tree, new Set(ids)));
+}
 const statusRows = agents.length
-  ? await agentStatusRows(agents, sessionTrees)
+  ? await agentStatusRows(agents, sessionTrees, {
+      scopedAgentIds: scopedSessionAgentIds,
+    })
   : [];
 const sessionChanges = agents.length
   ? await agentSessionChanges(agents, since, sessionTrees)
