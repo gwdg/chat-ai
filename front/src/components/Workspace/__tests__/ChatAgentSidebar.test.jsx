@@ -100,6 +100,33 @@ describe("ChatAgentSidebar what's new scope", () => {
     });
   });
 
+  it("does not repeat the connected agents below the report", () => {
+    render(<ChatAgentSidebar conversationId="chat-1" />);
+
+    expect(lastPanel().children).toBeUndefined();
+  });
+
+  it("shows the scoped report for a workspace chat without agents", () => {
+    mocks.agents = [];
+    mocks.agentLinks = [];
+
+    render(<ChatAgentSidebar conversationId="chat-1" />);
+
+    expect(lastPanel().scope).toEqual({
+      agentIds: [],
+      sessionIds: {},
+      conversationIds: ["chat-1", "chat-2"],
+    });
+  });
+
+  it("renders nothing when the chat is not attached to a workspace", () => {
+    mocks.chatLinks = [];
+
+    render(<ChatAgentSidebar conversationId="chat-1" />);
+
+    expect(mocks.panels).toHaveLength(0);
+  });
+
   it("keeps the full session list of an agent bridged to the workspace", () => {
     mocks.agents = [
       { id: "agent-2", name: "Bridged agent", bridgeWorkspaceId: "ws-1" },

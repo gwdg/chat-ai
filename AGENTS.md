@@ -421,7 +421,9 @@ in `user_settings.mcp_servers`; the Meta chat reads the entry ids from `get_user
 it globally, while the panel inside a workspace chat (`ChatAgentSidebar`) passes a `scope` of that
 chat's workspace ids, so `getWhatsNew` only reports the workspace's chats, agents and the sessions
 attached to them (subagents of an attached session are kept; an active session outside the scope is
-not named). A scoped report shows a topic only when one of those chats is in it and omits memories,
+not named). That panel shows only the report: connected agents and their sessions are listed in the
+sidebar, not repeated below the report. A scoped report shows a topic only when one of those chats
+is in it and omits memories,
 which belong to the account rather than to a workspace; agent files stay agent-level because they
 have no session link. Scoped results are stored under
 `chatai.meta.last-check*:<workspaceIds>` so they never mix with the Meta chat's global result.
@@ -745,8 +747,8 @@ the rest; the active `sessionId` is stored on the
 local agent entry, while the session list is read from `GET /api/session` plus
 `GET /api/session/:id/children` by `agents/agentSessions.js`. Child sessions are the subagent
 sessions OpenCode creates; they are shown nested in the same list and can be opened like a
-top-level session. The + action creates a new session and makes it active. `AgentList`,
-`ChatAgentSidebar` and the workspace Agents panel refetch every 10s (or immediately on the
+top-level session. The + action creates a new session and makes it active. `AgentList` and the
+workspace Agents panel refetch every 10s (or immediately on the
 `chatai:agent-sessions-changed` / `chatai:agent-session-changed` events) so a subagent spawned by
 OpenCode appears without a reload. Leaving an agent session summarizes its messages with
 `generateConversationSummary`, stores the summary under that session in the agent entry's
