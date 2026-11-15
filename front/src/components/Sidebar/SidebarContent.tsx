@@ -774,11 +774,11 @@ export default function SidebarContent({
           </div>
           </div>
           )}
-          <div className="flex items-center justify-between">
+          <div className="mb-1 flex items-center justify-between rounded-lg bg-base-200/70 px-2 py-1">
             <button
               type="button"
               onClick={() => dispatch(toggleTopic("__chats__"))}
-              className="flex min-w-0 items-center gap-1 rounded-md text-left text-[11px] uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
+              className="flex min-w-0 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
               aria-expanded={!chatsCollapsed}
             >
               <ChevronDown
@@ -1039,15 +1039,15 @@ export default function SidebarContent({
           )}
           {!hasSearch && (
             <>
-              <div className="mx-3 border-t border-base-300" />
+              <div className="mx-2 my-1.5 border-t border-base-300" />
               <WorkspaceList />
               {isAgentsEnabled() && (
                 <>
-                  <div className="mx-3 border-t border-base-300" />
+                  <div className="mx-2 my-1.5 border-t border-base-300" />
                   <AgentList />
                 </>
               )}
-              <div className="mx-3 border-t border-base-300" />
+              <div className="mx-2 my-1.5 border-t border-base-300" />
               <McpServerList />
             </>
           )}

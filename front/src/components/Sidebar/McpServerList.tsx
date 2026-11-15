@@ -87,12 +87,12 @@ export default function McpServerList() {
   };
 
   return (
-    <div className="px-3 pt-2 pb-1">
-      <div className="mb-1 flex items-center gap-1 px-1">
+    <div className="px-3 pt-3 pb-1">
+      <div className="mb-1 flex items-center gap-1 rounded-lg bg-base-200/70 px-2 py-1">
         <button
           type="button"
           onClick={() => dispatch(toggleTopic("__mcp_servers__"))}
-          className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[10px] font-semibold uppercase tracking-wider text-base-content/45 transition hover:text-base-content"
+          className="flex min-w-0 flex-1 items-center gap-1 rounded-md text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70 transition hover:text-base-content"
           aria-expanded={!collapsed}
         >
           <ChevronDown

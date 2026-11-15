@@ -389,6 +389,11 @@ ids only — pinned topics, regular topics, and the unsorted bucket once it hold
 expand-all once every one of those ids is collapsed. Sections, date buckets, workspaces and agents
 share the same `collapsed_topics` list and must stay untouched.
 
+The Chats, Workspace, Agents and MCP Servers sections share one header style: an uppercase semibold
+label row on a `bg-base-200/70` band, with `mx-2 my-1.5 border-t border-base-300` rules between the
+sections in `SidebarContent`. A new sidebar section should reuse that pattern so the sections stay
+distinguishable.
+
 ### 4.16 Meta chat works from conversation summaries, not messages
 
 The AI icon in the sidebar header navigates to `/meta`, rendered by
