@@ -7,6 +7,8 @@ test.describe("language", () => {
       {
         user: "The user opens Chat AI with the default English interface.",
         system: "Footer and interface labels are English.",
+        shows:
+          "the Chat AI interface in English with English footer labels",
       },
       () => openApp(page),
     );
@@ -17,6 +19,8 @@ test.describe("language", () => {
         user: "The user clicks the German flag in the footer.",
         system:
           "The interface language changes immediately: legal links and helper texts are now German, without a reload.",
+        shows:
+          "the Chat AI interface in German with German footer labels such as Impressum",
       },
       async () => {
         await page.locator('button:has(img[alt="de language flag"])').click();

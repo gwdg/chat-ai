@@ -11,6 +11,8 @@ test.describe("chat", () => {
         user: "The user opens Chat AI.",
         system:
           "The welcome tour is dismissed and an empty conversation with the prompt box is shown.",
+        shows:
+          "the Chat AI chat page with a conversation area and a prompt input at the bottom",
       },
       () => openApp(page),
     );
@@ -21,6 +23,8 @@ test.describe("chat", () => {
         user: "The user types “Hello from the deterministic suite” and clicks Send.",
         system:
           "The message appears in the conversation and the assistant streams its answer back token by token.",
+        shows:
+          "the chat with the user message Hello from the deterministic suite and the assistant reply labelled Mocked reply to: Hello from the deterministic suite",
       },
       async () => {
         await sendPrompt(page, "Hello from the deterministic suite");
@@ -38,6 +42,8 @@ test.describe("chat", () => {
         user: "The user reads the answer.",
         system:
           "The sent prompt and the full answer stay visible, and the prompt box is empty and ready for the next message.",
+        shows:
+          "the chat with the user message and the assistant reply visible and an empty prompt input",
       },
       async () => {
         await expect(

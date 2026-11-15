@@ -42,6 +42,8 @@ test.describe("local OpenCode agent", () => {
       {
         user: "The user opens Chat AI with the Agents module enabled.",
         system: "An empty conversation is shown and the sidebar has an Agents section.",
+        shows:
+          "the Chat AI page with the sidebar and an Agents section",
       },
       () => openApp(page),
     );
@@ -52,6 +54,8 @@ test.describe("local OpenCode agent", () => {
         user: "The user clicks the Spawn agent button in the Agents section.",
         system:
           "The Add agent dialog opens with a name, a Local agent toggle (on by default), an opencode server URL and a password field.",
+        shows:
+          "the Add agent dialog with an agent name field and server settings",
       },
       async () => {
         // Add the agent through the sidebar, exactly as the UI offers it.
@@ -68,6 +72,8 @@ test.describe("local OpenCode agent", () => {
         user: "The user enters a name, the local server URL and its password.",
         system:
           "The form keeps Local agent checked, so the app will connect to this server directly instead of the configured defaults.",
+        shows:
+          "the Add agent dialog filled with an agent name, a server URL and a password",
       },
       async () => {
         await dialog
@@ -96,6 +102,8 @@ test.describe("local OpenCode agent", () => {
         user: "The user clicks Add agent.",
         system:
           "The app verifies the server, creates an OpenCode session named “Local OpenCode agent agent” and closes the dialog only after both calls succeeded.",
+        shows:
+          "the Chat AI page with the new Local OpenCode agent in the sidebar and no dialog",
       },
       async () => {
         await dialog
@@ -134,6 +142,8 @@ test.describe("local OpenCode agent", () => {
         user: "The user looks at the new agent row.",
         system:
           "The sidebar polls the local server and shows the green status “Connected and idle” next to the agent instead of an unknown state.",
+        shows:
+          "the sidebar agent row for Local OpenCode agent with a connected and idle status",
       },
       async () => {
         await expect(
@@ -148,6 +158,8 @@ test.describe("local OpenCode agent", () => {
         user: "The user clicks the agent row.",
         system:
           "The agent page opens with its files panel, an empty conversation and a composer bound to the OpenCode session.",
+        shows:
+          "the agent page with a files panel and an empty conversation composer",
       },
       async () => {
         await page.locator(`button[title="${SERVER_URL}"]`).first().click();
@@ -165,14 +177,29 @@ test.describe("local OpenCode agent", () => {
         user: "The user sends the shell command !echo opencode-local-ok.",
         system:
           "OpenCode runs the command in the session and streams its output back through the event stream, shown inline in the conversation.",
+        shows:
+          "the agent conversation showing shell output containing opencode-local-ok",
       },
       async () => {
         const composer = page.locator("textarea").first();
         await composer.fill(`!echo ${MARKER}`);
         await composer.press("Enter");
-        await expect(
-          page.getByText(MARKER, { exact: false }).first(),
-        ).toBeVisible({ timeout: 30_000 });
+
+        // Waiting for the marker text alone is not enough: the composer still
+        // contains it for a moment and `getByText` would match it there. Wait for
+        // the finished shell card instead — its output is a `<pre>` and the card
+        // reports the exit code once OpenCode finished the command.
+        const shellCard = page
+          .locator('div[id^="agent-message-"]')
+          .filter({ has: page.locator("pre") })
+          .filter({ hasText: MARKER });
+        await expect(shellCard.locator("pre")).toContainText(MARKER, {
+          timeout: 30_000,
+        });
+        await expect(shellCard).toContainText("Exit code 0", {
+          timeout: 30_000,
+        });
+        await expect(composer).toHaveValue("");
       },
     );
   });

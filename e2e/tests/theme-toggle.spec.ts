@@ -12,6 +12,8 @@ test.describe("theme", () => {
       {
         user: "The user opens Chat AI with the default light theme.",
         system: "The page root has no dark class, so the light palette is used.",
+        shows:
+          "the Chat AI interface in a light colour scheme with the conversation area and prompt input",
       },
       async () => {
         await openApp(page);
@@ -25,6 +27,8 @@ test.describe("theme", () => {
         user: "The user clicks the theme toggle in the footer.",
         system:
           "The dark class is applied to the page root and the daisyUI palette switches to the dark colours.",
+        shows:
+          "the Chat AI interface in a dark colour scheme with the conversation area and prompt input",
       },
       async () => {
         await page.locator('[data-guide="theme-toggle"]').click();
@@ -38,6 +42,8 @@ test.describe("theme", () => {
         user: "The user reloads the page.",
         system:
           "The theme preference comes from the persisted Redux interface settings, so the page stays dark.",
+        shows:
+          "the Chat AI interface still in a dark colour scheme after a page reload",
       },
       async () => {
         await page.reload();
@@ -51,6 +57,8 @@ test.describe("theme", () => {
       {
         user: "The user clicks the theme toggle again.",
         system: "The dark class is removed and the light palette is restored.",
+        shows:
+          "the Chat AI interface back in a light colour scheme",
       },
       async () => {
         await page.locator('[data-guide="theme-toggle"]').click();

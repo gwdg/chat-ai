@@ -11,6 +11,8 @@ test.describe("workspace", () => {
         user: "The user opens Chat AI and reveals the sidebar.",
         system:
           "The workspace section is visible with a New workspace action.",
+        shows:
+          "the Chat AI page with the sidebar visible and a New workspace action",
       },
       async () => {
         await openApp(page);
@@ -24,6 +26,7 @@ test.describe("workspace", () => {
         user: "The user clicks New workspace.",
         system:
           "A small form asks for a workspace name, pre-filled with a placeholder example.",
+        shows: "a create workspace form with an input for the workspace name",
       },
       async () => {
         await page.getByRole("button", { name: "New workspace" }).click();
@@ -37,6 +40,8 @@ test.describe("workspace", () => {
         user: "The user names it “Deterministic workspace” and confirms.",
         system:
           "The workspace page opens with its storage list, root folder and file browser.",
+        shows:
+          "the workspace page for Deterministic workspace with a storage list and a file browser",
       },
       async () => {
         await page
@@ -66,6 +71,8 @@ test.describe("workspace", () => {
         user: "The user reopens the sidebar.",
         system:
           "The new workspace is listed alongside the chats, so it can be opened again later.",
+        shows:
+          "the sidebar listing the workspace Deterministic workspace",
       },
       async () => {
         await openSidebar(page);

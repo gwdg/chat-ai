@@ -31,6 +31,8 @@ test.describe("codemode", () => {
       {
         user: "The user opens Chat AI.",
         system: "An empty conversation with the prompt box is shown.",
+        shows:
+          "the Chat AI chat page with an empty conversation and a prompt input",
       },
       () => openApp(page),
     );
@@ -41,6 +43,8 @@ test.describe("codemode", () => {
         user: "The user creates a workspace named “Codemode workspace” in the sidebar.",
         system:
           "The workspace page opens with its storage list and root folder. A workspace gives the agent file storage and write access.",
+        shows:
+          "the workspace page for Codemode workspace with a storage list and a file browser",
       },
       async () => {
         await openSidebar(page);
@@ -60,6 +64,8 @@ test.describe("codemode", () => {
         user: "Back in the chat, the user opens the Workspace popover and selects the workspace.",
         system:
           "The workspace option is pressed, so the chat has write access to that workspace. A “What's new” panel appears beside the conversation.",
+        shows:
+          "the chat page with an empty conversation and a workspace folder icon in the prompt toolbar",
       },
       async () => {
         await openApp(page);
@@ -83,6 +89,8 @@ test.describe("codemode", () => {
         user: "The user sends “Create a tiny PNG with codemode”.",
         system:
           "The assistant calls the codemode tool with JavaScript. The sandbox runs that code, calls tools.write, stores a 1×1 PNG in the workspace and then streams a short confirmation.",
+        shows:
+          "the chat with the user message Create a tiny PNG with codemode and the assistant reply Created the PNG with codemode",
       },
       async () => {
         const prompt = page.locator('textarea[name="prompt"]');
@@ -103,6 +111,8 @@ test.describe("codemode", () => {
         user: "The user looks at the codemode result in the reply.",
         system:
           "The generated file is served back into the chat as an image, shown with the alt text “pixel.png”.",
+        shows:
+          "the chat with an image named pixel.png in the assistant reply",
       },
       async () => {
         await expect(page.locator('img[alt="pixel.png"]').first()).toBeVisible({

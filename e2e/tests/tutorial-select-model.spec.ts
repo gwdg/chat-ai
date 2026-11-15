@@ -21,6 +21,7 @@ test.describe("tutorial: select a model", () => {
         user: "The user opens the Meta chat and starts the “Select a model” tutorial.",
         system:
           "The panel shows Step 1 of 1 and waits for the user to open the model selector. Done is disabled until then.",
+        shows: "the Meta chat with a tutorial panel showing Step 1 of 1",
       },
       async () => {
         await openApp(page, "/meta");
@@ -40,6 +41,8 @@ test.describe("tutorial: select a model", () => {
         user: "The user closes the sidebar overlay and clicks the model chip.",
         system:
           "The model picker opens and the tutorial recognises the click as the completed step.",
+        shows:
+          "the Meta chat page with a model selector showing Alpha Mock Model",
       },
       async () => {
         // The overlay drawer would cover the selector on small screens.
@@ -58,6 +61,8 @@ test.describe("tutorial: select a model", () => {
         user: "The user reopens the tutorial panel and clicks Done.",
         system:
           "The guide notices the selector click, marks its only step complete and automatically advances to Tutorial complete. Done closes the panel.",
+        shows:
+          "the Meta chat page with the Chatty introduction card and the prompt input",
       },
       async () => {
         panel = await showTutorialPanel(page);
@@ -69,6 +74,7 @@ test.describe("tutorial: select a model", () => {
         });
         await panel.getByRole("button", { name: "Done" }).click();
         await expect(panel).toHaveCount(0);
+        await closeSidebarOverlay(page);
       },
     );
   });

@@ -107,7 +107,14 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
-  timeout: 60_000,
+  // Screenshot validation happens in the documentation fixture teardown, so the
+  // timeout has to cover the vision requests as well. With E2E_VISION=0 there
+  // is nothing to wait for and the tighter limit catches slow scenarios.
+  timeout: ["0", "false", "no"].includes(
+    (process.env.E2E_VISION ?? "").toLowerCase(),
+  )
+    ? 60_000
+    : 120_000,
   expect: { timeout: 10_000 },
   reporter: [
     ["list"],

@@ -11,6 +11,8 @@ test.describe("chat attachments", () => {
         user: "The user opens Chat AI.",
         system:
           "The welcome tour is dismissed and an empty conversation with the prompt box is shown.",
+        shows:
+          "the Chat AI chat page with an empty conversation and a prompt input",
       },
       () => openApp(page),
     );
@@ -25,6 +27,8 @@ test.describe("chat attachments", () => {
         user: "The user attaches a local file named meeting-notes.txt.",
         system:
           "The file is read in the browser and appears as an attachment card above the prompt box, before anything is sent.",
+        shows:
+          "the chat prompt area with an attachment card named meeting-notes.txt",
       },
       async () => {
         // The AttachButton input is the only one without an `accept` filter; the
@@ -47,6 +51,8 @@ test.describe("chat attachments", () => {
         user: "The user sends “Summarize the attached notes”.",
         system:
           "The prompt and the attachment disappear from the prompt box, the message is stored locally and the assistant streams its answer.",
+        shows:
+          "the chat with the user message Summarize the attached notes and an assistant reply",
       },
       async () => {
         await sendPrompt(page, "Summarize the attached notes");
@@ -64,6 +70,8 @@ test.describe("chat attachments", () => {
         user: "The user reads the answer and scrolls back to the sent message.",
         system:
           "The sent message still carries the meeting-notes.txt attachment and the prompt box is empty.",
+        shows:
+          "the chat with a meeting-notes.txt attachment in the sent message and an empty prompt input",
       },
       async () => {
         // The attachment is kept in the sent message, not only in the prompt box.

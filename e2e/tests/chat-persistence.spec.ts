@@ -2,6 +2,7 @@ import {
   dismissWelcome,
   expect,
   openApp,
+  openSidebar,
   sendPrompt,
   test,
 } from "./fixtures";
@@ -17,6 +18,8 @@ test.describe("chat persistence", () => {
         user: "The user opens Chat AI and asks to persist the exchange.",
         system:
           "The conversation is created, the answer streams in and a title is generated for the chat.",
+        shows:
+          "the conversation area containing the prompt Persist this exchange at its top right and the assistant answer Mocked reply to: Persist this exchange beneath it",
       },
       async () => {
         await openApp(page);
@@ -35,6 +38,8 @@ test.describe("chat persistence", () => {
         user: "The user looks at the sidebar.",
         system:
           "The generated title appears in the chat list, which proves the conversation was written to IndexedDB before the reload.",
+        shows:
+          "the sidebar chat list containing the title Mocked conversation title",
       },
       async () => {
         // The title is generated after the reply and written in the same
@@ -45,6 +50,9 @@ test.describe("chat persistence", () => {
         await expect(
           page.getByText("Mocked conversation title").first(),
         ).toBeVisible({ timeout: 20_000 });
+        // On tablets and phones the sidebar is an overlay. Open it so the
+        // screenshot also shows the persisted title instead of a hidden drawer.
+        await openSidebar(page);
       },
     );
 
@@ -54,6 +62,8 @@ test.describe("chat persistence", () => {
         user: "The user reloads the browser tab.",
         system:
           "The app rehydrates the conversation from IndexedDB: the same prompt, the same answer and the same title are shown again.",
+        shows:
+          "the chat after a reload with the user message Persist this exchange and the assistant reply still visible",
       },
       async () => {
         await page.reload();

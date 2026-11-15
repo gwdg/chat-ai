@@ -10,6 +10,7 @@ test.describe("tutorial: search chats", () => {
         user: "The user opens the Meta chat and starts the “Search chats” tutorial.",
         system:
           "The tutorial panel appears with Step 1 of 2 and tells the user to open the chat search.",
+        shows: "the Meta chat with a tutorial panel showing Step 1 of 2",
       },
       async () => {
         await openApp(page, "/meta");
@@ -24,6 +25,8 @@ test.describe("tutorial: search chats", () => {
         user: "The user clicks the Search button in the sidebar.",
         system:
           "The search field opens, and the guide advances to Step 2 of 2, which waits for the user to type a query.",
+        shows:
+          "the sidebar with the chat search field open and a tutorial panel showing Step 2 of 2",
       },
       async () => {
         await page.locator('[data-guide="search-chats"]').click();
@@ -43,6 +46,8 @@ test.describe("tutorial: search chats", () => {
         user: "The user types “hello” into the search field.",
         system:
           "The guide marks itself complete, and Done closes the tutorial panel.",
+        shows:
+          "the sidebar with the chat search field containing hello and the message No matches for \"hello\" below it",
       },
       async () => {
         const search = page.locator('[data-guide="search-input"]');

@@ -108,6 +108,52 @@ A scenario that does not call `doc.step()` still gets one automatic final screen
 scenario is left undocumented. Re-running a scenario replaces its folder. The output root can be
 changed with `E2E_DOCUMENTATION_DIR`; `E2E_DOC_DEBUG=1` logs which folders are created.
 
+#### Automatic visual verification
+
+Screenshots are checked against the narrative with the SAIA Gemma vision model
+(`gemma-4-31b-it`). Add a `shows` sentence to a step and the recorded image is sent to the model
+after the test finishes:
+
+```ts
+await doc.step(
+  "Open the tutorial catalog",
+  {
+    user: "The user clicks the tutorials button above the prompt box.",
+    system: "The catalog opens and the guide advances to Step 2 of 4.",
+    shows: "the Meta chat with the tutorial catalog open above the prompt input",
+  },
+  async () => {
+    /* … */
+  },
+);
+```
+
+Every step with `shows` gets a `## Visual check` section in its Markdown file, containing the
+expectation and the model's verdict. A `NO` verdict (or a persistent API error) fails the test when
+the test itself passed, so a screenshot that shows the wrong layout — for example the phone sidebar
+drawer covering the Meta chat — cannot silently reach the documentation.
+
+Credentials are read at runtime from `secrets/back.json` (`apiEndpoint` + `apiKey`), the same file
+the back proxy uses. They are never copied into the repository. Override them with environment
+variables:
+
+| env | default | meaning |
+| --- | --- | --- |
+| `E2E_VISION` | `auto` | `auto` enables the checks when credentials exist; `1` requires them; `0` disables them |
+| `SAIA_API_ENDPOINT` | `apiEndpoint` from `back.json` | OpenAI-compatible base URL |
+| `SAIA_API_KEY` | `apiKey` from `back.json` | API key for the vision model |
+| `E2E_VISION_MODEL` | `gemma-4-31b-it` | model that answers the checks |
+| `E2E_VISION_CONCURRENCY` | `3` | parallel requests per worker |
+
+```bash
+npm run test:e2e                         # checks on when credentials are available
+E2E_VISION=0 npm run test:e2e            # documentation only, no model calls
+E2E_VISION=1 npm run test:e2e            # fail if the checks cannot run
+```
+
+The checks run in the fixture teardown, in parallel and with retries for transport errors. They are
+part of the normal suite, so a scenario's own `test.slow()` and the bumped test timeout cover them.
+
 ### Analyser
 
 `npm run analyze` checks the environment first, then runs the suite and reports per-project totals,

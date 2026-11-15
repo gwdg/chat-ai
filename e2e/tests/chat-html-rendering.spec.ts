@@ -26,6 +26,8 @@ test.describe("HTML rendering", () => {
         user: "The user opens the app and sends “Show me some HTML”.",
         system:
           "The assistant streams a fenced html block. HTML blocks start as code by default, so the source is shown with its tags.",
+        shows:
+          "the chat with a fenced HTML code block showing the source tags",
       },
       async () => {
         await openApp(page);
@@ -42,6 +44,8 @@ test.describe("HTML rendering", () => {
         user: "The user clicks “Render HTML (Strict)” on the code block.",
         system:
           "The block switches to a sandboxed iframe with an opaque origin. The heading renders as live markup inside that frame.",
+        shows:
+          "the chat with the rendered HTML document showing the heading Rendered HTML",
       },
       async () => {
         const toggle = page
@@ -65,6 +69,8 @@ test.describe("HTML rendering", () => {
         user: "The user checks that the model's script did not run.",
         system:
           "The strict sanitizer stripped the <script> element, and the iframe cannot reach the parent page, so no flag is set.",
+        shows:
+          "the chat with the rendered HTML document still showing the heading Rendered HTML",
       },
       async () => {
         const frame = page.frameLocator("iframe.html-block");
