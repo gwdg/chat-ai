@@ -345,7 +345,7 @@ export async function showTutorialPanel(page: Page) {
 
 /**
  * Every test gets fresh browser state (localStorage + IndexedDB), mocked APIs
- * and a documentation recorder.
+ * (unless the project sets `mockUpstream: false`) and a documentation recorder.
  *
  * Overriding `page` guarantees the routes exist before the first navigation.
  * The `doc` fixture writes per-step screenshots and narratives under
@@ -353,9 +353,17 @@ export async function showTutorialPanel(page: Page) {
  * `doc.step()` still get one automatic final screenshot from the fixture
  * teardown, so every scenario produces usable documentation.
  */
-export const test = base.extend<{ doc: ScenarioDocumentation }>({
-  page: async ({ page }, use) => {
-    await mockApi(page);
+export const test = base.extend<
+  { doc: ScenarioDocumentation } & { mockUpstream: boolean }
+>({
+  /**
+   * The documentation scenarios mock the three upstream endpoints. The opt-in
+   * `real-model` project sets this to `false` so the app talks to the back
+   * service the user started, with a real model behind it.
+   */
+  mockUpstream: [true, { option: true }],
+  page: async ({ page, mockUpstream }, use) => {
+    if (mockUpstream) await mockApi(page);
     await use(page);
   },
   // `auto` sets the fixture up for every test, even those that never mention

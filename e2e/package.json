@@ -14,7 +14,8 @@
         "test:e2e:chrome": "playwright test --project=chrome-desktop --project=chrome-tablet --project=chrome-phone",
         "test:e2e:ui": "playwright test --ui",
         "test:e2e:report": "playwright show-report results/html",
-        "test:opencode": "E2E_OPENCODE=1 playwright test --project=opencode-local"
+        "test:opencode": "E2E_OPENCODE=1 playwright test --project=opencode-local",
+    "test:real": "E2E_REAL_MODEL=1 playwright test tests/chat-real-model.spec.ts --project=chrome-desktop"
     },
     "dependencies": {
         "openai": "^4.104.0",

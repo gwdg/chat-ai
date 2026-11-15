@@ -1,10 +1,20 @@
 import { expect, openApp, sendPrompt, test } from "./fixtures";
 
+/**
+ * The reply text is fixed only while the upstream API is mocked. In the opt-in
+ * real-backend mode (`E2E_REAL_MODEL=1`) a real model answers, so the scenario
+ * checks that an answer arrived instead of matching fixture text.
+ */
+const REAL_MODEL = process.env.E2E_REAL_MODEL === "1";
+const PROMPT = "Summarize the attached notes";
+
 test.describe("chat attachments", () => {
   test("attaches a text file and sends it with the prompt", async ({
     page,
     doc,
   }) => {
+    if (REAL_MODEL) test.slow();
+
     await doc.step(
       "Open an empty chat",
       {
@@ -55,12 +65,18 @@ test.describe("chat attachments", () => {
           "the chat with the user message Summarize the attached notes and an assistant reply",
       },
       async () => {
-        await sendPrompt(page, "Summarize the attached notes");
-        await expect(
-          page.getByText("Mocked reply to: Summarize the attached notes", {
-            exact: true,
-          }),
-        ).toBeVisible({ timeout: 20_000 });
+        await sendPrompt(page, PROMPT);
+        if (REAL_MODEL) {
+          // A real model decides the wording; wait until text has streamed in.
+          await expect(page.locator(".markdown-body").last()).toContainText(
+            /\S/,
+            { timeout: 120_000 },
+          );
+        } else {
+          await expect(
+            page.getByText(`Mocked reply to: ${PROMPT}`, { exact: true }),
+          ).toBeVisible({ timeout: 20_000 });
+        }
       },
     );
 

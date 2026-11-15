@@ -262,9 +262,34 @@ async function probeOpencode() {
   }
 }
 
+/**
+ * Probe the back service the opt-in real-model suite talks to. `/models` answers
+ * 200 even when the upstream rejects the key, so the body decides, not the
+ * status (see AGENTS.md §4.8).
+ */
+async function probeBackend() {
+  if (process.env.E2E_REAL_MODEL !== "1") return { configured: false };
+  const url = (process.env.E2E_BACKEND_URL ?? "http://127.0.0.1:8081").replace(/\/+$/, "");
+  try {
+    const response = await fetch(`${url}/models`, { signal: AbortSignal.timeout(10_000) });
+    const body = await response.json().catch(() => null);
+    const models = Array.isArray(body?.data) ? body.data.length : 0;
+    if (!models) {
+      return {
+        configured: true,
+        ok: false,
+        url,
+        message: "no models in the response (check the apiKey in secrets/back.json)",
+      };
+    }
+    return { configured: true, ok: true, url, models };
+  } catch (error) {
+    return { configured: true, ok: false, url, message: oneLine(error?.message ?? error) };
+  }
+}
+
 async function environmentCheck() {
-  const browsers = installedBrowsers();
-  const chrome = systemChrome();
+  const browsers = installedBrowsers();  const chrome = systemChrome();
   const matrix = listMatrix();
   const projects = matrix.ok ? matrix.projects : [];
   const needed = new Set(
@@ -276,6 +301,7 @@ async function environmentCheck() {
     binary: opencodeInfo(),
     server: await probeOpencode(),
   };
+  const backend = await probeBackend();
 
   const env = {
     node: process.version,
@@ -286,6 +312,7 @@ async function environmentCheck() {
     systemChrome: chrome ?? null,
     probes,
     opencode,
+    backend,
     matrix: matrix.ok
       ? {
           ok: true,
@@ -334,6 +361,17 @@ function printEnvironment(env) {
     console.log(
       `  ${"opencode server".padEnd(15)} ${
         oc.ok ? `${green("ok")} ${dim(`(${oc.version ?? "unknown"}, ${oc.url})`)}` : `${red("failed")} ${dim(`${oc.url} ${oc.message ?? ""}`)}`
+      }`,
+    );
+  }
+
+  const backend = env.backend;
+  if (backend?.configured) {
+    console.log(
+      `  ${"backend".padEnd(15)} ${
+        backend.ok
+          ? `${green("ok")} ${dim(`(${backend.models} models, ${backend.url})`)}`
+          : `${red("failed")} ${dim(`${backend.url} ${backend.message ?? ""}`)}`
       }`,
     );
   }
@@ -546,6 +584,9 @@ async function main() {
   }
   if (process.env.E2E_OPENCODE === "1" && !env.opencode?.binary) {
     envProblems.push("opencode: not installed (required by E2E_OPENCODE=1)");
+  }
+  if (env.backend?.configured && !env.backend.ok) {
+    envProblems.push(`backend: ${env.backend.message ?? "unreachable"}`);
   }
 
   if (cli.values.check) {

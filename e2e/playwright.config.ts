@@ -1,3 +1,6 @@
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+
 import { defineConfig, devices, type Project } from "@playwright/test";
 
 /**
@@ -17,8 +20,57 @@ const OPENCODE_URL = (process.env.E2E_OPENCODE_URL ?? "http://127.0.0.1:4096").r
 const START_OPENCODE = OPENCODE_ENABLED && !process.env.E2E_OPENCODE_URL;
 const OPENCODE_SPEC = /agent-opencode\.spec\.ts/;
 
+/**
+ * Opt-in scenario against a real model: the app talks to a back service you
+ * started (`E2E_BACKEND_URL`), which holds the API key. The project runs its own
+ * app instance, because the backend URLs are compiled into the bundle at Vite
+ * startup (`VITE_BACKEND_ENDPOINT` etc.), so the mocked config cannot be reused.
+ */
+const REAL_MODEL_ENABLED = process.env.E2E_REAL_MODEL === "1";
+const REAL_BACKEND_URL = (
+  process.env.E2E_BACKEND_URL ?? "http://127.0.0.1:8081"
+).replace(/\/+$/, "");
+const REAL_APP_URL =
+  process.env.E2E_REAL_APP_URL ??
+  (USE_EXTERNAL_APP ? APP_URL : "http://127.0.0.1:8092");
+const REAL_APP_PORT = new URL(REAL_APP_URL).port || "8092";
+/** Generated from `fixtures/front.e2e.json`; gitignored with the rest of results/. */
+const REAL_CONFIG_FILE = "results/front.e2e-real.json";
+const REAL_SPEC = /chat-real-model\.spec\.ts/;
+
+/**
+ * Point a copy of the mocked front-end config at the back service the user is
+ * running. Every other key (modules, prompt defaults, title model) stays the
+ * same, so the real-model scenario renders the same app.
+ */
+function writeRealConfig(): void {
+  const base = JSON.parse(readFileSync("fixtures/front.e2e.json", "utf8"));
+  const modelId =
+    (process.env.E2E_REAL_MODEL_ID ?? "").trim() || base.default.model.id;
+
+  base.port = Number(REAL_APP_PORT);
+  base.backendPath = REAL_BACKEND_URL;
+  base.modelsPath = `${REAL_BACKEND_URL}/models`;
+  base.userDataPath = `${REAL_BACKEND_URL}/user`;
+  base.titleGenerationModel = modelId;
+  // The stored default is replaced by the matching entry from the real /models
+  // response as soon as it arrives, so the name only matters until then.
+  base.default.model = { id: modelId, name: modelId };
+
+  mkdirSync(dirname(resolve(REAL_CONFIG_FILE)), { recursive: true });
+  writeFileSync(REAL_CONFIG_FILE, `${JSON.stringify(base, null, 2)}\n`);
+}
+
+if (REAL_MODEL_ENABLED && OPENCODE_ENABLED) {
+  throw new Error(
+    "E2E_REAL_MODEL and E2E_OPENCODE are separate opt-in modes with their own app instance; run them one at a time.",
+  );
+}
+
+if (REAL_MODEL_ENABLED && !USE_EXTERNAL_APP) writeRealConfig();
+
 const webServer: any[] = [];
-if (!USE_EXTERNAL_APP) {
+if (!USE_EXTERNAL_APP && !REAL_MODEL_ENABLED) {
   webServer.push({
     command:
       "CONFIG_LOCATION=../e2e/fixtures/front.e2e.json npm run dev -- --port 8090 --strictPort",
@@ -38,15 +90,27 @@ if (START_OPENCODE) {
     timeout: 120_000,
   });
 }
+if (REAL_MODEL_ENABLED && !USE_EXTERNAL_APP) {
+  // Same front end, but with the generated config that points at the user's
+  // back service, so the answer comes from a real model and streams for real.
+  webServer.push({
+    command: `CONFIG_LOCATION=../e2e/${REAL_CONFIG_FILE} npm run dev -- --port ${REAL_APP_PORT} --strictPort`,
+    cwd: "../front",
+    url: REAL_APP_URL,
+    reuseExistingServer: !process.env.CI,
+    timeout: 180_000,
+  });
+}
 
 /** Chrome is the default browser for the three device classes. */
 // `browserName` is required for the iPad descriptor, which defaults to webkit.
 const chrome = { browserName: "chromium", channel: "chrome" } as const;
 
-const projects: Project[] = [
+/** The mocked matrix: Chrome desktop/tablet/phone plus Firefox desktop. */
+const deviceProjects: Project[] = [
   {
     name: "chrome-desktop",
-    testIgnore: OPENCODE_SPEC,
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
     use: {
       ...devices["Desktop Chrome"],
       ...chrome,
@@ -55,19 +119,19 @@ const projects: Project[] = [
   },
   {
     name: "chrome-tablet",
-    testIgnore: OPENCODE_SPEC,
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
     // 1194 x 834: below the app's 1280 px desktop breakpoint, so it keeps the
     // tablet layout (rail sidebar, drawer-free content) while still being wide.
     use: { ...devices["iPad Pro 11 landscape"], ...chrome },
   },
   {
     name: "chrome-phone",
-    testIgnore: OPENCODE_SPEC,
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
     use: { ...devices["Pixel 7"], ...chrome },
   },
   {
     name: "firefox-desktop",
-    testIgnore: OPENCODE_SPEC,
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
     // Same desktop class as chrome-desktop: 1280 x 720 squeezes the Meta chat
     // prompt row far enough that the model chip covers the send button.
     use: {
@@ -76,6 +140,43 @@ const projects: Project[] = [
     },
   },
 ];
+
+/**
+ * The two suites are separate modes: `npm run test:e2e` runs the mocked matrix
+ * above, `npm run test:real` (E2E_REAL_MODEL=1) runs the same device classes
+ * against the app instance that talks to the user's back service.
+ */
+const realApp = { baseURL: REAL_APP_URL, mockUpstream: false } as const;
+
+const realDeviceProjects: Project[] = [
+  {
+    name: "chrome-desktop",
+    use: {
+      ...devices["Desktop Chrome"],
+      ...chrome,
+      ...realApp,
+      viewport: { width: 1440, height: 900 },
+    },
+  },
+  {
+    name: "chrome-tablet",
+    use: { ...devices["iPad Pro 11 landscape"], ...chrome, ...realApp },
+  },
+  {
+    name: "chrome-phone",
+    use: { ...devices["Pixel 7"], ...chrome, ...realApp },
+  },
+  {
+    name: "firefox-desktop",
+    use: {
+      ...devices["Desktop Firefox"],
+      ...realApp,
+      viewport: { width: 1440, height: 900 },
+    },
+  },
+];
+
+const projects: Project[] = REAL_MODEL_ENABLED ? realDeviceProjects : deviceProjects;
 
 if (OPENCODE_ENABLED) {
   // One desktop run: the scenario drives the local agent UI and its shell turn,
@@ -92,11 +193,12 @@ if (OPENCODE_ENABLED) {
 }
 
 // WebKit needs host libraries that a plain `npm i` does not install. Enable it
-// explicitly after `npx playwright install-deps webkit`.
-if (process.env.E2E_WEBKIT === "1") {
+// explicitly after `npx playwright install-deps webkit`. It runs the mocked
+// matrix, so the opt-in modes do not add it.
+if (!REAL_MODEL_ENABLED && !OPENCODE_ENABLED && process.env.E2E_WEBKIT === "1") {
   projects.push({
     name: "webkit-desktop",
-    testIgnore: OPENCODE_SPEC,
+    testIgnore: [OPENCODE_SPEC, REAL_SPEC],
     use: { ...devices["Desktop Safari"] },
   });
 }

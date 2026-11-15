@@ -27,6 +27,7 @@ Each user scenario is its own readable file in `tests/`, so it can be run alone:
 | `chat-latex-rendering.spec.ts` | inline KaTeX math and a fenced LaTeX block |
 | `chat-codemode-png.spec.ts` | create a PNG through the codemode tool in a workspace |
 | `agent-opencode.spec.ts` | connect a local OpenCode agent and run a shell turn (opt-in) |
+| `chat-real-model.spec.ts` | ask a real model behind your own back service (opt-in) |
 
 ### Setup
 
@@ -61,6 +62,7 @@ npx playwright test tests/chat-send.spec.ts
 npx playwright test tests/chat-send.spec.ts --project=chrome-phone
 npm run test:e2e:report                 # last HTML report
 npm run test:opencode                   # opt-in local agent scenario, see below
+npm run test:real                       # opt-in real-model scenario, see below
 ```
 
 Results go to `e2e/results/` (gitignored): the HTML report under `results/html`, traces,
@@ -180,6 +182,11 @@ writes `results/analysis/report-<timestamp>.json`, `run-<timestamp>.log` and `la
 | `chrome-phone` | system Chrome | Pixel 7 |
 | `firefox-desktop` | Playwright Firefox | 1440 × 900 desktop |
 | `opencode-local` | system Chrome | 1440 × 900, only with `E2E_OPENCODE=1` |
+| `real-model` | system Chrome | 1440 × 900, only with `E2E_REAL_MODEL=1` |
+
+The two opt-in modes replace the mocked matrix for that run: they start their own app instance
+(`opencode-local` uses the mocked one plus a real local OpenCode server, `real-model` uses the app
+built against your back service).
 
 The tablet is deliberately 1194 px wide: the app's desktop breakpoint is 1280 px, so this exercises
 the tablet layout (rail sidebar plus overlay drawer). A 1280 × 720 desktop is not used because the
@@ -223,6 +230,55 @@ The shell turn is deliberate: it proves session creation, prompt delivery and ev
 without depending on a model provider or network access. If `E2E_OPENCODE_URL` points at an
 existing server, start it with the same password (`OPENCODE_SERVER_PASSWORD=... opencode serve`).
 
+### Real model behind a back service you started (opt-in)
+
+The default suite replaces the model with mocks; that is what makes it deterministic. To exercise
+the real thing, start the back proxy yourself (it reads the API key from `secrets/back.json`) and
+run the real-model mode **instead**:
+
+```bash
+cd back && npm run start                 # :8081
+cd e2e  && npm run test:real             # E2E_REAL_MODEL=1, project=real-model
+```
+
+The two are separate modes, not layers. `npm run test:e2e` starts the mocked app on port 8090 and
+runs the 13 deterministic scenarios; `npm run test:real` starts a second app instance on port 8092
+whose config points at `E2E_BACKEND_URL`, runs only `chat-real-model.spec.ts`, and does not start
+the mocked instance. Combining them (or either with `E2E_OPENCODE=1`) in one run is refused with a
+clear config error, because each mode needs its own app instance.
+
+The front end reads its backend URLs at Vite startup, so the real-mode config is generated from
+`fixtures/front.e2e.json` into `results/front.e2e-real.json` (gitignored): `backendPath` becomes
+`E2E_BACKEND_URL`, `modelsPath` and `userDataPath` become its `/models` and `/user` routes, and the
+title/chat model id becomes `E2E_REAL_MODEL_ID`. Everything else — modules, prompt defaults, the
+announcement — stays the same, so the scenario renders the same app.
+
+`tests/chat-real-model.spec.ts` asks "What is 17 + 25? Reply with just the number." and checks that
+
+- the model chip is no longer "Alpha Mock Model", so `/models` really came from your backend,
+- the streamed answer contains `42`, i.e. the model's own output rather than a fixture,
+- no `Mocked reply` text appears anywhere.
+
+Documentation and the Gemma vision check still run, so the mode writes
+`results/documentation/chat-real-model/real-model/` and its `shows` sentence is verified against the
+real answer. The wording is not deterministic, which is exactly why this mode is separate from the
+default matrix.
+
+Documentation folders are keyed by scenario and project only, and the real-mode projects reuse the
+mocked device names (`chrome-tablet`, …). Running the other mode therefore replaces the screenshots
+in the same folder; re-run the mode whose output you want to keep.
+
+| env | default | meaning |
+| --- | --- | --- |
+| `E2E_REAL_MODEL` | unset | `1` switches the run to the real-model mode |
+| `E2E_BACKEND_URL` | `http://127.0.0.1:8081` | back service that holds the API key |
+| `E2E_REAL_MODEL_ID` | `default.model.id` from `fixtures/front.e2e.json` | model id for the conversation and title generation; the matching entry from the real `/models` response replaces it, and the app falls back to the first listed model |
+| `E2E_REAL_APP_URL` | `http://127.0.0.1:8092` | app instance to test, when you serve the build yourself |
+| `E2E_APP_URL` | unset | test an already running app instance; no dev server is started, and the real mode uses it as well if `E2E_REAL_APP_URL` is unset |
+
+`npm run analyze:check` probes the backend in this mode and fails with the reason when `/models`
+returns no models. The status is always 200 — even for a rejected key — so the check reads the body.
+
 ### Mocked upstream APIs and settings
 
 `tests/fixtures.ts` registers `page.route` handlers before the first navigation, so no back service
@@ -234,6 +290,10 @@ is required:
 - `GET /user` returns a fixed user.
 - `POST /chat/completions` streams deterministic reply text and returns a fixed title for
   non-streaming calls.
+
+The handlers come from the `mockUpstream` option fixture, which is `true` by default. The opt-in
+`real-model` project sets it to `false`, so those three requests go to the back service instead of
+being intercepted; everything else (browser state, documentation, vision checks) is the same.
 
 `E2E_APP_URL` points the suite at an already running instance (for example a deployment) and skips
 the bundled dev server.
