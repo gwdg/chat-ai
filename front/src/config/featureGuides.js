@@ -600,6 +600,11 @@ export const featureGuides = {
         textKey: "feature_guide.manage_topics.step3",
         completeOnTargetClick: true,
       },
+      {
+        target: '[data-guide="collapse-all-topics"]',
+        textKey: "feature_guide.manage_topics.step4",
+        completeOnTargetClick: true,
+      },
     ],
   },
   sort_organize: {

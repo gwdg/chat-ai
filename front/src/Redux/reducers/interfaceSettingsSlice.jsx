@@ -92,6 +92,15 @@ const interfaceSettingsSlice = createSlice({
         }
       }
     },
+    // Counterpart to collapseTopics, used by the sidebar's expand-all control.
+    expandTopics: (state, action) => {
+      const ids = Array.isArray(action.payload)
+        ? action.payload
+        : [action.payload];
+      state.collapsed_topics = state.collapsed_topics.filter(
+        (id) => !ids.includes(id),
+      );
+    },
     // Agent rows in the sidebar start collapsed, so their session lists are
     // stored as the explicitly expanded ones instead of as collapsed ids.
     toggleExpandedAgent: (state, action) => {
@@ -178,7 +187,7 @@ export const {
   toggleTheme, setDarkMode, setLightMode,
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
-  setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics,
+  setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics, expandTopics,
   toggleExpandedAgent,
   setConversationSort, setConversationGrouping, markTutorialCompleted, markUseCaseCompleted,
   suppressTutorial,

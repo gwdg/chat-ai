@@ -100,6 +100,8 @@ export default {
     create_button: "Neues Thema",
     expand_topic: "Thema ausklappen",
     collapse_topic: "Thema einklappen",
+    expand_all_topics: "Alle Themen ausklappen",
+    collapse_all_topics: "Alle Themen einklappen",
     empty_topic: "Ziehen Sie einen Chat hierher.",
     search_label: "Suche",
     search_action: "Chats durchsuchen",
@@ -514,6 +516,8 @@ export default {
       step2: "Benennen Sie das Thema und wählen Sie Symbol und Farbe.",
       step3:
         "Ziehen Sie Chats in Themen oder verschieben Sie sie über das Chat-Menü.",
+      step4:
+        "Nutzen Sie die Schaltfläche neben „Thema erstellen“, um alle Themen auf einmal ein- oder auszuklappen.",
     },
     sort_organize: {
       title: "Chats sortieren & organisieren",

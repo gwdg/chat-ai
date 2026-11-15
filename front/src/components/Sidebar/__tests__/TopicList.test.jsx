@@ -1,7 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import TopicList, { PINNED_COLLAPSE_ID } from "../TopicList";
-import { toggleTopic } from "../../../Redux/reducers/interfaceSettingsSlice";
+import TopicList, { PINNED_COLLAPSE_ID, UNSORTED_TOPIC_ID } from "../TopicList";
+import {
+  collapseTopics,
+  expandTopics,
+  toggleTopic,
+} from "../../../Redux/reducers/interfaceSettingsSlice";
 
 const reduxMocks = vi.hoisted(() => ({
   collapsed: [],
@@ -186,5 +190,67 @@ describe("TopicList group colours", () => {
       "rgba(124, 58, 237, 0.16)",
     );
     expect(row.className).toContain("text-accent");
+  });
+});
+
+describe("TopicList collapse all", () => {
+  const pinnedGroup = { id: "t1", name: "Pinned topic", color: "#B4388D" };
+  const regularGroup = { id: "t3", name: "Regular topic", color: "violet" };
+  const unsortedChat = { id: "c3", title: "Unsorted chat", lastModified: 1 };
+  const props = {
+    ...baseProps,
+    topics: [regularGroup],
+    pinnedTopics: [pinnedGroup],
+    unsortedConversations: [unsortedChat],
+  };
+  const allTopicIds = [pinnedGroup.id, regularGroup.id, UNSORTED_TOPIC_ID];
+  const button = (name) => screen.getByRole("button", { name });
+
+  it("collapses pinned, regular and unsorted topics from the new-topic row", () => {
+    render(<TopicList {...props} />);
+
+    fireEvent.click(button("Collapse all topics"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      collapseTopics(allTopicIds),
+    );
+  });
+
+  it("expands every topic again once they are all collapsed", () => {
+    reduxMocks.collapsed = [...allTopicIds];
+    render(<TopicList {...props} />);
+
+    fireEvent.click(button("Expand all topics"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(expandTopics(allTopicIds));
+  });
+
+  it("keeps collapsing while at least one topic is open", () => {
+    reduxMocks.collapsed = [pinnedGroup.id, UNSORTED_TOPIC_ID];
+    render(<TopicList {...props} />);
+
+    fireEvent.click(button("Collapse all topics"));
+
+    expect(reduxMocks.dispatch).toHaveBeenCalledWith(
+      collapseTopics(allTopicIds),
+    );
+  });
+
+  it("leaves section, workspace and agent collapse ids alone", () => {
+    reduxMocks.collapsed = [PINNED_COLLAPSE_ID, "__chats__", "ws-1"];
+    render(<TopicList {...props} />);
+
+    fireEvent.click(button("Collapse all topics"));
+
+    const [action] = reduxMocks.dispatch.mock.calls.at(-1);
+    expect(action.payload).toEqual(allTopicIds);
+  });
+
+  it("hides the control when there is nothing to collapse", () => {
+    render(<TopicList {...baseProps} />);
+
+    expect(
+      screen.queryByRole("button", { name: /all topics/ }),
+    ).not.toBeInTheDocument();
   });
 });

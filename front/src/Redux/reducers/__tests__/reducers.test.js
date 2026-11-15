@@ -33,6 +33,8 @@ import userSettingsReducer, {
 } from "../userSettingsReducer";
 import interfaceSettingsReducer, {
   agreeWebSearch,
+  collapseTopics,
+  expandTopics,
   markTutorialCompleted,
   markUseCaseCompleted,
   setConversationGrouping,
@@ -292,5 +294,17 @@ describe("interface settings reducer", () => {
       setWarning({ key: "warn_fork", value: false }),
     );
     expect(state.warn_fork).toBe(false);
+  });
+
+  it("collapses and expands topic groups in bulk without duplicates", () => {
+    let state = init(interfaceSettingsReducer);
+    state = interfaceSettingsReducer(state, collapseTopics(["t1", "t2"]));
+    state = interfaceSettingsReducer(state, collapseTopics(["t2", "t3"]));
+    expect(state.collapsed_topics).toEqual(["t1", "t2", "t3"]);
+
+    // Expanding only drops the ids it was given; other sections stay collapsed.
+    state = interfaceSettingsReducer(state, collapseTopics("__pinned__"));
+    state = interfaceSettingsReducer(state, expandTopics(["t1", "t2"]));
+    expect(state.collapsed_topics).toEqual(["t3", "__pinned__"]);
   });
 });

@@ -100,6 +100,8 @@ export default {
     create_button: "New topic",
     expand_topic: "Expand topic",
     collapse_topic: "Collapse topic",
+    expand_all_topics: "Expand all topics",
+    collapse_all_topics: "Collapse all topics",
     empty_topic: "Drag a chat here.",
     search_label: "Search",
     search_action: "Search chats",
@@ -499,6 +501,8 @@ export default {
       step2: "Name the topic and choose an icon and color.",
       step3:
         "Drag chats into topics, or use the conversation menu to move them.",
+      step4:
+        "Use the button next to Create topic to collapse or expand all topics at once.",
     },
     sort_organize: {
       title: "Sort & organize chats",

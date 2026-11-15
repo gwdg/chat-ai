@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, DragEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
@@ -7,7 +7,9 @@ import {
   BookmarkAdd,
   Calendar,
   ChevronDown,
+  CollapseAll,
   Edit,
+  ExpandAll,
   OverflowMenuVertical,
   Pin,
   PinFilled,
@@ -20,7 +22,12 @@ import { groupRowTint, groupRule, topicColor, withAlpha } from "./topicColors";
 import { isTopicIconId, topicIcon } from "./topicIcons";
 
 import { useModal } from "../../modals/ModalContext";
-import { selectCollapsedTopics, toggleTopic } from "../../Redux/reducers/interfaceSettingsSlice";
+import {
+  collapseTopics,
+  expandTopics,
+  selectCollapsedTopics,
+  toggleTopic,
+} from "../../Redux/reducers/interfaceSettingsSlice";
 
 /**
  * The virtual topic holding conversations with no `folderId`. It is a UI
@@ -114,9 +121,32 @@ export default function TopicList({
   const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const toggleTopicCollapse = useCallback((topicId: string) => {
-    console.log("Dispatching topic toggle", topicId);
     dispatch(toggleTopic(topicId));
   }, []);
+
+  // The ids the collapse-all control acts on: pinned topics, regular topics and
+  // the unsorted bucket once it holds chats. Sections, date buckets, workspaces
+  // and agents share the same collapse state and must stay untouched.
+  const topicCollapseIds = useMemo(() => {
+    const ids = [
+      ...pinnedTopics.map((topic) => topic.id),
+      ...topics.map((topic) => topic.id),
+    ];
+    if (unsortedConversations.length > 0) ids.push(UNSORTED_TOPIC_ID);
+    return ids;
+  }, [pinnedTopics, topics, unsortedConversations]);
+
+  const allTopicsCollapsed =
+    topicCollapseIds.length > 0 &&
+    topicCollapseIds.every((id) => collapsedTopicIds.includes(id));
+
+  const toggleAllTopics = useCallback(() => {
+    dispatch(
+      allTopicsCollapsed
+        ? expandTopics(topicCollapseIds)
+        : collapseTopics(topicCollapseIds),
+    );
+  }, [allTopicsCollapsed, topicCollapseIds]);
 
   const closeTopicMenu = useCallback(() => {
     setMenuTopicId(null);
@@ -389,11 +419,31 @@ export default function TopicList({
           onCreateTopic({ x: rect?.right ?? 0, y: rect?.top ?? 0 });
         }}
         data-guide="create-topic"
-        className="w-full flex items-center text-xs text-secondary dark:text-primary font-semibold cursor-pointer"
+        className="flex-1 min-w-0 flex items-center text-xs text-secondary dark:text-primary font-semibold cursor-pointer"
       >
         <BookmarkAdd size={18} className="flex-shrink-0" />
           <span className="truncate px-2">{t("folders.create_button")}</span>
       </button>
+      {topicCollapseIds.length > 0 && (
+        <button
+          type="button"
+          onClick={toggleAllTopics}
+          data-guide="collapse-all-topics"
+          aria-label={t(
+            allTopicsCollapsed
+              ? "folders.expand_all_topics"
+              : "folders.collapse_all_topics",
+          )}
+          title={t(
+            allTopicsCollapsed
+              ? "folders.expand_all_topics"
+              : "folders.collapse_all_topics",
+          )}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-base-content/60 transition-colors hover:bg-base-300 hover:text-base-content group-hover:text-base-content/80"
+        >
+          {allTopicsCollapsed ? <ExpandAll size={16} /> : <CollapseAll size={16} />}
+        </button>
+      )}
       </div>
       {topics.map((topic) => {
         const color = topicColor(topic);

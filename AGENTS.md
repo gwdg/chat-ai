@@ -383,6 +383,12 @@ group is open. The wash is applied through the `--group-tint` / `--group-tint-ho
 with `bg-[var(--group-tint)]` and `hover:bg-[var(--group-tint-hover)]`, not as an inline
 `backgroundColor`, because inline styles beat the hover utility.
 
+The new-topic row in `TopicList` carries a collapse-all control on the right. It acts on the topic
+ids only — pinned topics, regular topics, and the unsorted bucket once it holds chats — through
+`collapseTopics` / `expandTopics` (`expandTopics` is the counterpart added for it), and turns into
+expand-all once every one of those ids is collapsed. Sections, date buckets, workspaces and agents
+share the same `collapsed_topics` list and must stay untouched.
+
 ### 4.16 Meta chat works from conversation summaries, not messages
 
 The AI icon in the sidebar header navigates to `/meta`, rendered by
