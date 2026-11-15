@@ -1586,9 +1586,18 @@ export default function WorkspacePage() {
                   </div>
                   <div className="border-t border-base-300 p-1.5">
                     <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveMountId(null);
+                          setSelectedSourceId(null);
+                          setRootPath("/");
+                        }}
+                        className="rounded text-[10px] font-semibold uppercase tracking-wider text-base-content/45 transition hover:text-base-content"
+                        title={t("workspace.workspace_root")}
+                      >
                         {t("workspace.workspace_root")}
-                      </span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => addFolder()}
