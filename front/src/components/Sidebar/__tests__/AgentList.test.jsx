@@ -1,8 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
+import { configureStore } from "@reduxjs/toolkit";
+import { Provider } from "react-redux";
 import AgentList from "../AgentList";
 import { removeAgent } from "../../../agents/agentStore";
+import interfaceSettingsReducer from "../../../Redux/reducers/interfaceSettingsSlice";
 
 const mocks = vi.hoisted(() => ({
   openModal: vi.fn(),
@@ -12,10 +15,6 @@ const mocks = vi.hoisted(() => ({
   notifyError: vi.fn(),
 }));
 
-vi.mock("react-redux", () => ({
-  useSelector: () => [],
-  useDispatch: () => vi.fn(),
-}));
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: mocks.openModal }),
 }));
@@ -42,6 +41,18 @@ beforeEach(() => {
   removeAgent("agent-1");
 });
 
+const makeStore = () =>
+  configureStore({ reducer: { interface_settings: interfaceSettingsReducer } });
+
+const renderAgentList = (store = makeStore()) =>
+  render(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={["/chat"]}>
+        <AgentList />
+      </MemoryRouter>
+    </Provider>,
+  );
+
 const removeAgentThroughMenu = () => {
   fireEvent.click(screen.getByRole("button", { name: "Agent options" }));
   fireEvent.click(screen.getByRole("button", { name: "Remove agent" }));
@@ -63,11 +74,7 @@ const addAgentThroughModal = () => {
 
 describe("AgentList", () => {
   it("opens the add-agent window and lists the created agent", () => {
-    render(
-      <MemoryRouter initialEntries={["/chat"]}>
-        <AgentList />
-      </MemoryRouter>,
-    );
+    renderAgentList();
 
     expect(screen.getByText("Agents")).toBeInTheDocument();
     expect(screen.getByText("No agents yet.")).toBeInTheDocument();
@@ -96,11 +103,7 @@ describe("AgentList", () => {
 
   it("shows the live connection status for an agent", async () => {
     mocks.status.mockResolvedValue({ "session-1": { type: "busy" } });
-    render(
-      <MemoryRouter initialEntries={["/chat"]}>
-        <AgentList />
-      </MemoryRouter>,
-    );
+    renderAgentList();
     addAgentThroughModal();
 
     expect(
@@ -110,11 +113,7 @@ describe("AgentList", () => {
 
   it("shows a connection error when the status request fails", async () => {
     mocks.status.mockRejectedValue(new Error("offline"));
-    render(
-      <MemoryRouter initialEntries={["/chat"]}>
-        <AgentList />
-      </MemoryRouter>,
-    );
+    renderAgentList();
     addAgentThroughModal();
 
     expect(
@@ -123,11 +122,7 @@ describe("AgentList", () => {
   });
 
   it("interrupts and deletes the session before removing the agent", async () => {
-    render(
-      <MemoryRouter initialEntries={["/chat"]}>
-        <AgentList />
-      </MemoryRouter>,
-    );
+    renderAgentList();
     addAgentThroughModal();
 
     const order = [];
@@ -145,11 +140,7 @@ describe("AgentList", () => {
   });
 
   it("keeps the agent when the session cannot be deleted", async () => {
-    render(
-      <MemoryRouter initialEntries={["/chat"]}>
-        <AgentList />
-      </MemoryRouter>,
-    );
+    renderAgentList();
     addAgentThroughModal();
     mocks.deleteSession.mockRejectedValueOnce(new Error("not deleted"));
 
@@ -160,11 +151,7 @@ describe("AgentList", () => {
   });
 
   it("removes the agent locally when authentication fails", async () => {
-    render(
-      <MemoryRouter initialEntries={["/chat"]}>
-        <AgentList />
-      </MemoryRouter>,
-    );
+    renderAgentList();
     addAgentThroughModal();
     mocks.deleteSession.mockRejectedValueOnce(
       new Error("The opencode server rejected the password."),
@@ -179,11 +166,7 @@ describe("AgentList", () => {
   });
 
   it("removes the agent locally when the server is unreachable", async () => {
-    render(
-      <MemoryRouter initialEntries={["/chat"]}>
-        <AgentList />
-      </MemoryRouter>,
-    );
+    renderAgentList();
     addAgentThroughModal();
     mocks.deleteSession.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
@@ -193,5 +176,28 @@ describe("AgentList", () => {
       expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument(),
     );
     expect(mocks.notifyError).toHaveBeenCalled();
+  });
+
+  it("remembers an expanded agent after a remount", () => {
+    const store = makeStore();
+    const first = renderAgentList(store);
+    addAgentThroughModal();
+
+    const toggle = screen.getByRole("button", { name: "Sessions" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(store.getState().interface_settings.expanded_agents).toContain(
+      "agent-1",
+    );
+
+    first.unmount();
+    renderAgentList(store);
+
+    expect(screen.getByRole("button", { name: "Sessions" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
   });
 });

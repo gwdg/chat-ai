@@ -41,6 +41,8 @@ import AgentSessionList from "../Agent/AgentSessionList";
 import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import {
   selectCollapsedTopics,
+  selectExpandedAgents,
+  toggleExpandedAgent,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
 import {
@@ -102,9 +104,6 @@ export default function AgentList() {
   const [sessionsByAgent, setSessionsByAgent] = useState<Record<string, any>>(
     {},
   );
-  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
-    new Set(),
-  );
   const [creatingSession, setCreatingSession] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<
     Record<string, "ready" | "working" | "error" | "checking">
@@ -118,6 +117,7 @@ export default function AgentList() {
   const workspaces = useWorkspaceList();
   const seededRef = useRef<Set<string>>(new Set());
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
+  const expandedAgentIds = useSelector(selectExpandedAgents) ?? [];
   const collapsed = collapsedTopicIds.includes("__agents__");
   const activeId = openAgent.agentId;
 
@@ -283,6 +283,13 @@ export default function AgentList() {
     }
   };
 
+  // Agent session lists start collapsed, so only expansions are persisted.
+  const expandAgent = (agentId) => {
+    if (!expandedAgentIds.includes(agentId)) {
+      dispatch(toggleExpandedAgent(agentId));
+    }
+  };
+
   const createSession = async (agent, workspaceId?: string) => {
     if (creatingSession) return;
     setCreatingSession(agent.id);
@@ -298,7 +305,7 @@ export default function AgentList() {
         ...current,
         [agent.id]: tree,
       }));
-      setExpandedSessions((current) => new Set(current).add(agent.id));
+      expandAgent(agent.id);
       navigate(`/agent/${agent.id}`);
     } catch (reason) {
       notifyError(reason instanceof Error ? reason.message : String(reason));
@@ -310,17 +317,12 @@ export default function AgentList() {
   const switchSession = (agent, session, workspaceId?: string) => {
     if (workspaceId) void openWorkspaceAgentSession(workspaceId, agent, session);
     else switchAgentSession(agent, session.id);
-    setExpandedSessions((current) => new Set(current).add(agent.id));
+    expandAgent(agent.id);
     navigate(`/agent/${agent.id}`);
   };
 
   const toggleSessions = (agentId) => {
-    setExpandedSessions((current) => {
-      const next = new Set(current);
-      if (next.has(agentId)) next.delete(agentId);
-      else next.add(agentId);
-      return next;
-    });
+    dispatch(toggleExpandedAgent(agentId));
   };
 
   return (
@@ -371,7 +373,7 @@ export default function AgentList() {
                     ? "bg-error"
                     : "bg-base-content/20";
             const sessionTree = sessionsByAgent[agent.id];
-            const sessionOpen = expandedSessions.has(agent.id);
+            const sessionOpen = expandedAgentIds.includes(agent.id);
             return (
               <div key={agent.id}>
               <div

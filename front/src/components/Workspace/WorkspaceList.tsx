@@ -50,6 +50,16 @@ import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import { topicIconById } from "../Sidebar/topicIcons";
 import { topicColor, withAlpha } from "../Sidebar/topicColors";
 
+// Workspace rows and the agent rows inside them default to expanded, so only the
+// ids the user folded are persisted. They share `collapsed_topics` with the chat
+// topics and the subpanel headers, which already use synthetic ids there.
+export const workspaceRowCollapseId = (workspaceId: string) =>
+  `__workspace_row__:${workspaceId}`;
+export const workspaceAgentCollapseId = (
+  workspaceId: string,
+  agentId: string,
+) => `__workspace_agent__:${workspaceId}:${agentId}`;
+
 export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -64,7 +74,6 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   const sessionLinks = useWorkspaceAgentSessionLinks();
   const agents = useAgents();
   const conversations = useConversationList() || [];
-  const [expandedChats, setExpandedChats] = useState<Set<string>>(new Set());
   const chatsByWorkspace = useMemo(() => {
     const map = new Map<string, typeof conversations>();
     for (const link of chatLinks) {
@@ -89,20 +98,35 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
     }
     return map;
   }, [agentLinks, agents]);
-  const initializedChatExpansion = useRef<Set<string>>(new Set());
   const [sessionTrees, setSessionTrees] = useState<Record<string, any>>({});
   const [sessionRefresh, setSessionRefresh] = useState(0);
   const [creatingSession, setCreatingSession] = useState<string | null>(null);
-  const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(
-    new Set(),
-  );
   const loadedSessionAgents = useRef<Set<string>>(new Set());
+  const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
+
+  // A workspace row is open unless the user folded it; it is only foldable when
+  // something is attached. The same persisted list drives its agent rows below.
+  const expandedWorkspaceIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const workspace of workspaces) {
+      const expandable =
+        (chatsByWorkspace.get(workspace.id)?.length ?? 0) > 0 ||
+        (agentsByWorkspace.get(workspace.id)?.length ?? 0) > 0;
+      if (
+        expandable &&
+        !collapsedTopicIds.includes(workspaceRowCollapseId(workspace.id))
+      ) {
+        ids.add(workspace.id);
+      }
+    }
+    return ids;
+  }, [workspaces, chatsByWorkspace, agentsByWorkspace, collapsedTopicIds]);
 
   // Session titles come from the agent server; load them the first time a workspace with
   // agents is expanded, then keep them until the session list actually changes.
   useEffect(() => {
     const targets: any[] = [];
-    for (const workspaceId of expandedChats) {
+    for (const workspaceId of expandedWorkspaceIds) {
       for (const agent of agentsByWorkspace.get(workspaceId) ?? []) {
         if (loadedSessionAgents.current.has(agent.id)) continue;
         loadedSessionAgents.current.add(agent.id);
@@ -126,7 +150,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
     return () => {
       cancelled = true;
     };
-  }, [agentsByWorkspace, expandedChats, sessionRefresh]);
+  }, [agentsByWorkspace, expandedWorkspaceIds, sessionRefresh]);
 
   useEffect(() => {
     const refresh = (event: Event) => {
@@ -151,34 +175,6 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
     };
   }, []);
 
-  useEffect(() => {
-    setExpandedChats((current) => {
-      const next = new Set(current);
-      let changed = false;
-      for (const [workspaceId, chats] of chatsByWorkspace) {
-        if (
-          (chats.length > 0 || (agentsByWorkspace.get(workspaceId)?.length ?? 0) > 0) &&
-          !initializedChatExpansion.current.has(workspaceId)
-        ) {
-          initializedChatExpansion.current.add(workspaceId);
-          next.add(workspaceId);
-          changed = true;
-        }
-      }
-      for (const [workspaceId, attached] of agentsByWorkspace) {
-        if (
-          attached.length > 0 &&
-          !initializedChatExpansion.current.has(workspaceId)
-        ) {
-          initializedChatExpansion.current.add(workspaceId);
-          next.add(workspaceId);
-          changed = true;
-        }
-      }
-      return changed ? next : current;
-    });
-  }, [agentsByWorkspace, chatsByWorkspace]);
-  const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__workspaces__");
 
   const create = () => openModal("workspaceCreate", {});
@@ -245,7 +241,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
             const chats = chatsByWorkspace.get(workspace.id) ?? [];
             const attachedAgents = agentsByWorkspace.get(workspace.id) ?? [];
             const expandable = chats.length > 0 || attachedAgents.length > 0;
-            const expanded = expandedChats.has(workspace.id);
+            const expanded = expandedWorkspaceIds.has(workspace.id);
             const WorkspaceIcon = topicIconById(workspace.icon).Icon;
             const workspaceColor = topicColor({
               id: workspace.id,
@@ -263,12 +259,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                   <button
                     type="button"
                     onClick={() =>
-                      setExpandedChats((current) => {
-                        const next = new Set(current);
-                        if (next.has(workspace.id)) next.delete(workspace.id);
-                        else next.add(workspace.id);
-                        return next;
-                      })
+                      dispatch(toggleTopic(workspaceRowCollapseId(workspace.id)))
                     }
                     disabled={!expandable}
                     className={`ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-content/40 ${
@@ -425,9 +416,13 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                         ? filterSessionTree(tree, sessionIds)
                         : null;
                       // Per workspace and agent, so the same agent can be folded in one
-                      // workspace and open in another.
-                      const agentKey = `${workspace.id}:${agent.id}`;
-                      const sessionsOpen = !collapsedAgents.has(agentKey);
+                      // workspace and open in another. Collapsed ids live in the same
+                      // persisted list the chat topics use, so the fold survives a reload.
+                      const agentKey = workspaceAgentCollapseId(
+                        workspace.id,
+                        agent.id,
+                      );
+                      const sessionsOpen = !collapsedTopicIds.includes(agentKey);
                       const hasSessions = sessionIds.size > 0;
                       const agentActive = openAgent.agentId === agent.id;
                       return (
@@ -442,14 +437,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
                             <button
                               type="button"
                               disabled={!hasSessions}
-                              onClick={() =>
-                                setCollapsedAgents((current) => {
-                                  const next = new Set(current);
-                                  if (next.has(agentKey)) next.delete(agentKey);
-                                  else next.add(agentKey);
-                                  return next;
-                                })
-                              }
+                              onClick={() => dispatch(toggleTopic(agentKey))}
                               className={`flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 ${
                                 hasSessions
                                   ? "hover:bg-base-300 hover:text-base-content"

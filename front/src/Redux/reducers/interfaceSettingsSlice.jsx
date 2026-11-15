@@ -20,6 +20,7 @@ const interfaceSettingsSlice = createSlice({
     agree_web_search: false,
     show_usage_in_sidebar: true,
     collapsed_topics: [],
+    expanded_agents: [],
     conversation_sort: "created_desc",
     conversation_grouping: "topic",
     completed_tutorials: [],
@@ -91,6 +92,20 @@ const interfaceSettingsSlice = createSlice({
         }
       }
     },
+    // Agent rows in the sidebar start collapsed, so their session lists are
+    // stored as the explicitly expanded ones instead of as collapsed ids.
+    toggleExpandedAgent: (state, action) => {
+      const id = action.payload;
+      if (!id) return;
+      if (!Array.isArray(state.expanded_agents)) state.expanded_agents = [];
+      if (state.expanded_agents.includes(id)) {
+        state.expanded_agents = state.expanded_agents.filter(
+          (entry) => entry !== id,
+        );
+      } else {
+        state.expanded_agents.push(id);
+      }
+    },
     setConversationSort: (state, action) => {
       state.conversation_sort = action.payload;
     },
@@ -151,6 +166,8 @@ export const selectConversationGrouping = (state) => {
 // Stable empty arrays keep useSelector from reporting a new snapshot for old,
 // persisted state that predates these lists.
 const EMPTY_LIST = [];
+export const selectExpandedAgents = (state) =>
+  state.interface_settings.expanded_agents ?? EMPTY_LIST;
 export const selectCompletedTutorials = (state) =>
   state.interface_settings.completed_tutorials ?? EMPTY_LIST;
 export const selectCompletedUseCases = (state) =>
@@ -162,6 +179,7 @@ export const {
   closeSettings, toggleSettings, toggleSidebar, closeSidebar, openSidebar,
   closeAnnouncement, closeHallucination, agreeWebSearch, closeTour,
   setShowUsageInSidebar, setWarning, toggleTopic, collapseTopics,
+  toggleExpandedAgent,
   setConversationSort, setConversationGrouping, markTutorialCompleted, markUseCaseCompleted,
   suppressTutorial,
 } = interfaceSettingsSlice.actions;

@@ -43,6 +43,7 @@ const getDefaultState = () => {
       count_announcement: 0,
       show_usage_in_sidebar: true,
       collapsed_topics: [],
+      expanded_agents: [],
       conversation_sort: "created_desc",
       conversation_grouping: "topic",
       completed_tutorials: [],
