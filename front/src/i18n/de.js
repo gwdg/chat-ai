@@ -560,7 +560,7 @@ export default {
       title: "Einen Arbeitsbereich anheften",
       step1: "Öffnen Sie das Optionenmenü eines Arbeitsbereichs in der Seitenleiste.",
       step2:
-        "Wählen Sie „Arbeitsbereich anheften“. Er wechselt in den angehefteten Bereich oben über den Chats.",
+        "Wählen Sie „Arbeitsbereich anheften“. Er wird zusätzlich im angehefteten Bereich oben über den Chats angezeigt und bleibt in der Arbeitsbereichsliste.",
       step3:
         "Klicken Sie im angehefteten Bereich erneut auf die Nadel, um den Arbeitsbereich nicht mehr anzuheften.",
     },
@@ -568,7 +568,7 @@ export default {
       title: "Einen Agenten anheften",
       step1: "Öffnen Sie das Optionenmenü eines Agenten in der Seitenleiste.",
       step2:
-        "Wählen Sie „Agenten anheften“. Er wechselt in den angehefteten Bereich oben über den Chats.",
+        "Wählen Sie „Agenten anheften“. Er wird zusätzlich im angehefteten Bereich oben über den Chats angezeigt und bleibt in der Agentenliste.",
     },
     close_chat: {
       title: "Einen Chat schließen",

@@ -117,7 +117,7 @@ describe("WorkspaceList pinning", () => {
     );
   });
 
-  it("leaves pinned workspaces to the pinned section", async () => {
+  it("keeps a pinned workspace in the Workspace section", async () => {
     mocks.workspaces.mockReturnValue([
       {
         id: "ws-1",
@@ -129,9 +129,10 @@ describe("WorkspaceList pinning", () => {
     ]);
     renderList(makeStore());
 
-    await waitFor(() =>
-      expect(screen.queryByText("Teaching")).not.toBeInTheDocument(),
-    );
+    expect(await screen.findByText("Teaching")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Workspace options" }),
+    ).toBeInTheDocument();
   });
 });
 

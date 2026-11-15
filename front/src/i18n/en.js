@@ -545,7 +545,7 @@ export default {
       title: "Pin a workspace",
       step1: "Open the options menu of a workspace in the sidebar.",
       step2:
-        "Choose Pin workspace. It moves to the pinned section at the top, above the chats.",
+        "Choose Pin workspace. It is added to the pinned section at the top, above the chats, and stays in the workspace list.",
       step3:
         "Click the pin again in the pinned section to unpin the workspace.",
     },
@@ -553,7 +553,7 @@ export default {
       title: "Pin an agent",
       step1: "Open the options menu of an agent in the sidebar.",
       step2:
-        "Choose Pin agent. It moves to the pinned section at the top, above the chats.",
+        "Choose Pin agent. It is added to the pinned section at the top, above the chats, and stays in the agent list.",
     },
     close_chat: {
       title: "Close a chat",

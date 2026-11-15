@@ -182,20 +182,21 @@ describe("AgentList", () => {
     expect(mocks.notifyError).toHaveBeenCalled();
   });
 
-  it("pins an agent from its options menu and hides it from the list", async () => {
+  it("pins an agent from its options menu and keeps it in the list", async () => {
     renderAgentList();
     addAgentThroughModal();
 
     fireEvent.click(screen.getByRole("button", { name: "Agent options" }));
     fireEvent.click(screen.getByRole("button", { name: "Pin agent" }));
 
-    await waitFor(() =>
-      expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument(),
-    );
-    expect(getAgent("agent-1")?.pinned).toBe(true);
+    await waitFor(() => expect(getAgent("agent-1")?.pinned).toBe(true));
 
-    // Unpinning brings it back into the Agents section.
+    // Pinning adds a row to the pinned section; the Agents section keeps its own.
+    expect(await screen.findByText("HPC project 1")).toBeInTheDocument();
+
+    // Unpinning removes only the pinned copy.
     act(() => setAgentPinned("agent-1", false));
+    expect(getAgent("agent-1")?.pinned).toBe(false);
     expect(await screen.findByText("HPC project 1")).toBeInTheDocument();
   });
 

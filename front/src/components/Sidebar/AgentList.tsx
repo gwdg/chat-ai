@@ -103,8 +103,6 @@ export default function AgentList() {
   const { openModal } = useModal();
   const { notifyError } = useToast();
   const agents = useAgents();
-  // Pinned agents are listed in the sidebar's pinned section instead of here.
-  const visibleAgents = agents.filter((agent) => agent.pinned !== true);
   const [removing, setRemoving] = useState<string | null>(null);
   const [sessionsByAgent, setSessionsByAgent] = useState<Record<string, any>>(
     {},
@@ -365,7 +363,7 @@ export default function AgentList() {
         </p>
       ) : (
         <div className="space-y-0.5">
-          {visibleAgents.map((agent) => {
+          {agents.map((agent) => {
             const active = agent.id === activeId;
             const status = statuses[agent.id] ?? "checking";
             const statusLabel = t(`agents.status_${status}`);

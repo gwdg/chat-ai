@@ -377,10 +377,11 @@ no header, collapse logic or create-topic row) plus pinned workspaces and agents
 `/workspace/<id>` and `/agent/<id>`. Pinned chats are not groups, so they are marked with a leading
 dash in the slot where a topic shows its collapse chevron, and never with a vertical connector line.
 `SidebarContent` builds one `topicListProps` object and spreads it into both `TopicList` instances.
-Pinned workspaces and agents are filtered out of `WorkspaceList` / `AgentList` and unpinned from the
-pinned row (hover pin button) or their options menu; `setWorkspacePinned` writes `WorkspaceRow.pinned`
-(unindexed, no Dexie bump), `setAgentPinned` writes the localStorage agent entry. The new-chat row
-sits directly below the Chats band, above the search panel and the list.
+Pinned workspaces and agents stay in `WorkspaceList` / `AgentList` as well, so the pinned row is an
+extra shortcut, not a move; they are unpinned from the pinned row (hover pin button) or their options
+menu. `setWorkspacePinned` writes `WorkspaceRow.pinned` (unindexed, no Dexie bump) and
+`setAgentPinned` writes the localStorage agent entry. The new-chat row sits directly below the Chats
+band, above the search panel and the list.
 It is in `interfaceSettingsSlice`'s `initialState` and `getDefaultState()`; an old persisted state
 without the key falls back to `"topic"` in the selector, so no migration is needed.
 
@@ -923,8 +924,8 @@ back service is not involved. `agents/agentStore.js` persists the agent metadata
 Every agent carries `createdAt`, `updatedAt` and an optional `pinned` flag. `load()` backfills the
 timestamps of agents created before they existed and persists them once. `updateAgent` bumps
 `updatedAt` for metadata changes but not for session tracking (`sessionId`, `sessionSummaries`);
-`setAgentPinned` pins the agent into the top-level pinned section, and `AgentList` filters pinned
-agents out of its own list. The agent conversation header shows both timestamps. A custom per-agent
+`setAgentPinned` adds the agent to the top-level pinned section; `AgentList` still lists it. The agent
+conversation header shows both timestamps. A custom per-agent
 password is persisted with it; agents left on the configured default re-read that
 password from `front.json` on load. `modules.agents: false` in
 `front.json` sets `VITE_MODULE_AGENTS=false`, hiding the sidebar section and its route. Removing an

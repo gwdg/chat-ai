@@ -74,11 +74,6 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   const { openModal, confirmAction } = useModal();
   const { notifyError } = useToast();
   const workspaces = useWorkspaceList();
-  // Pinned workspaces are listed in the sidebar's pinned section instead of here.
-  const visibleWorkspaces = useMemo(
-    () => workspaces.filter((workspace) => workspace.pinned !== true),
-    [workspaces],
-  );
   const chatLinks = useWorkspaceChatLinks();
   const agentLinks = useWorkspaceAgentLinks();
   const sessionLinks = useWorkspaceAgentSessionLinks();
@@ -119,7 +114,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
   // something is attached. The same persisted list drives its agent rows below.
   const expandedWorkspaceIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const workspace of visibleWorkspaces) {
+    for (const workspace of workspaces) {
       const expandable =
         (chatsByWorkspace.get(workspace.id)?.length ?? 0) > 0 ||
         (agentsByWorkspace.get(workspace.id)?.length ?? 0) > 0;
@@ -131,7 +126,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
       }
     }
     return ids;
-  }, [visibleWorkspaces, chatsByWorkspace, agentsByWorkspace, collapsedTopicIds]);
+  }, [workspaces, chatsByWorkspace, agentsByWorkspace, collapsedTopicIds]);
 
   // Session titles come from the agent server; load them the first time a workspace with
   // agents is expanded, then keep them until the session list actually changes.
@@ -247,7 +242,7 @@ export default function WorkspaceList({ onNavigate }: { onNavigate?: () => void 
         </button>
       ) : (
         <div className="space-y-0.5">
-          {visibleWorkspaces.map((workspace) => {
+          {workspaces.map((workspace) => {
             const active = location.pathname === `/workspace/${workspace.id}`;
             const chats = chatsByWorkspace.get(workspace.id) ?? [];
             const attachedAgents = agentsByWorkspace.get(workspace.id) ?? [];
