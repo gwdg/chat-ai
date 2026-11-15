@@ -679,11 +679,9 @@ there, opening one from an attached workspace attaches it, and `AppDB` version 1
 `workspace_agents.sessionsSeeded` records that the agent's active session was copied into the
 workspace once (`seedWorkspaceAgentSessions`), so existing data upgrades without duplicating
 sessions and a detached session is not re-added. Detaching an agent, deleting a workspace, removing
-an agent, and closing a session all delete the matching session links. Storage
-is shown for every source in the Storage card's "Available storage" list, except the derived
-agent-files source of an agent already listed in the Agents panel:
-`workspace/workspaceSources.ts` hides it so the agent name is not shown twice, while a source for
-an agent that only reaches the workspace through the bridge stays visible.
+an agent, and closing a session all delete the matching session links. Every source in Storage's
+"Available storage" list is shown, including the agent-files source of an attached agent, so its
+filesystem is browsable like any other source.
 
 Transfers are orchestrated in the browser: `workspace/transferPlanner.ts` always moves on drag and
 drop, regardless of source; an explicit "copy" intent is the only copy path. It blocks read-only

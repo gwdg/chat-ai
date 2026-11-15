@@ -80,7 +80,6 @@ import { runTransfer } from "../workspace/transfer";
 import { uploadLocalFiles } from "../workspace/upload";
 import { baseName, joinPath, normalizePath, parentPath } from "../workspace/paths";
 import type { FileProvider, QuotaInfo } from "../workspace/providers/types";
-import { visibleWorkspaceSources } from "../workspace/workspaceSources";
 
 const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
   const reader = stream.getReader();
@@ -197,10 +196,6 @@ export default function WorkspacePage() {
         .map((link) => agents.find((agent) => agent.id === link.agentId))
         .filter(Boolean),
     [workspaceAgents, agents],
-  );
-  const visibleSources = useMemo(
-    () => visibleWorkspaceSources(sources, attachedAgents),
-    [sources, attachedAgents],
   );
   const [agentSessions, setAgentSessions] = useState<Record<string, any>>({});
   const [expandedAgentSessions, setExpandedAgentSessions] = useState<Set<string>>(
@@ -1409,7 +1404,7 @@ export default function WorkspacePage() {
                     </div>
                   {availableStorageOpen && (
                   <div className="mt-1 max-h-[45vh] overflow-y-auto">
-                    {visibleSources.length === 0 ? (
+                    {sources.length === 0 ? (
                       <button
                         type="button"
                         onClick={addSource}
@@ -1418,7 +1413,7 @@ export default function WorkspacePage() {
                         {t("workspace.no_sources")}
                       </button>
                     ) : (
-                      visibleSources.map((source) => {
+                      sources.map((source) => {
                         const active = source.id === selectedSourceId;
                         const provider = providers.get(source.id);
                         const unavailable =
