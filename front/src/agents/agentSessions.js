@@ -5,6 +5,7 @@ import {
   listOpencodeSessions,
 } from "../apis/opencodeAgents";
 import { updateAgent } from "./agentStore";
+import { removeWorkspaceAgentSessionLinks } from "../db/workspaceDb";
 
 const sessionTime = (session) =>
   Number(session?.time?.updated ?? session?.time?.created ?? 0);
@@ -95,6 +96,7 @@ export async function createAgentSession(agent, title) {
 export async function deleteAgentSession(agent, session, tree = null) {
   if (!agent?.id || !session?.id) return null;
   await deleteOpencodeSession(agent, session.id);
+  await removeWorkspaceAgentSessionLinks(agent.id, session.id);
   let nextSession = null;
   if (agent.sessionId === session.id) {
     const source = tree || (await fetchAgentSessions(agent));

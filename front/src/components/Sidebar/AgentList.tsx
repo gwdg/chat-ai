@@ -42,6 +42,22 @@ import {
   selectCollapsedTopics,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
+import {
+  seedWorkspaceAgentSessions,
+  useWorkspaceAgentLinks,
+  useWorkspaceAgentSessionLinks,
+  useWorkspaceList,
+} from "../../db/workspaceDb";
+import {
+  agentWorkspaceIds,
+  createWorkspaceAgentSession,
+  detachSessionFromWorkspace,
+  filterSessionTree,
+  openWorkspaceAgentSession,
+  unassignedSessionIds,
+  workspaceSessionIds,
+} from "../../agents/workspaceAgentSessions";
+import { topicIconById } from "./topicIcons";
 
 const canRemoveLocally = (reason: unknown) => {
   const message = String(reason instanceof Error ? reason.message : reason);
@@ -96,11 +112,28 @@ export default function AgentList() {
     Record<string, Record<string, "ready" | "working" | "error">>
   >({});
   const statusPollingRef = useRef<Promise<void> | null>(null);
+  const workspaceLinks = useWorkspaceAgentLinks();
+  const sessionLinks = useWorkspaceAgentSessionLinks();
+  const workspaces = useWorkspaceList();
+  const seededRef = useRef<Set<string>>(new Set());
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const collapsed = collapsedTopicIds.includes("__agents__");
   const activeId = location.pathname.startsWith("/agent/")
     ? location.pathname.slice("/agent/".length)
     : null;
+
+  // Make sure an agent attached to a workspace shows its active session there, even when the
+  // workspace was attached before sessions were tracked per workspace.
+  useEffect(() => {
+    for (const agent of agents) {
+      for (const workspaceId of agentWorkspaceIds(workspaceLinks, agent.id)) {
+        const key = `${workspaceId}:${agent.id}`;
+        if (seededRef.current.has(key)) continue;
+        seededRef.current.add(key);
+        void seedWorkspaceAgentSessions(workspaceId, [agent]);
+      }
+    }
+  }, [agents, workspaceLinks]);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,12 +284,16 @@ export default function AgentList() {
     }
   };
 
-  const createSession = async (agent) => {
+  const createSession = async (agent, workspaceId?: string) => {
     if (creatingSession) return;
     setCreatingSession(agent.id);
     try {
-      await createAgentSession(agent);
-      notifyAgentSessionsChanged(agent.id);
+      if (workspaceId) {
+        await createWorkspaceAgentSession(workspaceId, agent);
+      } else {
+        await createAgentSession(agent);
+        notifyAgentSessionsChanged(agent.id);
+      }
       const tree = await fetchAgentSessions(agent);
       setSessionsByAgent((current) => ({
         ...current,
@@ -271,8 +308,9 @@ export default function AgentList() {
     }
   };
 
-  const switchSession = (agent, session) => {
-    switchAgentSession(agent, session.id);
+  const switchSession = (agent, session, workspaceId?: string) => {
+    if (workspaceId) void openWorkspaceAgentSession(workspaceId, agent, session);
+    else switchAgentSession(agent, session.id);
     setExpandedSessions((current) => new Set(current).add(agent.id));
     navigate(`/agent/${agent.id}`);
   };
@@ -442,20 +480,122 @@ export default function AgentList() {
                   </Popover>
                 )}
               </div>
-              {sessionOpen && (
-                <AgentSessionList
-                  agent={agent}
-                  tree={sessionTree}
-                  activeSessionId={agent.sessionId}
-                  statuses={sessionStatuses[agent.id]}
-                  summaries={sessionSummariesFor(agent)}
-                  onSelect={(session) => switchSession(agent, session)}
-                  onCreate={createSession}
-                  creating={creatingSession === agent.id}
-                  showCreate={false}
-                  className="mt-1 ml-4"
-                />
-              )}
+              {sessionOpen && (() => {
+                const agentWorkspaces = agentWorkspaceIds(
+                  workspaceLinks,
+                  agent.id,
+                )
+                  .map((workspaceId) =>
+                    workspaces.find((workspace) => workspace.id === workspaceId),
+                  )
+                  .filter(Boolean);
+                const unassigned = unassignedSessionIds(
+                  sessionTree,
+                  sessionLinks,
+                  agent.id,
+                );
+                if (agentWorkspaces.length === 0) {
+                  return (
+                    <AgentSessionList
+                      agent={agent}
+                      tree={sessionTree}
+                      activeSessionId={agent.sessionId}
+                      statuses={sessionStatuses[agent.id]}
+                      summaries={sessionSummariesFor(agent)}
+                      onSelect={(session) => switchSession(agent, session)}
+                      onCreate={createSession}
+                      creating={creatingSession === agent.id}
+                      showCreate={false}
+                      className="mt-1 ml-4"
+                    />
+                  );
+                }
+                return (
+                  <div className="mt-1 ml-4 space-y-1">
+                    {agentWorkspaces.map((workspace) => {
+                      const sessionIds = workspaceSessionIds(
+                        sessionLinks,
+                        workspace.id,
+                        agent.id,
+                      );
+                      const WorkspaceIcon = topicIconById(workspace.icon).Icon;
+                      return (
+                        <div key={workspace.id}>
+                          <div className="flex items-center gap-1 rounded-md px-1 py-0.5 text-[10px] text-base-content/55">
+                            <WorkspaceIcon size={11} className="shrink-0" />
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/workspace/${workspace.id}`)}
+                              className="min-w-0 flex-1 truncate text-left hover:text-base-content"
+                            >
+                              {workspace.name}
+                            </button>
+                            <span className="shrink-0 tabular-nums text-base-content/35">
+                              {sessionIds.size}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void createSession(agent, workspace.id)
+                              }
+                              disabled={creatingSession === agent.id}
+                              className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 hover:bg-base-300 hover:text-base-content disabled:opacity-50"
+                              title={t("agents.new_session")}
+                              aria-label={t("agents.new_session")}
+                            >
+                              {creatingSession === agent.id ? (
+                                <span className="loading loading-spinner loading-xs" />
+                              ) : (
+                                <Add size={11} />
+                              )}
+                            </button>
+                          </div>
+                          <AgentSessionList
+                            agent={agent}
+                            tree={filterSessionTree(sessionTree, sessionIds)}
+                            activeSessionId={agent.sessionId}
+                            statuses={sessionStatuses[agent.id]}
+                            summaries={sessionSummariesFor(agent)}
+                            onSelect={(session) =>
+                              switchSession(agent, session, workspace.id)
+                            }
+                            onDetach={(session) =>
+                              void detachSessionFromWorkspace(
+                                workspace.id,
+                                agent,
+                                session,
+                              )
+                            }
+                            showHeader={false}
+                            showCreate={false}
+                            emptyKey="agents.no_workspace_sessions"
+                            className="ml-2"
+                          />
+                        </div>
+                      );
+                    })}
+                    {unassigned.size > 0 && (
+                      <div>
+                        <div className="px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
+                          {t("agents.unassigned_sessions")}
+                        </div>
+                        <AgentSessionList
+                          agent={agent}
+                          tree={filterSessionTree(sessionTree, unassigned)}
+                          activeSessionId={agent.sessionId}
+                          statuses={sessionStatuses[agent.id]}
+                          summaries={sessionSummariesFor(agent)}
+                          onSelect={(session) => switchSession(agent, session)}
+                          showHeader={false}
+                          showCreate={false}
+                          emptyKey="agents.no_unassigned_sessions"
+                          className="ml-2"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               </div>
             );
           })}

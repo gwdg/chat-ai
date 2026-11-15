@@ -53,6 +53,7 @@ import MoveToModal from "./Workspace/MoveToModal";
 import AddMountModal from "./Workspace/AddMountModal";
 import AttachChatModal from "./Workspace/AttachChatModal";
 import AttachAgentModal from "./Workspace/AttachAgentModal";
+import AttachAgentSessionModal from "./Workspace/AttachAgentSessionModal";
 import CreateEntryModal from "./Workspace/CreateEntryModal";
 import RenameWorkspaceModal from "./Workspace/RenameWorkspaceModal";
 import McpServerModal from "./McpServer/McpServerModal";
@@ -225,6 +226,9 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "workspaceAttachAgent" && (
         <AttachAgentModal isOpen onClose={closeModal} {...modalProps} />
+      )}
+      {modalType === "workspaceAttachAgentSession" && (
+        <AttachAgentSessionModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "workspaceCreateEntry" && (
         <CreateEntryModal isOpen onClose={closeModal} {...modalProps} />

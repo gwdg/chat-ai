@@ -29,6 +29,7 @@ import type {
   WorkspaceMountRow,
   WorkspaceChatRow,
   WorkspaceAgentRow,
+  WorkspaceAgentSessionRow,
   WorkspaceNodeRow,
   WorkspaceBlobRow,
   WorkspaceFileReferenceRow
@@ -50,6 +51,7 @@ export class AppDB extends Dexie {
   workspace_mounts!: Table<WorkspaceMountRow, string>
   workspace_chats!: Table<WorkspaceChatRow, string>
   workspace_agents!: Table<WorkspaceAgentRow, string>
+  workspace_agent_sessions!: Table<WorkspaceAgentSessionRow, string>
   workspace_nodes!: Table<WorkspaceNodeRow, string>
   workspace_blobs!: Table<WorkspaceBlobRow, string>
   workspace_file_references!: Table<WorkspaceFileReferenceRow, string>
@@ -322,6 +324,11 @@ export class AppDB extends Dexie {
 
     this.version(12).stores({
       workspace_agents: 'id, workspaceId, agentId, [workspaceId+agentId]',
+    });
+
+    this.version(13).stores({
+      workspace_agent_sessions:
+        'id, workspaceId, agentId, sessionId, [workspaceId+agentId], [workspaceId+agentId+sessionId]',
     });
   }
 }

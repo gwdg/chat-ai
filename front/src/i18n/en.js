@@ -299,6 +299,7 @@ export default {
       step1: "Create a workspace or open an existing one from the sidebar; it already includes browser storage and an Arcana filesystem source.",
       step2: "Pick a source on the left. Device sources carry a \"This device only\" badge.",
       step3: "Browse the files here. Drag a file onto another source to copy it; hold Alt for a move.",
+      step4: "Attach an agent and pick the sessions that belong to this workspace; new sessions created here are attached automatically.",
     },
     workspace_upload: {
       title: "Upload files into a workspace",
@@ -320,7 +321,7 @@ export default {
       title: "Spawn a remote agent",
       step1: "Use the + button in the Agents section to add an agent and select its HPC project.",
       step2: "Agents appear in the list; click one to open its chat on the right.",
-      step3: "Expand an agent with the chevron to see its sessions and any subagent sessions. Click a session to switch, use + to create one, or open the ... menu to rename or close it.",
+      step3: "Expand an agent with the chevron to see each workspace with the sessions attached there, plus sessions that are not in a workspace. Click a session to switch, use + to create one, or open the ... menu to rename, detach or close it.",
     },
     catalog: {
       open: "Browse tutorials",
@@ -1609,6 +1610,10 @@ export default {
     sessions: "Sessions",
     new_session: "New session",
     no_sessions: "No sessions yet.",
+    no_workspace_sessions: "No sessions attached to this workspace yet.",
+    unassigned_sessions: "Not in a workspace",
+    no_unassigned_sessions: "Every session is attached to a workspace.",
+    detach_session: "Remove from workspace",
     subagent_short: "sub",
     rename_session: "Rename session",
     close_session: "Close session",
@@ -1811,6 +1816,9 @@ export default {
     attach_agent: "Attach agent",
     attach_agent_hint:
       "Attach an agent to this workspace. The agent can then use it as a bridge workspace.",
+    attach_agent_session: "Attach session",
+    attach_agent_session_hint:
+      "Pick the sessions of this agent that belong to this workspace. Other workspaces keep their own list.",
     no_available_agents: "No unattached agents available.",
     agents: "Agents",
     agent_sidebar_title: "Connected agents",

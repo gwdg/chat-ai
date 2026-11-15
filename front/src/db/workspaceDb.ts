@@ -11,6 +11,7 @@ import type {
   WorkspaceMountRow,
   WorkspaceChatRow,
   WorkspaceAgentRow,
+  WorkspaceAgentSessionRow,
   WorkspaceFileReferenceRow,
 } from "./dbTypes";
 import { defaultCapabilities } from "../workspace/capabilities";
@@ -253,12 +254,14 @@ export async function deleteWorkspace(id: string): Promise<void> {
       db.workspace_mounts,
       db.workspace_chats,
       db.workspace_agents,
+      db.workspace_agent_sessions,
     ],
     async () => {
       await db.workspace_transfers.where("workspaceId").equals(id).delete();
       await db.workspace_mounts.where("workspaceId").equals(id).delete();
       await db.workspace_chats.where("workspaceId").equals(id).delete();
       await db.workspace_agents.where("workspaceId").equals(id).delete();
+      await db.workspace_agent_sessions.where("workspaceId").equals(id).delete();
       await db.workspace_sources.where("workspaceId").equals(id).delete();
       await db.workspaces.delete(id);
     },
@@ -617,6 +620,10 @@ export async function detachWorkspaceAgent(
     .equals([workspaceId, agentId])
     .first();
   if (link) await db.workspace_agents.delete(link.id);
+  await db.workspace_agent_sessions
+    .where("[workspaceId+agentId]")
+    .equals([workspaceId, agentId])
+    .delete();
 }
 
 export function useWorkspaceAgents(workspaceId?: string): WorkspaceAgentRow[] {
@@ -686,4 +693,143 @@ export async function removeOrphanWorkspaceAgents(
   if (orphans.length) {
     await db.workspace_agents.bulkDelete(orphans.map((link) => link.id));
   }
+  const sessionLinks = await db.workspace_agent_sessions.toArray();
+  const orphanSessions = sessionLinks.filter((link) => !known.has(link.agentId));
+  if (orphanSessions.length) {
+    await db.workspace_agent_sessions.bulkDelete(
+      orphanSessions.map((link) => link.id),
+    );
+  }
+}
+
+// ---------- Workspace agent sessions ----------
+// A workspace shows only the sessions that are explicitly attached to it, not every
+// session of the agent. The link is (workspace, agent, session) because two workspaces
+// can show different sessions of the same agent.
+
+export async function attachWorkspaceAgentSession(
+  workspaceId: string,
+  agentId: string,
+  sessionId: string,
+): Promise<void> {
+  if (!workspaceId || !agentId || !sessionId) return;
+  const existing = await db.workspace_agent_sessions
+    .where("[workspaceId+agentId+sessionId]")
+    .equals([workspaceId, agentId, sessionId])
+    .first();
+  if (existing) return;
+  const link: WorkspaceAgentSessionRow = {
+    id: newId(),
+    workspaceId,
+    agentId,
+    sessionId,
+    createdAt: now(),
+  };
+  await db.workspace_agent_sessions.add(link);
+}
+
+export async function detachWorkspaceAgentSession(
+  workspaceId: string,
+  agentId: string,
+  sessionId: string,
+): Promise<void> {
+  await db.workspace_agent_sessions
+    .where("[workspaceId+agentId+sessionId]")
+    .equals([workspaceId, agentId, sessionId])
+    .delete();
+}
+
+export async function hasWorkspaceAgentSessionLink(
+  workspaceId: string,
+  agentId: string,
+  sessionId: string,
+): Promise<boolean> {
+  return Boolean(
+    await db.workspace_agent_sessions
+      .where("[workspaceId+agentId+sessionId]")
+      .equals([workspaceId, agentId, sessionId])
+      .first(),
+  );
+}
+
+export function useWorkspaceAgentSessions(
+  workspaceId?: string,
+): WorkspaceAgentSessionRow[] {
+  return (
+    useLiveQuery(
+      () =>
+        workspaceId
+          ? db.workspace_agent_sessions
+              .where("workspaceId")
+              .equals(workspaceId)
+              .toArray()
+          : [],
+      [workspaceId],
+      [] as WorkspaceAgentSessionRow[],
+    ) ?? []
+  );
+}
+
+export function useWorkspaceAgentSessionLinks(): WorkspaceAgentSessionRow[] {
+  return (
+    useLiveQuery(
+      () => db.workspace_agent_sessions.toArray(),
+      [],
+      [] as WorkspaceAgentSessionRow[],
+    ) ?? []
+  );
+}
+
+export async function getWorkspaceAgentSessionIds(
+  workspaceId: string,
+  agentId: string,
+): Promise<string[]> {
+  if (!workspaceId || !agentId) return [];
+  const links = await db.workspace_agent_sessions
+    .where("[workspaceId+agentId]")
+    .equals([workspaceId, agentId])
+    .toArray();
+  return links.map((link) => link.sessionId);
+}
+
+/**
+ * Copy the agent's currently active session into a workspace the first time that agent is
+ * shown there. Existing workspaces keep working after the upgrade without every old
+ * session appearing everywhere.
+ */
+export async function seedWorkspaceAgentSessions(
+  workspaceId: string,
+  agents: { id: string; sessionId?: string }[],
+): Promise<void> {
+  if (!workspaceId) return;
+  const links = await db.workspace_agents
+    .where("workspaceId")
+    .equals(workspaceId)
+    .toArray();
+  for (const link of links) {
+    if (link.sessionsSeeded) continue;
+    const agent = agents.find((item) => item.id === link.agentId);
+    if (!agent) continue;
+    if (agent.sessionId) {
+      await attachWorkspaceAgentSession(
+        workspaceId,
+        link.agentId,
+        agent.sessionId,
+      );
+    }
+    await db.workspace_agents.update(link.id, { sessionsSeeded: true });
+  }
+}
+
+/** Drop the links of a session that was closed on the agent server. */
+export async function removeWorkspaceAgentSessionLinks(
+  agentId: string,
+  sessionId: string,
+): Promise<void> {
+  if (!agentId || !sessionId) return;
+  await db.workspace_agent_sessions
+    .where("sessionId")
+    .equals(sessionId)
+    .and((link) => link.agentId === agentId)
+    .delete();
 }

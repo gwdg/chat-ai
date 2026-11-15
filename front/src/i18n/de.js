@@ -309,6 +309,7 @@ export default {
       step1: "Erstellen Sie einen Arbeitsbereich oder öffnen Sie einen in der Seitenleiste; er enthält bereits Browserspeicher und eine Arcana-Dateisystem-Quelle.",
       step2: "Wählen Sie links eine Quelle. Gerätequellen tragen die Markierung \"Nur dieses Gerät\".",
       step3: "Durchsuchen Sie hier die Dateien. Ziehen Sie eine Datei auf eine andere Quelle zum Kopieren; mit Alt zum Verschieben.",
+      step4: "Verknüpfen Sie einen Agenten und wählen Sie die Sitzungen, die zu diesem Arbeitsbereich gehören; hier neu erstellte Sitzungen werden automatisch zugeordnet.",
     },
     workspace_upload: {
       title: "Dateien in einen Arbeitsbereich hochladen",
@@ -330,7 +331,7 @@ export default {
       title: "Einen Remote-Agenten starten",
       step1: "Verwenden Sie die +-Schaltfläche im Bereich Agenten, um einen Agenten hinzuzufügen und sein HPC-Projekt auszuwählen.",
       step2: "Agenten erscheinen in der Liste; klicken Sie auf einen, um seinen Chat rechts zu öffnen.",
-      step3: "Klappen Sie einen Agenten über das Chevron auf, um seine Sitzungen und Subagenten-Sitzungen zu sehen. Klicken Sie eine Sitzung zum Wechseln an, erstellen Sie mit + eine neue oder öffnen Sie das ...-Menü zum Umbenennen oder Schließen.",
+      step3: "Klappen Sie einen Agenten über das Chevron auf, um jeden Arbeitsbereich mit den zugeordneten Sitzungen sowie Sitzungen ohne Arbeitsbereich zu sehen. Klicken Sie eine Sitzung zum Wechseln an, erstellen Sie mit + eine neue oder öffnen Sie das ...-Menü zum Umbenennen, Entfernen oder Schließen.",
     },
     catalog: {
       open: "Tutorials durchsuchen",
@@ -1631,6 +1632,10 @@ export default {
     sessions: "Sitzungen",
     new_session: "Neue Sitzung",
     no_sessions: "Noch keine Sitzungen.",
+    no_workspace_sessions: "Diesem Arbeitsbereich sind noch keine Sitzungen zugeordnet.",
+    unassigned_sessions: "Nicht in einem Arbeitsbereich",
+    no_unassigned_sessions: "Jede Sitzung ist einem Arbeitsbereich zugeordnet.",
+    detach_session: "Aus dem Arbeitsbereich entfernen",
     subagent_short: "Sub",
     rename_session: "Sitzung umbenennen",
     close_session: "Sitzung schließen",
@@ -1833,6 +1838,9 @@ export default {
     attach_agent: "Agent verknüpfen",
     attach_agent_hint:
       "Verknüpfen Sie einen Agenten mit diesem Arbeitsbereich. Der Agent kann ihn anschließend als Brücken-Arbeitsbereich verwenden.",
+    attach_agent_session: "Sitzung zuordnen",
+    attach_agent_session_hint:
+      "Wählen Sie die Sitzungen dieses Agenten, die zu diesem Arbeitsbereich gehören. Andere Arbeitsbereiche behalten ihre eigene Liste.",
     no_available_agents: "Keine nicht verknüpften Agenten verfügbar.",
     agents: "Agenten",
     agent_sidebar_title: "Verbundene Agenten",

@@ -596,7 +596,8 @@ lives entirely in IndexedDB; the back service does not store it. Dexie schema v6
 `workspace_mounts` and `workspace_chats`; v8 adds the browser source's `workspace_nodes` /
 `workspace_blobs` file tree; v9 adds `workspace_file_references`; v10 adds the default Arcana
 filesystem source; v11 adds the default browser source and moves every browser source and workspace
-root onto the single `browser-storage` tree; v12 adds `workspace_agents` links. Handles and the transfer journal never leave the device. A persisted
+root onto the single `browser-storage` tree; v12 adds `workspace_agents` links and v13 adds
+`workspace_agent_sessions` links. Handles and the transfer journal never leave the device. A persisted
 `chatai.workspace.deviceId` binds `browser`, `local` and `mcp` sources to this device; `arcana`
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
@@ -640,7 +641,17 @@ many-to-many chat link: a chat can be attached to any number of workspaces, show
 workspace in the sidebar and in the workspace's Chats panel, and toggled from the `Workspace` icon
 left of the Local tools icon in the prompt box. `workspace_agents` is the matching many-to-many link
 between workspaces and localStorage-backed agent entries; the workspace page's Agents panel attaches
-or detaches them, and links whose agent no longer exists are removed when that page loads. Storage
+or detaches them, and links whose agent no longer exists are removed when that page loads.
+`workspace_agent_sessions` (Dexie v13) is the session-level link: it stores
+`{workspaceId, agentId, sessionId}`, so a workspace shows only the sessions attached to it instead
+of every session of an agent. The workspace page's Agents panel and the chat sidebar list those
+sessions; the sidebar agent list groups an agent's sessions by workspace and keeps sessions that
+belong to no workspace under "Not in a workspace". Creating a session from a workspace attaches it
+there, opening one from an attached workspace attaches it, and `AppDB` version 13 adds the table.
+`workspace_agents.sessionsSeeded` records that the agent's active session was copied into the
+workspace once (`seedWorkspaceAgentSessions`), so existing data upgrades without duplicating
+sessions and a detached session is not re-added. Detaching an agent, deleting a workspace, removing
+an agent, and closing a session all delete the matching session links. Storage
 is shown for every source in the always visible "Available storage" panel.
 
 Transfers are orchestrated in the browser: `workspace/transferPlanner.ts` always moves on drag and
@@ -690,7 +701,9 @@ remote ids as a value.
 
 `Sidebar/AgentList.tsx` lists remote agents like conversation rows and polls
 `GET /api/session/status` every 5 s for the status dot (green idle, yellow working, red connection
-error). Each agent row expands into its OpenCode sessions: the active `sessionId` is stored on the
+error). Each agent row expands into its OpenCode sessions grouped by the workspaces the agent is
+attached to, with the sessions attached to each workspace and a final "Not in a workspace" group for
+the rest; the active `sessionId` is stored on the
 local agent entry, while the session list is read from `GET /api/session` plus
 `GET /api/session/:id/children` by `agents/agentSessions.js`. Child sessions are the subagent
 sessions OpenCode creates; they are shown nested in the same list and can be opened like a

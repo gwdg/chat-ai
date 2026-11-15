@@ -7,16 +7,22 @@ import {
   addWorkspaceMount,
   attachWorkspaceChat,
   attachWorkspaceAgent,
+  attachWorkspaceAgentSession,
   createWorkspace,
   deleteWorkspace,
   detachWorkspaceChat,
   detachWorkspaceAgent,
+  detachWorkspaceAgentSession,
   getChatWorkspaceId,
   getSourceHandle,
   getWorkspace,
+  getWorkspaceAgentSessionIds,
+  hasWorkspaceAgentSessionLink,
   removeOrphanWorkspaceAgents,
+  removeWorkspaceAgentSessionLinks,
   removeSource,
   saveSourceHandle,
+  seedWorkspaceAgentSessions,
   setWorkspaceMountReadOnly,
   updateSource,
   updateWorkspace,
@@ -32,6 +38,7 @@ const reset = async () => {
   await db.workspace_mounts.clear();
   await db.workspace_chats.clear();
   await db.workspace_agents.clear();
+  await db.workspace_agent_sessions.clear();
   await db.workspace_nodes.clear();
   await db.workspace_blobs.clear();
   await db.workspace_file_references.clear();
@@ -163,6 +170,77 @@ describe("workspace database", () => {
 
     await detachWorkspaceAgent(workspaceId, "agent-1");
     expect(await db.workspace_agents.count()).toBe(0);
+  });
+
+  it("attaches agent sessions per workspace instead of everywhere", async () => {
+    const first = await createWorkspace("First");
+    const second = await createWorkspace("Second");
+    await attachWorkspaceAgent(first, "agent-1");
+    await attachWorkspaceAgent(second, "agent-1");
+
+    await attachWorkspaceAgentSession(first, "agent-1", "session-1");
+    await attachWorkspaceAgentSession(first, "agent-1", "session-1");
+    await attachWorkspaceAgentSession(first, "agent-1", "session-2");
+    await attachWorkspaceAgentSession(second, "agent-1", "session-2");
+    expect(await db.workspace_agent_sessions.count()).toBe(3);
+    expect(
+      (await getWorkspaceAgentSessionIds(first, "agent-1")).sort(),
+    ).toEqual(["session-1", "session-2"]);
+    expect(await hasWorkspaceAgentSessionLink(first, "agent-1", "session-2")).toBe(
+      true,
+    );
+    expect(await hasWorkspaceAgentSessionLink(second, "agent-1", "session-1")).toBe(
+      false,
+    );
+
+    await detachWorkspaceAgentSession(first, "agent-1", "session-1");
+    expect(await db.workspace_agent_sessions.count()).toBe(2);
+
+    // Closing a session removes it from every workspace it was attached to.
+    await removeWorkspaceAgentSessionLinks("agent-1", "session-2");
+    expect(await getWorkspaceAgentSessionIds(second, "agent-1")).toEqual([]);
+    await attachWorkspaceAgentSession(first, "agent-1", "session-2");
+    await attachWorkspaceAgentSession(second, "agent-1", "session-2");
+
+    // Detaching the agent also drops the sessions attached through it.
+    await detachWorkspaceAgent(first, "agent-1");
+    expect(await getWorkspaceAgentSessionIds(first, "agent-1")).toEqual([]);
+    expect(
+      (await getWorkspaceAgentSessionIds(second, "agent-1")).sort(),
+    ).toEqual(["session-2"]);
+
+    await deleteWorkspace(second);
+    expect(await db.workspace_agent_sessions.count()).toBe(0);
+  });
+
+  it("seeds an attached agent's active session once", async () => {
+    const workspaceId = await createWorkspace("Seeded");
+    await attachWorkspaceAgent(workspaceId, "agent-1");
+    await attachWorkspaceAgent(workspaceId, "agent-2");
+
+    await seedWorkspaceAgentSessions(workspaceId, [
+      { id: "agent-1", sessionId: "session-1" },
+      { id: "agent-2", sessionId: "" },
+    ]);
+    expect(await getWorkspaceAgentSessionIds(workspaceId, "agent-1")).toEqual([
+      "session-1",
+    ]);
+    expect(await getWorkspaceAgentSessionIds(workspaceId, "agent-2")).toEqual([]);
+
+    // The pair is marked as seeded, so a detached session is not re-added.
+    await detachWorkspaceAgentSession(workspaceId, "agent-1", "session-1");
+    await seedWorkspaceAgentSessions(workspaceId, [
+      { id: "agent-1", sessionId: "session-1" },
+    ]);
+    expect(await getWorkspaceAgentSessionIds(workspaceId, "agent-1")).toEqual([]);
+  });
+
+  it("removes session links of removed agents", async () => {
+    const workspaceId = await createWorkspace("Orphans");
+    await attachWorkspaceAgent(workspaceId, "agent-1");
+    await attachWorkspaceAgentSession(workspaceId, "agent-1", "session-1");
+    await removeOrphanWorkspaceAgents([]);
+    expect(await db.workspace_agent_sessions.count()).toBe(0);
   });
 
   it("marks a source read-only", async () => {

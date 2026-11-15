@@ -297,6 +297,16 @@ export type WorkspaceAgentRow = {
   workspaceId: string
   agentId: string
   createdAt: number
+  // Set once the agent's currently active session was copied into this workspace.
+  sessionsSeeded?: boolean
+}
+
+export type WorkspaceAgentSessionRow = {
+  id: string
+  workspaceId: string
+  agentId: string
+  sessionId: string
+  createdAt: number
 }
 
 export type WorkspaceNodeRow = {

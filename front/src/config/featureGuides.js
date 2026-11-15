@@ -41,6 +41,10 @@ export const featureGuides = {
         target: '[data-guide="workspace-files"]',
         textKey: "feature_guide.workspace_overview.step3",
       },
+      {
+        target: '[data-guide="workspace-agents"]',
+        textKey: "feature_guide.workspace_overview.step4",
+      },
     ],
   },
   workspace_upload: {

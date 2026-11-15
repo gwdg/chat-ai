@@ -10,6 +10,7 @@ import {
   Edit,
   OverflowMenuVertical,
   TrashCan,
+  Unlink,
 } from "@carbon/icons-react";
 import { GitBranch } from "lucide-react";
 
@@ -30,6 +31,7 @@ const SessionRow = ({
   onSelect,
   onRename,
   onClose,
+  onDetach,
   subLabel,
 }) => {
   const { t } = useTranslation();
@@ -86,6 +88,19 @@ const SessionRow = ({
         >
           {({ close }) => (
             <>
+              {onDetach && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    onDetach(session);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-base-content/80 transition hover:bg-base-200"
+                >
+                  <Unlink size={13} />
+                  {t("agents.detach_session")}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -136,8 +151,11 @@ export default function AgentSessionList({
   summaries = {},
   onSelect,
   onCreate,
+  onDetach,
   creating = false,
   showCreate = true,
+  showHeader = true,
+  emptyKey = "agents.no_sessions",
   className = "",
 }) {
   const { t } = useTranslation();
@@ -162,6 +180,7 @@ export default function AgentSessionList({
         onSelect={onSelect}
         onRename={renameSession}
         onClose={closeSession}
+        onDetach={onDetach}
         subLabel={subLabel}
       />
       {(children.get(session.id) || []).map((child) =>
@@ -194,32 +213,34 @@ export default function AgentSessionList({
       className={`rounded-lg border border-base-300/70 bg-base-100/40 p-1 ${className}`}
       data-guide="agent-session-list"
     >
-      <div className="mb-1 flex items-center justify-between px-1">
-        <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
-          {t("agents.sessions")}
-          {tree?.all?.length ? ` (${tree.all.length})` : ""}
-        </span>
-        {showCreate && (
-          <button
-            type="button"
-            onClick={() => onCreate?.(agent)}
-            disabled={creating}
-            className="flex h-5 w-5 items-center justify-center rounded text-base-content/50 hover:bg-base-200 hover:text-base-content disabled:opacity-50"
-            title={t("agents.new_session")}
-            aria-label={t("agents.new_session")}
-          >
-            {creating ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : (
-              <Add size={13} />
-            )}
-          </button>
-        )}
-      </div>
+      {showHeader && (
+        <div className="mb-1 flex items-center justify-between px-1">
+          <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
+            {t("agents.sessions")}
+            {tree?.all?.length ? ` (${tree.all.length})` : ""}
+          </span>
+          {showCreate && (
+            <button
+              type="button"
+              onClick={() => onCreate?.(agent)}
+              disabled={creating}
+              className="flex h-5 w-5 items-center justify-center rounded text-base-content/50 hover:bg-base-200 hover:text-base-content disabled:opacity-50"
+              title={t("agents.new_session")}
+              aria-label={t("agents.new_session")}
+            >
+              {creating ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <Add size={13} />
+              )}
+            </button>
+          )}
+        </div>
+      )}
       <div className="max-h-56 space-y-0.5 overflow-y-auto">
         {roots.length === 0 && (
           <p className="px-2 py-1 text-[10px] text-base-content/45">
-            {t("agents.no_sessions")}
+            {t(emptyKey)}
           </p>
         )}
         {roots.map((session) => renderSession(session))}

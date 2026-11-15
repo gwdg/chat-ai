@@ -28,8 +28,16 @@ import {
 } from "../../apis/opencodeAgents";
 import {
   useChatWorkspaces,
+  seedWorkspaceAgentSessions,
   useWorkspaceAgentLinks,
+  useWorkspaceAgentSessionLinks,
 } from "../../db/workspaceDb";
+import {
+  createWorkspaceAgentSession,
+  filterSessionTree,
+  openWorkspaceAgentSession,
+  workspaceSessionIds,
+} from "../../agents/workspaceAgentSessions";
 import MetaChangesPanel from "../Meta/MetaChangesPanel";
 import AgentSessionList from "../Agent/AgentSessionList";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
@@ -68,6 +76,7 @@ export default function ChatAgentSidebar({ conversationId }) {
   const agents = useAgents();
   const chatLinks = useChatWorkspaces(conversationId);
   const agentLinks = useWorkspaceAgentLinks();
+  const sessionLinks = useWorkspaceAgentSessionLinks();
   const [statuses, setStatuses] = useState({});
   const [sessionStatuses, setSessionStatuses] = useState({});
   const [expanded, setExpanded] = useState(new Set());
@@ -75,22 +84,50 @@ export default function ChatAgentSidebar({ conversationId }) {
   const [sessions, setSessions] = useState({});
   const [creatingSession, setCreatingSession] = useState(null);
 
+  const workspaceIds = useMemo(
+    () => [...new Set((chatLinks || []).map((link) => link.workspaceId))],
+    [chatLinks],
+  );
+
   const connectedAgents = useMemo(() => {
-    const workspaceIds = new Set(
-      (chatLinks || []).map((link) => link.workspaceId),
-    );
     const ids = new Set(
       (agentLinks || [])
-        .filter((link) => workspaceIds.has(link.workspaceId))
+        .filter((link) => workspaceIds.includes(link.workspaceId))
         .map((link) => link.agentId),
     );
     return agents.filter(
       (agent) =>
         ids.has(agent.id) ||
         (agent.bridgeWorkspaceId &&
-          workspaceIds.has(agent.bridgeWorkspaceId)),
+          workspaceIds.includes(agent.bridgeWorkspaceId)),
     );
-  }, [agents, agentLinks, chatLinks]);
+  }, [agents, agentLinks, workspaceIds]);
+
+  // Give agents attached before per-workspace sessions existed their active session here too.
+  useEffect(() => {
+    for (const workspaceId of workspaceIds) {
+      void seedWorkspaceAgentSessions(workspaceId, agents);
+    }
+  }, [agents, workspaceIds]);
+
+  // Only sessions attached to one of this chat's workspaces are listed. Agents that reach the
+  // chat only through the bridge keep their full list.
+  const sessionIdsFor = (agent) => {
+    const attachedWorkspaceIds = workspaceIds.filter((workspaceId) =>
+      (agentLinks || []).some(
+        (link) =>
+          link.workspaceId === workspaceId && link.agentId === agent.id,
+      ),
+    );
+    if (!attachedWorkspaceIds.length) return null;
+    const ids = new Set();
+    for (const workspaceId of attachedWorkspaceIds) {
+      for (const id of workspaceSessionIds(sessionLinks, workspaceId, agent.id)) {
+        ids.add(id);
+      }
+    }
+    return ids;
+  };
 
   useEffect(() => {
     if (!connectedAgents.length) {
@@ -194,18 +231,28 @@ export default function ChatAgentSidebar({ conversationId }) {
     if (creatingSession) return;
     setCreatingSession(agent.id);
     try {
-      await createAgentSession(agent);
-      notifyAgentSessionsChanged(agent.id);
+      if (workspaceIds.length) {
+        await createWorkspaceAgentSession(workspaceIds[0], agent);
+      } else {
+        await createAgentSession(agent);
+        notifyAgentSessionsChanged(agent.id);
+      }
       const tree = await fetchAgentSessions(agent);
       setSessions((current) => ({ ...current, [agent.id]: tree }));
       navigate(`/agent/${agent.id}`);
+    } catch (reason) {
+      console.error("Failed to create agent session", reason);
     } finally {
       setCreatingSession(null);
     }
   };
 
   const switchSession = (agent, session) => {
-    switchAgentSession(agent, session.id);
+    if (workspaceIds.length) {
+      void openWorkspaceAgentSession(workspaceIds[0], agent, session);
+    } else {
+      switchAgentSession(agent, session.id);
+    }
     navigate(`/agent/${agent.id}`);
   };
 
@@ -264,13 +311,14 @@ export default function ChatAgentSidebar({ conversationId }) {
                 <div className="mt-2 space-y-2 text-[10px] text-base-content/70">
                   <AgentSessionList
                     agent={agent}
-                    tree={sessions[agent.id]}
+                    tree={filterSessionTree(sessions[agent.id], sessionIdsFor(agent))}
                     activeSessionId={agent.sessionId}
                     statuses={sessionStatuses[agent.id]}
                     summaries={sessionSummariesFor(agent)}
                     onSelect={(session) => switchSession(agent, session)}
                     onCreate={createSession}
                     creating={creatingSession === agent.id}
+                    emptyKey="agents.no_workspace_sessions"
                     className="text-[10px]"
                   />
                   <div>

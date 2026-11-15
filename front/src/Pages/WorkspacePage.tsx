@@ -33,12 +33,16 @@ import { formatGitLog } from "../utils/gitLog";
 import { useConversationList } from "../db";
 import { useAgents } from "../agents/agentStore";
 import {
-  createAgentSession,
   fetchAgentSessions,
-  notifyAgentSessionsChanged,
   sessionSummariesFor,
-  switchAgentSession,
 } from "../agents/agentSessions";
+import {
+  createWorkspaceAgentSession,
+  detachSessionFromWorkspace,
+  filterSessionTree,
+  openWorkspaceAgentSession,
+  workspaceSessionIds,
+} from "../agents/workspaceAgentSessions";
 import {
   deleteWorkspace,
   detachWorkspaceChat,
@@ -47,9 +51,11 @@ import {
   removeWorkspaceMount,
   updateSource,
   saveTransfer,
+  seedWorkspaceAgentSessions,
   setWorkspaceMountReadOnly,
   usePendingTransfers,
   useWorkspace,
+  useWorkspaceAgentSessions,
   useWorkspaceChats,
   useWorkspaceMounts,
   useWorkspaceSources,
@@ -181,6 +187,7 @@ export default function WorkspacePage() {
   );
   const agents = useAgents();
   const workspaceAgents = useWorkspaceAgents(workspaceId);
+  const workspaceAgentSessions = useWorkspaceAgentSessions(workspaceId);
   const attachedAgents = useMemo(
     () =>
       workspaceAgents
@@ -199,6 +206,13 @@ export default function WorkspacePage() {
   useEffect(() => {
     void removeOrphanWorkspaceAgents(agents.map((agent) => agent.id));
   }, [agents]);
+
+  // Old workspaces had no session links. Seed each attached agent once with its active
+  // session so the workspace does not start out empty.
+  useEffect(() => {
+    if (!workspaceId || attachedAgents.length === 0) return;
+    void seedWorkspaceAgentSessions(workspaceId, attachedAgents);
+  }, [workspaceId, attachedAgents]);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -1039,19 +1053,34 @@ export default function WorkspacePage() {
     if (creatingAgentSession) return;
     setCreatingAgentSession(agent.id);
     try {
-      await createAgentSession(agent);
-      notifyAgentSessionsChanged(agent.id);
+      await createWorkspaceAgentSession(workspaceId, agent);
       const tree = await fetchAgentSessions(agent);
       setAgentSessions((current) => ({ ...current, [agent.id]: tree }));
       navigate(`/agent/${agent.id}`);
+    } catch (reason) {
+      notifyError(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setCreatingAgentSession(null);
     }
   };
 
   const switchToAgentSession = (agent, session) => {
-    switchAgentSession(agent, session.id);
+    void openWorkspaceAgentSession(workspaceId, agent, session);
     navigate(`/agent/${agent.id}`);
+  };
+
+  const detachAgentSession = (agent, session) => {
+    void detachSessionFromWorkspace(workspaceId, agent, session);
+  };
+
+  const attachAgentSession = (agent) => {
+    openModal("workspaceAttachAgentSession", {
+      workspaceId,
+      agent,
+      attachedIds: [
+        ...workspaceSessionIds(workspaceAgentSessions, workspaceId, agent.id),
+      ],
+    });
   };
 
   const toggleSourceReadOnly = (source: { id: string; readOnly?: boolean }) => {
@@ -1628,7 +1657,10 @@ export default function WorkspacePage() {
                       )}
                     </div>
                   </div>
-                  <div className="border-t border-base-300 p-1.5">
+                  <div
+                    className="border-t border-base-300 p-1.5"
+                    data-guide="workspace-agents"
+                  >
                     <div className="flex items-center justify-between px-1">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-base-content/45">
                         {t("workspace.agents")}
@@ -1649,58 +1681,98 @@ export default function WorkspacePage() {
                           {t("workspace.no_attached_agents")}
                         </p>
                       ) : (
-                        attachedAgents.map((agent) => (
-                          <div key={agent.id} className="rounded-md">
-                            <div className="group flex items-center gap-1 rounded-md px-1 py-1 hover:bg-base-200">
-                              <button
-                                type="button"
-                                onClick={() => toggleAgentSessions(agent.id)}
-                                className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 hover:text-base-content"
-                                title={t("agents.sessions")}
-                                aria-label={t("agents.sessions")}
-                                aria-expanded={expandedAgentSessions.has(agent.id)}
-                              >
-                                <ChevronRight
-                                  size={12}
-                                  className={expandedAgentSessions.has(agent.id) ? "rotate-90 transition" : "transition"}
+                        attachedAgents.map((agent) => {
+                          const sessionIds = workspaceSessionIds(
+                            workspaceAgentSessions,
+                            workspaceId,
+                            agent.id,
+                          );
+                          return (
+                            <div key={agent.id} className="rounded-md">
+                              <div className="group flex items-center gap-1 rounded-md px-1 py-1 hover:bg-base-200">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleAgentSessions(agent.id)}
+                                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-base-content/40 hover:text-base-content"
+                                  title={t("agents.sessions")}
+                                  aria-label={t("agents.sessions")}
+                                  aria-expanded={expandedAgentSessions.has(agent.id)}
+                                >
+                                  <ChevronRight
+                                    size={12}
+                                    className={expandedAgentSessions.has(agent.id) ? "rotate-90 transition" : "transition"}
+                                  />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const attached = [...sessionIds];
+                                    const target = attached.includes(
+                                      agent.sessionId,
+                                    )
+                                      ? agent.sessionId
+                                      : attached[0];
+                                    navigate(
+                                      target
+                                        ? `/agent/${agent.id}?session=${target}`
+                                        : `/agent/${agent.id}`,
+                                    );
+                                  }}
+                                  className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                                >
+                                  <Bot size={12} className="shrink-0 text-base-content/50" />
+                                  <span className="min-w-0 flex-1 truncate text-[11px] text-base-content/80">
+                                    {agent.name}
+                                  </span>
+                                  {sessionIds.size > 0 && (
+                                    <span className="shrink-0 text-[10px] text-base-content/45">
+                                      {sessionIds.size}
+                                    </span>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => attachAgentSession(agent)}
+                                  className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-accent group-hover:opacity-100"
+                                  title={t("workspace.attach_agent_session")}
+                                  aria-label={t("workspace.attach_agent_session")}
+                                >
+                                  <Add size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => detachAgent(agent.id)}
+                                  className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover:opacity-100"
+                                  title={t("workspace.detach_agent")}
+                                  aria-label={t("workspace.detach_agent")}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                              {expandedAgentSessions.has(agent.id) && (
+                                <AgentSessionList
+                                  agent={agent}
+                                  tree={filterSessionTree(
+                                    agentSessions[agent.id],
+                                    sessionIds,
+                                  )}
+                                  activeSessionId={agent.sessionId}
+                                  summaries={sessionSummariesFor(agent)}
+                                  onSelect={(session) =>
+                                    switchToAgentSession(agent, session)
+                                  }
+                                  onCreate={createSessionForAgent}
+                                  onDetach={(session) =>
+                                    detachAgentSession(agent, session)
+                                  }
+                                  creating={creatingAgentSession === agent.id}
+                                  emptyKey="agents.no_workspace_sessions"
+                                  className="mb-1 ml-5"
                                 />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => navigate(`/agent/${agent.id}`)}
-                                className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-                              >
-                                <Bot size={12} className="shrink-0 text-base-content/50" />
-                                <span className="min-w-0 flex-1 truncate text-[11px] text-base-content/80">
-                                  {agent.name}
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => detachAgent(agent.id)}
-                                className="flex h-4 w-4 items-center justify-center rounded text-base-content/40 opacity-0 transition hover:text-error group-hover:opacity-100"
-                                title={t("workspace.detach_agent")}
-                                aria-label={t("workspace.detach_agent")}
-                              >
-                                ×
-                              </button>
+                              )}
                             </div>
-                            {expandedAgentSessions.has(agent.id) && (
-                              <AgentSessionList
-                                agent={agent}
-                                tree={agentSessions[agent.id]}
-                                activeSessionId={agent.sessionId}
-                                summaries={sessionSummariesFor(agent)}
-                                onSelect={(session) =>
-                                  switchToAgentSession(agent, session)
-                                }
-                                onCreate={createSessionForAgent}
-                                creating={creatingAgentSession === agent.id}
-                                className="mb-1 ml-5"
-                              />
-                            )}
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
