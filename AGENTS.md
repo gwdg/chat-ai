@@ -119,6 +119,14 @@ CI. A passing build or unit test is not evidence that the full UI works; exercis
 browser when behaviour matters. **Include tests with new features:** add at least one focused
 `*.test.js|jsx|ts|tsx` covering the new behavior, plus regression coverage for bugs you fix.
 
+**Scope your test runs.** A change confined to one component or util needs only the spec next to
+it, e.g. `npx vitest run src/components/Sidebar/__tests__/TopicList.test.jsx` (add
+`npm run build` when JSX or exports changed). Keep the full `npm test` for the end of a task, or
+for edits to shared code that many specs import (`Redux/reducers/`, `db/`, `utils/`). Vitest builds
+a jsdom environment per test file, so a full run costs seconds after every small edit and rarely
+reports anything the adjacent spec would miss. The reverse still holds: a green targeted spec is
+not evidence that the whole suite is green.
+
 `npm i` can rewrite `package-lock.json`. Check `git status` afterwards and keep unrelated lockfile
 churn out of your commit.
 
