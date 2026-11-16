@@ -12,6 +12,7 @@ import {
   Pin,
   PinFilled,
   TrashCan,
+  Workspace,
 } from "@carbon/icons-react";
 import {
   Popover,
@@ -271,6 +272,7 @@ export default function WorkspaceList({
           size={12}
           className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
         />
+        <Workspace size={12} className="shrink-0" />
         <span className="truncate">{t("workspace.sidebar_title")}</span>
       </button>
       <button

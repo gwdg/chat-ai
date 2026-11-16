@@ -458,8 +458,10 @@ share the same `collapsed_topics` list and must stay untouched.
 
 The Pinned, Chats, Workspace, Agents and MCP Servers sections share one header style: an uppercase
 semibold label row on a `bg-base-200/70` band, with `mx-2 my-1.5 border-t border-base-300` rules
-between the sections in `SidebarContent`. A new sidebar section should reuse that pattern so the
-sections stay distinguishable.
+between the sections in `SidebarContent`. Every header starts with the collapse chevron and then a
+12 px section icon (chat bubble, workspace grid, robot, server; Pinned uses its pin there), so the
+sections stay distinguishable while collapsed. A new sidebar section should reuse that pattern,
+icon included.
 
 ### 4.16 Meta chat works from conversation summaries, not messages
 

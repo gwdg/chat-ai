@@ -370,6 +370,7 @@ export default function AgentList({
           size={12}
           className={`shrink-0 transition-transform ${collapsed ? "-rotate-90" : ""}`}
         />
+        <Bot size={12} className="shrink-0" />
         <Tooltip text={t("agents.tooltip")}>
           <span className="truncate">{t("agents.section_title")}</span>
         </Tooltip>

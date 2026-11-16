@@ -12,6 +12,7 @@ import {
 import {
   ArrangeHorizontal,
   Calendar,
+  Chat,
   Checkmark,
   ChevronDown,
   ChevronLeft,
@@ -832,6 +833,7 @@ export default function SidebarContent({
                 size={12}
                 className={`shrink-0 transition-transform ${chatsCollapsed ? "-rotate-90" : ""}`}
               />
+              <Chat size={12} className="shrink-0" />
               <span className="truncate">{t("folders.title")}</span>
               <span className="ml-1 font-normal tabular-nums text-base-content/35">
                 {conversations.length}

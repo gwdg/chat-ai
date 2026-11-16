@@ -319,4 +319,13 @@ describe("AgentList", () => {
       "true",
     );
   });
+
+  it("marks the section with an icon beside the collapse control", () => {
+    renderAgentList();
+
+    // Two icons: the collapse chevron and the section icon, like Pinned.
+    expect(
+      screen.getByRole("button", { name: "Agents" }).querySelectorAll("svg"),
+    ).toHaveLength(2);
+  });
 });

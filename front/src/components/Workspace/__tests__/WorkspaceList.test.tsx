@@ -444,3 +444,14 @@ describe("WorkspaceList group colours", () => {
     expect(row.className).toContain("text-accent");
   });
 });
+
+describe("WorkspaceList section header", () => {
+  it("marks the section with an icon beside the collapse control", () => {
+    renderList(makeStore());
+
+    // Two icons: the collapse chevron and the section icon, like Pinned.
+    expect(
+      screen.getByRole("button", { name: "Workspace" }).querySelectorAll("svg"),
+    ).toHaveLength(2);
+  });
+});
