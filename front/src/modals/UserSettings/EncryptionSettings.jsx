@@ -57,6 +57,12 @@ const configuredKeyUrl = () => {
   return String(configured || "").trim() || DEFAULT_KEY_BASE_URL;
 };
 
+/** `<e2eeKeyUrl>keys.json`: the manifest `make -C encryption keys` writes. */
+const configuredKeyDirectoryUrl = () => {
+  const base = configuredKeyUrl();
+  return `${base.endsWith("/") ? base : `${base}/`}keys.json`;
+};
+
 export default function EncryptionSettings({ modelsData }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -67,6 +73,7 @@ export default function EncryptionSettings({ modelsData }) {
   const [modelTokens, setModelTokens] = useState("");
   const [keyText, setKeyText] = useState("");
   const [url, setUrl] = useState("");
+  const [directoryUrl, setDirectoryUrl] = useState(configuredKeyDirectoryUrl);
   const [publishedUrl, setPublishedUrl] = useState(configuredKeyUrl);
   const [publishProgress, setPublishProgress] = useState(null);
   const [publishResult, setPublishResult] = useState(null);
@@ -215,7 +222,7 @@ export default function EncryptionSettings({ modelsData }) {
 
   const handleDirectory = () =>
     run(async () => {
-      const result = await fetchKeyDirectory(url);
+      const result = await fetchKeyDirectory(directoryUrl);
       const merged = mergeKeyImport(keys, result.keys);
       // A directory carries its own model lists; verify every incoming key
       // against the models that exist here before storing any of them.
@@ -646,28 +653,33 @@ export default function EncryptionSettings({ modelsData }) {
           )}
 
           {mode === "directory" && (
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-base-content/70">
-                {t("e2ee.directory_url")}
-                <input
-                  type="url"
-                  className="input input-sm input-bordered w-full"
-                  value={url}
-                  onChange={(event) => setUrl(event.target.value)}
-                  placeholder="https://example.org/keys/keys.json"
-                  spellCheck={false}
-                />
-              </label>
-              <button
-                type="button"
-                className="btn btn-sm btn-primary"
-                onClick={handleDirectory}
-                disabled={busy || !url.trim()}
-              >
-                <Download className="h-4 w-4" aria-hidden="true" />
-                {busy ? t("e2ee.verifying") : t("e2ee.import_directory")}
-              </button>
-            </div>
+            <>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-base-content/70">
+                  {t("e2ee.directory_url")}
+                  <input
+                    type="url"
+                    className="input input-sm input-bordered w-full"
+                    value={directoryUrl}
+                    onChange={(event) => setDirectoryUrl(event.target.value)}
+                    placeholder="https://example.org/keys/keys.json"
+                    spellCheck={false}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={handleDirectory}
+                  disabled={busy || !directoryUrl.trim()}
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  {busy ? t("e2ee.verifying") : t("e2ee.import_directory")}
+                </button>
+              </div>
+              <p className="text-xs text-base-content/60">
+                {t("e2ee.directory_hint")}
+              </p>
+            </>
           )}
 
           {error && (

@@ -355,6 +355,8 @@ export default {
     directory_url: "Directory URL",
     import_directory: "Import directory",
     directory_imported: "Imported {{count}} keys",
+    directory_hint:
+      "make -C encryption keys writes this file: every model's public key and binding in one document. Each key is still verified before it is stored.",
     import_error: "Could not import the key.",
     models_title: "Model encryption",
     models_keyed: "{{count}} encrypted",

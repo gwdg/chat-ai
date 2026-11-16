@@ -367,6 +367,8 @@ export default {
     directory_url: "Verzeichnis-URL",
     import_directory: "Verzeichnis importieren",
     directory_imported: "{{count}} Schlüssel importiert",
+    directory_hint:
+      "make -C encryption keys schreibt diese Datei: Public Key und Bindung jedes Modells in einem Dokument. Jeder Schlüssel wird weiterhin vor dem Speichern geprüft.",
     import_error: "Der Schlüssel konnte nicht importiert werden.",
     models_title: "Modellverschlüsselung",
     models_keyed: "{{count}} verschlüsselt",

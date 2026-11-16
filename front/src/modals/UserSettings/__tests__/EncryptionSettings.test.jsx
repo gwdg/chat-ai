@@ -410,6 +410,42 @@ describe("EncryptionSettings published keys", () => {
     expect(document.body.textContent).toContain("Mistral B");
   });
 
+  it("opens the directory tab on the manifest URL and imports it", async () => {
+    const document = {
+      keys: [
+        {
+          id: "key-1",
+          name: "Node",
+          publicKey: freshKey(),
+          models: ["qwen-a"],
+        },
+      ],
+      models: { "qwen-a": "key-1" },
+    };
+    const fetchImpl = vi.fn(async () => answered(JSON.stringify(document)));
+    vi.stubGlobal("fetch", fetchImpl);
+    const store = makeStore();
+    renderSettings(store);
+
+    fireEvent.click(screen.getByRole("button", { name: "Key directory" }));
+    const input = screen.getByLabelText("Directory URL");
+    expect(input).toHaveValue(
+      "https://docs.ai.gwdg.de/technical/saia-platform/keys/keys.json",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Import directory" }));
+
+    await waitFor(() => {
+      expect(toast.notifySuccess).toHaveBeenCalled();
+    });
+    expect(fetchImpl.mock.calls[0][0]).toBe(
+      "https://docs.ai.gwdg.de/technical/saia-platform/keys/keys.json",
+    );
+    expect(verify.verifyKeyForModel).toHaveBeenCalledTimes(1);
+    expect(settings(store).e2ee_models).toEqual({ "qwen-a": "key-1" });
+    expect(settings(store).e2ee_keys.map((key) => key.id)).toEqual(["key-1"]);
+  });
+
   it("reports a directory that publishes no usable key", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => notFound));
     const store = makeStore();

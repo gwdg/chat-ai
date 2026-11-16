@@ -1397,6 +1397,14 @@ prefills the directory from `e2eeKeyUrl` (`VITE_E2EE_KEY_URL`, default
 `verifyKeyForModel` before it is stored, and one failing model does not block the others. The
 directory must send `access-control-allow-origin`, because the browser fetches it directly.
 
+The same run also writes `keys.json` in the output directory, next to the pairs: the key-directory
+document (`{keys:[{id,name,publicKey,models}], models:{<model id>:<key id>}}`) with ids of the form
+`key-<fingerprint>` (the same id `keyEntryId()` derives), so Encryption settings → Directory can bind
+every key in one import; that tab prefills `<e2eeKeyUrl>keys.json`. It carries public keys only.
+Regenerating it keeps existing pairs;
+`make list` reports a missing/invalid manifest, a model bound to an unknown key id, and a `.pub` the
+manifest does not list.
+
 `encryption/Makefile` wraps the same script for a host without this checkout's tooling
 (`make -C encryption keys|dry-run|force|list|test`, variables `NODE`, `OUT`, `CONFIG`,
 `MODELS_URL`, `API_KEY`, `HEADER_FLAGS`). It needs GNU make and Node 18+ and resolves its own

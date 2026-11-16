@@ -6,7 +6,24 @@ model** and writes it to `keys/`:
 ```
 keys/<MODELNAME>.key   base64url X25519 private key, mode 0600, node only
 keys/<MODELNAME>.pub   base64url X25519 public key, publish this one
+keys/keys.json         all public keys + model bindings, no private material
 ```
+
+`keys.json` is the key directory the app imports in one click (Encryption
+settings → Directory). It has the format `parseKeyDirectory()` reads:
+
+```json
+{
+  "keys": [
+    { "id": "key-<fingerprint>", "name": "Qwen A",
+      "publicKey": "<43-char base64url>", "models": ["qwen-a"] }
+  ],
+  "models": { "qwen-a": "key-<fingerprint>" }
+}
+```
+
+Every key is still verified against its model before it is stored, and the file
+contains only `.pub` material, so it can sit next to the published `.pub` files.
 
 `<MODELNAME>` is the model **id** with every run of characters outside
 `[A-Za-z0-9._-]` replaced by `-`, so `bridge/deepseek-v4.1-flash-1017` becomes
@@ -69,6 +86,11 @@ make -C encryption MODELS_URL=http://localhost:10000/public/v1/models API_KEY=..
 `make keys` keeps an existing pair (a lost private key is never silently
 replaced); `make force` rewrites it, which is the two-sided rotation: provision
 the node with the new `.key`, then publish the new `.pub`.
+
+Every `make keys` run also writes `keys.json` in `OUT` from the pairs that are
+there, so the manifest can be regenerated after existing pairs were kept.
+`make list` reports it: a missing manifest, a model bound to a key id that is
+not in the file, or a `.pub` the manifest does not list.
 
 ## Usage
 

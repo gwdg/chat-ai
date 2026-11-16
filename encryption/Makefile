@@ -63,10 +63,10 @@ endif
 help:
 	@echo "SAIA E2EE model node keys"
 	@echo
-	@echo "  make keys        write one <MODELNAME>.key/.pub pair per model, keeping existing pairs"
+	@echo "  make keys        write one <MODELNAME>.key/.pub pair per model plus keys.json, keeping existing pairs"
 	@echo "  make dry-run     show the model -> file table, write nothing"
 	@echo "  make force       replace existing pairs (provision the node first, then publish)"
-	@echo "  make list        show the pairs in $(OUT)"
+	@echo "  make list        show the pairs in $(OUT) and the keys.json manifest"
 	@echo "  make test        run the generator's own tests"
 	@echo
 	@echo "The model list comes from $(MODELS_URL)"
@@ -92,7 +92,7 @@ force: check-node
 	$(NODE) "$(SCRIPT)" $(GEN_ARGS) $(HEADER_FLAGS) --force
 
 list: check-node
-	@$(NODE) --input-type=module -e 'import fs from "node:fs"; import path from "node:path"; const dir = path.resolve("$(OUT)"); if (!fs.existsSync(dir)) { console.log("No " + dir + " yet. Run: make keys"); process.exit(0); } const pubs = fs.readdirSync(dir).filter((name) => name.endsWith(".pub")).sort(); if (!pubs.length) { console.log("No key pairs in " + dir + " yet. Run: make keys"); process.exit(0); } for (const name of pubs) { const text = fs.readFileSync(path.join(dir, name), "utf8").trim(); const privatePath = path.join(dir, name.slice(0, -4) + ".key"); const state = (text.length === 43 ? "ok" : "NOT A KEY") + "  " + (fs.existsSync(privatePath) ? "private present" : "PRIVATE MISSING"); console.log(name.padEnd(48) + "  " + state); }'
+	@$(NODE) --input-type=module -e 'import fs from "node:fs"; import path from "node:path"; import { createHash } from "node:crypto"; const dir = path.resolve("$(OUT)"); if (!fs.existsSync(dir)) { console.log("No " + dir + " yet. Run: make keys"); process.exit(0); } const pubs = fs.readdirSync(dir).filter((name) => name.endsWith(".pub")).sort(); if (!pubs.length) { console.log("No key pairs in " + dir + " yet. Run: make keys"); process.exit(0); } const listed = new Set(); for (const name of pubs) { const text = fs.readFileSync(path.join(dir, name), "utf8").trim(); const privatePath = path.join(dir, name.slice(0, -4) + ".key"); const state = (text.length === 43 ? "ok" : "NOT A KEY") + "  " + (fs.existsSync(privatePath) ? "private present" : "PRIVATE MISSING"); console.log(name.padEnd(48) + "  " + state); if (text.length === 43) listed.add("key-" + createHash("sha256").update(Buffer.from(text, "base64url")).digest().subarray(0, 12).toString("base64url")); } const manifestPath = path.join(dir, "keys.json"); if (!fs.existsSync(manifestPath)) { console.log("\nkeys.json: MISSING. Run: make keys"); process.exit(0); } let doc; try { doc = JSON.parse(fs.readFileSync(manifestPath, "utf8")); } catch { console.log("\nkeys.json: NOT VALID JSON"); process.exit(0); } const keys = Array.isArray(doc.keys) ? doc.keys : []; const models = doc.models && typeof doc.models === "object" && !Array.isArray(doc.models) ? doc.models : {}; const known = new Set(keys.map((entry) => entry && entry.id).filter(Boolean)); const dangling = Object.entries(models).filter(([, id]) => !known.has(id)).map(([modelId]) => modelId); const unlisted = [...listed].filter((id) => !known.has(id)); console.log("\nkeys.json: " + keys.length + " key(s), " + Object.keys(models).length + " model(s)" + (dangling.length ? "  DANGLING MODEL(S): " + dangling.join(", ") : "") + (unlisted.length ? "  UNLISTED .pub: " + unlisted.length : ""));'
 
 test: check-node
 	cd "$(THIS_DIR)" && $(NODE) --test

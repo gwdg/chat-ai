@@ -9,6 +9,7 @@ import { after, before, describe, it } from "node:test";
 
 import {
   DEFAULT_MODELS_URL,
+  buildKeyDirectory,
   generatePair,
   keyId,
   main,
@@ -122,6 +123,32 @@ describe("file names", () => {
   });
 });
 
+describe("key directory", () => {
+  it("binds each key to its model and skips an unusable key", () => {
+    const pair = generatePair();
+    const document = buildKeyDirectory([
+      { modelId: "qwen-a", name: "Qwen A", publicKey: pair.publicKey },
+      { modelId: "no-key", name: "No Key", publicKey: "" },
+    ]);
+    assert.deepEqual(document, {
+      keys: [
+        {
+          id: `key-${pair.keyId}`,
+          name: "Qwen A",
+          publicKey: pair.publicKey,
+          models: ["qwen-a"],
+        },
+      ],
+      models: { "qwen-a": `key-${pair.keyId}` },
+    });
+    // The display name falls back to the model id.
+    const unnamed = buildKeyDirectory([
+      { modelId: "m", publicKey: generatePair().publicKey },
+    ]);
+    assert.equal(unnamed.keys[0].name, "m");
+  });
+});
+
 describe("main", () => {
   let server;
   let url;
@@ -187,11 +214,42 @@ describe("main", () => {
       );
     }
 
+    // keys.json is the import file: the public key of every .pub, bound to the
+    // model id it belongs to, with no private material.
+    const manifestPath = path.join(outDir, "keys.json");
+    const manifestText = fs.readFileSync(manifestPath, "utf8");
+    const manifest = JSON.parse(manifestText);
+    assert.equal(manifest.keys.length, 2);
+    assert.deepEqual(Object.keys(manifest.models).sort(), [
+      "bridge/b-model",
+      "qwen-a",
+    ]);
+    const expected = {
+      "qwen-a": { fileName: "qwen-a", name: "Qwen A" },
+      "bridge/b-model": { fileName: "bridge-b-model", name: "B" },
+    };
+    for (const [modelId, { fileName, name }] of Object.entries(expected)) {
+      const publicKey = fs.readFileSync(path.join(outDir, `${fileName}.pub`), "utf8").trim();
+      const id = `key-${keyId(publicKey)}`;
+      assert.equal(manifest.models[modelId], id);
+      const entry = manifest.keys.find((key) => key.id === id);
+      assert.deepEqual(entry, {
+        id,
+        name,
+        publicKey,
+        models: [modelId],
+      });
+    }
+    assert.equal(manifestText.includes(".key"), false);
+    assert.equal(manifestText.includes("private"), false);
+
     const second = await quietly(() =>
       main(["--models-url", url, "--api-key", "test-key", "--out", outDir]),
     );
     assert.equal(second.code, 0);
     assert.match(second.output, /0 key pair\(s\) written, 2 left alone/);
+    // Rebuilding the manifest for existing pairs gives the same document.
+    assert.equal(fs.readFileSync(manifestPath, "utf8"), manifestText);
   });
 
   it("reports an upstream error instead of writing keys", async () => {
@@ -224,6 +282,7 @@ describe("main", () => {
       );
       assert.equal(result.code, 0);
       assert.match(result.output, /Dry run: 2 key pair/);
+      assert.match(result.output, /keys\.json would list 2 key\(s\)/);
       assert.deepEqual(fs.readdirSync(empty), []);
     } finally {
       fs.rmSync(empty, { recursive: true, force: true });

@@ -278,6 +278,49 @@ function existingKeyId(publicPath) {
   }
 }
 
+function readPublicKey(publicPath) {
+  try {
+    return fs.readFileSync(publicPath, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * The key directory document (`keys.json`) for a set of pairs.
+ *
+ * This is the same shape the app's Encryption settings import as a directory:
+ * one entry per key with its model ids, plus a model -> key-id map. Importing
+ * one file therefore binds every key, and each key is still verified against
+ * its model before it is stored.
+ */
+export function buildKeyDirectory(entries) {
+  const keys = [];
+  const models = {};
+  for (const entry of entries) {
+    const publicKey = String(entry.publicKey ?? "").trim();
+    if (!publicKey) continue;
+    const id = `key-${keyId(publicKey)}`;
+    keys.push({
+      id,
+      name: entry.name || entry.modelId,
+      publicKey,
+      models: [entry.modelId],
+    });
+    models[entry.modelId] = id;
+  }
+  return { keys, models };
+}
+
+function writeKeyDirectory(outDir, entries) {
+  const document = buildKeyDirectory(entries);
+  const file = path.join(outDir, "keys.json");
+  fs.writeFileSync(file, `${JSON.stringify(document, null, 2)}\n`, {
+    mode: 0o644,
+  });
+  return { file, ...document };
+}
+
 function writePair(publicPath, privatePath, pair) {
   fs.writeFileSync(privatePath, `${pair.privateKey}\n`, { mode: 0o600 });
   fs.chmodSync(privatePath, 0o600);
@@ -339,6 +382,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (!args.dryRun) fs.mkdirSync(outDir, { recursive: true });
 
   const rows = [];
+  const entries = [];
   const counts = { written: 0, skipped: 0 };
   for (const model of models) {
     const { fileName, publicPath, privatePath } = pathsFor(outDir, model.id);
@@ -346,9 +390,19 @@ export async function main(argv = process.argv.slice(2)) {
     if (exists && !args.force) {
       counts.skipped += 1;
       rows.push([model.id, fileName, existingKeyId(publicPath), "exists"]);
+      entries.push({
+        modelId: model.id,
+        name: model.name,
+        publicKey: readPublicKey(publicPath),
+      });
       continue;
     }
     const pair = generatePair();
+    entries.push({
+      modelId: model.id,
+      name: model.name,
+      publicKey: pair.publicKey,
+    });
     if (args.dryRun) {
       rows.push([model.id, fileName, pair.keyId, "would write"]);
       continue;
@@ -358,16 +412,25 @@ export async function main(argv = process.argv.slice(2)) {
     rows.push([model.id, fileName, pair.keyId, "written"]);
   }
 
+  const manifest = args.dryRun
+    ? { file: path.join(outDir, "keys.json"), ...buildKeyDirectory(entries) }
+    : writeKeyDirectory(outDir, entries);
+
   print(rows, outDir, {
     dryRun: args.dryRun,
     ...counts,
     modelsUrl,
     modelCount: models.length,
+    manifest,
   });
   return 0;
 }
 
-function print(rows, outDir, { dryRun, written, skipped, modelsUrl, modelCount }) {
+function print(
+  rows,
+  outDir,
+  { dryRun, written, skipped, modelsUrl, modelCount, manifest },
+) {
   console.log(`${modelCount} model(s) from ${modelsUrl}`);
   const widths = [0, 0, 0];
   for (const row of rows) {
@@ -386,11 +449,24 @@ function print(rows, outDir, { dryRun, written, skipped, modelsUrl, modelCount }
       `Dry run: ${pending} key pair(s) would go to ${outDir}` +
         (skipped ? `, ${skipped} exist already.` : "."),
     );
+    if (manifest.keys.length) {
+      console.log(
+        `Dry run: ${manifest.file} would list ${manifest.keys.length} key(s).`,
+      );
+    }
     return;
   }
   console.log(
     `${written} key pair(s) written, ${skipped} left alone in ${outDir}.`,
   );
+  if (manifest.keys.length) {
+    console.log(
+      `${manifest.file} lists ${manifest.keys.length} key(s) for ${Object.keys(manifest.models).length} model(s).`,
+    );
+    console.log(
+      "Import it in Settings -> Encryption -> Directory to bind every key at once.",
+    );
+  }
   if (written) {
     console.log(
       "Private keys are mode 0600. Put a .key on its model node and publish only the .pub file.",
