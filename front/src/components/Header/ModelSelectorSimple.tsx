@@ -19,6 +19,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { BaseModelInfo } from "../../types/models";
 import Tooltip from "../Others/Tooltip";
+import E2eeLock from "../Others/E2eeLock";
 import DemandIndicator from "./DemandIndicator";
 
 const isExternalModel = (model: { name?: string } | undefined) =>
@@ -138,6 +139,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               </Tooltip>
             )}
             <span className="font-medium truncate">{model.name}</span>
+            <E2eeLock modelId={model.id} size={12} />
           </div>
           <div className="ml-2 flex shrink-0 items-center gap-1 text-accent">
             {model.input?.includes("image") && <Tooltip text={"Image Input"}><FontAwesomeIcon icon={faImage} /></Tooltip>}
@@ -170,6 +172,7 @@ export default function ModelSelectorSimple({ selectedModel, modelsData, onChang
               <DemandIndicator demand={selectedModel?.demand} status={selectedModel?.status} />
             </div>
             <span className="font-medium truncate">{selectedModel?.name}</span>
+            <E2eeLock modelId={selectedModel?.id} size={13} />
           </div>
 
           <div className="flex items-center gap-2">

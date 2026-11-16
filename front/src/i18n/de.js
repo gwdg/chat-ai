@@ -298,6 +298,8 @@ export default {
     update_memory_group_summary: "Erinnerung „{{from}}“ in „{{to}}“ in Gruppe „{{group}}“ ändern",
     delete_memory_summary: "Erinnerung „{{text}}“ löschen",
     clear_memories_summary: "Alle gespeicherten Erinnerungen löschen",
+    e2ee_assign_summary: "Modell {{model}} mit Schlüssel „{{key}}“ verschlüsseln",
+    e2ee_clear_summary: "Verschlüsselung für Modell {{model}} beenden",
     memory_item: "Erinnerung {{index}}",
     setting_on: "an",
     setting_off: "aus",
@@ -305,6 +307,44 @@ export default {
     unsorted_topic: "Nicht zugeordnet",
     error: "Antwort fehlgeschlagen. Bitte versuchen Sie es erneut.",
     no_model: "Kein Standardmodell konfiguriert.",
+  },
+  e2ee: {
+    badge: "Ende-zu-Ende verschlüsselt",
+    description:
+      "Verknüpfen Sie ein Modell mit dem öffentlichen Schlüssel seines Verschlüsselungsknotens. Jede Anfrage über dieses Modell wird dann in diesem Browser versiegelt; der Server sieht nur Geheimtext. Der Schlüssel wird nicht vom Anbieter geladen, sondern außerhalb des Kanals verteilt – importieren Sie ihn aus einer vertrauenswürdigen Quelle.",
+    keys_title: "Verschlüsselungsschlüssel",
+    no_keys: "Noch keine Schlüssel. Importieren Sie unten einen.",
+    invalid_key: "Kein gültiger 32-Byte-X25519-Public-Key",
+    download: "Public Key herunterladen",
+    remove: "Entfernen",
+    remove_confirm: "Diesen Schlüssel und seine Modellzuordnungen entfernen?",
+    removed: "Schlüssel entfernt",
+    added: "Schlüssel hinzugefügt",
+    import_method: "Schlüssel hinzufügen",
+    modes: {
+      paste: "Einfügen oder Datei",
+      url: "Aus URL",
+      directory: "Schlüsselverzeichnis",
+    },
+    name: "Schlüsselname",
+    name_placeholder: "z. B. Qwen-Knoten",
+    public_key: "Public Key",
+    public_key_placeholder: "Base64url-X25519-Public-Key",
+    add_key: "Schlüssel hinzufügen",
+    choose_file: ".pub-Datei wählen…",
+    key_url: "Schlüssel-URL",
+    fetch_key: "Schlüssel laden",
+    directory_url: "Verzeichnis-URL",
+    import_directory: "Verzeichnis importieren",
+    directory_imported: "{{count}} Schlüssel importiert",
+    import_error: "Der Schlüssel konnte nicht importiert werden.",
+    models_title: "Modellverschlüsselung",
+    models_keyed: "{{count}} verschlüsselt",
+    models_description:
+      "Ein mit einem Schlüssel verknüpftes Modell sendet nur Geheimtext. Modelle ohne Schlüssel senden weiterhin im Klartext. Fehlt ein verknüpfter Schlüssel oder ist er ungültig, wird die Anfrage blockiert statt auf Klartext zurückzufallen.",
+    models_no_keys: "Fügen Sie zuerst einen Schlüssel hinzu.",
+    assign_label: "Verschlüsselungsschlüssel für {{model}}",
+    not_encrypted: "Nicht verschlüsselt",
   },
   mcp_confirmation: {
     title: "MCP-Werkzeug ausführen?",
@@ -647,6 +687,15 @@ export default {
       step1: "Öffnen Sie Ihre Benutzereinstellungen.",
       step2:
         "Wählen Sie den Tab Chat, um Standardmodell, Sendetaste, Zusammenfassungen, Zeitstempel, Darstellung und Dokumentkonvertierung zu ändern.",
+    },
+    e2ee: {
+      title: "Ein Modell Ende-zu-Ende verschlüsseln",
+      step1: "Öffnen Sie Ihre Benutzereinstellungen.",
+      step2: "Wählen Sie den Tab Verschlüsselung.",
+      step3:
+        "Importieren Sie den Public Key des Modells: einfügen, .pub-Datei wählen, aus einer URL laden oder ein ganzes Schlüsselverzeichnis importieren.",
+      step4:
+        "Verknüpfen Sie ein Modell mit dem Schlüssel. Es zeigt dann ein grünes Schloss, und jede Anfrage darüber wird in diesem Browser verschlüsselt.",
     },
     message_timestamps: {
       title: "Zeitstempel für Nachrichten anzeigen",
@@ -1146,6 +1195,12 @@ export default {
         title: "Gespeicherte Erinnerungen",
         description:
           "Prüfen und verwalten Sie die von Chat AI gespeicherten Details.",
+      },
+      encryption: {
+        label: "Verschlüsselung",
+        title: "Ende-zu-Ende-Verschlüsselung",
+        description:
+          "Verwalten Sie die Public Keys verschlüsselungsfähiger Modelle und wählen Sie, welche Modelle sie nutzen.",
       },
       data: {
         label: "Daten",

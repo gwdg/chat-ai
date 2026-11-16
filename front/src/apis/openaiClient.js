@@ -6,6 +6,7 @@
 // is then loaded on demand so it never weighs on the default bundle.
 import { createFetchClient } from "./fetchClient";
 import { getApiKey, getFakeAuthHeaders } from "./authHeaders";
+import { e2eeFetch } from "../e2ee/fetch";
 
 // Resolve the backend endpoint from config
 export function resolveBaseURL() {
@@ -45,6 +46,9 @@ const createSdkClient = (timeout) => {
       ...(Object.keys(defaultHeaders).length ? { defaultHeaders } : {}),
       dangerouslyAllowBrowser: true,
       timeout,
+      // The SDK keeps its own streaming/error handling; the transport wrapper
+      // still seals every keyed-model request and decrypts the answer.
+      fetch: e2eeFetch,
     });
   });
   return {
@@ -60,5 +64,9 @@ const createSdkClient = (timeout) => {
 export function createBackendClient(timeout = 20000) {
   return useOpenAISdk()
     ? createSdkClient(timeout)
-    : createFetchClient({ baseURL: resolveBaseURL(), timeout });
+    : createFetchClient({
+        baseURL: resolveBaseURL(),
+        timeout,
+        fetchImpl: e2eeFetch,
+      });
 }

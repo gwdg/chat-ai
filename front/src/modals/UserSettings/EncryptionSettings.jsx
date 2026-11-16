@@ -1,0 +1,423 @@
+import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  Download,
+  KeyRound,
+  Link2,
+  Lock,
+  ShieldCheck,
+  Trash2,
+  Upload,
+} from "lucide-react";
+
+import {
+  addE2eeKey,
+  removeE2eeKey,
+  selectE2eeKeys,
+  selectE2eeModels,
+  setE2eeModelKey,
+} from "../../Redux/reducers/userSettingsReducer";
+import {
+  keyEntryFromText,
+  fetchKeyDirectory,
+  fetchKeyFromUrl,
+  mergeKeyImport,
+  publicKeyFileText,
+} from "../../e2ee/keys";
+import { usableKey } from "../../e2ee/registry";
+import { downloadText } from "../../utils/download";
+import { useToast } from "../../hooks/useToast";
+import E2eeLock from "../../components/Others/E2eeLock";
+
+const MODES = ["paste", "url", "directory"];
+
+const fingerprint = (entry) => usableKey(entry)?.kid ?? "";
+
+export default function EncryptionSettings({ modelsData }) {
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const { notifySuccess, notifyError } = useToast();
+  const keys = useSelector(selectE2eeKeys);
+  const assignments = useSelector(selectE2eeModels);
+  const [mode, setMode] = useState("paste");
+  const [name, setName] = useState("");
+  const [keyText, setKeyText] = useState("");
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const fileRef = useRef(null);
+
+  const models = useMemo(
+    () =>
+      [...(modelsData ?? [])].sort((a, b) =>
+        String(a?.name || a?.id).localeCompare(String(b?.name || b?.id)),
+      ),
+    [modelsData],
+  );
+
+  const keyedCount = models.filter((model) => assignments[model.id]).length;
+
+  const addKey = (entry) => {
+    dispatch(addE2eeKey(entry));
+    notifySuccess(t("e2ee.added"));
+  };
+
+  const resetForm = () => {
+    setName("");
+    setKeyText("");
+    setUrl("");
+    setError("");
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const run = async (task) => {
+    setBusy(true);
+    setError("");
+    try {
+      await task();
+      resetForm();
+    } catch (caught) {
+      setError(caught?.message || t("e2ee.import_error"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePaste = () =>
+    run(async () => {
+      const entry = keyEntryFromText(keyText, { name, source: "paste" });
+      addKey(entry);
+    });
+
+  const handleFile = (event) =>
+    run(async () => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      const entry = keyEntryFromText(text, {
+        name: name || file.name.replace(/\.(pub|txt)$/i, ""),
+        source: "file",
+      });
+      addKey(entry);
+    });
+
+  const handleUrl = () =>
+    run(async () => {
+      const entry = await fetchKeyFromUrl(url, { name });
+      addKey(entry);
+    });
+
+  const handleDirectory = () =>
+    run(async () => {
+      const result = await fetchKeyDirectory(url);
+      const merged = mergeKeyImport(keys, result.keys);
+      for (const key of result.keys) dispatch(addE2eeKey(key));
+      for (const [modelId, keyId] of Object.entries(result.models)) {
+        if (merged.some((key) => key.id === keyId)) {
+          dispatch(setE2eeModelKey({ modelId, keyId }));
+        }
+      }
+      notifySuccess(t("e2ee.directory_imported", { count: result.keys.length }));
+      resetForm();
+    });
+
+  const handleDownload = (entry) => {
+    const safe = (entry.name || entry.id).replace(/[^\w.-]+/g, "-");
+    downloadText(
+      publicKeyFileText(entry),
+      "text/plain;charset=utf-8",
+      `${safe}.pub`,
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <p className="text-xs leading-relaxed text-base-content/70">
+        {t("e2ee.description")}
+      </p>
+
+      <section className="flex flex-col gap-3" data-guide="e2ee-keys">
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-accent" aria-hidden="true" />
+          <h3 className="text-sm font-medium text-base-content">
+            {t("e2ee.keys_title")}
+          </h3>
+        </div>
+
+        {keys.length === 0 ? (
+          <p className="text-xs text-base-content/60">{t("e2ee.no_keys")}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-base-300 rounded-lg border border-base-300">
+            {keys.map((entry) => {
+              const usable = usableKey(entry);
+              return (
+                <li
+                  key={entry.id}
+                  className="flex flex-wrap items-center gap-3 px-3 py-2.5"
+                >
+                  <ShieldCheck
+                    className={`h-4 w-4 shrink-0 ${usable ? "text-success" : "text-error"}`}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-base-content">
+                      {entry.name || entry.id}
+                    </p>
+                    <p className="truncate font-mono text-[0.7rem] text-base-content/60">
+                      {usable
+                        ? `${entry.kid || fingerprint(entry)} · ${entry.publicKey}`
+                        : t("e2ee.invalid_key")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs btn-square"
+                    onClick={() => handleDownload(entry)}
+                    title={t("e2ee.download")}
+                    aria-label={t("e2ee.download")}
+                  >
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs btn-square text-error"
+                    onClick={() =>
+                      setPendingDelete(
+                        pendingDelete === entry.id ? null : entry.id,
+                      )
+                    }
+                    title={t("e2ee.remove")}
+                    aria-label={t("e2ee.remove")}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  {pendingDelete === entry.id && (
+                    <div className="flex w-full items-center justify-end gap-2 pt-1">
+                      <span className="text-xs text-base-content/70">
+                        {t("e2ee.remove_confirm")}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-error btn-xs"
+                        onClick={() => {
+                          dispatch(removeE2eeKey(entry.id));
+                          setPendingDelete(null);
+                          notifySuccess(t("e2ee.removed"));
+                        }}
+                      >
+                        {t("e2ee.remove")}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs"
+                        onClick={() => setPendingDelete(null)}
+                      >
+                        {t("common.cancel")}
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <div
+          role="group"
+          aria-label={t("e2ee.import_method")}
+          className="tabs tabs-box tabs-sm grid grid-cols-3"
+        >
+          {MODES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={mode === value}
+              onClick={() => {
+                setMode(value);
+                setError("");
+              }}
+              className={`tab min-w-0 text-xs font-medium ${mode === value ? "tab-active text-accent!" : ""}`}
+            >
+              <span className="block truncate">
+                {t(`e2ee.modes.${value}`)}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="flex flex-col gap-1 text-xs text-base-content/70">
+            {t("e2ee.name")}
+            <input
+              type="text"
+              className="input input-sm input-bordered w-full"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("e2ee.name_placeholder")}
+            />
+          </label>
+
+          {mode === "paste" && (
+            <>
+              <label className="flex flex-col gap-1 text-xs text-base-content/70">
+                {t("e2ee.public_key")}
+                <textarea
+                  className="textarea textarea-bordered min-h-20 w-full font-mono text-xs"
+                  value={keyText}
+                  onChange={(event) => setKeyText(event.target.value)}
+                  placeholder={t("e2ee.public_key_placeholder")}
+                  spellCheck={false}
+                />
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={handlePaste}
+                  disabled={busy || !keyText.trim()}
+                >
+                  <Upload className="h-4 w-4" aria-hidden="true" />
+                  {t("e2ee.add_key")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={busy}
+                >
+                  {t("e2ee.choose_file")}
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".pub,.txt,text/plain"
+                  className="hidden"
+                  onChange={handleFile}
+                />
+              </div>
+            </>
+          )}
+
+          {mode === "url" && (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-base-content/70">
+                {t("e2ee.key_url")}
+                <input
+                  type="url"
+                  className="input input-sm input-bordered w-full"
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  placeholder="https://example.org/keys/qwen.pub"
+                  spellCheck={false}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={handleUrl}
+                disabled={busy || !url.trim()}
+              >
+                <Link2 className="h-4 w-4" aria-hidden="true" />
+                {t("e2ee.fetch_key")}
+              </button>
+            </div>
+          )}
+
+          {mode === "directory" && (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-base-content/70">
+                {t("e2ee.directory_url")}
+                <input
+                  type="url"
+                  className="input input-sm input-bordered w-full"
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  placeholder="https://example.org/keys/keys.json"
+                  spellCheck={false}
+                />
+              </label>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={handleDirectory}
+                disabled={busy || !url.trim()}
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                {t("e2ee.import_directory")}
+              </button>
+            </div>
+          )}
+
+          {error && (
+            <p className="text-xs text-error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3" data-guide="e2ee-models">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Lock className="h-4 w-4 text-accent" aria-hidden="true" />
+            <h3 className="text-sm font-medium text-base-content">
+              {t("e2ee.models_title")}
+            </h3>
+          </div>
+          <span className="text-xs text-base-content/60">
+            {t("e2ee.models_keyed", { count: keyedCount })}
+          </span>
+        </div>
+        <p className="text-xs leading-relaxed text-base-content/70">
+          {t("e2ee.models_description")}
+        </p>
+
+        {keys.length === 0 ? (
+          <p className="text-xs text-base-content/60">{t("e2ee.models_no_keys")}</p>
+        ) : models.length === 0 ? (
+          <p className="text-xs text-base-content/60">{t("common.loading")}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-base-300 rounded-lg border border-base-300">
+            {models.map((model) => (
+              <li
+                key={model.id}
+                className="flex flex-wrap items-center gap-3 px-3 py-2"
+              >
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span className="truncate text-sm text-base-content">
+                    {model.name || model.id}
+                  </span>
+                  <E2eeLock modelId={model.id} size={13} />
+                </span>
+                <select
+                  className="select select-sm select-bordered max-w-52"
+                  value={assignments[model.id] ?? ""}
+                  onChange={(event) =>
+                    dispatch(
+                      setE2eeModelKey({
+                        modelId: model.id,
+                        keyId: event.target.value || null,
+                      }),
+                    )
+                  }
+                  aria-label={t("e2ee.assign_label", {
+                    model: model.name || model.id,
+                  })}
+                >
+                  <option value="">{t("e2ee.not_encrypted")}</option>
+                  {keys.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name || entry.id}
+                    </option>
+                  ))}
+                </select>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}

@@ -3,6 +3,7 @@ import { Popover, PopoverButton, PopoverPanel, Transition } from "@headlessui/re
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "@carbon/icons-react";
 import DemandIndicator from "../Header/DemandIndicator";
+import E2eeLock from "../Others/E2eeLock";
 import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
 
 /**
@@ -32,6 +33,7 @@ export default function ModelButton({ localState, setLocalState, modelsData }) {
           />
         </span>
         <span className="truncate font-medium">{selectedModel?.name}</span>
+        <E2eeLock modelId={selectedModel?.id} size={13} />
         <ChevronDown size={16} className="flex-shrink-0 text-accent" />
       </PopoverButton>
 

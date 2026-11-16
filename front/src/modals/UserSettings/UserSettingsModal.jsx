@@ -5,6 +5,7 @@ import {
   Brain,
   Database,
   Download,
+  Lock,
   SlidersHorizontal,
   Trash2,
   UserRound,
@@ -30,6 +31,7 @@ import { useToast } from "../../hooks/useToast";
 import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 import ImportChatButton from "../../components/Sidebar/Buttons/ImportChatButton";
 import StorageStatus from "./StorageStatus";
+import EncryptionSettings from "./EncryptionSettings";
 
 const PROFILE_TABS = [
   {
@@ -52,6 +54,13 @@ const PROFILE_TABS = [
     labelKey: "user_settings.tabs.memories.label",
     titleKey: "user_settings.tabs.memories.title",
     descriptionKey: "user_settings.tabs.memories.description",
+  },
+  {
+    id: "encryption",
+    icon: Lock,
+    labelKey: "user_settings.tabs.encryption.label",
+    titleKey: "user_settings.tabs.encryption.title",
+    descriptionKey: "user_settings.tabs.encryption.description",
   },
   {
     id: "data",
@@ -178,6 +187,10 @@ export default function UserSettingsModal({
           </div>
         </div>
       );
+    }
+
+    if (activeTab === "encryption") {
+      return <EncryptionSettings modelsData={modelsData} />;
     }
 
     return (

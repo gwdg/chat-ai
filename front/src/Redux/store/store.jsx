@@ -18,7 +18,7 @@ const persistConfig = {
     "user_settings",
     "migration_data",
   ],
-  version: 9,
+  version: 10,
   migrate: createMigrate(migrations, { debug: true })
 };
 
@@ -73,6 +73,8 @@ const getDefaultState = () => {
       conversation_summaries: true,
       show_timestamps: false,
       send_with_enter: null,
+      e2ee_keys: [],
+      e2ee_models: {},
     },
   };
 };

@@ -142,6 +142,7 @@ describe("Meta chat local tools", () => {
       "search_messages",
       "list_memories",
       "get_user_settings",
+      "list_e2ee_keys",
       "test_mcp_server",
       "agent_health",
       "list_mcp_tools",

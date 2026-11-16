@@ -3,6 +3,7 @@
 import getModelDefaults from "../config/getModelDefaults";
 import { authHeaders, getApiKey } from "./authHeaders";
 import { resolveBaseURL } from "./openaiClient";
+import { e2eeFetch } from "../e2ee/fetch";
 
 export const agentEndpoint = () => resolveBaseURL().replace(/\/$/, "");
 export const isAgentEnabled = () => import.meta.env.VITE_MODULE_AGENT === "true";
@@ -45,7 +46,9 @@ const blob = (data: Uint8Array, type = "") => new Blob([data as Uint8Array<Array
 
 async function post(path: string, body: BodyInit, json = false, signal?: AbortSignal) {
   const headers = { ...(json ? { "Content-Type": "application/json" } : {}), ...agentRequestHeaders() };
-  const response = await fetch(`${agentEndpoint()}${path}`, {
+  // `e2eeFetch` only rewrites keyed-model `/chat/completions` calls (explainImage);
+  // every other endpoint passes through untouched.
+  const response = await e2eeFetch(`${agentEndpoint()}${path}`, {
     method: "POST",
     body,
     signal,

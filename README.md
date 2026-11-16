@@ -102,6 +102,25 @@ A public Git repository can bootstrap a workspace. See
 `chat-ai-manifest.json` schema and confirmation flow. An example repository is
 prepared under `remote-example/`.
 
+## End-to-end encryption
+
+Chat AI can seal the traffic of individual models in the browser. In
+**User settings → Encryption**, import the public key of an encryption-capable
+model (paste it, choose a `.pub` file, load a single key from a URL, or import a
+key directory) and bind the model to that key. A bound model shows a green lock
+wherever it is listed, and every `/chat/completions` request it sends leaves the
+browser as ciphertext; the node seals its answer the same way.
+
+- Keys are **public** X25519 material and may be imported from a trusted source.
+  They are stored with your user settings, not in `secrets/`.
+- Only `/chat/completions` is encrypted. Document conversion, speech, image and
+  web-search endpoints stay cleartext.
+- If a bound key is missing or invalid, the request is **blocked** instead of
+  sent in cleartext.
+
+The protocol is the v3 protocol of `saia/saia-e2ee`; the browser port lives in
+`front/src/e2ee/` and `back/service.mjs` forwards a sealed envelope untouched.
+
 ## Configuration
 
 You can set the port numbers for both the `front` and `back` services in the `front.json` and `back.json` files.

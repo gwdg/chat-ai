@@ -15,6 +15,7 @@ import { getFileType } from "../utils/attachments";
 import { ARTEFACTS, prepareAttachment, uploadPath } from "./prepare";
 import { createWrittenFiles, resultImages } from "./writtenFiles";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
+import { e2eeFetch } from "../e2ee/fetch";
 import { attachmentsNote, hasReadableText, type AttachmentEntry } from "./attachmentContext";
 import i18n from "../i18n";
 import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpTools } from "./mcp";
@@ -375,8 +376,12 @@ export async function runAgentTurn({
   // following requests of this turn (transformContext) and the stored transcript (done).
   let gatewayMessages: AgentMessage[] = [];
   const before = new Map<AgentMessage, AgentMessage[]>();
-  const fetchFn = gatewayFetch((exchange) =>
-    gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
+  // E2EE sits *under* the gateway wrapper, so the status-event filter only ever
+  // sees the decrypted stream.
+  const fetchFn = gatewayFetch(
+    (exchange) =>
+      gatewayMessages.push(toAgentMessage(exchange, { api: model.api, provider: PROVIDER, model: spec.id })),
+    e2eeFetch,
   );
 
   const tools = useTools

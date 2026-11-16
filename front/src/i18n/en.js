@@ -288,6 +288,8 @@ export default {
     update_memory_group_summary: "Update memory “{{from}}” to “{{to}}” in group “{{group}}”",
     delete_memory_summary: "Delete memory “{{text}}”",
     clear_memories_summary: "Delete all saved memories",
+    e2ee_assign_summary: "Encrypt model {{model}} with key “{{key}}”",
+    e2ee_clear_summary: "Stop encrypting model {{model}}",
     memory_item: "Memory {{index}}",
     setting_on: "on",
     setting_off: "off",
@@ -295,6 +297,44 @@ export default {
     unsorted_topic: "Unsorted",
     error: "Could not answer. Please try again.",
     no_model: "No default model is configured.",
+  },
+  e2ee: {
+    badge: "End-to-end encrypted",
+    description:
+      "Bind a model to the public key of its encryption node. Every request you send through that model is then sealed in this browser; the server only sees ciphertext. The key itself never leaves the provider out of band, so import it from a trusted source.",
+    keys_title: "Encryption keys",
+    no_keys: "No keys yet. Import one below.",
+    invalid_key: "Not a valid 32-byte X25519 public key",
+    download: "Download public key",
+    remove: "Remove",
+    remove_confirm: "Remove this key and its model bindings?",
+    removed: "Key removed",
+    added: "Key added",
+    import_method: "How to add a key",
+    modes: {
+      paste: "Paste or file",
+      url: "From URL",
+      directory: "Key directory",
+    },
+    name: "Key name",
+    name_placeholder: "e.g. Qwen node",
+    public_key: "Public key",
+    public_key_placeholder: "Base64url X25519 public key",
+    add_key: "Add key",
+    choose_file: "Choose .pub file…",
+    key_url: "Key URL",
+    fetch_key: "Download key",
+    directory_url: "Directory URL",
+    import_directory: "Import directory",
+    directory_imported: "Imported {{count}} keys",
+    import_error: "Could not import the key.",
+    models_title: "Model encryption",
+    models_keyed: "{{count}} encrypted",
+    models_description:
+      "A model bound to a key sends only ciphertext. Models without a key keep sending in cleartext. If a bound key is missing or invalid, the request is blocked instead of falling back to cleartext.",
+    models_no_keys: "Add a key first to bind a model.",
+    assign_label: "Encryption key for {{model}}",
+    not_encrypted: "Not encrypted",
   },
   mcp_confirmation: {
     title: "Run MCP tool?",
@@ -632,6 +672,15 @@ export default {
       step1: "Open your user settings.",
       step2:
         "Choose the Chat tab to change the default model, send key, summaries, timestamps, rendering, and document conversion.",
+    },
+    e2ee: {
+      title: "Encrypt a model end to end",
+      step1: "Open your user settings.",
+      step2: "Choose the Encryption tab.",
+      step3:
+        "Import the model's public key: paste it, choose a .pub file, load it from a URL, or import a whole key directory.",
+      step4:
+        "Bind a model to the key. It then shows a green lock and every request through it is encrypted in this browser.",
     },
     message_timestamps: {
       title: "Show message timestamps",
@@ -1130,6 +1179,12 @@ export default {
         label: "Memories",
         title: "Saved memories",
         description: "Review and manage details Chat AI has learned.",
+      },
+      encryption: {
+        label: "Encryption",
+        title: "End-to-end encryption",
+        description:
+          "Manage the public keys of encryption-capable models and choose which models use them.",
       },
       data: {
         label: "Data",

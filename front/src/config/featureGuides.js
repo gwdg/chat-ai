@@ -1026,6 +1026,43 @@ export const featureGuides = {
       },
     ],
   },
+  e2ee: {
+    titleKey: "feature_guide.e2ee.title",
+    prompt:
+      "Encrypt a model end to end: open user settings, choose the Encryption tab, import the public key of an encryption-capable model (paste it, choose a .pub file, load it from a URL, or import a key directory), then bind the model to that key. The model shows a green lock and every request through it is encrypted in this browser.",
+    keywords: [
+      "encryption",
+      "end-to-end encryption",
+      "e2ee",
+      "public key",
+      "key",
+      "verschlüsselung",
+      "schlüssel",
+    ],
+    steps: [
+      {
+        target: ['[data-guide="user-settings"]', ".user-profile-button", ".user-profile-block"],
+        textKey: "feature_guide.e2ee.step1",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="settings-tab-encryption"]',
+        prepare: openUserSettings,
+        textKey: "feature_guide.e2ee.step2",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-keys"]',
+        textKey: "feature_guide.e2ee.step3",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-models"]',
+        textKey: "feature_guide.e2ee.step4",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   chat_preferences: {
     titleKey: "feature_guide.chat_preferences.title",
     prompt:
@@ -1555,6 +1592,7 @@ export const FEATURE_CATEGORIES = {
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",
+    "e2ee",
     "chat_preferences",
     "message_timestamps",
     "memories",

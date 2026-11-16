@@ -111,7 +111,7 @@ const errorFromResponse = async (response) => {
 };
 
 // Fetch with a timeout that only covers waiting for the response headers.
-const fetchOnce = async (url, init, timeout, userSignal) => {
+const fetchOnce = async (fetchImpl, url, init, timeout, userSignal) => {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -123,7 +123,7 @@ const fetchOnce = async (url, init, timeout, userSignal) => {
   const onUserAbort = () => controller.abort();
   userSignal?.addEventListener("abort", onUserAbort, { once: true });
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await fetchImpl(url, { ...init, signal: controller.signal });
   } catch (err) {
     userSignal?.removeEventListener("abort", onUserAbort);
     if (userSignal?.aborted) throw new APIUserAbortError();
@@ -134,12 +134,12 @@ const fetchOnce = async (url, init, timeout, userSignal) => {
   }
 };
 
-const request = async (url, init, timeout, signal) => {
+const request = async (fetchImpl, url, init, timeout, signal) => {
   for (let retriesRemaining = MAX_RETRIES; ; retriesRemaining--) {
     if (signal?.aborted) throw new APIUserAbortError();
     let response;
     try {
-      response = await fetchOnce(url, init, timeout, signal);
+      response = await fetchOnce(fetchImpl, url, init, timeout, signal);
     } catch (err) {
       if (err instanceof APIUserAbortError || !retriesRemaining) throw err;
       await sleep(retryDelay(retriesRemaining));
@@ -225,13 +225,18 @@ async function* streamChunks(response) {
   }
 }
 
-export function createFetchClient({ baseURL, timeout = 20000 }) {
+export function createFetchClient({
+  baseURL,
+  timeout = 20000,
+  fetchImpl = (...args) => globalThis.fetch(...args),
+}) {
   const url = `${baseURL.replace(/\/+$/, "")}/chat/completions`;
   return {
     chat: {
       completions: {
         async create(params, { signal } = {}) {
           const response = await request(
+            fetchImpl,
             url,
             {
               method: "POST",

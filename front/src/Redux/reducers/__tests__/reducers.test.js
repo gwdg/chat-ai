@@ -30,6 +30,12 @@ import userSettingsReducer, {
   selectShowTimestamps,
   setCollapseReasoningWhileStreaming,
   setShowTimestamps,
+  addE2eeKey,
+  updateE2eeKey,
+  removeE2eeKey,
+  setE2eeModelKey,
+  selectE2eeKeys,
+  selectE2eeModels,
 } from "../userSettingsReducer";
 import interfaceSettingsReducer, {
   agreeWebSearch,
@@ -247,6 +253,84 @@ describe("user settings reducer", () => {
     expect(selectRenderGraphviz({ user_settings: state })).toBe(false);
     expect(selectRenderVega({ user_settings: state })).toBe(false);
     expect(selectRenderChartjs({ user_settings: state })).toBe(false);
+  });
+
+  it("stores encryption keys and model bindings, and drops dangling ones", () => {
+    let state = init(userSettingsReducer);
+    expect(selectE2eeKeys({ user_settings: state })).toEqual([]);
+    expect(selectE2eeModels({ user_settings: state })).toEqual({});
+
+    state = userSettingsReducer(
+      state,
+      addE2eeKey({
+        id: "node-a",
+        name: "Node A",
+        publicKey: "  abc  ",
+        source: "paste",
+        // Derived data is not trusted; it is recomputed from the key.
+        kid: "stale",
+      }),
+    );
+    expect(selectE2eeKeys({ user_settings: state })[0]).toMatchObject({
+      id: "node-a",
+      name: "Node A",
+      publicKey: "abc",
+      source: "paste",
+    });
+    expect(selectE2eeKeys({ user_settings: state })[0].kid).toBeUndefined();
+
+    state = userSettingsReducer(
+      state,
+      updateE2eeKey({ id: "node-a", patch: { name: "Renamed" } }),
+    );
+    expect(selectE2eeKeys({ user_settings: state })[0].name).toBe("Renamed");
+
+    state = userSettingsReducer(
+      state,
+      setE2eeModelKey({ modelId: "qwen-a", keyId: "node-a" }),
+    );
+    expect(selectE2eeModels({ user_settings: state })).toEqual({
+      "qwen-a": "node-a",
+    });
+
+    // A binding can only name an existing key.
+    state = userSettingsReducer(
+      state,
+      setE2eeModelKey({ modelId: "qwen-a", keyId: "missing" }),
+    );
+    expect(selectE2eeModels({ user_settings: state })).toEqual({
+      "qwen-a": "node-a",
+    });
+
+    // Removing the key removes the binding, so the model is not left keyed
+    // without a key (which would fail closed).
+    state = userSettingsReducer(state, removeE2eeKey("node-a"));
+    expect(selectE2eeKeys({ user_settings: state })).toEqual([]);
+    expect(selectE2eeModels({ user_settings: state })).toEqual({});
+  });
+
+  it("sanitises imported encryption keys and bindings", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      importUserSettings({
+        e2ee_keys: [
+          { id: "node-a", publicKey: "abc", secret: "do-not-import" },
+          { id: "", publicKey: "abc" },
+          { id: "node-b", publicKey: "   " },
+        ],
+        e2ee_models: { "qwen-a": "node-a", "qwen-b": "node-missing" },
+      }),
+    );
+
+    expect(selectE2eeKeys({ user_settings: state })).toHaveLength(1);
+    expect(selectE2eeKeys({ user_settings: state })[0]).not.toHaveProperty(
+      "secret",
+    );
+    // A binding to an unknown key is dropped instead of becoming a trap.
+    expect(selectE2eeModels({ user_settings: state })).toEqual({
+      "qwen-a": "node-a",
+    });
   });
 
   it("returns a stable empty list for old interface settings", () => {

@@ -1312,6 +1312,52 @@ under `mcp.servers` in `opencode.json`, then OpenCode must be restarted. Linux n
 `kdialog` for the native folder-approval dialog; headless hosts deny access. If the MCP tools are
 missing, do not fall back to shell access outside the project.
 
+### 4.29 Keyed models are sealed in the browser, as a transport wrapper
+
+End-to-end encryption is a **fetch wrapper**, not a second chat implementation. A model is "keyed"
+when `user_settings.e2ee_models[modelId]` names an entry in `user_settings.e2ee_keys`; the key entry
+holds only the node's published **X25519 public key** (plus a name/id/fingerprint/import source).
+`src/e2ee/registry.js` resolves that binding and `src/e2ee/fetch.js` (`createE2eeFetch`, shared as
+`e2eeFetch`) rewrites a keyed `/chat/completions` request into the sealed envelope and decrypts the
+answer. Because it sits at the transport layer, every caller is covered without changing its
+request code: `apis/fetchClient.js` (via `fetchImpl`), the opt-in OpenAI SDK (`fetch` option),
+`agent/gateway.ts#gatewayFetch` (the E2EE wrapper is its `baseFetch`, so the gateway only sees the
+decrypted stream), `agent/runAgent.ts`, and `apis/agentEndpoints.ts#post` (which covers
+`explainImage`). The wrapper is a no-op for every other path; only `/chat/completions` (and
+`/completions`) is in the protocol, so `/documents/convert/file`, `/audio/*`, `/images/*` and
+`/websearch` stay cleartext.
+
+**Fail closed.** A keyed model whose key is missing or does not parse as a 32-byte X25519 key throws
+before any network call. `openRequest` stays strict like the Python reference: after the node strips
+the cleartext `stream`/`stream_options` routing hints, the only allowed top-level fields are `model`
+and `e2ee`. On the response side a keyed request accepts a sealed JSON body or a sealed SSE stream;
+a 2xx JSON body without `e2ee` is refused unless it is an error object, non-2xx statuses pass
+through, SSE may carry cleartext `usage`/`error` chunks but never cleartext `choices`, and the
+stream must end with the authenticated final marker. Retries are safe because the caller keeps the
+cleartext body and the wrapper re-seals (fresh ephemeral key and random password) on every attempt.
+
+`src/e2ee/protocol.js` is a direct port of `saia/saia-e2ee/e2ee_connector/saia_e2ee/protocol.py`
+(protocol v3). `canonicalPath()` maps every `*/chat/completions` to `/v1/chat/completions`, so the
+backend path, an engine `/public/v1/...` and a proxy share one AAD. `back/service.mjs` detects an
+`e2ee` envelope at `/chat/completions` and forwards the raw `{model,e2ee,stream}` body upstream — it
+skips `messages` validation, testMode and the tool gateway, because the payload is ciphertext.
+
+**Green lock.** `components/Others/E2eeLock.jsx` reads the same registry and renders a green
+(`text-success`) lock only while the binding resolves to a usable key, so the badge and the actual
+sealing cannot disagree. It is rendered everywhere a model is listed: both model selectors
+(list/extended/grid/trigger), the prompt-box `ModelButton`, the default-model row, and the
+Encryption settings model rows. It renders nothing for an unkeyed model. Any new model list must
+include it.
+
+**Settings.** The new Encryption tab (`modals/UserSettings/EncryptionSettings.jsx`) imports a key by
+paste, `.pub` file, single URL, or a key directory (`src/e2ee/keys.js`; the directory format is
+`{keys:[{id,name,publicKey|key|url,models[]}], models:{modelId:keyId}}`), downloads a `.pub`, and
+binds each model to a key. Storage is Redux `user_settings.e2ee_keys` / `e2ee_models` (persist
+version 10 + migration 10); `importUserSettings` keeps only the public fields and drops bindings to
+unknown keys. The Meta chat exposes the state through `get_user_settings` and `list_e2ee_keys`, and
+`E2EE_ASSIGN` proposes/reverts a binding through `MetaActionCard` (it never imports a key). The
+`e2ee` feature guide covers the flow.
+
 ## 5. Conventions
 
 - **Gradual TypeScript.** `.jsx` and `.tsx` coexist. `front/tsconfig.json` is `strict: false`,
