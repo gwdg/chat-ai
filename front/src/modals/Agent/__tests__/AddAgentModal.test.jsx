@@ -21,6 +21,18 @@ const serviceMocks = vi.hoisted(() => ({
 // simulated by flipping this for the hosted cases below.
 const accessMocks = vi.hoisted(() => ({ direct: true }));
 
+// Whether the engine lists `saia-agent` for this user. The hook itself is
+// covered by its own test; here the states are set directly.
+const serviceAccess = vi.hoisted(() => ({ value: "granted" }));
+
+vi.mock("../../../hooks/useAgentServiceAccess", () => ({
+  useAgentServiceAccess: () => serviceAccess.value,
+  AGENT_SERVICE_CHECKING: "checking",
+  AGENT_SERVICE_GRANTED: "granted",
+  AGENT_SERVICE_DENIED: "denied",
+  AGENT_SERVICE_UNKNOWN: "unknown",
+}));
+
 const storeMocks = vi.hoisted(() => ({ update: vi.fn() }));
 
 vi.mock("../../BaseModal", () => ({
@@ -53,6 +65,7 @@ beforeEach(() => {
   serviceMocks.create.mockReset();
   serviceMocks.remove.mockReset();
   accessMocks.direct = true;
+  serviceAccess.value = "granted";
   storeMocks.update.mockReset();
 });
 
@@ -382,5 +395,53 @@ describe("AddAgentModal", () => {
       }),
     );
     expect(serviceMocks.remove).toHaveBeenCalledWith("svc-old");
+  });
+
+  it("disables the service fields and names the access request when saia-agent is missing", () => {
+    // The engine lists `saia-agent` only for users granted the service's access
+    // group, so a readable model list without it is an entitlement answer.
+    serviceAccess.value = "denied";
+    const onCreate = vi.fn();
+    render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={onCreate} />);
+
+    expect(screen.getByLabelText("Agent name")).toBeDisabled();
+    expect(screen.getByLabelText("HPC project")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add agent" })).toBeDisabled();
+    expect(
+      screen.getByText(/not enabled for your account/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/support@gwdg\.de/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add agent" }));
+
+    expect(serviceMocks.create).not.toHaveBeenCalled();
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it("leaves the external connection usable without the service entitlement", () => {
+    serviceAccess.value = "denied";
+    render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "OpenCode server" }));
+
+    // Only the service is gated: an external server needs no entitlement.
+    expect(screen.getByLabelText("Agent name")).toBeEnabled();
+    expect(screen.getByLabelText("opencode server")).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add agent" })).toBeEnabled();
+    expect(screen.queryByText(/support@gwdg\.de/)).toBeNull();
+  });
+
+  it("keeps the service usable when the model list cannot be read", () => {
+    // `unknown` means the check failed, not that access was refused: locking
+    // the dialog there would hide a working service behind a network error.
+    serviceAccess.value = "unknown";
+    render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={vi.fn()} />);
+
+    expect(screen.getByLabelText("Agent name")).toBeEnabled();
+    expect(screen.getByLabelText("HPC project")).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add agent" })).toBeEnabled();
+    expect(
+      screen.getByText(/The agent service starts an OpenCode container/),
+    ).toBeInTheDocument();
   });
 });

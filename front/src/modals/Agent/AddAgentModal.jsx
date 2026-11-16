@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 
 import BaseModal from "../BaseModal";
 import { newId } from "../../db";
@@ -14,6 +16,11 @@ import {
   deleteServiceAgent,
 } from "../../apis/agentService";
 import { directAgentAccessAllowed } from "../../apis/agentAccess";
+import {
+  AGENT_SERVICE_CHECKING,
+  AGENT_SERVICE_DENIED,
+  useAgentServiceAccess,
+} from "../../hooks/useAgentServiceAccess";
 
 // Placeholder project list; the real projects will come from the GWDG backend.
 const PROJECT_COUNT = 3;
@@ -61,8 +68,17 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const [error, setError] = useState("");
   const project = projects.find((item) => item.id === projectId);
 
+  // The HPC service exists per user and is granted through an engine access
+  // group, so a user without the grant cannot create one at all: the model list
+  // answers that before any request is sent, and the service fields stay locked
+  // behind the access request instead of failing after the click.
+  const access = useAgentServiceAccess();
+  const serviceLocked =
+    serviceMode &&
+    (access === AGENT_SERVICE_CHECKING || access === AGENT_SERVICE_DENIED);
+
   const submit = async () => {
-    if (saving || (serviceMode && !project)) return;
+    if (saving || serviceLocked || (serviceMode && !project)) return;
     setSaving(true);
     setError("");
     let next = {
@@ -198,6 +214,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder={t("agents.name_placeholder")}
+            disabled={serviceLocked}
             className="input input-bordered w-full"
           />
         </label>
@@ -211,6 +228,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
                 <select
                   value={projectId}
                   onChange={(event) => setProjectId(event.target.value)}
+                  disabled={serviceLocked}
                   className="select select-bordered w-full"
                 >
                   {projects.map((item) => (
@@ -220,13 +238,33 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
                   ))}
                 </select>
               </label>
-              <p className="text-[11px] leading-relaxed text-base-content/50">
-                {t("agents.hpc_project_hint")}
-              </p>
+              {/* The hint describes picking a project, which no denied user can
+                  do; the warning below says why instead. */}
+              {access !== AGENT_SERVICE_DENIED && (
+                <p className="text-[11px] leading-relaxed text-base-content/50">
+                  {t("agents.hpc_project_hint")}
+                </p>
+              )}
             </div>
-            <p className="text-[11px] leading-relaxed text-base-content/50">
-              {t("agents.service_hint")}
-            </p>
+            {access === AGENT_SERVICE_DENIED ? (
+              <div role="alert" className="alert alert-warning text-xs">
+                <FontAwesomeIcon icon={faCircleInfo} className="text-base shrink-0" />
+                <span>
+                  <span className="block font-medium">
+                    {t("agents.service_unavailable")}
+                  </span>
+                  {t("agents.service_request_access")}
+                </span>
+              </div>
+            ) : access === AGENT_SERVICE_CHECKING ? (
+              <p className="text-[11px] leading-relaxed text-base-content/50">
+                {t("agents.service_checking")}
+              </p>
+            ) : (
+              <p className="text-[11px] leading-relaxed text-base-content/50">
+                {t("agents.service_hint")}
+              </p>
+            )}
           </>
         )}
         {!serviceMode && (
@@ -268,7 +306,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             type="button"
             className="btn btn-accent"
             onClick={submit}
-            disabled={saving || (serviceMode && !project)}
+            disabled={saving || serviceLocked || (serviceMode && !project)}
           >
             {saving
               ? t("agents.connecting")

@@ -1934,6 +1934,12 @@ export default {
     default_name: "OpenCode-Agent",
     service_hint:
       "Der Agenten-Dienst startet für diesen Agenten einen OpenCode-Container und beendet ihn, wenn Sie den Agenten entfernen. Eine Server-URL oder ein Passwort ist nicht nötig.",
+    service_unavailable:
+      "Der GWDG HPC-Agenten-Dienst ist für Ihr Konto nicht freigeschaltet.",
+    service_request_access:
+      "Wenn Sie für ein HPC-Konto berechtigt sind, können Sie den Zugang zu diesem Service per Anfrage an support@gwdg.de beantragen.",
+    service_checking:
+      "Es wird geprüft, ob der GWDG HPC-Agenten-Dienst für Ihr Konto verfügbar ist…",
     service_forced_hint:
       "Im Deployment laufen Agenten über den Agenten-Dienst (SAIA). Direkte OpenCode-Verbindungen sind nur möglich, wenn Chat AI lokal läuft.",
     hpc_project_label: "HPC-Projekt",

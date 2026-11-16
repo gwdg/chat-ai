@@ -1203,6 +1203,15 @@ default port, so the app never assumes a local service. A production build and a
 preview never contain the proxy. The
 connection choice in the add-agent window only appears with local access, where its external-server
 mode is the way back to a direct server.
+
+The service is also registered in the engine as the model `saia-agent`, inside an access group, so
+`/models` lists it only for users that were granted the service. That list is the entitlement check
+in the add-agent dialog: `hooks/useAgentServiceAccess.js` fetches it when the dialog opens and
+answers `checking`, `granted`, `denied` or `unknown`. `denied` (a readable list without the model)
+disables the name, the HPC project and the submit button and shows that eligible HPC users can
+request access at support@gwdg.de; `unknown` (an empty list or a refused `/models`) fails open,
+because a broken model fetch says nothing about the user's grants. The external tab is never gated
+by it, since a direct server needs no entitlement.
 `AgentList`'s remove action also calls `DELETE /agents/<id>` when `serviceAgentId` is set, so
 removing the row frees the container/process; a `404` counts as already removed. The rest of the
 OpenCode client (`apis/opencodeAgents.js`) is unchanged because the proxy forwards `/api/*`

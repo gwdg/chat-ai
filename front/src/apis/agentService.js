@@ -8,6 +8,17 @@
 /** The service's routes on the app origin, served by the SAIA gateway. */
 export const AGENT_SERVICE_PATH = "/agents";
 
+/**
+ * The model the service is registered as in the SAIA engine.
+ *
+ * It sits in an engine access group (`agent` by default), so `/v1/models` lists
+ * it only for a user that was granted that group. The model list is therefore
+ * the entitlement answer for this user, and
+ * `hooks/useAgentServiceAccess.js` reads it before the add-agent dialog offers
+ * the service fields.
+ */
+export const AGENT_SERVICE_MODEL = "saia-agent";
+
 export const serviceOpencodeUrl = (agentId) =>
   `${AGENT_SERVICE_PATH}/${encodeURIComponent(agentId)}/opencode`;
 
