@@ -15,6 +15,7 @@
     "prebuild": "node scripts/copy-tikzjax.mjs",
     "validate:guides": "node scripts/validate-feature-guides.mjs",
     "test": "vitest run",
+    "test:live": "vitest run --config vitest.live.config.js",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },

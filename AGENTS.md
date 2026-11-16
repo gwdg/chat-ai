@@ -103,9 +103,18 @@ sub-path deployment needs `base` changed plus a rebuild.
 ```bash
 cd front && npm run build    # vite build — works, ~6s
 cd front && npm test         # vitest run — unit/component tests (jsdom + Testing Library)
+cd front && npm run test:live       # starts a real `opencode serve` and drives the client
 cd front && npm run test:watch
 cd front && npm run test:coverage   # v8 text coverage report
 ```
+
+**Live tests** are the `*.live.test.*` files, excluded from `npm test` because they spawn a real
+process. `src/apis/__tests__/opencodeAgents.live.test.js` picks a free port, starts
+`opencode serve` in a temporary HOME/XDG tree with `OPENCODE_SERVER_PASSWORD`, and runs the client
+against it (info, auth, sessions, files, catalogues, shell, SSE, delete), then kills it and removes
+the tree. It never prompts a model, so it needs no credentials or network, and it skips itself when
+no `opencode` binary is on `PATH` (`OPENCODE_BIN` overrides the lookup). The live config
+(`vitest.live.config.js`) reuses the unit-test setup and only changes `include` and the timeouts.
 
 **`npm run lint` does not currently run.** The script invokes `eslint`, but neither `eslint` nor the
 plugins `.eslintrc.cjs` extends are in `front/devDependencies`, so a clean `npm i` gives
