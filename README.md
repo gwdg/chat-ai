@@ -170,8 +170,7 @@ The Agents sidebar is wired to the agent service, not to a fixed `opencodeServer
 ```bash
 cd agent-service
 cp backends.example.yml backends.yml   # enable a docker or process OpenCode backend
-.venv/bin/alembic upgrade head
-.venv/bin/saia-agent-service --host 127.0.0.1 --port 8090
+make start                             # venv + install + schema + service on :8090
 ```
 
 With the bundled dummy backend the UI works but the agent has no tools; a `kind: docker` entry starts the real `gwdg-opencode` container per agent (it needs access to the Docker daemon). The add-agent window defaults to the service and offers a toggle back to a direct OpenCode server.
