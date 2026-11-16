@@ -874,8 +874,12 @@ A tree folder that contains a
 the branch reflog) without a shell,
 while the agent file panel runs `git log --stat` through the OpenCode shell and falls back to the
 same reflog parsing. That internal command is tagged `CHATAI_GIT_LOG`, and agent chat/state filters
-it out so the log appears only in the preview panel. HTML previews render in `SandboxedHtmlPreview`: an empty-sandbox
-iframe with an opaque origin, strict CSP (no scripts or network), and external references stripped.
+it out so the log appears only in the preview panel. HTML previews render in `SandboxedHtmlPreview`: an
+iframe with an opaque origin and a Strict/Relaxed switch at the top. Strict (the start mode unless
+`user_settings.html_sanitization` is `"relaxed"`) removes scripts, forms and frames but keeps the
+document's own CSS; relaxed adds `allow-scripts` so an interactive file behaves like an interactive
+HTML block. Both modes take the CSP from `utils/htmlPreview.js#buildHtmlCsp` — the same policy the
+fenced HTML block uses — and drop external references according to `html_load_external`.
 
 The browser supports multi-select: `WorkspacePage` owns `selectedPaths` and clears it when the
 source or folder changes, while `WorkspaceRootBrowser` only renders the per-row checkboxes, the
@@ -1223,7 +1227,9 @@ missing, do not fall back to shell access outside the project.
   inline code are their own node types. External references in rendered model output are blocked
   by default (`html_load_external: false`): `utils/externalRefs.js` drops external URL attributes
   during sanitisation, and `MarkdownImage` / `MermaidDiagram` apply the same policy so a reply
-  cannot make the browser contact third-party hosts unless the user opts in.
+  cannot make the browser contact third-party hosts unless the user opts in. The allowlists, the
+  sanitizers and the iframe CSP live in `utils/htmlPreview.js` and are shared by fenced HTML blocks
+  and the HTML file preview — change the policy there, never at one call site.
 - **Mark data-transfer risk visibly.** Any option or feature that can send user data outside
   GWDG (external models, web search, MCP servers, external references, …) must show the yellow
   warning triangle (`faTriangleExclamation` / `TriangleAlert`) in its row or card, so the risk is

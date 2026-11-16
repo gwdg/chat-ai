@@ -2172,6 +2172,13 @@ export default {
     image_failed: "Failed to load image",
     video_failed: "Failed to load video",
     video_unsupported: "Your browser does not support the video tag.",
+    html_mode: "HTML rendering",
+    html_strict: "Strict",
+    html_relaxed: "Relaxed",
+    html_relaxed_hint:
+      "Strict only shows the page; relaxed also runs its scripts. Network access follows the \"Load external references\" preference, as in rendered HTML blocks.",
+    html_relaxed_warning:
+      "This page can run scripts and load external resources.",
     pdf_failed: "Failed to display PDF",
     pdf_mobile_title: "PDF preview is not available on mobile devices",
     pdf_mobile_hint: "Please use a desktop browser to preview PDF files",

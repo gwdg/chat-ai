@@ -288,7 +288,7 @@ export default function FilePreviewContent({
         <SandboxedHtmlPreview
           content={text}
           title={name}
-          className="h-full min-h-[70vh] w-full rounded border border-base-300 bg-base-100"
+          className="w-full rounded border border-base-300 bg-base-100"
         />
       );
     }

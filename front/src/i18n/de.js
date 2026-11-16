@@ -2200,6 +2200,13 @@ export default {
     image_failed: "Bild konnte nicht geladen werden",
     video_failed: "Video konnte nicht geladen werden",
     video_unsupported: "Ihr Browser unterstützt das Video-Element nicht.",
+    html_mode: "HTML-Darstellung",
+    html_strict: "Streng",
+    html_relaxed: "Gelockert",
+    html_relaxed_hint:
+      "Streng zeigt die Seite nur an; gelockert führt auch ihre Skripte aus. Der Netzwerkzugriff folgt der Einstellung \"Externe Referenzen laden\", wie bei gerenderten HTML-Blöcken.",
+    html_relaxed_warning:
+      "Diese Seite kann Skripte ausführen und externe Ressourcen laden.",
     pdf_failed: "PDF konnte nicht angezeigt werden",
     pdf_mobile_title: "Die PDF-Vorschau ist auf Mobilgeräten nicht verfügbar",
     pdf_mobile_hint: "Bitte nutzen Sie einen Desktop-Browser für die PDF-Vorschau",
