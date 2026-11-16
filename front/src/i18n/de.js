@@ -1909,6 +1909,8 @@ export default {
     tool_call: "Werkzeugaufruf",
     tool_input: "Eingabe",
     tool_output: "Ausgabe",
+    open_preview: "Vorschau",
+    open_preview_of: "Vorschau von {{name}}",
     reasoning: "Denkprozess",
     files: "Dateien",
     search_files: "Dateien durchsuchen",

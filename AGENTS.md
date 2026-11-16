@@ -1014,7 +1014,9 @@ workspace root file browser) and reads/writes the OpenCode project filesystem th
 searches through `/api/fs/find`, and refreshes on navigation, upload, new file, or an explicit
 refresh. The
 `WorkspaceFilePanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
-file list. The sidebar's `+` opens
+file list. A `read` or `write` tool card in the conversation carries a file card below the step that
+opens that file in the same right-hand panel (`AgentAssistantParts` takes `onOpenFile` from
+`AgentPage`); other tools get no card. The sidebar's `+` opens
 `modals/Agent/AddAgentModal`, which offers a name and one connection choice: the GWDG HPC agentic
 service (with the placeholder HPC project list) or an external OpenCode agent server (with its URL
 and password). The choice is a pair of `tabs-box` buttons, one per mode; the fields below it belong

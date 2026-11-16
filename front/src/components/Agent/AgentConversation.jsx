@@ -157,7 +157,7 @@ const sessionIsWorking = (value) =>
     sessionStatusValue(value),
   );
 
-export default function AgentConversation({ agent, modelsData = [] }) {
+export default function AgentConversation({ agent, modelsData = [], onOpenFile }) {
   const { t, i18n } = useTranslation();
   const [searchParams] = useSearchParams();
   const focusMessageId = searchParams.get("message");
@@ -1666,6 +1666,7 @@ export default function AgentConversation({ agent, modelsData = [] }) {
                     <AgentAssistantParts
                       parts={item.parts}
                       fallback={item.text}
+                      onOpenFile={onOpenFile}
                     />
                   )}
                 </div>

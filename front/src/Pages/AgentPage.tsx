@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router";
 
@@ -42,6 +42,21 @@ export default function AgentPage() {
   const userData = useUpdateUserData();
   const { preview, openFile, openText, closePreview, download } =
     useOpencodeFilePreview(agent);
+  // Tool cards of the conversation open the file they read or wrote in the same
+  // right-hand panel the file list uses.
+  const openConversationFile = useCallback(
+    (path: string) => {
+      if (!agent?.id || !path) return;
+      void openFile({
+        sourceId: agent.id,
+        path,
+        name: path.split("/").filter(Boolean).pop() || path,
+        kind: "file",
+        local: false,
+      });
+    },
+    [agent?.id, openFile],
+  );
   useEffect(() => {
     if (!agent?.id || !sessionParam || sessionParam === agent.sessionId) return;
     let cancelled = false;
@@ -152,7 +167,11 @@ export default function AgentPage() {
           )}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {agent ? (
-              <AgentConversation agent={agent} modelsData={modelsData} />
+              <AgentConversation
+                agent={agent}
+                modelsData={modelsData}
+                onOpenFile={openConversationFile}
+              />
             ) : (
               <div className="flex flex-1 items-center justify-center text-sm text-base-content/60">
                 {t("agents.not_found")}

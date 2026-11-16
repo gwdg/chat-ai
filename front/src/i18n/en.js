@@ -1883,6 +1883,8 @@ export default {
     tool_call: "Tool call",
     tool_input: "Input",
     tool_output: "Output",
+    open_preview: "Preview",
+    open_preview_of: "Preview {{name}}",
     reasoning: "Reasoning",
     files: "Files",
     search_files: "Search files",
