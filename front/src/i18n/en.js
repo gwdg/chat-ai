@@ -2018,7 +2018,7 @@ export default {
       "This chat is attached to several workspaces. Open one to manage its files.",
     access_storage: "Access storage",
     access_storage_hint:
-      "The model may read and write the files of this chat and of its attached workspaces.",
+      "The model may read the files of this chat and of its attached workspaces. Writing is the separate switch under Local agent.",
     access_storage_off_hint:
       "The model gets no file tools. Attachments are still included in the message where their text can be read.",
     chat_files: "Files in this chat",

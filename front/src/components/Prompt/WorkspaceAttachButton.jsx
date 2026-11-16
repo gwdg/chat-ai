@@ -198,6 +198,7 @@ export default function WorkspaceAttachButton({ localState, setLocalState }) {
             <WorkspaceSettings
               localState={localState}
               setLocalState={setLocalState}
+              workspaceAttached={attachedWorkspaces.length > 0}
             />
           </div>
         </PopoverPanel>

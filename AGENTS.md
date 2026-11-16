@@ -844,9 +844,13 @@ modal and closing afterwards dismissed it again.
 
 The prompt box's Workspace popover (`WorkspaceAttachButton`) is ordered storage → attachment →
 settings: the "Access storage" master switch, the "Manage data" row directly under it, the
-attachment hint with the workspace list, then the agent settings that apply to workspace files
-(the codemode toggle `tools.codemode` and the tool-call limit `settings.max_tool_calls`). The
-attachment hint is dynamic: unattached it invites attaching, attached it names the workspaces and
+attachment hint with the workspace list, then the agent settings under "Local agent" (the
+`Browser agent` tile `tools.codemode`, the `Allow write` tile `tools.write_access`, and the
+tool-call limit `settings.max_tool_calls`). Writing is opt-in where nothing else allows it: with no
+attached workspace the `Allow write` tile is the only way to set `tools.write_access`, and it is
+hidden for a chat whose first workspace link makes `storageToolSettings` force writing on. The tile
+is disabled while "Access storage" is off, because then no file tool is offered at all.
+The attachment hint is dynamic: unattached it invites attaching, attached it names the workspaces and
 says the chat can use all files there. GWDG Tools no longer renders codemode or the call limit.
 
 "Manage data" is the per-chat view of the same files. With exactly one attached workspace it opens

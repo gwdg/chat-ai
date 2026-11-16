@@ -2044,7 +2044,7 @@ export default {
       "Dieser Chat ist mit mehreren Arbeitsbereichen verknüpft. Öffnen Sie einen, um seine Dateien zu verwalten.",
     access_storage: "Auf Speicher zugreifen",
     access_storage_hint:
-      "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen und schreiben.",
+      "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen. Schreiben ist der separate Schalter unter „Lokaler Agent“.",
     access_storage_off_hint:
       "Das Modell erhält keine Dateiwerkzeuge. Anhänge werden weiterhin in die Nachricht aufgenommen, sofern ihr Text lesbar ist.",
     chat_files: "Dateien in diesem Chat",
