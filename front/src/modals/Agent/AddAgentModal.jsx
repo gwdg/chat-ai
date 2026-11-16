@@ -80,40 +80,41 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
     };
     let createdServiceId = null;
     let replacedServiceId = null;
-    if (serviceMode) {
-      // The service starts an OpenCode backend for this agent; its proxy prefix
-      // becomes the agent's server URL and no basic auth is stored.
-      let serviceAgentId = agent?.serviceAgentId;
-      if (!serviceAgentId) {
-        const created = await createServiceAgent({ name: next.name });
-        serviceAgentId = created.serviceAgentId;
-        createdServiceId = serviceAgentId;
-        next.serverUrl = created.serverUrl;
-      }
-      next = {
-        ...next,
-        projectId: project.id,
-        serviceAgentId,
-        serviceManaged: true,
-        username: defaults.username,
-        password: "",
-        passwordSource: "service",
-      };
-    } else {
-      const {
-        serviceAgentId: _id,
-        serviceManaged: _managed,
-        projectId: _project,
-        ...direct
-      } = next;
-      next = direct;
-      if (agent?.serviceAgentId) replacedServiceId = agent.serviceAgentId;
-    }
-    const connectionChanged =
-      !editing ||
-      next.serverUrl !== agent.serverUrl ||
-      next.password !== agent.password;
     try {
+      if (serviceMode) {
+        // The service starts an OpenCode backend for this agent; its proxy prefix
+        // becomes the agent's server URL and no basic auth is stored.
+        let serviceAgentId = agent?.serviceAgentId;
+        if (!serviceAgentId) {
+          const created = await createServiceAgent({ name: next.name });
+          serviceAgentId = created.serviceAgentId;
+          createdServiceId = serviceAgentId;
+          next.serverUrl = created.serverUrl;
+        }
+        next = {
+          ...next,
+          projectId: project.id,
+          serviceAgentId,
+          serviceManaged: true,
+          username: defaults.username,
+          password: "",
+          passwordSource: "service",
+        };
+      } else {
+        const {
+          serviceAgentId: _id,
+          serviceManaged: _managed,
+          projectId: _project,
+          ...direct
+        } = next;
+        next = direct;
+        if (agent?.serviceAgentId) replacedServiceId = agent.serviceAgentId;
+      }
+      const connectionChanged =
+        !editing ||
+        next.serverUrl !== agent.serverUrl ||
+        next.password !== agent.password;
+
       let patch = next;
       if (connectionChanged) {
         await getOpencodeInfo(next);
@@ -136,6 +137,8 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
         // Do not leave a container behind for an agent that was never saved.
         await deleteServiceAgent(createdServiceId).catch(() => {});
       }
+      // A 409 is the service's own capacity answer (a backend is full) or a row
+      // it will not serve; its message names the reason, so show it verbatim.
       setError(
         t("agents.connect_failed", {
           error: reason instanceof Error ? reason.message : String(reason),
@@ -166,7 +169,12 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
                     key={option}
                     type="button"
                     aria-pressed={selected}
-                    onClick={() => setMode(option)}
+                    onClick={() => {
+                      setMode(option);
+                      // The previous attempt's error belongs to the mode that
+                      // produced it.
+                      setError("");
+                    }}
                     className={`tab h-auto min-w-0 whitespace-normal px-2 py-2 text-center text-xs font-medium leading-tight ${
                       selected ? "tab-active text-accent!" : ""
                     }`}

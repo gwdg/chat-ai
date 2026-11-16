@@ -311,6 +311,37 @@ describe("AddAgentModal", () => {
     expect(screen.queryByLabelText("HPC project")).toBeNull();
   });
 
+  it("reports a service refusal and lets the dialog be submitted again", async () => {
+    serviceMocks.create.mockRejectedValueOnce(
+      Object.assign(
+        new Error(
+          "agent service responded with 409: backend 'local-opencode' has reached its limit of 2 instance(s)",
+        ),
+        { status: 409, code: "capacity_exceeded" },
+      ),
+    );
+    const onCreate = vi.fn();
+
+    render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={onCreate} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add agent" }));
+
+    expect(
+      await screen.findByText(/has reached its limit of 2 instance/),
+    ).toBeInTheDocument();
+    // The failed attempt must not leave the button stuck on "Connecting…".
+    expect(screen.getByRole("button", { name: "Add agent" })).toBeEnabled();
+
+    serviceMocks.create.mockResolvedValueOnce({
+      serviceAgentId: "svc-new",
+      serverUrl: "/agents/svc-new/opencode",
+      status: "running",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add agent" }));
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalled());
+    expect(onCreate.mock.calls[0][0].serviceAgentId).toBe("svc-new");
+  });
+
   it("switches a service agent to an external server and drops the service id", async () => {
     const agent = {
       id: "agent-service",
