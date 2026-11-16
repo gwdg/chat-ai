@@ -327,7 +327,7 @@ export default {
     manage_chat_data: {
       title: "Dateien eines Chats verwalten",
       step1: "Auf Speicher zugreifen ist standardmäßig an und steht oben im Arbeitsbereich-Menü. Schalten Sie es aus, erhält das Modell keine Dateiwerkzeuge; Anhänge werden weiterhin in die Nachricht aufgenommen, sofern möglich.",
-      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu sehen. Einem Arbeitsbereich zugeordnete Chats verlinken dorthin, wo das Dateisystem angezeigt wird; Chats ohne Arbeitsbereich durchsuchen die für den Chat in diesem Browser gespeicherten Dateien.",
+      step2: "Wählen Sie Daten verwalten, um die Dateien hinter diesem Schalter zu sehen. Chats, die einem Arbeitsbereich zugeordnet sind, öffnen diesen, wo das Dateisystem angezeigt wird; Chats ohne Arbeitsbereich durchsuchen die für den Chat in diesem Browser gespeicherten Dateien.",
       step3: "Laden Sie die Dateien des Chats hier hoch, erstellen, benennen Sie sie um, laden Sie sie herunter oder löschen Sie sie.",
     },
     workspace_clone: {
@@ -2022,11 +2022,14 @@ export default {
     no_attached_agents: "Noch keine Agenten verknüpft.",
     detach_agent: "Agent trennen",
     chat_workspaces: "Arbeitsbereich",
-    chat_workspaces_empty: "Dieser Chat ist keinem Arbeitsbereich zugeordnet.",
+    chat_workspaces_attached_hint:
+      "Dieser Chat ist mit {{names}} verknüpft und kann alle Dateien dort nutzen.",
     chat_workspaces_hint: "Verknüpfen Sie diesen Chat mit einem oder mehreren Arbeitsbereichen.",
+    chat_workspaces_none: "Noch keine Arbeitsbereiche. Erstellen Sie einen in der Seitenleiste.",
     manage_data: "Daten verwalten",
+    manage_data_in: "Daten in {{name}} verwalten",
     manage_data_workspace_hint:
-      "Dieser Chat ist einem Arbeitsbereich zugeordnet. Seine Dateien werden im Arbeitsbereich verwaltet.",
+      "Dieser Chat ist mit mehreren Arbeitsbereichen verknüpft. Öffnen Sie einen, um seine Dateien zu verwalten.",
     access_storage: "Auf Speicher zugreifen",
     access_storage_hint:
       "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen und schreiben.",

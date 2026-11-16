@@ -154,9 +154,12 @@ describe("ManageDataModal", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("links to the workspace of an attached chat instead of a local browser", () => {
-    dbMocks.links = [{ workspaceId: "w1" }];
-    dbMocks.workspaces = [{ id: "w1", name: "Research" }];
+  it("lets a chat attached to several workspaces pick one", () => {
+    dbMocks.links = [{ workspaceId: "w1" }, { workspaceId: "w2" }];
+    dbMocks.workspaces = [
+      { id: "w1", name: "Research" },
+      { id: "w2", name: "Teaching" },
+    ];
     const onClose = vi.fn();
     const provider = makeProvider({ "/": [] });
     render(
@@ -170,10 +173,11 @@ describe("ManageDataModal", () => {
     );
 
     expect(screen.queryByText("Files in this chat")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText("Research"));
+    expect(screen.getByText("Research")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Teaching"));
 
     expect(onClose).toHaveBeenCalled();
-    expect(routerMocks.navigate).toHaveBeenCalledWith("/workspace/w1");
+    expect(routerMocks.navigate).toHaveBeenCalledWith("/workspace/w2");
   });
 
   it("ignores workspace links whose workspace is gone", () => {

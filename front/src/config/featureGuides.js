@@ -54,7 +54,7 @@ export const featureGuides = {
   manage_chat_data: {
     titleKey: "feature_guide.manage_chat_data.title",
     prompt:
-      "Open the Workspace menu in the prompt box. Access storage sits at the top: it is on by default and with it off the model gets no file tools. Manage data shows where this chat keeps its files: a chat attached to a workspace links to that workspace, where its file system is shown; a chat without a workspace browses the files stored in this browser for the chat.",
+      "Open the Workspace menu in the prompt box. Access storage sits at the top: it is on by default and with it off the model gets no file tools. Manage data shows where this chat keeps its files: a chat attached to a workspace opens that workspace, where its file system is shown; a chat without a workspace browses the files stored in this browser for the chat.",
     keywords: [
       "manage data",
       "access storage",

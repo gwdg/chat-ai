@@ -836,14 +836,17 @@ on itself. `requestTransfer` therefore takes `entries[]` and checks every entry 
 `MoveToModal` must call `onClose` before `onSelect`, because `onSelect` opens that confirmation
 modal and closing afterwards dismissed it again.
 
-The prompt box's Workspace popover (`WorkspaceAttachButton`) also holds the agent settings that
-apply to workspace files: the codemode toggle (`tools.codemode`) and the tool-call limit
-(`settings.max_tool_calls`). GWDG Tools no longer renders either.
+The prompt box's Workspace popover (`WorkspaceAttachButton`) is ordered storage → attachment →
+settings: the "Access storage" master switch, the "Manage data" row directly under it, the
+attachment hint with the workspace list, then the agent settings that apply to workspace files
+(the codemode toggle `tools.codemode` and the tool-call limit `settings.max_tool_calls`). The
+attachment hint is dynamic: unattached it invites attaching, attached it names the workspaces and
+says the chat can use all files there. GWDG Tools no longer renders codemode or the call limit.
 
-"Manage data" (the row at the bottom of the prompt box's Workspace popover →
-`modals/Chat/ManageDataModal.jsx`) is the per-chat view of the same files. An attached chat links
-to each of its workspaces (the workspace page owns the file system); a chat without a workspace
-browses its own OPFS tree
+"Manage data" is the per-chat view of the same files. With exactly one attached workspace it opens
+that workspace page directly (the workspace owns the file system, so the popover does not repeat
+it in a second view); with several it opens `modals/Chat/ManageDataModal.jsx`, which asks which
+one; with none it browses the chat's own OPFS tree
 (`conversations/<conversationId>`) through `ConversationStorageProvider`
 (`workspace/providers/conversation.ts`), rendered with the shared `WorkspaceRootBrowser`. The
 "Access storage" switch is the first row of that popover, not of the modal: it writes

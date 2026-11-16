@@ -317,7 +317,7 @@ export default {
     manage_chat_data: {
       title: "Manage the files of a chat",
       step1: "Access storage is on by default and sits at the top of the Workspace menu. Switch it off to give the model no file tools at all; attachments are still included in the message where possible.",
-      step2: "Choose Manage data to see the files behind this switch. A chat attached to a workspace links to that workspace, where the file system is shown; a chat without a workspace browses the files kept in this browser for the chat.",
+      step2: "Choose Manage data to see the files behind this switch. A chat attached to a workspace opens that workspace, where the file system is shown; a chat without a workspace browses the files kept in this browser for the chat.",
       step3: "Upload, create, rename, download and delete the chat's files here.",
     },
     workspace_clone: {
@@ -1996,11 +1996,14 @@ export default {
     no_attached_agents: "No agents attached yet.",
     detach_agent: "Detach agent",
     chat_workspaces: "Workspace",
-    chat_workspaces_empty: "This chat is not attached to a workspace.",
+    chat_workspaces_attached_hint:
+      "This chat is attached to {{names}} and can use all files there.",
     chat_workspaces_hint: "Attach this chat to one or more workspaces.",
+    chat_workspaces_none: "No workspaces yet. Create one in the sidebar.",
     manage_data: "Manage data",
+    manage_data_in: "Manage data in {{name}}",
     manage_data_workspace_hint:
-      "This chat is attached to a workspace. Its files are managed in the workspace.",
+      "This chat is attached to several workspaces. Open one to manage its files.",
     access_storage: "Access storage",
     access_storage_hint:
       "The model may read and write the files of this chat and of its attached workspaces.",
