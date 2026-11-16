@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import WorkspaceFilePanel from "../Workspace/WorkspaceFilePanel";
+import FilePreviewPanel from "../DocumentPanel/FilePreviewPanel";
 import { useOpencodeFilePreview } from "../../hooks/useOpencodeFilePreview";
 
 export default function AgentFilePreviewPanel({ agent, path, onClose }) {
@@ -21,7 +21,7 @@ export default function AgentFilePreviewPanel({ agent, path, onClose }) {
   if (!preview) return null;
 
   return (
-    <WorkspaceFilePanel
+    <FilePreviewPanel
       preview={preview}
       onClose={() => {
         closePreview();

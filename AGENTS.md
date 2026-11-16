@@ -849,15 +849,26 @@ modal, and deleted recursively after confirmation; sources with the matching cap
 offer new file/folder creation. A download reads the complete content before the browser saves it:
 `workspace/download.ts#downloadProviderEntry` connects the provider, drains its stream, and hands a
 `Blob` to `utils/download.js#downloadBlob`, which refuses anything that is not a blob. The same
-holds for chat attachments: they open in the docked `ChatFilePreviewPanel`
-(`context/FilePreviewContext.jsx`) rather than a modal, and the panel loads the file by id instead of
-using `useFile`'s `data`, which is written to state separately from the metadata and produced an
-empty download when the button was clicked before the bytes arrived. `ChatPage` and `MetaChatPage`
-render the panel beside their content column and hide their own side panel while it is open.
-Clicking the same attachment again closes it: `Attachment` calls `toggleFilePreview`. Switching to
-another file must not reuse the previous one's bytes: the panel keys `ChatFilePreview` by `fileId`,
-and `useFileMeta` / `useFile` / `useFileBase64` / `useFileContent` reset their state when the id
-changes — otherwise the old data URL is rendered inside an `<img>` and shows "Failed to load image".
+holds for chat attachments: they open in the docked preview (`context/FilePreviewContext.jsx`)
+rather than a modal, and the panel loads the file by id instead of using `useFile`'s `data`, which
+is written to state separately from the metadata and produced an empty download when the button was
+clicked before the bytes arrived. `ChatPage` and `MetaChatPage` render the panel beside their
+content column and hide their own side panel while it is open.
+Clicking the same attachment again closes it: `Attachment` calls `toggleFilePreview`.
+
+All three previews — workspace browser, agent file list/panel and chat attachments — render the same
+`components/DocumentPanel/FilePreviewPanel.jsx`, whose body is
+`DocumentPanel/FilePreviewContent.jsx`. Callers pass `{ entry: { name, mime, size }, url?, text?,
+data?, loading?, error?, onOpenPath? }`; `hooks/useConversationFilePreview.js` builds that shape for a
+stored conversation file (media from `useFileBase64`, text from `useFileContent`). A new file type
+belongs in `FilePreviewContent`, not in one of the call sites: otherwise the same file would look
+different in a workspace and in a chat.
+
+Switching to another file must not reuse the previous one's bytes: `FilePreviewPanel` keys the
+content by the preview's own key (`fileId` for chat), media is only rendered once `url` belongs to
+the current file, and `useFileMeta` / `useFile` / `useFileBase64` / `useFileContent` reset their
+state when the id changes — otherwise the old data URL is rendered inside an `<img>` and shows
+"Failed to load image".
 A tree folder that contains a
 `.git` directory gets a Git button; the workspace preview parses `.git/logs/HEAD` (falling back to
 the branch reflog) without a shell,
@@ -1020,7 +1031,7 @@ workspace root file browser) and reads/writes the OpenCode project filesystem th
 `GET /api/fs/find`. Its file list polls the current directory every 5 s while the page is visible,
 searches through `/api/fs/find`, and refreshes on navigation, upload, new file, or an explicit
 refresh. The
-`WorkspaceFilePanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
+`FilePreviewPanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
 file list. A `read` or `write` tool card in the conversation carries a file card below the step that
 opens that file in the same right-hand panel (`AgentAssistantParts` takes `onOpenFile` from
 `AgentPage`); clicking the same card again closes it (`useOpencodeFilePreview#toggleFile`), and

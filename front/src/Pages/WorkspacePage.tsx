@@ -23,7 +23,7 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import WorkspaceRootTree from "../components/Workspace/WorkspaceRootTree";
 import WorkspaceRootBrowser from "../components/Workspace/WorkspaceRootBrowser";
-import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
+import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
 import AgentSessionList from "../components/Agent/AgentSessionList";
 import { activeSessionIdFor, useOpenAgent } from "../hooks/useOpenAgent";
 import { useModal } from "../modals/ModalContext";
@@ -2541,7 +2541,7 @@ export default function WorkspacePage() {
       </div>
       </div>
       {preview && (
-        <WorkspaceFilePanel
+        <FilePreviewPanel
           preview={preview}
           onClose={closePreview}
           onDownload={download}

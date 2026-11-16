@@ -8,7 +8,7 @@ import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import AgentConversation from "../components/Agent/AgentConversation";
 import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
-import WorkspaceFilePanel from "../components/Workspace/WorkspaceFilePanel";
+import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
 import { updateAgent, useAgent } from "../agents/agentStore";
 import {
   isAgentBridgeEnabled,
@@ -179,7 +179,7 @@ export default function AgentPage() {
             )}
           </div>
           {agent && preview && (
-            <WorkspaceFilePanel
+            <FilePreviewPanel
               preview={preview}
               onClose={closePreview}
               onDownload={download}

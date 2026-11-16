@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 
-export default function AudioPlayer({ file, dataURL }) {
+export default function AudioPlayer({ file, dataURL, mime }) {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -12,7 +12,9 @@ export default function AudioPlayer({ file, dataURL }) {
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
 
-  const mimeType = dataURL?.split(";")[0]?.replace("data:", "") || "audio";
+  // A data URL carries the type; a workspace object URL does not, so the entry's mime wins.
+  const mimeType =
+    mime ?? (dataURL?.split(";")[0]?.replace("data:", "") || "audio");
 
   useEffect(() => {
     const audio = audioRef.current;

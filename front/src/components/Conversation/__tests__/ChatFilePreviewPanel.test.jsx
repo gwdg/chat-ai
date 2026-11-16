@@ -12,6 +12,7 @@ const view = vi.hoisted(() => ({
   meta: null,
   data: null,
   file: null,
+  text: "the content",
   closeFilePreview: null,
 }));
 
@@ -19,7 +20,7 @@ vi.mock("../../../db", () => ({
   useFileMeta: () => view.meta,
   useFile: () => ({ file: view.meta, data: view.data }),
   useFileBase64: () => null,
-  useFileContent: () => "the content",
+  useFileContent: () => view.text,
   loadFile: vi.fn(async () => view.file),
 }));
 
@@ -59,6 +60,7 @@ describe("ChatFilePreviewPanel", () => {
     view.meta = meta();
     view.data = null;
     view.file = null;
+    view.text = "the content";
   });
 
   afterEach(() => downloads.restore());
@@ -100,6 +102,18 @@ describe("ChatFilePreviewPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(view.closeFilePreview).toHaveBeenCalled();
+  });
+
+  it("renders through the shared preview, like the workspace panel", () => {
+    view.meta = { name: "data.csv", type: "text/csv", size: 10 };
+    view.text = "name,size\nalpha,1\nbeta,2";
+
+    render(<ChatFilePreviewPanel />);
+
+    expect(
+      screen.getByRole("columnheader", { name: "name" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "beta" })).toBeInTheDocument();
   });
 
   it("renders nothing without a preview request", () => {
