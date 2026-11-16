@@ -22,11 +22,24 @@ NODE ?= node
 OUT ?= $(THIS_DIR)/keys
 
 # front.json to read modelsPath and apiKey from. Empty means the script's own
-# default: $CONFIG_LOCATION, else secrets/front.json next to this checkout.
+# default: $CONFIG_LOCATION, else secrets/front.json next to this checkout; the
+# endpoint is still the GWDG list unless MODELS_URL is set.
 CONFIG ?=
 
-# Request overrides for the /models call.
+# The GWDG deployment's model list. This is the default endpoint, because a
+# checkout outside the deployment has no local back service to ask.
+GWDG_MODELS_URL ?= https://chat-ai.academiccloud.de/v1/models
+
+# Endpoint to query. An explicit CONFIG= wins with that file's modelsPath, so a
+# different deployment's list beats the GWDG default.
+ifneq ($(strip $(CONFIG)),)
 MODELS_URL ?=
+else
+MODELS_URL ?= $(GWDG_MODELS_URL)
+endif
+
+# Bearer token. The script falls back to $SAIA_API_KEY, then apiKey in the
+# front config, then apiKey in the back.json next to it.
 API_KEY ?=
 
 # Extra script arguments, verbatim. Quote them here instead of on the make
@@ -56,12 +69,14 @@ help:
 	@echo "  make list        show the pairs in $(OUT)"
 	@echo "  make test        run the generator's own tests"
 	@echo
+	@echo "The model list comes from $(MODELS_URL)"
+	@echo
 	@echo "Variables (make VAR=value):"
 	@echo "  NODE=            Node 18+ binary (default: node)"
 	@echo "  OUT=             output directory (default: $(THIS_DIR)/keys)"
-	@echo "  CONFIG=          front.json to read modelsPath/apiKey from"
-	@echo "  MODELS_URL=      /models endpoint, overrides the config"
-	@echo "  API_KEY=         bearer token, overrides the config"
+	@echo "  CONFIG=          front.json to read modelsPath/apiKey from (its list wins)"
+	@echo "  MODELS_URL=      /models endpoint, overrides both (default: $(GWDG_MODELS_URL))"
+	@echo "  API_KEY=         bearer token (default: SAIA_API_KEY, or apiKey in the configs)"
 	@echo "  HEADER_FLAGS=    extra script arguments, e.g. --header 'X-User: me'"
 	@echo
 	@echo "A .key is a node's private key: never commit or upload it. Publish only"

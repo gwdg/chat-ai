@@ -33,6 +33,10 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_OUT = path.join(SCRIPT_DIR, "keys");
 
+/** The GWDG deployment's model list, used when nothing else names one. */
+export const DEFAULT_MODELS_URL =
+  "https://chat-ai.academiccloud.de/v1/models";
+
 const HELP = `Generate one E2EE node key pair per model.
 
 Usage:
@@ -40,11 +44,14 @@ Usage:
 
 Options:
   --models-url <url>   /models endpoint to query
-                       (default: modelsPath from --config)
+                       (default: modelsPath from --config, else
+                        ${DEFAULT_MODELS_URL})
   --config <file>      front.json to read modelsPath/apiKey from
-                       (default: $CONFIG_LOCATION, else secrets/front.json)
+                       (default: $CONFIG_LOCATION, else secrets/front.json;
+                        a back.json next to it supplies the API key when the
+                        front config has none)
   --api-key <key>      bearer token for the models endpoint
-                       (default: apiKey from the config)
+                       (default: $SAIA_API_KEY, else apiKey from the configs)
   --header <n: value>  extra request header, repeatable
   --out <dir>          output directory (default: encryption/keys)
   --force              overwrite existing key pairs
@@ -172,9 +179,17 @@ function readConfig(file) {
   }
 }
 
-function requestHeaders(args, config) {
+function requestHeaders(args, config, backConfig) {
   const headers = { Accept: "application/json" };
-  const apiKey = args.apiKey || config?.apiKey || "";
+  // Explicit flag, then the shell, then the deployment's configs: front.json
+  // carries the key for an endpoint the browser may call, back.json is where
+  // the README puts the real one.
+  const apiKey =
+    args.apiKey ||
+    process.env.SAIA_API_KEY ||
+    config?.apiKey ||
+    backConfig?.apiKey ||
+    "";
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   for (const header of args.headers) {
     const separator = header.indexOf(":");
@@ -182,6 +197,27 @@ function requestHeaders(args, config) {
     headers[header.slice(0, separator).trim()] = header.slice(separator + 1).trim();
   }
   return headers;
+}
+
+/** The endpoint to query: explicit flag, the config's modelsPath, then GWDG. */
+export function resolveModelsUrl(args = {}, config = null) {
+  const explicit = String(args.modelsUrl ?? "").trim();
+  if (explicit) return explicit;
+  const configured = String(config?.modelsPath ?? "").trim();
+  if (configured) return configured;
+  return DEFAULT_MODELS_URL;
+}
+
+/** A human-readable reason from an OpenAI-style error body, or "". */
+function errorDetail(payload) {
+  if (typeof payload?.message === "string" && payload.message) {
+    return payload.message;
+  }
+  if (typeof payload?.error?.message === "string" && payload.error.message) {
+    return payload.error.message;
+  }
+  if (typeof payload?.error === "string" && payload.error) return payload.error;
+  return "";
 }
 
 async function fetchModels(url, headers) {
@@ -205,13 +241,16 @@ async function fetchModels(url, headers) {
   }
   // The back service answers 200 even when the upstream rejects the request,
   // so the body — not the status — decides whether this worked.
+  const detail = errorDetail(payload) || body.slice(0, 120);
   if (!response.ok) {
-    throw new Error(
-      `${url} answered HTTP ${response.status}: ${payload?.message || payload?.error?.message || body.slice(0, 120)}`,
-    );
+    const hint =
+      response.status === 401 || response.status === 403
+        ? " Set apiKey in secrets/back.json, export SAIA_API_KEY, or pass --api-key."
+        : "";
+    throw new Error(`${url} answered HTTP ${response.status}: ${detail}${hint}`);
   }
-  if (payload?.message && !payload?.data) {
-    throw new Error(`${url} answered: ${payload.message}`);
+  if (!Array.isArray(payload) && !Array.isArray(payload?.data)) {
+    throw new Error(`${url} answered without a model list: ${detail}`);
   }
   return parseModelsPayload(payload);
 }
@@ -269,28 +308,24 @@ export async function main(argv = process.argv.slice(2)) {
 
   const configPath = resolveConfigPath(args.config);
   let config = null;
+  let backConfig = null;
   try {
     config = readConfig(configPath);
+    // The README puts the real API key in back.json, next to front.json.
+    backConfig = readConfig(path.join(path.dirname(configPath), "back.json"));
   } catch (error) {
     console.error(error.message);
     return 1;
   }
-  if (!config && !args.modelsUrl) {
-    console.error(
-      `No config at ${configPath}. Pass --models-url or --config.`,
-    );
-    return 1;
-  }
 
-  const modelsUrl = args.modelsUrl || config?.modelsPath || "";
-  if (!modelsUrl) {
-    console.error(`No modelsPath in ${configPath}. Pass --models-url.`);
-    return 1;
-  }
+  const modelsUrl = resolveModelsUrl(args, config);
 
   let models;
   try {
-    models = await fetchModels(modelsUrl, requestHeaders(args, config));
+    models = await fetchModels(
+      modelsUrl,
+      requestHeaders(args, config, backConfig),
+    );
   } catch (error) {
     console.error(error.message);
     return 1;
@@ -323,11 +358,17 @@ export async function main(argv = process.argv.slice(2)) {
     rows.push([model.id, fileName, pair.keyId, "written"]);
   }
 
-  print(rows, outDir, { dryRun: args.dryRun, ...counts });
+  print(rows, outDir, {
+    dryRun: args.dryRun,
+    ...counts,
+    modelsUrl,
+    modelCount: models.length,
+  });
   return 0;
 }
 
-function print(rows, outDir, { dryRun, written, skipped }) {
+function print(rows, outDir, { dryRun, written, skipped, modelsUrl, modelCount }) {
+  console.log(`${modelCount} model(s) from ${modelsUrl}`);
   const widths = [0, 0, 0];
   for (const row of rows) {
     for (let i = 0; i < widths.length; i += 1) {

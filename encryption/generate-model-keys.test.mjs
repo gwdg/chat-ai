@@ -8,10 +8,12 @@ import { createPrivateKey, createPublicKey, diffieHellman } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 
 import {
+  DEFAULT_MODELS_URL,
   generatePair,
   keyId,
   main,
   parseModelsPayload,
+  resolveModelsUrl,
 } from "./generate-model-keys.mjs";
 import { publishedKeyFileName } from "../front/src/e2ee/publishedKeys.js";
 
@@ -81,6 +83,28 @@ describe("model payload", () => {
 
   it("rejects a body without a model list", () => {
     assert.throws(() => parseModelsPayload({ message: "Unauthorized" }));
+  });
+});
+
+describe("models endpoint", () => {
+  it("defaults to the GWDG model list", () => {
+    assert.equal(
+      DEFAULT_MODELS_URL,
+      "https://chat-ai.academiccloud.de/v1/models",
+    );
+    assert.equal(resolveModelsUrl({}, null), DEFAULT_MODELS_URL);
+  });
+
+  it("prefers --models-url, then the config's modelsPath", () => {
+    const config = { modelsPath: "https://example.test/v1/models" };
+    assert.equal(
+      resolveModelsUrl({ modelsUrl: "http://localhost:1/models" }, config),
+      "http://localhost:1/models",
+    );
+    assert.equal(resolveModelsUrl({}, config), config.modelsPath);
+    // An empty or blank value is not a choice.
+    assert.equal(resolveModelsUrl({ modelsUrl: "  " }, config), config.modelsPath);
+    assert.equal(resolveModelsUrl({}, { modelsPath: "" }), DEFAULT_MODELS_URL);
   });
 });
 
@@ -220,6 +244,54 @@ describe("main", () => {
       assert.match(before, /^[A-Za-z0-9_-]{43}\n$/);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("takes the API key from the back.json next to the config", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "model-keys-"));
+    const previous = process.env.SAIA_API_KEY;
+    delete process.env.SAIA_API_KEY;
+    try {
+      const configPath = path.join(dir, "front.json");
+      fs.writeFileSync(configPath, JSON.stringify({ modelsPath: url }));
+      fs.writeFileSync(
+        path.join(dir, "back.json"),
+        JSON.stringify({ apiKey: "test-key" }),
+      );
+      const out = path.join(dir, "out");
+      const result = await quietly(() => main(["--config", configPath, "--out", out]));
+      assert.equal(result.code, 0);
+      assert.match(result.output, /2 key pair\(s\) written/);
+      assert.equal(fs.existsSync(path.join(out, "qwen-a.pub")), true);
+    } finally {
+      if (previous === undefined) delete process.env.SAIA_API_KEY;
+      else process.env.SAIA_API_KEY = previous;
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("names the key sources when the endpoint answers 401", async () => {
+    const rejecting = http.createServer((request, response) => {
+      response.writeHead(401, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({ error: { message: "Unknown API key", type: "authentication_error" } }),
+      );
+    });
+    await new Promise((resolve) => rejecting.listen(0, "127.0.0.1", resolve));
+    const { port } = rejecting.address();
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), "model-keys-"));
+    try {
+      const result = await quietly(() =>
+        main(["--models-url", `http://127.0.0.1:${port}/models`, "--out", empty]),
+      );
+      assert.equal(result.code, 1);
+      assert.match(result.output, /HTTP 401/);
+      assert.match(result.output, /Unknown API key/);
+      assert.match(result.output, /SAIA_API_KEY/);
+      assert.deepEqual(fs.readdirSync(empty), []);
+    } finally {
+      await new Promise((resolve) => rejecting.close(resolve));
+      fs.rmSync(empty, { recursive: true, force: true });
     }
   });
 });

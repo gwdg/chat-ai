@@ -45,17 +45,24 @@ The script imports the file-name mapping from
 | --- | --- |
 | `NODE=` | Node 18+ binary (default `node`); checked before anything runs |
 | `OUT=` | output directory (default `encryption/keys`) |
-| `CONFIG=` | `front.json` to read `modelsPath`/`apiKey` from |
-| `MODELS_URL=`, `API_KEY=` | overrides for the config |
+| `CONFIG=` | `front.json` to read `modelsPath`/`apiKey` from; its model list wins |
+| `MODELS_URL=` | `/models` endpoint (default: the GWDG model list) |
+| `API_KEY=` | bearer token (default: `$SAIA_API_KEY`, or `apiKey` in the configs) |
 | `HEADER_FLAGS=` | extra script arguments, quoted: `HEADER_FLAGS="--header 'X-User: me'"` |
 
 Examples:
 
 ```bash
+# out of the box: the GWDG model list, key from secrets/back.json
+make -C encryption keys
+
 # on a node, write straight into the key mount
 make -C encryption OUT=/secure/saia-e2ee keys
 
-# against an engine that needs its own bearer token
+# another deployment: its own model list and key
+make -C encryption CONFIG=/secure/front.json keys
+
+# a local engine that wants its own bearer token
 make -C encryption MODELS_URL=http://localhost:10000/public/v1/models API_KEY=... keys
 ```
 
@@ -66,10 +73,27 @@ the node with the new `.key`, then publish the new `.pub`.
 ## Usage
 
 The models come from the deployment's `/models` endpoint — the same response
-the app's model picker uses. By default the script reads `modelsPath` and
-`apiKey` from `secrets/front.json` (or `$CONFIG_LOCATION`):
+the app's model picker uses. The endpoint is chosen in this order:
+
+1. `--models-url`
+2. `modelsPath` in the config (`--config`, `$CONFIG_LOCATION`, then
+   `secrets/front.json`)
+3. the GWDG model list,
+   `https://chat-ai.academiccloud.de/v1/models`
+
+So a checkout with no config still works against GWDG:
 
 ```bash
+node encryption/generate-model-keys.mjs
+```
+
+The GWDG endpoint needs an API key. The script takes the first of
+`--api-key`, `$SAIA_API_KEY`, `apiKey` in the front config, `apiKey` in the
+`back.json` next to it (where the README puts the real key). Exporting it keeps
+it out of `ps`:
+
+```bash
+export SAIA_API_KEY=...
 node encryption/generate-model-keys.mjs
 ```
 

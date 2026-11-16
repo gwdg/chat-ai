@@ -1402,6 +1402,10 @@ directory must send `access-control-allow-origin`, because the browser fetches i
 `MODELS_URL`, `API_KEY`, `HEADER_FLAGS`). It needs GNU make and Node 18+ and resolves its own
 directory from `$(MAKEFILE_LIST)`, so it works from any cwd and with `-f`; the dev container has no
 `make`, so it cannot be exercised there — `node --test encryption/*.test.mjs` is the equivalent check.
+The endpoint is `--models-url` (or `MODELS_URL=`), then the config's `modelsPath`, then the GWDG
+list `https://chat-ai.academiccloud.de/v1/models`, which is what `make` uses when `CONFIG` is
+unset. The key is `--api-key` (or `API_KEY=`), then `$SAIA_API_KEY`, then `apiKey` in the front
+config, then `apiKey` in the `back.json` beside it; GWDG needs one and answers 401 without it.
 
 ## 5. Conventions
 
