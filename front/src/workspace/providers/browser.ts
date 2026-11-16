@@ -1,6 +1,5 @@
 import type { WorkspaceCapabilities, WorkspaceFileEntry } from "../../db/dbTypes";
 import {
-  deleteSourceNodes,
   ensureSourceDir,
   getSourceBlob,
   getSourceNode,
@@ -34,10 +33,6 @@ const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> 
   }
   return data;
 };
-
-export async function clearBrowserSourceData(sourceId: string): Promise<void> {
-  await deleteSourceNodes(sourceId);
-}
 
 export class BrowserProvider implements FileProvider {
   readonly kind = "browser" as const;

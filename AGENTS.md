@@ -168,12 +168,12 @@ into the nested shape the UI uses. Raw table access (`db.messages`, `db.content_
 
 ### 4.3 Dexie migrations
 
-`db/index.ts` is at **version 15**. A new *indexed* field needs a new `this.version(n).stores({...})`
+`db/index.ts` is at **version 16**. A new *indexed* field needs a new `this.version(n).stores({...})`
 block plus an `.upgrade()` that backfills existing rows — this is how `folderId` (v3),
 `hasFirstPrompt` (v4), `lastOpenedAt` (v5), the workspace tables (v6-v8),
 `workspace_file_references` (v9), the default Arcana filesystem source (v10), the default
-browser source with the shared browser tree (v11), and the `arcana_v2` → `arcana_tools` tool-toggle
-rename (v15) were added. A field that is only stored and never
+browser source with the shared browser tree (v11), the `arcana_v2` → `arcana_tools` tool-toggle
+rename (v15), and the per-workspace browser tree (v16) were added. A field that is only stored and never
 queried needs **no** version bump; Dexie keeps unindexed properties on the row as-is. A version
 bump and `.upgrade()` are still appropriate when existing rows need a backfill. Never edit an
 existing version block: users have live databases.
@@ -707,21 +707,25 @@ lives entirely in IndexedDB; the back service does not store it. Dexie schema v6
 filesystem source; v11 adds the default browser source and moves every browser source and workspace
 root onto the single `browser-storage` tree; v12 adds `workspace_agents` links, v13 adds
 `workspace_agent_sessions` links and v14 adds the `agent_sessions` /
-`agent_session_messages` history cache. Handles and the transfer journal never leave the device. A persisted
+`agent_session_messages` history cache; v16 gives every workspace its own browser tree
+(`workspace-browser:<workspaceId>`) and copies the old shared tree into each one. Handles and the
+transfer journal never leave the device. A persisted
 `chatai.workspace.deviceId` binds `browser`, `local` and `mcp` sources to this device; `arcana`
 sources carry no `deviceId`. The UI badges device-plane sources "This device only" and marks a
 source whose stored `deviceId` differs as unavailable.
 
 Attaching a file from a workspace to a chat records a `workspace_file_references` row for the
-browser node; deleting a chat removes its reference rows. All browser sources and every workspace
-root share the single `browser-storage` tree, so deleting a workspace removes its source rows but
-not the shared browser files.
+browser node; deleting a chat removes its reference rows. A workspace root and its browser sources
+share one tree per workspace (`workspaceBrowserStorageId` in `workspace/browserStorage.ts`), never
+another workspace's, so deleting a workspace removes its own tree (files still referenced by a chat
+stay) and leaves other workspaces untouched. Removing a browser source keeps the files because the
+workspace root still shows the same tree.
 
 Every source kind is a `FileProvider` (`workspace/providers/`) built from its `WorkspaceSourceRow`:
 Every new workspace automatically gets a `browser` source and, unless the Arcanas module is off, an
 `arcana-filesystem` source; Dexie v10/v11 backfill them into existing workspaces.
 
-browser = the shared IndexedDB tree in `workspace_nodes` / `workspace_blobs`, local = a
+browser = the workspace's own IndexedDB tree in `workspace_nodes` / `workspace_blobs`, local = a
 `FileSystemDirectoryHandle` in `workspace_handles`, arcana = one Arcana Tools collection through
 `agent/arcanaTools.ts`, arcana-filesystem = every Arcana as a folder with its files, mcp = file tools exposed
 by a configured local MCP server (the option only appears when `tools.mcp` is on and a local URL is

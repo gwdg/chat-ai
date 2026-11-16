@@ -6,7 +6,7 @@ import { deleteAllWorkspaces, deleteWorkspace } from '../agent/workspace'
 import i18n from '../i18n'
 import { isArcanasEnabled } from '../utils/modules'
 import { defaultCapabilities } from '../workspace/capabilities'
-import { SHARED_BROWSER_STORAGE_ID } from '../workspace/browserStorage'
+import { SHARED_BROWSER_STORAGE_ID, workspaceBrowserStorageId } from '../workspace/browserStorage'
 
 import type { 
   ConversationRow, 
@@ -349,7 +349,74 @@ export class AppDB extends Dexie {
         migrateLegacyToolKeys(conversation?.settings);
       });
     });
+
+    // v11 merged every browser source and workspace root into one shared tree.
+    // Each workspace gets its own tree now: copy what the shared tree holds into
+    // every workspace, so no workspace loses the files it could already see,
+    // point that workspace's file references at its copy, then drop the shared
+    // rows. Provenance was lost in v11, so the copy is the safest isolation.
+    this.version(16).stores({}).upgrade(isolateWorkspaceBrowserStorage);
   }
+}
+
+/**
+ * Moves the data of the pre-v16 shared browser tree into every workspace's own
+ * tree. Runs inside the Dexie v16 upgrade transaction.
+ */
+export async function isolateWorkspaceBrowserStorage(tx: any) {
+  const nodesTable = tx.table('workspace_nodes');
+  const blobsTable = tx.table('workspace_blobs');
+  const refsTable = tx.table('workspace_file_references');
+  const workspaces = await tx.table('workspaces').toArray();
+  const sharedNodes = await nodesTable
+    .where('sourceId')
+    .equals(SHARED_BROWSER_STORAGE_ID)
+    .toArray();
+  if (!sharedNodes.length) return;
+
+  for (const workspace of workspaces) {
+    const treeId = workspaceBrowserStorageId(workspace.id);
+    const existingPaths = new Set(
+      (await nodesTable.where('sourceId').equals(treeId).toArray()).map(
+        (node: any) => node.path,
+      ),
+    );
+    const copied = new Map<string, string>();
+    const nodes: any[] = [];
+    const blobs: any[] = [];
+    const flush = async () => {
+      if (nodes.length) await nodesTable.bulkPut(nodes.splice(0));
+      if (blobs.length) await blobsTable.bulkPut(blobs.splice(0));
+    };
+    for (const node of sharedNodes) {
+      // A tree that already has this path keeps its own row.
+      if (existingPaths.has(node.path)) continue;
+      const id = uuidv4();
+      copied.set(node.id, id);
+      nodes.push({ ...node, id, sourceId: treeId });
+      if (node.kind === 'file') {
+        const blob = await blobsTable.get(node.id);
+        if (blob) blobs.push({ ...blob, id, sourceId: treeId });
+      }
+      if (nodes.length >= 100) await flush();
+    }
+    await flush();
+
+    const references = await refsTable
+      .where('workspaceId')
+      .equals(workspace.id)
+      .toArray();
+    for (const reference of references) {
+      if (reference.sourceId !== SHARED_BROWSER_STORAGE_ID) continue;
+      const nodeId = copied.get(reference.nodeId);
+      if (!nodeId) continue;
+      await refsTable.update(reference.id, { sourceId: treeId, nodeId });
+    }
+  }
+
+  const sharedIds = sharedNodes.map((node: any) => node.id);
+  await nodesTable.bulkDelete(sharedIds);
+  await blobsTable.bulkDelete(sharedIds);
 }
 
 /**

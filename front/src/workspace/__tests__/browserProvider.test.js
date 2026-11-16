@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { db } from "../../db";
 import { BrowserProvider } from "../providers/browser";
-import { SHARED_BROWSER_STORAGE_ID } from "../browserStorage";
+import { workspaceBrowserStorageId } from "../browserStorage";
 
 const streamOf = (text) =>
   new ReadableStream({
@@ -53,24 +53,36 @@ describe("browser provider", () => {
     ]);
   });
 
-  it("shares one IndexedDB tree across browser sources", async () => {
-    const first = new BrowserProvider("source-a", SHARED_BROWSER_STORAGE_ID);
-    const second = new BrowserProvider(
+  it("keeps each workspace's browser tree separate", async () => {
+    const first = new BrowserProvider(
+      "source-a",
+      workspaceBrowserStorageId("one"),
+    );
+    const rootOfFirst = new BrowserProvider(
       "workspace-root:one",
-      SHARED_BROWSER_STORAGE_ID,
+      workspaceBrowserStorageId("one"),
+    );
+    const otherWorkspace = new BrowserProvider(
+      "workspace-root:two",
+      workspaceBrowserStorageId("two"),
     );
     await first.connect();
-    await second.connect();
+    await rootOfFirst.connect();
+    await otherWorkspace.connect();
 
-    await first.write("/shared.txt", streamOf("shared"), { overwrite: false });
+    await first.write("/private.txt", streamOf("one"), { overwrite: false });
 
+    // The workspace root and its browser sources share the workspace's tree.
     expect(
-      (await second.list("/")).entries.map((entry) => entry.name),
-    ).toContain("shared.txt");
-    expect(await readText(await second.read("/shared.txt"))).toBe("shared");
-    expect((await second.stat("/shared.txt")).sourceId).toBe(
+      (await rootOfFirst.list("/")).entries.map((entry) => entry.name),
+    ).toContain("private.txt");
+    expect(await readText(await rootOfFirst.read("/private.txt"))).toBe("one");
+    expect((await rootOfFirst.stat("/private.txt")).sourceId).toBe(
       "workspace-root:one",
     );
+
+    // Another workspace does not see it.
+    expect((await otherWorkspace.list("/")).entries).toEqual([]);
   });
 
   it("rejects writes that would overwrite without permission", async () => {

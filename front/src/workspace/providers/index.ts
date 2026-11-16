@@ -3,7 +3,7 @@ import { ArcanaProvider } from "./arcana";
 import { ArcanaFilesystemProvider } from "./arcanaFilesystem";
 import { AgentFilesProvider } from "./agent";
 import { BrowserProvider } from "./browser";
-import { SHARED_BROWSER_STORAGE_ID } from "../browserStorage";
+import { workspaceBrowserStorageId } from "../browserStorage";
 import { LocalProvider } from "./local";
 import { McpProvider } from "./mcp";
 import { ReadOnlyProvider } from "./readOnly";
@@ -12,7 +12,12 @@ import type { FileProvider } from "./types";
 export function createProvider(source: WorkspaceSourceRow): FileProvider {
   let provider: FileProvider;
   if (source.kind === "browser") {
-    provider = new BrowserProvider(source.id, SHARED_BROWSER_STORAGE_ID);
+    // A workspace's browser sources share its own tree with its root, not with
+    // the other workspaces.
+    provider = new BrowserProvider(
+      source.id,
+      workspaceBrowserStorageId(source.workspaceId),
+    );
   }
   else if (source.kind === "local") {
     provider = new LocalProvider(

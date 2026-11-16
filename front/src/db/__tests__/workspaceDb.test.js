@@ -13,6 +13,7 @@ import {
   detachWorkspaceChat,
   detachWorkspaceAgent,
   detachWorkspaceAgentSession,
+  ensureBrowserSource,
   getChatWorkspaceId,
   getSourceHandle,
   getWorkspace,
@@ -31,6 +32,7 @@ import {
   updateWorkspace,
 } from "../workspaceDb";
 import { getDeviceId } from "../../workspace/deviceId";
+import { workspaceBrowserStorageId } from "../../workspace/browserStorage";
 import { writeSourceFile } from "../workspaceVfs";
 
 const reset = async () => {
@@ -326,53 +328,81 @@ describe("workspace database", () => {
 
   it("keeps browser files referenced by a chat when deleting the workspace", async () => {
     const workspaceId = await createWorkspace("Refs");
-    const sourceId = await addSource({
+    await addSource({
       workspaceId,
       kind: "browser",
       label: "Browser",
       config: { storage: "indexeddb" },
     });
-    const rootSourceId = `workspace-root:${workspaceId}`;
+    const treeId = workspaceBrowserStorageId(workspaceId);
     const bytes = new Uint8Array([1, 2, 3]);
 
-    const rootKeep = await writeSourceFile(rootSourceId, "/folder/keep.txt", bytes);
-    const rootDrop = await writeSourceFile(rootSourceId, "/folder/drop.txt", bytes);
-    const sourceKeep = await writeSourceFile(sourceId, "/keep.txt", bytes);
-    const sourceDrop = await writeSourceFile(sourceId, "/drop.txt", bytes);
+    const keep = await writeSourceFile(treeId, "/folder/keep.txt", bytes);
+    const drop = await writeSourceFile(treeId, "/folder/drop.txt", bytes);
 
     await addFileReference({
       conversationId: "chat-1",
       workspaceId,
-      sourceId: rootSourceId,
-      nodeId: rootKeep.id,
+      sourceId: treeId,
+      nodeId: keep.id,
       name: "keep.txt",
-      path: rootKeep.path,
-    });
-    await addFileReference({
-      conversationId: "chat-1",
-      workspaceId,
-      sourceId,
-      nodeId: sourceKeep.id,
-      name: "keep.txt",
-      path: sourceKeep.path,
+      path: keep.path,
     });
 
     await deleteWorkspace(workspaceId);
 
-    expect(await db.workspace_nodes.get(rootKeep.id)).toBeDefined();
-    expect(await db.workspace_blobs.get(rootKeep.id)).toBeDefined();
-    expect(await db.workspace_nodes.get(rootDrop.id)).toBeUndefined();
-    expect(await db.workspace_blobs.get(rootDrop.id)).toBeUndefined();
-    expect(await db.workspace_nodes.get(sourceKeep.id)).toBeDefined();
-    expect(await db.workspace_nodes.get(sourceDrop.id)).toBeUndefined();
+    expect(await db.workspace_nodes.get(keep.id)).toBeDefined();
+    expect(await db.workspace_blobs.get(keep.id)).toBeDefined();
+    expect(await db.workspace_nodes.get(drop.id)).toBeUndefined();
+    expect(await db.workspace_blobs.get(drop.id)).toBeUndefined();
 
     // The ancestor directory stays with its referenced file.
     const folder = await db.workspace_nodes
       .where("[sourceId+path]")
-      .equals([rootSourceId, "/folder"])
+      .equals([treeId, "/folder"])
       .first();
     expect(folder).toBeDefined();
-    expect(await db.workspace_file_references.count()).toBe(2);
+    expect(await db.workspace_file_references.count()).toBe(1);
+  });
+
+  it("does not touch another workspace's browser files when deleting a workspace", async () => {
+    const first = await createWorkspace("First");
+    const second = await createWorkspace("Second");
+    await writeSourceFile(
+      workspaceBrowserStorageId(first),
+      "/first.txt",
+      new Uint8Array([1]),
+    );
+    const secondFile = await writeSourceFile(
+      workspaceBrowserStorageId(second),
+      "/second.txt",
+      new Uint8Array([2]),
+    );
+
+    await deleteWorkspace(first);
+
+    expect(
+      await db.workspace_nodes
+        .where("sourceId")
+        .equals(workspaceBrowserStorageId(first))
+        .count(),
+    ).toBe(0);
+    expect(await db.workspace_nodes.get(secondFile.id)).toBeDefined();
+  });
+
+  it("keeps the workspace files when a browser source is removed", async () => {
+    const workspaceId = await createWorkspace("Browser source");
+    const sourceId = await ensureBrowserSource(workspaceId);
+    const file = await writeSourceFile(
+      workspaceBrowserStorageId(workspaceId),
+      "/kept.txt",
+      new Uint8Array([1]),
+    );
+
+    await removeSource(sourceId);
+
+    expect(await db.workspace_sources.get(sourceId)).toBeUndefined();
+    expect(await db.workspace_nodes.get(file.id)).toBeDefined();
   });
 
   it("stores folder handles and deletes sources with the workspace", async () => {

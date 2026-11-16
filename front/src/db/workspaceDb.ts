@@ -16,7 +16,7 @@ import type {
 } from "./dbTypes";
 import { defaultCapabilities } from "../workspace/capabilities";
 import { getDeviceId, DEVICE_PLANE_KINDS } from "../workspace/deviceId";
-import { deleteSourceNodes } from "./workspaceVfs";
+import { workspaceBrowserStorageId } from "../workspace/browserStorage";
 
 
 export { getDeviceId } from "../workspace/deviceId";
@@ -152,7 +152,7 @@ export async function createWorkspace(name: string): Promise<string> {
   return id;
 }
 
-/** Every workspace gets a browser-storage source; all browser sources share one IndexedDB tree. */
+/** Every workspace gets a browser-storage source; its tree is private to the workspace. */
 export async function ensureBrowserSource(
   workspaceId: string,
 ): Promise<string> {
@@ -335,11 +335,10 @@ export async function deleteWorkspace(id: string): Promise<void> {
   );
   for (const source of sources) {
     await db.workspace_handles.delete(source.id);
-    if (source.kind === "browser") {
-      await deleteUnreferencedSourceNodes(source.id);
-    }
   }
-  await deleteUnreferencedSourceNodes(`workspace-root:${id}`);
+  // The root and every browser source of the workspace share one tree, so it is
+  // cleaned up once. Files a chat still references stay for that chat.
+  await deleteUnreferencedSourceNodes(workspaceBrowserStorageId(id));
 }
 
 export async function listWorkspaceSummaries() {
@@ -451,7 +450,8 @@ export async function removeSource(id: string): Promise<void> {
   await db.workspace_sources.delete(id);
   await db.workspace_handles.delete(id);
   await db.workspace_mounts.where("sourceId").equals(id).delete();
-  if (source.kind === "browser") await deleteSourceNodes(id);
+  // A browser source shares the workspace's tree with its root and its other
+  // browser sources, so removing the source only drops the row, not the files.
 }
 
 export async function saveSourceHandle(
