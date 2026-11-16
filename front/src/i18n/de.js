@@ -310,6 +310,7 @@ export default {
   },
   e2ee: {
     badge: "Ende-zu-Ende verschlüsselt",
+    encrypted_with: "Verschlüsselt mit „{{key}}“",
     description:
       "Verknüpfen Sie ein Modell mit dem öffentlichen Schlüssel seines Verschlüsselungsknotens. Jede Anfrage über dieses Modell wird dann in diesem Browser versiegelt; der Server sieht nur Geheimtext. Der Schlüssel wird nicht vom Anbieter geladen, sondern außerhalb des Kanals verteilt – importieren Sie ihn aus einer vertrauenswürdigen Quelle.",
     keys_title: "Verschlüsselungsschlüssel",

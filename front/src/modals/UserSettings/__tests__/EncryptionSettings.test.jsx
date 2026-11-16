@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -235,6 +241,44 @@ describe("EncryptionSettings model status", () => {
     expect(screen.getByText("Key missing or invalid")).toBeInTheDocument();
     // A broken key encrypts nothing, so the model is not counted as encrypted.
     expect(screen.getByText("0 encrypted")).toBeInTheDocument();
+  });
+
+  it("does not repeat a key that is labelled with the model's own name", () => {
+    const store = makeStore();
+    // An import without an explicit name labels the key with the model names
+    // it applies to, which used to print the row title twice.
+    store.dispatch({
+      type: "user_settings/addE2eeKey",
+      payload: { id: "k2", name: "Qwen A", publicKey },
+    });
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "qwen-a", keyId: "k2" },
+    });
+
+    renderWith(store);
+
+    const modelsSection = document.querySelector('[data-guide="e2ee-models"]');
+    expect(within(modelsSection).getAllByText("Qwen A")).toHaveLength(1);
+    // The key stays discoverable from the status badge.
+    expect(screen.getByTitle(/Encrypted with/)).toBeInTheDocument();
+  });
+
+  it("still names a key that has its own label", () => {
+    const store = makeStore();
+    store.dispatch({
+      type: "user_settings/addE2eeKey",
+      payload: { id: "k3", name: "Node A", publicKey },
+    });
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "qwen-a", keyId: "k3" },
+    });
+
+    renderWith(store);
+
+    const modelsSection = document.querySelector('[data-guide="e2ee-models"]');
+    expect(within(modelsSection).getByText("Node A")).toBeInTheDocument();
   });
 
   it("lists an internal-service model and names the feature", () => {

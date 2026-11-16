@@ -495,6 +495,23 @@ export default function EncryptionSettings({ modelsData }) {
               const entry = findKeyForAssignment(keys, assigned);
               const usable = usableKey(entry);
               const features = usage.get(model.id) ?? [];
+              // A key imported without an explicit name is labelled with the
+              // model names it applies to, so repeating that label here would
+              // just print the row title a second time.
+              const modelLabel = String(model.name || model.id)
+                .trim()
+                .toLowerCase();
+              const keyLabel = usable
+                ? String(entry.name || entry.id || "").trim()
+                : "";
+              const keyIsModelLabel = keyLabel
+                .split(",")
+                .map((part) => part.trim().toLowerCase())
+                .some(
+                  (part) =>
+                    part === modelLabel ||
+                    part === String(model.id).trim().toLowerCase(),
+                );
               return (
                 <li
                   key={model.id}
@@ -527,12 +544,21 @@ export default function EncryptionSettings({ modelsData }) {
                       binding, this table only reports the resulting state. */}
                   {usable ? (
                     <span className="flex min-w-0 items-center gap-2">
-                      <span className="badge badge-success badge-sm">
+                      <span
+                        className="badge badge-success badge-sm"
+                        title={
+                          keyLabel
+                            ? t("e2ee.encrypted_with", { key: keyLabel })
+                            : undefined
+                        }
+                      >
                         {t("e2ee.badge")}
                       </span>
-                      <span className="max-w-40 truncate text-[0.7rem] text-base-content/60">
-                        {entry.name || entry.id}
-                      </span>
+                      {keyLabel && !keyIsModelLabel && (
+                        <span className="max-w-40 truncate text-[0.7rem] text-base-content/60">
+                          {keyLabel}
+                        </span>
+                      )}
                     </span>
                   ) : assigned ? (
                     <span

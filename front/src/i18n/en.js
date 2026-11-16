@@ -300,6 +300,7 @@ export default {
   },
   e2ee: {
     badge: "End-to-end encrypted",
+    encrypted_with: "Encrypted with “{{key}}”",
     description:
       "Bind a model to the public key of its encryption node. Every request you send through that model is then sealed in this browser; the server only sees ciphertext. The key itself never leaves the provider out of band, so import it from a trusted source.",
     keys_title: "Encryption keys",
