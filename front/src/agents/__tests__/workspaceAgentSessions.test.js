@@ -5,6 +5,7 @@ import {
   agentWorkspaceIds,
   agentWorkspaceSessionIds,
   filterSessionTree,
+  sessionSubtreeIds,
   unassignedSessionIds,
   workspaceSessionIds,
 } from "../workspaceAgentSessions";
@@ -79,6 +80,32 @@ describe("workspace agent sessions", () => {
 
   it("keeps the whole tree when no filter is given", () => {
     expect(filterSessionTree(tree, null)).toBe(tree);
+  });
+
+  it("adds the subagent subtree without the parents of a group session", () => {
+    // child-b is attached alone; root-b only appears as its parent and stays open.
+    expect(ids(sessionSubtreeIds(tree, ["child-b"]))).toEqual(["child-b"]);
+    expect(ids(sessionSubtreeIds(tree, ["root-a"]))).toEqual([
+      "child-a",
+      "root-a",
+    ]);
+    // The sidebar passes the group's session ids as a Set.
+    expect(ids(sessionSubtreeIds(tree, new Set(["root-a"])))).toEqual([
+      "child-a",
+      "root-a",
+    ]);
+    expect(ids(sessionSubtreeIds(tree, []))).toEqual([]);
+
+    const nested = buildSessionTree([
+      { id: "root", time: { updated: 3 } },
+      { id: "child", parentID: "root", time: { updated: 2 } },
+      { id: "grandchild", parentID: "child", time: { updated: 1 } },
+    ]);
+    expect(ids(sessionSubtreeIds(nested, ["root"]))).toEqual([
+      "child",
+      "grandchild",
+      "root",
+    ]);
   });
 
   it("reports sessions that no workspace shows", () => {

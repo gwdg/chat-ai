@@ -169,6 +169,28 @@ export const featureGuides = {
       },
     ],
   },
+  close_group_sessions: {
+    titleKey: "feature_guide.close_group_sessions.title",
+    prompt:
+      "Close every session of an agent inside one sidebar group, such as a workspace or “Not in a workspace”. Running turns are interrupted first, and the action always asks for confirmation in a dialog.",
+    keywords: [
+      "close all sessions",
+      "close group sessions",
+      "stop agent sessions",
+      "close workspace sessions",
+      "close unassigned sessions",
+    ],
+    steps: [
+      {
+        target: '[data-guide="agents-list"]',
+        textKey: "feature_guide.close_group_sessions.step1",
+      },
+      {
+        target: '[data-guide="close-group-sessions"]',
+        textKey: "feature_guide.close_group_sessions.step2",
+      },
+    ],
+  },
   attach_media: {
     titleKey: "feature_guide.attach_media.title",
     prompt:
@@ -1449,7 +1471,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery"],
+  workspace: ["workspace_overview", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

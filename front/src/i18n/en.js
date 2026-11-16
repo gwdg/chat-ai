@@ -346,6 +346,11 @@ export default {
       step2: "Agents appear in the list; click one to open its chat on the right.",
       step3: "Expand an agent with the chevron to see each workspace with the sessions attached there, plus sessions that are not in a workspace. Click a session to switch, use + to create one, or open the ... menu to rename, detach or close it.",
     },
+    close_group_sessions: {
+      title: "Close all sessions of a group",
+      step1: "Expand an agent to see its sessions grouped by workspace and under “Not in a workspace”.",
+      step2: "The trash icon in the group header closes every session of that group. Running turns are interrupted first, and you must confirm the action in a dialog before any session is removed.",
+    },
     catalog: {
       open: "Browse tutorials",
       close: "Hide tutorials",
@@ -1551,6 +1556,9 @@ export default {
     close_chat_yes: "Close chat",
     close_agent_session: "Close this session? It will be removed from OpenCode.",
     close_agent_session_yes: "Close session",
+    close_agent_group_sessions:
+      "Close all {{count}} sessions in “{{group}}”? Running turns are interrupted and the sessions are removed from OpenCode.",
+    close_agent_group_sessions_yes: "Close all sessions",
     restore_agent_sessions:
       "Create new sessions on the agent server and write each cached transcript into its instructions? The old sessions are not recreated, and the cached history is sent to this agent's server.",
     restore_agent_sessions_yes: "Restore sessions",
@@ -1685,6 +1693,12 @@ export default {
     session_options: "Session options",
     session_renamed: "Session renamed",
     session_closed: "Session closed",
+    close_group_sessions: "Close all sessions in this group",
+    group_sessions_closed_one: "1 session closed.",
+    group_sessions_closed_other: "{{count}} sessions closed.",
+    group_sessions_failed_one: "1 session could not be closed: {{message}}",
+    group_sessions_failed_other:
+      "{{count}} sessions could not be closed: {{message}}",
     session_name_placeholder: "Session name",
     tooltip: "Remote agents running on GWDG infrastructure.",
     status_ready: "Connected and idle",

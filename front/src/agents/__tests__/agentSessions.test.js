@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  closeAgentSessions,
   fetchAgentSessions,
   mergeMessageHistory,
   syncSessionHistory,
 } from "../agentSessions";
+import { addAgent, getAgent } from "../agentStore";
 import { db } from "../../db";
 import {
   loadAgentSessions,
@@ -16,15 +18,20 @@ const apiMocks = vi.hoisted(() => ({
   full: vi.fn(),
   sessions: vi.fn(),
   children: vi.fn(),
+  create: vi.fn(),
+  remove: vi.fn(),
+  interrupt: vi.fn(),
 }));
 
 vi.mock("../../apis/opencodeAgents", () => ({
-  createOpencodeSession: vi.fn(),
-  deleteOpencodeSession: vi.fn(),
+  createOpencodeSession: (...args) => apiMocks.create(...args),
+  deleteOpencodeSession: (...args) => apiMocks.remove(...args),
+  interruptOpencodeSession: (...args) => apiMocks.interrupt(...args),
   listOpencodeMessages: (...args) => apiMocks.full(...args),
   listOpencodeMessagesPage: (...args) => apiMocks.page(...args),
   listOpencodeSessionChildren: (...args) => apiMocks.children(...args),
   listOpencodeSessions: (...args) => apiMocks.sessions(...args),
+  opencodeDefaults: () => ({ serverUrl: "", username: "opencode", password: "" }),
 }));
 
 const message = (id, extra = {}) => ({ id, type: "user", text: id, ...extra });
@@ -35,6 +42,12 @@ beforeEach(async () => {
   apiMocks.full.mockReset();
   apiMocks.sessions.mockReset();
   apiMocks.children.mockReset();
+  apiMocks.create.mockReset();
+  apiMocks.remove.mockReset();
+  apiMocks.interrupt.mockReset();
+  apiMocks.create.mockResolvedValue({ id: "new-session" });
+  apiMocks.remove.mockResolvedValue(null);
+  apiMocks.interrupt.mockResolvedValue(null);
   await db.agent_sessions.clear();
   await db.agent_session_messages.clear();
 });
@@ -311,5 +324,87 @@ describe("fetchAgentSessions", () => {
 
     expect(tree.offline).toBe(true);
     expect(tree.all.map((session) => session.id)).toEqual(["s1"]);
+  });
+});
+
+describe("closeAgentSessions", () => {
+  it("interrupts every session before deleting it", async () => {
+    const order = [];
+    apiMocks.interrupt.mockImplementation(async () => {
+      order.push("interrupt");
+    });
+    apiMocks.remove.mockImplementation(async () => {
+      order.push("delete");
+    });
+
+    const result = await closeAgentSessions(
+      { id: "agent-1", sessionId: "active" },
+      [{ id: "s1" }, { id: "s2" }],
+    );
+
+    expect(order).toEqual(["interrupt", "interrupt", "delete", "delete"]);
+    expect(result).toEqual({ closed: ["s1", "s2"], failed: [] });
+    expect(apiMocks.sessions).not.toHaveBeenCalled();
+  });
+
+  it("drops the cached history of every closed session", async () => {
+    await saveAgentSessions("agent-1", [{ id: "s1" }, { id: "s2" }]);
+
+    await closeAgentSessions({ id: "agent-1", sessionId: "active" }, [
+      { id: "s1" },
+    ]);
+
+    expect((await loadAgentSessions("agent-1")).map((item) => item.id)).toEqual(
+      ["s2"],
+    );
+  });
+
+  it("activates a remaining session when the active one is closed", async () => {
+    addAgent({ id: "agent-keep", name: "One", sessionId: "s1" });
+    apiMocks.sessions.mockResolvedValue([{ id: "keep", title: "Keep" }]);
+    apiMocks.children.mockResolvedValue([]);
+
+    await closeAgentSessions(getAgent("agent-keep"), [{ id: "s1" }]);
+
+    expect(getAgent("agent-keep").sessionId).toBe("keep");
+    expect(apiMocks.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a fresh session when the last one is closed", async () => {
+    addAgent({ id: "agent-create", name: "One", sessionId: "s1" });
+    apiMocks.sessions.mockResolvedValue([]);
+    apiMocks.children.mockResolvedValue([]);
+
+    await closeAgentSessions(getAgent("agent-create"), [{ id: "s1" }]);
+
+    expect(apiMocks.create).toHaveBeenCalled();
+  });
+
+  it("counts an already removed session as closed", async () => {
+    apiMocks.remove.mockRejectedValue(
+      new Error("opencode server responded with 404: Not Found"),
+    );
+    await saveAgentSessions("agent-1", [{ id: "s1" }]);
+
+    const result = await closeAgentSessions(
+      { id: "agent-1", sessionId: "active" },
+      [{ id: "s1" }],
+    );
+
+    expect(result).toEqual({ closed: ["s1"], failed: [] });
+    expect(await loadAgentSessions("agent-1")).toEqual([]);
+  });
+
+  it("keeps a session the server refuses to delete", async () => {
+    apiMocks.remove.mockRejectedValue(new Error("boom"));
+
+    const result = await closeAgentSessions(
+      { id: "agent-1", sessionId: "active" },
+      [{ id: "s1" }],
+    );
+
+    expect(result.closed).toEqual([]);
+    expect(result.failed).toHaveLength(1);
+    expect(result.failed[0].sessionId).toBe("s1");
   });
 });

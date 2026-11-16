@@ -91,6 +91,28 @@ export const filterSessionTree = (tree, ids) => {
 };
 
 /**
+ * The sessions in `ids` plus their subagent subtrees. Closing a group must not leave the
+ * subagent sessions of a closed root behind, but it must not close the parents that only
+ * appear in the group to render an attached child.
+ */
+export const sessionSubtreeIds = (tree, ids) => {
+  const all = tree?.all || [];
+  const kept = new Set(Array.from(ids || []).filter(Boolean));
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const session of all) {
+      const parentId = parentIdOf(session);
+      if (parentId && kept.has(parentId) && !kept.has(session.id)) {
+        kept.add(session.id);
+        grew = true;
+      }
+    }
+  }
+  return kept;
+};
+
+/**
  * Sessions of an agent that no workspace of that agent shows, directly or through a parent.
  * They stay reachable in the sidebar's "not in a workspace" group.
  */

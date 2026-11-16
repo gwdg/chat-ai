@@ -1,6 +1,7 @@
 import {
   createOpencodeSession,
   deleteOpencodeSession,
+  interruptOpencodeSession,
   listOpencodeMessages,
   listOpencodeMessagesPage,
   listOpencodeSessionChildren,
@@ -311,6 +312,58 @@ export async function deleteAgentSession(agent, session, tree = null) {
   }
   notifyAgentSessionsChanged(agent.id);
   return nextSession;
+}
+
+/**
+ * Close several of an agent's sessions at once: interrupt every turn first, then delete the
+ * sessions on the server and drop their workspace links and cached histories. When the active
+ * session is among them, another session is activated or a fresh one is created, so the agent is
+ * never left without a session. A session the server no longer knows counts as closed.
+ */
+export async function closeAgentSessions(agent, sessions) {
+  if (!agent?.id) return { closed: [], failed: [] };
+  const ids = [
+    ...new Set((sessions || []).map((session) => session?.id).filter(Boolean)),
+  ];
+  if (!ids.length) return { closed: [], failed: [] };
+
+  // Stop running turns before deleting, so a working session is not removed mid-turn.
+  await Promise.all(
+    ids.map((sessionId) =>
+      interruptOpencodeSession(agent, sessionId).catch(() => {}),
+    ),
+  );
+
+  const closed = [];
+  const failed = [];
+  for (const sessionId of ids) {
+    try {
+      await deleteOpencodeSession(agent, sessionId);
+    } catch (reason) {
+      const message = String(reason instanceof Error ? reason.message : reason);
+      // A session that is already gone still has to lose its local links and cache.
+      if (!/\b404\b/.test(message)) {
+        failed.push({ sessionId, reason });
+        continue;
+      }
+    }
+    await removeWorkspaceAgentSessionLinks(agent.id, sessionId);
+    await removeAgentSessionCache(agent.id, sessionId).catch(() => {});
+    closed.push(sessionId);
+  }
+
+  if (closed.includes(agent.sessionId)) {
+    const tree = await fetchAgentSessions(agent).catch(() => null);
+    const nextSession =
+      tree?.roots?.find((session) => !closed.includes(session.id)) ||
+      tree?.all?.find((session) => !closed.includes(session.id)) ||
+      null;
+    if (nextSession) switchAgentSession(agent, nextSession.id);
+    else await createAgentSession(agent);
+  }
+
+  if (closed.length) notifyAgentSessionsChanged(agent.id);
+  return { closed, failed };
 }
 
 export function switchAgentSession(agent, sessionId) {

@@ -356,6 +356,11 @@ export default {
       step2: "Agenten erscheinen in der Liste; klicken Sie auf einen, um seinen Chat rechts zu öffnen.",
       step3: "Klappen Sie einen Agenten über das Chevron auf, um jeden Arbeitsbereich mit den zugeordneten Sitzungen sowie Sitzungen ohne Arbeitsbereich zu sehen. Klicken Sie eine Sitzung zum Wechseln an, erstellen Sie mit + eine neue oder öffnen Sie das ...-Menü zum Umbenennen, Entfernen oder Schließen.",
     },
+    close_group_sessions: {
+      title: "Alle Sitzungen einer Gruppe schließen",
+      step1: "Klappen Sie einen Agenten auf, um seine Sitzungen nach Arbeitsbereich gruppiert und unter „Nicht in einem Arbeitsbereich“ zu sehen.",
+      step2: "Das Papierkorb-Symbol in der Gruppenüberschrift schließt alle Sitzungen dieser Gruppe. Laufende Antworten werden zuerst unterbrochen, und Sie müssen die Aktion in einem Dialog bestätigen, bevor eine Sitzung entfernt wird.",
+    },
     catalog: {
       open: "Tutorials durchsuchen",
       close: "Tutorials ausblenden",
@@ -1571,6 +1576,9 @@ export default {
     close_chat_yes: "Chat schließen",
     close_agent_session: "Diese Sitzung schließen? Sie wird aus OpenCode entfernt.",
     close_agent_session_yes: "Sitzung schließen",
+    close_agent_group_sessions:
+      "Alle {{count}} Sitzungen in „{{group}}“ schließen? Laufende Antworten werden unterbrochen und die Sitzungen aus OpenCode entfernt.",
+    close_agent_group_sessions_yes: "Alle Sitzungen schließen",
     restore_agent_sessions:
       "Neue Sitzungen auf dem Agent-Server erstellen und den jeweiligen zwischengespeicherten Verlauf in ihre Anweisungen schreiben? Die alten Sitzungen werden nicht wiederhergestellt und der zwischengespeicherte Verlauf wird an den Server dieses Agenten gesendet.",
     restore_agent_sessions_yes: "Sitzungen wiederherstellen",
@@ -1708,6 +1716,13 @@ export default {
     session_options: "Sitzungsoptionen",
     session_renamed: "Sitzung umbenannt",
     session_closed: "Sitzung geschlossen",
+    close_group_sessions: "Alle Sitzungen dieser Gruppe schließen",
+    group_sessions_closed_one: "1 Sitzung geschlossen.",
+    group_sessions_closed_other: "{{count}} Sitzungen geschlossen.",
+    group_sessions_failed_one:
+      "1 Sitzung konnte nicht geschlossen werden: {{message}}",
+    group_sessions_failed_other:
+      "{{count}} Sitzungen konnten nicht geschlossen werden: {{message}}",
     session_name_placeholder: "Sitzungsname",
     tooltip: "Remote-Agenten, die auf der GWDG-Infrastruktur laufen.",
     status_ready: "Verbunden und bereit",

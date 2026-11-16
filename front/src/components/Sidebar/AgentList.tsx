@@ -42,6 +42,7 @@ import {
   switchAgentSession,
 } from "../../agents/agentSessions";
 import AgentSessionList from "../Agent/AgentSessionList";
+import CloseGroupSessionsButton from "../Agent/CloseGroupSessionsButton";
 import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import {
   selectCollapsedTopics,
@@ -61,6 +62,7 @@ import {
   detachSessionFromWorkspace,
   filterSessionTree,
   openWorkspaceAgentSession,
+  sessionSubtreeIds,
   unassignedSessionIds,
   workspaceSessionIds,
 } from "../../agents/workspaceAgentSessions";
@@ -583,6 +585,13 @@ export default function AgentList({
                           >
                             {workspace.name}
                           </button>
+                          <CloseGroupSessionsButton
+                            agent={agent}
+                            sessionIds={[
+                              ...sessionSubtreeIds(sessionTree, sessionIds),
+                            ]}
+                            groupName={workspace.name}
+                          />
                           <span className="shrink-0 tabular-nums text-base-content/35">
                             {sessionIds.size}
                           </span>
@@ -629,8 +638,17 @@ export default function AgentList({
                   })}
                   {unassigned.size > 0 && (
                     <div>
-                      <div className="px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
-                        {t("agents.unassigned_sessions")}
+                      <div className="flex items-center gap-1 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-base-content/45">
+                        <span className="min-w-0 flex-1 truncate">
+                          {t("agents.unassigned_sessions")}
+                        </span>
+                        <CloseGroupSessionsButton
+                          agent={agent}
+                          sessionIds={[
+                            ...sessionSubtreeIds(sessionTree, unassigned),
+                          ]}
+                          groupName={t("agents.unassigned_sessions")}
+                        />
                       </div>
                       <AgentSessionList
                         agent={agent}
