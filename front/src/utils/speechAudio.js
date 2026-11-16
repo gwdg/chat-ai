@@ -7,6 +7,10 @@ export function getSpeechModule() {
   if (!raw || raw === "undefined" || raw === "false") return null;
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    // `true` enables speech with the browser's own voices. That is what a setup
+    // without a TTS service can offer: replies are spoken locally and nothing
+    // is sent to the backend for synthesis. An object names an engine model.
+    if (parsed === true) return { model: null, voice: null };
     if (parsed && typeof parsed === "object" && parsed.model && parsed.voice) {
       return parsed;
     }

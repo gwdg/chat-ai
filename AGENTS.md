@@ -213,7 +213,7 @@ has no `/bridge/*`, no MCP gateway and no Arcana Tools: those routes exist only 
 
 Feature modules are gated this way — `VITE_MODULE_TOOLS`, `VITE_MODULE_FEEDBACK`,
 `VITE_MODULE_CHOICES`, `VITE_MODULE_AGENT` (the browser agent), `VITE_MODULE_AGENTS` (the sidebar
-Agents section, on by default), `VITE_MODULE_ARCANAS` (Arcana and Arcana Tools, on by default), `VITE_MODULE_SPEECH` (JSON, with `model` and `voice`). A deployment can
+Agents section, on by default), `VITE_MODULE_ARCANAS` (Arcana and Arcana Tools, on by default), `VITE_MODULE_SPEECH` (`true` enables speech with the browser's own voices and no backend TTS; a JSON object with `model` and `voice` uses an engine TTS model — read it through `utils/speechAudio.js#getSpeechModule`, not by parsing the env var). A deployment can
 switch these parts of the UI off, so new code in those areas must still behave with the flag off.
 
 ### 4.6 Model capabilities are data, not code
