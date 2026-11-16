@@ -24,9 +24,11 @@ import {
   selectDarkMode,
   toggleTopic,
 } from "../../Redux/reducers/interfaceSettingsSlice";
+import { selectUserSettings } from "../../Redux/reducers/userSettingsReducer";
 
 import { useConversationList } from "../../db";
 import {
+  createAttachedChat,
   deleteWorkspace,
   detachWorkspaceAgent,
   detachWorkspaceChat,
@@ -55,6 +57,7 @@ import { activeSessionIdFor, useOpenAgent } from "../../hooks/useOpenAgent";
 import { topicIconById } from "../Sidebar/topicIcons";
 import { pinnedStateId } from "../Sidebar/pinnedState";
 import { groupRowTint, groupRule, topicColor, withAlpha } from "../Sidebar/topicColors";
+import { getDefaultConversation } from "../../utils/conversationUtils";
 
 // Workspace rows and the agent rows inside them default to expanded, so only the
 // ids the user folded are persisted. They share `collapsed_topics` with the chat
@@ -122,9 +125,11 @@ export default function WorkspaceList({
   const [sessionTrees, setSessionTrees] = useState<Record<string, any>>({});
   const [sessionRefresh, setSessionRefresh] = useState(0);
   const [creatingSession, setCreatingSession] = useState<string | null>(null);
+  const [creatingChat, setCreatingChat] = useState<string | null>(null);
   const loadedSessionAgents = useRef<Set<string>>(new Set());
   const collapsedTopicIds = useSelector(selectCollapsedTopics) ?? [];
   const isDark = useSelector(selectDarkMode);
+  const userSettings = useSelector(selectUserSettings);
 
   // The pinned copy is a second instance of this list, so its folds are keyed
   // apart from the workspace rows in the Workspace section.
@@ -213,6 +218,26 @@ export default function WorkspaceList({
   const collapsed = collapsedTopicIds.includes("__workspaces__");
 
   const create = () => openModal("workspaceCreate", {});
+
+  // The "+" of a workspace row starts a chat that belongs to that workspace
+  // right away. Attaching an existing chat stays available in the workspace's
+  // Chats panel.
+  const createChat = async (workspaceId: string) => {
+    if (creatingChat) return;
+    setCreatingChat(workspaceId);
+    try {
+      const id = await createAttachedChat(
+        workspaceId,
+        getDefaultConversation(userSettings),
+      );
+      navigate(`/chat/${id}`);
+      onNavigate?.();
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setCreatingChat(null);
+    }
+  };
 
   const remove = (workspace: { id: string; name: string }) => {
     confirmAction(
@@ -348,18 +373,17 @@ export default function WorkspaceList({
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  openModal("workspaceAttachChat", {
-                    workspaceId: workspace.id,
-                    conversations,
-                    attachedIds: chats.map((chat) => chat.id),
-                  })
-                }
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-accent group-hover:opacity-100"
-                title={t("workspace.attach_chat")}
-                aria-label={t("workspace.attach_chat")}
+                disabled={creatingChat === workspace.id}
+                onClick={() => void createChat(workspace.id)}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-content/40 opacity-0 transition hover:bg-base-300 hover:text-accent group-hover:opacity-100 disabled:opacity-50"
+                title={t("workspace.new_chat")}
+                aria-label={t("workspace.new_chat")}
               >
-                <Add size={14} />
+                {creatingChat === workspace.id ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  <Add size={14} />
+                )}
               </button>
               <Popover className="relative mr-1">
                 <PopoverButton

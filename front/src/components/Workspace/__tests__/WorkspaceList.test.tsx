@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   notifyError: vi.fn(),
   workspaces: vi.fn(),
   setPinned: vi.fn(async () => {}),
+  createChat: vi.fn(async () => "chat-new"),
 }));
 
 vi.mock("../../../db", () => ({
@@ -23,6 +24,7 @@ vi.mock("../../../db", () => ({
 }));
 vi.mock("../../../db/workspaceDb", () => ({
   useWorkspaceList: () => mocks.workspaces(),
+  createAttachedChat: (...args: any[]) => mocks.createChat(...args),
   setWorkspacePinned: (...args: any[]) => mocks.setPinned(...args),
   useWorkspaceChatLinks: () => mocks.chatLinks(),
   useWorkspaceAgentLinks: () => [{ workspaceId: "ws-1", agentId: "agent-1" }],
@@ -51,6 +53,13 @@ vi.mock("../../../agents/agentSessions", async (importOriginal) => {
 });
 vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: vi.fn(), confirmAction: vi.fn() }),
+}));
+vi.mock("../../../utils/conversationUtils", () => ({
+  getDefaultConversation: () => ({
+    id: "draft",
+    title: "Untitled Chat",
+    settings: {},
+  }),
 }));
 vi.mock("../../../hooks/useToast", () => ({
   useToast: () => ({ notifySuccess: vi.fn(), notifyError: mocks.notifyError }),
@@ -103,6 +112,7 @@ beforeEach(() => {
     { id: "ws-1", name: "Teaching", icon: "default", color: "violet" },
   ]);
   mocks.setPinned.mockReset();
+  mocks.createChat.mockReset().mockResolvedValue("chat-new");
 });
 
 describe("WorkspaceList pinning", () => {
@@ -372,6 +382,25 @@ describe("WorkspaceList agent sessions", () => {
     expect(screen.getByText("HPC agent").closest("button")).toHaveAttribute(
       "aria-current",
       "page",
+    );
+  });
+});
+
+describe("WorkspaceList new chats", () => {
+  it("starts a workspace chat from the + of the row", async () => {
+    renderList(makeStore());
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "New chat in this workspace",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.createChat).toHaveBeenCalledWith(
+        "ws-1",
+        expect.objectContaining({ title: "Untitled Chat" }),
+      ),
     );
   });
 });
