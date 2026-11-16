@@ -9,6 +9,11 @@ import {
   getOpencodeInfo,
   opencodeDefaults,
 } from "../../apis/opencodeAgents";
+import {
+  createServiceAgent,
+  deleteServiceAgent,
+  hasAgentService,
+} from "../../apis/agentService";
 
 // Placeholder project list; the real projects will come from the GWDG backend.
 const PROJECT_COUNT = 3;
@@ -30,6 +35,12 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
     agent?.projectId ?? projects[0]?.id ?? "",
   );
   const [local, setLocal] = useState(agent?.local !== false);
+  const serviceAvailable = hasAgentService();
+  // A new agent uses the service when one is configured; an existing agent
+  // keeps the mode it was created with so editing never migrates it silently.
+  const [useService, setUseService] = useState(
+    agent?.serviceAgentId ? true : !agent && serviceAvailable,
+  );
   const [serverUrl, setServerUrl] = useState(
     agent?.serverUrl ?? defaults.serverUrl,
   );
@@ -48,7 +59,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
       ? serverUrl.trim()
       : defaults.serverUrl;
     const effectivePassword = local ? password : defaults.password;
-    const next = {
+    let next = {
       ...(agent ?? {}),
       id: agent?.id ?? newId(),
       projectId: project.id,
@@ -60,6 +71,32 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
       passwordSource:
         effectivePassword === defaults.password ? "config" : "custom",
     };
+    let createdServiceId = null;
+    let replacedServiceId = null;
+    if (useService) {
+      // The service starts an OpenCode backend for this agent; its proxy prefix
+      // becomes the agent's server URL and no basic auth is stored.
+      let serviceAgentId = agent?.serviceAgentId;
+      if (!serviceAgentId) {
+        const created = await createServiceAgent({ name: next.name });
+        serviceAgentId = created.serviceAgentId;
+        createdServiceId = serviceAgentId;
+        next.serverUrl = created.serverUrl;
+      }
+      next = {
+        ...next,
+        serviceAgentId,
+        serviceManaged: true,
+        username: defaults.username,
+        password: "",
+        passwordSource: "service",
+      };
+    } else {
+      const { serviceAgentId: _id, serviceManaged: _managed, ...direct } =
+        next;
+      next = direct;
+      if (agent?.serviceAgentId) replacedServiceId = agent.serviceAgentId;
+    }
     const connectionChanged =
       !editing ||
       next.serverUrl !== agent.serverUrl ||
@@ -76,8 +113,17 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
       }
       if (editing) updateAgent(agent.id, patch);
       else onCreate?.(patch);
+      if (replacedServiceId) {
+        // Switching a local agent back to a direct connection leaves nothing
+        // for the service to own.
+        await deleteServiceAgent(replacedServiceId).catch(() => {});
+      }
       onClose();
     } catch (reason) {
+      if (createdServiceId) {
+        // Do not leave a container behind for an agent that was never saved.
+        await deleteServiceAgent(createdServiceId).catch(() => {});
+      }
       setError(
         t("agents.connect_failed", {
           error: reason instanceof Error ? reason.message : String(reason),
@@ -92,15 +138,28 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="agents.add_title">
       <div className="flex flex-col gap-3 pb-2 text-sm">
         <p className="text-xs text-base-content/70">{t("agents.add_hint")}</p>
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
-            className="toggle toggle-sm"
-            checked={local}
-            onChange={(event) => setLocal(event.target.checked)}
-          />
-          {t("agents.local")}
-        </label>
+        {(serviceAvailable || agent?.serviceAgentId) && (
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              className="toggle toggle-sm"
+              checked={useService}
+              onChange={(event) => setUseService(event.target.checked)}
+            />
+            {t("agents.use_service")}
+          </label>
+        )}
+        {!useService && (
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              className="toggle toggle-sm"
+              checked={local}
+              onChange={(event) => setLocal(event.target.checked)}
+            />
+            {t("agents.local")}
+          </label>
+        )}
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-base-content/70">
             {t("agents.name_label")}
@@ -112,7 +171,12 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             className="input input-bordered w-full"
           />
         </label>
-        {!local && (
+        {useService && (
+          <p className="text-[11px] leading-relaxed text-base-content/50">
+            {t("agents.service_hint")}
+          </p>
+        )}
+        {!useService && !local && (
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-base-content/70">
               {t("agents.hpc_project_label")}
@@ -130,7 +194,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             </select>
           </label>
         )}
-        {local && (
+        {!useService && local && (
           <>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-base-content/70">

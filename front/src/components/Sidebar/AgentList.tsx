@@ -27,6 +27,7 @@ import {
   getOpencodeSessionStatus,
   interruptOpencodeSession,
 } from "../../apis/opencodeAgents";
+import { deleteServiceAgent } from "../../apis/agentService";
 import {
   addAgent,
   removeAgent,
@@ -290,6 +291,11 @@ export default function AgentList({
         // local agent once the backend has terminated it successfully.
         await interruptOpencodeSession(agent, agent.sessionId).catch(() => {});
         await deleteOpencodeSession(agent, agent.sessionId);
+      }
+      if (agent.serviceAgentId) {
+        // The service also owns the container/process, so deleting its agent is
+        // what actually frees it. A 404 means somebody already did.
+        await deleteServiceAgent(agent.serviceAgentId);
       }
       removeAgent(agent.id);
       if (agent.id === activeId) navigate("/chat");

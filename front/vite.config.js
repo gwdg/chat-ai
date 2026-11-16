@@ -136,6 +136,9 @@ try {
     } else if (key == "opencodeServerPassword") {
       process.env["VITE_OPENCODE_SERVER_PASSWORD"] = value;
       console.log("opencode server password:", value ? "set" : "not set");
+    } else if (key == "agentServiceUrl") {
+      process.env["VITE_AGENT_SERVICE_URL"] = value;
+      console.log("Agent service URL:", value);
     } else if (key == "opencodeBridgeSidecarCommand") {
       process.env["VITE_OPENCODE_BRIDGE_SIDECAR_COMMAND"] = JSON.stringify(value);
       console.log("opencode bridge sidecar:", JSON.stringify(value));

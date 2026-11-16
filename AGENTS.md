@@ -191,7 +191,7 @@ inside `db/`. UI strings and i18n keys say topic.
 `VITE_DEFAULT_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`,
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
-`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_MODULE_*`. Consequences: **a new
+`VITE_OPENCODE_SERVER_PASSWORD`, `VITE_AGENT_SERVICE_URL`, `VITE_MODULE_*`. Consequences: **a new
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
@@ -940,7 +940,24 @@ selection is sent to `POST /api/session/:id/model`. A second dropdown lists `GET
 HTTP-basic credentials default from `opencodeServerUrl` / `opencodeServerUsername` /
 `opencodeServerPassword` in `front.json` (mapped to `VITE_OPENCODE_SERVER_*`) and stay editable per
 agent. The browser talks to the server directly (opencode allows the app origin via CORS), so the
-back service is not involved. `agents/agentStore.js` persists the agent metadata in localStorage.
+back service is not involved.
+
+When `agentServiceUrl` is set (`VITE_AGENT_SERVICE_URL`, see
+[`agent-service/`](agent-service/README.md)), `AddAgentModal` defaults to a service-managed agent:
+it `POST`s `/agents` on the service, stores the returned id as `serviceAgentId` and the proxy prefix
+`<service>/agents/<id>/opencode` as `serverUrl`, and stores no basic-auth password (the proxy adds
+the backend credentials). The toggle in that window keeps the direct connection available.
+`AgentList`'s remove action also calls `DELETE /agents/<id>` when `serviceAgentId` is set, so
+removing the row frees the container/process; a `404` counts as already removed. The rest of the
+OpenCode client (`apis/opencodeAgents.js`) is unchanged because the proxy forwards `/api/*`
+verbatim, which is why `serviceOpencodeUrl()` is the whole integration. The browser sends no
+identity header (`apis/agentService.js`), so the service resolves every call to its configured
+`DEFAULT_USER_ID`: that is the single-user local setup, not per-user isolation. A deployment needs a
+gateway in front of `/agents/*` that authenticates and forwards `inference-id` (or another trusted
+header) before one user's agent can be separated from another's. The service keeps its rows
+across restarts, so an agent id survives one; if its database is reset or the row is deleted, the
+saved `serverUrl` points at a missing id and the agent must be recreated (the edit window does that).
+`agents/agentStore.js` persists the agent metadata in localStorage.
 Every agent carries `createdAt`, `updatedAt` and an optional `pinned` flag. `load()` backfills the
 timestamps of agents created before they existed and persists them once. `updateAgent` bumps
 `updatedAt` for metadata changes but not for session tracking (`sessionId`, `sessionSummaries`);

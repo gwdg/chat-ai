@@ -1738,6 +1738,9 @@ export default {
     unpin_action: "Agenten nicht mehr anheften",
     add_hint: "Wählen Sie eines der HPC-Projekte aus, die Ihnen zur Verfügung stehen.",
     local: "Lokaler Agent",
+    use_service: "Über den Agenten-Dienst ausführen",
+    service_hint:
+      "Der Agenten-Dienst startet für diesen Agenten einen OpenCode-Container und beendet ihn, wenn Sie den Agenten entfernen. Eine Server-URL oder ein Passwort ist nicht nötig.",
     hpc_project_label: "HPC-Projekt",
     server_url_label: "opencode-Server",
     server_password_label: "Server-Passwort",

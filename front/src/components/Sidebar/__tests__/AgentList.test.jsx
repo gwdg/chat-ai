@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   deleteSession: vi.fn(async () => null),
   status: vi.fn(async () => ({})),
   notifyError: vi.fn(),
+  deleteServiceAgent: vi.fn(async () => null),
 }));
 
 vi.mock("../../../modals/ModalContext", () => ({
@@ -33,6 +34,9 @@ vi.mock("../../../apis/opencodeAgents", () => ({
 vi.mock("../../../hooks/useToast", () => ({
   useToast: () => ({ notifyError: mocks.notifyError }),
 }));
+vi.mock("../../../apis/agentService", () => ({
+  deleteServiceAgent: (...args) => mocks.deleteServiceAgent(...args),
+}));
 
 beforeEach(() => {
   mocks.openModal.mockReset();
@@ -40,9 +44,11 @@ beforeEach(() => {
   mocks.deleteSession.mockReset();
   mocks.status.mockReset();
   mocks.notifyError.mockReset();
+  mocks.deleteServiceAgent.mockReset();
   mocks.interrupt.mockResolvedValue(null);
   mocks.deleteSession.mockResolvedValue(null);
   mocks.status.mockResolvedValue({});
+  mocks.deleteServiceAgent.mockResolvedValue(null);
   localStorage.clear();
   removeAgent("agent-1");
   removeAgent("agent-2");
@@ -74,6 +80,22 @@ const addAgentThroughModal = () => {
       projectId: "hpc-project-1",
       name: "HPC project 1",
       serverUrl: "http://127.0.0.1:9000",
+      sessionId: "session-1",
+    }),
+  );
+};
+
+const addServiceAgentThroughModal = () => {
+  fireEvent.click(screen.getByRole("button", { name: "Spawn agent" }));
+  const { onCreate } = mocks.openModal.mock.calls.at(-1)[1];
+  act(() =>
+    onCreate({
+      id: "agent-1",
+      projectId: "hpc-project-1",
+      name: "HPC project 1",
+      serverUrl: "http://agent-service:8090/agents/svc-1/opencode",
+      serviceAgentId: "svc-1",
+      serviceManaged: true,
       sessionId: "session-1",
     }),
   );
@@ -143,6 +165,20 @@ describe("AgentList", () => {
     removeAgentThroughMenu();
 
     await waitFor(() => expect(order).toEqual(["interrupt", "delete"]));
+    expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument();
+  });
+
+  it("deletes the service agent after its session", async () => {
+    renderAgentList();
+    addServiceAgentThroughModal();
+    removeAgentThroughMenu();
+
+    await waitFor(() =>
+      expect(mocks.deleteServiceAgent).toHaveBeenCalledWith("svc-1"),
+    );
+    expect(mocks.deleteSession.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.deleteServiceAgent.mock.invocationCallOrder[0],
+    );
     expect(screen.queryByText("HPC project 1")).not.toBeInTheDocument();
   });
 
