@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import Papa from "papaparse";
 import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
 import AudioPlayer from "./AudioPlayer";
-import { useFile, useFileBase64, useFileContent } from "../../db";
+import { useFile, useFileBase64, useFileContent, loadFile } from "../../db";
+import { downloadBlob } from "../../utils/download";
 import { X } from "lucide-react";
 import { getFileType } from "../../utils/attachments";
 
@@ -128,22 +129,17 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
   const textContent = useFileContent(fileId);
   if (!file) return null;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
-      // Create file as is
-      const fileToSave = new File([data], file?.name || "Save", { type: file.type })     
-
-      // Create and use download link
-      const downloadUrl = URL.createObjectURL(fileToSave);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = file?.name || "Save";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      // Clean up
-      setTimeout(() => URL.revokeObjectURL(downloadUrl), 300);
+      // `useFile` loads the metadata and the bytes separately, so the bytes can still be missing
+      // when this button is clicked. Read the complete file from IndexedDB instead of saving
+      // `data`, which produced a download without the file's content.
+      const complete = await loadFile(fileId);
+      if (!complete) {
+        alert(t("file_preview.save_failed"));
+        return;
+      }
+      downloadBlob(complete, complete.name || file?.name || "Save");
     } catch (err) {
       console.error("Download failed:", err);
       alert(t("file_preview.save_failed"));

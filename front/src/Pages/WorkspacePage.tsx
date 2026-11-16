@@ -81,29 +81,9 @@ import { planTransfer } from "../workspace/transferPlanner";
 import { entriesForAction } from "../workspace/selection";
 import { runTransfer } from "../workspace/transfer";
 import { uploadLocalFiles } from "../workspace/upload";
+import { downloadProviderEntry, readAll } from "../workspace/download";
 import { baseName, joinPath, normalizePath, parentPath } from "../workspace/paths";
 import type { FileProvider, QuotaInfo } from "../workspace/providers/types";
-
-const readAll = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      length += value.length;
-    }
-  }
-  const data = new Uint8Array(length);
-  let offset = 0;
-  for (const part of chunks) {
-    data.set(part, offset);
-    offset += part.length;
-  }
-  return data;
-};
 
 const PREVIEW_LIMIT = 8 * 1024 * 1024;
 
@@ -733,17 +713,7 @@ export default function WorkspacePage() {
   ) => {
     if (!provider || entry.kind !== "file") return;
     try {
-      if (provider.status !== "connected") await provider.connect();
-      const bytes = await readAll(await provider.read(entry.path));
-      const blob = new Blob([bytes], {
-        type: entry.mime || "application/octet-stream",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = entry.name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await downloadProviderEntry(provider, entry);
     } catch (error) {
       notifyError(error instanceof Error ? error.message : String(error));
     }

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import MessageAssistant from "../MessageAssistant";
 import { loadFile, saveFileReady } from "../../../../db";
 import { createWrittenFiles } from "../../../../agent/writtenFiles";
+import { captureDownloads } from "../../../../test/downloads";
 
 const { openModal, confirmAction } = vi.hoisted(() => ({
   openModal: vi.fn(),
@@ -120,8 +121,61 @@ describe("assistant message with a png", () => {
     });
   });
 
-  it("shows a png the agent read as the same clickable attachment", async () => {
+  it("downloads a png the model created with its complete content", async () => {
     const bytes = randomPng();
+    const files = createWrittenFiles("conversation-downloaded-png", {
+      readFile: async () => bytes,
+    });
+    // What runAgent reports after a file tool wrote the image.
+    files.observe({ path: "/generated/random-chart.png", kind: "write" });
+    await files.save();
+    const [item] = files.items();
+
+    render(
+      <MessageAssistant
+        localState={{
+          id: "conversation-downloaded-png",
+          settings: {
+            model: { id: "vision-model", input: ["image"] },
+            enable_tools: true,
+          },
+          messages: [
+            {
+              role: "assistant",
+              content: [
+                { type: "text", text: "Here is the chart you asked for." },
+                item,
+              ],
+            },
+          ],
+        }}
+        setLocalState={vi.fn()}
+        message_index={0}
+        modelsData={[]}
+      />,
+    );
+
+    await screen.findByAltText("random-chart.png");
+    // The card only appears once the metadata is stored; wait for the bytes too, because the
+    // download reads them from IndexedDB.
+    await waitFor(async () => {
+      const saved = await loadFile(item.fileId);
+      expect(saved).not.toBeNull();
+      expect(new Uint8Array(await saved.arrayBuffer())).toEqual(bytes);
+    });
+
+    const downloads = captureDownloads();
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "Download file" }));
+      await waitFor(() => expect(downloads.blobs).toHaveLength(1));
+      expect(await downloads.bytes()).toEqual(bytes);
+      expect(downloads.links()[0].download).toBe("random-chart.png");
+    } finally {
+      downloads.restore();
+    }
+  });
+
+  it("shows a png the agent read as the same clickable attachment", async () => {    const bytes = randomPng();
     const files = createWrittenFiles("conversation-read-png", {
       readFile: async () => {
         throw new Error("the tool result contains the image");

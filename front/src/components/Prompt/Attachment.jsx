@@ -13,6 +13,7 @@ import { WarningAltFilled, CheckmarkFilled, Close, Download, Video, DocumentBlan
 import { useSelector } from "react-redux";
 import { processFile } from "../../apis/processFile";
 import { getFileType } from "../../utils/attachments";
+import { downloadBlob } from "../../utils/download";
 import { modelSupportsFileType } from "../../utils/modelCapabilities";
 import {
   canConvertDocumentLocally,
@@ -76,16 +77,13 @@ export default function Attachment({
   const handleDownload = async (event) => {
     event.stopPropagation();
     try {
-      const bytes = await loadFile(attachment.fileId);
-      const blob = new Blob([bytes], { type: file.type || "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = file.name || "download";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 300);
+      // A missing row yields no file; saving it would download a blob without the content.
+      const fileToSave = await loadFile(attachment.fileId);
+      if (!fileToSave) {
+        notifyError(t("file_preview.save_failed"));
+        return;
+      }
+      downloadBlob(fileToSave, fileToSave.name || file.name || "download");
     } catch (error) {
       console.error("Download failed:", error);
       notifyError(t("file_preview.save_failed"));

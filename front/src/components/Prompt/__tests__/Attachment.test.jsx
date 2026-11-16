@@ -1,6 +1,10 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Attachment from "../Attachment";
+import { loadFile } from "../../../db";
+import { captureDownloads } from "../../../test/downloads";
+
+const { notifyError } = vi.hoisted(() => ({ notifyError: vi.fn() }));
 
 vi.mock("../../../db", () => ({
   useFileMeta: () => ({ name: "document.pdf", type: "application/pdf", size: 1024 }),
@@ -19,7 +23,7 @@ vi.mock("../../../modals/ModalContext", () => ({
   useModal: () => ({ openModal: vi.fn() }),
 }));
 vi.mock("../../../hooks/useToast", () => ({
-  useToast: () => ({ notifySuccess: vi.fn(), notifyError: vi.fn() }),
+  useToast: () => ({ notifySuccess: vi.fn(), notifyError }),
 }));
 vi.mock("../../../apis/processFile", () => ({ processFile: vi.fn() }));
 vi.mock("../../../utils/browserDocumentConversion", () => ({
@@ -63,6 +67,57 @@ describe("Attachment document conversion", () => {
 
     expect(screen.getByRole("button", { name: "Process (browser)" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Process (server)" })).toBeInTheDocument();
+  });
+});
+
+describe("Attachment download", () => {
+  let downloads;
+
+  beforeEach(() => {
+    downloads = captureDownloads();
+    vi.mocked(loadFile).mockReset();
+    notifyError.mockClear();
+  });
+
+  afterEach(() => downloads.restore());
+
+  const renderAttachment = () =>
+    render(
+      <Attachment
+        localState={localState}
+        setLocalState={vi.fn()}
+        attachment={{ fileId: "file" }}
+        index={0}
+        inHistory
+      />,
+    );
+
+  it("downloads the complete file that is stored for the attachment", async () => {
+    const bytes = new Uint8Array(256);
+    bytes.set([0x25, 0x50, 0x44, 0x46]); // %PDF
+    for (let i = 4; i < bytes.length; i += 1) bytes[i] = i;
+    vi.mocked(loadFile).mockResolvedValue(
+      new File([bytes], "document.pdf", { type: "application/pdf" }),
+    );
+
+    renderAttachment();
+    fireEvent.click(screen.getByRole("button", { name: "Download file" }));
+
+    await waitFor(() => expect(downloads.blobs).toHaveLength(1));
+    expect(await downloads.bytes()).toEqual(bytes);
+    expect(downloads.links()[0].download).toBe("document.pdf");
+    expect(notifyError).not.toHaveBeenCalled();
+  });
+
+  it("reports a file that cannot be loaded instead of downloading it", async () => {
+    vi.mocked(loadFile).mockResolvedValue(null);
+
+    renderAttachment();
+    fireEvent.click(screen.getByRole("button", { name: "Download file" }));
+
+    await waitFor(() => expect(notifyError).toHaveBeenCalled());
+    expect(downloads.blobs).toEqual([]);
+    expect(downloads.links()).toEqual([]);
   });
 });
 

@@ -843,8 +843,14 @@ The file browser's Upload file action writes files from the computer into the fo
 shown (workspace root or the selected source) through `workspace/upload.ts`; it is disabled for
 read-only sources and mounts. Entries can be downloaded, renamed through the shared create-entry
 modal, and deleted recursively after confirmation; sources with the matching capabilities also
-offer new file/folder creation. A tree folder that contains a `.git` directory gets a Git button;
-the workspace preview parses `.git/logs/HEAD` (falling back to the branch reflog) without a shell,
+offer new file/folder creation. A download reads the complete content before the browser saves it:
+`workspace/download.ts#downloadProviderEntry` connects the provider, drains its stream, and hands a
+`Blob` to `utils/download.js#downloadBlob`, which refuses anything that is not a blob. The same
+holds for chat attachments and the preview modal: `PreviewModal` loads the file by id instead of
+using `useFile`'s `data`, which is written to state separately from the metadata and produced an
+empty download when the button was clicked before the bytes arrived. A tree folder that contains a
+`.git` directory gets a Git button; the workspace preview parses `.git/logs/HEAD` (falling back to
+the branch reflog) without a shell,
 while the agent file panel runs `git log --stat` through the OpenCode shell and falls back to the
 same reflog parsing. That internal command is tagged `CHATAI_GIT_LOG`, and agent chat/state filters
 it out so the log appears only in the preview panel. HTML previews render in `SandboxedHtmlPreview`: an empty-sandbox
