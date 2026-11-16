@@ -9,10 +9,12 @@ import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import AgentConversation from "../components/Agent/AgentConversation";
 import AgentFilesPanel from "../components/Agent/AgentFilesPanel";
 import FilePreviewPanel from "../components/DocumentPanel/FilePreviewPanel";
-import { useAgent } from "../agents/agentStore";
+import { updateAgent, useAgent } from "../agents/agentStore";
 import {
+  attachedWorkspaces,
   disableAgentBridgeAfterFailure,
   isAgentBridgeEnabled,
+  resolveBridgeWorkspace,
 } from "../agents/agentBridgeAccess";
 import {
   fetchAgentSessions,
@@ -23,6 +25,7 @@ import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useOpencodeFilePreview } from "../hooks/useOpencodeFilePreview";
 import { useAgentBridge } from "../hooks/useAgentBridge";
 import {
+  useAgentWorkspaceLinks,
   useWorkspaceList,
   useWorkspaceMounts,
   useWorkspaceSources,
@@ -83,10 +86,16 @@ export default function AgentPage() {
     });
   }, [agent, focusedFilePath, openFile]);
   const workspaces = useWorkspaceList();
-  const bridgeEnabled = isAgentBridgeEnabled(agent);
-  const bridgeWorkspaceId =
-    agent?.bridgeWorkspaceId ?? workspaces[0]?.id ?? null;
-  const workspaceId = bridgeEnabled ? bridgeWorkspaceId : null;
+  const agentLinks = useAgentWorkspaceLinks(agent?.id);
+  // Only attached workspaces can be exposed: the bridge must never fall back to another
+  // workspace of the account, or the agent would read files the user never connected to it.
+  const bridgeCandidates = useMemo(
+    () => attachedWorkspaces(workspaces, agentLinks),
+    [agentLinks, workspaces],
+  );
+  const bridgeWorkspace = resolveBridgeWorkspace(agent, bridgeCandidates);
+  const bridgeEnabled = isAgentBridgeEnabled(agent) && !!bridgeWorkspace;
+  const workspaceId = bridgeEnabled ? bridgeWorkspace.id : null;
   const sources = useWorkspaceSources(workspaceId ?? undefined);
   const mounts = useWorkspaceMounts(workspaceId ?? undefined);
   const { providers } = useWorkspaceProviders(sources);
@@ -94,6 +103,12 @@ export default function AgentPage() {
     () => (workspaceId ? createWorkspaceRootProvider(workspaceId) : null),
     [workspaceId],
   );
+  // An access flag without an attached workspace can only come from data written before the
+  // bridge required one; clear it so a workspace attached later does not silently switch on.
+  useEffect(() => {
+    if (!agent || bridgeCandidates.length || !isAgentBridgeEnabled(agent)) return;
+    updateAgent(agent.id, { bridgeEnabled: false });
+  }, [agent, bridgeCandidates]);
   // The bridge runs from this page; its switch, status and options live in the composer's
   // workspace popover (components/Agent/AgentWorkspaceButton.jsx).
   const bridge = useAgentBridge({
@@ -112,7 +127,7 @@ export default function AgentPage() {
   useEffect(() => {
     if (!agent) return;
     if (bridge.status === "error") {
-      if (disableAgentBridgeAfterFailure(agent, workspaces)) {
+      if (disableAgentBridgeAfterFailure(agent)) {
         setBridgeFailure(bridge.error || t("agents.bridge.not_working"));
       }
       return;
@@ -120,7 +135,7 @@ export default function AgentPage() {
     if (bridge.status === "online" || bridge.status === "connecting") {
       setBridgeFailure("");
     }
-  }, [agent, bridge.status, bridge.error, workspaces, t]);
+  }, [agent, bridge.status, bridge.error, t]);
 
   const sidebarState = useMemo(
     () => ({ id: "", title: "", messages: [], folderId: null, settings: { model: "" } }),

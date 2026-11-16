@@ -51,6 +51,7 @@ beforeEach(() => {
 
 describe("AgentWorkspaceButton", () => {
   it("owns the workspace access switch", async () => {
+    mocks.links = [{ workspaceId: "ws-1" }];
     const toggle = await openPanel({ bridgeEnabled: false });
 
     expect(toggle).not.toBeChecked();
@@ -86,6 +87,42 @@ describe("AgentWorkspaceButton", () => {
 
     expect(screen.queryByLabelText("Allow writes")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Local MCP tools")).not.toBeInTheDocument();
+  });
+
+  it("cannot switch access on while no workspace is attached", async () => {
+    // Only an attachment connects a workspace; a remembered choice must not borrow another
+    // workspace of the account for the agent.
+    const toggle = await openPanel({
+      bridgeEnabled: true,
+      bridgeWorkspaceId: "ws-2",
+    });
+
+    expect(toggle).toBeDisabled();
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText(/Attach a workspace first/)).toBeInTheDocument();
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
+  });
+
+  it("disables the bridge options while no workspace is attached", async () => {
+    await openPanel({ bridgeEnabled: true, bridgeWorkspaceId: "ws-2" });
+
+    expect(screen.getByLabelText("Allow writes")).toBeDisabled();
+    expect(screen.getByLabelText("Local MCP tools")).toBeDisabled();
+  });
+
+  it("switches access off when the last workspace is detached", async () => {
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel();
+
+    fireEvent.click(screen.getByRole("button", { name: "First project" }));
+
+    await waitFor(() =>
+      expect(mocks.detach).toHaveBeenCalledWith("ws-1", "agent-1"),
+    );
+    expect(mocks.updateAgent).toHaveBeenCalledWith("agent-1", {
+      bridgeWorkspaceId: null,
+      bridgeEnabled: false,
+    });
   });
 
   it("keeps the bridge options under the status and the workspaces last", async () => {

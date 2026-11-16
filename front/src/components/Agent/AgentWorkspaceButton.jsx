@@ -18,7 +18,9 @@ import {
 } from "../../db/workspaceDb";
 import { updateAgent } from "../../agents/agentStore";
 import {
+  attachedWorkspaces as attachedWorkspaceList,
   isAgentBridgeEnabled,
+  resolveBridgeWorkspace,
   setAgentBridgeEnabled,
 } from "../../agents/agentBridgeAccess";
 
@@ -41,7 +43,12 @@ export default function AgentWorkspaceButton({
   const workspaces = useWorkspaceList();
   const links = useAgentWorkspaceLinks(agent?.id);
   const attached = new Set(links.map((link) => link.workspaceId));
-  const accessOn = isAgentBridgeEnabled(agent);
+  const attachedWorkspaces = attachedWorkspaceList(workspaces, links);
+  // An agent with nothing attached cannot start a bridge: it would have to borrow another
+  // workspace of the account, which is not what the user connected here.
+  const enabled = isAgentBridgeEnabled(agent);
+  const accessOn = enabled && attachedWorkspaces.length > 0;
+  const bridgeWorkspace = resolveBridgeWorkspace(agent, attachedWorkspaces);
 
   // A status only says something about a bridge that is meant to run, so nothing is reported
   // while access is off — except the failure that made the page switch access off.
@@ -96,25 +103,34 @@ export default function AgentWorkspaceButton({
     ? t("workspace.empty_sidebar_title")
     : bridgeUnavailable
       ? t("agents.bridge.unavailable_hint")
-      : accessOn
-        ? ""
-        : failed
-          ? t("agents.bridge.disabled_after_failure")
-          : t("agents.bridge.disabled_hint");
+      : !attachedWorkspaces.length
+        ? t("agents.bridge.needs_workspace")
+        : accessOn
+          ? ""
+          : failed
+            ? t("agents.bridge.disabled_after_failure")
+            : t("agents.bridge.disabled_hint");
 
   const toggle = async (workspaceId) => {
     if (attached.has(workspaceId)) {
       await detachWorkspaceAgent(workspaceId, agent.id);
-      if (agent.bridgeWorkspaceId === workspaceId) {
-        const next = links.find((link) => link.workspaceId !== workspaceId);
-        updateAgent(agent.id, {
-          bridgeWorkspaceId: next?.workspaceId ?? null,
-        });
-      }
+      const remaining = attachedWorkspaces.filter(
+        (workspace) => workspace.id !== workspaceId,
+      );
+      const chosenGone =
+        !!agent.bridgeWorkspaceId &&
+        !remaining.some(
+          (workspace) => workspace.id === agent.bridgeWorkspaceId,
+        );
+      const patch = {};
+      // The exposed workspace must still be attached; without one there is no bridge at all.
+      if (chosenGone) patch.bridgeWorkspaceId = remaining[0]?.id ?? null;
+      if (!remaining.length) patch.bridgeEnabled = false;
+      if (Object.keys(patch).length) updateAgent(agent.id, patch);
       return;
     }
     await attachWorkspaceAgent(workspaceId, agent.id);
-    if (!agent.bridgeWorkspaceId) {
+    if (!bridgeWorkspace) {
       updateAgent(agent.id, { bridgeWorkspaceId: workspaceId });
     }
   };
@@ -153,9 +169,13 @@ export default function AgentWorkspaceButton({
               role="switch"
               className="toggle toggle-xs toggle-accent"
               checked={accessOn}
-              disabled={!workspaces.length || bridgeUnavailable}
+              disabled={
+                !workspaces.length ||
+                bridgeUnavailable ||
+                attachedWorkspaces.length === 0
+              }
               onChange={(event) =>
-                setAgentBridgeEnabled(agent, event.target.checked, workspaces)
+                setAgentBridgeEnabled(agent, event.target.checked)
               }
               aria-label={t("agents.bridge.title")}
               data-guide="agent-bridge-toggle"
@@ -188,7 +208,7 @@ export default function AgentWorkspaceButton({
             </p>
           )}
 
-          {accessOn && (
+          {enabled && (
             <div className="mt-2 border-t border-base-300 pt-2">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
                 {t("agents.bridge.options")}
@@ -198,6 +218,7 @@ export default function AgentWorkspaceButton({
                   <input
                     type="checkbox"
                     className="checkbox checkbox-xs"
+                    disabled={!accessOn}
                     checked={agent?.bridgeWritable === true}
                     onChange={(event) =>
                       updateAgent(agent.id, {
@@ -211,6 +232,7 @@ export default function AgentWorkspaceButton({
                   <input
                     type="checkbox"
                     className="checkbox checkbox-xs"
+                    disabled={!accessOn}
                     checked={agent?.bridgeMcp === true}
                     onChange={(event) =>
                       updateAgent(agent.id, { bridgeMcp: event.target.checked })
@@ -244,11 +266,10 @@ export default function AgentWorkspaceButton({
           <div className="mt-2 flex max-h-56 flex-col gap-0.5 overflow-y-auto">
             {workspaces.map((workspace) => {
               const selected = attached.has(workspace.id);
-              // The page falls back to the first workspace, so the badge has to follow the same
-              // rule while the agent has no explicit choice yet.
+              // The page falls back to the first attached workspace, so the badge follows the
+              // same rule while the agent has no explicit choice yet.
               const active =
-                accessOn &&
-                (agent.bridgeWorkspaceId ?? workspaces[0]?.id) === workspace.id;
+                accessOn && bridgeWorkspace?.id === workspace.id;
               return (
                 <div key={workspace.id} className="flex items-center gap-1">
                   <button

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { addAgent, getAgent } from "../agentStore";
 import {
+  attachedWorkspaces,
   disableAgentBridgeAfterFailure,
   isAgentBridgeEnabled,
+  resolveBridgeWorkspace,
   setAgentBridgeEnabled,
 } from "../agentBridgeAccess";
 
@@ -27,15 +29,15 @@ describe("agent bridge access", () => {
     ).toBe(false);
   });
 
-  it("picks a workspace when access is switched on", () => {
+  it("only flips the switch and never invents a workspace", () => {
+    // An access flag without an attachment would otherwise expose the account's first
+    // workspace to an agent the user never connected it to.
     addAgent({ id: "bridge-agent-1", name: "One", sessionId: "s1" });
 
-    setAgentBridgeEnabled(getAgent("bridge-agent-1"), true, workspaces);
+    setAgentBridgeEnabled(getAgent("bridge-agent-1"), true);
 
-    expect(getAgent("bridge-agent-1")).toMatchObject({
-      bridgeEnabled: true,
-      bridgeWorkspaceId: "ws-1",
-    });
+    expect(getAgent("bridge-agent-1")).toMatchObject({ bridgeEnabled: true });
+    expect(getAgent("bridge-agent-1").bridgeWorkspaceId).toBeUndefined();
   });
 
   it("keeps the chosen workspace when access is switched off", () => {
@@ -47,7 +49,7 @@ describe("agent bridge access", () => {
       bridgeWorkspaceId: "ws-2",
     });
 
-    setAgentBridgeEnabled(getAgent("bridge-agent-2"), false, workspaces);
+    setAgentBridgeEnabled(getAgent("bridge-agent-2"), false);
 
     expect(getAgent("bridge-agent-2")).toMatchObject({
       bridgeEnabled: false,
@@ -65,7 +67,7 @@ describe("agent bridge access", () => {
     });
 
     expect(
-      disableAgentBridgeAfterFailure(getAgent("bridge-agent-3"), workspaces),
+      disableAgentBridgeAfterFailure(getAgent("bridge-agent-3")),
     ).toBe(true);
 
     expect(getAgent("bridge-agent-3")).toMatchObject({
@@ -85,8 +87,27 @@ describe("agent bridge access", () => {
     const before = getAgent("bridge-agent-4");
 
     expect(
-      disableAgentBridgeAfterFailure(getAgent("bridge-agent-4"), workspaces),
+      disableAgentBridgeAfterFailure(getAgent("bridge-agent-4")),
     ).toBe(false);
     expect(getAgent("bridge-agent-4")).toEqual(before);
+  });
+
+  it("lists only the workspaces the agent is attached to", () => {
+    const links = [{ workspaceId: "ws-2" }];
+
+    expect(attachedWorkspaces(workspaces, links)).toEqual([workspaces[1]]);
+    expect(attachedWorkspaces(workspaces, [])).toEqual([]);
+    expect(attachedWorkspaces([], links)).toEqual([]);
+  });
+
+  it("never exposes a workspace that is not attached", () => {
+    // A remembered choice alone (or another workspace of the account) is not an attachment.
+    expect(resolveBridgeWorkspace({ bridgeWorkspaceId: "ws-2" }, [])).toBeNull();
+    expect(
+      resolveBridgeWorkspace({ bridgeWorkspaceId: "ws-2" }, [workspaces[0]]),
+    ).toEqual(workspaces[0]);
+    expect(resolveBridgeWorkspace({}, [workspaces[0], workspaces[1]])).toEqual(
+      workspaces[0],
+    );
   });
 });

@@ -1222,8 +1222,11 @@ section. The popover starts with a live status row: green "Agent bridge working"
 online, red while it is offline or failed, and a muted "off" while access is switched off. The bridge
 settings stay together under it — hint, write and MCP toggles, keep-open warning — and the attached
 workspaces with the "Use for the bridge" choice are the last section, because they are what the
-options apply to. Without the switch no bridge starts and the agent gets no tool; turning it on
-picks `bridgeWorkspaceId` or the first workspace. A bridge start failure is reported as a toast
+options apply to. Without the switch no bridge starts and the agent gets no tool, and the bridge only
+ever exposes an **attached** workspace: with none attached the switch and the write/MCP options are
+disabled, a remembered `bridgeWorkspaceId` does not count on its own, and detaching the last
+workspace switches access off. Turning it on exposes `bridgeWorkspaceId` while that workspace is
+still attached, otherwise the first attached one. A bridge start failure is reported as a toast
 because no panel prints it any more, and `AgentPage` then switches access off
 (`disableAgentBridgeAfterFailure`) so an enabled switch never sits in front of a dead bridge; a
 dropped socket does not do that, because `useAgentBridge` retries it after 3 s. Existing agents keep

@@ -8,18 +8,42 @@ export const isAgentBridgeEnabled = (agent) =>
   agent?.bridgeEnabled ?? !!agent?.bridgeWorkspaceId;
 
 /**
- * Switch access on or off. Turning it on picks a workspace if the agent has none yet, so the
- * reverse proxy can start right away; turning it off only flips the switch and keeps the chosen
- * workspace, so switching back on restores it.
+ * The workspaces an agent is actually attached to, in sidebar order.
+ *
+ * `workspace_agents` is the only source of truth here: `bridgeWorkspaceId` remembers a choice
+ * but is not an attachment, so it cannot put a workspace on this list by itself.
  */
-export const setAgentBridgeEnabled = (agent, enabled, workspaces = []) => {
+export const attachedWorkspaces = (workspaces = [], links = []) => {
+  if (!workspaces?.length || !links?.length) return [];
+  const ids = new Set(links.map((link) => link.workspaceId));
+  return workspaces.filter((workspace) => ids.has(workspace.id));
+};
+
+/**
+ * The workspace the bridge exposes: the remembered choice while it is still attached, otherwise
+ * the first attached one, otherwise `null`.
+ *
+ * Only an attached workspace may be exposed. Falling back to "any workspace of this account"
+ * would hand the agent files the user never connected to this agent; with nothing attached the
+ * result is `null`, and the bridge then does not start at all.
+ */
+export const resolveBridgeWorkspace = (agent, attachedWorkspaces = []) => {
+  const attached = attachedWorkspaces || [];
+  return (
+    attached.find((workspace) => workspace.id === agent?.bridgeWorkspaceId) ??
+    attached[0] ??
+    null
+  );
+};
+
+/**
+ * Switch access on or off. The workspace is chosen by attaching it (the first attached one is
+ * used until another is selected), so this never invents a workspace of its own: an agent with
+ * nothing attached cannot start a bridge.
+ */
+export const setAgentBridgeEnabled = (agent, enabled) => {
   if (!agent?.id) return;
-  updateAgent(agent.id, {
-    bridgeEnabled: enabled === true,
-    ...(enabled && !agent.bridgeWorkspaceId
-      ? { bridgeWorkspaceId: workspaces[0]?.id ?? null }
-      : {}),
-  });
+  updateAgent(agent.id, { bridgeEnabled: enabled === true });
 };
 
 /**
@@ -27,8 +51,8 @@ export const setAgentBridgeEnabled = (agent, enabled, workspaces = []) => {
  * leaving an enabled switch in front of a dead bridge. A dropped socket does not come through
  * here: `useAgentBridge` retries that one by itself. Returns whether anything was switched off.
  */
-export const disableAgentBridgeAfterFailure = (agent, workspaces = []) => {
+export const disableAgentBridgeAfterFailure = (agent) => {
   if (!agent?.id || !isAgentBridgeEnabled(agent)) return false;
-  setAgentBridgeEnabled(agent, false, workspaces);
+  setAgentBridgeEnabled(agent, false);
   return true;
 };

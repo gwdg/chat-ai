@@ -1740,6 +1740,8 @@ export default {
         "The browser lost its connection to the bridge. It reconnects automatically.",
       disabled_after_failure:
         "Access was switched off because the bridge could not start. Turn it on to try again.",
+      needs_workspace:
+        "Attach a workspace first. The bridge exposes only attached workspaces.",
       options: "Options",
       writable: "Allow writes",
       mcp: "Local MCP tools",

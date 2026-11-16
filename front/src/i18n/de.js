@@ -1764,6 +1764,8 @@ export default {
         "Der Browser hat die Verbindung zur Brücke verloren. Sie verbindet sich automatisch neu.",
       disabled_after_failure:
         "Der Zugriff wurde ausgeschaltet, weil die Brücke nicht starten konnte. Schalten Sie ihn wieder ein, um es erneut zu versuchen.",
+      needs_workspace:
+        "Verknüpfen Sie zuerst einen Arbeitsbereich. Die Brücke stellt nur verknüpfte Arbeitsbereiche bereit.",
       options: "Optionen",
       writable: "Schreiben erlauben",
       mcp: "Lokale MCP-Werkzeuge",
