@@ -145,6 +145,7 @@ The `front` service uses the following configurable attributes in `front.json`:
 - `default`: Default settings for new conversations, including default `model` with `model.id` and `model.name`, as well as `top_p` and `temperature`.
 - `titleGenerationModel`: Model ID for title generation
 - `memoryGenerationModel`: Model ID for memory generation and updates
+- `e2eeKeyUrl`: (Optional) Base URL of the directory that publishes the E2EE model node keys as `<MODELNAME>.pub`. The Encryption tab prefills it and loads every published key from it after verification. Default: `https://docs.ai.gwdg.de/technical/saia-platform/keys/`. Generate the pairs with `node encryption/generate-model-keys.mjs` (see [encryption/README.md](encryption/README.md))
 - `announcement`: Text to be displayed in the announcement bar at the top of the window
 - `useOpenAISdk`: (Optional) `true` sends chat requests through the official `openai` SDK instead of the built-in lightweight `fetch` client. The SDK is then loaded on first use. Default: `false`
 

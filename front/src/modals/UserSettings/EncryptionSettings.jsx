@@ -3,11 +3,13 @@ import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Download,
+  FolderDown,
   KeyRound,
   Link2,
   Lock,
   ShieldCheck,
   Trash2,
+  TriangleAlert,
   Upload,
 } from "lucide-react";
 
@@ -33,6 +35,10 @@ import {
   resolveModelTokens,
 } from "../../e2ee/modelBindings";
 import { internalModelUsage } from "../../e2ee/modelUsage";
+import {
+  DEFAULT_KEY_BASE_URL,
+  fetchPublishedKeyTexts,
+} from "../../e2ee/publishedKeys";
 import { findKeyForAssignment, usableKey } from "../../e2ee/registry";
 import { verifyKeyForModel } from "../../e2ee/verify";
 import { authHeaders } from "../../apis/authHeaders";
@@ -41,9 +47,15 @@ import { downloadText } from "../../utils/download";
 import { useToast } from "../../hooks/useToast";
 import E2eeLock from "../../components/Others/E2eeLock";
 
-const MODES = ["paste", "url", "directory"];
+const MODES = ["published", "paste", "url", "directory"];
 
 const fingerprint = (entry) => usableKey(entry)?.kid ?? "";
+
+/** The key directory the deployment publishes its `.pub` files under. */
+const configuredKeyUrl = () => {
+  const configured = import.meta.env.VITE_E2EE_KEY_URL;
+  return String(configured || "").trim() || DEFAULT_KEY_BASE_URL;
+};
 
 export default function EncryptionSettings({ modelsData }) {
   const { t } = useTranslation();
@@ -51,10 +63,13 @@ export default function EncryptionSettings({ modelsData }) {
   const { notifySuccess, notifyError } = useToast();
   const keys = useSelector(selectE2eeKeys);
   const assignments = useSelector(selectE2eeModels);
-  const [mode, setMode] = useState("paste");
+  const [mode, setMode] = useState("published");
   const [modelTokens, setModelTokens] = useState("");
   const [keyText, setKeyText] = useState("");
   const [url, setUrl] = useState("");
+  const [publishedUrl, setPublishedUrl] = useState(configuredKeyUrl);
+  const [publishProgress, setPublishProgress] = useState(null);
+  const [publishResult, setPublishResult] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -223,6 +238,103 @@ export default function EncryptionSettings({ modelsData }) {
       resetForm();
     });
 
+  // The one-click path for a deployment that publishes its own node keys: one
+  // `<MODELNAME>.pub` per model under the configured URL. A 404 means the model
+  // has no E2EE node, which is normal and reported separately. A downloaded key
+  // is still tested against its own model before it is stored, so a wrong or
+  // stale file cannot silently break the "keyed means encrypted" guarantee, and
+  // one failing model does not block the rest.
+  const handlePublished = () =>
+    run(async () => {
+      const base = publishedUrl.trim();
+      if (!base) throw new Error(t("e2ee.published_url_required"));
+      const candidates = models.filter(
+        (model) => !usableKey(findKeyForAssignment(keys, assignments[model.id])),
+      );
+      if (!candidates.length) {
+        setPublishResult({ imported: 0, missing: 0, failed: [] });
+        notifySuccess(t("e2ee.published_none_needed"));
+        return;
+      }
+
+      setPublishResult(null);
+      setPublishProgress({ phase: "fetch", done: 0, total: candidates.length });
+      try {
+        const downloaded = await fetchPublishedKeyTexts({
+          baseUrl: base,
+          models: candidates,
+          onProgress: ({ done, total }) =>
+            setPublishProgress({ phase: "fetch", done, total }),
+        });
+
+        const unreadable = [];
+        const parsed = [];
+        for (const { model, url: keyUrl, text } of downloaded.found) {
+          try {
+            parsed.push({
+              model,
+              key: keyEntryFromText(text, {
+                name: model.name || model.id,
+                url: keyUrl,
+                source: "published",
+              }),
+            });
+          } catch (caught) {
+            unreadable.push({
+              model,
+              reason: caught?.message || t("e2ee.import_error"),
+            });
+          }
+        }
+
+        const verifyUrl = `${resolveBaseURL().replace(/\/+$/, "")}/chat/completions`;
+        const headers = authHeaders();
+        const verified = [];
+        const rejected = [];
+        for (let index = 0; index < parsed.length; index += 1) {
+          setPublishProgress({
+            phase: "verify",
+            done: index,
+            total: parsed.length,
+          });
+          const { model, key } = parsed[index];
+          try {
+            await verifyKeyForModel({
+              modelId: model.id,
+              key,
+              url: verifyUrl,
+              headers,
+            });
+            verified.push({ model, key });
+          } catch (caught) {
+            rejected.push({
+              model,
+              reason: caught?.message || t("e2ee.import_error"),
+            });
+          }
+        }
+
+        for (const { model, key } of verified) {
+          dispatch(addE2eeKey(key));
+          dispatch(setE2eeModelKey({ modelId: model.id, keyId: key.id }));
+        }
+        setPublishResult({
+          imported: verified.length,
+          missing: downloaded.missing.length,
+          failed: [...downloaded.failed, ...unreadable, ...rejected],
+        });
+        if (verified.length) {
+          notifySuccess(
+            t("e2ee.published_imported", { count: verified.length }),
+          );
+        } else {
+          notifyError(t("e2ee.published_none"));
+        }
+      } finally {
+        setPublishProgress(null);
+      }
+    });
+
   const handleDownload = (entry) => {
     const safe = (entry.name || entry.id).replace(/[^\w.-]+/g, "-");
     downloadText(
@@ -327,7 +439,7 @@ export default function EncryptionSettings({ modelsData }) {
         <div
           role="group"
           aria-label={t("e2ee.import_method")}
-          className="tabs tabs-box tabs-sm grid grid-cols-3"
+          className="tabs tabs-box tabs-sm grid grid-cols-2 sm:grid-cols-4"
         >
           {MODES.map((value) => (
             <button
@@ -348,8 +460,9 @@ export default function EncryptionSettings({ modelsData }) {
         </div>
 
         <div className="flex flex-col gap-2">
-          {/* A directory defines its own key names and model lists. */}
-          {mode !== "directory" && (
+          {/* A directory and the published-key loader define their own model
+              bindings; the manual field only belongs to the other modes. */}
+          {mode !== "directory" && mode !== "published" && (
             <label className="flex flex-col gap-1 text-xs text-base-content/70">
               {t("e2ee.models_field")}
               <input
@@ -364,6 +477,106 @@ export default function EncryptionSettings({ modelsData }) {
                 {t("e2ee.models_field_hint")}
               </span>
             </label>
+          )}
+
+          {mode === "published" && (
+            <div className="flex flex-col gap-2" data-guide="e2ee-published">
+              <p className="flex gap-2 text-xs leading-relaxed text-base-content/70">
+                <TriangleAlert
+                  className="mt-0.5 h-4 w-4 shrink-0 text-warning"
+                  aria-hidden="true"
+                />
+                {t("e2ee.published_hint")}
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-base-content/70">
+                  {t("e2ee.published_url")}
+                  <input
+                    type="url"
+                    className="input input-sm input-bordered w-full"
+                    value={publishedUrl}
+                    onChange={(event) => setPublishedUrl(event.target.value)}
+                    placeholder={DEFAULT_KEY_BASE_URL}
+                    spellCheck={false}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={handlePublished}
+                  disabled={busy || !publishedUrl.trim()}
+                >
+                  <FolderDown className="h-4 w-4" aria-hidden="true" />
+                  {busy ? t("e2ee.published_loading") : t("e2ee.published_load")}
+                </button>
+              </div>
+
+              {publishProgress && (
+                <div
+                  className="flex flex-col gap-1"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <progress
+                    className="progress progress-info w-full"
+                    value={publishProgress.done}
+                    max={Math.max(publishProgress.total, 1)}
+                  />
+                  <span className="text-[0.7rem] text-base-content/60">
+                    {t(
+                      publishProgress.phase === "verify"
+                        ? "e2ee.published_progress_verify"
+                        : "e2ee.published_progress_fetch",
+                      {
+                        done: publishProgress.done,
+                        total: publishProgress.total,
+                      },
+                    )}
+                  </span>
+                </div>
+              )}
+
+              {publishResult && (
+                <div
+                  className="flex flex-col gap-1 rounded-md border border-base-300 p-2 text-xs"
+                  role="status"
+                >
+                  <span className="text-base-content/70">
+                    {t("e2ee.published_summary", {
+                      imported: publishResult.imported,
+                      missing: publishResult.missing,
+                      failed: publishResult.failed.length,
+                    })}
+                  </span>
+                  {publishResult.failed.length > 0 && (
+                    <>
+                      <span className="text-warning">
+                        {t("e2ee.published_failed_title")}
+                      </span>
+                      <ul className="flex flex-col gap-0.5 text-base-content/60">
+                        {publishResult.failed
+                          .slice(0, 6)
+                          .map(({ model, reason }) => (
+                            <li key={model.id} className="truncate">
+                              <span className="text-base-content/80">
+                                {model.name || model.id}
+                              </span>
+                              {reason ? ` — ${reason}` : ""}
+                            </li>
+                          ))}
+                        {publishResult.failed.length > 6 && (
+                          <li>
+                            {t("e2ee.published_more", {
+                              count: publishResult.failed.length - 6,
+                            })}
+                          </li>
+                        )}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {mode === "paste" && (

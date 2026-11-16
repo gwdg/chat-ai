@@ -329,10 +329,28 @@ export default {
       "Keines davon ist ein bekanntes Modell: {{models}}. Der Schlüssel wurde nicht hinzugefügt.",
     import_method: "Schlüssel hinzufügen",
     modes: {
+      published: "Veröffentlichte Schlüssel",
       paste: "Einfügen oder Datei",
       url: "Aus URL",
       directory: "Schlüsselverzeichnis",
     },
+    published_url: "Basis-URL der Schlüssel",
+    published_hint:
+      "Das Schlüsselverzeichnis ist eine Vertrauensbasis: Verwenden Sie nur eine URL, der Sie vertrauen. Jeder heruntergeladene Schlüssel wird vor dem Speichern mit einer versiegelten Anfrage gegen sein Modell geprüft.",
+    published_load: "Schlüssel für alle Modelle laden",
+    published_loading: "Schlüssel werden geladen …",
+    published_url_required: "Geben Sie die URL des Schlüsselverzeichnisses an.",
+    published_progress_fetch: "Schlüssel werden geladen … {{done}}/{{total}}",
+    published_progress_verify: "Schlüssel werden geprüft … {{done}}/{{total}}",
+    published_imported: "{{count}} geprüfte Schlüssel importiert",
+    published_none:
+      "Kein Schlüssel hat die Prüfung bestanden. Prüfen Sie die Basis-URL und ob die Modelle einen E2EE-Knoten haben.",
+    published_none_needed:
+      "Jedes Modell hat bereits einen nutzbaren Schlüssel.",
+    published_summary:
+      "{{imported}} importiert · {{missing}} ohne veröffentlichten Schlüssel · {{failed}} fehlgeschlagen",
+    published_failed_title: "Nicht importiert:",
+    published_more: "und {{count}} weitere",
     models_field: "Gilt für Modelle",
     models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
     models_field_hint:
@@ -717,6 +735,8 @@ export default {
       step2: "Wählen Sie den Tab Verschlüsselung.",
       step3:
         "Importieren Sie den Public Key des Modells: einfügen, .pub-Datei wählen, aus einer URL laden oder ein ganzes Schlüsselverzeichnis importieren.",
+      step_published:
+        "Oder laden Sie die vom Deployment veröffentlichten Schlüssel: Die Basis-URL ist aus der Konfiguration vorbelegt, und „Schlüssel für alle Modelle laden“ importiert und prüft jede veröffentlichte .pub-Datei.",
       step4:
         "Geben Sie beim Hinzufügen die Modelle an, für die der Schlüssel gilt. Sie zeigen dann ein grünes Schloss, und jede Anfrage darüber wird in diesem Browser verschlüsselt.",
     },

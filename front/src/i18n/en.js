@@ -319,10 +319,27 @@ export default {
       "None of these are known models: {{models}}. The key was not added.",
     import_method: "How to add a key",
     modes: {
+      published: "Published keys",
       paste: "Paste or file",
       url: "From URL",
       directory: "Key directory",
     },
+    published_url: "Key base URL",
+    published_hint:
+      "The key directory is a trust anchor: use only a URL you trust. Each downloaded key is tested with one sealed request against its own model before it is stored.",
+    published_load: "Load keys for all models",
+    published_loading: "Loading keys…",
+    published_url_required: "Enter the URL of the key directory.",
+    published_progress_fetch: "Downloading keys… {{done}}/{{total}}",
+    published_progress_verify: "Verifying keys… {{done}}/{{total}}",
+    published_imported: "Imported {{count}} verified key(s)",
+    published_none:
+      "No key passed verification. Check the key base URL and that the models have an E2EE node.",
+    published_none_needed: "Every model already has a usable key.",
+    published_summary:
+      "{{imported}} imported · {{missing}} without a published key · {{failed}} failed",
+    published_failed_title: "Not imported:",
+    published_more: "and {{count}} more",
     models_field: "Applies to models",
     models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
     models_field_hint:
@@ -701,6 +718,8 @@ export default {
       step2: "Choose the Encryption tab.",
       step3:
         "Import the model's public key: paste it, choose a .pub file, load it from a URL, or import a whole key directory.",
+      step_published:
+        "Or load the keys the deployment publishes: the key base URL is prefilled from the configuration, and Load keys for all models imports and verifies every published .pub file.",
       step4:
         "Enter the models the key applies to when you add it. They then show a green lock and every request through them is encrypted in this browser.",
     },

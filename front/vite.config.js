@@ -152,6 +152,11 @@ try {
     } else if (key == "explainImageModel") {
       process.env["VITE_EXPLAIN_IMAGE_MODEL"] = value;
       console.log("Explain-image model:", value);
+    } else if (key == "e2eeKeyUrl") {
+      // Where the published `.pub` files of the model nodes live. The app only
+      // reads it, and the compression/static pipeline does not touch it.
+      process.env["VITE_E2EE_KEY_URL"] = value;
+      console.log("E2EE key URL:", value);
     } else if (key == "announcement") {
       process.env["VITE_ANNOUNCEMENT"] = value;
       console.log("Announcement:", value);

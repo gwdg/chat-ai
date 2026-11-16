@@ -41,6 +41,11 @@ const makeStore = () =>
 
 const settings = (store) => store.getState().user_settings;
 
+// The published-key loader is the default tab; the manual import lives one tab
+// to the right.
+const openPasteTab = () =>
+  fireEvent.click(screen.getByRole("button", { name: "Paste or file" }));
+
 beforeEach(() => {
   toast.notifySuccess.mockReset();
   toast.notifyError.mockReset();
@@ -57,6 +62,7 @@ describe("EncryptionSettings key import", () => {
       </Provider>,
     );
 
+    openPasteTab();
     fireEvent.change(screen.getByLabelText("Public key"), {
       target: { value: publicKey },
     });
@@ -95,6 +101,7 @@ describe("EncryptionSettings key import", () => {
       </Provider>,
     );
 
+    openPasteTab();
     fireEvent.change(screen.getByLabelText("Public key"), {
       target: { value: publicKey },
     });
@@ -122,6 +129,7 @@ describe("EncryptionSettings key import", () => {
       </Provider>,
     );
 
+    openPasteTab();
     fireEvent.change(screen.getByLabelText("Public key"), {
       target: { value: publicKey },
     });
@@ -148,6 +156,7 @@ describe("EncryptionSettings key import", () => {
       </Provider>,
     );
 
+    openPasteTab();
     fireEvent.change(screen.getByLabelText("Public key"), {
       target: { value: publicKey },
     });
@@ -174,6 +183,7 @@ describe("EncryptionSettings key import", () => {
       </Provider>,
     );
 
+    openPasteTab();
     fireEvent.change(screen.getByLabelText("Public key"), {
       target: { value: publicKey },
     });
@@ -303,5 +313,149 @@ describe("EncryptionSettings model status", () => {
     expect(
       screen.getByText(/No model is encrypted yet or used by an internal feature/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("EncryptionSettings published keys", () => {
+  const freshKey = () =>
+    b64e(x25519.getPublicKey(x25519.utils.randomSecretKey()));
+  const answered = (body) => ({
+    ok: true,
+    status: 200,
+    text: async () => body,
+  });
+  const notFound = { ok: false, status: 404, text: async () => "" };
+
+  const renderSettings = (store) =>
+    render(
+      <Provider store={store}>
+        <EncryptionSettings modelsData={modelsData} />
+      </Provider>,
+    );
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("opens on the published keys with the configured base URL", () => {
+    renderSettings(makeStore());
+
+    expect(screen.getByLabelText("Key base URL")).toHaveValue(
+      "https://docs.ai.gwdg.de/technical/saia-platform/keys/",
+    );
+    expect(
+      screen.getByRole("button", { name: /Load keys for all models/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("imports and binds every published key, treating a 404 as no key", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url) =>
+        String(url) === "https://keys.example/qwen-a.pub"
+          ? answered(freshKey())
+          : notFound,
+      ),
+    );
+    const store = makeStore();
+    renderSettings(store);
+
+    fireEvent.change(screen.getByLabelText("Key base URL"), {
+      target: { value: "https://keys.example" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /Load keys for all models/ }),
+    );
+
+    await waitFor(() => {
+      expect(settings(store).e2ee_keys).toHaveLength(1);
+    });
+
+    const key = settings(store).e2ee_keys[0];
+    expect(settings(store).e2ee_models).toEqual({ "qwen-a": key.id });
+    // Only the published model is verified; the 404 for the other is not.
+    expect(verify.verifyKeyForModel).toHaveBeenCalledTimes(1);
+    expect(verify.verifyKeyForModel.mock.calls[0][0]).toMatchObject({
+      modelId: "qwen-a",
+      url: "http://localhost:8081/chat/completions",
+    });
+    expect(toast.notifySuccess).toHaveBeenCalled();
+    expect(screen.getByText(/1 imported/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/1 without a published key/),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a model out when its key does not verify, but imports the rest", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => answered(freshKey())));
+    verify.verifyKeyForModel.mockImplementation(async ({ modelId }) => {
+      if (modelId === "mistral-b") throw new Error("Unknown key id");
+      return { ok: true };
+    });
+    const store = makeStore();
+    renderSettings(store);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Load keys for all models/ }),
+    );
+
+    await waitFor(() => {
+      expect(settings(store).e2ee_keys).toHaveLength(1);
+    });
+
+    expect(Object.keys(settings(store).e2ee_models)).toEqual(["qwen-a"]);
+    expect(screen.getByText(/Not imported:/)).toBeInTheDocument();
+    expect(document.body.textContent).toContain("Unknown key id");
+    expect(document.body.textContent).toContain("Mistral B");
+  });
+
+  it("reports a directory that publishes no usable key", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => notFound));
+    const store = makeStore();
+    renderSettings(store);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Load keys for all models/ }),
+    );
+
+    await waitFor(() => {
+      expect(toast.notifyError).toHaveBeenCalled();
+    });
+
+    expect(settings(store).e2ee_keys).toEqual([]);
+    expect(screen.getByText(/0 imported/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/2 without a published key/),
+    ).toBeInTheDocument();
+  });
+
+  it("does not re-download a model that already has a usable key", async () => {
+    const store = makeStore();
+    store.dispatch({
+      type: "user_settings/addE2eeKey",
+      payload: { id: "k1", name: "Node", publicKey },
+    });
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "qwen-a", keyId: "k1" },
+    });
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "mistral-b", keyId: "k1" },
+    });
+    const fetchImpl = vi.fn();
+    vi.stubGlobal("fetch", fetchImpl);
+    renderSettings(store);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Load keys for all models/ }),
+    );
+
+    await waitFor(() => {
+      expect(toast.notifySuccess).toHaveBeenCalled();
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(settings(store).e2ee_keys).toHaveLength(1);
   });
 });
