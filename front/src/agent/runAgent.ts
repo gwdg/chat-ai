@@ -19,7 +19,8 @@ import i18n from "../i18n";
 import { activeMcpServers, connectMcpServers, McpUnavailableError, type McpServer, type McpTools } from "./mcp";
 import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
-import { createConnectedAgentTools } from "./connectedAgentTools";
+import { createConnectedAgentTools, type ConnectedAgentContext } from "./connectedAgentTools";
+import { createWorkspaceTools, type WorkspaceToolContext } from "./workspaceTools";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
 import { WorkspaceAgentVfs } from "../workspace/agentVfs";
@@ -379,15 +380,29 @@ export async function runAgentTurn({
         hasLocalFolder: mounts.length > 0 || !!attachedWorkspace,
       })
     : [];
-  let hasConnectedAgentTools = false;
+  let workspaceContext: WorkspaceToolContext | null = null;
   if (useTools) {
     try {
-      const connectedTools = await createConnectedAgentTools(
+      const workspaceTools = await createWorkspaceTools(
+        conversationId,
+        workspace,
+        attachedWorkspace?.workspaceId,
+      );
+      tools.push(...workspaceTools.tools);
+      workspaceContext = workspaceTools.context;
+    } catch (error) {
+      console.warn("Could not load workspace tools", error);
+    }
+  }
+  let connectedAgentContext: ConnectedAgentContext | null = null;
+  if (useTools) {
+    try {
+      const connected = await createConnectedAgentTools(
         conversationId,
         workspace,
       );
-      tools.push(...connectedTools);
-      hasConnectedAgentTools = connectedTools.length > 0;
+      tools.push(...connected.tools);
+      connectedAgentContext = connected.context;
     } catch (error) {
       console.warn("Could not load connected agent tools", error);
     }
@@ -418,8 +433,21 @@ export async function runAgentTurn({
             : NO_BROWSER_STORAGE_PROMPT
           : NO_TOOLS_PROMPT,
         useTools && arcanaTools ? ARCANA_TOOLS_PROMPT : "",
-        hasConnectedAgentTools
-          ? "Agents connected to this chat's workspace are available through connected_agents_status, connected_agent_list_sessions, connected_agent_history, connected_agent_switch_session, connected_agent_remove_session, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents and to the sessions attached to this chat's workspace; use connected_agent_list_sessions to see them, connected_agent_switch_session to change the active session, connected_agent_remove_session only when the user explicitly asks to remove one, and connected_agent_fetch_file for images, PDFs, and other binary files. Never claim to see sessions that are not listed."
+        workspaceContext?.workspaces.length
+          ? `This chat is attached to the workspace(s) ${workspaceContext.workspaces
+              .map((workspace) => `${workspace.name} (${workspace.id})`)
+              .join(
+                ", ",
+              )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders.`
+          : "",
+        connectedAgentContext?.workspaceIds.length
+          ? connectedAgentContext.agents.length
+            ? `Agents connected to this chat's workspace: ${connectedAgentContext.agents
+                .map(({ agent }) => `${agent.name || agent.id} (${agent.id})`)
+                .join(
+                  ", ",
+                )}. They are available through connected_agents_status, connected_agent_list_sessions, connected_agent_history, connected_agent_switch_session, connected_agent_remove_session, connected_agent_files, connected_agent_read_file, and connected_agent_fetch_file. Access is limited to those agents and to the sessions attached to this chat's workspace; use connected_agent_list_sessions to see them, connected_agent_switch_session to change the active session, connected_agent_remove_session only when the user explicitly asks to remove one, and connected_agent_fetch_file for images, PDFs, and other binary files. Never claim to see sessions that are not listed.`
+            : "This chat is attached to a workspace, but no agents are attached to it. If the user asks about an agent, use connected_agents_status to check, then say that no agent is attached to this workspace. Do not claim to know or see one."
           : "",
         useTools && storageAccess && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
         useTools &&
@@ -524,7 +552,7 @@ export async function runAgentTurn({
 const DEFAULT_MAX_TOOL_CALLS = 10;
 const TOOL_LIMIT_REASON = "Tool limit exceeded for this response. The user can increase tool limits.";
 
-const NO_TOOL_CALLING = /tool[- ]choice|tool-call-parser|does not support tools|tools? (is|are) not supported/i;
+const NO_TOOL_CALLING = /tool[- ]choice|tool-call-parser|does not support tool|tools? (is|are) not supported/i;
 
 const TYPES: Record<string, string> = {
   png: "image/png",

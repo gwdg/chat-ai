@@ -23,14 +23,22 @@ const toollessModels = new Set<string>();
 export const markToolless = (modelId: string) => toollessModels.add(modelId);
 
 /**
- * Whether the agent may offer tools to this model. External models get none; a model whose
- * server has no tool calling is marked with `"tools": false` in config/models/<id>.json, or
- * found out at runtime.
+ * Whether the agent may offer tools to this model.
+ *
+ * "External" in a display name is a routing and accounting label, not a capability: models
+ * served through a bridge carry it so the engine's demand updater skips them, while the engine
+ * explicitly keeps their tools in the request body. Tool support therefore comes from data:
+ * `external` in the extended /models response, `"tools": false` (or `true`) in
+ * config/models/<id>.json, or a rejection learned at runtime (`markToolless`). Anything else
+ * starts with tools; `runAgent` retries without them if the first request is rejected.
  */
-export function modelSupportsTools(model: { id?: string; name?: string } | undefined) {
-  if ((model?.name ?? "").toLowerCase().includes("external")) return false;
+export function modelSupportsTools(model: { id?: string; name?: string; external?: boolean } | undefined) {
   if (!model?.id) return true;
-  return getModelDefaults(model.id)?.tools !== false && !toollessModels.has(model.id);
+  if (toollessModels.has(model.id)) return false;
+  const configured = getModelDefaults(model.id)?.tools;
+  if (configured === true) return true;
+  if (configured === false) return false;
+  return model.external !== true;
 }
 
 const blob = (data: Uint8Array, type = "") => new Blob([data as Uint8Array<ArrayBuffer>], { type });

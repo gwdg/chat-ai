@@ -231,7 +231,15 @@ switch these parts of the UI off, so new code in those areas must still behave w
 `front/src/config/models/<model-id>.json` is auto-globbed by `getModelDefaults.jsx` via
 `import.meta.glob`, keyed on the filename. To give a model reasoning-effort support or other
 per-model defaults, add or edit the JSON named exactly after the model id — no code change and no
-registry to update.
+registry to update. A model id containing `/` (e.g. `bridge/local-echo-1`) cannot have a config file,
+because the keys are file names.
+
+`modelSupportsTools()` (`apis/agentEndpoints.ts`) takes tool support from data, not from the display
+name: the `external` field of the extended `/models` response, `"tools": true|false` in the model
+config, or a rejection learned at runtime (`markToolless`, retried by `runAgent`). **"(External)" in
+a name is not a tool-capability signal.** Bridge models carry it so the engine's demand updater
+skips them, while `saia-engine` keeps their tools in the request body; reading the marker as "no
+tools" leaves every bridge model without tools, workspace tools included.
 
 ### 4.7 Secrets
 
@@ -518,6 +526,11 @@ delete sessions attached to its own workspace. `connected_agent_history` uses th
 default and refuses when that session is not itself attached, instead of reading it anyway, while the
 names lookup resolves titles inside the filtered tree. An agent attached only through
 `bridgeWorkspaceId` (whole-workspace bridge, no session links) keeps access to all of its sessions.
+A chat attached to a workspace always receives the `connected_agent_*` tools, even when no agent is
+attached: `connected_agents_status` then answers "no agents attached", and the system prompt lists
+the attached agents by name so the model does not have to guess from a generic tool description.
+The tools' file operations read the agent's own (possibly remote) OpenCode filesystem over HTTP, so
+they work without a bridge or an attached workspace mount.
 
 File listings preserve modification/access timestamps when the server returns them;
 recent-file queries sort by modification time and, because `/fs/list` may omit timestamps, run a
@@ -726,6 +739,15 @@ through that mount while still allowing reads and copies out. The Local tools pa
 GWDG Tools now contains the document-creation and image-analysis toggles, while codemode and the
 tool-call limit moved to the Workspace popover. When a chat has a workspace link, `runAgent` uses
 `workspace/agentVfs.ts` over that workspace's root and mounts for the file tools.
+`agent/workspaceTools.ts` adds the workspace-scoped tools that the plain file tools cannot cover:
+`workspace_list` (sources, mounts and attached agents of every workspace linked to the chat),
+`workspace_list_agents` (agents attached to a workspace, with session counts, plus the configured
+agents that are not attached and therefore inaccessible), and `workspace_files` /
+`workspace_read_file` / `workspace_write_file` / `workspace_fetch_file`. Those accept a workspace
+id or name plus a `source` id, label or mount path, so they reach sources that are not mounted and
+workspaces other than the first `workspace_chats` link, which is the only one `getChatWorkspaceBundle`
+puts into the chat VFS. They are registered whenever the chat has a `workspace_chats` link and the
+model supports tools, even while no agent is attached.
 `agent/prepare.ts` writes attachments and their converted variants under `/artefacts` in the
 attached workspace root (or the conversation OPFS when no workspace is linked); the agent VFS keeps
 `/uploads` routed to the conversation OPFS for legacy paths.

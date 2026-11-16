@@ -62,9 +62,22 @@ const classifyStatus = (value: any) => {
  */
 type ConnectedAgent = { agent: any; workspaceIds: string[] };
 
-async function connectedAgents(conversationId: string): Promise<ConnectedAgent[]> {
+/**
+ * The chat's workspace links and the agents reachable through them. `workspaceIds` is what
+ * decides whether the tools exist at all: a chat attached to a workspace always gets them,
+ * even while no agent is attached, so the model can answer "none attached" from evidence
+ * instead of guessing.
+ */
+export type ConnectedAgentContext = {
+  workspaceIds: string[];
+  agents: ConnectedAgent[];
+};
+
+async function connectedAgents(
+  conversationId: string,
+): Promise<ConnectedAgentContext> {
   const workspaceIds = await getConversationWorkspaceIds(conversationId);
-  if (!workspaceIds.length) return [];
+  if (!workspaceIds.length) return { workspaceIds, agents: [] };
   const links = await getWorkspaceAgentLinks(workspaceIds);
   const linked = new Map<string, string[]>();
   for (const link of links) {
@@ -72,29 +85,30 @@ async function connectedAgents(conversationId: string): Promise<ConnectedAgent[]
     if (!list.includes(link.workspaceId)) list.push(link.workspaceId);
     linked.set(link.agentId, list);
   }
-  const result: ConnectedAgent[] = [];
+  const agents: ConnectedAgent[] = [];
   for (const agent of getAgents()) {
     const attached = linked.get(agent.id);
     if (attached?.length) {
-      result.push({ agent, workspaceIds: attached });
+      agents.push({ agent, workspaceIds: attached });
       continue;
     }
     if (
       agent.bridgeWorkspaceId &&
       workspaceIds.includes(agent.bridgeWorkspaceId)
     ) {
-      result.push({ agent, workspaceIds: [] });
+      agents.push({ agent, workspaceIds: [] });
     }
   }
-  return result;
+  return { workspaceIds, agents };
 }
 
 export async function createConnectedAgentTools(
   conversationId: string,
   workspace: Vfs,
-): Promise<AgentTool<any>[]> {
-  const agents = await connectedAgents(conversationId);
-  if (!agents.length) return [];
+): Promise<{ tools: AgentTool<any>[]; context: ConnectedAgentContext }> {
+  const context = await connectedAgents(conversationId);
+  const agents = context.agents;
+  if (!context.workspaceIds.length) return { tools: [], context };
 
   const findEntry = (reference: string) => {
     const target = String(reference || "").trim();
@@ -162,14 +176,24 @@ export async function createConnectedAgentTools(
     name: "connected_agents_status",
     label: "Connected agent status",
     description:
-      "Check the connection and session status of agents connected to this chat's workspace. Optionally pass one agent id or name.",
+      "Check the connection and session status of agents connected to this chat's workspace. Call without an agent to list every connected agent.",
     parameters: Type.Object({
       agent: Type.Optional(Type.String()),
     }),
     execute: async (_id, args) => {
+      if (!agents.length) {
+        return text("No agents are attached to this chat's workspace.");
+      }
       const selected = args.agent
         ? [findEntry(args.agent)].filter(Boolean)
         : agents;
+      if (!selected.length) {
+        return text(
+          `Agent not found. Connected agents: ${agents
+            .map(({ agent }) => `${agent.name || agent.id} (${agent.id})`)
+            .join(", ")}.`,
+        );
+      }
       const lines = await Promise.all(
         selected.map(async ({ agent }) => {
           if (!agent.sessionId) return `- ${agent.name}: no session`;
@@ -478,14 +502,17 @@ export async function createConnectedAgentTools(
     },
   };
 
-  return [
-    statusTool,
-    sessionsTool,
-    historyTool,
-    switchSessionTool,
-    removeSessionTool,
-    filesTool,
-    readTool,
-    fetchTool,
-  ];
+  return {
+    tools: [
+      statusTool,
+      sessionsTool,
+      historyTool,
+      switchSessionTool,
+      removeSessionTool,
+      filesTool,
+      readTool,
+      fetchTool,
+    ],
+    context,
+  };
 }

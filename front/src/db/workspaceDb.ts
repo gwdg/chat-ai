@@ -720,6 +720,40 @@ export async function getConversationWorkspaceIds(
   return [...new Set(links.map((link) => link.workspaceId))];
 }
 
+/** Workspace rows by id, for callers that only have the chat's workspace links. */
+export async function listWorkspacesByIds(
+  workspaceIds: string[],
+): Promise<WorkspaceRow[]> {
+  if (!workspaceIds.length) return [];
+  return db.workspaces.where("id").anyOf(workspaceIds).toArray();
+}
+
+/** Every source of the given workspaces, mounted or not. */
+export async function listWorkspaceSources(
+  workspaceIds: string[],
+): Promise<WorkspaceSourceRow[]> {
+  if (!workspaceIds.length) return [];
+  return db.workspace_sources
+    .where("workspaceId")
+    .anyOf(workspaceIds)
+    .toArray();
+}
+
+/** Every mount of the given workspaces, in `path` order. */
+export async function listWorkspaceMounts(
+  workspaceIds: string[],
+): Promise<WorkspaceMountRow[]> {
+  if (!workspaceIds.length) return [];
+  const mounts = await db.workspace_mounts
+    .where("workspaceId")
+    .anyOf(workspaceIds)
+    .toArray();
+  return mounts.sort(
+    (left, right) =>
+      left.path.length - right.path.length || left.path.localeCompare(right.path),
+  );
+}
+
 export async function getWorkspaceAgentIds(
   workspaceIds: string[],
 ): Promise<string[]> {

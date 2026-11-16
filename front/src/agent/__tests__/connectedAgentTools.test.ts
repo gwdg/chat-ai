@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   messages: vi.fn(),
   info: vi.fn(),
   status: vi.fn(),
+  files: vi.fn(),
+  readFile: vi.fn(),
 }));
 
 vi.mock("../../agents/agentStore", () => ({
@@ -34,8 +36,8 @@ vi.mock("../../apis/opencodeAgents", () => ({
   listOpencodeMessages: (...args) => mocks.messages(...args),
   getOpencodeInfo: (...args) => mocks.info(...args),
   getOpencodeSessionStatus: (...args) => mocks.status(...args),
-  listOpencodeFiles: vi.fn(async () => []),
-  readOpencodeFile: vi.fn(),
+  listOpencodeFiles: (...args) => mocks.files(...args),
+  readOpencodeFile: (...args) => mocks.readFile(...args),
 }));
 
 import { createConnectedAgentTools } from "../connectedAgentTools";
@@ -59,7 +61,7 @@ const agent = {
 };
 
 const tool = async (name: string, workspaceScoped = true) => {
-  const tools = await createConnectedAgentTools(
+  const { tools } = await createConnectedAgentTools(
     "chat-1",
     {} as any,
   );
@@ -91,6 +93,8 @@ beforeEach(() => {
   ]);
   mocks.info.mockResolvedValue({});
   mocks.status.mockResolvedValue({});
+  mocks.files.mockReset().mockResolvedValue([]);
+  mocks.readFile.mockReset();
 });
 
 describe("connected agent tools workspace scope", () => {
@@ -178,8 +182,102 @@ describe("connected agent tools workspace scope", () => {
   it("offers no connected agent tools without a workspace link", async () => {
     mocks.conversationWorkspaces.mockResolvedValue([]);
 
-    const tools = await createConnectedAgentTools("chat-1", {} as any);
+    const { tools } = await createConnectedAgentTools("chat-1", {} as any);
 
     expect(tools).toHaveLength(0);
+  });
+
+  it("offers the tools in a workspace chat even without an attached agent", async () => {
+    mocks.getAgents.mockReturnValue([]);
+    mocks.agentLinks.mockResolvedValue([]);
+
+    const { tools, context } = await createConnectedAgentTools(
+      "chat-1",
+      {} as any,
+    );
+
+    expect(tools.map((item) => item.name)).toContain(
+      "connected_agents_status",
+    );
+    expect(context.workspaceIds).toEqual(["ws-1"]);
+    expect(context.agents).toHaveLength(0);
+
+    const status = tools.find(
+      (item) => item.name === "connected_agents_status",
+    );
+    expect(textOf(await status!.execute("call", {}))).toBe(
+      "No agents are attached to this chat's workspace.",
+    );
+  });
+
+  it("finds an attached agent without bridgeWorkspaceId", async () => {
+    mocks.getAgents.mockReturnValue([agent]);
+
+    const { context } = await createConnectedAgentTools("chat-1", {} as any);
+
+    expect(context.agents.map(({ agent }) => agent.id)).toEqual(["agent-1"]);
+  });
+
+  it("lists remote agent files without a bridge or session", async () => {
+    mocks.getAgents.mockReturnValue([{ id: "agent-1", name: "HPC agent" }]);
+    mocks.files.mockResolvedValue([
+      { type: "file", path: "notes.txt", size: 5 },
+    ]);
+
+    const files = await tool("connected_agent_files");
+    const output = textOf(await files.run({ agent: "agent-1" }));
+
+    expect(mocks.files).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "agent-1" }),
+      "",
+    );
+    expect(output).toContain("notes.txt");
+  });
+
+  it("reads a remote agent file without a bridge", async () => {
+    mocks.readFile.mockResolvedValue({
+      blob: { size: 5, text: async () => "hello" },
+      type: "text/plain",
+    });
+
+    const read = await tool("connected_agent_read_file");
+    const output = textOf(await read.run({ agent: "agent-1", path: "notes.txt" }));
+
+    expect(mocks.readFile).toHaveBeenCalledWith(agent, "notes.txt");
+    expect(output).toBe("hello");
+  });
+
+  it("fetches a remote agent file into the chat without a bridge", async () => {
+    const bytes = new Uint8Array([1, 2, 3]);
+    mocks.readFile.mockResolvedValue({
+      blob: {
+        size: bytes.length,
+        text: async () => "",
+        arrayBuffer: async () => bytes.buffer,
+      },
+      type: "application/octet-stream",
+    });
+    const workspace = {
+      mkdir: vi.fn(async () => {}),
+      writeFile: vi.fn(async () => {}),
+    };
+    const { tools } = await createConnectedAgentTools(
+      "chat-1",
+      workspace as any,
+    );
+    const fetch = tools.find(
+      (item) => item.name === "connected_agent_fetch_file",
+    )!;
+
+    const output = textOf(
+      await fetch.execute("call", { agent: "agent-1", path: "img.png" }),
+    );
+
+    expect(workspace.mkdir).toHaveBeenCalledWith("/connected-agents/HPC-agent");
+    expect(workspace.writeFile).toHaveBeenCalledWith(
+      "/connected-agents/HPC-agent/img.png",
+      expect.any(Uint8Array),
+    );
+    expect(output).toContain("Attached /connected-agents/HPC-agent/img.png");
   });
 });
