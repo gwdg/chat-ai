@@ -194,11 +194,12 @@ try {
 
 // The agent service is addressed on the app's own origin (`/agents`), exactly as
 // the SAIA gateway serves it in a deployment, so the browser never needs a
-// service URL or port. A dev server has no gateway in front of it, so it
-// forwards that path to the local service instead. Preview/production builds get
-// it from the gateway, never from this proxy.
-const AGENT_SERVICE_DEV_TARGET =
-  process.env.AGENT_SERVICE_DEV_PROXY || "http://127.0.0.1:8090";
+// service URL or port. A dev server has no gateway in front of it, so it can
+// forward that path to a local service — only when `AGENT_SERVICE_DEV_PROXY`
+// names one. There is deliberately no default: the app must not assume that a
+// service is listening on a fixed local port. Preview/production builds get the
+// prefix from the gateway, never from this proxy.
+const AGENT_SERVICE_DEV_TARGET = (process.env.AGENT_SERVICE_DEV_PROXY || "").trim();
 
 // pi's tool modules, and some of their dependencies, import Node built-ins at load time even
 // though the agent replaces their file access (see src/agent/tools.ts). Map them to browser
@@ -256,10 +257,11 @@ const piCodingAgent = path.resolve(__dirname, "node_modules/@earendil-works/pi-c
 
 // Export the Vite config
 export default defineConfig(({ mode }) => {
-  // The local agent service stands in for the gateway only in the dev server.
+  // The local agent service stands in for the gateway only in the dev server, and only
+  // when it was named explicitly (see AGENT_SERVICE_DEV_TARGET).
   const proxy = {
     ...(oidcProxy ?? {}),
-    ...(mode === "development"
+    ...(mode === "development" && AGENT_SERVICE_DEV_TARGET
       ? {
           "/agents": {
             target: AGENT_SERVICE_DEV_TARGET,

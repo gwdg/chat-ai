@@ -1145,8 +1145,9 @@ proxy adds the backend credentials). A service-managed agent is not pinned to th
 when it was created: `opencodeAgents.js#baseUrl()` derives it from `serviceAgentId` via
 `agentService.js#serviceOpencodeUrl()` (fixed `AGENT_SERVICE_PATH` `/agents`), so an existing agent
 follows the current deployment. Because no gateway runs locally, `vite.config.js` proxies `/agents`
-to `http://127.0.0.1:8090` (override with the `AGENT_SERVICE_DEV_PROXY` environment variable) but
-only in `development` mode; a production build and a gateway-fronted preview never contain it. The
+to `AGENT_SERVICE_DEV_PROXY` in `development` mode, and only when that variable is set: there is no
+default port, so the app never assumes a local service. A production build and a gateway-fronted
+preview never contain the proxy. The
 connection choice in the add-agent window only appears with local access, where its external-server
 mode is the way back to a direct server.
 `AgentList`'s remove action also calls `DELETE /agents/<id>` when `serviceAgentId` is set, so
