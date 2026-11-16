@@ -136,6 +136,37 @@ a jsdom environment per test file, so a full run costs seconds after every small
 reports anything the adjacent spec would miss. The reverse still holds: a green targeted spec is
 not evidence that the whole suite is green.
 
+**Extended tests (Playwright, `e2e/`).** `e2e/` is a separate npm package that starts the app
+itself and drives a real browser; `e2e/README.md` is the full matrix and env-var reference.
+
+```bash
+cd e2e && npm i && npm run setup:e2e   # dependencies + Playwright browsers (+ Chrome for chrome-*)
+cd e2e && npm run test:e2e             # deterministic suite against the mocked model
+cd e2e && npm run test:opencode        # opt-in: local OpenCode agent, both specs
+cd e2e && npm run test:opencode:agentic # opt-in: only the agentic scenario
+cd e2e && npm run test:real            # opt-in: real model behind a back service you started
+```
+
+The default suite mocks `/models`, `/user` and `/chat/completions`, and every documented step
+writes a screenshot and narrative to `e2e/results/documentation/<scenario>/<project>/` (`N.png`,
+`N.md`, `index.md`; gitignored). With SAIA credentials (`SAIA_API_ENDPOINT`/`SAIA_API_KEY`, or the
+`apiEndpoint`/`apiKey` of `secrets/back.json`), a vision model also checks each screenshot against
+the step's expected `shows` text and a mismatch fails the test (`E2E_VISION=auto`; `1` requires
+credentials, `0` disables the checks).
+
+The opt-in agent scenarios are the extended tests for agent work. `tests/agent-opencode.spec.ts`
+proves session creation, prompt delivery, streaming and a `!` shell turn without a model provider.
+`tests/agent-agentic-tasks.spec.ts` is the full agentic task: it sends a prompt, so OpenCode runs a
+real tool loop — `write hello.py`, `shell python3 hello.py`, `read hello.py`, then `edit` and run it
+again — and the spec asserts the file on disk, the rendered tool cards and the docked preview.
+`scripts/scripted-model.mjs` is the deterministic OpenAI-compatible model server and
+`scripts/opencode-server.mjs` registers it as the project's `scripted` provider (the tool choices
+are fixed; the execution, files and output are genuine). The two specs skip unless
+`E2E_OPENCODE=1`, which the npm scripts set. They also skip when `E2E_OPENCODE_URL` points at a
+server you started, because that server has to configure the `scripted` provider itself. Each mode
+starts its own app instance, so combining `test:e2e`, `test:real` and `test:opencode` in one run is
+refused by the config instead of silently sharing ports.
+
 `npm i` can rewrite `package-lock.json`. Check `git status` afterwards and keep unrelated lockfile
 churn out of your commit.
 
