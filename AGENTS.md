@@ -814,6 +814,17 @@ same reflog parsing. That internal command is tagged `CHATAI_GIT_LOG`, and agent
 it out so the log appears only in the preview panel. HTML previews render in `SandboxedHtmlPreview`: an empty-sandbox
 iframe with an opaque origin, strict CSP (no scripts or network), and external references stripped.
 
+The browser supports multi-select: `WorkspacePage` owns `selectedPaths` and clears it when the
+source or folder changes, while `WorkspaceRootBrowser` only renders the per-row checkboxes, the
+toolbar select-all and the selection bar from props. An entry is selectable when it can also be
+deleted — local entries in the root view (`entry.local && !entry.mount`, so mounts are never
+selectable) and `canDeleteSourceEntry` entries in a source view — and select-all only covers those.
+Bulk delete confirms once and removes each entry with `provider.remove`, reporting per-entry
+failures. Bulk move opens `MoveToModal` with the entries and then the transfer confirmation with an
+aggregated `planTransfer`; it always uses the move strategy and reuses `runTransfer` per entry.
+`MoveToModal` must call `onClose` before `onSelect`, because `onSelect` opens that confirmation
+modal and closing afterwards dismissed it again.
+
 The prompt box's Workspace popover (`WorkspaceAttachButton`) also holds the agent settings that
 apply to workspace files: the codemode toggle (`tools.codemode`) and the tool-call limit
 (`settings.max_tool_calls`). GWDG Tools no longer renders either.

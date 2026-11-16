@@ -301,6 +301,8 @@ export default function WorkspacePage() {
   } | null>(null);
   const [dragHint, setDragHint] = useState<"copy" | "move" | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+  const [selectionBusy, setSelectionBusy] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
@@ -329,6 +331,11 @@ export default function WorkspacePage() {
       setActiveMountId(null);
     }
   }, [mounts, activeMountId]);
+
+  // A selection belongs to the folder it was made in.
+  useEffect(() => {
+    setSelectedPaths([]);
+  }, [selectedSourceId, currentPath, rootPath]);
 
   const refreshQuota = useCallback(async (provider: FileProvider) => {
     if (!provider.quota) return;
@@ -599,6 +606,117 @@ export default function WorkspacePage() {
     selectedSource?.readOnly !== true &&
     activeMount?.readOnly !== true &&
     !(selectedProvider.kind === "arcana-filesystem" && entry.kind === "dir");
+
+  const canSelectRootEntry = (entry: RootEntry) =>
+    entry.local === true && !entry.mount;
+
+  const selectedSet = new Set(selectedPaths);
+  const selectedEntries: WorkspaceFileEntry[] = selectedSourceId
+    ? entries.filter(
+        (entry) => selectedSet.has(entry.path) && canDeleteSourceEntry(entry),
+      )
+    : rootEntries.filter(
+        (entry) => selectedSet.has(entry.path) && canSelectRootEntry(entry),
+      );
+
+  const toggleSelectedEntry = (
+    entry: WorkspaceFileEntry,
+    checked: boolean,
+  ) => {
+    setSelectedPaths((current) => {
+      if (!checked) return current.filter((path) => path !== entry.path);
+      return current.includes(entry.path)
+        ? current
+        : [...current, entry.path];
+    });
+  };
+
+  const selectAllInView = (selectAll: boolean) => {
+    if (!selectAll) {
+      setSelectedPaths([]);
+      return;
+    }
+    setSelectedPaths(
+      selectedSourceId
+        ? entries
+            .filter((entry) => canDeleteSourceEntry(entry))
+            .map((entry) => entry.path)
+        : rootEntries
+            .filter((entry) => canSelectRootEntry(entry))
+            .map((entry) => entry.path),
+    );
+  };
+
+  const deleteSelectedEntries = async () => {
+    if (!selectedEntries.length) return;
+    const provider = selectedSourceId ? selectedProvider : rootProvider;
+    if (!provider) return;
+    const list = [...selectedEntries];
+    const browsingPath = normalizePath(selectedSourceId ? currentPath : rootPath);
+    const deletedAncestor = list
+      .map((entry) => normalizePath(entry.path))
+      .find(
+        (path) => browsingPath === path || browsingPath.startsWith(`${path}/`),
+      );
+    setSelectionBusy(true);
+    let deleted = 0;
+    try {
+      if (provider.status !== "connected") await provider.connect();
+      for (const entry of list) {
+        try {
+          await provider.remove(entry.path, { recursive: true });
+          clearDeletedPreview(entry.path);
+          deleted += 1;
+        } catch (error) {
+          notifyError(
+            `${entry.name}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+      }
+      setSelectedPaths([]);
+      if (selectedSourceId) {
+        if (deletedAncestor) {
+          setPathBySource((current) => ({
+            ...current,
+            [selectedSourceId]: parentPath(deletedAncestor),
+          }));
+        } else {
+          await loadEntries(false);
+        }
+      } else {
+        await loadRootTree();
+        if (deletedAncestor) setRootPath(parentPath(deletedAncestor));
+        else await loadRoot();
+        setRootTreeRevision((current) => current + 1);
+      }
+      void refreshQuota(provider);
+      if (deleted) {
+        notifySuccess(
+          t("workspace.delete_selection_success", { count: deleted }),
+        );
+      }
+    } catch (error) {
+      notifyError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSelectionBusy(false);
+    }
+  };
+
+  const requestDeleteSelection = () => {
+    if (!selectedEntries.length) return;
+    confirmAction(
+      {
+        warningKey: "warn_workspace_file_delete",
+        messageKey: "workspace.delete_selection_confirm",
+        messageValues: { count: selectedEntries.length },
+        confirmKey: "common.delete",
+        danger: true,
+      },
+      () => void deleteSelectedEntries(),
+    );
+  };
 
   const downloadEntry = async (
     entry: WorkspaceFileEntry,
@@ -1135,43 +1253,207 @@ export default function WorkspacePage() {
   const executeTransfer = async ({
     fromSourceId,
     toSourceId,
-    entry,
+    entries,
     targetDir,
     strategy,
+    clearSelection = false,
   }: {
     fromSourceId: string;
     toSourceId: string;
-    entry: WorkspaceFileEntry;
+    entries: WorkspaceFileEntry[];
     targetDir: string;
     strategy: "copy" | "move";
+    clearSelection?: boolean;
   }) => {
     const from = providerFor(fromSourceId);
     const to = providerFor(toSourceId);
-    if (!from || !to) return;
+    if (!from || !to || entries.length === 0) return;
     setTransferring(true);
+    let transferred = 0;
     try {
       if (from.status !== "connected") await from.connect();
       if (to.status !== "connected") await to.connect();
-      await runTransfer({
-        workspaceId: workspaceId!,
-        from,
-        to,
-        entry,
-        targetDir,
-        strategy,
-      });
+      for (const entry of entries) {
+        try {
+          await runTransfer({
+            workspaceId: workspaceId!,
+            from,
+            to,
+            entry,
+            targetDir,
+            strategy,
+          });
+          transferred += 1;
+        } catch (error) {
+          notifyError(
+            `${entry.name}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+      }
       if (from.sourceId === selectedSourceId) await loadEntries(false);
       if (to.sourceId === selectedSourceId) await loadEntries(false);
       if (from.sourceId === rootSourceId || to.sourceId === rootSourceId) {
         await loadRoot();
+        await loadRootTree();
+        setRootTreeRevision((current) => current + 1);
       }
       void refreshQuota(from);
       void refreshQuota(to);
+      if (clearSelection || strategy === "move") {
+        const moved = new Set(entries.map((entry) => entry.path));
+        setSelectedPaths((current) =>
+          current.filter((path) => !moved.has(path)),
+        );
+      }
+      if (transferred && (clearSelection || entries.length > 1)) {
+        notifySuccess(
+          t("workspace.transfer_success", { count: transferred }),
+        );
+      }
     } catch (error) {
       notifyError(error instanceof Error ? error.message : String(error));
     } finally {
       setTransferring(false);
     }
+  };
+
+  const moveTargetsFor = (fromSourceId: string) =>
+    sources.filter(
+      (source) =>
+        source.id !== fromSourceId &&
+        source.status !== "error" &&
+        !source.readOnly,
+    );
+
+  const moveEntriesTo = (
+    list: WorkspaceFileEntry[],
+    fromSourceId: string,
+    toSourceId: string,
+  ) => {
+    const from = providerFor(fromSourceId);
+    const to = providerFor(toSourceId);
+    if (!from || !to || list.length === 0) return;
+    const fromSourceRow = sources.find((source) => source.id === fromSourceId);
+    const toSourceRow = sources.find((source) => source.id === toSourceId);
+    if (toSourceRow?.readOnly) {
+      notifyError(t("workspace.source_read_only_error"));
+      return;
+    }
+    if (fromSourceRow?.readOnly) {
+      notifyError(t("workspace.source_read_only_error"));
+      return;
+    }
+    if (activeMount?.readOnly && fromSourceId === selectedSourceId) {
+      notifyError(t("workspace.mount_read_only_error"));
+      return;
+    }
+    const totalBytes = list.reduce(
+      (sum, entry) => sum + (entry.kind === "file" ? entry.size ?? 0 : 0),
+      0,
+    );
+    const free = quotas[toSourceId]?.free;
+    if (
+      fromSourceId !== toSourceId &&
+      typeof free === "number" &&
+      totalBytes > free
+    ) {
+      notifyError(t("workspace.transfer_blocked"));
+      return;
+    }
+    const plans = list.map((entry) =>
+      planTransfer({
+        intent: "move",
+        sameSource: fromSourceId === toSourceId,
+        sourceKind: from.kind,
+        targetKind: to.kind,
+        entries: [entry],
+        sourcePath: entry.path,
+        targetPath: joinPath("/", entry.name),
+        sourceCapabilities: from.capabilities,
+        targetCapabilities: to.capabilities,
+      }),
+    );
+    const blocked = plans.find((plan) => plan.blocked);
+    if (blocked) {
+      notifyError(blocked.warnings[0] || t("workspace.transfer_blocked"));
+      return;
+    }
+    const labelFor = (sourceId: string) =>
+      sourceId === rootSourceId
+        ? t("workspace.workspace_root")
+        : (sources.find((source) => source.id === sourceId)?.label ?? "");
+    openModal("workspaceTransfer", {
+      plan: {
+        strategy: "move",
+        itemCount: list.length,
+        totalBytes,
+        requiresConfirmation: true,
+        requiresDelete: true,
+        blocked: false,
+        warnings: [...new Set(plans.flatMap((plan) => plan.warnings))],
+      },
+      fromLabel: labelFor(fromSourceId),
+      toLabel: labelFor(toSourceId),
+      onConfirm: () =>
+        void executeTransfer({
+          fromSourceId,
+          toSourceId,
+          entries: list,
+          targetDir: "/",
+          strategy: "move",
+          clearSelection: true,
+        }),
+    });
+  };
+
+  const requestMoveSelection = () => {
+    if (!selectedEntries.length) return;
+    const fromSourceId = selectedSourceId ?? rootSourceId;
+    openModal("workspaceMoveTo", {
+      entries: [...selectedEntries],
+      sources: moveTargetsFor(fromSourceId),
+      onSelect: (targetId: string) =>
+        void moveEntriesTo(selectedEntries, fromSourceId, targetId),
+    });
+  };
+
+  const renderSelectionActions = (fromSourceId: string) => {
+    const targets = moveTargetsFor(fromSourceId);
+    return (
+      <>
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs"
+          disabled={selectionBusy || transferring || targets.length === 0}
+          title={
+            targets.length === 0
+              ? t("workspace.move_to_no_targets")
+              : t("workspace.move_to")
+          }
+          onClick={requestMoveSelection}
+        >
+          {t("workspace.move_to")}
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs text-error"
+          disabled={selectionBusy || transferring}
+          onClick={requestDeleteSelection}
+        >
+          <TrashCan size={12} />
+          {t("common.delete")}
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs"
+          onClick={() => setSelectedPaths([])}
+        >
+          {t("workspace.clear_selection")}
+        </button>
+      </>
+    );
   };
 
   const requestTransfer = ({
@@ -1251,7 +1533,7 @@ export default function WorkspacePage() {
           executeTransfer({
             fromSourceId,
             toSourceId,
-            entry,
+            entries: [entry],
             targetDir,
             strategy: plan.strategy,
           }),
@@ -1261,7 +1543,7 @@ export default function WorkspacePage() {
     void executeTransfer({
       fromSourceId,
       toSourceId,
-      entry,
+      entries: [entry],
       targetDir,
       strategy: plan.strategy,
     });
@@ -1911,6 +2193,14 @@ export default function WorkspacePage() {
                         isReadOnly={rootEntryReadOnly}
                         sourceLabel={rootEntrySourceLabel}
                         entryActions={renderRootEntryActions}
+                        selectable
+                        canSelectEntry={canSelectRootEntry}
+                        selectedPaths={selectedEntries.map(
+                          (entry) => entry.path,
+                        )}
+                        onToggleSelect={toggleSelectedEntry}
+                        onSelectAll={selectAllInView}
+                        selectionActions={renderSelectionActions(rootSourceId)}
                         emptyHint={t("workspace.root_empty_hint")}
                       />
                     </div>
@@ -2115,6 +2405,12 @@ export default function WorkspacePage() {
                           )}
                         </>
                       )}
+                      selectable
+                      canSelectEntry={canDeleteSourceEntry}
+                      selectedPaths={selectedEntries.map((entry) => entry.path)}
+                      onToggleSelect={toggleSelectedEntry}
+                      onSelectAll={selectAllInView}
+                      selectionActions={renderSelectionActions(selectedSourceId!)}
                       footer={
                         nextCursor ? (
                           <div className="p-2 text-center">

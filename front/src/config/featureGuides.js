@@ -80,6 +80,29 @@ export const featureGuides = {
       },
     ],
   },
+  workspace_multiselect: {
+    titleKey: "feature_guide.workspace_multiselect.title",
+    prompt:
+      "Select several files or folders in a workspace browser to delete or move them at once. Tick the checkbox that appears next to each entry, or use Select all in the toolbar, then move or delete the whole selection from the bar above the list.",
+    keywords: [
+      "select multiple files",
+      "bulk delete",
+      "bulk move",
+      "select all files",
+      "multiple selection workspace",
+    ],
+    steps: [
+      {
+        target: '[data-guide="workspace-files"]',
+        textKey: "feature_guide.workspace_multiselect.step1",
+      },
+      {
+        target: '[data-guide="workspace-select-all"]',
+        textKey: "feature_guide.workspace_multiselect.step2",
+        completeOnTargetClick: true,
+      },
+    ],
+  },
   arcana_filesystem: {
     titleKey: "feature_guide.arcana_filesystem.title",
     prompt:
@@ -1471,7 +1494,7 @@ export const FEATURE_CATEGORIES = {
     "summarize_conversation",
     "close_chat",
   ],
-  workspace: ["workspace_overview", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions"],
+  workspace: ["workspace_overview", "pin_workspace", "pin_agent", "workspace_clone", "workspace_upload", "workspace_multiselect", "arcana_filesystem", "attach_from_workspace", "remote_agents", "agent_recovery", "close_group_sessions"],
   personas: ["chat_with_persona"],
   settings: [
     "settings_overview",

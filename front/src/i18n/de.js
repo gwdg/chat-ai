@@ -333,6 +333,11 @@ export default {
       step1: "Öffnen Sie einen Arbeitsbereich und wählen Sie Datei hochladen in der Dateiansicht; der Browser fragt nach einer Datei von diesem Computer.",
       step2: "Die hochgeladene Datei erscheint in dem Ordner, den Sie gerade ansehen.",
     },
+    workspace_multiselect: {
+      title: "Mehrere Dateien gleichzeitig auswählen",
+      step1: "Neben jeder Datei und jedem Ordner, den Sie ändern können, erscheint ein Kontrollkästchen. Markieren Sie die gewünschten Einträge.",
+      step2: "Alle auswählen in der Werkzeugleiste markiert jeden Eintrag im aktuellen Ordner; verschieben oder löschen Sie die Auswahl über die Leiste über der Liste.",
+    },
     arcana_filesystem: {
       title: "Ein Arcana-Dateisystem verwenden",
       step1: "Jeder Arbeitsbereich enthält bereits eine Arcana-Dateisystem-Quelle.",
@@ -2066,6 +2071,10 @@ export default {
     empty_folder: "Dieser Ordner ist leer.",
     drop_hint: "Dateien hier ablegen, um sie in diese Quelle zu kopieren.",
     load_more: "Mehr laden",
+    select_all: "Alle auswählen",
+    clear_selection: "Auswahl aufheben",
+    selected_count_one: "{{count}} Element ausgewählt",
+    selected_count_other: "{{count}} Elemente ausgewählt",
     download: "Herunterladen",
     preview_too_large: "Diese Datei ist zu groß für die Vorschau.",
     preview_unavailable: "Für diesen Dateityp gibt es keine Vorschau.",
@@ -2081,15 +2090,27 @@ export default {
     transfer_move: "Verschieben",
     transfer_copy: "Kopieren",
     move_to: "Verschieben nach…",
+    move_selection_hint_one:
+      "Das ausgewählte Element in eine andere Quelle verschieben? Das Original wird erst nach der Prüfung der Kopie gelöscht.",
+    move_selection_hint_other:
+      "Die {{count}} ausgewählten Elemente in eine andere Quelle verschieben? Das Original wird erst nach der Prüfung der Kopie gelöscht.",
     delete_file_confirm:
       "Diese Datei löschen? Dies kann nicht rückgängig gemacht werden.",
     delete_folder_confirm:
       "Diesen Ordner mit dem gesamten Inhalt löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_selection_confirm_one:
+      "Das ausgewählte Element löschen? Dies kann nicht rückgängig gemacht werden.",
+    delete_selection_confirm_other:
+      "Die {{count}} ausgewählten Elemente löschen? Dies kann nicht rückgängig gemacht werden.",
     delete_success: "„{{name}}“ gelöscht.",
+    delete_selection_success_one: "{{count}} Element gelöscht.",
+    delete_selection_success_other: "{{count}} Elemente gelöscht.",
     move_to_hint: "„{{name}}“ in eine andere Quelle verschieben? Das Original wird erst nach der Prüfung der Kopie gelöscht.",
     move_to_target: "Zielquelle",
     move_to_no_targets: "Fügen Sie zuerst eine weitere Quelle hinzu.",
     transferring: "Übertrage…",
+    transfer_success_one: "{{count}} Element übertragen.",
+    transfer_success_other: "{{count}} Elemente übertragen.",
     transfer_blocked: "Diese Übertragung kann nicht gestartet werden.",
   },
 

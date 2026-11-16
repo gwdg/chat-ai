@@ -61,8 +61,21 @@ export default function WorkspaceRootBrowser({
   emptyHint,
   parentOf = parentPath,
   dataGuide = "workspace-files",
+  selectable = false,
+  canSelectEntry,
+  selectedPaths = [],
+  onToggleSelect,
+  onSelectAll,
+  selectionActions,
 }) {
   const { t } = useTranslation();
+  const selected = new Set(selectedPaths);
+  const selectableEntries = selectable
+    ? entries.filter((entry) => !canSelectEntry || canSelectEntry(entry))
+    : [];
+  const allSelected =
+    selectableEntries.length > 0 &&
+    selectableEntries.every((entry) => selected.has(entry.path));
 
   return (
     <>
@@ -95,6 +108,21 @@ export default function WorkspaceRootBrowser({
         ))}
         <div className="ml-auto flex items-center gap-1">
           {toolbarInfo}
+          {selectable && onSelectAll && selectableEntries.length > 0 && (
+            <label
+              className="flex cursor-pointer items-center gap-1"
+              title={t("workspace.select_all")}
+              data-guide="workspace-select-all"
+            >
+              <input
+                type="checkbox"
+                className="checkbox checkbox-xs"
+                checked={allSelected}
+                onChange={(event) => onSelectAll(event.target.checked)}
+                aria-label={t("workspace.select_all")}
+              />
+            </label>
+          )}
           {onRefresh && (
             <button
               type="button"
@@ -158,6 +186,17 @@ export default function WorkspaceRootBrowser({
           )}
         </div>
       </div>
+
+      {selectable && selectionActions && selectedPaths.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-base-300 bg-base-200/60 px-3 py-1.5 text-xs">
+          <span className="font-medium text-base-content">
+            {t("workspace.selected_count", { count: selectedPaths.length })}
+          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-1">
+            {selectionActions}
+          </div>
+        </div>
+      )}
 
       {newFileEditor}
 
@@ -232,6 +271,17 @@ export default function WorkspaceRootBrowser({
                 }
                 className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition hover:bg-base-200"
               >
+                {selectable && (!canSelectEntry || canSelectEntry(entry)) && (
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-xs shrink-0"
+                    checked={selected.has(entry.path)}
+                    onChange={(event) =>
+                      onToggleSelect?.(entry, event.target.checked)
+                    }
+                    aria-label={entry.name}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => onOpen?.(entry)}

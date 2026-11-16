@@ -7,17 +7,21 @@ export default function MoveToModal({
   isOpen,
   onClose,
   entry,
+  entries = [],
   sources = [],
   onSelect,
 }) {
   const { t } = useTranslation();
   const [targetId, setTargetId] = useState(sources[0]?.id ?? "");
+  const items = entries.length ? entries : entry ? [entry] : [];
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="workspace.move_to">
       <div className="flex flex-col gap-3 pb-2 text-sm">
         <p className="text-xs text-base-content/70">
-          {t("workspace.move_to_hint", { name: entry?.name ?? "" })}
+          {items.length > 1
+            ? t("workspace.move_selection_hint", { count: items.length })
+            : t("workspace.move_to_hint", { name: items[0]?.name ?? "" })}
         </p>
         {sources.length === 0 ? (
           <p className="text-xs text-base-content/60">
@@ -50,8 +54,10 @@ export default function MoveToModal({
             className="btn btn-accent"
             disabled={!targetId}
             onClick={() => {
-              onSelect?.(targetId);
+              // Close first: onSelect may open the transfer confirmation, and
+              // closing after it would dismiss that modal again.
               onClose();
+              onSelect?.(targetId);
             }}
           >
             {t("workspace.transfer_move")}

@@ -323,6 +323,11 @@ export default {
       step1: "Open a workspace and choose Upload file in the file browser; the browser asks for a file from this computer.",
       step2: "The uploaded file appears in the folder you are viewing.",
     },
+    workspace_multiselect: {
+      title: "Select several files at once",
+      step1: "A checkbox appears next to each file and folder you can change. Tick the ones you want to act on.",
+      step2: "Select all in the toolbar ticks every entry in the current folder; move or delete the selection from the bar above the list.",
+    },
     arcana_filesystem: {
       title: "Use an Arcana filesystem",
       step1: "Every workspace already includes an Arcana filesystem source.",
@@ -2040,6 +2045,10 @@ export default {
     empty_folder: "This folder is empty.",
     drop_hint: "Drop files here to copy them into this source.",
     load_more: "Load more",
+    select_all: "Select all",
+    clear_selection: "Clear selection",
+    selected_count_one: "{{count}} item selected",
+    selected_count_other: "{{count}} items selected",
     download: "Download",
     preview_too_large: "This file is too large to preview.",
     preview_unavailable: "No preview is available for this file type.",
@@ -2055,14 +2064,26 @@ export default {
     transfer_move: "Move",
     transfer_copy: "Copy",
     move_to: "Move to…",
+    move_selection_hint_one:
+      "Move the selected item to another source? The original is deleted only after the copy is verified.",
+    move_selection_hint_other:
+      "Move the {{count}} selected items to another source? The original is deleted only after the copy is verified.",
     delete_file_confirm: "Delete this file? This cannot be undone.",
     delete_folder_confirm:
       "Delete this folder and everything inside it? This cannot be undone.",
+    delete_selection_confirm_one:
+      "Delete the selected item? This cannot be undone.",
+    delete_selection_confirm_other:
+      "Delete the {{count}} selected items? This cannot be undone.",
     delete_success: "Deleted {{name}}.",
+    delete_selection_success_one: "Deleted {{count}} item.",
+    delete_selection_success_other: "Deleted {{count}} items.",
     move_to_hint: "Move “{{name}}” to another source? The original is deleted only after the copy is verified.",
     move_to_target: "Destination source",
     move_to_no_targets: "Add another source first.",
     transferring: "Transferring…",
+    transfer_success_one: "Transferred {{count}} item.",
+    transfer_success_other: "Transferred {{count}} items.",
     transfer_blocked: "This transfer cannot be started.",
   },
 
