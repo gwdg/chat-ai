@@ -22,6 +22,47 @@ X25519 public key; RSA or any other key type is rejected before a request is
 decrypted. A 256-bit X25519 key has roughly the security level of an RSA-3072
 key, and the per-request session keys come from it.
 
+## Makefile
+
+On a machine without this checkout's tooling — a laptop, a jump host, or the
+model node itself — `make` wraps the script. It needs GNU make and Node 18+
+only (no `npm install`), uses no Docker image and no absolute path from a dev
+environment, and works from any directory:
+
+```bash
+cd encryption && make            # same as make help
+make -C encryption keys          # write the pairs into encryption/keys/
+make -C encryption dry-run       # what would be written
+make -C encryption list          # check the pairs (missing .key, bad key)
+make -C encryption test          # the generator's own tests
+```
+
+The script imports the file-name mapping from
+`front/src/e2ee/publishedKeys.js` (which has no dependencies), so keep
+`encryption/` inside the checkout rather than copying the folder on its own.
+
+| Variable | Meaning |
+| --- | --- |
+| `NODE=` | Node 18+ binary (default `node`); checked before anything runs |
+| `OUT=` | output directory (default `encryption/keys`) |
+| `CONFIG=` | `front.json` to read `modelsPath`/`apiKey` from |
+| `MODELS_URL=`, `API_KEY=` | overrides for the config |
+| `HEADER_FLAGS=` | extra script arguments, quoted: `HEADER_FLAGS="--header 'X-User: me'"` |
+
+Examples:
+
+```bash
+# on a node, write straight into the key mount
+make -C encryption OUT=/secure/saia-e2ee keys
+
+# against an engine that needs its own bearer token
+make -C encryption MODELS_URL=http://localhost:10000/public/v1/models API_KEY=... keys
+```
+
+`make keys` keeps an existing pair (a lost private key is never silently
+replaced); `make force` rewrites it, which is the two-sided rotation: provision
+the node with the new `.key`, then publish the new `.pub`.
+
 ## Usage
 
 The models come from the deployment's `/models` endpoint — the same response
