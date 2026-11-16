@@ -67,6 +67,18 @@ export function useOpencodeFilePreview(agent) {
     [agent, closePreview],
   );
 
+  // The same file card that opened the preview closes it again.
+  const toggleFile = useCallback(
+    (entry) => {
+      if (entry?.path && preview?.entry?.path === entry.path) {
+        closePreview();
+        return undefined;
+      }
+      return openFile(entry);
+    },
+    [preview?.entry?.path, openFile, closePreview],
+  );
+
   const openText = useCallback(
     (entry, text, error = "", options = {}) => {
       closePreview();
@@ -89,5 +101,5 @@ export function useOpencodeFilePreview(agent) {
     link.click();
   }, [preview]);
 
-  return { preview, openFile, openText, closePreview, download };
+  return { preview, openFile, toggleFile, openText, closePreview, download };
 }

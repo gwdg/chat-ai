@@ -40,14 +40,14 @@ export default function AgentPage() {
   const agent = useAgent(agentId);
   const modelsData = useUpdateModelsData();
   const userData = useUpdateUserData();
-  const { preview, openFile, openText, closePreview, download } =
+  const { preview, openFile, toggleFile, openText, closePreview, download } =
     useOpencodeFilePreview(agent);
   // Tool cards of the conversation open the file they read or wrote in the same
-  // right-hand panel the file list uses.
+  // right-hand panel the file list uses, and close it when clicked again.
   const openConversationFile = useCallback(
     (path: string) => {
       if (!agent?.id || !path) return;
-      void openFile({
+      void toggleFile({
         sourceId: agent.id,
         path,
         name: path.split("/").filter(Boolean).pop() || path,
@@ -55,7 +55,7 @@ export default function AgentPage() {
         local: false,
       });
     },
-    [agent?.id, openFile],
+    [agent?.id, toggleFile],
   );
   useEffect(() => {
     if (!agent?.id || !sessionParam || sessionParam === agent.sessionId) return;
@@ -141,7 +141,7 @@ export default function AgentPage() {
           {agent && (
             <AgentFilesPanel
               agent={agent}
-              onOpenFile={openFile}
+              onOpenFile={toggleFile}
               onShowText={openText}
               workspaces={workspaces}
               workspaceId={workspaceId}

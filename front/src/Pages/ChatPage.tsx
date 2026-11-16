@@ -11,6 +11,7 @@ import { useUpdateModelsData } from "../hooks/useUpdateModelsData";
 import { useUpdateUserData } from "../hooks/useUpdateUserData";
 import { useWindowSize } from "../hooks/useWindowSize";
 import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
+import { useFilePreview } from "../context/FilePreviewContext";
 
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
@@ -18,6 +19,7 @@ import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
 import ChatAgentSidebar from "../components/Workspace/ChatAgentSidebar";
 import AgentFilePreviewPanel from "../components/Agent/AgentFilePreviewPanel";
+import ChatFilePreviewPanel from "../components/Conversation/ChatFilePreviewPanel";
 import PersonaChatBanner from "../components/Conversation/PersonaChatBanner";
 import HallucinationWarning from "../components/Conversation/HallucinationWarning";
 import TourManager from "../components/SettingsPanel/TourManager";
@@ -44,6 +46,7 @@ export default function ChatPage() {
   const { isMobile } = useWindowSize();
 
   const [localState, setLocalState] = useState(() => getDefaultConversation());
+  const { preview: chatFilePreview } = useFilePreview();
   const [filePreview, setFilePreview] = useState<{
     agentId: string;
     path: string;
@@ -185,7 +188,7 @@ export default function ChatPage() {
               />
             </div>
           </div>
-          {!filePreview && (
+          {!filePreview && !chatFilePreview && (
             <ChatAgentSidebar conversationId={localState?.id} />
           )}
         </div>
@@ -202,6 +205,7 @@ export default function ChatPage() {
           onClose={() => setFilePreview(null)}
         />
       )}
+      <ChatFilePreviewPanel />
     </div>
   );
 }

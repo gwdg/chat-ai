@@ -7,6 +7,7 @@ import { BrowserRouter } from "react-router";
 import AgentConflictWatcher from "./components/Others/AgentConflictWatcher";
 import { ToastProvider } from "./components/Others/ToastProvider";
 import { ModalProvider } from "./modals/ModalContext";
+import { FilePreviewProvider } from "./context/FilePreviewContext";
 import { FeatureGuideProvider } from "./context/FeatureGuideContext";
 import { requestPersistentStorage } from "./utils/storagePersistence";
 
@@ -46,9 +47,11 @@ function App() {
       <ToastProvider/>
       <AgentConflictWatcher />
       <ModalProvider>
-        <FeatureGuideProvider>
-          <PublicRoute />
-        </FeatureGuideProvider>
+        <FilePreviewProvider>
+          <FeatureGuideProvider>
+            <PublicRoute />
+          </FeatureGuideProvider>
+        </FilePreviewProvider>
       </ModalProvider>
     </BrowserRouter>
   );

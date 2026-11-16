@@ -17,6 +17,7 @@ import { useSettingsDeepLink } from "../hooks/useSettingsDeepLink";
 import CollapsibleFooter from "../components/Footer/CollapsibleFooter";
 import MetaChangesPanel from "../components/Meta/MetaChangesPanel";
 import AgentFilePreviewPanel from "../components/Agent/AgentFilePreviewPanel";
+import ChatFilePreviewPanel from "../components/Conversation/ChatFilePreviewPanel";
 import SidebarWrapper from "../components/Sidebar/SidebarWrapper";
 import Header from "../components/Header/Header";
 import Conversation from "../components/Conversation/Conversation";
@@ -28,6 +29,7 @@ import TutorialCatalog from "../components/Others/TutorialCatalog";
 import UseCaseCatalog from "../components/Others/UseCaseCatalog";
 import HallucinationWarning from "../components/Conversation/HallucinationWarning";
 import { MetaChatSendContext } from "../context/MetaChatContext";
+import { useFilePreview } from "../context/FilePreviewContext";
 import { useFeatureGuide } from "../context/FeatureGuideContext";
 import { useAgents } from "../agents/agentStore";
 
@@ -51,6 +53,7 @@ export default function MetaChatPage() {
   const [loaded, setLoaded] = useState(false);
   const [openCatalog, setOpenCatalog] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
+  const { preview: chatFilePreview } = useFilePreview();
   const agents = useAgents();
   const catalogRef = useRef(null);
   const latestStateRef = useRef(localState);
@@ -300,7 +303,7 @@ export default function MetaChatPage() {
               />
             </div>
             </div>
-            {!filePreview && (
+            {!filePreview && !chatFilePreview && (
               <MetaChangesPanel userSettings={userSettings} />
             )}
           </div>
@@ -315,6 +318,7 @@ export default function MetaChatPage() {
             onClose={() => setFilePreview(null)}
           />
         )}
+        <ChatFilePreviewPanel />
       </div>
     </MetaChatSendContext.Provider>
   );

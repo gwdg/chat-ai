@@ -849,9 +849,13 @@ modal, and deleted recursively after confirmation; sources with the matching cap
 offer new file/folder creation. A download reads the complete content before the browser saves it:
 `workspace/download.ts#downloadProviderEntry` connects the provider, drains its stream, and hands a
 `Blob` to `utils/download.js#downloadBlob`, which refuses anything that is not a blob. The same
-holds for chat attachments and the preview modal: `PreviewModal` loads the file by id instead of
+holds for chat attachments: they open in the docked `ChatFilePreviewPanel`
+(`context/FilePreviewContext.jsx`) rather than a modal, and the panel loads the file by id instead of
 using `useFile`'s `data`, which is written to state separately from the metadata and produced an
-empty download when the button was clicked before the bytes arrived. A tree folder that contains a
+empty download when the button was clicked before the bytes arrived. `ChatPage` and `MetaChatPage`
+render the panel beside their content column and hide their own side panel while it is open.
+Clicking the same attachment again closes it: `Attachment` calls `toggleFilePreview`. A tree folder
+that contains a
 `.git` directory gets a Git button; the workspace preview parses `.git/logs/HEAD` (falling back to
 the branch reflog) without a shell,
 while the agent file panel runs `git log --stat` through the OpenCode shell and falls back to the
@@ -1016,7 +1020,8 @@ refresh. The
 `WorkspaceFilePanel` preview is rendered by `AgentPage` to the right of the chat, not beside the
 file list. A `read` or `write` tool card in the conversation carries a file card below the step that
 opens that file in the same right-hand panel (`AgentAssistantParts` takes `onOpenFile` from
-`AgentPage`); other tools get no card. The sidebar's `+` opens
+`AgentPage`); clicking the same card again closes it (`useOpencodeFilePreview#toggleFile`), and
+other tools get no card. The sidebar's `+` opens
 `modals/Agent/AddAgentModal`, which offers a name and one connection choice: the GWDG HPC agentic
 service (with the placeholder HPC project list) or an external OpenCode agent server (with its URL
 and password). The choice is a pair of `tabs-box` buttons, one per mode; the fields below it belong

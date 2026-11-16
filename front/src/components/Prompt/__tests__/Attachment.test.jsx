@@ -4,7 +4,10 @@ import Attachment from "../Attachment";
 import { loadFile } from "../../../db";
 import { captureDownloads } from "../../../test/downloads";
 
-const { notifyError } = vi.hoisted(() => ({ notifyError: vi.fn() }));
+const { notifyError, toggleFilePreview } = vi.hoisted(() => ({
+  notifyError: vi.fn(),
+  toggleFilePreview: vi.fn(),
+}));
 
 vi.mock("../../../db", () => ({
   useFileMeta: () => ({ name: "document.pdf", type: "application/pdf", size: 1024 }),
@@ -19,8 +22,8 @@ vi.mock("../../../hooks/useAttachments", () => ({
     readFileAsBase64: vi.fn(),
   }),
 }));
-vi.mock("../../../modals/ModalContext", () => ({
-  useModal: () => ({ openModal: vi.fn() }),
+vi.mock("../../../context/FilePreviewContext", () => ({
+  useFilePreview: () => ({ toggleFilePreview, closeFilePreview: vi.fn() }),
 }));
 vi.mock("../../../hooks/useToast", () => ({
   useToast: () => ({ notifySuccess: vi.fn(), notifyError }),
@@ -53,6 +56,27 @@ const localState = {
     },
   ],
 };
+
+describe("Attachment preview", () => {
+  it("opens the docked preview panel instead of a modal", () => {
+    toggleFilePreview.mockClear();
+    render(
+      <Attachment
+        localState={localState}
+        setLocalState={vi.fn()}
+        attachment={{ fileId: "file" }}
+        index={0}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("document.pdf"));
+
+    expect(toggleFilePreview).toHaveBeenCalledWith({
+      fileId: "file",
+      name: "document.pdf",
+    });
+  });
+});
 
 describe("Attachment document conversion", () => {
   it("keeps the browser and server conversion buttons in agent mode", () => {

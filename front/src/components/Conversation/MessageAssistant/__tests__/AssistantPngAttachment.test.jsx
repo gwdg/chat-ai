@@ -5,13 +5,16 @@ import { loadFile, saveFileReady } from "../../../../db";
 import { createWrittenFiles } from "../../../../agent/writtenFiles";
 import { captureDownloads } from "../../../../test/downloads";
 
-const { openModal, confirmAction } = vi.hoisted(() => ({
-  openModal: vi.fn(),
+const { toggleFilePreview, confirmAction } = vi.hoisted(() => ({
+  toggleFilePreview: vi.fn(),
   confirmAction: vi.fn(),
 }));
 
 vi.mock("../../../../modals/ModalContext", () => ({
-  useModal: () => ({ openModal, confirmAction }),
+  useModal: () => ({ openModal: vi.fn(), confirmAction }),
+}));
+vi.mock("../../../../context/FilePreviewContext", () => ({
+  useFilePreview: () => ({ toggleFilePreview, closeFilePreview: vi.fn() }),
 }));
 vi.mock("../../../../hooks/useSendMessage", () => ({
   useSendMessage: () => vi.fn(),
@@ -57,9 +60,9 @@ const randomPng = (size = 128) => {
 const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes));
 
 describe("assistant message with a png", () => {
-  beforeEach(() => openModal.mockClear());
+  beforeEach(() => toggleFilePreview.mockClear());
 
-  // Renders the message, checks the thumbnail, its bytes and the preview modal.
+  // Renders the message, checks the thumbnail, its bytes and the preview request.
   const expectClickablePng = async ({ conversationId, content, name, bytes, fileId }) => {
     const localState = {
       id: conversationId,
@@ -90,14 +93,10 @@ describe("assistant message with a png", () => {
     const saved = await loadFile(fileId);
     expect(new Uint8Array(await saved.arrayBuffer())).toEqual(bytes);
 
-    // Clicking the attachment opens it in the preview modal.
+    // Clicking the attachment opens it in the docked file preview panel.
     fireEvent.click(image);
-    expect(openModal).toHaveBeenCalledWith(
-      "preview",
-      expect.objectContaining({
-        fileId,
-        previewFile: expect.objectContaining({ name, type: "image/png" }),
-      }),
+    expect(toggleFilePreview).toHaveBeenCalledWith(
+      expect.objectContaining({ fileId, name }),
     );
   };
 

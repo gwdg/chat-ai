@@ -27,7 +27,6 @@ import OrganizeChatsModal from "../components/Sidebar/Modals/OrganizeChatsModal"
 import ClearMemoryModal from "./UserSettings/ClearMemoryModal";
 import ConfirmActionModal from "./Alert/ConfirmActionModal";
 import FolderAccessModal from "./Alert/FolderAccessModal";
-import PreviewModal from "./Chat/PreviewModal";
 import UnsentFilesModal from "./Alert/UnsentFilesModal";
 import UnprocessedFilesModal from "./Alert/UnprocessedFilesModal";
 import ServiceOfflineModal from "./Alert/ServiceOfflineModal";
@@ -203,9 +202,6 @@ export function ModalProvider({ children }) {
       )}
       {modalType === "organizeChats" && (
         <OrganizeChatsModal isOpen onClose={closeModal} {...modalProps} />
-      )}
-      {modalType === "preview" && (
-        <PreviewModal isOpen onClose={closeModal} {...modalProps} />
       )}
       {modalType === "workspaceCreate" && (
         <CreateWorkspaceModal isOpen onClose={closeModal} {...modalProps} />
