@@ -753,7 +753,13 @@ through that mount while still allowing reads and copies out. A read-only row is
 the picker for `mode: "read"`; otherwise a browser write guard blocks a folder that is never
 written to. `AddSourceModal` surfaces the picker's `AbortError` in the dialog instead of treating it
 as a silent cancel, because Chrome reports the same error when its file dialog cannot open or
-refuses a folder.
+refuses a folder. Since `showDirectoryPicker` only exists in a secure context, the dialog reports a
+missing API or an insecure page up front and disables its action, rather than failing after the
+click; that is why a LAN IP over plain `http://` cannot add a local folder. The source kind is a
+selector, not an action: with only one kind available it is a plain heading. The local folder is
+picked by a "Choose folder…" button inside the local section, above the label field, and the dialog
+only creates the source from the footer's OK, so the chosen folder is visible before anything is
+written; OK stays disabled while no folder is chosen.
 The Local tools panel was removed;
 GWDG Tools now contains the document-creation and image-analysis toggles, while the tool-call limit
 moved to the Workspace popover. The Browser agent is the default and only workflow, so codemode is
@@ -808,7 +814,24 @@ expands; clicking a folder opens it in the centre browser, whose breadcrumbs sho
 
 `workspace_mounts` maps a folder inside a source (`sourcePath`) to a workspace path (`path`), so
 several sources can appear side by side in one workspace; the workspace browser starts at that
-mount list. `workspace_chats` is the
+mount list. `AddMountModal` (the Storage panel's "Add folder") has no path inputs at all: both paths
+are chosen in two always-expanded `FolderPickerPanel` lists, one per section, with no browse button
+and no confirm step. A panel lists only directories of its `path`, follows provider pagination, and
+clicking a folder selects it and descends into it; the up button selects the parent. The source
+panel lists directories of the selected source through `createProvider(source)` (connect, paged
+list, `close?.()`); the workspace panel lists the workspace root plus the virtual mount folders. The
+workspace panel chooses the *parent*, and the mount path is `<parent>/<leaf>` where the leaf is the
+source folder's name (or the source label when the source root is picked), previewed as
+"Mounts at …" under that list. The dialog opens on the workspace's own `browser` source rather than
+`sources[0]`, whose order is not stable; an Arcana source can be unreachable. A destination is
+refused with a message (and a disabled Add button) when its path already holds an entry, sits inside
+a mounted folder, or would contain one: `mountTarget.ts#inspectMountTarget` asks the workspace root
+provider (`stat`, then the first page of `list`) and the root listing shows a local entry before a
+mount at the same path, so the mount would be shadowed and silently invisible. A mounted folder is
+therefore not offered as the parent either. Switching the source resets the source folder to `/`
+because a path only exists inside its own source; the chosen parent is kept. A source that cannot be
+listed shows the reason under its panel, and `arcanaTools.ts` reduces an upstream
+`{"detail": "Not Found"}` error body to its message instead of printing the JSON. `workspace_chats` is the
 many-to-many chat link: a chat can be attached to any number of workspaces, shown under the
 workspace in the sidebar and in the workspace's Chats panel, and toggled from the `Workspace` icon
 left of the Local tools icon in the prompt box. The `+` on a workspace row in the sidebar and the
@@ -830,7 +853,13 @@ workspace once (`seedWorkspaceAgentSessions`), so existing data upgrades without
 sessions and a detached session is not re-added. Detaching an agent, deleting a workspace, removing
 an agent, and closing a session all delete the matching session links. Every source in Storage's
 "Available storage" list is shown, including the agent-files source of an attached agent, so its
-filesystem is browsable like any other source.
+filesystem is browsable like any other source. The row actions come from
+`workspace/sources.ts#sourceRowActions`. The `browser` row offers no add-folder, no delete and — unless
+an older build already set it — no read-only toggle: its tree *is* the workspace root, so the row
+cannot be recreated (`ensureBrowserSource` runs only at creation), its folders are already at the
+root and a mount of one is refused, and its `readOnly` never reaches `createWorkspaceRootProvider`,
+where it would only pretend to protect files the root still writes. The derived `chat` and `agent`
+rows offer no delete or read-only toggle either; only `agent` keeps add-folder.
 
 Transfers are orchestrated in the browser: `workspace/transferPlanner.ts` always moves on drag and
 drop, regardless of source; an explicit "copy" intent is the only copy path. It blocks read-only

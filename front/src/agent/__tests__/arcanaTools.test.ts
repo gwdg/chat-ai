@@ -98,8 +98,7 @@ describe("Arcana Tools API", () => {
     });
   });
 
-  it("adds and removes members", async () => {
-    const fetchMock = vi.fn(async () => json({ ok: true }));
+  it("adds and removes members", async () => {    const fetchMock = vi.fn(async () => json({ ok: true }));
     vi.stubGlobal("fetch", fetchMock);
 
     await addArcanaMember("notes", "alice", "editor");
@@ -118,6 +117,40 @@ describe("Arcana Tools API", () => {
       2,
       "http://backend.test/arcana-tools/arcanas/notes/members/alice%40example.org",
       { method: "DELETE" }
+    );
+  });
+
+  it("reports the message of a JSON error body instead of the raw body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ detail: "Not Found" }), {
+            status: 404,
+            headers: { "content-type": "application/json" },
+          })
+      )
+    );
+
+    // The upstream answers a missing route with FastAPI's `{"detail":"Not Found"}`; that body must
+    // not reach the UI (the folder picker printed it verbatim).
+    await expect(listArcanas()).rejects.toThrow(/^Not Found$/);
+  });
+
+  it("falls back to a status message when the error body is not JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("<html>Bad gateway</html>", {
+            status: 502,
+            headers: { "content-type": "text/html" },
+          })
+      )
+    );
+
+    await expect(listArcanas()).rejects.toThrow(
+      "Arcana Tools request failed (502)"
     );
   });
 });

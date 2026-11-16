@@ -89,7 +89,7 @@ import { uploadLocalFiles } from "../workspace/upload";
 import { downloadProviderEntry, readAll } from "../workspace/download";
 import { baseName, joinPath, normalizePath, parentPath } from "../workspace/paths";
 import { buildSourceBreadcrumbs, sourceUpPath } from "../workspace/breadcrumbs";
-import { visibleStorageSources } from "../workspace/sources";
+import { sourceRowActions, visibleStorageSources } from "../workspace/sources";
 import { rootEntryAction } from "../workspace/rootNavigation";
 import type { FileProvider, QuotaInfo } from "../workspace/providers/types";
 
@@ -1796,8 +1796,7 @@ export default function WorkspacePage() {
                         const quota = quotas[source.id];
                         const storage = quotaLabel(source.kind, quota);
                         const isDevicePlane = DEVICE_PLANE_KINDS.has(source.kind);
-                        const fixedSource =
-                          source.kind === "agent" || source.kind === "chat";
+                        const actions = sourceRowActions(source);
                         return (
                           <div
                             key={source.id}
@@ -1843,7 +1842,7 @@ export default function WorkspacePage() {
                                   {t(`workspace.kind_${source.kind}`)}
                                 </span>
                               </button>
-                              {source.kind !== "chat" && (
+                              {actions.addFolder && (
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -1857,44 +1856,48 @@ export default function WorkspacePage() {
                                   <FolderAdd size={12} />
                                 </button>
                               )}
-                              {!fixedSource && (
+                              {(actions.toggleReadOnly || actions.remove) && (
                                 <>
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      toggleSourceReadOnly(source);
-                                    }}
-                                    className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
-                                    title={
-                                      source.readOnly
-                                        ? t("workspace.make_source_writable")
-                                        : t("workspace.make_source_read_only")
-                                    }
-                                    aria-label={
-                                      source.readOnly
-                                        ? t("workspace.make_source_writable")
-                                        : t("workspace.make_source_read_only")
-                                    }
-                                  >
-                                    {source.readOnly ? (
-                                      <Locked size={12} />
-                                    ) : (
-                                      <Unlocked size={12} />
-                                    )}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      removeSelectedSource(source.id, source.label);
-                                    }}
-                                    className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-error/10 hover:text-error"
-                                    aria-label={t("workspace.remove_source")}
-                                    title={t("workspace.remove_source")}
-                                  >
-                                    <TrashCan size={12} />
-                                  </button>
+                                  {actions.toggleReadOnly && (
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        toggleSourceReadOnly(source);
+                                      }}
+                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-base-content"
+                                      title={
+                                        source.readOnly
+                                          ? t("workspace.make_source_writable")
+                                          : t("workspace.make_source_read_only")
+                                      }
+                                      aria-label={
+                                        source.readOnly
+                                          ? t("workspace.make_source_writable")
+                                          : t("workspace.make_source_read_only")
+                                      }
+                                    >
+                                      {source.readOnly ? (
+                                        <Locked size={12} />
+                                      ) : (
+                                        <Unlocked size={12} />
+                                      )}
+                                    </button>
+                                  )}
+                                  {actions.remove && (
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        removeSelectedSource(source.id, source.label);
+                                      }}
+                                      className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-error/10 hover:text-error"
+                                      aria-label={t("workspace.remove_source")}
+                                      title={t("workspace.remove_source")}
+                                    >
+                                      <TrashCan size={12} />
+                                    </button>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -1977,15 +1980,6 @@ export default function WorkspacePage() {
                         title={t("workspace.workspace_root")}
                       >
                         {t("workspace.workspace_root")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => addFolder()}
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-base-content/50 transition hover:bg-base-200 hover:text-accent"
-                        title={t("workspace.add_folder")}
-                        aria-label={t("workspace.add_folder")}
-                      >
-                        <FolderAdd size={15} />
                       </button>
                     </div>
                     <div className="mt-1 max-h-44 overflow-y-auto">

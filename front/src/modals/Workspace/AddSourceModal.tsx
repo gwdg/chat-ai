@@ -18,6 +18,7 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
   const [kind, setKind] = useState<SourceKind>("local");
   const [label, setLabel] = useState("");
   const [readOnly, setReadOnly] = useState(false);
+  const [handle, setHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [mcpEndpoint, setMcpEndpoint] = useState("");
@@ -39,10 +40,24 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
     if (!availableKinds.includes(kind)) setKind(availableKinds[0] ?? "local");
   }, [availableKinds, kind]);
 
+  // Chrome only exposes showDirectoryPicker() on a secure page, and a blocked picker used to look
+  // like a dead click. Say why up front instead of failing after the button is pressed.
+  const localBlocker =
+    window.isSecureContext === false
+      ? t("workspace.local_insecure")
+      : !("showDirectoryPicker" in window)
+        ? t("workspace.local_unsupported")
+        : "";
+
+  /** OK is the only action that creates the source, so it stays off until the form can succeed. */
+  const canSubmit =
+    kind === "local" ? !!handle && !localBlocker : kind === "mcp" ? !!mcpEndpoint.trim() : true;
+
   const reset = () => {
     setKind("local");
     setLabel("");
     setReadOnly(false);
+    setHandle(null);
     setError("");
     setBusy(false);
     setMcpEndpoint("");
@@ -78,38 +93,57 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
     close();
   };
 
+  /**
+   * Picks the folder on its own, so the dialog can show what was chosen before the source is
+   * created and OK can simply confirm it. `showDirectoryPicker` needs a user gesture, which the
+   * button supplies.
+   */
+  const chooseFolder = async () => {
+    if (busy) return;
+    setError("");
+    setBusy(true);
+    try {
+      if (window.isSecureContext === false) {
+        throw new Error(t("workspace.local_insecure"));
+      }
+      if (!("showDirectoryPicker" in window)) {
+        throw new Error(t("workspace.local_unsupported"));
+      }
+      let picked: FileSystemDirectoryHandle;
+      try {
+        picked = await (window as any).showDirectoryPicker({
+          mode: readOnly ? "read" : "readwrite",
+        });
+      } catch (event) {
+        // Chrome reports AbortError both for "user cancelled" and for "the file dialog could not
+        // open / the folder was refused". Swallowing it made a blocked picker look like a click
+        // that does nothing, so keep the failure visible and diagnosable.
+        console.warn(
+          "[workspace] directory picker did not return a folder",
+          (event as Error)?.name,
+          (event as Error)?.message,
+        );
+        if ((event as Error)?.name === "AbortError") {
+          setError(t("workspace.local_aborted"));
+          return;
+        }
+        throw event;
+      }
+      setHandle(picked);
+    } catch (event) {
+      setError(event instanceof Error ? event.message : String(event));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submit = async () => {
     if (busy) return;
     setError("");
     setBusy(true);
     try {
       if (kind === "local") {
-        if (window.isSecureContext === false) {
-          throw new Error(t("workspace.local_insecure"));
-        }
-        if (!("showDirectoryPicker" in window)) {
-          throw new Error(t("workspace.local_unsupported"));
-        }
-        let handle: FileSystemDirectoryHandle;
-        try {
-          handle = await (window as any).showDirectoryPicker({
-            mode: readOnly ? "read" : "readwrite",
-          });
-        } catch (event) {
-          // Chrome reports AbortError both for "user cancelled" and for "the file dialog could not
-          // open / the folder was refused". Swallowing it made a blocked picker look like a click
-          // that does nothing, so keep the failure visible and diagnosable.
-          console.warn(
-            "[workspace] directory picker did not return a folder",
-            (event as Error)?.name,
-            (event as Error)?.message,
-          );
-          if ((event as Error)?.name === "AbortError") {
-            setError(t("workspace.local_aborted"));
-            return;
-          }
-          throw event;
-        }
+        if (!handle) throw new Error(t("workspace.choose_folder_required"));
         await finish({
           kind,
           label: label.trim() || handle.name,
@@ -150,18 +184,71 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
   return (
     <BaseModal isOpen={isOpen} onClose={close} titleKey="workspace.add_source">
       <div className="flex flex-col gap-3 pb-2">
-        <div className="flex flex-wrap gap-1">
-          {availableKinds.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setKind(item)}
-              className={`btn btn-sm ${kind === item ? "btn-accent" : "btn-ghost"}`}
-            >
-              {t(`workspace.kind_${item}`)}
-            </button>
-          ))}
+        <div className="flex flex-col gap-1">
+          {/* With one available kind a row of buttons is a control that cannot do anything, and
+              clicking the already selected "Local folder" chip looked like a dead action. */}
+          {availableKinds.length > 1 ? (
+            <>
+              <span className="text-xs font-medium text-base-content/70">
+                {t("workspace.source_kind")}
+              </span>
+              <div
+                role="group"
+                aria-label={t("workspace.source_kind")}
+                className="flex flex-wrap gap-1"
+              >
+                {availableKinds.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    aria-pressed={kind === item}
+                    onClick={() => setKind(item)}
+                    className={`btn btn-sm ${kind === item ? "btn-accent" : "btn-ghost"}`}
+                  >
+                    {t(`workspace.kind_${item}`)}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm font-medium">{t(`workspace.kind_${kind}`)}</p>
+          )}
         </div>
+
+        {kind === "local" && (
+          <>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-base-content/70">
+                {t("workspace.source_folder")}
+              </span>
+              <div className="flex min-w-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={chooseFolder}
+                  disabled={busy || !!localBlocker}
+                  className="btn btn-sm shrink-0"
+                >
+                  {t("workspace.choose_folder")}
+                </button>
+                <span
+                  data-testid="local-source-folder"
+                  className={`truncate text-xs ${
+                    handle ? "text-base-content" : "text-base-content/50"
+                  }`}
+                  title={handle?.name}
+                >
+                  {handle ? handle.name : t("workspace.no_folder_chosen")}
+                </span>
+              </div>
+            </div>
+            <p className="text-xs leading-relaxed text-base-content/60">
+              {t("workspace.local_hint")}
+            </p>
+            {localBlocker && (
+              <p className="text-xs leading-relaxed text-error">{localBlocker}</p>
+            )}
+          </>
+        )}
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-xs font-medium text-base-content/70">
@@ -174,12 +261,6 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
             className="input input-bordered w-full"
           />
         </label>
-
-        {kind === "local" && (
-          <p className="text-xs leading-relaxed text-base-content/60">
-            {t("workspace.local_hint")}
-          </p>
-        )}
 
         {kind === "mcp" && (
           <>
@@ -254,9 +335,9 @@ export default function AddSourceModal({ isOpen, onClose, workspaceId, onAdded }
             type="button"
             className="btn btn-accent"
             onClick={submit}
-            disabled={busy}
+            disabled={busy || !canSubmit}
           >
-            {t("workspace.add_source")}
+            {t("common.ok")}
           </button>
         </div>
       </div>

@@ -1,5 +1,26 @@
 import { agentEndpoint, agentRequestHeaders } from "../apis/agentEndpoints";
 
+/**
+ * A readable message from an error response. The upstream (or the gateway in front of it) answers
+ * with a JSON body such as `{"detail":"Not Found"}`; showing that verbatim in the UI is noise, so
+ * only its message field is used and anything else becomes a status message.
+ */
+async function failureMessage(response: Response) {
+  const text = await response.text().catch(() => "");
+  if (text) {
+    try {
+      const body = JSON.parse(text);
+      const detail = [body?.detail, body?.error, body?.message].find(
+        (value: unknown) => typeof value === "string" && value.trim()
+      );
+      if (detail) return detail as string;
+    } catch {
+      // Not JSON: a proxy error page is not worth showing.
+    }
+  }
+  return `Arcana Tools request failed (${response.status})`;
+}
+
 async function request(path: string, init?: RequestInit) {
   const auth = agentRequestHeaders();
   const requestInit = Object.keys(auth).length
@@ -13,8 +34,7 @@ async function request(path: string, init?: RequestInit) {
     : init;
   const response = await fetch(`${agentEndpoint()}${path}`, requestInit);
   if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(text || `Arcana Tools request failed (${response.status})`);
+    throw new Error(await failureMessage(response));
   }
   if (response.status === 204) return null;
   const type = response.headers.get("content-type") ?? "";
