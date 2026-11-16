@@ -1768,7 +1768,11 @@ export default {
         "Verknüpfen Sie zuerst einen Arbeitsbereich. Die Brücke stellt nur verknüpfte Arbeitsbereiche bereit.",
       options: "Optionen",
       writable: "Schreiben erlauben",
+      writable_hint:
+        "Erlaubt dem Agenten, Dateien im verknüpften Arbeitsbereich zu erstellen, zu ändern und zu löschen. Ohne diese Option bleibt der Arbeitsbereich schreibgeschützt.",
       mcp: "Lokale MCP-Werkzeuge",
+      mcp_hint:
+        "Erlaubt dem Agenten, die MCP-Server dieser Browsersitzung aufzurufen. Deren Ergebnisse und Daten verlassen die App über diese Server.",
       keep_open: "Lassen Sie diesen Tab geöffnet. Arbeitsbereichs- und MCP-Werkzeuge sind nur verfügbar, solange der Browser verbunden ist.",
       tab_warning: "Die Agenten-Brücke benötigt diesen Tab. Arbeitsbereichs- und MCP-Werkzeuge sind möglicherweise nicht verfügbar, bis Sie zurückkehren.",
       start_failed: "Die Arbeitsbereich-Brücke konnte nicht gestartet werden: {{message}}",

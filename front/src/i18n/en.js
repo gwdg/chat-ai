@@ -1744,7 +1744,11 @@ export default {
         "Attach a workspace first. The bridge exposes only attached workspaces.",
       options: "Options",
       writable: "Allow writes",
+      writable_hint:
+        "Lets the agent create, change and delete files in the attached workspace. Without it the workspace stays read-only.",
       mcp: "Local MCP tools",
+      mcp_hint:
+        "Lets the agent call the MCP servers of this browser session. Their results and data leave the app through those servers.",
       keep_open: "Keep this tab open. Workspace and MCP tools are available only while the browser is connected.",
       tab_warning: "The agent bridge needs this tab to stay connected. Workspace and MCP tools may stop until you return.",
       start_failed: "Could not start the workspace bridge: {{message}}",

@@ -6,7 +6,7 @@ import {
   Transition,
 } from "@headlessui/react";
 import { useTranslation } from "react-i18next";
-import { Check } from "lucide-react";
+import { Check, TriangleAlert } from "lucide-react";
 import { Workspace } from "@carbon/icons-react";
 
 import Tooltip from "../Others/Tooltip";
@@ -226,7 +226,13 @@ export default function AgentWorkspaceButton({
                       })
                     }
                   />
-                  {t("agents.bridge.writable")}
+                  {/* Both options change what the agent may touch, so each label says so. */}
+                  <Tooltip
+                    text={t("agents.bridge.writable_hint")}
+                    className="min-w-0"
+                  >
+                    {t("agents.bridge.writable")}
+                  </Tooltip>
                 </label>
                 <label className="flex items-center gap-2">
                   <input
@@ -238,7 +244,18 @@ export default function AgentWorkspaceButton({
                       updateAgent(agent.id, { bridgeMcp: event.target.checked })
                     }
                   />
-                  {t("agents.bridge.mcp")}
+                  <Tooltip
+                    text={t("agents.bridge.mcp_hint")}
+                    className="min-w-0"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {t("agents.bridge.mcp")}
+                      <TriangleAlert
+                        size={11}
+                        className="shrink-0 text-warning"
+                      />
+                    </span>
+                  </Tooltip>
                 </label>
               </div>
             </div>

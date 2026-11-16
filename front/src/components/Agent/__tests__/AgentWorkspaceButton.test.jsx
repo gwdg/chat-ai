@@ -81,6 +81,21 @@ describe("AgentWorkspaceButton", () => {
     });
   });
 
+  it("explains what the write and MCP options allow", async () => {
+    // Both options widen what the agent may touch, so each label carries its own hint
+    // instead of leaving the consequence to the option name.
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel();
+
+    fireEvent.mouseEnter(screen.getByText("Allow writes"));
+    expect(
+      screen.getByText(/create, change and delete files/),
+    ).toBeInTheDocument();
+
+    fireEvent.mouseEnter(screen.getByText("Local MCP tools"));
+    expect(screen.getByText(/MCP servers of this browser/)).toBeInTheDocument();
+  });
+
   it("hides the access options while access is off", async () => {
     mocks.links = [{ workspaceId: "ws-1" }];
     await openPanel({ bridgeEnabled: false });
