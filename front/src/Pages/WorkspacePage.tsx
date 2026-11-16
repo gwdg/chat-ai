@@ -451,9 +451,6 @@ export default function WorkspacePage() {
         if (!first || local.some((entry) => entry.name === first)) continue;
         const entryPath = joinPath(path, first);
         if (virtual.has(first)) continue;
-        const source = sources.find((candidate) => candidate.id === mount.sourceId);
-        const isChatFolder =
-          source?.kind === "chat" && mountPath === entryPath;
         virtual.set(first, {
           sourceId: workspaceRootSourceId(workspaceId),
           path: entryPath,
@@ -461,12 +458,11 @@ export default function WorkspacePage() {
           kind: "dir",
           local: false,
           mount: mountPath === entryPath ? mount : undefined,
-          label: isChatFolder ? source?.label : undefined,
         });
       }
       return [...local, ...virtual.values()];
     },
-    [rootProvider, workspaceId, mounts, sources],
+    [rootProvider, workspaceId, mounts],
   );
 
   const loadRoot = useCallback(async () => {
@@ -948,6 +944,8 @@ export default function WorkspacePage() {
     const source = sources.find(
       (candidate) => candidate.id === entry.mount!.sourceId,
     );
+    // A chat folder is named by its conversation id, which a rename never changes.
+    if (source?.kind === "chat") return undefined;
     return source?.label ?? entry.mount.sourceId;
   };
 
@@ -1971,14 +1969,7 @@ export default function WorkspacePage() {
                           onToggleMountReadOnly={toggleRootMountReadOnly}
                           isReadOnly={rootEntryReadOnly}
                           isSourceReadOnly={rootEntrySourceReadOnly}
-                          sourceLabel={(entry) =>
-                            entry.mount
-                              ? sources.find(
-                                  (candidate) =>
-                                    candidate.id === entry.mount!.sourceId,
-                                )?.label ?? entry.mount.sourceId
-                              : undefined
-                          }
+                          sourceLabel={rootEntrySourceLabel}
                         />
                       )}
                     </div>

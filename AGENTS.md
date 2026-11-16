@@ -779,8 +779,9 @@ workspace gets one derived `chat` source plus a mount at `/chats/<conversation i
 the agent VFS at that path. `attachWorkspaceChat` creates the link, `detachWorkspaceChat` removes
 only the source and mount (the files stay with the chat), and `WorkspacePage` reconciles it through
 `syncChatStorageSources`. The source is driven by the chat link, so the UI shows no per-row rename,
-unmount or read-only switch for it, and `listCloneTargets` excludes it. The browser displays the
-chat title (source label) with the id in the tooltip while the path stays `chats/<id>`. The tree
+unmount or read-only switch for it, and `listCloneTargets` excludes it. The folder under `chats/` is
+named by its conversation id, not the title, so a rename never changes the path; the derived
+source's own label keeps the title for the storage list. The tree
 used to be `conversations/<id>`; `chatStorageDir` copies an old tree over on first access and
 removes it, so there is no startup migration.
 A chat without file access (no workspace/mount and `tools.browser_storage` off, or a model without

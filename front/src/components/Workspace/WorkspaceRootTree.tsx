@@ -141,13 +141,10 @@ function TreeRow({
           ) : (
             <Document size={13} className="shrink-0 text-base-content/50" />
           )}
-          <span
-            className="min-w-0 flex-1 truncate text-base-content"
-            title={entry.label ? `${entry.label} (${entry.name})` : undefined}
-          >
-            {entry.label || entry.name}
+          <span className="min-w-0 flex-1 truncate text-base-content">
+            {entry.name}
           </span>
-          {isMount && !entry.label && props.sourceLabel?.(entry) && (
+          {isMount && props.sourceLabel?.(entry) && (
             <span className="shrink-0 text-[9px] font-semibold text-base-content/55">
               {props.sourceLabel?.(entry)}
             </span>

@@ -49,11 +49,10 @@ describe("WorkspaceRootTree flat mode", () => {
     expect(props.onOpen).toHaveBeenCalledWith(props.entries[0]);
   });
 
-  it("shows an attached chat's folder by title, without unmount controls", () => {
+  it("shows an attached chat's folder by its id, without unmount controls", () => {
     const chatEntry = {
       ...entry("chat-1", "dir", "chats/chat-1"),
       local: false,
-      label: "Trip planning",
       mount: {
         id: "mount-1",
         workspaceId: "ws-1",
@@ -68,8 +67,8 @@ describe("WorkspaceRootTree flat mode", () => {
 
     render(<WorkspaceRootTree {...props} flat canRemoveMount={() => false} />);
 
-    const row = screen.getByText("Trip planning");
-    expect(row).toHaveAttribute("title", "Trip planning (chat-1)");
+    const row = screen.getByText("chat-1");
+    expect(screen.queryByText("Trip planning")).toBeNull();
     expect(screen.queryByLabelText("Remove folder")).toBeNull();
 
     fireEvent.click(row);
