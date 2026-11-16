@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createWrittenFiles, guessType } from "../writtenFiles";
+import { createWrittenFiles, guessType, resultImages } from "../writtenFiles";
 import { loadFile } from "../../db";
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -95,10 +95,97 @@ describe("files the agent writes", () => {
   });
 });
 
+const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+
+describe("images a tool returns", () => {
+  it("attaches a png the agent read, with its random data", async () => {
+    const bytes = randomPng();
+    const files = createWrittenFiles(conversationId, workspaceFor({}));
+
+    await files.attachImage({
+      path: "/charts/random-chart.png",
+      data: toBase64(bytes),
+      mimeType: "image/png",
+    });
+
+    expect(files.items()).toHaveLength(1);
+    const saved = await readSaved(files.items()[0].fileId);
+    expect(saved.name).toBe("random-chart.png");
+    expect(saved.type).toBe("image/png");
+    expect(new Uint8Array(await saved.arrayBuffer())).toEqual(bytes);
+  });
+
+  it("skips a file that is already attached and the user's uploads", async () => {
+    const data = toBase64(randomPng());
+    const files = createWrittenFiles(conversationId, workspaceFor({
+      "/generated/image-1.png": new Uint8Array([1, 2, 3]),
+    }));
+
+    // The file was written earlier in the turn, so reading it must not attach it twice.
+    files.observe({ path: "/generated/image-1.png", kind: "write" });
+    await files.save();
+    await files.attachImage({ path: "/generated/image-1.png", data, mimeType: "image/png" });
+
+    // Uploads are visible in the user's message already.
+    await files.attachImage({ path: "/artefacts/1234abcd/photo.png", data, mimeType: "image/png" });
+
+    // Reading the same image twice keeps one item.
+    await files.attachImage({ path: "/charts/read.png", data, mimeType: "image/png" });
+    await files.attachImage({ path: "/charts/read.png", data, mimeType: "image/png" });
+
+    expect(files.items()).toHaveLength(2);
+  });
+
+  it("names an image without a path after the tool", async () => {
+    const files = createWrittenFiles(conversationId, workspaceFor({}));
+
+    await files.attachImage({
+      name: "mcp-tool-1.png",
+      data: `data:image/png;base64,${toBase64(randomPng())}`,
+      mimeType: "image/png",
+    });
+
+    expect((await readSaved(files.items()[0].fileId)).name).toBe("mcp-tool-1.png");
+  });
+});
+
 describe("guessType", () => {
   it("maps known extensions and falls back to text", () => {
     expect(guessType("chart.PNG")).toBe("image/png");
     expect(guessType("data.csv")).toBe("text/csv");
     expect(guessType("archive.zip")).toBe("text/plain");
+  });
+});
+
+describe("resultImages", () => {
+  it("turns the image blocks of a tool result into attachments", () => {
+    const images = resultImages(
+      {
+        content: [
+          { type: "text", text: "Read image file [image/png]" },
+          { type: "image", data: "abc", mimeType: "image/png" },
+        ],
+      },
+      { path: "/charts/random.png", toolName: "read" },
+    );
+
+    expect(images).toEqual([
+      { path: "/charts/random.png", name: undefined, data: "abc", mimeType: "image/png" },
+    ]);
+  });
+
+  it("names an image after the tool when there is no path", () => {
+    const [image] = resultImages(
+      { content: [{ type: "image", data: "abc", mimeType: "image/jpeg" }] },
+      { toolName: "fetch_preview" },
+    );
+
+    expect(image).toMatchObject({ name: "fetch_preview-1.jpg", data: "abc", mimeType: "image/jpeg" });
+    expect(image.path).toBeUndefined();
+  });
+
+  it("ignores text-only and missing results", () => {
+    expect(resultImages({ content: [{ type: "text", text: "done" }] })).toEqual([]);
+    expect(resultImages(undefined)).toEqual([]);
   });
 });

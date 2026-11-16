@@ -773,8 +773,11 @@ attached workspace root (or the conversation OPFS when no workspace is linked); 
 `/uploads` routed to the conversation OPFS for legacy paths. `agent/writtenFiles.ts` turns every
 other file the agent writes during a turn into a conversation file and reports it as a
 `{ type: "file", fileId }` content item of the assistant message, so a "create a png and show me"
-turn renders a clickable attachment. `/artefacts` writes are the user's inputs and never attached
-back; a path written twice keeps one attachment.
+turn renders a clickable attachment. Image blocks in tool results (pi's `read`, MCP tools) are
+attached the same way, which is why the tool call shows only its text and no `[image]` placeholder;
+an image whose path is already attached, or that is an upload below `/artefacts`, is skipped.
+`/artefacts` writes are the user's inputs and never attached back; a path written twice keeps one
+attachment.
 
 **A chat's files always live in its own OPFS tree at `chats/<conversation id>**
 (`workspace/chatStorage.ts`). Attaching a chat to a workspace never copies or moves them: the

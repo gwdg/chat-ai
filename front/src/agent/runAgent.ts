@@ -13,7 +13,7 @@ import { onAbortRequest, reasoningParams } from "../apis/chatCompletions";
 import { loadFileMeta } from "../db";
 import { getFileType } from "../utils/attachments";
 import { ARTEFACTS, prepareAttachment, uploadPath } from "./prepare";
-import { createWrittenFiles } from "./writtenFiles";
+import { createWrittenFiles, resultImages } from "./writtenFiles";
 import { addGatewayFields, gatewayFetch, gatewayRequestFields, nameResults, toAgentMessage } from "./gateway";
 import { attachmentsNote, hasReadableText, type AttachmentEntry } from "./attachmentContext";
 import i18n from "../i18n";
@@ -488,6 +488,23 @@ export async function runAgentTurn({
     return { agentMessages, text: agentText(agentMessages), files: written.items() };
   };
 
+  // Arguments of each tool call, by id, to name the images its result carries after the path.
+  const toolArgs = new Map<string, any>();
+  // pi's read and MCP tools return images; attach them like a generated image.
+  const attachResultImages = async (event: {
+    toolCallId: string;
+    toolName: string;
+    result?: { content?: any[] };
+  }) => {
+    const path = toolArgs.get(event.toolCallId)?.path;
+    for (const image of resultImages(event.result, {
+      path: typeof path === "string" ? path : undefined,
+      toolName: event.toolName,
+    })) {
+      await written.attachImage(image);
+    }
+  };
+
   let error: string | undefined;
   agent.subscribe(async (event) => {
     switch (event.type) {
@@ -497,6 +514,11 @@ export async function runAgentTurn({
       case "message_end":
         streaming = undefined;
         if (event.message.role === "user") return;
+        if (event.message.role === "assistant") {
+          for (const block of event.message.content ?? []) {
+            if (block?.type === "toolCall" && block.id) toolArgs.set(block.id, block.arguments);
+          }
+        }
         if (event.message.role === "assistant" && gatewayMessages.length) {
           before.set(event.message, gatewayMessages);
           done.push(...nameResults(gatewayMessages));
@@ -509,6 +531,7 @@ export async function runAgentTurn({
         break;
       case "tool_execution_end":
         await written.save();
+        await attachResultImages(event);
         break;
       default:
         return;

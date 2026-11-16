@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MessageAssistant from "../MessageAssistant";
 import { loadFile, saveFileReady } from "../../../../db";
+import { createWrittenFiles } from "../../../../agent/writtenFiles";
 
 const { openModal, confirmAction } = vi.hoisted(() => ({
   openModal: vi.fn(),
@@ -54,32 +55,18 @@ const randomPng = (size = 128) => {
 
 const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes));
 
-describe("assistant message with a created png", () => {
+describe("assistant message with a png", () => {
   beforeEach(() => openModal.mockClear());
 
-  it("shows the png as a clickable attachment", async () => {
-    const bytes = randomPng();
-    const fileId = await saveFileReady(
-      "conversation-created-png",
-      new File([bytes], "random-chart.png", { type: "image/png" }),
-    );
-
+  // Renders the message, checks the thumbnail, its bytes and the preview modal.
+  const expectClickablePng = async ({ conversationId, content, name, bytes, fileId }) => {
     const localState = {
-      id: "conversation-created-png",
+      id: conversationId,
       settings: {
         model: { id: "vision-model", input: ["image"] },
         enable_tools: true,
       },
-      messages: [
-        {
-          role: "assistant",
-          content: [
-            { type: "text", text: "Here is the chart you asked for." },
-            // What runAgent turns a written png into (see agent/writtenFiles.ts).
-            { type: "file", fileId },
-          ],
-        },
-      ],
+      messages: [{ role: "assistant", content }],
     };
 
     render(
@@ -92,7 +79,7 @@ describe("assistant message with a created png", () => {
     );
 
     expect(await screen.findByText("Here is the chart you asked for.")).toBeInTheDocument();
-    const image = await screen.findByAltText("random-chart.png");
+    const image = await screen.findByAltText(name);
     // useFileBase64 loads the bytes after the metadata, so the src arrives a tick later.
     await waitFor(() =>
       expect(image.getAttribute("src")).toBe(`data:image/png;base64,${toBase64(bytes)}`),
@@ -108,11 +95,55 @@ describe("assistant message with a created png", () => {
       "preview",
       expect.objectContaining({
         fileId,
-        previewFile: expect.objectContaining({
-          name: "random-chart.png",
-          type: "image/png",
-        }),
+        previewFile: expect.objectContaining({ name, type: "image/png" }),
       }),
     );
+  };
+
+  it("shows a created png as a clickable attachment", async () => {
+    const bytes = randomPng();
+    const fileId = await saveFileReady(
+      "conversation-created-png",
+      new File([bytes], "random-chart.png", { type: "image/png" }),
+    );
+
+    await expectClickablePng({
+      conversationId: "conversation-created-png",
+      content: [
+        { type: "text", text: "Here is the chart you asked for." },
+        // What runAgent turns a written png into (see agent/writtenFiles.ts).
+        { type: "file", fileId },
+      ],
+      name: "random-chart.png",
+      bytes,
+      fileId,
+    });
+  });
+
+  it("shows a png the agent read as the same clickable attachment", async () => {
+    const bytes = randomPng();
+    const files = createWrittenFiles("conversation-read-png", {
+      readFile: async () => {
+        throw new Error("the tool result contains the image");
+      },
+    });
+    // What runAgent does with the image block of a tool result, e.g. pi's read.
+    await files.attachImage({
+      path: "/charts/read-chart.png",
+      data: toBase64(bytes),
+      mimeType: "image/png",
+    });
+    const [item] = files.items();
+
+    await expectClickablePng({
+      conversationId: "conversation-read-png",
+      content: [
+        { type: "text", text: "Here is the chart you asked for." },
+        item,
+      ],
+      name: "read-chart.png",
+      bytes,
+      fileId: item.fileId,
+    });
   });
 });
