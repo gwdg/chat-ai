@@ -67,6 +67,7 @@ const cloneMcpServers = (servers) => JSON.parse(JSON.stringify(servers ?? []));
 
 const CONVERSATION_TOOL_SETTING_KEYS = new Set([
   "browser_storage",
+  "workspace_write_access",
   "arcana_tools",
 ]);
 
@@ -412,6 +413,7 @@ export default function MetaActionCard({
     enable_tools: "settings.tools_title",
     enable_web_search: "settings.label_web_search",
     browser_storage: "settings.label_browser_storage",
+    workspace_write_access: "settings.label_write_access",
     arcana_tools: "settings.label_arcana_tools",
   };
 

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 
 import { chatCompletions } from "../apis/chatCompletions";
+import { modelSupportsTools } from "../apis/agentEndpoints";
 import { useToast } from "./useToast";
 import generateMemory from "../apis/generateMemory";
 import { extractMessageText } from "../utils/conversationSummary";
@@ -109,6 +110,7 @@ Supported per-chat setting keys and values:
 - memory_mode_override: "default", 0, 1, or 2
 - enable_tools, enable_web_search: true or false
 - browser_storage: true or false (agent mode: lets the agent read and write this chat's browser workspace)
+- workspace_write_access: true or false (agent mode: lets the agent change files in the workspaces attached to this chat; a chat without an attached workspace always writes in its own storage)
 - arcana_tools: true or false (lets the assistant inspect Arcana collections, their files, indexes, and sharing)
 
 Use SET_CONVERSATION_SETTING with "target":"all" only when the user explicitly asks to change all chats; otherwise use a conversation id from list_chats. The Meta chat's own settings are read-only.
@@ -290,8 +292,12 @@ export function useMetaChatSend(modelsData = []) {
           top_p: localState.settings?.top_p ?? 0.5,
           enable_tools: false,
           tools: {},
-          function_tools: META_TOOL_DEFINITIONS,
-          tool_choice: "auto",
+          ...(modelSupportsTools({ id: modelId })
+            ? {
+                function_tools: META_TOOL_DEFINITIONS,
+                tool_choice: "auto",
+              }
+            : {}),
         },
         messages: [
           { role: "system", content: systemPrompt },

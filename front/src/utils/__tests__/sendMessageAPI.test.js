@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db, saveFileReady } from "../../db";
 import {
   buildConversationForAPI,
   processContentItems,
+  shouldUseBrowserAgent,
 } from "../sendMessage";
 
 const clearFiles = () =>
@@ -97,6 +98,29 @@ describe("processContentItems", () => {
       type: "file",
       file: { filename: "notes.txt" },
     });
+  });
+});
+
+describe("Browser agent routing", () => {
+  it("falls back to plain chat for a model without tool support", () => {
+    vi.stubEnv("VITE_MODULE_AGENT", "true");
+    try {
+      expect(
+        shouldUseBrowserAgent({ id: "qwen3-omni-30b-a3b-instruct" }),
+      ).toBe(false);
+      expect(shouldUseBrowserAgent({ id: "some-tool-model" })).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("uses the plain chat workflow when the agent module is off", () => {
+    vi.stubEnv("VITE_MODULE_AGENT", "false");
+    try {
+      expect(shouldUseBrowserAgent({ id: "some-tool-model" })).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 

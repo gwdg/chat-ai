@@ -990,7 +990,6 @@ export default {
     label_mcp_server: "MCP-Server",
     label_write_access: "Schreiben erlauben",
     label_browser_storage: "Browserspeicher",
-    label_codemode: "Browser-Agent",
     label_create_docx: "Word-Dokument",
     tools_requires_browser_storage: "Zuerst den Browserspeicher aktivieren oder einen lokalen Ordner freigeben",
     tools_requires_workspace: "Zuerst einen Arbeitsbereich verknüpfen",
@@ -998,6 +997,8 @@ export default {
     label_tool_limit: "Werkzeugaufrufe pro Antwort begrenzen",
     tool_limit_hint: "Maximale Werkzeugaufrufe pro Antwort; gemeinsam ausgeführte Aufrufe zählen einmal",
     tools_agent_external: "Dieses Modell läuft ohne Werkzeuge",
+    model_no_tools_warning:
+      "Dieses Modell unterstützt keine Werkzeuge. Der Chat läuft ohne Dateizugriff, Websuche oder MCP-Werkzeuge.",
     placeholder_arcana_id: "Arcana-ID",
     placeholder_mcp_id: "Server-ID",
     placeholder_mcp_url: "http://localhost:3000/mcp",
@@ -2044,9 +2045,11 @@ export default {
       "Dieser Chat ist mit mehreren Arbeitsbereichen verknüpft. Öffnen Sie einen, um seine Dateien zu verwalten.",
     access_storage: "Auf Speicher zugreifen",
     access_storage_hint:
-      "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen. Schreiben ist der separate Schalter unter „Lokaler Agent“.",
+      "Das Modell darf die Dateien dieses Chats und seiner verknüpften Arbeitsbereiche lesen. In diesem Chat darf es immer schreiben; für einen verknüpften Arbeitsbereich gibt es den Schalter darunter.",
     access_storage_off_hint:
       "Das Modell erhält keine Dateiwerkzeuge. Anhänge werden weiterhin in die Nachricht aufgenommen, sofern ihr Text lesbar ist.",
+    workspace_write_access_hint:
+      "Das Modell darf Dateien in den verknüpften Arbeitsbereichen ändern.",
     chat_files: "Dateien in diesem Chat",
     chat_files_hint:
       "Nur in diesem Browser für diesen Chat gespeichert. Das Modell schreibt hier, wenn kein Arbeitsbereich verknüpft ist.",
@@ -2081,6 +2084,7 @@ export default {
     kind_browser: "Browser",
     kind_local: "Lokaler Ordner",
     kind_agent: "Agent-Dateisystem",
+    kind_chat: "Chat-Ordner",
     kind_arcana: "Arcana",
     "kind_arcana-filesystem": "Arcana-Dateisystem",
     kind_mcp: "MCP",

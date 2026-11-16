@@ -14,6 +14,7 @@ import AttachFromWorkspaceButton from "./AttachFromWorkspaceButton";
 import WorkspaceAttachButton from "./WorkspaceAttachButton";
 import AttachMediaButton from "./AttachMediaButton";
 import PromptTextArea from "./PromptTextArea";
+import ModelNoToolsWarning from "./ModelNoToolsWarning";
 import SpeechModeButton from "./SpeechModeButton";
 import SpeechModePanel from "./SpeechModePanel";
 
@@ -168,6 +169,7 @@ export default function Prompt({
           localState={localState}
           setLocalState={setLocalState}
         />
+        <ModelNoToolsWarning localState={localState} />
         <div className={`flex flex-col gap-4 w-full relative select-none rounded-2xl shadow-lg text-base-content bg-base-100`} >
         {/* Prompt Text Area */}
         <PromptTextArea

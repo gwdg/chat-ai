@@ -34,6 +34,7 @@ const SUPPORTED_CONVERSATION_SETTING_KEYS = new Set([
   "enable_tools",
   "enable_web_search",
   "browser_storage",
+  "workspace_write_access",
   "arcana_tools",
 ]);
 
@@ -62,9 +63,8 @@ const CREATE_CHAT_TOOL_KEYS = new Set([
   "arcana",
   "mcp",
   "mcp_remote",
-  "write_access",
+  "workspace_write_access",
   "browser_storage",
-  "codemode",
   "create_docx",
 ]);
 

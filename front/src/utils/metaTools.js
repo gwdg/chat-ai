@@ -144,6 +144,7 @@ export function buildConversationSettingsSummary(settings = {}) {
     .filter(([, enabled]) => enabled)
     .map(([name]) => name);
   const browserStorage = tools.browser_storage !== false;
+  const workspaceWrite = tools.workspace_write_access !== false;
   const memoryOverride =
     settings.memory_mode_override === "default" ||
     settings.memory_mode_override === undefined
@@ -183,6 +184,7 @@ export function buildConversationSettingsSummary(settings = {}) {
         : ""
     }`,
     `storage access ${browserStorage ? "enabled" : "disabled"}`,
+    `writing in this chat ${browserStorage ? "enabled" : "disabled"}; writing in attached workspaces ${workspaceWrite ? "enabled" : "disabled"}`,
     `arcana ${arcanaId || "none"}`,
     `MCP local ${tools.mcp ? "enabled" : "disabled"}, remote ${remoteMcpEnabled(settings) ? "enabled" : "disabled"}${mcpDescription ? ` (${mcpDescription})` : ""}`,
   ].join("; ");

@@ -21,4 +21,6 @@ export const emptyStream = (): ReadableStream<Uint8Array> =>
 export type RootEntry = import("../db/dbTypes").WorkspaceFileEntry & {
   local: boolean;
   mount?: import("../db/dbTypes").WorkspaceMountRow;
+  /** Shown instead of the folder name, e.g. a chat title for `/chats/<conversation id>`. */
+  label?: string;
 };

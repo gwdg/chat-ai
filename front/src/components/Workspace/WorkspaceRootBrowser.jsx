@@ -295,10 +295,13 @@ export default function WorkspaceRootBrowser({
                         "file"}
                     </span>
                   )}
-                  <span className="min-w-0 flex-1 truncate text-base-content">
-                    {entry.name}
+                  <span
+                    className="min-w-0 flex-1 truncate text-base-content"
+                    title={entry.label ? `${entry.label} (${entry.name})` : undefined}
+                  >
+                    {entry.label || entry.name}
                   </span>
-                  {sourceLabel?.(entry) && (
+                  {!entry.label && sourceLabel?.(entry) && (
                     <span className="shrink-0 text-[10px] font-semibold text-base-content/60">
                       {sourceLabel(entry)}
                     </span>

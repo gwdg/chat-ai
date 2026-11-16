@@ -183,8 +183,9 @@ existing version block: users have live databases.
 the Meta chat, and it is **on by default** (`agent/storageAccess.ts`). v17 rewrites the old opt-in
 `false` of existing conversations to `true`, so after that upgrade an explicit `false` always means
 the user switched it off. With it off the model gets no data-access tools at all, even when a
-folder is mounted or the chat is attached to a workspace; Arcana, MCP and codemode keep their own
-toggles.
+folder is mounted or the chat is attached to a workspace; Arcana and MCP keep their own toggles.
+The Browser agent's `codemode` tool is always offered, not a toggle. Writing is always on in the
+chat's own storage; only an attached workspace has a `workspace_write_access` switch, on by default.
 
 ### 4.4 "folder" in code == "topic" in the UI
 
@@ -754,8 +755,9 @@ written to. `AddSourceModal` surfaces the picker's `AbortError` in the dialog in
 as a silent cancel, because Chrome reports the same error when its file dialog cannot open or
 refuses a folder.
 The Local tools panel was removed;
-GWDG Tools now contains the document-creation and image-analysis toggles, while codemode and the
-tool-call limit moved to the Workspace popover. When a chat has a workspace link, `runAgent` uses
+GWDG Tools now contains the document-creation and image-analysis toggles, while the tool-call limit
+moved to the Workspace popover. The Browser agent is the default and only workflow, so codemode is
+always on. When a chat has a workspace link, `runAgent` uses
 `workspace/agentVfs.ts` over that workspace's root and mounts for the file tools.
 `agent/workspaceTools.ts` adds the workspace-scoped tools that the plain file tools cannot cover:
 `workspace_list` (sources, mounts and attached agents of every workspace linked to the chat),
@@ -769,6 +771,18 @@ model supports tools, even while no agent is attached.
 `agent/prepare.ts` writes attachments and their converted variants under `/artefacts` in the
 attached workspace root (or the conversation OPFS when no workspace is linked); the agent VFS keeps
 `/uploads` routed to the conversation OPFS for legacy paths.
+
+**A chat's files always live in its own OPFS tree at `chats/<conversation id>**
+(`workspace/chatStorage.ts`). Attaching a chat to a workspace never copies or moves them: the
+workspace gets one derived `chat` source plus a mount at `/chats/<conversation id>`
+(`workspaceDb.ts#ensureChatStorageSource`), so the folder appears in the workspace browser and in
+the agent VFS at that path. `attachWorkspaceChat` creates the link, `detachWorkspaceChat` removes
+only the source and mount (the files stay with the chat), and `WorkspacePage` reconciles it through
+`syncChatStorageSources`. The source is driven by the chat link, so the UI shows no per-row rename,
+unmount or read-only switch for it, and `listCloneTargets` excludes it. The browser displays the
+chat title (source label) with the id in the tooltip while the path stays `chats/<id>`. The tree
+used to be `conversations/<id>`; `chatStorageDir` copies an old tree over on first access and
+removes it, so there is no startup migration.
 A chat without file access (no workspace/mount and `tools.browser_storage` off, or a model without
 tool support) gets no file tools, so `agent/attachmentContext.ts` inlines the text of text-like
 attachments and of documents with a converted `.md`/`.txt` variant into the user message; images,
@@ -844,20 +858,24 @@ modal and closing afterwards dismissed it again.
 
 The prompt box's Workspace popover (`WorkspaceAttachButton`) is ordered storage → attachment →
 settings: the "Access storage" master switch, the "Manage data" row directly under it, the
-attachment hint with the workspace list, then the agent settings under "Local agent" (the
-`Browser agent` tile `tools.codemode`, the `Allow write` tile `tools.write_access`, and the
-tool-call limit `settings.max_tool_calls`). Writing is opt-in where nothing else allows it: with no
-attached workspace the `Allow write` tile is the only way to set `tools.write_access`, and it is
-hidden for a chat whose first workspace link makes `storageToolSettings` force writing on. The tile
-is disabled while "Access storage" is off, because then no file tool is offered at all.
+attachment hint with the workspace list, then the tool-call limit under "Local agent". A chat with
+at least one attached workspace shows an `Allow write` switch (`tools.workspace_write_access`,
+default on) directly under "Access storage". A chat without a workspace has no write switch:
+writing in its own storage is always allowed. The switch is disabled while "Access storage" is off,
+because then no file tool is offered at all.
 The attachment hint is dynamic: unattached it invites attaching, attached it names the workspaces and
-says the chat can use all files there. GWDG Tools no longer renders codemode or the call limit.
+says the chat can use all files there. GWDG Tools no longer renders the call limit.
+
+The Browser agent is the default workflow (`utils/sendMessage.jsx#shouldUseBrowserAgent`). A model
+without tool support (`apis/agentEndpoints.ts#modelSupportsTools`) falls back to the plain chat path
+with no tools, and the prompt shows a warning above the input. `runAgent` also refuses to attach any
+tool to such a model, including workspace and connected-agent tools.
 
 "Manage data" is the per-chat view of the same files. With exactly one attached workspace it opens
 that workspace page directly (the workspace owns the file system, so the popover does not repeat
 it in a second view); with several it opens `modals/Chat/ManageDataModal.jsx`, which asks which
 one; with none it browses the chat's own OPFS tree
-(`conversations/<conversationId>`) through `ConversationStorageProvider`
+(`chats/<conversationId>`) through `ConversationStorageProvider`
 (`workspace/providers/conversation.ts`), rendered with the shared `WorkspaceRootBrowser`. The
 "Access storage" switch is the first row of that popover, not of the modal: it writes
 `tools.browser_storage` through the live `Prompt` state, and the modal only reports its result

@@ -21,4 +21,6 @@ export function getDeviceId(): string {
   }
 }
 
-export const DEVICE_PLANE_KINDS = new Set(["browser", "local", "mcp"]);
+// Sources whose files exist only in this browser and are bound to this device. A chat's own tree
+// (`chat`) is OPFS and belongs to a chat that only exists on this device.
+export const DEVICE_PLANE_KINDS = new Set(["browser", "local", "mcp", "chat"]);

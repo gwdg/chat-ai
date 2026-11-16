@@ -98,7 +98,6 @@ const TOGGLES: Record<string, string[]> = {
     "remove_arcana_member",
   ],
   write_access: ["write", "edit"],
-  codemode: ["codemode"],
   create_docx: ["create_docx"],
   image_analysis: ["explain_image"],
   image_generation: ["generate_image"],
@@ -570,6 +569,7 @@ export function createTools(fs: Vfs, { vision, enabled = {}, hasLocalFolder = fa
           : enabled[key] === false;
   const off = new Set(Object.entries(TOGGLES).flatMap(([key, names]) => (isOff(key) ? names : [])));
   const on = (tool: AgentTool<any>) => !off.has(tool.name);
+  // The Browser agent is the default workflow, so codemode is not a switch: it is always offered.
   // Scripts get the same file tools, so they cannot write either when writing is off
   const codemode = createCodemodeTool(fileTools.filter(on));
   return [...fileTools, codemode, ...arcanaTools, ...mediaTools].filter(on);

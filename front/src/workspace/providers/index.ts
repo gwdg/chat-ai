@@ -3,6 +3,7 @@ import { ArcanaProvider } from "./arcana";
 import { ArcanaFilesystemProvider } from "./arcanaFilesystem";
 import { AgentFilesProvider } from "./agent";
 import { BrowserProvider } from "./browser";
+import { ConversationStorageProvider } from "./conversation";
 import { workspaceBrowserStorageId } from "../browserStorage";
 import { LocalProvider } from "./local";
 import { McpProvider } from "./mcp";
@@ -17,6 +18,13 @@ export function createProvider(source: WorkspaceSourceRow): FileProvider {
     provider = new BrowserProvider(
       source.id,
       workspaceBrowserStorageId(source.workspaceId),
+    );
+  }
+  else if (source.kind === "chat") {
+    // The chat's own tree, mounted at /chats/<conversationId> (workspace/chatStorage.ts).
+    provider = new ConversationStorageProvider(
+      source.id,
+      String((source.config as any)?.conversationId ?? ""),
     );
   }
   else if (source.kind === "local") {

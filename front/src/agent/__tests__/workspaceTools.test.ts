@@ -176,6 +176,19 @@ describe("createWorkspaceTools", () => {
     expect(context.workspaceIds).toEqual([]);
   });
 
+  it("omits the workspace write tool when writing is switched off", async () => {
+    const { tools } = await createWorkspaceTools(
+      "chat-1",
+      vfs() as any,
+      undefined,
+      { writable: false },
+    );
+
+    const names = tools.map((item) => item.name);
+    expect(names).not.toContain("workspace_write_file");
+    expect(names).toContain("workspace_read_file");
+  });
+
   it("lists workspaces with their sources, mounts and agents", async () => {
     const list = await tool("workspace_list");
 

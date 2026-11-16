@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { liveQuery } from "dexie";
 
 import { db } from "../index";
+import { deleteConversation } from "../index";
 import {
   addFileReference,
   addSource,
@@ -31,6 +32,8 @@ import {
   syncAgentFilesSources,
   updateSource,
   updateWorkspace,
+  chatStorageSourceId,
+  syncChatStorageSources,
 } from "../workspaceDb";
 import { getDeviceId } from "../../workspace/deviceId";
 import { workspaceBrowserStorageId } from "../../workspace/browserStorage";
@@ -184,6 +187,79 @@ describe("workspace database", () => {
     await deleteWorkspace(workspaceId);
     expect(await db.workspace_mounts.count()).toBe(0);
     expect(await db.workspace_chats.count()).toBe(0);
+  });
+
+  it("links an attached chat's own folder into the workspace", async () => {
+    const workspaceId = await createWorkspace("Chat folders");
+    await db.conversations.put({
+      id: "chat-1",
+      title: "Trip planning",
+      settings: {},
+      createdAt: 1,
+      lastModified: 1,
+    });
+
+    await attachWorkspaceChat(workspaceId, "chat-1");
+    const source = await db.workspace_sources.get(
+      chatStorageSourceId(workspaceId, "chat-1"),
+    );
+    expect(source).toMatchObject({
+      kind: "chat",
+      label: "Trip planning",
+      config: { conversationId: "chat-1" },
+    });
+    const mount = await db.workspace_mounts
+      .where("sourceId")
+      .equals(source.id)
+      .first();
+    expect(mount).toMatchObject({
+      path: "/chats/chat-1",
+      sourcePath: "/",
+      readOnly: false,
+    });
+
+    // The link is idempotent: syncing again neither duplicates nor rewrites anything.
+    const before = await db.workspace_sources.get(source.id);
+    await syncChatStorageSources(workspaceId, [
+      { id: "chat-1", title: "Trip planning" },
+    ]);
+    expect(await db.workspace_sources.count()).toBe(3);
+    expect((await db.workspace_sources.get(source.id))?.lastModified).toBe(
+      before.lastModified,
+    );
+
+    // A title change follows through to the label.
+    await syncChatStorageSources(workspaceId, [
+      { id: "chat-1", title: "Renamed trip" },
+    ]);
+    expect((await db.workspace_sources.get(source.id))?.label).toBe(
+      "Renamed trip",
+    );
+
+    // Detaching only unlinks: the files stay with the chat.
+    await detachWorkspaceChat(workspaceId, "chat-1");
+    expect(await db.workspace_sources.get(source.id)).toBeUndefined();
+    expect(await db.workspace_mounts.count()).toBe(0);
+  });
+
+  it("drops the chat folder when the chat is deleted", async () => {
+    const workspaceId = await createWorkspace("Chat folders");
+    await db.conversations.put({
+      id: "chat-2",
+      title: "Doomed",
+      settings: {},
+      createdAt: 1,
+      lastModified: 1,
+    });
+    await attachWorkspaceChat(workspaceId, "chat-2");
+    const sourceId = chatStorageSourceId(workspaceId, "chat-2");
+    expect(await db.workspace_sources.get(sourceId)).toBeTruthy();
+
+    await deleteConversation("chat-2");
+    expect(await db.workspace_sources.get(sourceId)).toBeUndefined();
+    expect(await db.workspace_mounts.where("sourceId").equals(sourceId).count()).toBe(
+      0,
+    );
   });
 
   it("attaches agents to workspaces and removes orphan links", async () => {

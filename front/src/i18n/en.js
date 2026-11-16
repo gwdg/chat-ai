@@ -976,7 +976,6 @@ export default {
     label_mcp_server: "MCP Server",
     label_write_access: "Allow write",
     label_browser_storage: "Browser storage",
-    label_codemode: "Browser agent",
     label_create_docx: "Word document",
     tools_requires_browser_storage: "Enable browser storage or share a local folder first",
     tools_requires_workspace: "Attach a workspace first",
@@ -984,6 +983,8 @@ export default {
     label_tool_limit: "Limit tool calls per response",
     tool_limit_hint: "Maximum tool invocations per response; calls made together count once",
     tools_agent_external: "This model runs without tools",
+    model_no_tools_warning:
+      "This model does not support tools. The chat runs without file access, web search, or MCP tools.",
     placeholder_arcana_id: "Arcana id",
     placeholder_mcp_id: "Server id",
     placeholder_mcp_url: "http://localhost:3000/mcp",
@@ -2018,9 +2019,11 @@ export default {
       "This chat is attached to several workspaces. Open one to manage its files.",
     access_storage: "Access storage",
     access_storage_hint:
-      "The model may read the files of this chat and of its attached workspaces. Writing is the separate switch under Local agent.",
+      "The model may read the files of this chat and of its attached workspaces. It may always write in this chat; an attached workspace has its own switch below.",
     access_storage_off_hint:
       "The model gets no file tools. Attachments are still included in the message where their text can be read.",
+    workspace_write_access_hint:
+      "Let the model change files in the attached workspaces.",
     chat_files: "Files in this chat",
     chat_files_hint:
       "Kept in this browser for this chat only. The model writes here when no workspace is attached.",
@@ -2055,6 +2058,7 @@ export default {
     kind_browser: "Browser",
     kind_local: "Local folder",
     kind_agent: "Agent filesystem",
+    kind_chat: "Chat folder",
     kind_arcana: "Arcana",
     "kind_arcana-filesystem": "Arcana filesystem",
     kind_mcp: "MCP",

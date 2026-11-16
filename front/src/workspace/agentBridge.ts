@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { createProvider } from "./providers";
 import { createWorkspaceRootProvider } from "./workspaceRoot";
+import { ensureChatStorageSource } from "../db/workspaceDb";
 import type { WorkspaceMountRow } from "../db/dbTypes";
 import type { FileProvider } from "./providers/types";
 
@@ -21,6 +22,14 @@ export async function getChatWorkspaceBundle(
   const link = links.sort((a, b) => a.createdAt - b.createdAt)[0];
   const workspace = await db.workspaces.get(link.workspaceId);
   if (!workspace) return null;
+
+  // The chat's own tree is linked in here, not copied. Re-check on every turn so a workspace that
+  // was created before the chat was attached still shows it; when both already exist this writes
+  // nothing.
+  const title = (await db.conversations.get(conversationId))?.title;
+  await ensureChatStorageSource(link.workspaceId, conversationId, title).catch(
+    () => {},
+  );
 
   const root = createWorkspaceRootProvider(link.workspaceId);
   await root.connect().catch(() => {});

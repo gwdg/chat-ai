@@ -175,7 +175,16 @@ export type FolderRow = {
 
 // ---------- Workspaces ----------
 
-export type SourceKind = 'browser' | 'local' | 'mcp' | 'arcana' | 'arcana-filesystem' | 'agent'
+export type SourceKind =
+  | 'browser'
+  | 'local'
+  | 'mcp'
+  | 'arcana'
+  | 'arcana-filesystem'
+  | 'agent'
+  // A chat's own OPFS tree, linked into a workspace at /chats/<conversationId> while the chat is
+  // attached (db/workspaceDb.ts#ensureChatStorageSource).
+  | 'chat'
 
 export type SourceStatus =
   | 'connected'
@@ -209,6 +218,7 @@ export type McpConfig = {
 }
 export type ArcanaConfig = { remoteWorkspaceId: string; baseUrl?: string }
 export type AgentFilesConfig = { agentId: string }
+export type ChatStorageConfig = { conversationId: string }
 
 export type SourceConfig =
   | BrowserConfig
@@ -216,6 +226,7 @@ export type SourceConfig =
   | McpConfig
   | ArcanaConfig
   | AgentFilesConfig
+  | ChatStorageConfig
 
 export type WorkspaceRow = {
   id: string

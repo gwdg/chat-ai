@@ -7,6 +7,7 @@ import i18n from '../i18n'
 import { isArcanasEnabled } from '../utils/modules'
 import { defaultCapabilities } from '../workspace/capabilities'
 import { SHARED_BROWSER_STORAGE_ID, workspaceBrowserStorageId } from '../workspace/browserStorage'
+import { chatStorageSourceId } from '../workspace/chatStorage'
 
 import type { 
   ConversationRow, 
@@ -1102,6 +1103,8 @@ export async function deleteConversation(conversationId: string) {
     db.files_data,
     db.conversations,
     db.workspace_chats,
+    db.workspace_sources,
+    db.workspace_mounts,
     db.workspace_file_references],
     async () => {
       // Delete all files for this conversation (meta + data)
@@ -1131,6 +1134,13 @@ export async function deleteConversation(conversationId: string) {
       // Finally, delete the conversation record itself
       await db.conversations.delete(conversationId);
       await db.workspace_chats.where('conversationId').equals(conversationId).delete();
+      // The chat's own folder disappears from the workspaces it was attached to; the files are
+      // deleted with the chat below (workspace/chatStorage.ts).
+      for (const link of chatLinks) {
+        const sourceId = chatStorageSourceId(link.workspaceId, conversationId);
+        await db.workspace_mounts.where('sourceId').equals(sourceId).delete();
+        await db.workspace_sources.delete(sourceId);
+      }
       await db.workspace_file_references
         .where('conversationId')
         .equals(conversationId)

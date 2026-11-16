@@ -21,7 +21,7 @@ import { beginMcpConfirmationSession } from "./mcpConfirmation";
 import { createTools } from "./tools";
 import { createConnectedAgentTools, type ConnectedAgentContext } from "./connectedAgentTools";
 import { createWorkspaceTools, type WorkspaceToolContext } from "./workspaceTools";
-import { storageAccessEnabled, storageToolSettings } from "./storageAccess";
+import { storageAccessEnabled, storageToolSettings, writeAccessEnabled } from "./storageAccess";
 import { type Change, observe } from "./vfs";
 import { getWorkspace, listMounts } from "./workspace";
 import { WorkspaceAgentVfs } from "../workspace/agentVfs";
@@ -279,6 +279,13 @@ export async function runAgentTurn({
   const attachedWorkspace = await getChatWorkspaceBundle(conversationId).catch(
     () => null,
   );
+  // Writing is always on in the chat's own storage; an attached workspace has its own switch.
+  const writeAccess =
+    useTools &&
+    browserStorage &&
+    writeAccessEnabled(settings, {
+      attachedWorkspace: !!attachedWorkspace,
+    });
   const agentStorage = attachedWorkspace
     ? new WorkspaceAgentVfs(
         storage,
@@ -390,6 +397,7 @@ export async function runAgentTurn({
         conversationId,
         workspace,
         attachedWorkspace?.workspaceId,
+        { writable: writeAccess },
       );
       tools.push(...workspaceTools.tools);
       workspaceContext = workspaceTools.context;
@@ -441,7 +449,7 @@ export async function runAgentTurn({
               .map((workspace) => `${workspace.name} (${workspace.id})`)
               .join(
                 ", ",
-              )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders.`
+              )}. Use workspace_list for its sources, mounts and agents, workspace_list_agents for the agents attached to each workspace, and workspace_files, workspace_read_file, workspace_write_file and workspace_fetch_file for files in it, including sources that are not mounted. The read, ls and find tools work on the workspace root and its mounted folders. This chat's own folder is mounted at /chats/${conversationId}: it belongs to the chat and stays there if the workspace is detached, so keep the chat's private files there and the shared ones in the workspace.`
           : "",
         connectedAgentContext?.workspaceIds.length
           ? connectedAgentContext.agents.length
@@ -455,8 +463,7 @@ export async function runAgentTurn({
         useTools && browserStorage && mounts.length ? `The user's folders are mounted at: ${mounts.join(", ")}.` : "",
         useTools &&
         browserStorage &&
-        !attachedWorkspace &&
-        settings.tools?.write_access !== true
+        !writeAccess
           ? "The user has turned off writing and editing files: you can read files but not change them."
           : "",
         `Current date: ${new Date().toLocaleString()}`,

@@ -17,6 +17,10 @@ import type {
 import { defaultCapabilities } from "../workspace/capabilities";
 import { getDeviceId, DEVICE_PLANE_KINDS } from "../workspace/deviceId";
 import { workspaceBrowserStorageId } from "../workspace/browserStorage";
+import {
+  chatStorageMountPath,
+  chatStorageSourceId,
+} from "../workspace/chatStorage";
 
 
 export { getDeviceId } from "../workspace/deviceId";
@@ -107,6 +111,8 @@ export async function listCloneTargets() {
         source.kind !== "arcana" &&
         source.kind !== "arcana-filesystem" &&
         source.kind !== "agent" &&
+        // A chat's folder is derived: its files belong to the chat, not to a clone target.
+        source.kind !== "chat" &&
         source.readOnly !== true &&
         (!source.deviceId || source.deviceId === getDeviceId()) &&
         source.capabilities?.write === true &&
@@ -242,6 +248,107 @@ export async function removeAgentFilesSource(
   agentId: string,
 ): Promise<void> {
   await removeSource(`${AGENT_FILES_SOURCE_PREFIX}${workspaceId}:${agentId}`);
+}
+
+// A chat's own storage is never moved into a workspace. While the chat is attached, the workspace
+// gets one derived `chat` source and a mount at `/chats/<conversationId>`, so its files appear in
+// the workspace (and for the agent at that path) without being copied. Detaching removes the
+// mount and the source row; the files stay in the chat (workspace/chatStorage.ts).
+export { chatStorageSourceId, chatStorageMountPath };
+
+/**
+ * Links a chat's own files into a workspace. Idempotent, and it writes nothing when the source and
+ * its mount already exist, so the agent can call it on every turn without touching lastModified.
+ */
+export async function ensureChatStorageSource(
+  workspaceId: string,
+  conversationId: string,
+  label?: string,
+): Promise<string> {
+  if (!workspaceId || !conversationId) return "";
+  const id = chatStorageSourceId(workspaceId, conversationId);
+  const text = String(label ?? "").trim() || i18n.t("workspace.kind_chat");
+  const existing = await db.workspace_sources.get(id);
+  if (!existing) {
+    await addSource({
+      id,
+      workspaceId,
+      kind: "chat",
+      label: text,
+      config: { conversationId },
+      status: "offline",
+    });
+  } else if (existing.label !== text) {
+    await updateSource(id, { label: text });
+  }
+  const mountPath = chatStorageMountPath(conversationId);
+  const mount = await db.workspace_mounts
+    .where("workspaceId")
+    .equals(workspaceId)
+    .and((row) => row.sourceId === id)
+    .first();
+  if (mount) {
+    if (mount.path !== mountPath || mount.sourcePath !== "/") {
+      await db.workspace_mounts.update(mount.id, {
+        path: mountPath,
+        sourcePath: "/",
+        lastModified: now(),
+      });
+    }
+    return id;
+  }
+  await addWorkspaceMount({
+    workspaceId,
+    sourceId: id,
+    sourcePath: "/",
+    path: mountPath,
+  });
+  return id;
+}
+
+export async function removeChatStorageSource(
+  workspaceId: string,
+  conversationId: string,
+): Promise<void> {
+  await removeSource(chatStorageSourceId(workspaceId, conversationId));
+}
+
+/**
+ * Reconcile the chat sources of a workspace with its chat links: create what is missing (labels
+ * follow the chat titles) and drop what no chat links any more.
+ */
+export async function syncChatStorageSources(
+  workspaceId: string,
+  chats: { id: string; title?: string }[],
+): Promise<void> {
+  if (!workspaceId) return;
+  const links = await db.workspace_chats
+    .where("workspaceId")
+    .equals(workspaceId)
+    .toArray();
+  const titles = new Map((chats || []).map((chat) => [chat.id, chat.title]));
+  await Promise.all(
+    links.map((link) =>
+      ensureChatStorageSource(
+        workspaceId,
+        link.conversationId,
+        titles.get(link.conversationId),
+      ),
+    ),
+  );
+  const wanted = new Set(
+    links.map((link) => chatStorageSourceId(workspaceId, link.conversationId)),
+  );
+  const existing = await db.workspace_sources
+    .where("workspaceId")
+    .equals(workspaceId)
+    .and((source) => source.kind === "chat")
+    .toArray();
+  await Promise.all(
+    existing
+      .filter((source) => !wanted.has(source.id))
+      .map((source) => removeSource(source.id)),
+  );
 }
 
 /** Every workspace gets the Arcana Tools filesystem unless the Arcanas module is off. */
@@ -587,6 +694,9 @@ export async function attachWorkspaceChat(
     createdAt: now(),
   };
   await db.workspace_chats.add(link);
+  // The chat keeps its own tree; the workspace only shows it at /chats/<conversationId>.
+  const title = (await db.conversations.get(conversationId))?.title;
+  await ensureChatStorageSource(workspaceId, conversationId, title);
 }
 
 export async function detachWorkspaceChat(
@@ -599,6 +709,8 @@ export async function detachWorkspaceChat(
     .first();
   if (!link) return;
   await db.workspace_chats.delete(link.id);
+  // Unlink only: the chat's files stay in its own tree.
+  await removeChatStorageSource(workspaceId, conversationId);
 }
 
 export function useWorkspaceChats(workspaceId?: string): WorkspaceChatRow[] {

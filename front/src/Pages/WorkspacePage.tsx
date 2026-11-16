@@ -66,6 +66,7 @@ import {
   removeAgentFilesSource,
   removeOrphanWorkspaceAgents,
   syncAgentFilesSources,
+  syncChatStorageSources,
 } from "../db/workspaceDb";
 import type { WorkspaceFileEntry, WorkspaceMountRow } from "../db/dbTypes";
 import { DEVICE_PLANE_KINDS } from "../workspace/deviceId";
@@ -153,7 +154,7 @@ const quotaLabel = (
     return { label: "—", percent: null };
   }
   const percent = quota.quota ? Math.round((quota.usage / quota.quota) * 100) : null;
-  if (kind === "browser") {
+  if (kind === "browser" || kind === "chat") {
     return {
       label: `${formatBytes(quota.usage)} of ${formatBytes(quota.quota)} used — shared with this app`,
       percent,
@@ -224,6 +225,13 @@ export default function WorkspacePage() {
     // agent list changes: attach creates the source, detach or deleting an agent removes it.
     void syncAgentFilesSources(workspaceId, agents);
   }, [workspaceId, agents, attachedAgents]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    // Same for the chat folders: every attached chat shows its own tree at /chats/<id>, and the
+    // label follows the chat title. Old links get their source here.
+    void syncChatStorageSources(workspaceId, attachedChats);
+  }, [workspaceId, attachedChats]);
 
   useEffect(() => {
     for (const agentId of expandedAgentSessions) {
@@ -443,6 +451,9 @@ export default function WorkspacePage() {
         if (!first || local.some((entry) => entry.name === first)) continue;
         const entryPath = joinPath(path, first);
         if (virtual.has(first)) continue;
+        const source = sources.find((candidate) => candidate.id === mount.sourceId);
+        const isChatFolder =
+          source?.kind === "chat" && mountPath === entryPath;
         virtual.set(first, {
           sourceId: workspaceRootSourceId(workspaceId),
           path: entryPath,
@@ -450,11 +461,12 @@ export default function WorkspacePage() {
           kind: "dir",
           local: false,
           mount: mountPath === entryPath ? mount : undefined,
+          label: isChatFolder ? source?.label : undefined,
         });
       }
       return [...local, ...virtual.values()];
     },
-    [rootProvider, workspaceId, mounts],
+    [rootProvider, workspaceId, mounts, sources],
   );
 
   const loadRoot = useCallback(async () => {
@@ -985,6 +997,9 @@ export default function WorkspacePage() {
     const source = sources.find(
       (candidate) => candidate.id === entry.mount!.sourceId,
     );
+    // A chat folder is linked in by attaching the chat, so it has no per-row unmount or
+    // read-only switch; detaching the chat removes it.
+    if (source?.kind === "chat") return null;
     const sourceReadOnly = source?.readOnly === true;
     const effectiveReadOnly =
       entry.mount.readOnly === true || sourceReadOnly;
@@ -1739,7 +1754,8 @@ export default function WorkspacePage() {
                         const quota = quotas[source.id];
                         const storage = quotaLabel(source.kind, quota);
                         const isDevicePlane = DEVICE_PLANE_KINDS.has(source.kind);
-                        const fixedSource = source.kind === "agent";
+                        const fixedSource =
+                          source.kind === "agent" || source.kind === "chat";
                         return (
                           <div
                             key={source.id}
@@ -1785,18 +1801,20 @@ export default function WorkspacePage() {
                                   {t(`workspace.kind_${source.kind}`)}
                                 </span>
                               </button>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  addFolder(source.id);
-                                }}
-                                className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-accent"
-                                title={t("workspace.add_folder")}
-                                aria-label={t("workspace.add_folder")}
-                              >
-                                <FolderAdd size={12} />
-                              </button>
+                              {source.kind !== "chat" && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    addFolder(source.id);
+                                  }}
+                                  className="flex h-5 w-5 items-center justify-center rounded text-base-content/40 transition hover:bg-base-200 hover:text-accent"
+                                  title={t("workspace.add_folder")}
+                                  aria-label={t("workspace.add_folder")}
+                                >
+                                  <FolderAdd size={12} />
+                                </button>
+                              )}
                               {!fixedSource && (
                                 <>
                                   <button
@@ -1944,6 +1962,12 @@ export default function WorkspacePage() {
                           checkGit={checkRootGit}
                           onRemoveLocal={requestDeleteRootEntry}
                           onRemoveMount={removeRootMount}
+                          canRemoveMount={(entry) =>
+                            sources.find(
+                              (candidate) =>
+                                candidate.id === entry.mount?.sourceId,
+                            )?.kind !== "chat"
+                          }
                           onToggleMountReadOnly={toggleRootMountReadOnly}
                           isReadOnly={rootEntryReadOnly}
                           isSourceReadOnly={rootEntrySourceReadOnly}

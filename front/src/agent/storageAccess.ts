@@ -7,9 +7,19 @@
 export const storageAccessEnabled = (settings: any): boolean =>
   settings?.tools?.browser_storage !== false;
 
+// Writing is always allowed in the chat's own storage. Only an attached workspace offers a switch,
+// because its files are the ones the user shares; it is on unless switched off explicitly.
+export const writeAccessEnabled = (
+  settings: any,
+  { attachedWorkspace = false }: { attachedWorkspace?: boolean } = {},
+): boolean =>
+  !attachedWorkspace ||
+  settings?.tools?.workspace_write_access !== false;
+
 /**
  * The `createTools` options for a turn. With access storage off no file tool may be offered, not
- * even through an attached workspace or a mounted folder; writing stays opt-in otherwise.
+ * even through an attached workspace or a mounted folder. Writing is always on for the chat's own
+ * storage; an attached workspace follows its `workspace_write_access` switch.
  */
 export const storageToolSettings = (
   settings: any,
@@ -36,7 +46,7 @@ export const storageToolSettings = (
     enabled: {
       ...settings?.tools,
       browser_storage: true,
-      ...(attachedWorkspace ? { write_access: true } : {}),
+      write_access: writeAccessEnabled(settings, { attachedWorkspace }),
     },
     hasLocalFolder: attachedWorkspace || hasMounts,
   };

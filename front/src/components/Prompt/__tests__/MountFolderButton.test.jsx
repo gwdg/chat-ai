@@ -70,7 +70,6 @@ describe("MountFolderButton bulk actions", () => {
 
     expect(screen.getByRole("button", { name: /word document/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /analyze images/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /browser agent/i })).not.toBeDisabled();
   });
 
   it("enables file tools when a workspace is attached", () => {
@@ -91,7 +90,6 @@ describe("MountFolderButton bulk actions", () => {
     const localState = stateWith({
       mcp: false,
       create_docx: false,
-      codemode: false,
       image_analysis: false,
     });
     const setLocalState = vi.fn((updater) => updater(localState));
@@ -104,7 +102,6 @@ describe("MountFolderButton bulk actions", () => {
     expect(next.settings.tools).toMatchObject({
       mcp: true,
       create_docx: true,
-      codemode: true,
       image_analysis: true,
     });
     expect(next.settings.tools.browser_storage).toBeUndefined();
@@ -115,7 +112,6 @@ describe("MountFolderButton bulk actions", () => {
     const localState = stateWith({
       mcp: false,
       create_docx: false,
-      codemode: false,
       image_analysis: false,
     });
     const setLocalState = vi.fn((updater) => updater(localState));
@@ -125,7 +121,7 @@ describe("MountFolderButton bulk actions", () => {
     fireEvent.click(screen.getByRole("button", { name: /enable all/i }));
 
     const next = setLocalState.mock.results.at(-1).value;
-    expect(next.settings.tools).toMatchObject({ mcp: true, codemode: true });
+    expect(next.settings.tools).toMatchObject({ mcp: true });
     expect(next.settings.tools.create_docx).toBe(false);
     expect(next.settings.tools.image_analysis).toBe(false);
   });
@@ -135,7 +131,6 @@ describe("MountFolderButton bulk actions", () => {
     const localState = stateWith({
       mcp: true,
       create_docx: true,
-      codemode: true,
       image_analysis: true,
     });
     const setLocalState = vi.fn((updater) => updater(localState));
@@ -148,7 +143,6 @@ describe("MountFolderButton bulk actions", () => {
     expect(next.settings.tools).toMatchObject({
       mcp: false,
       create_docx: false,
-      codemode: false,
       image_analysis: false,
     });
   });

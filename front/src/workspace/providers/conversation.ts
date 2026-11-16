@@ -1,11 +1,13 @@
-// A `FileProvider` over the chat's own browser storage: OPFS at
-// `navigator.storage.getDirectory() / conversations / <conversationId>`.
+// A `FileProvider` over the chat's own browser storage: OPFS at `chats/<conversationId>`
+// (workspace/chatStorage.ts).
 //
 // This is the tree the agent writes to in a chat without a workspace (see agent/workspace.ts),
-// including the `/artefacts` uploads. The workspace file browser is reused on top of it, so the
-// chat's files can be managed with the same controls.
+// including the `/artefacts` uploads. An attached workspace links the same tree in at
+// `/chats/<conversationId>`, so the files stay with the chat. The workspace file browser is reused
+// on top of it, so the chat's files can be managed with the same controls.
 import type { WorkspaceCapabilities, WorkspaceFileEntry } from "../../db/dbTypes";
 import { defaultCapabilities } from "../capabilities";
+import { chatStorageDir } from "../chatStorage";
 import { joinPath, normalizePath } from "../paths";
 import type { DirectoryPage, FileProvider, QuotaInfo } from "./types";
 import { WorkspaceError } from "./types";
@@ -37,8 +39,8 @@ const segments = (path: string) =>
   normalizePath(path).split("/").filter(Boolean);
 
 export class ConversationStorageProvider implements FileProvider {
-  readonly kind = "browser" as const;
-  readonly capabilities: WorkspaceCapabilities = defaultCapabilities("browser");
+  readonly kind = "chat" as const;
+  readonly capabilities: WorkspaceCapabilities = defaultCapabilities("chat");
   status: "connected" | "needs-permission" | "offline" | "error" = "offline";
 
   private root: Promise<FileSystemDirectoryHandle> | null = null;
@@ -49,15 +51,7 @@ export class ConversationStorageProvider implements FileProvider {
   ) {}
 
   private rootHandle(): Promise<FileSystemDirectoryHandle> {
-    this.root ??= (async () => {
-      const opfs = await navigator.storage.getDirectory();
-      const conversations = await opfs.getDirectoryHandle("conversations", {
-        create: true,
-      });
-      return conversations.getDirectoryHandle(this.conversationId, {
-        create: true,
-      });
-    })();
+    this.root ??= chatStorageDir(this.conversationId);
     return this.root;
   }
 
