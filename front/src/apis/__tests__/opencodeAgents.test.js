@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AGENT_SERVICE_CONFLICT_EVENT } from "../agentService";
-import { getOpencodeInfo } from "../opencodeAgents";
+import { DIRECT_AGENT_BLOCKED, getOpencodeInfo } from "../opencodeAgents";
+
+const access = vi.hoisted(() => ({ direct: true }));
+
+vi.mock("../agentAccess", async (importOriginal) => ({
+  ...(await importOriginal()),
+  directAgentAccessAllowed: () => access.direct,
+}));
 
 const serviceAgent = {
   id: "local-1",
@@ -27,6 +34,7 @@ const collect = (event) => conflicts.push(event.detail);
 
 beforeEach(() => {
   conflicts.length = 0;
+  access.direct = true;
   window.addEventListener(AGENT_SERVICE_CONFLICT_EVENT, collect);
 });
 
@@ -88,5 +96,33 @@ describe("opencodeAgents conflict reporting", () => {
       /opencode server responded with 500/,
     );
     expect(conflicts).toEqual([]);
+  });
+});
+
+describe("opencodeAgents direct access guard", () => {
+  it("blocks a direct agent outside local access without calling it", async () => {
+    access.direct = false;
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      getOpencodeInfo({ id: "direct", serverUrl: "http://127.0.0.1:9000" }),
+    ).rejects.toThrow(DIRECT_AGENT_BLOCKED);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("still reaches a service-managed agent outside local access", async () => {
+    access.direct = false;
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ version: "1" })));
+
+    await expect(getOpencodeInfo(serviceAgent)).resolves.toBeDefined();
+  });
+
+  it("allows a direct agent when Chat AI runs locally", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ version: "1" })));
+
+    await expect(
+      getOpencodeInfo({ id: "direct", serverUrl: "http://127.0.0.1:9000" }),
+    ).resolves.toBeDefined();
   });
 });

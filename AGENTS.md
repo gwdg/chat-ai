@@ -1014,11 +1014,25 @@ HTTP-basic credentials default from `opencodeServerUrl` / `opencodeServerUsernam
 agent. The browser talks to the server directly (opencode allows the app origin via CORS), so the
 back service is not involved.
 
+**A direct OpenCode server is a local-only affordance.** Everything else must go through the agent
+service, which in a deployment sits behind SAIA. `apis/agentAccess.js` is the policy:
+`directAgentAccessAllowed()` is true only for a loopback hostname (`localhost`, `127.0.0.1`, `::1`,
+bracketed or not), and `isServiceManagedAgent()` is "the agent carries a `serviceAgentId`".
+`apis/opencodeAgents.js#rawRequest` enforces it for every request, so a direct agent outside local
+access throws `DIRECT_AGENT_BLOCKED` without touching the network. `AddAgentModal` mirrors the policy
+outside local access: it hides the service toggle, the local toggle, the server URL/password fields
+and the HPC project selector, shows `agents.service_forced_hint`, and disables "Add agent" with
+`agents.service_required` when no service is configured. Saving an existing direct agent there
+migrates it to the service (creates the service agent, stores its proxy prefix, drops the basic-auth
+password). There is no config flag that bypasses this; a LAN/IP deployment counts as deployment.
+
 When `agentServiceUrl` is set (`VITE_AGENT_SERVICE_URL`, see
 [`agent-service/`](agent-service/README.md)), `AddAgentModal` defaults to a service-managed agent:
 it `POST`s `/agents` on the service, stores the returned id as `serviceAgentId` and the proxy prefix
 `<service>/agents/<id>/opencode` as `serverUrl`, and stores no basic-auth password (the proxy adds
-the backend credentials). The toggle in that window keeps the direct connection available.
+the backend credentials). In a deployment `agentServiceUrl` must be the SAIA gateway path that
+forwards `/agents/*` to the service, never the service's own port. The service toggle in that window
+only appears with local access, where it is the way back to a direct server.
 `AgentList`'s remove action also calls `DELETE /agents/<id>` when `serviceAgentId` is set, so
 removing the row frees the container/process; a `404` counts as already removed. The rest of the
 OpenCode client (`apis/opencodeAgents.js`) is unchanged because the proxy forwards `/api/*`

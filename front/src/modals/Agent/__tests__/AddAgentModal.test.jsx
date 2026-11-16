@@ -18,11 +18,23 @@ const serviceMocks = vi.hoisted(() => ({
   remove: vi.fn(),
 }));
 
+// jsdom runs on localhost, which allows direct connections. A deployment is
+// simulated by flipping this for the hosted cases below.
+const accessMocks = vi.hoisted(() => ({ direct: true }));
+
+const storeMocks = vi.hoisted(() => ({ update: vi.fn() }));
+
 vi.mock("../../BaseModal", () => ({
   default: ({ children }) => <div>{children}</div>,
 }));
 vi.mock("../../../db", () => ({
   newId: () => "agent-1",
+}));
+vi.mock("../../../agents/agentStore", () => ({
+  updateAgent: (...args) => storeMocks.update(...args),
+}));
+vi.mock("../../../apis/agentAccess", () => ({
+  directAgentAccessAllowed: () => accessMocks.direct,
 }));
 vi.mock("../../../apis/opencodeAgents", () => ({
   opencodeDefaults: () => apiMocks.defaults,
@@ -43,6 +55,8 @@ beforeEach(() => {
   serviceMocks.available = false;
   serviceMocks.create.mockReset();
   serviceMocks.remove.mockReset();
+  accessMocks.direct = true;
+  storeMocks.update.mockReset();
 });
 
 describe("AddAgentModal", () => {
@@ -153,6 +167,93 @@ describe("AddAgentModal", () => {
         sessionId: "session-1",
       }),
     );
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("forces the service and hides the direct option outside local access", async () => {
+    accessMocks.direct = false;
+    serviceMocks.available = true;
+    serviceMocks.create.mockResolvedValue({
+      serviceAgentId: "svc-2",
+      serverUrl: "http://gateway.example/agents/svc-2/opencode",
+    });
+    const onCreate = vi.fn();
+    render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={onCreate} />);
+
+    // No way back to a direct connection: no toggle, no server fields.
+    expect(
+      screen.queryByLabelText("Run through the agent service"),
+    ).toBeNull();
+    expect(screen.queryByLabelText("opencode server")).toBeNull();
+    expect(screen.getByText(/In a deployment agents run/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add agent" }));
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    expect(serviceMocks.create).toHaveBeenCalledWith({ name: "HPC project 1" });
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        serviceAgentId: "svc-2",
+        serverUrl: "http://gateway.example/agents/svc-2/opencode",
+      }),
+    );
+  });
+
+  it("blocks creation outside local access when no service is configured", () => {
+    accessMocks.direct = false;
+    serviceMocks.available = false;
+    const onCreate = vi.fn();
+    render(<AddAgentModal isOpen onClose={vi.fn()} onCreate={onCreate} />);
+
+    expect(screen.getByText(/it is not configured/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add agent" })).toBeDisabled();
+  });
+
+  it("migrates a direct agent to the service when it is saved outside local access", async () => {
+    accessMocks.direct = false;
+    serviceMocks.available = true;
+    serviceMocks.create.mockResolvedValue({
+      serviceAgentId: "svc-3",
+      serverUrl: "http://gateway.example/agents/svc-3/opencode",
+    });
+    const agent = {
+      id: "agent-direct",
+      name: "Direct agent",
+      projectId: "hpc-project-1",
+      local: true,
+      serverUrl: "http://127.0.0.1:9000",
+      username: "opencode",
+      password: "custom",
+      passwordSource: "custom",
+      sessionId: "old-session",
+    };
+    const onCreate = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <AddAgentModal
+        isOpen
+        onClose={onClose}
+        onCreate={onCreate}
+        agent={agent}
+      />,
+    );
+
+    expect(screen.queryByLabelText("opencode server")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(storeMocks.update).toHaveBeenCalledTimes(1));
+    expect(serviceMocks.create).toHaveBeenCalledWith({ name: "Direct agent" });
+    expect(storeMocks.update).toHaveBeenCalledWith(
+      "agent-direct",
+      expect.objectContaining({
+        serviceAgentId: "svc-3",
+        serviceManaged: true,
+        serverUrl: "http://gateway.example/agents/svc-3/opencode",
+        password: "",
+        sessionId: "session-1",
+      }),
+    );
+    expect(onCreate).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });
 });

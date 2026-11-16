@@ -4,9 +4,20 @@ import {
   reportAgentConflict,
   serviceErrorDetails,
 } from "./agentService";
+import {
+  directAgentAccessAllowed,
+  isServiceManagedAgent,
+} from "./agentAccess";
 
 const DEFAULT_SERVER_URL = "http://127.0.0.1:9000";
 const DEFAULT_SERVER_USERNAME = "opencode";
+
+/**
+ * A direct OpenCode server is only reachable from a local Chat AI. Everything
+ * else must go through the agent service, which sits behind SAIA.
+ */
+export const DIRECT_AGENT_BLOCKED =
+  "Direct agent connections are only available when Chat AI runs locally. In a deployment, agents run through the agent service (SAIA).";
 
 export const opencodeDefaults = () => ({
   serverUrl: import.meta.env.VITE_OPENCODE_SERVER_URL || DEFAULT_SERVER_URL,
@@ -26,6 +37,9 @@ const authHeaders = (agent) => {
 };
 
 async function rawRequest(agent, path, init = {}) {
+  if (!isServiceManagedAgent(agent) && !directAgentAccessAllowed()) {
+    throw new Error(DIRECT_AGENT_BLOCKED);
+  }
   const response = await fetch(`${baseUrl(agent)}/api${path}`, {
     ...init,
     headers: {

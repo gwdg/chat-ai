@@ -1743,6 +1743,10 @@ export default {
     use_service: "Run through the agent service",
     service_hint:
       "The agent service starts an OpenCode container for this agent and stops it when you remove the agent. No server URL or password is needed.",
+    service_forced_hint:
+      "In a deployment agents run through the agent service (SAIA). Direct OpenCode connections are only possible when Chat AI runs locally.",
+    service_required:
+      "Agents run through the agent service (SAIA) here, but it is not configured. Ask your administrator to set it up.",
     hpc_project_label: "HPC project",
     server_url_label: "opencode server",
     server_password_label: "Server password",

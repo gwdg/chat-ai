@@ -14,6 +14,7 @@ import {
   deleteServiceAgent,
   hasAgentService,
 } from "../../apis/agentService";
+import { directAgentAccessAllowed } from "../../apis/agentAccess";
 
 // Placeholder project list; the real projects will come from the GWDG backend.
 const PROJECT_COUNT = 3;
@@ -41,6 +42,14 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const [useService, setUseService] = useState(
     agent?.serviceAgentId ? true : !agent && serviceAvailable,
   );
+  // Direct `opencode serve` connections are a local-only affordance. Outside a
+  // locally opened Chat AI every agent must run through the service behind SAIA,
+  // so the direct mode is not offered and an existing direct agent is migrated
+  // when it is saved.
+  const directAllowed = directAgentAccessAllowed();
+  const serviceMode = useService || !directAllowed;
+  const serviceMissing =
+    serviceMode && !serviceAvailable && !agent?.serviceAgentId;
   const [serverUrl, setServerUrl] = useState(
     agent?.serverUrl ?? defaults.serverUrl,
   );
@@ -52,7 +61,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
   const project = projects.find((item) => item.id === projectId);
 
   const submit = async () => {
-    if (!project || saving) return;
+    if (!project || saving || serviceMissing) return;
     setSaving(true);
     setError("");
     const effectiveServerUrl = local
@@ -73,7 +82,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
     };
     let createdServiceId = null;
     let replacedServiceId = null;
-    if (useService) {
+    if (serviceMode) {
       // The service starts an OpenCode backend for this agent; its proxy prefix
       // becomes the agent's server URL and no basic auth is stored.
       let serviceAgentId = agent?.serviceAgentId;
@@ -138,7 +147,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
     <BaseModal isOpen={isOpen} onClose={onClose} titleKey="agents.add_title">
       <div className="flex flex-col gap-3 pb-2 text-sm">
         <p className="text-xs text-base-content/70">{t("agents.add_hint")}</p>
-        {(serviceAvailable || agent?.serviceAgentId) && (
+        {directAllowed && (serviceAvailable || agent?.serviceAgentId) && (
           <label className="flex items-center gap-2 text-xs">
             <input
               type="checkbox"
@@ -149,7 +158,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             {t("agents.use_service")}
           </label>
         )}
-        {!useService && (
+        {!serviceMode && (
           <label className="flex items-center gap-2 text-xs">
             <input
               type="checkbox"
@@ -171,12 +180,25 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             className="input input-bordered w-full"
           />
         </label>
-        {useService && (
+        {serviceMode && (
           <p className="text-[11px] leading-relaxed text-base-content/50">
             {t("agents.service_hint")}
           </p>
         )}
-        {!useService && !local && (
+        {!directAllowed && (
+          <p
+            className={
+              serviceMissing
+                ? "text-[11px] leading-relaxed text-error"
+                : "text-[11px] leading-relaxed text-base-content/60"
+            }
+          >
+            {serviceMissing
+              ? t("agents.service_required")
+              : t("agents.service_forced_hint")}
+          </p>
+        )}
+        {!serviceMode && !local && (
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-base-content/70">
               {t("agents.hpc_project_label")}
@@ -194,7 +216,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             </select>
           </label>
         )}
-        {!useService && local && (
+        {!serviceMode && local && (
           <>
             <label className="flex flex-col gap-1">
               <span className="text-xs font-medium text-base-content/70">
@@ -233,7 +255,7 @@ export default function AddAgentModal({ isOpen, onClose, onCreate, agent }) {
             type="button"
             className="btn btn-accent"
             onClick={submit}
-            disabled={!project || saving}
+            disabled={!project || saving || serviceMissing}
           >
             {saving
               ? t("agents.connecting")
