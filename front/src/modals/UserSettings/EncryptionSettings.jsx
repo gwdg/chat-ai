@@ -30,7 +30,10 @@ import {
   parseModelTokens,
   resolveModelTokens,
 } from "../../e2ee/modelBindings";
-import { usableKey } from "../../e2ee/registry";
+import { findKeyForAssignment, usableKey } from "../../e2ee/registry";
+import { verifyKeyForModel } from "../../e2ee/verify";
+import { authHeaders } from "../../apis/authHeaders";
+import { resolveBaseURL } from "../../apis/openaiClient";
 import { downloadText } from "../../utils/download";
 import { useToast } from "../../hooks/useToast";
 import E2eeLock from "../../components/Others/E2eeLock";
@@ -62,16 +65,51 @@ export default function EncryptionSettings({ modelsData }) {
     [modelsData],
   );
 
-  const keyedCount = models.filter((model) => assignments[model.id]).length;
+  // Count only bindings that resolve to a usable key: an assigned key that is
+  // missing or invalid blocks the model instead of encrypting it.
+  const keyedCount = models.filter((model) =>
+    usableKey(findKeyForAssignment(keys, assignments[model.id])),
+  ).length;
+
+  // Parsing a key only proves it is 32 bytes wide. It does not prove that it is
+  // the key of the node serving a model. Before a key is stored, every model it
+  // is bound to gets one real sealed request, and a rejection keeps the key out
+  // instead of leaving a model that would fail on the first prompt.
+  const verifyPairs = async (pairs) => {
+    if (!pairs.length) return 0;
+    const url = `${resolveBaseURL().replace(/\/+$/, "")}/chat/completions`;
+    const headers = authHeaders();
+    for (const { key, model } of pairs) {
+      try {
+        await verifyKeyForModel({ modelId: model.id, key, url, headers });
+      } catch (caught) {
+        throw new Error(
+          t("e2ee.verify_failed", {
+            model: model.name || model.id,
+            reason: caught?.message || t("e2ee.import_error"),
+          }),
+        );
+      }
+    }
+    return pairs.length;
+  };
 
   // Adds the key and binds it to the models typed in the field. Unknown tokens
-  // do not abort the import: the key and the known bindings are still saved,
-  // and a toast names the entries that matched nothing.
-  const addKey = (entry) => {
-    const { matched, unknown } = resolveModelTokens(
-      models,
-      parseModelTokens(modelTokens),
-    );
+  // do not abort the import once something matched: the key and the known
+  // bindings are still saved and a toast names the entries that matched
+  // nothing. Tokens that match nothing at all are an error, because there is
+  // then nothing left to verify the key against.
+  const addKey = async (entry) => {
+    const tokens = parseModelTokens(modelTokens);
+    const { matched, unknown } = resolveModelTokens(models, tokens);
+    if (tokens.length > 0 && matched.length === 0) {
+      throw new Error(
+        t("e2ee.no_models_matched", { models: tokens.join(", ") }),
+      );
+    }
+
+    await verifyPairs(matched.map((model) => ({ key: entry, model })));
+
     const named = {
       ...entry,
       name:
@@ -90,8 +128,10 @@ export default function EncryptionSettings({ modelsData }) {
         t("e2ee.unknown_models", { models: unknown.join(", ") }),
         4000,
       );
+    } else if (matched.length > 0) {
+      notifySuccess(t("e2ee.verified_added", { count: matched.length }));
     } else {
-      notifySuccess(t("e2ee.added"));
+      notifySuccess(t("e2ee.added_unverified"));
     }
   };
 
@@ -119,7 +159,7 @@ export default function EncryptionSettings({ modelsData }) {
   const handlePaste = () =>
     run(async () => {
       const entry = keyEntryFromText(keyText, { source: "paste" });
-      addKey(entry);
+      await addKey(entry);
     });
 
   const handleFile = (event) =>
@@ -128,19 +168,30 @@ export default function EncryptionSettings({ modelsData }) {
       if (!file) return;
       const text = await file.text();
       const entry = keyEntryFromText(text, { source: "file" });
-      addKey(entry);
+      await addKey(entry);
     });
 
   const handleUrl = () =>
     run(async () => {
       const entry = await fetchKeyFromUrl(url);
-      addKey(entry);
+      await addKey(entry);
     });
 
   const handleDirectory = () =>
     run(async () => {
       const result = await fetchKeyDirectory(url);
       const merged = mergeKeyImport(keys, result.keys);
+      // A directory carries its own model lists; verify every incoming key
+      // against the models that exist here before storing any of them.
+      const known = new Map(models.map((model) => [model.id, model]));
+      const pairs = Object.entries(result.models ?? {})
+        .map(([modelId, keyId]) => ({
+          key: result.keys.find((entry) => entry.id === keyId),
+          model: known.get(modelId),
+        }))
+        .filter((pair) => pair.key && pair.model);
+      await verifyPairs(pairs);
+
       for (const key of result.keys) dispatch(addE2eeKey(key));
       for (const [modelId, keyId] of Object.entries(result.models)) {
         if (merged.some((key) => key.id === keyId)) {
@@ -314,7 +365,7 @@ export default function EncryptionSettings({ modelsData }) {
                   disabled={busy || !keyText.trim()}
                 >
                   <Upload className="h-4 w-4" aria-hidden="true" />
-                  {t("e2ee.add_key")}
+                  {busy ? t("e2ee.verifying") : t("e2ee.add_key")}
                 </button>
                 <button
                   type="button"
@@ -355,7 +406,7 @@ export default function EncryptionSettings({ modelsData }) {
                 disabled={busy || !url.trim()}
               >
                 <Link2 className="h-4 w-4" aria-hidden="true" />
-                {t("e2ee.fetch_key")}
+                {busy ? t("e2ee.verifying") : t("e2ee.fetch_key")}
               </button>
             </div>
           )}
@@ -380,7 +431,7 @@ export default function EncryptionSettings({ modelsData }) {
                 disabled={busy || !url.trim()}
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
-                {t("e2ee.import_directory")}
+                {busy ? t("e2ee.verifying") : t("e2ee.import_directory")}
               </button>
             </div>
           )}
@@ -415,41 +466,47 @@ export default function EncryptionSettings({ modelsData }) {
           <p className="text-xs text-base-content/60">{t("common.loading")}</p>
         ) : (
           <ul className="flex flex-col divide-y divide-base-300 rounded-lg border border-base-300">
-            {models.map((model) => (
-              <li
-                key={model.id}
-                className="flex flex-wrap items-center gap-3 px-3 py-2"
-              >
-                <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                  <span className="truncate text-sm text-base-content">
-                    {model.name || model.id}
-                  </span>
-                  <E2eeLock modelId={model.id} size={13} />
-                </span>
-                <select
-                  className="select select-sm select-bordered max-w-52"
-                  value={assignments[model.id] ?? ""}
-                  onChange={(event) =>
-                    dispatch(
-                      setE2eeModelKey({
-                        modelId: model.id,
-                        keyId: event.target.value || null,
-                      }),
-                    )
-                  }
-                  aria-label={t("e2ee.assign_label", {
-                    model: model.name || model.id,
-                  })}
+            {models.map((model) => {
+              const assigned = assignments[model.id];
+              const entry = findKeyForAssignment(keys, assigned);
+              const usable = usableKey(entry);
+              return (
+                <li
+                  key={model.id}
+                  className="flex flex-wrap items-center gap-3 px-3 py-2"
                 >
-                  <option value="">{t("e2ee.not_encrypted")}</option>
-                  {keys.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.name || entry.id}
-                    </option>
-                  ))}
-                </select>
-              </li>
-            ))}
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <span className="truncate text-sm text-base-content">
+                      {model.name || model.id}
+                    </span>
+                    <E2eeLock modelId={model.id} size={13} />
+                  </span>
+                  {/* Read-only: a key's "Applies to models" list sets the
+                      binding, this table only reports the resulting state. */}
+                  {usable ? (
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="badge badge-success badge-sm">
+                        {t("e2ee.badge")}
+                      </span>
+                      <span className="max-w-40 truncate text-[0.7rem] text-base-content/60">
+                        {entry.name || entry.id}
+                      </span>
+                    </span>
+                  ) : assigned ? (
+                    <span
+                      className="badge badge-error badge-sm"
+                      title={t("e2ee.invalid_key")}
+                    >
+                      {t("e2ee.models_blocked")}
+                    </span>
+                  ) : (
+                    <span className="badge badge-ghost badge-sm">
+                      {t("e2ee.not_encrypted")}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

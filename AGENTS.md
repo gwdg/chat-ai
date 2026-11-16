@@ -1352,11 +1352,15 @@ include it.
 **Settings.** The new Encryption tab (`modals/UserSettings/EncryptionSettings.jsx`) imports a key by
 paste, `.pub` file, single URL, or a key directory (`src/e2ee/keys.js`; the directory format is
 `{keys:[{id,name,publicKey|key|url,models[]}], models:{modelId:keyId}}`), downloads a `.pub`, and
-binds each model to a key. The add-key form has no free-form name: its field is **"Applies to
-models"**, a comma-separated list of ids or display names resolved by
+binds it to the models named on import. The add-key form has no free-form name: its field is
+**"Applies to models"**, a comma-separated list of ids or display names resolved by
 `src/e2ee/modelBindings.js`. Importing a key writes the matching `e2ee_models` bindings directly and
 labels the key with those model names (or its fingerprint); unknown entries are reported and
-skipped. The model table remains the editable overview of the same map. Storage is Redux `user_settings.e2ee_keys` / `e2ee_models` (persist
+skipped. Every key is verified before it is stored: `src/e2ee/verify.js` sends one sealed one-token
+request per bound model and requires a sealed answer, so a wrong key, a non-E2EE model or an
+unreachable endpoint keeps the key out. The model table is read-only and reports each model as
+encrypted (with its key's label), blocked (the bound key is missing or invalid), or not encrypted;
+bindings change by removing the key and importing it again. Storage is Redux `user_settings.e2ee_keys` / `e2ee_models` (persist
 version 10 + migration 10); `importUserSettings` keeps only the public fields and drops bindings to
 unknown keys. The Meta chat exposes the state through `get_user_settings` and `list_e2ee_keys`, and
 `E2EE_ASSIGN` proposes/reverts a binding through `MetaActionCard` (it never imports a key). The

@@ -319,7 +319,13 @@ export default {
     remove: "Entfernen",
     remove_confirm: "Diesen Schlüssel und seine Modellzuordnungen entfernen?",
     removed: "Schlüssel entfernt",
-    added: "Schlüssel hinzugefügt",
+    verifying: "Schlüssel wird geprüft…",
+    verified_added: "Schlüssel für {{count}} Modell(e) geprüft",
+    added_unverified:
+      "Schlüssel ohne Prüfung hinzugefügt. Geben Sie mindestens ein bekanntes Modell an, um ihn zu testen.",
+    verify_failed: "Prüfung für {{model}} fehlgeschlagen: {{reason}}",
+    no_models_matched:
+      "Keines davon ist ein bekanntes Modell: {{models}}. Der Schlüssel wurde nicht hinzugefügt.",
     import_method: "Schlüssel hinzufügen",
     modes: {
       paste: "Einfügen oder Datei",
@@ -329,7 +335,7 @@ export default {
     models_field: "Gilt für Modelle",
     models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
     models_field_hint:
-      "Kommagetrennte Modell-IDs oder -Namen. Der Schlüssel wird nach dem Import daran gebunden; unbekannte Einträge werden ignoriert. Die Zuordnung lässt sich unten auch ändern.",
+      "Kommagetrennte Modell-IDs oder -Namen. Der Schlüssel wird vor dem Speichern daran geprüft; unbekannte Einträge werden übersprungen. Um die Modelle später zu ändern, entfernen Sie den Schlüssel und importieren Sie ihn erneut.",
     unknown_models:
       "Schlüssel hinzugefügt, aber diese Modelle sind unbekannt: {{models}}",
     fallback_name: "Schlüssel {{fingerprint}}",
@@ -346,9 +352,10 @@ export default {
     models_title: "Modellverschlüsselung",
     models_keyed: "{{count}} verschlüsselt",
     models_description:
-      "Ein mit einem Schlüssel verknüpftes Modell sendet nur Geheimtext. Modelle ohne Schlüssel senden weiterhin im Klartext. Fehlt ein verknüpfter Schlüssel oder ist er ungültig, wird die Anfrage blockiert statt auf Klartext zurückzufallen.",
-    models_no_keys: "Fügen Sie zuerst einen Schlüssel hinzu.",
-    assign_label: "Verschlüsselungsschlüssel für {{model}}",
+      "Ein Modell, das unter \"Gilt für Modelle\" eines Schlüssels aufgeführt ist, sendet nur Geheimtext. Modelle ohne Schlüssel senden weiterhin im Klartext. Fehlt ein gebundener Schlüssel oder ist er ungültig, werden Anfragen für seine Modelle blockiert statt auf Klartext zurückzufallen.",
+    models_no_keys:
+      "Fügen Sie einen Schlüssel hinzu und geben Sie die Modelle an, für die er gilt.",
+    models_blocked: "Schlüssel fehlt oder ist ungültig",
     not_encrypted: "Nicht verschlüsselt",
   },
   mcp_confirmation: {
@@ -700,7 +707,7 @@ export default {
       step3:
         "Importieren Sie den Public Key des Modells: einfügen, .pub-Datei wählen, aus einer URL laden oder ein ganzes Schlüsselverzeichnis importieren.",
       step4:
-        "Verknüpfen Sie ein Modell mit dem Schlüssel. Es zeigt dann ein grünes Schloss, und jede Anfrage darüber wird in diesem Browser verschlüsselt.",
+        "Geben Sie beim Hinzufügen die Modelle an, für die der Schlüssel gilt. Sie zeigen dann ein grünes Schloss, und jede Anfrage darüber wird in diesem Browser verschlüsselt.",
     },
     message_timestamps: {
       title: "Zeitstempel für Nachrichten anzeigen",

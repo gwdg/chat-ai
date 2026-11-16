@@ -108,8 +108,11 @@ Chat AI can seal the traffic of individual models in the browser. In
 **User settings → Encryption**, import the public key of an encryption-capable
 model (paste it, choose a `.pub` file, load a single key from a URL, or import a
 key directory) and enter the models it applies to as a comma-separated list of
-ids or names. The key is bound to those models on import; bindings can also be
-changed later in the model table. A bound model shows a green lock
+ids or names. The key is tested against those models with a real sealed request
+before it is saved; a key the node does not accept is not stored. The model list
+in the tab is read-only and shows which models are encrypted, which are blocked
+by a missing key, and which stay in cleartext; to change a model's binding,
+remove the key and import it again. A bound model shows a green lock
 wherever it is listed, and every `/chat/completions` request it sends leaves the
 browser as ciphertext; the node seals its answer the same way.
 

@@ -309,7 +309,13 @@ export default {
     remove: "Remove",
     remove_confirm: "Remove this key and its model bindings?",
     removed: "Key removed",
-    added: "Key added",
+    verifying: "Verifying key…",
+    verified_added: "Key verified for {{count}} model(s)",
+    added_unverified:
+      "Key added without verification. Enter at least one known model to test it.",
+    verify_failed: "Verification failed for {{model}}: {{reason}}",
+    no_models_matched:
+      "None of these are known models: {{models}}. The key was not added.",
     import_method: "How to add a key",
     modes: {
       paste: "Paste or file",
@@ -319,7 +325,7 @@ export default {
     models_field: "Applies to models",
     models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
     models_field_hint:
-      "Comma-separated model ids or names. The key is bound to them after import; unknown entries are ignored. You can also change the bindings below.",
+      "Comma-separated model ids or names. The key is tested against them before it is stored; unknown entries are skipped. To change the models later, remove the key and import it again.",
     unknown_models: "Key added, but these are not known models: {{models}}",
     fallback_name: "Key {{fingerprint}}",
     public_key: "Public key",
@@ -335,9 +341,9 @@ export default {
     models_title: "Model encryption",
     models_keyed: "{{count}} encrypted",
     models_description:
-      "A model bound to a key sends only ciphertext. Models without a key keep sending in cleartext. If a bound key is missing or invalid, the request is blocked instead of falling back to cleartext.",
-    models_no_keys: "Add a key first to bind a model.",
-    assign_label: "Encryption key for {{model}}",
+      "A model listed in a key's \"Applies to models\" sends only ciphertext. Models without a key keep sending in cleartext. If a bound key is missing or invalid, requests for its models are blocked instead of falling back to cleartext.",
+    models_no_keys: "Add a key and list the models it applies to.",
+    models_blocked: "Key missing or invalid",
     not_encrypted: "Not encrypted",
   },
   mcp_confirmation: {
@@ -684,7 +690,7 @@ export default {
       step3:
         "Import the model's public key: paste it, choose a .pub file, load it from a URL, or import a whole key directory.",
       step4:
-        "Bind a model to the key. It then shows a green lock and every request through it is encrypted in this browser.",
+        "Enter the models the key applies to when you add it. They then show a green lock and every request through them is encrypted in this browser.",
     },
     message_timestamps: {
       title: "Show message timestamps",
