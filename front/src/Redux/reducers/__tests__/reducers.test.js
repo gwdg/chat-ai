@@ -33,6 +33,7 @@ import userSettingsReducer, {
   addE2eeKey,
   updateE2eeKey,
   removeE2eeKey,
+  clearE2eeKeys,
   setE2eeModelKey,
   selectE2eeKeys,
   selectE2eeModels,
@@ -269,6 +270,10 @@ describe("user settings reducer", () => {
         source: "paste",
         // Derived data is not trusted; it is recomputed from the key.
         kid: "stale",
+        // The last sealed test is stored with the key so the list can show it
+        // green, and only well-formed model ids are kept.
+        testedAt: "2026-01-01T00:00:00.000Z",
+        testedModels: ["qwen-a", "", 7],
       }),
     );
     expect(selectE2eeKeys({ user_settings: state })[0]).toMatchObject({
@@ -276,6 +281,8 @@ describe("user settings reducer", () => {
       name: "Node A",
       publicKey: "abc",
       source: "paste",
+      testedAt: "2026-01-01T00:00:00.000Z",
+      testedModels: ["qwen-a"],
     });
     expect(selectE2eeKeys({ user_settings: state })[0].kid).toBeUndefined();
 
@@ -309,13 +316,36 @@ describe("user settings reducer", () => {
     expect(selectE2eeModels({ user_settings: state })).toEqual({});
   });
 
+  it("clears every key and binding in one step", () => {
+    let state = init(userSettingsReducer);
+    state = userSettingsReducer(
+      state,
+      addE2eeKey({ id: "node-a", name: "Node A", publicKey: "abc" }),
+    );
+    state = userSettingsReducer(
+      state,
+      setE2eeModelKey({ modelId: "qwen-a", keyId: "node-a" }),
+    );
+
+    state = userSettingsReducer(state, clearE2eeKeys());
+
+    expect(selectE2eeKeys({ user_settings: state })).toEqual([]);
+    expect(selectE2eeModels({ user_settings: state })).toEqual({});
+  });
+
   it("sanitises imported encryption keys and bindings", () => {
     let state = init(userSettingsReducer);
     state = userSettingsReducer(
       state,
       importUserSettings({
         e2ee_keys: [
-          { id: "node-a", publicKey: "abc", secret: "do-not-import" },
+          {
+            id: "node-a",
+            publicKey: "abc",
+            secret: "do-not-import",
+            testedAt: "2026-01-01T00:00:00.000Z",
+            testedModels: ["qwen-a", 42],
+          },
           { id: "", publicKey: "abc" },
           { id: "node-b", publicKey: "   " },
         ],
@@ -327,6 +357,11 @@ describe("user settings reducer", () => {
     expect(selectE2eeKeys({ user_settings: state })[0]).not.toHaveProperty(
       "secret",
     );
+    // A backup keeps the test record, so an imported key does not have to be
+    // re-tested to show what was already known.
+    expect(selectE2eeKeys({ user_settings: state })[0].testedModels).toEqual([
+      "qwen-a",
+    ]);
     // A binding to an unknown key is dropped instead of becoming a trap.
     expect(selectE2eeModels({ user_settings: state })).toEqual({
       "qwen-a": "node-a",

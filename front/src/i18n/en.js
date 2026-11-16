@@ -300,21 +300,46 @@ export default {
   },
   e2ee: {
     badge: "End-to-end encrypted",
-    encrypted_with: "Encrypted with “{{key}}”",
     description:
-      "End-to-end encryption is an extra layer on top of the transport encryption that already protects every request. With a key bound, your message is additionally sealed in this browser and stays ciphertext all the way to the machine that runs the model — usually a GPU — so the servers in between, including this platform, cannot read it. Each key is distributed out of band, not by the model host, so import it only from a source you trust.",
+      "A bound key adds a second layer of encryption on top of the transport encryption that already protects every request: your message is sealed in this browser and stays ciphertext until it reaches the machine that runs the model, usually a GPU. Keys are distributed out of band, so import only from a source you trust.",
     keys_title: "Encryption keys",
-    no_keys: "No keys yet. Import one below.",
+    no_keys: "No keys yet. Add one above.",
     invalid_key: "Not a valid 32-byte X25519 public key",
     download: "Download public key",
     remove: "Remove",
     remove_confirm: "Remove this key and its model bindings?",
     removed: "Key removed",
-    verifying: "Verifying key…",
-    verified_added: "Key verified for {{count}} model(s)",
+    clear_all: "Remove all keys",
+    clear_all_confirm: "Remove every key and model binding?",
+    clear_all_done: "All encryption keys removed",
+    test: "Test",
+    test_all: "Test all",
+    test_ok: "Key works: {{count}} model(s) answered the sealed test.",
+    test_failed: "No sealed answer from {{models}} ({{reason}}).",
+    test_no_models: "Bind this key to a model before testing it",
+    test_no_bindings: "No key is bound to a model, so there is nothing to test.",
+    test_all_done: "{{working}} of {{tested}} tested keys work.",
+    test_failed_keys: "Failing: {{keys}}",
+    status_working: "Works",
+    status_working_hint:
+      "The last sealed test request passed for {{count}} model(s)",
+    status_failed: "Test failed",
+    status_failed_hint:
+      "The last sealed test request did not pass for any bound model",
+    status_untested: "Not tested",
+    status_untested_hint:
+      "The key is well formed, but it has not been tested against a model",
+    verifying: "Testing key…",
+    verified_added: "Key tested and bound to {{count}} model(s)",
     added_unverified:
-      "Key added without verification. Enter at least one known model to test it.",
-    verify_failed: "Verification failed for {{model}}: {{reason}}",
+      "Key added without a test. Enter at least one known model so it can be checked.",
+    add_keys_title: "Add encryption keys",
+    add_keys_description:
+      "Each key is tested with one sealed request per model before it is stored. Models that fail the test stay unencrypted.",
+    verify_failed_all:
+      "The key was not added: the test request for {{model}} failed ({{reason}}).",
+    verify_failed_models:
+      "Not encrypted because the test failed for {{models}} ({{reason}}).",
     no_models_matched:
       "None of these are known models: {{models}}. The key was not added.",
     import_method: "How to add a key",
@@ -326,7 +351,7 @@ export default {
     },
     published_url: "Key base URL",
     published_hint:
-      "The key directory is a trust anchor: use only a URL you trust. Each downloaded key is tested with one sealed request against its own model before it is stored.",
+      "Use only a key URL you trust. Each downloaded key is tested against its model before it is stored.",
     published_load: "Load keys for all models",
     published_loading: "Loading keys…",
     published_url_required: "Enter the URL of the key directory.",
@@ -343,7 +368,7 @@ export default {
     models_field: "Applies to models",
     models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
     models_field_hint:
-      "Comma-separated model ids or names. The key is tested against them before it is stored; unknown entries are skipped. To change the models later, remove the key and import it again.",
+      "Comma-separated model ids or names; a bridged \"(External)\" entry is a separate model. Unknown entries are skipped.",
     unknown_models: "Key added, but these are not known models: {{models}}",
     fallback_name: "Key {{fingerprint}}",
     public_key: "Public key",
@@ -356,7 +381,7 @@ export default {
     import_directory: "Import directory",
     directory_imported: "Imported {{count}} keys",
     directory_hint:
-      "make -C encryption keys writes this file: every model's public key and binding in one document. Each key is still verified before it is stored.",
+      "One document with every key and its model bindings. Each key is still tested before it is stored.",
     choose_folder: "Choose key folder…",
     folder_hint:
       "Reads every .pub file in a local folder. Files that are not valid public keys are reported and skipped.",
@@ -369,14 +394,12 @@ export default {
       "This browser cannot open a folder here. Use the directory URL instead, or open the app over HTTPS or localhost.",
     folder_error: "Could not read the folder: {{reason}}",
     import_error: "Could not import the key.",
-    models_title: "Model encryption",
+    models_title: "Unencrypted models",
     models_keyed: "{{count}} encrypted",
     models_description:
-      "A model listed in a key's \"Applies to models\" adds the extra encryption layer on top of the transport encryption. Models without a key keep using the normal transport encryption. If a bound key is missing or invalid, requests for its models are blocked instead of silently dropping the extra layer.",
-    models_filtered_hint:
-      "Only models bound to a key and models used by an internal feature are listed.",
+      "These models are used by an internal feature and have no working key, so their requests only get the transport encryption.",
     models_empty:
-      "No model is encrypted yet or used by an internal feature.",
+      "No model used by an internal feature is missing a key.",
     used_for: "Used for",
     features: {
       titles: "Titles",
@@ -735,6 +758,8 @@ export default {
         "Or load the keys the deployment publishes: the key base URL is prefilled from the configuration, and Load keys for all models imports and verifies every published .pub file.",
       step4:
         "Enter the models the key applies to when you add it. They then show a green lock and every request through them is encrypted in this browser.",
+      step_test:
+        "Test a key again against the models it is bound to. A key that answers the sealed test is marked green; an untested or failed key is not.",
     },
     message_timestamps: {
       title: "Show message timestamps",

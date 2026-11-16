@@ -310,21 +310,47 @@ export default {
   },
   e2ee: {
     badge: "Ende-zu-Ende verschlüsselt",
-    encrypted_with: "Verschlüsselt mit „{{key}}“",
     description:
-      "Ende-zu-Ende-Verschlüsselung ist eine zusätzliche Ebene über der Transportverschlüsselung, die jede Anfrage ohnehin schützt. Mit einem gebundenen Schlüssel wird Ihre Nachricht zusätzlich in diesem Browser versiegelt und bleibt Geheimtext bis zu der Maschine, die das Modell ausführt – in der Regel eine GPU. Die dazwischenliegenden Server, auch diese Plattform, können sie daher nicht lesen. Jeder Schlüssel wird außerhalb des Kanals verteilt, nicht vom Modell-Host, importieren Sie ihn deshalb nur aus einer vertrauenswürdigen Quelle.",
+      "Ein gebundener Schlüssel ergänzt eine zweite Verschlüsselungsebene über der Transportverschlüsselung, die jede Anfrage ohnehin schützt: Ihre Nachricht wird in diesem Browser versiegelt und bleibt Geheimtext bis zu der Maschine, die das Modell ausführt, in der Regel eine GPU. Schlüssel werden außerhalb des Kanals verteilt, importieren Sie sie deshalb nur aus einer vertrauenswürdigen Quelle.",
     keys_title: "Verschlüsselungsschlüssel",
-    no_keys: "Noch keine Schlüssel. Importieren Sie unten einen.",
+    no_keys: "Noch keine Schlüssel. Fügen Sie oben einen hinzu.",
     invalid_key: "Kein gültiger 32-Byte-X25519-Public-Key",
     download: "Public Key herunterladen",
     remove: "Entfernen",
     remove_confirm: "Diesen Schlüssel und seine Modellzuordnungen entfernen?",
     removed: "Schlüssel entfernt",
-    verifying: "Schlüssel wird geprüft…",
-    verified_added: "Schlüssel für {{count}} Modell(e) geprüft",
+    clear_all: "Alle Schlüssel entfernen",
+    clear_all_confirm: "Jeden Schlüssel und jede Modellzuordnung entfernen?",
+    clear_all_done: "Alle Verschlüsselungsschlüssel entfernt",
+    test: "Testen",
+    test_all: "Alle testen",
+    test_ok: "Schlüssel funktioniert: {{count}} Modell(e) haben die versiegelte Testanfrage beantwortet.",
+    test_failed: "Keine versiegelte Antwort von {{models}} ({{reason}}).",
+    test_no_models: "Ordnen Sie den Schlüssel zuerst einem Modell zu",
+    test_no_bindings:
+      "Kein Schlüssel ist einem Modell zugeordnet, es gibt nichts zu testen.",
+    test_all_done: "{{working}} von {{tested}} getesteten Schlüsseln funktionieren.",
+    test_failed_keys: "Fehlerhaft: {{keys}}",
+    status_working: "Funktioniert",
+    status_working_hint:
+      "Die letzte versiegelte Testanfrage war für {{count}} Modell(e) erfolgreich",
+    status_failed: "Test fehlgeschlagen",
+    status_failed_hint:
+      "Die letzte versiegelte Testanfrage war für kein gebundenes Modell erfolgreich",
+    status_untested: "Nicht getestet",
+    status_untested_hint:
+      "Der Schlüssel ist wohlgeformt, wurde aber noch nicht gegen ein Modell getestet",
+    verifying: "Schlüssel wird getestet…",
+    verified_added: "Schlüssel getestet und {{count}} Modell(en) zugeordnet",
     added_unverified:
-      "Schlüssel ohne Prüfung hinzugefügt. Geben Sie mindestens ein bekanntes Modell an, um ihn zu testen.",
-    verify_failed: "Prüfung für {{model}} fehlgeschlagen: {{reason}}",
+      "Schlüssel ohne Test hinzugefügt. Geben Sie mindestens ein bekanntes Modell an, damit er geprüft werden kann.",
+    add_keys_title: "Verschlüsselungsschlüssel hinzufügen",
+    add_keys_description:
+      "Jeder Schlüssel wird vor dem Speichern mit einer versiegelten Anfrage je Modell getestet. Modelle, deren Test scheitert, bleiben unverschlüsselt.",
+    verify_failed_all:
+      "Der Schlüssel wurde nicht hinzugefügt: Die Testanfrage für {{model}} ist fehlgeschlagen ({{reason}}).",
+    verify_failed_models:
+      "Nicht verschlüsselt, weil der Test für {{models}} fehlgeschlagen ist ({{reason}}).",
     no_models_matched:
       "Keines davon ist ein bekanntes Modell: {{models}}. Der Schlüssel wurde nicht hinzugefügt.",
     import_method: "Schlüssel hinzufügen",
@@ -336,7 +362,7 @@ export default {
     },
     published_url: "Basis-URL der Schlüssel",
     published_hint:
-      "Das Schlüsselverzeichnis ist eine Vertrauensbasis: Verwenden Sie nur eine URL, der Sie vertrauen. Jeder heruntergeladene Schlüssel wird vor dem Speichern mit einer versiegelten Anfrage gegen sein Modell geprüft.",
+      "Verwenden Sie nur eine Schlüssel-URL, der Sie vertrauen. Jeder heruntergeladene Schlüssel wird vor dem Speichern gegen sein Modell getestet.",
     published_load: "Schlüssel für alle Modelle laden",
     published_loading: "Schlüssel werden geladen …",
     published_url_required: "Geben Sie die URL des Schlüsselverzeichnisses an.",
@@ -354,7 +380,7 @@ export default {
     models_field: "Gilt für Modelle",
     models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
     models_field_hint:
-      "Kommagetrennte Modell-IDs oder -Namen. Der Schlüssel wird vor dem Speichern daran geprüft; unbekannte Einträge werden übersprungen. Um die Modelle später zu ändern, entfernen Sie den Schlüssel und importieren Sie ihn erneut.",
+      "Kommagetrennte Modell-IDs oder -Namen; eine Brücken-Variante mit „(External)“ ist ein eigenes Modell. Unbekannte Einträge werden übersprungen.",
     unknown_models:
       "Schlüssel hinzugefügt, aber diese Modelle sind unbekannt: {{models}}",
     fallback_name: "Schlüssel {{fingerprint}}",
@@ -368,7 +394,7 @@ export default {
     import_directory: "Verzeichnis importieren",
     directory_imported: "{{count}} Schlüssel importiert",
     directory_hint:
-      "make -C encryption keys schreibt diese Datei: Public Key und Bindung jedes Modells in einem Dokument. Jeder Schlüssel wird weiterhin vor dem Speichern geprüft.",
+      "Ein Dokument mit allen Schlüsseln und ihren Modellzuordnungen. Jeder Schlüssel wird weiterhin vor dem Speichern getestet.",
     choose_folder: "Schlüsselordner wählen…",
     folder_hint:
       "Liest alle .pub-Dateien in einem lokalen Ordner. Dateien, die keine gültigen Public Keys sind, werden gemeldet und übersprungen.",
@@ -381,14 +407,12 @@ export default {
       "Dieser Browser kann hier keinen Ordner öffnen. Nutze stattdessen die Verzeichnis-URL oder öffne die App über HTTPS bzw. localhost.",
     folder_error: "Der Ordner konnte nicht gelesen werden: {{reason}}",
     import_error: "Der Schlüssel konnte nicht importiert werden.",
-    models_title: "Modellverschlüsselung",
+    models_title: "Unverschlüsselte Modelle",
     models_keyed: "{{count}} verschlüsselt",
     models_description:
-      "Ein Modell, das unter \"Gilt für Modelle\" eines Schlüssels aufgeführt ist, erhält die zusätzliche Verschlüsselungsebene über der Transportverschlüsselung. Modelle ohne Schlüssel nutzen weiterhin die normale Transportverschlüsselung. Fehlt ein gebundener Schlüssel oder ist er ungültig, werden Anfragen für seine Modelle blockiert, statt die zusätzliche Ebene stillschweigend wegzulassen.",
-    models_filtered_hint:
-      "Nur mit einem Schlüssel verbundene Modelle und Modelle, die eine interne Funktion verwendet, werden aufgelistet.",
+      "Diese Modelle werden von einer internen Funktion verwendet und haben keinen funktionierenden Schlüssel, ihre Anfragen erhalten also nur die Transportverschlüsselung.",
     models_empty:
-      "Noch kein Modell ist verschlüsselt oder wird von einer internen Funktion verwendet.",
+      "Kein von einer internen Funktion verwendetes Modell ist ohne Schlüssel.",
     used_for: "Verwendet für",
     features: {
       titles: "Titel",
@@ -752,6 +776,8 @@ export default {
         "Oder laden Sie die vom Deployment veröffentlichten Schlüssel: Die Basis-URL ist aus der Konfiguration vorbelegt, und „Schlüssel für alle Modelle laden“ importiert und prüft jede veröffentlichte .pub-Datei.",
       step4:
         "Geben Sie beim Hinzufügen die Modelle an, für die der Schlüssel gilt. Sie zeigen dann ein grünes Schloss, und jede Anfrage darüber wird in diesem Browser verschlüsselt.",
+      step_test:
+        "Testen Sie einen Schlüssel erneut gegen die Modelle, denen er zugeordnet ist. Ein Schlüssel, der die versiegelte Testanfrage beantwortet, wird grün markiert; ein ungetesteter oder fehlgeschlagener nicht.",
     },
     message_timestamps: {
       title: "Zeitstempel für Nachrichten anzeigen",

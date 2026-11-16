@@ -202,6 +202,31 @@ describe("Meta chat local tools", () => {
     expect(agents).toContain("modified: 2025-02-02T00:00:00.000Z");
   });
 
+  it("reports each encryption key's last sealed test", async () => {
+    const run = createMetaToolRunner({
+      ...context,
+      userSettings: {
+        ...context.userSettings,
+        e2ee_keys: [
+          {
+            id: "node-a",
+            name: "Node A",
+            publicKey: "abc",
+            testedAt: "2026-01-01T00:00:00.000Z",
+            testedModels: ["test-model"],
+          },
+          { id: "node-b", name: "Node B", publicKey: "def" },
+        ],
+        e2ee_models: { "test-model": "node-a" },
+      },
+    });
+
+    const result = await run("list_e2ee_keys");
+
+    expect(result).toContain("test: tested passing for test-model");
+    expect(result).toContain("test: not tested");
+  });
+
   it("lists configured agents with link ids", async () => {
     agentMocks.agents = [
       {

@@ -1052,7 +1052,7 @@ export const featureGuides = {
         completeOnTargetClick: true,
       },
       {
-        target: '[data-guide="e2ee-keys"]',
+        target: '[data-guide="e2ee-add"]',
         textKey: "feature_guide.e2ee.step3",
         completeOnTargetClick: true,
       },
@@ -1064,6 +1064,11 @@ export const featureGuides = {
       {
         target: '[data-guide="e2ee-models"]',
         textKey: "feature_guide.e2ee.step4",
+        completeOnTargetClick: true,
+      },
+      {
+        target: '[data-guide="e2ee-keys"]',
+        textKey: "feature_guide.e2ee.step_test",
         completeOnTargetClick: true,
       },
     ],

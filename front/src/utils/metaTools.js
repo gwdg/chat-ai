@@ -687,7 +687,7 @@ export const META_TOOL_DEFINITIONS = [
   ),
   tool(
     "list_e2ee_keys",
-    "List the user's end-to-end encryption public keys (name, id, fingerprint, source) and which models are bound to each key.",
+    "List the user's end-to-end encryption public keys (name, id, fingerprint, source), which models are bound to each key, and whether the last sealed test passed.",
   ),
   tool(
     "test_mcp_server",
@@ -1280,11 +1280,19 @@ export function createMetaToolRunner({
             const models = Object.entries(bindings)
               .filter(([, keyId]) => keyId === key.id)
               .map(([modelId]) => modelId);
+            const tested = key.testedAt
+              ? `tested ${
+                  Array.isArray(key.testedModels) && key.testedModels.length
+                    ? `passing for ${key.testedModels.join(", ")}`
+                    : "without a passing model"
+                } at ${key.testedAt}`
+              : "not tested";
             return [
               `- ${key.name || key.id} (id: ${key.id})`,
               `  fingerprint: ${usableKey(key)?.kid || "unknown"}`,
               `  source: ${key.source || "paste"}${key.url ? `, url: ${key.url}` : ""}`,
               `  models: ${models.length ? models.join(", ") : "none"}`,
+              `  test: ${tested}`,
             ].join("\n");
           })
           .join("\n");

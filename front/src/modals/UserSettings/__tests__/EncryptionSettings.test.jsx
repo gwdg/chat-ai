@@ -78,6 +78,10 @@ describe("EncryptionSettings key import", () => {
     const key = settings(store).e2ee_keys[0];
     // The key label comes from the models it applies to.
     expect(key.name).toBe("Qwen A, Mistral B");
+    // The import records the sealed test, so the key list can show it as green
+    // instead of "not tested".
+    expect(key.testedModels).toEqual(["qwen-a", "mistral-b"]);
+    expect(key.testedAt).toEqual(expect.any(String));
     expect(settings(store).e2ee_models).toEqual({
       "qwen-a": key.id,
       "mistral-b": key.id,
@@ -143,6 +147,42 @@ describe("EncryptionSettings key import", () => {
     expect(settings(store).e2ee_models).toEqual({});
     // Nothing to test the key against, so no request is made.
     expect(verify.verifyKeyForModel).not.toHaveBeenCalled();
+  });
+
+  it("binds only the models whose test request succeeded", async () => {
+    verify.verifyKeyForModel.mockImplementation(async ({ modelId }) => {
+      if (modelId === "mistral-b") throw new Error("Unknown key id");
+      return { ok: true };
+    });
+    const store = makeStore();
+    render(
+      <Provider store={store}>
+        <EncryptionSettings modelsData={modelsData} />
+      </Provider>,
+    );
+
+    openPasteTab();
+    fireEvent.change(screen.getByLabelText("Public key"), {
+      target: { value: publicKey },
+    });
+    fireEvent.change(screen.getByLabelText(/Applies to models/), {
+      target: { value: "Qwen A, Mistral B" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Add key/ }));
+
+    await waitFor(() => {
+      expect(settings(store).e2ee_keys).toHaveLength(1);
+    });
+
+    const key = settings(store).e2ee_keys[0];
+    // The working model is bound, the failing one is left unencrypted instead
+    // of being bound to a key the node does not know.
+    expect(settings(store).e2ee_models).toEqual({ "qwen-a": key.id });
+    expect(verify.verifyKeyForModel).toHaveBeenCalledTimes(2);
+    expect(toast.notifyError).toHaveBeenCalledTimes(1);
+    expect(toast.notifyError.mock.calls[0][0]).toContain("Mistral B");
+    expect(toast.notifyError.mock.calls[0][0]).toContain("Unknown key id");
+    expect(toast.notifySuccess).not.toHaveBeenCalled();
   });
 
   it("keeps the key out when the node rejects it", async () => {
@@ -212,7 +252,7 @@ describe("EncryptionSettings model status", () => {
     vi.unstubAllEnvs();
   });
 
-  it("marks a bound model as encrypted and offers no per-model key picker", () => {
+  it("counts encrypted models and keeps them out of the unencrypted list", () => {
     const store = makeStore();
     store.dispatch({
       type: "user_settings/addE2eeKey",
@@ -225,73 +265,40 @@ describe("EncryptionSettings model status", () => {
 
     renderWith(store);
 
-    expect(screen.getByText("End-to-end encrypted")).toBeInTheDocument();
-    // The key's label appears in the key list and in the model row.
-    expect(screen.getAllByText("Node A").length).toBeGreaterThanOrEqual(2);
-    // An unencrypted plain chat model is hidden.
-    expect(screen.queryByText("Not encrypted")).toBeNull();
-    // Bindings come from the key's "Applies to models" list; the table is
-    // read-only, so there is no select to assign a key per model.
+    expect(screen.getByText("1 encrypted")).toBeInTheDocument();
+    // Only unencrypted function models are listed, so the encrypted chat model
+    // has no row and the section reports that nothing is missing.
+    expect(
+      screen.getByText(/No model used by an internal feature is missing a key/),
+    ).toBeInTheDocument();
+    // Bindings come from the key's "Applies to models" list; there is no
+    // per-model key picker.
     expect(screen.queryByRole("combobox")).toBeNull();
   });
 
-  it("marks a binding to an unusable key as blocked", () => {
+  it("counts a binding for a model this deployment does not list", () => {
     const store = makeStore();
     store.dispatch({
       type: "user_settings/addE2eeKey",
-      payload: { id: "bad", name: "Broken", publicKey: "not-a-key" },
+      payload: { id: "k5", name: "Node A", publicKey },
     });
+    // A plain id while the deployment lists only the bridged copy: the model is
+    // still encrypted, so the header must not say "0 encrypted".
     store.dispatch({
       type: "user_settings/setE2eeModelKey",
-      payload: { modelId: "qwen-a", keyId: "bad" },
+      payload: {
+        modelId: "deepseek-v4.1-flash-1017",
+        keyId: "k5",
+      },
     });
 
     renderWith(store);
 
-    expect(screen.getByText("Key missing or invalid")).toBeInTheDocument();
-    // A broken key encrypts nothing, so the model is not counted as encrypted.
-    expect(screen.getByText("0 encrypted")).toBeInTheDocument();
+    expect(screen.getByText("1 encrypted")).toBeInTheDocument();
+    expect(screen.queryByText("Not encrypted")).toBeNull();
   });
 
-  it("does not repeat a key that is labelled with the model's own name", () => {
-    const store = makeStore();
-    // An import without an explicit name labels the key with the model names
-    // it applies to, which used to print the row title twice.
-    store.dispatch({
-      type: "user_settings/addE2eeKey",
-      payload: { id: "k2", name: "Qwen A", publicKey },
-    });
-    store.dispatch({
-      type: "user_settings/setE2eeModelKey",
-      payload: { modelId: "qwen-a", keyId: "k2" },
-    });
-
-    renderWith(store);
-
-    const modelsSection = document.querySelector('[data-guide="e2ee-models"]');
-    expect(within(modelsSection).getAllByText("Qwen A")).toHaveLength(1);
-    // The key stays discoverable from the status badge.
-    expect(screen.getByTitle(/Encrypted with/)).toBeInTheDocument();
-  });
-
-  it("still names a key that has its own label", () => {
-    const store = makeStore();
-    store.dispatch({
-      type: "user_settings/addE2eeKey",
-      payload: { id: "k3", name: "Node A", publicKey },
-    });
-    store.dispatch({
-      type: "user_settings/setE2eeModelKey",
-      payload: { modelId: "qwen-a", keyId: "k3" },
-    });
-
-    renderWith(store);
-
-    const modelsSection = document.querySelector('[data-guide="e2ee-models"]');
-    expect(within(modelsSection).getByText("Node A")).toBeInTheDocument();
-  });
-
-  it("lists an internal-service model and names the feature", () => {
+  it("lists a model an internal feature uses without a key", () => {
     vi.stubEnv("VITE_MEMORY_GENERATION_MODEL", "mistral-b");
     const store = makeStore();
 
@@ -301,18 +308,202 @@ describe("EncryptionSettings model status", () => {
     expect(screen.getByText("Used for")).toBeInTheDocument();
     expect(screen.getByText("Memory")).toBeInTheDocument();
     expect(screen.getByText("Not encrypted")).toBeInTheDocument();
-    // The plain chat model without a key stays out of the list.
+    // A chat model without a key is not a function model, so it stays out.
     expect(screen.queryByText("Qwen A")).toBeNull();
   });
 
-  it("shows an empty state when nothing is encrypted or used internally", () => {
+  it("hides an internal model once its key works", () => {
+    vi.stubEnv("VITE_MEMORY_GENERATION_MODEL", "mistral-b");
     const store = makeStore();
+    store.dispatch({
+      type: "user_settings/addE2eeKey",
+      payload: { id: "k1", name: "Node A", publicKey },
+    });
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "mistral-b", keyId: "k1" },
+    });
 
     renderWith(store);
 
+    expect(screen.queryByText("Mistral B")).toBeNull();
+    expect(screen.getByText("1 encrypted")).toBeInTheDocument();
+  });
+
+  it("marks an internal model whose key is unusable as blocked", () => {
+    vi.stubEnv("VITE_MEMORY_GENERATION_MODEL", "mistral-b");
+    const store = makeStore();
+    store.dispatch({
+      type: "user_settings/addE2eeKey",
+      payload: { id: "bad", name: "Broken", publicKey: "not-a-key" },
+    });
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "mistral-b", keyId: "bad" },
+    });
+
+    renderWith(store);
+
+    expect(screen.getByText("Key missing or invalid")).toBeInTheDocument();
+    // A broken key encrypts nothing, so the model counts as unencrypted.
+    expect(screen.getByText("0 encrypted")).toBeInTheDocument();
+  });
+
+  it("puts the add-key controls above the unencrypted list and the keys below it", () => {
+    renderWith(makeStore());
+
+    const order = [...document.querySelectorAll("[data-guide^='e2ee-']")]
+      .map((element) => element.getAttribute("data-guide"))
+      // The published-key loader is part of the add-key section.
+      .filter((id) => id !== "e2ee-published");
+    expect(order).toEqual(["e2ee-add", "e2ee-models", "e2ee-keys"]);
+  });
+
+  it("removes every key and binding after confirmation", () => {
+    const store = makeStore();
+    store.dispatch({
+      type: "user_settings/addE2eeKey",
+      payload: { id: "k1", name: "Node A", publicKey },
+    });
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "qwen-a", keyId: "k1" },
+    });
+
+    renderWith(store);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove all keys" }));
     expect(
-      screen.getByText(/No model is encrypted yet or used by an internal feature/),
+      screen.getByText("Remove every key and model binding?"),
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove all keys" }));
+
+    expect(settings(store).e2ee_keys).toEqual([]);
+    expect(settings(store).e2ee_models).toEqual({});
+    expect(toast.notifySuccess).toHaveBeenCalled();
+  });
+
+  it("shows an empty state when no unencrypted function model exists", () => {
+    renderWith(makeStore());
+
+    expect(
+      screen.getByText(/No model used by an internal feature is missing a key/),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("EncryptionSettings key test", () => {
+  const renderWith = (store) =>
+    render(
+      <Provider store={store}>
+        <EncryptionSettings modelsData={modelsData} />
+      </Provider>,
+    );
+
+  const seedKey = (store, id = "k1", name = "Node A", key = publicKey) =>
+    store.dispatch({
+      type: "user_settings/addE2eeKey",
+      payload: { id, name, publicKey: key },
+    });
+
+  it("re-tests a bound key and marks it green", async () => {
+    const store = makeStore();
+    seedKey(store);
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "qwen-a", keyId: "k1" },
+    });
+
+    renderWith(store);
+
+    // A key restored from a backup has no test record, so it starts untested
+    // even though it parses.
+    expect(screen.getByText("Not tested")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Test" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Works")).toBeInTheDocument();
+    });
+    expect(verify.verifyKeyForModel).toHaveBeenCalledTimes(1);
+    expect(verify.verifyKeyForModel.mock.calls[0][0].modelId).toBe("qwen-a");
+    expect(settings(store).e2ee_keys[0].testedModels).toEqual(["qwen-a"]);
+    expect(settings(store).e2ee_keys[0].testedAt).toEqual(expect.any(String));
+    expect(toast.notifySuccess).toHaveBeenCalled();
+  });
+
+  it("marks a key red when its test request fails", async () => {
+    verify.verifyKeyForModel.mockRejectedValue(
+      new Error("This request was sealed for a different model key."),
+    );
+    const store = makeStore();
+    seedKey(store);
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "qwen-a", keyId: "k1" },
+    });
+
+    renderWith(store);
+
+    fireEvent.click(screen.getByRole("button", { name: "Test" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Test failed")).toBeInTheDocument();
+    });
+    expect(settings(store).e2ee_keys[0].testedAt).toEqual(expect.any(String));
+    expect(settings(store).e2ee_keys[0].testedModels).toEqual([]);
+    expect(toast.notifyError).toHaveBeenCalledTimes(1);
+    expect(toast.notifyError.mock.calls[0][0]).toContain(
+      "sealed for a different model key",
+    );
+    expect(toast.notifySuccess).not.toHaveBeenCalled();
+  });
+
+  it("does not test a key that is bound to no model", () => {
+    const store = makeStore();
+    seedKey(store);
+
+    renderWith(store);
+
+    const button = screen.getByRole("button", { name: "Test" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute(
+      "title",
+      "Bind this key to a model before testing it",
+    );
+  });
+
+  it("tests every key from the section header", async () => {
+    const store = makeStore();
+    seedKey(store);
+    seedKey(
+      store,
+      "k2",
+      "Node B",
+      b64e(x25519.getPublicKey(x25519.utils.randomSecretKey())),
+    );
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "qwen-a", keyId: "k1" },
+    });
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: "mistral-b", keyId: "k2" },
+    });
+
+    renderWith(store);
+
+    fireEvent.click(screen.getByRole("button", { name: "Test all" }));
+
+    await waitFor(() => {
+      expect(toast.notifySuccess).toHaveBeenCalledWith(
+        "2 of 2 tested keys work.",
+      );
+    });
+    expect(settings(store).e2ee_keys.map((key) => key.testedModels)).toEqual([
+      ["qwen-a"],
+      ["mistral-b"],
+    ]);
   });
 });
 

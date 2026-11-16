@@ -143,6 +143,14 @@ function importUserSettingsState(state, incoming) {
         ...(typeof key.source === "string" ? { source: key.source } : {}),
         ...(typeof key.url === "string" ? { url: key.url } : {}),
         ...(typeof key.addedAt === "string" ? { addedAt: key.addedAt } : {}),
+        ...(typeof key.testedAt === "string" ? { testedAt: key.testedAt } : {}),
+        ...(Array.isArray(key.testedModels)
+          ? {
+              testedModels: key.testedModels.filter(
+                (modelId) => typeof modelId === "string" && modelId,
+              ),
+            }
+          : {}),
       }));
   }
   if (
@@ -424,6 +432,17 @@ const userSettingsSlice = createSlice({
         ...(typeof key.source === "string" ? { source: key.source } : {}),
         ...(typeof key.url === "string" ? { url: key.url } : {}),
         addedAt: key.addedAt || new Date().toISOString(),
+        // The last sealed test, per model, so the key list can show whether the
+        // key still works instead of only whether it parses. Absent means it was
+        // never tested; an empty list means the last test failed everywhere.
+        ...(typeof key.testedAt === "string" ? { testedAt: key.testedAt } : {}),
+        ...(Array.isArray(key.testedModels)
+          ? {
+              testedModels: key.testedModels.filter(
+                (modelId) => typeof modelId === "string" && modelId,
+              ),
+            }
+          : {}),
       };
       const index = state.e2ee_keys.findIndex((item) => item.id === key.id);
       if (index >= 0) state.e2ee_keys[index] = { ...state.e2ee_keys[index], ...entry };
@@ -450,6 +469,14 @@ const userSettingsSlice = createSlice({
       state.e2ee_models = Object.fromEntries(
         Object.entries(state.e2ee_models).filter(([, keyId]) => keyId !== id),
       );
+    },
+
+    // Removes every key and every binding in one step. A binding without its
+    // key fails closed, so the two always move together.
+    clearE2eeKeys: (state) => {
+      ensureE2eeState(state);
+      state.e2ee_keys = [];
+      state.e2ee_models = {};
     },
 
     setE2eeModelKey: (state, action) => {
@@ -517,7 +544,7 @@ export const {
   addMemoryGroup, renameMemoryGroup, deleteMemoryGroup,
   setDefaultMemoryGroup, setMemoryGroup,
   addMcpServer, updateMcpServer, removeMcpServer,
-  addE2eeKey, updateE2eeKey, removeE2eeKey, setE2eeModelKey,
+  addE2eeKey, updateE2eeKey, removeE2eeKey, clearE2eeKeys, setE2eeModelKey,
   setTimeoutTime, resetTimeoutTime, setTimeoutInSeconds,
   setDefaultModel, setMemoryMode, setSuggestUserPrompts, setHtmlRenderMode,
   setHtmlLoadExternal, setHtmlSanitization, setSetTitleOnce, setRenderTypst,
