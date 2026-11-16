@@ -5,6 +5,7 @@
 // `"useOpenAISdk": true` in front.json switches back to the official SDK, which
 // is then loaded on demand so it never weighs on the default bundle.
 import { createFetchClient } from "./fetchClient";
+import { getApiKey } from "./authHeaders";
 
 // Resolve the backend endpoint from config
 export function resolveBaseURL() {
@@ -20,10 +21,12 @@ export function resolveBaseURL() {
 
 const useOpenAISdk = () => import.meta.env.VITE_USE_OPENAI_SDK === "true";
 
-// The backend authenticates the user through the OIDC proxy, so no API key is
-// involved. The SDK constructor needs a placeholder key (openai v6 rejects a
-// null one); its Authorization header is explicitly omitted so that no
-// key-like value is ever sent.
+// The backend authenticates the user through the OIDC proxy, so normally no API
+// key is involved. The SDK constructor needs a placeholder key (openai v6
+// rejects a null one); its Authorization header is explicitly omitted so that no
+// key-like value is ever sent. With `apiKey` in front.json the key is real: the
+// SDK then sends it as `Authorization: Bearer <key>`, which direct endpoints
+// such as a local SAIA engine accept.
 let sdkPromise;
 const createSdkClient = (timeout) => {
   if (!sdkPromise) {
@@ -32,16 +35,16 @@ const createSdkClient = (timeout) => {
       throw err;
     });
   }
-  const client = sdkPromise.then(
-    ({ default: OpenAI }) =>
-      new OpenAI({
-        baseURL: resolveBaseURL(),
-        apiKey: "not-needed",
-        defaultHeaders: { Authorization: null },
-        dangerouslyAllowBrowser: true,
-        timeout,
-      })
-  );
+  const client = sdkPromise.then(({ default: OpenAI }) => {
+    const apiKey = getApiKey();
+    return new OpenAI({
+      baseURL: resolveBaseURL(),
+      apiKey: apiKey || "not-needed",
+      ...(apiKey ? {} : { defaultHeaders: { Authorization: null } }),
+      dangerouslyAllowBrowser: true,
+      timeout,
+    });
+  });
   return {
     chat: {
       completions: {

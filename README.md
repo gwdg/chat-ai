@@ -112,6 +112,7 @@ The `front` service uses the following configurable attributes in `front.json`:
 - `backendPath`: Path to `back` service, used for sending messages and processing PDF files, e.g. `http://localhost:8081/` or `/backend`
 - `modelsPath`: Path to get list of available models from. Simply set to `<backendPath>/models` if unsure
 - `userDataPath`: (Optional) Path to get user data. Simply set to `<backendPath>/user` if unsure
+- `apiKey`: (Optional) Bearer token sent to `backendPath`, `modelsPath` and `userDataPath`. Leave it out when the OIDC proxy authenticates the user, as in the default setup. It exists for endpoints that the browser may call directly, such as a SAIA engine (see [Calling a SAIA Engine Directly](#calling-a-saia-engine-directly-local-testing)). Vite compiles it into the bundle, so treat it as public
 - `default`: Default settings for new conversations, including default `model` with `model.id` and `model.name`, as well as `top_p` and `temperature`.
 - `titleGenerationModel`: Model ID for title generation
 - `memoryGenerationModel`: Model ID for memory generation and updates
@@ -129,6 +130,27 @@ The `back` service listens to requests from `front` and interacts with an OpenAI
 If you wish to avoid using different ports for the `front` and `back` services, you must set up a reverse proxy or virtual host to route paths such as `/models` and `/backend` to the backend service listening on its own distinguished port. This can be done with popular server software such as Apache or Nginx.
 
 If you wish to customize the list of available models, you must create a path that returns an OpenAI-style JSON response containing the model ids and names, and set the `modelsPath` in `front.json` accordingly. If configured correctly, your custom list will be displayed in the dropdown menu in the interface, instead of the list from your API provider.
+
+## Calling a SAIA Engine Directly (local testing)
+
+`back` is a thin proxy: it adds the API key server-side and avoids CORS. A SAIA engine exposes the same OpenAI-compatible routes under `/public/v1` with CORS enabled and accepts `Authorization: Bearer <key>`, so `front` can call it without `back`. That is what `secrets/front-local-conf.json` does for the stack in [`saia/saia-engine/local-testing`](saia/saia-engine/local-testing/README.md):
+
+```json
+"backendPath": "http://localhost:10000/public/v1",
+"modelsPath": "http://localhost:10000/public/v1/models",
+"apiKey": "35c1e0a9f8d24b6f9c0a1e2d3f4a5b6c"
+```
+
+Start the local stack, then run `front` with that config file:
+
+```bash
+docker compose -f saia/saia-engine/local-testing/compose.yml up -d --build
+cd front && CONFIG_LOCATION=../secrets/front-local-conf.json npm run dev
+```
+
+The file ships with the local test settings: the fixed dev key from the stack's `.env.example`, `bridge/local-echo-1` as the default and title/memory/proposal model, and the modules that need `back` (tools, feedback, choices, agent, agents, Arcana, speech) switched off. The echo models answer every prompt with `local-echo-1 says: …`, including the title prompt, so chat titles look odd there; set `titleGenerationModel` (and the memory/proposal keys) to a model from the selector to change that. There is no `userDataPath`, because the engine's public API has no `/user` route; the UI simply has no profile or usage data. `back`-only features — the OpenCode agent bridge, MCP and Arcana Tools — are unavailable in this mode, and document conversion still needs the engine's docling-serve backend (the browser-side conversion in Chat preferences works without it).
+
+Two things to keep in mind: the key is compiled into the bundle, so this is a local development setup, not a deployment pattern, and the engine's `/public/v1` routes are rate-limited per key just like any other client.
 
 ## Serving a Static Build (Apache / Nginx)
 

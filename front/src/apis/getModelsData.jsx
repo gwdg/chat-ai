@@ -1,7 +1,11 @@
 // Gets available models data from the server
+import { authHeaders } from "./authHeaders";
+
 export async function getModelsData() {
   try {
-    const response = await fetch(import.meta.env.VITE_MODELS_ENDPOINT);
+    const response = await fetch(import.meta.env.VITE_MODELS_ENDPOINT, {
+      headers: authHeaders(),
+    });
     // If failed, return response with error
     if (!response.ok) {
       return response;

@@ -104,6 +104,11 @@ try {
     } else if (key == "userDataPath") {
       process.env["VITE_USERDATA_ENDPOINT"] = value;
       console.log("User data path:", value);
+    } else if (key == "apiKey") {
+      // Optional bearer token for endpoints without the OIDC proxy. Never log
+      // the value: config output ends up in logs and terminals.
+      process.env["VITE_API_KEY"] = value;
+      console.log("API key configured:", Boolean(value));
     } else if (key == "default") {
       process.env["VITE_DEFAULT_SETTINGS"] = JSON.stringify(value);
       console.log("Default settings:", JSON.stringify(value));

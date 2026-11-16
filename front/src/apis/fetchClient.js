@@ -11,6 +11,8 @@
 //   mid-stream simply ends the stream;
 // - an SSE `error` event, or a chunk carrying `error`, throws an `APIError`.
 
+import { authHeaders } from "./authHeaders";
+
 const MAX_RETRIES = 2;
 
 export class APIError extends Error {
@@ -236,6 +238,7 @@ export function createFetchClient({ baseURL, timeout = 20000 }) {
               headers: {
                 "Content-Type": "application/json",
                 Accept: params?.stream ? "text/event-stream" : "application/json",
+                ...authHeaders(),
               },
               body: JSON.stringify(params),
             },

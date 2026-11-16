@@ -187,7 +187,7 @@ inside `db/`. UI strings and i18n keys say topic.
 ### 4.5 Config reaches the front end through vite.config.js
 
 `secrets/front.json` is read **at Vite startup** and hand-mapped into `process.env.VITE_*`:
-`VITE_BACKEND_ENDPOINT`, `VITE_MODELS_ENDPOINT`, `VITE_USERDATA_ENDPOINT`,
+`VITE_BACKEND_ENDPOINT`, `VITE_MODELS_ENDPOINT`, `VITE_USERDATA_ENDPOINT`, `VITE_API_KEY`,
 `VITE_DEFAULT_SETTINGS`, `VITE_TITLE_GENERATION_MODEL`, `VITE_MEMORY_GENERATION_MODEL`,
 `VITE_PROPOSAL_GENERATION_MODEL`, `VITE_ANNOUNCEMENT`, `VITE_USE_OPENAI_SDK`,
 `VITE_OPENCODE_SERVER_URL`, `VITE_OPENCODE_SERVER_USERNAME`,
@@ -195,6 +195,16 @@ inside `db/`. UI strings and i18n keys say topic.
 config key requires editing `front/vite.config.js` too**, and a config change requires a dev-server
 restart. Read values via `import.meta.env.VITE_*`; they arrive as strings, hence the
 `=== "true"` comparisons.
+
+`apiKey` is optional and maps to `VITE_API_KEY`. When it is empty the app sends **no** Authorization
+header and the OIDC proxy authenticates the user, as before. When it is set, `apis/authHeaders.js`
+adds `Authorization: Bearer <key>` to the chat client (`fetchClient.js`), the SDK path in
+`openaiClient.js`, and the direct `fetch` calls (`getModelsData`, `getUserData`, `processFile`,
+`generateAudio`). That is only for endpoints without the OIDC proxy, e.g. a SAIA engine's
+`/public/v1`; the key ships inside the bundle. `getUserData` returns `null` when `userDataPath` is
+unset instead of calling an undefined URL. `secrets/front-local-conf.json` is the config for the
+local stack in `saia/saia-engine/local-testing`; run `CONFIG_LOCATION=../secrets/front-local-conf.json
+npm run dev` from `front/` to use it.
 
 Feature modules are gated this way — `VITE_MODULE_TOOLS`, `VITE_MODULE_FEEDBACK`,
 `VITE_MODULE_CHOICES`, `VITE_MODULE_AGENT` (the browser agent), `VITE_MODULE_AGENTS` (the sidebar

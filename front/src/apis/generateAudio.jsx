@@ -1,3 +1,5 @@
+import { authHeaders } from "./authHeaders";
+
 function createAudioFile(base64Data, format = "wav", filename = null) {
   const cleanedBase64 = base64Data.includes(",")
     ? base64Data.split(",").pop()
@@ -44,6 +46,7 @@ export default async function generateAudio(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders(),
       },
       body: JSON.stringify({
         model,

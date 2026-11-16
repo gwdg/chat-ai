@@ -35,8 +35,23 @@ describe("createBackendClient", () => {
     const res = await createBackendClient(5000).chat.completions.create({ a: 1 }, { signal });
     expect(res).toEqual({ via: "sdk" });
     expect(OpenAI).toHaveBeenCalledWith(
-      expect.objectContaining({ baseURL: "http://backend.test/", timeout: 5000 })
+      expect.objectContaining({
+        baseURL: "http://backend.test/",
+        timeout: 5000,
+        defaultHeaders: { Authorization: null },
+      })
     );
     expect(sdkCreate).toHaveBeenCalledWith({ a: 1 }, { signal });
+  });
+
+  it("lets the SDK send the configured apiKey instead of dropping Authorization", async () => {
+    vi.stubEnv("VITE_BACKEND_ENDPOINT", "http://backend.test");
+    vi.stubEnv("VITE_USE_OPENAI_SDK", "true");
+    vi.stubEnv("VITE_API_KEY", "local-dev-key");
+
+    await createBackendClient().chat.completions.create({});
+    const options = OpenAI.mock.calls.at(-1)[0];
+    expect(options.apiKey).toBe("local-dev-key");
+    expect(options.defaultHeaders).toBeUndefined();
   });
 });
