@@ -1349,6 +1349,15 @@ sealing cannot disagree. It is rendered everywhere a model is listed: both model
 Encryption settings model rows. It renders nothing for an unkeyed model. Any new model list must
 include it.
 
+**Blue safety lock.** `components/Header/WarningExternalModel.tsx` is the data-safety indicator in
+the header and the prompt box, not a model badge. For safe settings on a keyed model it keeps the
+lock but paints it blue (`text-info`) and overlays a small Carbon `Link` icon at the lower right;
+the notice then uses `alert.data_security_notice_e2ee`, which adds that the model is additionally
+end-to-end encrypted, instead of `alert.data_security_notice`. The blue state requires
+`isSafeSettings()` first, so a warning (external model, web search, MCP) still wins and stays
+yellow. Both states read the registry through `isModelKeyed` in the same way as `E2eeLock`
+(§4.29).
+
 **Settings.** The new Encryption tab (`modals/UserSettings/EncryptionSettings.jsx`) imports a key by
 paste, `.pub` file, single URL, or a key directory (`src/e2ee/keys.js`; the directory format is
 `{keys:[{id,name,publicKey|key|url,models[]}], models:{modelId:keyId}}`), downloads a `.pub`, and

@@ -1,8 +1,40 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { Provider } from "react-redux";
+import { configureStore } from "@reduxjs/toolkit";
 import { describe, expect, it } from "vitest";
+import { x25519 } from "@noble/curves/ed25519.js";
+
+import userSettingsReducer from "../../../Redux/reducers/userSettingsReducer";
+import { b64e } from "../../../e2ee/protocol";
 import WarningExternalModel, { DataSafetyText } from "../WarningExternalModel";
 
 const localState = (settings) => ({ settings });
+const publicKey = b64e(x25519.getPublicKey(x25519.utils.randomSecretKey()));
+
+// `boundModel` binds a key to that model id, which turns the safety lock blue.
+const makeStore = (boundModel) => {
+  const store = configureStore({
+    reducer: { user_settings: userSettingsReducer },
+  });
+  if (boundModel) {
+    store.dispatch({
+      type: "user_settings/addE2eeKey",
+      payload: { id: "k1", name: "Node A", publicKey },
+    });
+    store.dispatch({
+      type: "user_settings/setE2eeModelKey",
+      payload: { modelId: boundModel, keyId: "k1" },
+    });
+  }
+  return store;
+};
+
+const renderSafety = (store, settings) =>
+  render(
+    <Provider store={store}>
+      <WarningExternalModel localState={localState(settings)} userData={{}} />
+    </Provider>,
+  );
 
 describe("data safety warning", () => {
   it("warns for external models", () => {
@@ -44,13 +76,59 @@ describe("data safety warning", () => {
   });
 
   it("renders the warning popover", () => {
-    render(
-      <WarningExternalModel
-        localState={localState({ model: { name: "External" }, tools: {} })}
-        userData={{}}
-      />,
-    );
+    renderSafety(makeStore(), { model: { name: "External" }, tools: {} });
     expect(screen.getByText(/external model or external tools/i)).toBeInTheDocument();
     expect(screen.getAllByRole("button").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the green lock for a model without a key", () => {
+    renderSafety(makeStore(), {
+      model: { id: "qwen-a", name: "Internal" },
+      tools: {},
+    });
+
+    const button = screen.getByRole("button");
+    expect(button.className).toMatch(/text-success/);
+    expect(button.querySelectorAll("svg")).toHaveLength(1);
+  });
+
+  it("turns the lock blue and adds a chain for an encrypted model", () => {
+    renderSafety(makeStore("qwen-a"), {
+      model: { id: "qwen-a", name: "Internal" },
+      tools: {},
+    });
+
+    const button = screen.getByRole("button");
+    expect(button.className).toMatch(/text-info/);
+    expect(button.className).not.toMatch(/text-success/);
+    // The lock plus the chain overlay.
+    expect(button.querySelectorAll("svg")).toHaveLength(2);
+  });
+
+  it("mentions the additional end-to-end encryption in the notice", () => {
+    const { container } = renderSafety(makeStore("qwen-a"), {
+      model: { id: "qwen-a", name: "Internal" },
+      tools: {},
+    });
+
+    fireEvent.mouseEnter(container.firstChild);
+
+    expect(
+      screen.getByText(/additionally end-to-end encrypted/i),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the plain notice for an unencrypted model", () => {
+    const { container } = renderSafety(makeStore(), {
+      model: { id: "qwen-a", name: "Internal" },
+      tools: {},
+    });
+
+    fireEvent.mouseEnter(container.firstChild);
+
+    expect(screen.getByText(/processed securely within our servers/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/additionally end-to-end encrypted/i),
+    ).toBeNull();
   });
 });

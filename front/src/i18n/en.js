@@ -1673,6 +1673,8 @@ export default {
     yes: "Yes, clear everything",
     system_prompt_empty: "System prompt is empty. Model may not respond.",
     data_security_notice: "Your data will be processed securely within our servers. No information will be transmitted outside of the GWDG.",
+    data_security_notice_e2ee:
+      "Your data will be processed securely within our servers. No information will be transmitted outside of the GWDG. This model is additionally end-to-end encrypted: your messages are sealed in this browser.",
     data_security_warning: 
       "You are using an external model or external tools. Your messages may be processed outside of GWDG. Custom settings and GWDG tools may not be available. Please refrain from entering confidential or personal data.",
     data_security_warning_mpg:
