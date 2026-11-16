@@ -25,6 +25,11 @@ import {
   mergeKeyImport,
   publicKeyFileText,
 } from "../../e2ee/keys";
+import {
+  modelKeyName,
+  parseModelTokens,
+  resolveModelTokens,
+} from "../../e2ee/modelBindings";
 import { usableKey } from "../../e2ee/registry";
 import { downloadText } from "../../utils/download";
 import { useToast } from "../../hooks/useToast";
@@ -41,7 +46,7 @@ export default function EncryptionSettings({ modelsData }) {
   const keys = useSelector(selectE2eeKeys);
   const assignments = useSelector(selectE2eeModels);
   const [mode, setMode] = useState("paste");
-  const [name, setName] = useState("");
+  const [modelTokens, setModelTokens] = useState("");
   const [keyText, setKeyText] = useState("");
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -59,13 +64,39 @@ export default function EncryptionSettings({ modelsData }) {
 
   const keyedCount = models.filter((model) => assignments[model.id]).length;
 
+  // Adds the key and binds it to the models typed in the field. Unknown tokens
+  // do not abort the import: the key and the known bindings are still saved,
+  // and a toast names the entries that matched nothing.
   const addKey = (entry) => {
-    dispatch(addE2eeKey(entry));
-    notifySuccess(t("e2ee.added"));
+    const { matched, unknown } = resolveModelTokens(
+      models,
+      parseModelTokens(modelTokens),
+    );
+    const named = {
+      ...entry,
+      name:
+        entry.name ||
+        modelKeyName(matched) ||
+        t("e2ee.fallback_name", {
+          fingerprint: String(entry.kid || entry.id).slice(0, 8),
+        }),
+    };
+    dispatch(addE2eeKey(named));
+    for (const model of matched) {
+      dispatch(setE2eeModelKey({ modelId: model.id, keyId: named.id }));
+    }
+    if (unknown.length > 0) {
+      notifyError(
+        t("e2ee.unknown_models", { models: unknown.join(", ") }),
+        4000,
+      );
+    } else {
+      notifySuccess(t("e2ee.added"));
+    }
   };
 
   const resetForm = () => {
-    setName("");
+    setModelTokens("");
     setKeyText("");
     setUrl("");
     setError("");
@@ -87,7 +118,7 @@ export default function EncryptionSettings({ modelsData }) {
 
   const handlePaste = () =>
     run(async () => {
-      const entry = keyEntryFromText(keyText, { name, source: "paste" });
+      const entry = keyEntryFromText(keyText, { source: "paste" });
       addKey(entry);
     });
 
@@ -96,16 +127,13 @@ export default function EncryptionSettings({ modelsData }) {
       const file = event.target.files?.[0];
       if (!file) return;
       const text = await file.text();
-      const entry = keyEntryFromText(text, {
-        name: name || file.name.replace(/\.(pub|txt)$/i, ""),
-        source: "file",
-      });
+      const entry = keyEntryFromText(text, { source: "file" });
       addKey(entry);
     });
 
   const handleUrl = () =>
     run(async () => {
-      const entry = await fetchKeyFromUrl(url, { name });
+      const entry = await fetchKeyFromUrl(url);
       addKey(entry);
     });
 
@@ -248,16 +276,23 @@ export default function EncryptionSettings({ modelsData }) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="flex flex-col gap-1 text-xs text-base-content/70">
-            {t("e2ee.name")}
-            <input
-              type="text"
-              className="input input-sm input-bordered w-full"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder={t("e2ee.name_placeholder")}
-            />
-          </label>
+          {/* A directory defines its own key names and model lists. */}
+          {mode !== "directory" && (
+            <label className="flex flex-col gap-1 text-xs text-base-content/70">
+              {t("e2ee.models_field")}
+              <input
+                type="text"
+                className="input input-sm input-bordered w-full"
+                value={modelTokens}
+                onChange={(event) => setModelTokens(event.target.value)}
+                placeholder={t("e2ee.models_field_placeholder")}
+                spellCheck={false}
+              />
+              <span className="text-[0.7rem] text-base-content/60">
+                {t("e2ee.models_field_hint")}
+              </span>
+            </label>
+          )}
 
           {mode === "paste" && (
             <>

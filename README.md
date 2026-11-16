@@ -107,7 +107,9 @@ prepared under `remote-example/`.
 Chat AI can seal the traffic of individual models in the browser. In
 **User settings → Encryption**, import the public key of an encryption-capable
 model (paste it, choose a `.pub` file, load a single key from a URL, or import a
-key directory) and bind the model to that key. A bound model shows a green lock
+key directory) and enter the models it applies to as a comma-separated list of
+ids or names. The key is bound to those models on import; bindings can also be
+changed later in the model table. A bound model shows a green lock
 wherever it is listed, and every `/chat/completions` request it sends leaves the
 browser as ciphertext; the node seals its answer the same way.
 

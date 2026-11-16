@@ -326,8 +326,13 @@ export default {
       url: "Aus URL",
       directory: "Schlüsselverzeichnis",
     },
-    name: "Schlüsselname",
-    name_placeholder: "z. B. Qwen-Knoten",
+    models_field: "Gilt für Modelle",
+    models_field_placeholder: "qwen3-235b-a22b, Mistral Large",
+    models_field_hint:
+      "Kommagetrennte Modell-IDs oder -Namen. Der Schlüssel wird nach dem Import daran gebunden; unbekannte Einträge werden ignoriert. Die Zuordnung lässt sich unten auch ändern.",
+    unknown_models:
+      "Schlüssel hinzugefügt, aber diese Modelle sind unbekannt: {{models}}",
+    fallback_name: "Schlüssel {{fingerprint}}",
     public_key: "Public Key",
     public_key_placeholder: "Base64url-X25519-Public-Key",
     add_key: "Schlüssel hinzufügen",
