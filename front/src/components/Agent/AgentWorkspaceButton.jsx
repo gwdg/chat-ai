@@ -90,6 +90,18 @@ export default function AgentWorkspaceButton({
         ? "bg-error/10"
         : "bg-base-200/70";
 
+  // The hint explains the state of the bridge itself. With access on it would only repeat the
+  // workspace section, whose own explanation sits under its header (see below).
+  const bridgeNote = !workspaces.length
+    ? t("workspace.empty_sidebar_title")
+    : bridgeUnavailable
+      ? t("agents.bridge.unavailable_hint")
+      : accessOn
+        ? ""
+        : failed
+          ? t("agents.bridge.disabled_after_failure")
+          : t("agents.bridge.disabled_hint");
+
   const toggle = async (workspaceId) => {
     if (attached.has(workspaceId)) {
       await detachWorkspaceAgent(workspaceId, agent.id);
@@ -170,17 +182,51 @@ export default function AgentWorkspaceButton({
             </p>
           )}
 
-          <p className="mt-1 text-[11px] leading-relaxed text-base-content/60">
-            {!workspaces.length
-              ? t("workspace.empty_sidebar_title")
-              : bridgeUnavailable
-                ? t("agents.bridge.unavailable_hint")
-                : accessOn
-                  ? t("agents.workspaces_hint")
-                  : failed
-                    ? t("agents.bridge.disabled_after_failure")
-                    : t("agents.bridge.disabled_hint")}
-          </p>
+          {bridgeNote && (
+            <p className="mt-1 text-[11px] leading-relaxed text-base-content/60">
+              {bridgeNote}
+            </p>
+          )}
+
+          {accessOn && (
+            <div className="mt-2 border-t border-base-300 pt-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
+                {t("agents.bridge.options")}
+              </p>
+              <div className="mt-1.5 flex flex-col gap-1 text-[11px]">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-xs"
+                    checked={agent?.bridgeWritable === true}
+                    onChange={(event) =>
+                      updateAgent(agent.id, {
+                        bridgeWritable: event.target.checked,
+                      })
+                    }
+                  />
+                  {t("agents.bridge.writable")}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-xs"
+                    checked={agent?.bridgeMcp === true}
+                    onChange={(event) =>
+                      updateAgent(agent.id, { bridgeMcp: event.target.checked })
+                    }
+                  />
+                  {t("agents.bridge.mcp")}
+                </label>
+              </div>
+            </div>
+          )}
+
+          {attached.size > 0 && accessOn && (
+            <p className="mt-2 text-[10px] leading-snug text-warning">
+              {t("agents.bridge.keep_open")}
+            </p>
+          )}
 
           <div className="mt-3 flex items-center justify-between gap-2 border-t border-base-300 pt-2">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
@@ -190,6 +236,11 @@ export default function AgentWorkspaceButton({
               {attached.size}
             </span>
           </div>
+          {accessOn && workspaces.length > 0 && (
+            <p className="mt-1 text-[11px] leading-relaxed text-base-content/60">
+              {t("agents.workspaces_hint")}
+            </p>
+          )}
           <div className="mt-2 flex max-h-56 flex-col gap-0.5 overflow-y-auto">
             {workspaces.map((workspace) => {
               const selected = attached.has(workspace.id);
@@ -244,46 +295,6 @@ export default function AgentWorkspaceButton({
           {!workspaces.length && (
             <p className="mt-2 text-[11px] text-base-content/50">
               {t("agents.workspaces_empty")}
-            </p>
-          )}
-
-          {accessOn && (
-            <div className="mt-2 border-t border-base-300 pt-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-base-content/50">
-                {t("agents.bridge.options")}
-              </p>
-              <div className="mt-1.5 flex flex-col gap-1 text-[11px]">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-xs"
-                    checked={agent?.bridgeWritable === true}
-                    onChange={(event) =>
-                      updateAgent(agent.id, {
-                        bridgeWritable: event.target.checked,
-                      })
-                    }
-                  />
-                  {t("agents.bridge.writable")}
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-xs"
-                    checked={agent?.bridgeMcp === true}
-                    onChange={(event) =>
-                      updateAgent(agent.id, { bridgeMcp: event.target.checked })
-                    }
-                  />
-                  {t("agents.bridge.mcp")}
-                </label>
-              </div>
-            </div>
-          )}
-
-          {attached.size > 0 && accessOn && (
-            <p className="mt-2 text-[10px] leading-snug text-warning">
-              {t("agents.bridge.keep_open")}
             </p>
           )}
         </PopoverPanel>

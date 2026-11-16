@@ -1219,9 +1219,10 @@ The agent page's workspace access is an explicit switch (`bridgeEnabled`) in the
 workspace popover (`components/Agent/AgentWorkspaceButton.jsx`, through
 `agents/agentBridgeAccess.js`); the left file panel is only the file browser and shows no bridge
 section. The popover starts with a live status row: green "Agent bridge working" while the socket is
-online, red while it is offline or failed, and a muted "off" while access is switched off. The same
-popover holds the write and MCP toggles and the "Use for the bridge" choice of which attached
-workspace is exposed. Without the switch no bridge starts and the agent gets no tool; turning it on
+online, red while it is offline or failed, and a muted "off" while access is switched off. The bridge
+settings stay together under it — hint, write and MCP toggles, keep-open warning — and the attached
+workspaces with the "Use for the bridge" choice are the last section, because they are what the
+options apply to. Without the switch no bridge starts and the agent gets no tool; turning it on
 picks `bridgeWorkspaceId` or the first workspace. A bridge start failure is reported as a toast
 because no panel prints it any more, and `AgentPage` then switches access off
 (`disableAgentBridgeAfterFailure`) so an enabled switch never sits in front of a dead bridge; a

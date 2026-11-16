@@ -88,6 +88,29 @@ describe("AgentWorkspaceButton", () => {
     expect(screen.queryByLabelText("Local MCP tools")).not.toBeInTheDocument();
   });
 
+  it("keeps the bridge options under the status and the workspaces last", async () => {
+    // The bridge reads top-down, so its options follow the status; the workspaces are the
+    // section that is chosen from the options, hence they come last.
+    mocks.links = [{ workspaceId: "ws-1" }];
+    await openPanel({}, { bridgeStatus: "online" });
+
+    const follows = (first, second) =>
+      Boolean(
+        first.compareDocumentPosition(second) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+
+    const status = screen.getByRole("status");
+    const options = screen.getByText("Options");
+    const workspaces = screen.getByText("Workspace");
+
+    expect(follows(status, options)).toBe(true);
+    expect(follows(options, workspaces)).toBe(true);
+    expect(
+      follows(workspaces, screen.getByRole("button", { name: "Second project" })),
+    ).toBe(true);
+  });
+
   it("marks the active bridge workspace and switches to another attached one", async () => {
     mocks.links = [{ workspaceId: "ws-1" }, { workspaceId: "ws-2" }];
     await openPanel();
